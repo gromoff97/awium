@@ -37,4 +37,13 @@ final class Validation {
         Objects.requireNonNull(args, "args");
         return String.format(format, args);
     }
+
+    static CharSequence[] stringFragments(CharSequence[] values) {
+        Objects.requireNonNull(values, "values");
+        var copy = values.clone();
+        for (var index = 0; index < copy.length; index++) {
+            Objects.requireNonNull(copy[index], "values[" + index + "]");
+        }
+        return copy;
+    }
 }

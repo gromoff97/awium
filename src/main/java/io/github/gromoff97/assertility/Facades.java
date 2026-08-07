@@ -1,8 +1,17 @@
 package io.github.gromoff97.assertility;
 
+import io.github.gromoff97.assertility.api.BooleanAwait;
+import io.github.gromoff97.assertility.api.BooleanTerminals;
+import io.github.gromoff97.assertility.api.ComparableAwait;
+import io.github.gromoff97.assertility.api.ComparableTerminals;
 import io.github.gromoff97.assertility.api.ObjectAwait;
 import io.github.gromoff97.assertility.api.ObjectTerminals;
+import io.github.gromoff97.assertility.api.StringAwait;
+import io.github.gromoff97.assertility.api.StringTerminals;
+import io.github.gromoff97.assertility.api.TryBooleanAwait;
+import io.github.gromoff97.assertility.api.TryComparableAwait;
 import io.github.gromoff97.assertility.api.TryObjectAwait;
+import io.github.gromoff97.assertility.api.TryStringAwait;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -20,6 +29,31 @@ final class Facades {
 
     static <T> TryObjectAwait<T> tryObject(AwaitSpec<T> spec) {
         return new ResultObjectFacade<>(spec);
+    }
+
+    static BooleanAwait bool(AwaitSpec<Boolean> spec) {
+        return new ThrowingBooleanFacade(spec);
+    }
+
+    static TryBooleanAwait tryBool(AwaitSpec<Boolean> spec) {
+        return new ResultBooleanFacade(spec);
+    }
+
+    static <T extends Comparable<? super T>> ComparableAwait<T> comparable(AwaitSpec<T> spec) {
+        return new ThrowingComparableFacade<>(spec);
+    }
+
+    static <T extends Comparable<? super T>> TryComparableAwait<T> tryComparable(
+            AwaitSpec<T> spec) {
+        return new ResultComparableFacade<>(spec);
+    }
+
+    static StringAwait string(AwaitSpec<String> spec) {
+        return new ThrowingStringFacade(spec);
+    }
+
+    static TryStringAwait tryString(AwaitSpec<String> spec) {
+        return new ResultStringFacade(spec);
     }
 
     private abstract static class ObjectFacade<T, R> implements ObjectTerminals<T, R> {
@@ -155,6 +189,227 @@ final class Facades {
 
         @Override
         AwaitResult<T> execute(String terminalName, Terminal<T, T> terminal) {
+            return PollingCore.tryAwait(spec, terminalName, terminal);
+        }
+    }
+
+    private abstract static class BooleanFacade<R> extends ObjectFacade<Boolean, R>
+            implements BooleanTerminals<R> {
+        BooleanFacade(AwaitSpec<Boolean> spec) {
+            super(spec);
+        }
+
+        @Override
+        public R isTrue() {
+            return execute("isTrue", actual -> {
+                AssertJSupport.assertNotNull(actual);
+                assertThat(actual).isTrue();
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R isFalse() {
+            return execute("isFalse", actual -> {
+                AssertJSupport.assertNotNull(actual);
+                assertThat(actual).isFalse();
+                return Evaluation.fixed(actual);
+            });
+        }
+    }
+
+    private static final class ThrowingBooleanFacade extends BooleanFacade<Boolean>
+            implements BooleanAwait {
+        ThrowingBooleanFacade(AwaitSpec<Boolean> spec) {
+            super(spec);
+        }
+
+        @Override
+        Boolean execute(String terminalName, Terminal<Boolean, Boolean> terminal) {
+            return PollingCore.await(spec, terminalName, terminal);
+        }
+
+        @Override
+        public BooleanTerminals<Boolean> as(String description) {
+            return new ThrowingBooleanFacade(spec.describedAs(
+                    Validation.literalDescription(description)));
+        }
+
+        @Override
+        public BooleanTerminals<Boolean> as(String format, Object... args) {
+            return new ThrowingBooleanFacade(spec.describedAs(
+                    Validation.formattedDescription(format, args)));
+        }
+    }
+
+    private static final class ResultBooleanFacade extends BooleanFacade<AwaitResult<Boolean>>
+            implements TryBooleanAwait {
+        ResultBooleanFacade(AwaitSpec<Boolean> spec) {
+            super(spec);
+        }
+
+        @Override
+        AwaitResult<Boolean> execute(String terminalName, Terminal<Boolean, Boolean> terminal) {
+            return PollingCore.tryAwait(spec, terminalName, terminal);
+        }
+    }
+
+    private abstract static class ComparableFacade<T extends Comparable<? super T>, R>
+            extends ObjectFacade<T, R> implements ComparableTerminals<T, R> {
+        ComparableFacade(AwaitSpec<T> spec) {
+            super(spec);
+        }
+
+        @Override
+        public R isGreaterThan(T expected) {
+            return execute("isGreaterThan", actual -> {
+                AssertJSupport.assertNotNull(actual);
+                assertThat(actual).isGreaterThan(expected);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R isGreaterThanOrEqualTo(T expected) {
+            return execute("isGreaterThanOrEqualTo", actual -> {
+                AssertJSupport.assertNotNull(actual);
+                assertThat(actual).isGreaterThanOrEqualTo(expected);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R isLessThan(T expected) {
+            return execute("isLessThan", actual -> {
+                AssertJSupport.assertNotNull(actual);
+                assertThat(actual).isLessThan(expected);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R isLessThanOrEqualTo(T expected) {
+            return execute("isLessThanOrEqualTo", actual -> {
+                AssertJSupport.assertNotNull(actual);
+                assertThat(actual).isLessThanOrEqualTo(expected);
+                return Evaluation.fixed(actual);
+            });
+        }
+    }
+
+    private static final class ThrowingComparableFacade<T extends Comparable<? super T>>
+            extends ComparableFacade<T, T> implements ComparableAwait<T> {
+        ThrowingComparableFacade(AwaitSpec<T> spec) {
+            super(spec);
+        }
+
+        @Override
+        T execute(String terminalName, Terminal<T, T> terminal) {
+            return PollingCore.await(spec, terminalName, terminal);
+        }
+
+        @Override
+        public ComparableTerminals<T, T> as(String description) {
+            return new ThrowingComparableFacade<>(spec.describedAs(
+                    Validation.literalDescription(description)));
+        }
+
+        @Override
+        public ComparableTerminals<T, T> as(String format, Object... args) {
+            return new ThrowingComparableFacade<>(spec.describedAs(
+                    Validation.formattedDescription(format, args)));
+        }
+    }
+
+    private static final class ResultComparableFacade<T extends Comparable<? super T>>
+            extends ComparableFacade<T, AwaitResult<T>> implements TryComparableAwait<T> {
+        ResultComparableFacade(AwaitSpec<T> spec) {
+            super(spec);
+        }
+
+        @Override
+        AwaitResult<T> execute(String terminalName, Terminal<T, T> terminal) {
+            return PollingCore.tryAwait(spec, terminalName, terminal);
+        }
+    }
+
+    private abstract static class StringFacade<R> extends ComparableFacade<String, R>
+            implements StringTerminals<R> {
+        StringFacade(AwaitSpec<String> spec) {
+            super(spec);
+        }
+
+        @Override
+        public R isEmpty() {
+            return execute("isEmpty", actual -> {
+                AssertJSupport.assertNotNull(actual);
+                assertThat(actual).isEmpty();
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R isNotEmpty() {
+            return execute("isNotEmpty", actual -> {
+                AssertJSupport.assertNotNull(actual);
+                assertThat(actual).isNotEmpty();
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R contains(CharSequence... values) {
+            var validated = Validation.stringFragments(values);
+            return execute("contains", actual -> {
+                AssertJSupport.assertNotNull(actual);
+                assertThat(actual).contains(validated);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R doesNotContain(CharSequence... values) {
+            var validated = Validation.stringFragments(values);
+            return execute("doesNotContain", actual -> {
+                AssertJSupport.assertNotNull(actual);
+                assertThat(actual).doesNotContain(validated);
+                return Evaluation.fixed(actual);
+            });
+        }
+    }
+
+    private static final class ThrowingStringFacade extends StringFacade<String>
+            implements StringAwait {
+        ThrowingStringFacade(AwaitSpec<String> spec) {
+            super(spec);
+        }
+
+        @Override
+        String execute(String terminalName, Terminal<String, String> terminal) {
+            return PollingCore.await(spec, terminalName, terminal);
+        }
+
+        @Override
+        public StringTerminals<String> as(String description) {
+            return new ThrowingStringFacade(spec.describedAs(
+                    Validation.literalDescription(description)));
+        }
+
+        @Override
+        public StringTerminals<String> as(String format, Object... args) {
+            return new ThrowingStringFacade(spec.describedAs(
+                    Validation.formattedDescription(format, args)));
+        }
+    }
+
+    private static final class ResultStringFacade extends StringFacade<AwaitResult<String>>
+            implements TryStringAwait {
+        ResultStringFacade(AwaitSpec<String> spec) {
+            super(spec);
+        }
+
+        @Override
+        AwaitResult<String> execute(String terminalName, Terminal<String, String> terminal) {
             return PollingCore.tryAwait(spec, terminalName, terminal);
         }
     }

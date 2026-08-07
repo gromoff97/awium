@@ -33,10 +33,12 @@ class ObjectAwaitTest {
 
     @Test
     void nullIsReadyOnlyForNullTerminals() {
-        var nullValue = await(TestFactories.fast()).<String>until(() -> null).isNull();
-        var equalNull = await(TestFactories.fast()).<String>until(() -> null).isEqualTo(null);
+        AwaitSources.StringSource nullString = () -> null;
+
+        var nullValue = await(TestFactories.fast()).until(nullString).isNull();
+        var equalNull = await(TestFactories.fast()).until(nullString).isEqualTo(null);
         var unequalNonNull = tryAwait(TestFactories.fast())
-                .<String>until(() -> null)
+                .until(nullString)
                 .isNotEqualTo("ready");
 
         assertThat(nullValue).isNull();
