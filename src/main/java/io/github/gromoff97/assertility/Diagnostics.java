@@ -11,20 +11,14 @@ final class Diagnostics {
 
     static AwaitFailure awaitFailure(
             AwaitSpec<?> spec, String terminalName, RuntimeException engineFailure) {
-        var message = new StringBuilder("Await failed");
+        var message = new StringBuilder();
         if (spec.description() != null) {
-            message.append(System.lineSeparator())
-                    .append("Description: ")
-                    .append(spec.description());
+            message.append(spec.description()).append(": ");
         }
-        message.append(System.lineSeparator())
-                .append("Terminal: ")
-                .append(terminalName);
-        if (engineFailure.getMessage() != null) {
-            message.append(System.lineSeparator())
-                    .append("Awaitility: ")
-                    .append(engineFailure.getMessage());
-        }
+        message.append(terminalName).append(" did not complete: ")
+                .append(engineFailure.getMessage() == null
+                        ? engineFailure.getClass().getSimpleName()
+                        : engineFailure.getMessage());
         return new AwaitFailure(message.toString(), engineFailure);
     }
 
