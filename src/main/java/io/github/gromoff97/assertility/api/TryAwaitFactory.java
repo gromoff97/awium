@@ -18,5 +18,8 @@ public interface TryAwaitFactory {
     <E, C extends java.util.Collection<E>> TryCollectionAwait<E, C> until(
             AwaitSources.CollectionSource<E, C> source);
 
+    <K, V, M extends java.util.Map<K, V>> TryMapAwait<K, V, M> until(
+            AwaitSources.MapSource<K, V, M> source);
+
     <T> TryObjectAwait<T> until(AwaitSources.Source<T> source);
 }

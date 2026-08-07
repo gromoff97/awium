@@ -18,5 +18,8 @@ public interface AwaitFactory {
     <E, C extends java.util.Collection<E>> CollectionAwait<E, C> until(
             AwaitSources.CollectionSource<E, C> source);
 
+    <K, V, M extends java.util.Map<K, V>> MapAwait<K, V, M> until(
+            AwaitSources.MapSource<K, V, M> source);
+
     <T> ObjectAwait<T> until(AwaitSources.Source<T> source);
 }

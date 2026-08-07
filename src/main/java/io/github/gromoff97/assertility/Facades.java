@@ -6,6 +6,8 @@ import io.github.gromoff97.assertility.api.ComparableAwait;
 import io.github.gromoff97.assertility.api.ComparableTerminals;
 import io.github.gromoff97.assertility.api.CollectionAwait;
 import io.github.gromoff97.assertility.api.CollectionTerminals;
+import io.github.gromoff97.assertility.api.MapAwait;
+import io.github.gromoff97.assertility.api.MapTerminals;
 import io.github.gromoff97.assertility.api.ObjectAwait;
 import io.github.gromoff97.assertility.api.ObjectTerminals;
 import io.github.gromoff97.assertility.api.OptionalAwait;
@@ -17,6 +19,7 @@ import io.github.gromoff97.assertility.api.StringTerminals;
 import io.github.gromoff97.assertility.api.TryBooleanAwait;
 import io.github.gromoff97.assertility.api.TryComparableAwait;
 import io.github.gromoff97.assertility.api.TryCollectionAwait;
+import io.github.gromoff97.assertility.api.TryMapAwait;
 import io.github.gromoff97.assertility.api.TryObjectAwait;
 import io.github.gromoff97.assertility.api.TryOptionalAwait;
 import io.github.gromoff97.assertility.api.TrySequencedCollectionAwait;
@@ -25,6 +28,7 @@ import io.github.gromoff97.assertility.api.TryStringAwait;
 import java.util.Collection;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.SequencedCollection;
 import java.util.concurrent.ThreadLocalRandom;
@@ -96,6 +100,14 @@ final class Facades {
     static <E, C extends SequencedCollection<E>> TrySequencedCollectionAwait<E, C>
             trySequencedCollection(AwaitSpec<C> spec) {
         return new ResultSequencedCollectionFacade<>(spec);
+    }
+
+    static <K, V, M extends Map<K, V>> MapAwait<K, V, M> map(AwaitSpec<M> spec) {
+        return new ThrowingMapFacade<>(spec);
+    }
+
+    static <K, V, M extends Map<K, V>> TryMapAwait<K, V, M> tryMap(AwaitSpec<M> spec) {
+        return new ResultMapFacade<>(spec);
     }
 
     private abstract static class ObjectFacade<T, R> implements ObjectTerminals<T, R> {
@@ -1067,6 +1079,178 @@ final class Facades {
 
         @Override
         AwaitResult<List<E>> executeList(String terminalName, Terminal<C, List<E>> terminal) {
+            return PollingCore.tryAwait(spec, terminalName, terminal);
+        }
+    }
+
+    private abstract static class MapFacade<K, V, M extends Map<K, V>, R>
+            extends ObjectFacade<M, R> implements MapTerminals<K, V, M, R> {
+        MapFacade(AwaitSpec<M> spec) {
+            super(spec);
+        }
+
+        @Override
+        public R isEmpty() {
+            return execute("isEmpty", actual -> {
+                assertMapReady(actual);
+                assertThat(actual).isEmpty();
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R isNotEmpty() {
+            return execute("isNotEmpty", actual -> {
+                assertMapReady(actual);
+                assertThat(actual).isNotEmpty();
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R hasSize(int size) {
+            var expected = Validation.size(size);
+            return execute("hasSize", actual -> {
+                assertMapReady(actual);
+                assertThat(actual).hasSize(expected);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R hasSizeGreaterThan(int size) {
+            var expected = Validation.size(size);
+            return execute("hasSizeGreaterThan", actual -> {
+                assertMapReady(actual);
+                assertThat(actual).hasSizeGreaterThan(expected);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R hasSizeGreaterThanOrEqualTo(int size) {
+            var expected = Validation.size(size);
+            return execute("hasSizeGreaterThanOrEqualTo", actual -> {
+                assertMapReady(actual);
+                assertThat(actual).hasSizeGreaterThanOrEqualTo(expected);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R hasSizeLessThan(int size) {
+            var expected = Validation.size(size);
+            return execute("hasSizeLessThan", actual -> {
+                assertMapReady(actual);
+                assertThat(actual).hasSizeLessThan(expected);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R hasSizeLessThanOrEqualTo(int size) {
+            var expected = Validation.size(size);
+            return execute("hasSizeLessThanOrEqualTo", actual -> {
+                assertMapReady(actual);
+                assertThat(actual).hasSizeLessThanOrEqualTo(expected);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R containsKey(K key) {
+            return execute("containsKey", actual -> {
+                assertMapReady(actual);
+                assertThat(actual.containsKey(key)).isTrue();
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R doesNotContainKey(K key) {
+            return execute("doesNotContainKey", actual -> {
+                assertMapReady(actual);
+                assertThat(actual.containsKey(key)).isFalse();
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R containsEntry(K key, V value) {
+            return execute("containsEntry", actual -> {
+                assertMapReady(actual);
+                MapSupport.assertContainsEntry(actual, key, value);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R doesNotContainEntry(K key, V value) {
+            return execute("doesNotContainEntry", actual -> {
+                assertMapReady(actual);
+                MapSupport.assertDoesNotContainEntry(actual, key, value);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R containsAllEntriesOf(Map<? extends K, ? extends V> expected) {
+            Validation.callback(expected, "expected");
+            return execute("containsAllEntriesOf", actual -> {
+                assertMapReady(actual);
+                MapSupport.assertContainsAllEntries(actual, expected);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public R containsExactlyInAnyOrderEntriesOf(
+                Map<? extends K, ? extends V> expected) {
+            Validation.callback(expected, "expected");
+            return execute("containsExactlyInAnyOrderEntriesOf", actual -> {
+                assertMapReady(actual);
+                MapSupport.assertContainsExactlyEntries(actual, expected);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        private void assertMapReady(M actual) {
+            AssertJSupport.assertNotNull(actual);
+        }
+    }
+
+    private static final class ThrowingMapFacade<K, V, M extends Map<K, V>>
+            extends MapFacade<K, V, M, M> implements MapAwait<K, V, M> {
+        ThrowingMapFacade(AwaitSpec<M> spec) {
+            super(spec);
+        }
+
+        @Override
+        M execute(String terminalName, Terminal<M, M> terminal) {
+            return PollingCore.await(spec, terminalName, terminal);
+        }
+
+        @Override
+        public MapTerminals<K, V, M, M> as(String description) {
+            return new ThrowingMapFacade<>(spec.describedAs(
+                    Validation.literalDescription(description)));
+        }
+
+        @Override
+        public MapTerminals<K, V, M, M> as(String format, Object... args) {
+            return new ThrowingMapFacade<>(spec.describedAs(
+                    Validation.formattedDescription(format, args)));
+        }
+    }
+
+    private static final class ResultMapFacade<K, V, M extends Map<K, V>>
+            extends MapFacade<K, V, M, AwaitResult<M>> implements TryMapAwait<K, V, M> {
+        ResultMapFacade(AwaitSpec<M> spec) {
+            super(spec);
+        }
+
+        @Override
+        AwaitResult<M> execute(String terminalName, Terminal<M, M> terminal) {
             return PollingCore.tryAwait(spec, terminalName, terminal);
         }
     }
