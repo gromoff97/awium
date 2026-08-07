@@ -286,4 +286,145 @@ class CompilationContractTest {
         assertThat(result.exitCode()).isNotZero();
         assertThat(result.diagnostics()).contains("doesNotThrowAnyException");
     }
+
+    @Test
+    void everyReadmeJavaSnippetCompiles() throws Exception {
+        var result = CompilationSupport.compile(
+                temporaryDirectory.resolve("readme"), "ReadmeExamples", """
+                        import io.github.gromoff97.assertility.AwaitFailure;
+                        import io.github.gromoff97.assertility.AwaitResult;
+                        import io.github.gromoff97.assertility.AwaitSources;
+                        import java.io.IOException;
+                        import java.time.Duration;
+                        import java.time.Instant;
+                        import java.util.List;
+                        import java.util.Map;
+                        import java.util.Optional;
+                        import java.util.concurrent.CompletableFuture;
+                        import org.awaitility.core.ConditionFactory;
+
+                        import static io.github.gromoff97.assertility.Assertility.*;
+                        import static org.assertj.core.api.Assertions.assertThat;
+
+                        final class ReadmeExamples {
+                            static void primary(
+                                    PaymentDao paymentDao, String transactionId) {
+                                Payment payment = awaitUntil(paymentDao::loadPayments)
+                                        .as("payment %s", transactionId)
+                                        .single(actual -> actual.transactionId()
+                                                .equals(transactionId));
+                            }
+
+                            static void factory(
+                                    PaymentDao paymentDao, String transactionId) {
+                                ConditionFactory factory = org.awaitility.Awaitility.await()
+                                        .pollInterval(Duration.ofMillis(50))
+                                        .atMost(Duration.ofSeconds(2))
+                                        .during(Duration.ofMillis(100));
+
+                                Payment payment = await(factory)
+                                        .until(paymentDao::loadPayment)
+                                        .as("payment %s reaches the final state", transactionId)
+                                        .returns(Status.COMPLETED, Payment::status);
+                            }
+
+                            static void result(
+                                    PaymentDao paymentDao,
+                                    String transactionId,
+                                    ConditionFactory factory) {
+                                AwaitResult<Payment> result = tryAwait(factory)
+                                        .until(paymentDao::loadPayments)
+                                        .single(Payment::transactionId, transactionId);
+
+                                if (result.isSuccess()) {
+                                    Payment payment = result.get();
+                                } else {
+                                    AwaitFailure failure = result.failure().orElseThrow();
+                                }
+                            }
+
+                            static void object(PaymentDao paymentDao) {
+                                Payment payment = awaitUntil(paymentDao::loadPayment)
+                                        .returns(Status.COMPLETED, Payment::status);
+                            }
+
+                            static void satisfies(PaymentDao paymentDao) {
+                                Payment payment = awaitUntil(paymentDao::loadPayment)
+                                        .satisfies(actual -> {
+                                            assertThat(actual.status())
+                                                    .isEqualTo(Status.COMPLETED);
+                                            assertThat(actual.completedAt()).isNotNull();
+                                        });
+                            }
+
+                            static void optionalAndCollections(
+                                    PaymentDao paymentDao,
+                                    String transactionId,
+                                    Payment expectedPayment) {
+                                Payment optionalPayment = awaitUntil(paymentDao::findPayment)
+                                        .contains(expectedPayment);
+
+                                Payment singlePayment = awaitUntil(paymentDao::loadPayments)
+                                        .single(Payment::transactionId, transactionId);
+                                Payment anyCompleted = awaitUntil(paymentDao::loadPayments)
+                                        .any(payment ->
+                                                payment.status() == Status.COMPLETED);
+                                List<Payment> twoCompleted = awaitUntil(paymentDao::loadPayments)
+                                        .exactly(2, Payment::status, Status.COMPLETED);
+                            }
+
+                            static void mapFutureExecutable(
+                                    PaymentDao paymentDao,
+                                    String transactionId,
+                                    Payment expectedPayment) {
+                                Map<String, Payment> indexed =
+                                        awaitUntil(paymentDao::indexPayments)
+                                                .containsEntry(
+                                                        transactionId, expectedPayment);
+
+                                CompletableFuture<Payment> completed =
+                                        awaitUntil(paymentDao::requestPayment).isDone();
+                                Payment response = completed.join();
+
+                                awaitUntil(paymentDao::refresh)
+                                        .doesNotThrowAnyException();
+                            }
+
+                            static void inference() {
+                                AwaitSources.OptionalSource<String> empty = Optional::empty;
+                                AwaitSources.StringSource nullable = () -> null;
+                                AwaitSources.Executable failing = () -> {
+                                    throw new IOException("not ready");
+                                };
+                            }
+
+                            enum Status {
+                                PENDING,
+                                COMPLETED
+                            }
+
+                            record Payment(
+                                    String transactionId,
+                                    Status status,
+                                    Instant completedAt) {
+                            }
+
+                            interface PaymentDao {
+                                List<Payment> loadPayments();
+
+                                Payment loadPayment();
+
+                                Optional<Payment> findPayment();
+
+                                Map<String, Payment> indexPayments();
+
+                                CompletableFuture<Payment> requestPayment();
+
+                                void refresh() throws IOException;
+                            }
+                        }
+                        """);
+
+        assertThat(result.exitCode()).as(result.diagnostics()).isZero();
+    }
 }
