@@ -204,6 +204,24 @@ class CollectionAwaitTest {
     }
 
     @Test
+    void extractorSelectorWithTooManyMatchesOmitsIrrelevantCandidateDiffs() {
+        var payments = List.of(
+                new Payment("p-1", true),
+                new Payment("p-2", true),
+                new Payment("p-3", false));
+
+        var result = tryAwait(TestFactories.fast()).until(() -> payments)
+                .single(Payment::active, true);
+        var message = result.failure().orElseThrow().getMessage();
+
+        assertThat(message)
+                .contains("actual matches: 2")
+                .contains("p-1")
+                .contains("p-2")
+                .doesNotContain("candidate comparison failures");
+    }
+
+    @Test
     void selectorPredicateAssertionErrorPropagatesImmediately() {
         var failure = new AssertionError("predicate defect");
 
@@ -229,14 +247,15 @@ class CollectionAwaitTest {
         var none = await(TestFactories.fast()).until(() -> empty)
                 .none(Payment::active);
         var emptyAll = tryAwait(TestFactories.fast()).until(() -> empty)
-                .all(Payment::active);
+                .all("active payments", Payment::active);
 
         assertThat(all).isSameAs(expected);
         assertThat(none).isSameAs(empty);
         assertThat(allSourceCalls).hasValue(2);
         assertThat(emptyAll.failure().orElseThrow())
                 .hasMessageContaining(
-                        "expected a non-empty collection whose elements all match");
+                        "expected a non-empty collection whose elements all match")
+                .hasMessageContaining("active payments");
     }
 
     @Test
@@ -316,6 +335,20 @@ class CollectionAwaitTest {
         assertThat(excludes).isSameAs(actual);
         assertThat(exact).isSameAs(actual);
         assertThat(exactElements).isSameAs(actual);
+    }
+
+    @Test
+    void containsAndContainsAllFollowAssertJDuplicateSemantics() {
+        var actual = List.of(new Entity("e-1", new Detail("one")));
+        var duplicateExpected = new Entity("e-1", new Detail("one"));
+        var facade = await(TestFactories.fast()).until(() -> actual);
+
+        var contains = facade.contains(duplicateExpected, duplicateExpected);
+        var containsAll = facade.containsAll(List.of(
+                duplicateExpected, duplicateExpected));
+
+        assertThat(contains).isSameAs(actual);
+        assertThat(containsAll).isSameAs(actual);
     }
 
     @Test

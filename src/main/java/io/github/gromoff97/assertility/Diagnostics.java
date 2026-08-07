@@ -43,7 +43,9 @@ final class Diagnostics {
 
         var relevant = matches.elements().isEmpty() ? matches.observed() : matches.elements();
         appendRenderedSample(message, relevant);
-        appendComparisonFailures(message, matches.comparisonFailures());
+        if (matches.elements().isEmpty()) {
+            appendComparisonFailures(message, matches.comparisonFailures());
+        }
         return new AssertionError(message.toString());
     }
 

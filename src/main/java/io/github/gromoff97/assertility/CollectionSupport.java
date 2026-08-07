@@ -96,8 +96,13 @@ final class CollectionSupport {
     static <E> void requireAll(
             Collection<E> source, Matches<E> matches, String description) {
         if (source.isEmpty()) {
-            throw new AssertionError(
+            var message = new StringBuilder(
                     "expected a non-empty collection whose elements all match");
+            if (description != null) {
+                message.append(System.lineSeparator())
+                        .append("description: ").append(description);
+            }
+            throw new AssertionError(message.toString());
         }
         if (matches.elements().size() != source.size()) {
             throw Diagnostics.quantifierFailure("all", source, matches, description);
@@ -112,7 +117,7 @@ final class CollectionSupport {
     }
 
     static <E> void assertContains(Collection<E> actual, List<? extends E> expected) {
-        if (!canConsumeExpected(actual, expected, false)) {
+        if (!containsEveryExpectedValue(actual, expected)) {
             throw new AssertionError("collection did not recursively contain all expected elements");
         }
     }
@@ -131,7 +136,7 @@ final class CollectionSupport {
 
     static <E> void assertExactlyInAnyOrder(
             Collection<E> actual, List<? extends E> expected) {
-        if (!canConsumeExpected(actual, expected, true)) {
+        if (!canConsumeExpectedExactly(actual, expected)) {
             throw new AssertionError(
                     "collection did not recursively contain exactly the expected elements in any order");
         }
@@ -153,9 +158,26 @@ final class CollectionSupport {
         }
     }
 
-    private static <E> boolean canConsumeExpected(
-            Collection<E> actual, List<? extends E> expected, boolean exactSize) {
-        if (exactSize && actual.size() != expected.size()) {
+    private static <E> boolean containsEveryExpectedValue(
+            Collection<E> actual, List<? extends E> expected) {
+        for (var expectedElement : expected) {
+            var found = false;
+            for (var actualElement : actual) {
+                if (recursivelyEqual(actualElement, expectedElement)) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static <E> boolean canConsumeExpectedExactly(
+            Collection<E> actual, List<? extends E> expected) {
+        if (actual.size() != expected.size()) {
             return false;
         }
         var actualSnapshot = new ArrayList<>(actual);
