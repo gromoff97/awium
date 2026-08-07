@@ -6,13 +6,17 @@ import io.github.gromoff97.assertility.api.ComparableAwait;
 import io.github.gromoff97.assertility.api.ComparableTerminals;
 import io.github.gromoff97.assertility.api.ObjectAwait;
 import io.github.gromoff97.assertility.api.ObjectTerminals;
+import io.github.gromoff97.assertility.api.OptionalAwait;
+import io.github.gromoff97.assertility.api.OptionalTerminals;
 import io.github.gromoff97.assertility.api.StringAwait;
 import io.github.gromoff97.assertility.api.StringTerminals;
 import io.github.gromoff97.assertility.api.TryBooleanAwait;
 import io.github.gromoff97.assertility.api.TryComparableAwait;
 import io.github.gromoff97.assertility.api.TryObjectAwait;
+import io.github.gromoff97.assertility.api.TryOptionalAwait;
 import io.github.gromoff97.assertility.api.TryStringAwait;
 
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -54,6 +58,14 @@ final class Facades {
 
     static TryStringAwait tryString(AwaitSpec<String> spec) {
         return new ResultStringFacade(spec);
+    }
+
+    static <T> OptionalAwait<T> optional(AwaitSpec<Optional<T>> spec) {
+        return new ThrowingOptionalFacade<>(spec);
+    }
+
+    static <T> TryOptionalAwait<T> tryOptional(AwaitSpec<Optional<T>> spec) {
+        return new ResultOptionalFacade<>(spec);
     }
 
     private abstract static class ObjectFacade<T, R> implements ObjectTerminals<T, R> {
@@ -410,6 +422,141 @@ final class Facades {
 
         @Override
         AwaitResult<String> execute(String terminalName, Terminal<String, String> terminal) {
+            return PollingCore.tryAwait(spec, terminalName, terminal);
+        }
+    }
+
+    private abstract static class OptionalFacade<T, RS, RV>
+            extends ObjectFacade<Optional<T>, RS> implements OptionalTerminals<T, RS, RV> {
+        OptionalFacade(AwaitSpec<Optional<T>> spec) {
+            super(spec);
+        }
+
+        abstract RV executeValue(String terminalName, Terminal<Optional<T>, T> terminal);
+
+        @Override
+        public RS isEmpty() {
+            return execute("isEmpty", actual -> {
+                AssertJSupport.assertNotNull(actual);
+                assertThat(actual).isEmpty();
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public RV isPresent() {
+            return executeValue("isPresent", actual -> Evaluation.fixed(presentValue(actual)));
+        }
+
+        @Override
+        public RV isPresent(Predicate<? super T> predicate) {
+            Validation.callback(predicate, "predicate");
+            return presentMatching("isPresent", null, predicate);
+        }
+
+        @Override
+        public RV isPresent(String description, Predicate<? super T> predicate) {
+            Validation.predicateDescription(description);
+            Validation.callback(predicate, "predicate");
+            return presentMatching("isPresent: " + description, description, predicate);
+        }
+
+        private RV presentMatching(
+                String terminalName, String description, Predicate<? super T> predicate) {
+            return executeValue(terminalName, actual -> {
+                var value = presentValue(actual);
+                final boolean matched;
+                try {
+                    matched = predicate.test(value);
+                } catch (AssertionError error) {
+                    throw new CallbackFailure(error);
+                }
+                var assertion = assertThat(matched);
+                if (description != null) {
+                    assertion.as(description);
+                }
+                assertion.isTrue();
+                return Evaluation.fixed(value);
+            });
+        }
+
+        @Override
+        public RV contains(T expected) {
+            return executeValue("contains", actual -> {
+                var value = presentValue(actual);
+                AssertJSupport.assertRecursiveEqual(value, expected);
+                return Evaluation.fixed(value);
+            });
+        }
+
+        @Override
+        public <V> RV contains(V expected, Function<? super T, ? extends V> extractor) {
+            Validation.callback(extractor, "extractor");
+            return executeValue("contains", actual -> {
+                var value = presentValue(actual);
+                final V extracted;
+                try {
+                    extracted = extractor.apply(value);
+                } catch (AssertionError error) {
+                    throw new CallbackFailure(error);
+                }
+                AssertJSupport.assertRecursiveEqual(extracted, expected);
+                return Evaluation.fixed(value);
+            });
+        }
+
+        private T presentValue(Optional<T> actual) {
+            AssertJSupport.assertNotNull(actual);
+            assertThat(actual).isPresent();
+            return actual.orElseThrow();
+        }
+    }
+
+    private static final class ThrowingOptionalFacade<T>
+            extends OptionalFacade<T, Optional<T>, T> implements OptionalAwait<T> {
+        ThrowingOptionalFacade(AwaitSpec<Optional<T>> spec) {
+            super(spec);
+        }
+
+        @Override
+        Optional<T> execute(
+                String terminalName, Terminal<Optional<T>, Optional<T>> terminal) {
+            return PollingCore.await(spec, terminalName, terminal);
+        }
+
+        @Override
+        T executeValue(String terminalName, Terminal<Optional<T>, T> terminal) {
+            return PollingCore.await(spec, terminalName, terminal);
+        }
+
+        @Override
+        public OptionalTerminals<T, Optional<T>, T> as(String description) {
+            return new ThrowingOptionalFacade<>(spec.describedAs(
+                    Validation.literalDescription(description)));
+        }
+
+        @Override
+        public OptionalTerminals<T, Optional<T>, T> as(String format, Object... args) {
+            return new ThrowingOptionalFacade<>(spec.describedAs(
+                    Validation.formattedDescription(format, args)));
+        }
+    }
+
+    private static final class ResultOptionalFacade<T>
+            extends OptionalFacade<T, AwaitResult<Optional<T>>, AwaitResult<T>>
+            implements TryOptionalAwait<T> {
+        ResultOptionalFacade(AwaitSpec<Optional<T>> spec) {
+            super(spec);
+        }
+
+        @Override
+        AwaitResult<Optional<T>> execute(
+                String terminalName, Terminal<Optional<T>, Optional<T>> terminal) {
+            return PollingCore.tryAwait(spec, terminalName, terminal);
+        }
+
+        @Override
+        AwaitResult<T> executeValue(String terminalName, Terminal<Optional<T>, T> terminal) {
             return PollingCore.tryAwait(spec, terminalName, terminal);
         }
     }

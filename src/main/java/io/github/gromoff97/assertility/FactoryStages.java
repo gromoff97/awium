@@ -4,11 +4,13 @@ import io.github.gromoff97.assertility.api.AwaitFactory;
 import io.github.gromoff97.assertility.api.BooleanAwait;
 import io.github.gromoff97.assertility.api.ComparableAwait;
 import io.github.gromoff97.assertility.api.ObjectAwait;
+import io.github.gromoff97.assertility.api.OptionalAwait;
 import io.github.gromoff97.assertility.api.StringAwait;
 import io.github.gromoff97.assertility.api.TryAwaitFactory;
 import io.github.gromoff97.assertility.api.TryBooleanAwait;
 import io.github.gromoff97.assertility.api.TryComparableAwait;
 import io.github.gromoff97.assertility.api.TryObjectAwait;
+import io.github.gromoff97.assertility.api.TryOptionalAwait;
 import io.github.gromoff97.assertility.api.TryStringAwait;
 import org.awaitility.core.ConditionFactory;
 
@@ -42,6 +44,11 @@ final class FactoryStages {
         }
 
         @Override
+        public <T> OptionalAwait<T> until(AwaitSources.OptionalSource<T> source) {
+            return Facades.optional(new AwaitSpec<>(factory, source, null));
+        }
+
+        @Override
         public <T> ObjectAwait<T> until(AwaitSources.Source<T> source) {
             return Facades.object(new AwaitSpec<>(factory, source, null));
         }
@@ -62,6 +69,11 @@ final class FactoryStages {
         @Override
         public TryStringAwait until(AwaitSources.StringSource source) {
             return Facades.tryString(new AwaitSpec<>(factory, source, null));
+        }
+
+        @Override
+        public <T> TryOptionalAwait<T> until(AwaitSources.OptionalSource<T> source) {
+            return Facades.tryOptional(new AwaitSpec<>(factory, source, null));
         }
 
         @Override

@@ -10,5 +10,7 @@ public interface TryAwaitFactory {
 
     TryStringAwait until(AwaitSources.StringSource source);
 
+    <T> TryOptionalAwait<T> until(AwaitSources.OptionalSource<T> source);
+
     <T> TryObjectAwait<T> until(AwaitSources.Source<T> source);
 }
