@@ -4,6 +4,8 @@ import io.github.gromoff97.assertility.api.BooleanAwait;
 import io.github.gromoff97.assertility.api.BooleanTerminals;
 import io.github.gromoff97.assertility.api.ComparableAwait;
 import io.github.gromoff97.assertility.api.ComparableTerminals;
+import io.github.gromoff97.assertility.api.CollectionAwait;
+import io.github.gromoff97.assertility.api.CollectionTerminals;
 import io.github.gromoff97.assertility.api.ObjectAwait;
 import io.github.gromoff97.assertility.api.ObjectTerminals;
 import io.github.gromoff97.assertility.api.OptionalAwait;
@@ -12,11 +14,15 @@ import io.github.gromoff97.assertility.api.StringAwait;
 import io.github.gromoff97.assertility.api.StringTerminals;
 import io.github.gromoff97.assertility.api.TryBooleanAwait;
 import io.github.gromoff97.assertility.api.TryComparableAwait;
+import io.github.gromoff97.assertility.api.TryCollectionAwait;
 import io.github.gromoff97.assertility.api.TryObjectAwait;
 import io.github.gromoff97.assertility.api.TryOptionalAwait;
 import io.github.gromoff97.assertility.api.TryStringAwait;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -66,6 +72,15 @@ final class Facades {
 
     static <T> TryOptionalAwait<T> tryOptional(AwaitSpec<Optional<T>> spec) {
         return new ResultOptionalFacade<>(spec);
+    }
+
+    static <E, C extends Collection<E>> CollectionAwait<E, C> collection(AwaitSpec<C> spec) {
+        return new ThrowingCollectionFacade<>(spec);
+    }
+
+    static <E, C extends Collection<E>> TryCollectionAwait<E, C> tryCollection(
+            AwaitSpec<C> spec) {
+        return new ResultCollectionFacade<>(spec);
     }
 
     private abstract static class ObjectFacade<T, R> implements ObjectTerminals<T, R> {
@@ -557,6 +572,279 @@ final class Facades {
 
         @Override
         AwaitResult<T> executeValue(String terminalName, Terminal<Optional<T>, T> terminal) {
+            return PollingCore.tryAwait(spec, terminalName, terminal);
+        }
+    }
+
+    private abstract static class CollectionFacade<
+            E, C extends Collection<E>, RC, RE, RL>
+            extends ObjectFacade<C, RC> implements CollectionTerminals<E, C, RC, RE, RL> {
+        CollectionFacade(AwaitSpec<C> spec) {
+            super(spec);
+        }
+
+        abstract RE executeElement(String terminalName, Terminal<C, E> terminal);
+
+        abstract RL executeList(String terminalName, Terminal<C, List<E>> terminal);
+
+        @Override
+        public RC isEmpty() {
+            return execute("isEmpty", actual -> {
+                assertCollectionReady(actual);
+                assertThat(actual).isEmpty();
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public RC isNotEmpty() {
+            return execute("isNotEmpty", actual -> {
+                assertCollectionReady(actual);
+                assertThat(actual).isNotEmpty();
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public RC hasSize(int size) {
+            var expected = Validation.size(size);
+            return execute("hasSize", actual -> {
+                assertCollectionReady(actual);
+                assertThat(actual).hasSize(expected);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public RC hasSizeGreaterThan(int size) {
+            var expected = Validation.size(size);
+            return execute("hasSizeGreaterThan", actual -> {
+                assertCollectionReady(actual);
+                assertThat(actual).hasSizeGreaterThan(expected);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public RC hasSizeGreaterThanOrEqualTo(int size) {
+            var expected = Validation.size(size);
+            return execute("hasSizeGreaterThanOrEqualTo", actual -> {
+                assertCollectionReady(actual);
+                assertThat(actual).hasSizeGreaterThanOrEqualTo(expected);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public RC hasSizeLessThan(int size) {
+            var expected = Validation.size(size);
+            return execute("hasSizeLessThan", actual -> {
+                assertCollectionReady(actual);
+                assertThat(actual).hasSizeLessThan(expected);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public RC hasSizeLessThanOrEqualTo(int size) {
+            var expected = Validation.size(size);
+            return execute("hasSizeLessThanOrEqualTo", actual -> {
+                assertCollectionReady(actual);
+                assertThat(actual).hasSizeLessThanOrEqualTo(expected);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public RE single() {
+            return executeElement("single", actual -> {
+                assertCollectionReady(actual);
+                var matches = CollectionSupport.allElements(actual);
+                return Evaluation.fixed(CollectionSupport.requireSingle(
+                        "single", actual, matches, null));
+            });
+        }
+
+        @Override
+        public RE single(Predicate<? super E> predicate) {
+            Validation.callback(predicate, "predicate");
+            return singleMatching("single", null, predicate);
+        }
+
+        @Override
+        public RE single(String description, Predicate<? super E> predicate) {
+            Validation.predicateDescription(description);
+            Validation.callback(predicate, "predicate");
+            return singleMatching("single", description, predicate);
+        }
+
+        private RE singleMatching(
+                String terminalName, String description, Predicate<? super E> predicate) {
+            return executeElement(terminalName, actual -> {
+                assertCollectionReady(actual);
+                var matches = CollectionSupport.matches(actual, predicate);
+                return Evaluation.fixed(CollectionSupport.requireSingle(
+                        "single", actual, matches, description));
+            });
+        }
+
+        @Override
+        public <V> RE single(Function<? super E, ? extends V> extractor, V expected) {
+            Validation.callback(extractor, "extractor");
+            return executeElement("single", actual -> {
+                assertCollectionReady(actual);
+                var matches = CollectionSupport.matches(actual, expected, extractor);
+                return Evaluation.fixed(CollectionSupport.requireSingle(
+                        "single", actual, matches, null));
+            });
+        }
+
+        @Override
+        public RE any() {
+            return executeElement("any", actual -> {
+                assertCollectionReady(actual);
+                return randomMatch(actual, CollectionSupport.allElements(actual), null);
+            });
+        }
+
+        @Override
+        public RE any(Predicate<? super E> predicate) {
+            Validation.callback(predicate, "predicate");
+            return anyMatching("any", null, predicate);
+        }
+
+        @Override
+        public RE any(String description, Predicate<? super E> predicate) {
+            Validation.predicateDescription(description);
+            Validation.callback(predicate, "predicate");
+            return anyMatching("any", description, predicate);
+        }
+
+        private RE anyMatching(
+                String terminalName, String description, Predicate<? super E> predicate) {
+            return executeElement(terminalName, actual -> {
+                assertCollectionReady(actual);
+                return randomMatch(
+                        actual, CollectionSupport.matches(actual, predicate), description);
+            });
+        }
+
+        @Override
+        public <V> RE any(Function<? super E, ? extends V> extractor, V expected) {
+            Validation.callback(extractor, "extractor");
+            return executeElement("any", actual -> {
+                assertCollectionReady(actual);
+                return randomMatch(
+                        actual, CollectionSupport.matches(actual, expected, extractor), null);
+            });
+        }
+
+        private Evaluation<E> randomMatch(
+                C actual, CollectionSupport.Matches<E> matches, String description) {
+            CollectionSupport.requireAny("any", actual, matches, description);
+            return new Evaluation<>(() -> matches.elements().get(
+                    ThreadLocalRandom.current().nextInt(matches.elements().size())));
+        }
+
+        @Override
+        public RL exactly(int count, Predicate<? super E> predicate) {
+            var expectedCount = Validation.exactCount(count);
+            Validation.callback(predicate, "predicate");
+            return exactlyMatching(expectedCount, null, predicate);
+        }
+
+        @Override
+        public RL exactly(
+                int count, String description, Predicate<? super E> predicate) {
+            var expectedCount = Validation.exactCount(count);
+            Validation.predicateDescription(description);
+            Validation.callback(predicate, "predicate");
+            return exactlyMatching(expectedCount, description, predicate);
+        }
+
+        private RL exactlyMatching(
+                int count, String description, Predicate<? super E> predicate) {
+            return executeList("exactly", actual -> {
+                assertCollectionReady(actual);
+                var matches = CollectionSupport.matches(actual, predicate);
+                CollectionSupport.requireExactly("exactly", actual, matches, count, description);
+                return Evaluation.fixed(CollectionSupport.unmodifiableSnapshot(matches.elements()));
+            });
+        }
+
+        @Override
+        public <V> RL exactly(
+                int count, Function<? super E, ? extends V> extractor, V expected) {
+            var expectedCount = Validation.exactCount(count);
+            Validation.callback(extractor, "extractor");
+            return executeList("exactly", actual -> {
+                assertCollectionReady(actual);
+                var matches = CollectionSupport.matches(actual, expected, extractor);
+                CollectionSupport.requireExactly("exactly", actual, matches, expectedCount, null);
+                return Evaluation.fixed(CollectionSupport.unmodifiableSnapshot(matches.elements()));
+            });
+        }
+
+        private void assertCollectionReady(C actual) {
+            AssertJSupport.assertNotNull(actual);
+        }
+    }
+
+    private static final class ThrowingCollectionFacade<E, C extends Collection<E>>
+            extends CollectionFacade<E, C, C, E, List<E>> implements CollectionAwait<E, C> {
+        ThrowingCollectionFacade(AwaitSpec<C> spec) {
+            super(spec);
+        }
+
+        @Override
+        C execute(String terminalName, Terminal<C, C> terminal) {
+            return PollingCore.await(spec, terminalName, terminal);
+        }
+
+        @Override
+        E executeElement(String terminalName, Terminal<C, E> terminal) {
+            return PollingCore.await(spec, terminalName, terminal);
+        }
+
+        @Override
+        List<E> executeList(String terminalName, Terminal<C, List<E>> terminal) {
+            return PollingCore.await(spec, terminalName, terminal);
+        }
+
+        @Override
+        public CollectionTerminals<E, C, C, E, List<E>> as(String description) {
+            return new ThrowingCollectionFacade<>(spec.describedAs(
+                    Validation.literalDescription(description)));
+        }
+
+        @Override
+        public CollectionTerminals<E, C, C, E, List<E>> as(
+                String format, Object... args) {
+            return new ThrowingCollectionFacade<>(spec.describedAs(
+                    Validation.formattedDescription(format, args)));
+        }
+    }
+
+    private static final class ResultCollectionFacade<E, C extends Collection<E>>
+            extends CollectionFacade<
+                    E, C, AwaitResult<C>, AwaitResult<E>, AwaitResult<List<E>>>
+            implements TryCollectionAwait<E, C> {
+        ResultCollectionFacade(AwaitSpec<C> spec) {
+            super(spec);
+        }
+
+        @Override
+        AwaitResult<C> execute(String terminalName, Terminal<C, C> terminal) {
+            return PollingCore.tryAwait(spec, terminalName, terminal);
+        }
+
+        @Override
+        AwaitResult<E> executeElement(String terminalName, Terminal<C, E> terminal) {
+            return PollingCore.tryAwait(spec, terminalName, terminal);
+        }
+
+        @Override
+        AwaitResult<List<E>> executeList(String terminalName, Terminal<C, List<E>> terminal) {
             return PollingCore.tryAwait(spec, terminalName, terminal);
         }
     }

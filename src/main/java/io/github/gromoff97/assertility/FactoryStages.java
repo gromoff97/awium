@@ -3,16 +3,20 @@ package io.github.gromoff97.assertility;
 import io.github.gromoff97.assertility.api.AwaitFactory;
 import io.github.gromoff97.assertility.api.BooleanAwait;
 import io.github.gromoff97.assertility.api.ComparableAwait;
+import io.github.gromoff97.assertility.api.CollectionAwait;
 import io.github.gromoff97.assertility.api.ObjectAwait;
 import io.github.gromoff97.assertility.api.OptionalAwait;
 import io.github.gromoff97.assertility.api.StringAwait;
 import io.github.gromoff97.assertility.api.TryAwaitFactory;
 import io.github.gromoff97.assertility.api.TryBooleanAwait;
 import io.github.gromoff97.assertility.api.TryComparableAwait;
+import io.github.gromoff97.assertility.api.TryCollectionAwait;
 import io.github.gromoff97.assertility.api.TryObjectAwait;
 import io.github.gromoff97.assertility.api.TryOptionalAwait;
 import io.github.gromoff97.assertility.api.TryStringAwait;
 import org.awaitility.core.ConditionFactory;
+
+import java.util.Collection;
 
 final class FactoryStages {
     private FactoryStages() {
@@ -49,6 +53,12 @@ final class FactoryStages {
         }
 
         @Override
+        public <E, C extends Collection<E>> CollectionAwait<E, C> until(
+                AwaitSources.CollectionSource<E, C> source) {
+            return Facades.collection(new AwaitSpec<>(factory, source, null));
+        }
+
+        @Override
         public <T> ObjectAwait<T> until(AwaitSources.Source<T> source) {
             return Facades.object(new AwaitSpec<>(factory, source, null));
         }
@@ -74,6 +84,12 @@ final class FactoryStages {
         @Override
         public <T> TryOptionalAwait<T> until(AwaitSources.OptionalSource<T> source) {
             return Facades.tryOptional(new AwaitSpec<>(factory, source, null));
+        }
+
+        @Override
+        public <E, C extends Collection<E>> TryCollectionAwait<E, C> until(
+                AwaitSources.CollectionSource<E, C> source) {
+            return Facades.tryCollection(new AwaitSpec<>(factory, source, null));
         }
 
         @Override

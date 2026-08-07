@@ -46,4 +46,18 @@ final class Validation {
         }
         return copy;
     }
+
+    static int size(int size) {
+        if (size < 0) {
+            throw new IllegalArgumentException("size must be non-negative");
+        }
+        return size;
+    }
+
+    static int exactCount(int count) {
+        if (count < 2) {
+            throw new IllegalArgumentException("exactly count must be at least 2");
+        }
+        return count;
+    }
 }
