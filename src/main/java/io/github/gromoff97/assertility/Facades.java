@@ -10,6 +10,8 @@ import io.github.gromoff97.assertility.api.ObjectAwait;
 import io.github.gromoff97.assertility.api.ObjectTerminals;
 import io.github.gromoff97.assertility.api.OptionalAwait;
 import io.github.gromoff97.assertility.api.OptionalTerminals;
+import io.github.gromoff97.assertility.api.SequencedCollectionAwait;
+import io.github.gromoff97.assertility.api.SequencedCollectionTerminals;
 import io.github.gromoff97.assertility.api.StringAwait;
 import io.github.gromoff97.assertility.api.StringTerminals;
 import io.github.gromoff97.assertility.api.TryBooleanAwait;
@@ -17,11 +19,14 @@ import io.github.gromoff97.assertility.api.TryComparableAwait;
 import io.github.gromoff97.assertility.api.TryCollectionAwait;
 import io.github.gromoff97.assertility.api.TryObjectAwait;
 import io.github.gromoff97.assertility.api.TryOptionalAwait;
+import io.github.gromoff97.assertility.api.TrySequencedCollectionAwait;
 import io.github.gromoff97.assertility.api.TryStringAwait;
 
 import java.util.Collection;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.SequencedCollection;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -81,6 +86,16 @@ final class Facades {
     static <E, C extends Collection<E>> TryCollectionAwait<E, C> tryCollection(
             AwaitSpec<C> spec) {
         return new ResultCollectionFacade<>(spec);
+    }
+
+    static <E, C extends SequencedCollection<E>> SequencedCollectionAwait<E, C>
+            sequencedCollection(AwaitSpec<C> spec) {
+        return new ThrowingSequencedCollectionFacade<>(spec);
+    }
+
+    static <E, C extends SequencedCollection<E>> TrySequencedCollectionAwait<E, C>
+            trySequencedCollection(AwaitSpec<C> spec) {
+        return new ResultSequencedCollectionFacade<>(spec);
     }
 
     private abstract static class ObjectFacade<T, R> implements ObjectTerminals<T, R> {
@@ -785,7 +800,123 @@ final class Facades {
             });
         }
 
-        private void assertCollectionReady(C actual) {
+        @Override
+        public RC all(Predicate<? super E> predicate) {
+            Validation.callback(predicate, "predicate");
+            return allMatching(null, predicate);
+        }
+
+        @Override
+        public RC all(String description, Predicate<? super E> predicate) {
+            Validation.predicateDescription(description);
+            Validation.callback(predicate, "predicate");
+            return allMatching(description, predicate);
+        }
+
+        private RC allMatching(String description, Predicate<? super E> predicate) {
+            return execute("all", actual -> {
+                assertCollectionReady(actual);
+                var matches = CollectionSupport.matches(actual, predicate);
+                CollectionSupport.requireAll(actual, matches, description);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public <V> RC all(Function<? super E, ? extends V> extractor, V expected) {
+            Validation.callback(extractor, "extractor");
+            return execute("all", actual -> {
+                assertCollectionReady(actual);
+                var matches = CollectionSupport.matches(actual, expected, extractor);
+                CollectionSupport.requireAll(actual, matches, null);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public RC none(Predicate<? super E> predicate) {
+            Validation.callback(predicate, "predicate");
+            return noneMatching(null, predicate);
+        }
+
+        @Override
+        public RC none(String description, Predicate<? super E> predicate) {
+            Validation.predicateDescription(description);
+            Validation.callback(predicate, "predicate");
+            return noneMatching(description, predicate);
+        }
+
+        private RC noneMatching(String description, Predicate<? super E> predicate) {
+            return execute("none", actual -> {
+                assertCollectionReady(actual);
+                var matches = CollectionSupport.matches(actual, predicate);
+                CollectionSupport.requireNone(actual, matches, description);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public <V> RC none(Function<? super E, ? extends V> extractor, V expected) {
+            Validation.callback(extractor, "extractor");
+            return execute("none", actual -> {
+                assertCollectionReady(actual);
+                var matches = CollectionSupport.matches(actual, expected, extractor);
+                CollectionSupport.requireNone(actual, matches, null);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public RC contains(E... expected) {
+            var values = Validation.values(expected, "expected");
+            return execute("contains", actual -> {
+                assertCollectionReady(actual);
+                CollectionSupport.assertContains(actual, Arrays.asList(values));
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public RC containsAll(Iterable<? extends E> expected) {
+            var values = Validation.iterable(expected, "expected");
+            return execute("containsAll", actual -> {
+                assertCollectionReady(actual);
+                CollectionSupport.assertContains(actual, values);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public RC doesNotContain(E... unexpected) {
+            var values = Validation.values(unexpected, "unexpected");
+            return execute("doesNotContain", actual -> {
+                assertCollectionReady(actual);
+                CollectionSupport.assertDoesNotContain(actual, Arrays.asList(values));
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public RC containsExactlyInAnyOrder(E... expected) {
+            var values = Validation.values(expected, "expected");
+            return execute("containsExactlyInAnyOrder", actual -> {
+                assertCollectionReady(actual);
+                CollectionSupport.assertExactlyInAnyOrder(actual, Arrays.asList(values));
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public RC containsExactlyInAnyOrderElementsOf(Iterable<? extends E> expected) {
+            var values = Validation.iterable(expected, "expected");
+            return execute("containsExactlyInAnyOrderElementsOf", actual -> {
+                assertCollectionReady(actual);
+                CollectionSupport.assertExactlyInAnyOrder(actual, values);
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        final void assertCollectionReady(C actual) {
             AssertJSupport.assertNotNull(actual);
         }
     }
@@ -830,6 +961,97 @@ final class Facades {
                     E, C, AwaitResult<C>, AwaitResult<E>, AwaitResult<List<E>>>
             implements TryCollectionAwait<E, C> {
         ResultCollectionFacade(AwaitSpec<C> spec) {
+            super(spec);
+        }
+
+        @Override
+        AwaitResult<C> execute(String terminalName, Terminal<C, C> terminal) {
+            return PollingCore.tryAwait(spec, terminalName, terminal);
+        }
+
+        @Override
+        AwaitResult<E> executeElement(String terminalName, Terminal<C, E> terminal) {
+            return PollingCore.tryAwait(spec, terminalName, terminal);
+        }
+
+        @Override
+        AwaitResult<List<E>> executeList(String terminalName, Terminal<C, List<E>> terminal) {
+            return PollingCore.tryAwait(spec, terminalName, terminal);
+        }
+    }
+
+    private abstract static class SequencedCollectionFacade<
+            E, C extends SequencedCollection<E>, RC, RE, RL>
+            extends CollectionFacade<E, C, RC, RE, RL>
+            implements SequencedCollectionTerminals<E, C, RC, RE, RL> {
+        SequencedCollectionFacade(AwaitSpec<C> spec) {
+            super(spec);
+        }
+
+        @Override
+        public RC containsExactly(E... expected) {
+            var values = Validation.values(expected, "expected");
+            return execute("containsExactly", actual -> {
+                assertCollectionReady(actual);
+                CollectionSupport.assertExactlyInOrder(actual, Arrays.asList(values));
+                return Evaluation.fixed(actual);
+            });
+        }
+
+        @Override
+        public RC containsExactlyElementsOf(Iterable<? extends E> expected) {
+            var values = Validation.iterable(expected, "expected");
+            return execute("containsExactlyElementsOf", actual -> {
+                assertCollectionReady(actual);
+                CollectionSupport.assertExactlyInOrder(actual, values);
+                return Evaluation.fixed(actual);
+            });
+        }
+    }
+
+    private static final class ThrowingSequencedCollectionFacade<
+            E, C extends SequencedCollection<E>>
+            extends SequencedCollectionFacade<E, C, C, E, List<E>>
+            implements SequencedCollectionAwait<E, C> {
+        ThrowingSequencedCollectionFacade(AwaitSpec<C> spec) {
+            super(spec);
+        }
+
+        @Override
+        C execute(String terminalName, Terminal<C, C> terminal) {
+            return PollingCore.await(spec, terminalName, terminal);
+        }
+
+        @Override
+        E executeElement(String terminalName, Terminal<C, E> terminal) {
+            return PollingCore.await(spec, terminalName, terminal);
+        }
+
+        @Override
+        List<E> executeList(String terminalName, Terminal<C, List<E>> terminal) {
+            return PollingCore.await(spec, terminalName, terminal);
+        }
+
+        @Override
+        public SequencedCollectionTerminals<E, C, C, E, List<E>> as(String description) {
+            return new ThrowingSequencedCollectionFacade<>(spec.describedAs(
+                    Validation.literalDescription(description)));
+        }
+
+        @Override
+        public SequencedCollectionTerminals<E, C, C, E, List<E>> as(
+                String format, Object... args) {
+            return new ThrowingSequencedCollectionFacade<>(spec.describedAs(
+                    Validation.formattedDescription(format, args)));
+        }
+    }
+
+    private static final class ResultSequencedCollectionFacade<
+            E, C extends SequencedCollection<E>>
+            extends SequencedCollectionFacade<
+                    E, C, AwaitResult<C>, AwaitResult<E>, AwaitResult<List<E>>>
+            implements TrySequencedCollectionAwait<E, C> {
+        ResultSequencedCollectionFacade(AwaitSpec<C> spec) {
             super(spec);
         }
 

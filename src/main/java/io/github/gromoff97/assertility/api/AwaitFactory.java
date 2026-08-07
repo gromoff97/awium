@@ -12,6 +12,9 @@ public interface AwaitFactory {
 
     <T> OptionalAwait<T> until(AwaitSources.OptionalSource<T> source);
 
+    <E, C extends java.util.SequencedCollection<E>> SequencedCollectionAwait<E, C> until(
+            AwaitSources.SequencedCollectionSource<E, C> source);
+
     <E, C extends java.util.Collection<E>> CollectionAwait<E, C> until(
             AwaitSources.CollectionSource<E, C> source);
 

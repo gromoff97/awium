@@ -2,6 +2,9 @@ package io.github.gromoff97.assertility;
 
 import org.awaitility.core.ConditionFactory;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 final class Validation {
@@ -59,5 +62,19 @@ final class Validation {
             throw new IllegalArgumentException("exactly count must be at least 2");
         }
         return count;
+    }
+
+    static <E> E[] values(E[] values, String name) {
+        Objects.requireNonNull(values, name);
+        return values.clone();
+    }
+
+    static <E> List<E> iterable(Iterable<? extends E> values, String name) {
+        Objects.requireNonNull(values, name);
+        var snapshot = new ArrayList<E>();
+        for (var value : values) {
+            snapshot.add(value);
+        }
+        return Collections.unmodifiableList(snapshot);
     }
 }

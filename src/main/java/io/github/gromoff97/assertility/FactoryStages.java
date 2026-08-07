@@ -6,6 +6,7 @@ import io.github.gromoff97.assertility.api.ComparableAwait;
 import io.github.gromoff97.assertility.api.CollectionAwait;
 import io.github.gromoff97.assertility.api.ObjectAwait;
 import io.github.gromoff97.assertility.api.OptionalAwait;
+import io.github.gromoff97.assertility.api.SequencedCollectionAwait;
 import io.github.gromoff97.assertility.api.StringAwait;
 import io.github.gromoff97.assertility.api.TryAwaitFactory;
 import io.github.gromoff97.assertility.api.TryBooleanAwait;
@@ -13,10 +14,12 @@ import io.github.gromoff97.assertility.api.TryComparableAwait;
 import io.github.gromoff97.assertility.api.TryCollectionAwait;
 import io.github.gromoff97.assertility.api.TryObjectAwait;
 import io.github.gromoff97.assertility.api.TryOptionalAwait;
+import io.github.gromoff97.assertility.api.TrySequencedCollectionAwait;
 import io.github.gromoff97.assertility.api.TryStringAwait;
 import org.awaitility.core.ConditionFactory;
 
 import java.util.Collection;
+import java.util.SequencedCollection;
 
 final class FactoryStages {
     private FactoryStages() {
@@ -53,6 +56,12 @@ final class FactoryStages {
         }
 
         @Override
+        public <E, C extends SequencedCollection<E>> SequencedCollectionAwait<E, C> until(
+                AwaitSources.SequencedCollectionSource<E, C> source) {
+            return Facades.sequencedCollection(new AwaitSpec<>(factory, source, null));
+        }
+
+        @Override
         public <E, C extends Collection<E>> CollectionAwait<E, C> until(
                 AwaitSources.CollectionSource<E, C> source) {
             return Facades.collection(new AwaitSpec<>(factory, source, null));
@@ -84,6 +93,12 @@ final class FactoryStages {
         @Override
         public <T> TryOptionalAwait<T> until(AwaitSources.OptionalSource<T> source) {
             return Facades.tryOptional(new AwaitSpec<>(factory, source, null));
+        }
+
+        @Override
+        public <E, C extends SequencedCollection<E>> TrySequencedCollectionAwait<E, C> until(
+                AwaitSources.SequencedCollectionSource<E, C> source) {
+            return Facades.trySequencedCollection(new AwaitSpec<>(factory, source, null));
         }
 
         @Override

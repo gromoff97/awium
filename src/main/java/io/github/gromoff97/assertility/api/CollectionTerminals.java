@@ -41,4 +41,26 @@ public interface CollectionTerminals<E, C extends Collection<E>, RC, RE, RL>
     RL exactly(int count, String description, Predicate<? super E> predicate);
 
     <V> RL exactly(int count, Function<? super E, ? extends V> extractor, V expected);
+
+    RC all(Predicate<? super E> predicate);
+
+    RC all(String description, Predicate<? super E> predicate);
+
+    <V> RC all(Function<? super E, ? extends V> extractor, V expected);
+
+    RC none(Predicate<? super E> predicate);
+
+    RC none(String description, Predicate<? super E> predicate);
+
+    <V> RC none(Function<? super E, ? extends V> extractor, V expected);
+
+    RC contains(E... expected);
+
+    RC containsAll(Iterable<? extends E> expected);
+
+    RC doesNotContain(E... unexpected);
+
+    RC containsExactlyInAnyOrder(E... expected);
+
+    RC containsExactlyInAnyOrderElementsOf(Iterable<? extends E> expected);
 }

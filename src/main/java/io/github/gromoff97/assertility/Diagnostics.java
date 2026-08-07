@@ -53,6 +53,29 @@ final class Diagnostics {
         return new AssertionError(message.toString());
     }
 
+    static AssertionError quantifierFailure(
+            String quantifier,
+            Collection<?> source,
+            CollectionSupport.Matches<?> matches,
+            String description) {
+        var message = new StringBuilder(quantifier)
+                .append(" quantifier did not match")
+                .append(System.lineSeparator())
+                .append("source size: ").append(source.size())
+                .append(System.lineSeparator())
+                .append("matching elements: ").append(matches.elements().size());
+        if (description != null) {
+            message.append(System.lineSeparator())
+                    .append("description: ").append(description);
+        }
+        var relevant = "all".equals(quantifier)
+                ? matches.nonMatches()
+                : matches.elements();
+        appendRenderedSample(message, relevant);
+        appendComparisonFailures(message, matches.comparisonFailures());
+        return new AssertionError(message.toString());
+    }
+
     private static void appendRenderedSample(StringBuilder message, List<?> relevant) {
         var sampleSize = Math.min(10, relevant.size());
         message.append(System.lineSeparator()).append("sample elements:");

@@ -6,6 +6,7 @@ import io.github.gromoff97.assertility.api.ComparableAwait;
 import io.github.gromoff97.assertility.api.CollectionAwait;
 import io.github.gromoff97.assertility.api.ObjectAwait;
 import io.github.gromoff97.assertility.api.OptionalAwait;
+import io.github.gromoff97.assertility.api.SequencedCollectionAwait;
 import io.github.gromoff97.assertility.api.StringAwait;
 import io.github.gromoff97.assertility.api.TryAwaitFactory;
 import io.github.gromoff97.assertility.api.TryBooleanAwait;
@@ -13,11 +14,13 @@ import io.github.gromoff97.assertility.api.TryComparableAwait;
 import io.github.gromoff97.assertility.api.TryCollectionAwait;
 import io.github.gromoff97.assertility.api.TryObjectAwait;
 import io.github.gromoff97.assertility.api.TryOptionalAwait;
+import io.github.gromoff97.assertility.api.TrySequencedCollectionAwait;
 import io.github.gromoff97.assertility.api.TryStringAwait;
 import org.awaitility.Awaitility;
 import org.awaitility.core.ConditionFactory;
 
 import java.util.Collection;
+import java.util.SequencedCollection;
 
 public final class Assertility {
     private Assertility() {
@@ -38,6 +41,11 @@ public final class Assertility {
 
     public static <T> OptionalAwait<T> awaitUntil(AwaitSources.OptionalSource<T> source) {
         return Facades.optional(new AwaitSpec<>(Awaitility.await(), source, null));
+    }
+
+    public static <E, C extends SequencedCollection<E>> SequencedCollectionAwait<E, C>
+            awaitUntil(AwaitSources.SequencedCollectionSource<E, C> source) {
+        return Facades.sequencedCollection(new AwaitSpec<>(Awaitility.await(), source, null));
     }
 
     public static <E, C extends Collection<E>> CollectionAwait<E, C> awaitUntil(
@@ -64,6 +72,11 @@ public final class Assertility {
 
     public static <T> TryOptionalAwait<T> tryAwaitUntil(AwaitSources.OptionalSource<T> source) {
         return Facades.tryOptional(new AwaitSpec<>(Awaitility.await(), source, null));
+    }
+
+    public static <E, C extends SequencedCollection<E>> TrySequencedCollectionAwait<E, C>
+            tryAwaitUntil(AwaitSources.SequencedCollectionSource<E, C> source) {
+        return Facades.trySequencedCollection(new AwaitSpec<>(Awaitility.await(), source, null));
     }
 
     public static <E, C extends Collection<E>> TryCollectionAwait<E, C> tryAwaitUntil(
