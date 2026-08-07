@@ -6,6 +6,10 @@ import io.github.gromoff97.assertility.api.ComparableAwait;
 import io.github.gromoff97.assertility.api.ComparableTerminals;
 import io.github.gromoff97.assertility.api.CollectionAwait;
 import io.github.gromoff97.assertility.api.CollectionTerminals;
+import io.github.gromoff97.assertility.api.ExecutableAwait;
+import io.github.gromoff97.assertility.api.ExecutableTerminals;
+import io.github.gromoff97.assertility.api.FutureAwait;
+import io.github.gromoff97.assertility.api.FutureTerminals;
 import io.github.gromoff97.assertility.api.MapAwait;
 import io.github.gromoff97.assertility.api.MapTerminals;
 import io.github.gromoff97.assertility.api.ObjectAwait;
@@ -19,6 +23,8 @@ import io.github.gromoff97.assertility.api.StringTerminals;
 import io.github.gromoff97.assertility.api.TryBooleanAwait;
 import io.github.gromoff97.assertility.api.TryComparableAwait;
 import io.github.gromoff97.assertility.api.TryCollectionAwait;
+import io.github.gromoff97.assertility.api.TryExecutableAwait;
+import io.github.gromoff97.assertility.api.TryFutureAwait;
 import io.github.gromoff97.assertility.api.TryMapAwait;
 import io.github.gromoff97.assertility.api.TryObjectAwait;
 import io.github.gromoff97.assertility.api.TryOptionalAwait;
@@ -32,6 +38,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.SequencedCollection;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -108,6 +115,26 @@ final class Facades {
 
     static <K, V, M extends Map<K, V>> TryMapAwait<K, V, M> tryMap(AwaitSpec<M> spec) {
         return new ResultMapFacade<>(spec);
+    }
+
+    static <F extends Future<?>> FutureAwait<F> future(AwaitSpec<F> spec) {
+        return new ThrowingFutureFacade<>(spec);
+    }
+
+    static <F extends Future<?>> TryFutureAwait<F> tryFuture(AwaitSpec<F> spec) {
+        return new ResultFutureFacade<>(spec);
+    }
+
+    static ExecutableAwait executable(
+            org.awaitility.core.ConditionFactory factory, AwaitSources.Executable source) {
+        Validation.callback(source, "source");
+        return new ThrowingExecutableFacade(new AwaitSpec<>(factory, () -> source, null));
+    }
+
+    static TryExecutableAwait tryExecutable(
+            org.awaitility.core.ConditionFactory factory, AwaitSources.Executable source) {
+        Validation.callback(source, "source");
+        return new ResultExecutableFacade(new AwaitSpec<>(factory, () -> source, null));
     }
 
     private abstract static class ObjectFacade<T, R> implements ObjectTerminals<T, R> {
@@ -1253,5 +1280,111 @@ final class Facades {
         AwaitResult<M> execute(String terminalName, Terminal<M, M> terminal) {
             return PollingCore.tryAwait(spec, terminalName, terminal);
         }
+    }
+
+    private abstract static class FutureFacade<F extends Future<?>, R>
+            extends ObjectFacade<F, R> implements FutureTerminals<F, R> {
+        FutureFacade(AwaitSpec<F> spec) {
+            super(spec);
+        }
+
+        @Override
+        public R isDone() {
+            return execute("isDone", actual -> {
+                AssertJSupport.assertNotNull(actual);
+                assertThat(actual.isDone()).isTrue();
+                return Evaluation.fixed(actual);
+            });
+        }
+    }
+
+    private static final class ThrowingFutureFacade<F extends Future<?>>
+            extends FutureFacade<F, F> implements FutureAwait<F> {
+        ThrowingFutureFacade(AwaitSpec<F> spec) {
+            super(spec);
+        }
+
+        @Override
+        F execute(String terminalName, Terminal<F, F> terminal) {
+            return PollingCore.await(spec, terminalName, terminal);
+        }
+
+        @Override
+        public FutureTerminals<F, F> as(String description) {
+            return new ThrowingFutureFacade<>(spec.describedAs(
+                    Validation.literalDescription(description)));
+        }
+
+        @Override
+        public FutureTerminals<F, F> as(String format, Object... args) {
+            return new ThrowingFutureFacade<>(spec.describedAs(
+                    Validation.formattedDescription(format, args)));
+        }
+    }
+
+    private static final class ResultFutureFacade<F extends Future<?>>
+            extends FutureFacade<F, AwaitResult<F>> implements TryFutureAwait<F> {
+        ResultFutureFacade(AwaitSpec<F> spec) {
+            super(spec);
+        }
+
+        @Override
+        AwaitResult<F> execute(String terminalName, Terminal<F, F> terminal) {
+            return PollingCore.tryAwait(spec, terminalName, terminal);
+        }
+    }
+
+    private static final class ThrowingExecutableFacade implements ExecutableAwait {
+        private final AwaitSpec<AwaitSources.Executable> spec;
+
+        ThrowingExecutableFacade(AwaitSpec<AwaitSources.Executable> spec) {
+            this.spec = spec;
+        }
+
+        @Override
+        public void doesNotThrowAnyException() {
+            PollingCore.await(spec, "doesNotThrowAnyException", executableTerminal());
+        }
+
+        @Override
+        public ExecutableTerminals as(String description) {
+            return new ThrowingExecutableFacade(spec.describedAs(
+                    Validation.literalDescription(description)));
+        }
+
+        @Override
+        public ExecutableTerminals as(String format, Object... args) {
+            return new ThrowingExecutableFacade(spec.describedAs(
+                    Validation.formattedDescription(format, args)));
+        }
+    }
+
+    private static final class ResultExecutableFacade implements TryExecutableAwait {
+        private final AwaitSpec<AwaitSources.Executable> spec;
+
+        ResultExecutableFacade(AwaitSpec<AwaitSources.Executable> spec) {
+            this.spec = spec;
+        }
+
+        @Override
+        public AwaitResult<Void> doesNotThrowAnyException() {
+            return PollingCore.tryAwait(
+                    spec, "doesNotThrowAnyException", executableTerminal());
+        }
+    }
+
+    private static Terminal<AwaitSources.Executable, Void> executableTerminal() {
+        return executable -> {
+            try {
+                executable.run();
+            } catch (InterruptedException interruption) {
+                Thread.currentThread().interrupt();
+                throw new AwaitExecutionException(interruption);
+            } catch (Exception | AssertionError retryable) {
+                throw new AssertionError(
+                        "executable threw before completing successfully", retryable);
+            }
+            return Evaluation.fixed(null);
+        };
     }
 }

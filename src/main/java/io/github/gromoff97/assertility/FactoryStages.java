@@ -4,6 +4,8 @@ import io.github.gromoff97.assertility.api.AwaitFactory;
 import io.github.gromoff97.assertility.api.BooleanAwait;
 import io.github.gromoff97.assertility.api.ComparableAwait;
 import io.github.gromoff97.assertility.api.CollectionAwait;
+import io.github.gromoff97.assertility.api.ExecutableAwait;
+import io.github.gromoff97.assertility.api.FutureAwait;
 import io.github.gromoff97.assertility.api.MapAwait;
 import io.github.gromoff97.assertility.api.ObjectAwait;
 import io.github.gromoff97.assertility.api.OptionalAwait;
@@ -13,6 +15,8 @@ import io.github.gromoff97.assertility.api.TryAwaitFactory;
 import io.github.gromoff97.assertility.api.TryBooleanAwait;
 import io.github.gromoff97.assertility.api.TryComparableAwait;
 import io.github.gromoff97.assertility.api.TryCollectionAwait;
+import io.github.gromoff97.assertility.api.TryExecutableAwait;
+import io.github.gromoff97.assertility.api.TryFutureAwait;
 import io.github.gromoff97.assertility.api.TryMapAwait;
 import io.github.gromoff97.assertility.api.TryObjectAwait;
 import io.github.gromoff97.assertility.api.TryOptionalAwait;
@@ -23,6 +27,7 @@ import org.awaitility.core.ConditionFactory;
 import java.util.Collection;
 import java.util.Map;
 import java.util.SequencedCollection;
+import java.util.concurrent.Future;
 
 final class FactoryStages {
     private FactoryStages() {
@@ -77,6 +82,17 @@ final class FactoryStages {
         }
 
         @Override
+        public <F extends Future<?>> FutureAwait<F> until(
+                AwaitSources.FutureSource<F> source) {
+            return Facades.future(new AwaitSpec<>(factory, source, null));
+        }
+
+        @Override
+        public ExecutableAwait until(AwaitSources.Executable source) {
+            return Facades.executable(factory, source);
+        }
+
+        @Override
         public <T> ObjectAwait<T> until(AwaitSources.Source<T> source) {
             return Facades.object(new AwaitSpec<>(factory, source, null));
         }
@@ -120,6 +136,17 @@ final class FactoryStages {
         public <K, V, M extends Map<K, V>> TryMapAwait<K, V, M> until(
                 AwaitSources.MapSource<K, V, M> source) {
             return Facades.tryMap(new AwaitSpec<>(factory, source, null));
+        }
+
+        @Override
+        public <F extends Future<?>> TryFutureAwait<F> until(
+                AwaitSources.FutureSource<F> source) {
+            return Facades.tryFuture(new AwaitSpec<>(factory, source, null));
+        }
+
+        @Override
+        public TryExecutableAwait until(AwaitSources.Executable source) {
+            return Facades.tryExecutable(factory, source);
         }
 
         @Override

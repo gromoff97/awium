@@ -4,6 +4,8 @@ import io.github.gromoff97.assertility.api.AwaitFactory;
 import io.github.gromoff97.assertility.api.BooleanAwait;
 import io.github.gromoff97.assertility.api.ComparableAwait;
 import io.github.gromoff97.assertility.api.CollectionAwait;
+import io.github.gromoff97.assertility.api.ExecutableAwait;
+import io.github.gromoff97.assertility.api.FutureAwait;
 import io.github.gromoff97.assertility.api.MapAwait;
 import io.github.gromoff97.assertility.api.ObjectAwait;
 import io.github.gromoff97.assertility.api.OptionalAwait;
@@ -13,6 +15,8 @@ import io.github.gromoff97.assertility.api.TryAwaitFactory;
 import io.github.gromoff97.assertility.api.TryBooleanAwait;
 import io.github.gromoff97.assertility.api.TryComparableAwait;
 import io.github.gromoff97.assertility.api.TryCollectionAwait;
+import io.github.gromoff97.assertility.api.TryExecutableAwait;
+import io.github.gromoff97.assertility.api.TryFutureAwait;
 import io.github.gromoff97.assertility.api.TryMapAwait;
 import io.github.gromoff97.assertility.api.TryObjectAwait;
 import io.github.gromoff97.assertility.api.TryOptionalAwait;
@@ -24,6 +28,7 @@ import org.awaitility.core.ConditionFactory;
 import java.util.Collection;
 import java.util.Map;
 import java.util.SequencedCollection;
+import java.util.concurrent.Future;
 
 public final class Assertility {
     private Assertility() {
@@ -61,6 +66,15 @@ public final class Assertility {
         return Facades.map(new AwaitSpec<>(Awaitility.await(), source, null));
     }
 
+    public static <F extends Future<?>> FutureAwait<F> awaitUntil(
+            AwaitSources.FutureSource<F> source) {
+        return Facades.future(new AwaitSpec<>(Awaitility.await(), source, null));
+    }
+
+    public static ExecutableAwait awaitUntil(AwaitSources.Executable source) {
+        return Facades.executable(Awaitility.await(), source);
+    }
+
     public static <T> ObjectAwait<T> awaitUntil(AwaitSources.Source<T> source) {
         return Facades.object(new AwaitSpec<>(Awaitility.await(), source, null));
     }
@@ -95,6 +109,15 @@ public final class Assertility {
     public static <K, V, M extends Map<K, V>> TryMapAwait<K, V, M> tryAwaitUntil(
             AwaitSources.MapSource<K, V, M> source) {
         return Facades.tryMap(new AwaitSpec<>(Awaitility.await(), source, null));
+    }
+
+    public static <F extends Future<?>> TryFutureAwait<F> tryAwaitUntil(
+            AwaitSources.FutureSource<F> source) {
+        return Facades.tryFuture(new AwaitSpec<>(Awaitility.await(), source, null));
+    }
+
+    public static TryExecutableAwait tryAwaitUntil(AwaitSources.Executable source) {
+        return Facades.tryExecutable(Awaitility.await(), source);
     }
 
     public static <T> TryObjectAwait<T> tryAwaitUntil(AwaitSources.Source<T> source) {

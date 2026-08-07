@@ -21,5 +21,10 @@ public interface TryAwaitFactory {
     <K, V, M extends java.util.Map<K, V>> TryMapAwait<K, V, M> until(
             AwaitSources.MapSource<K, V, M> source);
 
+    <F extends java.util.concurrent.Future<?>> TryFutureAwait<F> until(
+            AwaitSources.FutureSource<F> source);
+
+    TryExecutableAwait until(AwaitSources.Executable source);
+
     <T> TryObjectAwait<T> until(AwaitSources.Source<T> source);
 }

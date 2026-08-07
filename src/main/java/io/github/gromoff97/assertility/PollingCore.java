@@ -26,8 +26,20 @@ final class PollingCore {
         } catch (CallbackFailure callbackFailure) {
             throw callbackFailure.original();
         } catch (RuntimeException runtimeException) {
+            var interruption = findCause(runtimeException, InterruptedException.class);
+            if (interruption != null) {
+                Thread.currentThread().interrupt();
+                if (runtimeException instanceof AwaitExecutionException awaitExecutionException) {
+                    throw awaitExecutionException;
+                }
+                throw new AwaitExecutionException(interruption);
+            }
             throw runtimeException;
         } catch (Exception checkedException) {
+            if (checkedException instanceof InterruptedException interruption) {
+                Thread.currentThread().interrupt();
+                throw new AwaitExecutionException(interruption);
+            }
             throw new AwaitExecutionException(checkedException);
         }
 
