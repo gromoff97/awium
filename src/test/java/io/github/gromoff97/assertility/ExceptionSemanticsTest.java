@@ -79,12 +79,13 @@ class ExceptionSemanticsTest {
         var predicateFailure = new AssertionError("predicate defect");
         var extractorFailure = new AssertionError("extractor defect");
         var satisfiesCalls = new AtomicInteger();
+        var ignoreExceptions = TestFactories.fast().ignoreExceptions();
 
-        assertThatThrownBy(() -> await(TestFactories.fast()).until(() -> "ready")
+        assertThatThrownBy(() -> await(ignoreExceptions).until(() -> "ready")
                 .matches(value -> {
                     throw predicateFailure;
                 })).isSameAs(predicateFailure);
-        assertThatThrownBy(() -> await(TestFactories.fast()).until(() -> "ready")
+        assertThatThrownBy(() -> await(ignoreExceptions).until(() -> "ready")
                 .returns("READY", value -> {
                     throw extractorFailure;
                 })).isSameAs(extractorFailure);
@@ -97,6 +98,25 @@ class ExceptionSemanticsTest {
 
         assertThat(value).isEqualTo("ready");
         assertThat(satisfiesCalls).hasValue(3);
+    }
+
+    @Test
+    void sourceAndFatalErrorsPropagateUnchangedAcrossBothModes() {
+        var sourceAssertion = new AssertionError("source defect");
+        var fatal = new LinkageError("fatal defect");
+        AwaitSources.Source<String> assertionSource = () -> {
+            throw sourceAssertion;
+        };
+        AwaitSources.Source<String> fatalSource = () -> {
+            throw fatal;
+        };
+
+        assertThatThrownBy(() -> await(TestFactories.fast())
+                .until(assertionSource)
+                .isNotNull()).isSameAs(sourceAssertion);
+        assertThatThrownBy(() -> tryAwait(TestFactories.fast().ignoreExceptions())
+                .until(fatalSource)
+                .isNotNull()).isSameAs(fatal);
     }
 
     @Test

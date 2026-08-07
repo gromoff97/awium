@@ -14,30 +14,57 @@ final class PollingCore {
 
     static <T, R> R await(AwaitSpec<T> spec, String terminalName, Terminal<T, R> terminal) {
         var finalEvaluation = new AtomicReference<Evaluation<R>>();
+        var callbackFailure = new AtomicReference<CallbackFailure>();
+        var interruptionFailure = new AtomicReference<InterruptedException>();
+        var executionError = new AtomicReference<Error>();
         try {
             spec.factory().untilAsserted(() -> {
+                if (hasExternalFailure(
+                        callbackFailure, interruptionFailure, executionError)) {
+                    return;
+                }
+                final T actual;
                 try {
-                    var actual = spec.source().get();
+                    actual = spec.source().get();
+                } catch (Throwable failure) {
+                    throwClassifiedSourceFailure(
+                            failure, interruptionFailure, executionError);
+                    return;
+                }
+                try {
                     var evaluation = terminal.evaluate(actual);
                     finalEvaluation.set(evaluation);
+                } catch (CallbackFailure failure) {
+                    callbackFailure.compareAndSet(null, failure);
+                    throw failure;
                 } catch (Throwable failure) {
                     var interruption = findCause(failure, InterruptedException.class);
                     if (interruption != null) {
+                        interruptionFailure.compareAndSet(null, interruption);
                         throw new InterruptionSignal(interruption);
+                    }
+                    if (failure instanceof Error error
+                            && !(error instanceof AssertionError)) {
+                        executionError.compareAndSet(null, error);
+                        throw new ExecutionErrorSignal(error);
                     }
                     throw failure;
                 }
             });
         } catch (InterruptionSignal signal) {
             throw propagateInterruption(signal.interruption());
+        } catch (ExecutionErrorSignal signal) {
+            throw signal.error();
         } catch (ConditionTimeoutException | TerminalFailureException engineFailure) {
+            propagateExternalFailure(
+                    callbackFailure, interruptionFailure, executionError);
             var interruption = findCause(engineFailure, InterruptedException.class);
             if (interruption != null) {
                 throw propagateInterruption(interruption);
             }
             throw Diagnostics.awaitFailure(spec, terminalName, engineFailure);
-        } catch (CallbackFailure callbackFailure) {
-            throw callbackFailure.original();
+        } catch (CallbackFailure escapedCallbackFailure) {
+            throw escapedCallbackFailure.original();
         } catch (Error error) {
             throw error;
         } catch (RuntimeException runtimeException) {
@@ -57,11 +84,55 @@ final class PollingCore {
             throw new AwaitExecutionException(checkedException);
         }
 
+        propagateExternalFailure(callbackFailure, interruptionFailure, executionError);
         var evaluation = finalEvaluation.get();
         if (evaluation == null) {
             throw new IllegalStateException("Awaitility completed without a successful evaluation");
         }
         return evaluation.resolve();
+    }
+
+    private static void throwClassifiedSourceFailure(
+            Throwable failure,
+            AtomicReference<InterruptedException> interruptionFailure,
+            AtomicReference<Error> executionError) throws Throwable {
+        var interruption = findCause(failure, InterruptedException.class);
+        if (interruption != null) {
+            interruptionFailure.compareAndSet(null, interruption);
+            throw new InterruptionSignal(interruption);
+        }
+        if (failure instanceof Error error) {
+            executionError.compareAndSet(null, error);
+            throw new ExecutionErrorSignal(error);
+        }
+        throw failure;
+    }
+
+    private static boolean hasExternalFailure(
+            AtomicReference<CallbackFailure> callbackFailure,
+            AtomicReference<InterruptedException> interruptionFailure,
+            AtomicReference<Error> executionError) {
+        return callbackFailure.get() != null
+                || interruptionFailure.get() != null
+                || executionError.get() != null;
+    }
+
+    private static void propagateExternalFailure(
+            AtomicReference<CallbackFailure> callbackFailure,
+            AtomicReference<InterruptedException> interruptionFailure,
+            AtomicReference<Error> executionError) {
+        var interruption = interruptionFailure.get();
+        if (interruption != null) {
+            throw propagateInterruption(interruption);
+        }
+        var error = executionError.get();
+        if (error != null) {
+            throw error;
+        }
+        var callback = callbackFailure.get();
+        if (callback != null) {
+            throw callback.original();
+        }
     }
 
     static <T, R> AwaitResult<R> tryAwait(
@@ -103,6 +174,22 @@ final class PollingCore {
 
         private InterruptedException interruption() {
             return interruption;
+        }
+    }
+
+    private static final class ExecutionErrorSignal extends Error {
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        private final Error error;
+
+        private ExecutionErrorSignal(Error error) {
+            super(error);
+            this.error = error;
+        }
+
+        private Error error() {
+            return error;
         }
     }
 }
