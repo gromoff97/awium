@@ -34,7 +34,10 @@ class FactoryGrammarTest {
         assertTrue(isPrivate(constructors[0].getModifiers()));
         assertEquals(0, constructors[0].getParameterCount());
 
-        List<Method> methods = List.of(Assertility.class.getDeclaredMethods());
+        List<Method> methods = List.of(Assertility.class.getDeclaredMethods())
+                .stream()
+                .filter(method -> !method.isSynthetic())
+                .toList();
         assertEquals(5, methods.size());
         assertTrue(methods.stream().allMatch(method -> method.getName().equals("await")));
         assertTrue(methods.stream().allMatch(method -> isPublic(method.getModifiers())
