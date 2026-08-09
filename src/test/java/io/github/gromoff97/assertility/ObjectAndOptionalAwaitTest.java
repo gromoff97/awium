@@ -1,0 +1,128 @@
+package io.github.gromoff97.assertility;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.Test;
+
+class ObjectAndOptionalAwaitTest {
+
+    @Test
+    void objectTerminalsReturnPreservedAndConditionSelectedResults() {
+        Object actual = new Object();
+        Object preserved = Assertility.await(
+                (AwaitSources.Source<Object>) () -> actual)
+                .until(AwaitConditions.isNotNull);
+        Integer selected = Assertility.await(
+                (AwaitSources.Source<String>) () -> "value")
+                .until(AwaitConditions.<String, Integer>condition("length",
+                        value -> Evaluation.satisfied(value.length())));
+
+        assertSame(actual, preserved);
+        assertEquals(5, selected);
+    }
+
+    @Test
+    void optionalPresentUnwrapsTheObservedValue() {
+        Object value = new Object();
+
+        Object result = Assertility.await(
+                (AwaitSources.OptionalSource<Object>) () -> Optional.of(value))
+                .until(AwaitConditions.present);
+
+        assertSame(value, result);
+    }
+
+    @Test
+    void collectionAndMapStructuralTerminalsPreserveConcreteSources() {
+        ArrayList<String> list = new ArrayList<>(List.of("value"));
+        HashMap<String, Integer> map = new HashMap<>(Map.of("value", 1));
+        StructuralCondition structural = satisfiedStructural();
+
+        ArrayList<String> returnedList = Assertility.await(
+                (AwaitSources.SequencedCollectionSource<String,
+                        ArrayList<String>>) () -> list).until(structural);
+        HashMap<String, Integer> returnedMap = Assertility.await(
+                (AwaitSources.MapSource<String, Integer,
+                        HashMap<String, Integer>>) () -> map).until(structural);
+
+        assertSame(list, returnedList);
+        assertSame(map, returnedMap);
+    }
+
+    @Test
+    void reusableStageRetainsTheExactSourceAndStartsEachTerminalFresh() {
+        CyclingSource source = new CyclingSource();
+        FakeTime time = new FakeTime(0);
+        AwaitChain<String> chain = new AwaitChain<>(source, WaitConfig.defaults()
+                .withEvery(Duration.ofNanos(1)).withUpTo(Duration.ofNanos(10)),
+                time, time, new InterruptGuard(), new FailureFactory());
+        ObjectUntil<String> stage =
+                new ObjectStageAdapters.ObjectAfterUpToStage<>(chain);
+        Condition<String, String> evenObservation = AwaitConditions.condition(
+                "even observation", value -> Integer.parseInt(value.substring(1)) % 2 == 0
+                        ? Evaluation.satisfied(value)
+                        : Evaluation.unsatisfied("odd observation"));
+
+        assertSame(source, chain.source());
+        assertEquals("v2", stage.until(evenObservation));
+        assertEquals("v4", stage.until(evenObservation));
+        assertEquals(4, source.calls.get());
+    }
+
+    @Test
+    void collectionAndMapNullObservationsUseFacadeSpecificMismatch() {
+        StructuralCondition structural = satisfiedStructural();
+
+        AwaitTimeoutException collectionFailure = assertThrows(
+                AwaitTimeoutException.class,
+                () -> nullCollectionStage().until(structural));
+        AwaitTimeoutException mapFailure = assertThrows(AwaitTimeoutException.class,
+                () -> nullMapStage().until(structural));
+
+        assertTrue(collectionFailure.getMessage().contains("collection was null"));
+        assertTrue(mapFailure.getMessage().contains("map was null"));
+    }
+
+    private static CollectionUntil<String, List<String>> nullCollectionStage() {
+        FakeTime time = new FakeTime(0);
+        AwaitChain<List<String>> chain = new AwaitChain<>(() -> null,
+                WaitConfig.defaults().withEvery(Duration.ofNanos(1))
+                        .withUpTo(Duration.ofNanos(2)),
+                time, time, new InterruptGuard(), new FailureFactory());
+        return new CollectionStageAdapters.CollectionAfterUpToStage<>(chain);
+    }
+
+    private static MapUntil<String, String, Map<String, String>> nullMapStage() {
+        FakeTime time = new FakeTime(0);
+        AwaitChain<Map<String, String>> chain = new AwaitChain<>(() -> null,
+                WaitConfig.defaults().withEvery(Duration.ofNanos(1))
+                        .withUpTo(Duration.ofNanos(2)),
+                time, time, new InterruptGuard(), new FailureFactory());
+        return new MapStageAdapters.MapAfterUpToStage<>(chain);
+    }
+
+    private static StructuralCondition satisfiedStructural() {
+        return new StructuralCondition(new ConditionRuntime<>(
+                actual -> Evaluation.satisfied(actual),
+                () -> "structure to match", null));
+    }
+
+    private static final class CyclingSource implements AwaitSources.Source<String> {
+        private final AtomicInteger calls = new AtomicInteger();
+
+        @Override
+        public String get() {
+            return "v" + calls.incrementAndGet();
+        }
+    }
+}
