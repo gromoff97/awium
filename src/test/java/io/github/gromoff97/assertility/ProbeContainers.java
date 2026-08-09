@@ -2,10 +2,12 @@ package io.github.gromoff97.assertility;
 
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
+import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 final class ProbeContainers {
@@ -262,6 +264,171 @@ final class ProbeContainers {
                     return delegate.next();
                 }
             };
+        }
+    }
+
+    static final class EntryMap<K, V> extends AbstractMap<K, V> {
+        private final List<Entry<K, V>> entries;
+        RuntimeException sizeFailure;
+        RuntimeException isEmptyFailure;
+        RuntimeException entrySetFailure;
+        RuntimeException iteratorFailure;
+        RuntimeException nextFailure;
+        int failingNext;
+        int sizeCalls;
+        int isEmptyCalls;
+        int entrySetCalls;
+        int iteratorCalls;
+        int hasNextCalls;
+        int nextCalls;
+        int containsKeyCalls;
+        int getCalls;
+        int containsValueCalls;
+        int equalsCalls;
+        int hashCodeCalls;
+
+        EntryMap(List<Entry<K, V>> entries) {
+            this.entries = entries;
+        }
+
+        @Override
+        public int size() {
+            sizeCalls++;
+            if (sizeFailure != null) {
+                throw sizeFailure;
+            }
+            return entries.size();
+        }
+
+        @Override
+        public boolean isEmpty() {
+            isEmptyCalls++;
+            if (isEmptyFailure != null) {
+                throw isEmptyFailure;
+            }
+            return entries.isEmpty();
+        }
+
+        @Override
+        public Set<Entry<K, V>> entrySet() {
+            entrySetCalls++;
+            if (entrySetFailure != null) {
+                throw entrySetFailure;
+            }
+            return new AbstractSet<>() {
+                @Override
+                public Iterator<Entry<K, V>> iterator() {
+                    iteratorCalls++;
+                    if (iteratorFailure != null) {
+                        throw iteratorFailure;
+                    }
+                    Iterator<Entry<K, V>> delegate = entries.iterator();
+                    return new Iterator<>() {
+                        @Override
+                        public boolean hasNext() {
+                            hasNextCalls++;
+                            return delegate.hasNext();
+                        }
+
+                        @Override
+                        public Entry<K, V> next() {
+                            nextCalls++;
+                            if (nextFailure != null
+                                    && nextCalls == failingNext) {
+                                throw nextFailure;
+                            }
+                            return delegate.next();
+                        }
+                    };
+                }
+
+                @Override
+                public int size() {
+                    return entries.size();
+                }
+            };
+        }
+
+        @Override
+        public boolean containsKey(Object key) {
+            containsKeyCalls++;
+            throw new AssertionError("containsKey must not be called");
+        }
+
+        @Override
+        public V get(Object key) {
+            getCalls++;
+            throw new AssertionError("get must not be called");
+        }
+
+        @Override
+        public boolean containsValue(Object value) {
+            containsValueCalls++;
+            throw new AssertionError("containsValue must not be called");
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            equalsCalls++;
+            throw new AssertionError("equals must not be called");
+        }
+
+        @Override
+        public int hashCode() {
+            hashCodeCalls++;
+            throw new AssertionError("hashCode must not be called");
+        }
+
+        @Override
+        public String toString() {
+            return "entry map";
+        }
+    }
+
+    static final class ProbeEntry<K, V> implements Map.Entry<K, V> {
+        private final K key;
+        private final V value;
+        RuntimeException keyFailure;
+        RuntimeException valueFailure;
+        int keyCalls;
+        int valueCalls;
+
+        ProbeEntry(K key, V value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        @Override
+        public K getKey() {
+            keyCalls++;
+            if (keyFailure != null) {
+                throw keyFailure;
+            }
+            return key;
+        }
+
+        @Override
+        public V getValue() {
+            valueCalls++;
+            if (valueFailure != null) {
+                throw valueFailure;
+            }
+            return value;
+        }
+
+        @Override
+        public V setValue(V value) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            throw new AssertionError("entry equals must not be called");
+        }
+
+        @Override
+        public int hashCode() {
+            throw new AssertionError("entry hashCode must not be called");
         }
     }
 }

@@ -1,6 +1,7 @@
 package io.github.gromoff97.assertility;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.SequencedCollection;
@@ -169,6 +170,69 @@ public final class AwaitConditions {
                     Collection<? extends E> expected) {
         return CollectionConditions.doesNotContainExactlyInAnyOrderElementsOf(
                 expected);
+    }
+
+    public static <K> PreservingCondition<Map<? super K, ?>> containsKey(
+            K expected) {
+        return MapConditions.containsKey(expected);
+    }
+
+    public static <K> PreservingCondition<Map<? super K, ?>> doesNotContainKey(
+            K expected) {
+        return MapConditions.doesNotContainKey(expected);
+    }
+
+    public static <V> PreservingCondition<Map<?, ? super V>> containsValue(
+            V expected) {
+        return MapConditions.containsValue(expected);
+    }
+
+    public static <V> PreservingCondition<Map<?, ? super V>>
+            doesNotContainValue(V expected) {
+        return MapConditions.doesNotContainValue(expected);
+    }
+
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>>
+            containsEntry(K key, V value) {
+        return MapConditions.containsEntry(key, value);
+    }
+
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>>
+            doesNotContainEntry(K key, V value) {
+        return MapConditions.doesNotContainEntry(key, value);
+    }
+
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>>
+            containsAllEntriesOf(Map<? extends K, ? extends V> expected) {
+        return MapConditions.containsAllEntriesOf(expected);
+    }
+
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>>
+            doesNotContainAllEntriesOf(
+                    Map<? extends K, ? extends V> expected) {
+        return MapConditions.doesNotContainAllEntriesOf(expected);
+    }
+
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>>
+            containsAnyEntriesOf(Map<? extends K, ? extends V> expected) {
+        return MapConditions.containsAnyEntriesOf(expected);
+    }
+
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>>
+            containsNoEntriesOf(Map<? extends K, ? extends V> expected) {
+        return MapConditions.containsNoEntriesOf(expected);
+    }
+
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>>
+            containsExactlyEntriesOf(
+                    Map<? extends K, ? extends V> expected) {
+        return MapConditions.containsExactlyEntriesOf(expected);
+    }
+
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>>
+            doesNotContainExactlyEntriesOf(
+                    Map<? extends K, ? extends V> expected) {
+        return MapConditions.doesNotContainExactlyEntriesOf(expected);
     }
 
     public static <S, R> Condition<S, R> condition(
