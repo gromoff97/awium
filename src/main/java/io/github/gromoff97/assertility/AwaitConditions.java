@@ -3,6 +3,7 @@ package io.github.gromoff97.assertility;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.SequencedCollection;
 
 public final class AwaitConditions {
 
@@ -115,6 +116,59 @@ public final class AwaitConditions {
     public static <E> PreservingCondition<Collection<? super E>>
             containsNoElementsOf(Collection<? extends E> expected) {
         return CollectionConditions.containsNoElementsOf(expected);
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <E> PreservingCondition<SequencedCollection<? super E>>
+            containsExactly(E... expected) {
+        return CollectionConditions.containsExactly(expected);
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <E> PreservingCondition<SequencedCollection<? super E>>
+            doesNotContainExactly(E... expected) {
+        return CollectionConditions.doesNotContainExactly(expected);
+    }
+
+    public static <E> PreservingCondition<SequencedCollection<? super E>>
+            containsExactlyElementsOf(Collection<? extends E> expected) {
+        return CollectionConditions.containsExactlyElementsOf(expected);
+    }
+
+    public static <E> PreservingCondition<SequencedCollection<? super E>>
+            doesNotContainExactlyElementsOf(
+                    Collection<? extends E> expected) {
+        return CollectionConditions.doesNotContainExactlyElementsOf(expected);
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <E> PreservingCondition<Collection<? super E>>
+            containsExactlyInAnyOrder(E... expected) {
+        return CollectionConditions.containsExactlyInAnyOrder(expected);
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <E> PreservingCondition<Collection<? super E>>
+            doesNotContainExactlyInAnyOrder(E... expected) {
+        return CollectionConditions.doesNotContainExactlyInAnyOrder(expected);
+    }
+
+    public static <E> PreservingCondition<Collection<? super E>>
+            containsExactlyInAnyOrderElementsOf(
+                    Collection<? extends E> expected) {
+        return CollectionConditions.containsExactlyInAnyOrderElementsOf(
+                expected);
+    }
+
+    public static <E> PreservingCondition<Collection<? super E>>
+            doesNotContainExactlyInAnyOrderElementsOf(
+                    Collection<? extends E> expected) {
+        return CollectionConditions.doesNotContainExactlyInAnyOrderElementsOf(
+                expected);
     }
 
     public static <S, R> Condition<S, R> condition(

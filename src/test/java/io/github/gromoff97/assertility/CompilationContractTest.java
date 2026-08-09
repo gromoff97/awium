@@ -165,6 +165,73 @@ class CompilationContractTest {
     }
 
     @Test
+    void collectionExactFactoriesRespectOrderedSourceTyping()
+            throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.assertility.Assertility.await;
+                import static io.github.gromoff97.assertility.AwaitConditions.*;
+                import io.github.gromoff97.assertility.*;
+                import java.util.*;
+
+                final class Contract {
+                    void check(
+                            AwaitSources.SequencedCollectionSource<String,
+                                    ArrayList<String>> sequenced,
+                            AwaitSources.CollectionSource<String,
+                                    Collection<String>> collection,
+                            Collection<String> expected) {
+                        ArrayList<String> ordered = await(sequenced)
+                                .until(containsExactly("a", "b"));
+                        await(sequenced).until(doesNotContainExactly("b", "a")
+                                .because("ordered"));
+                        await(sequenced).until(containsExactlyElementsOf(expected));
+                        await(sequenced).until(doesNotContainExactlyElementsOf(
+                                expected).because("ordered"));
+
+                        Collection<String> anyOrder = await(collection)
+                                .until(containsExactlyInAnyOrder("a", "b"));
+                        await(collection).until(doesNotContainExactlyInAnyOrder(
+                                "a", "b").because("any order"));
+                        await(collection).until(
+                                containsExactlyInAnyOrderElementsOf(expected));
+                        await(collection).until(
+                                doesNotContainExactlyInAnyOrderElementsOf(expected)
+                                        .because("any order"));
+
+                        await(sequenced).until(containsExactlyInAnyOrder("a"));
+                        await(sequenced).until(
+                                containsExactlyInAnyOrderElementsOf(expected));
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void orderedExactFactoriesRejectCollectionOnlySources() throws IOException {
+        for (String condition : new String[] {
+                "containsExactly(\"a\")",
+                "doesNotContainExactly(\"a\")",
+                "containsExactlyElementsOf(expected)",
+                "doesNotContainExactlyElementsOf(expected)"
+        }) {
+            assertFalse(compiles("""
+                    import static io.github.gromoff97.assertility.Assertility.await;
+                    import static io.github.gromoff97.assertility.AwaitConditions.*;
+                    import io.github.gromoff97.assertility.*;
+                    import java.util.*;
+
+                    final class Contract {
+                        void check(AwaitSources.CollectionSource<String,
+                                Collection<String>> source,
+                                Collection<String> expected) {
+                            await(source).until(%s);
+                        }
+                    }
+                    """.formatted(condition)), condition);
+        }
+    }
+
+    @Test
     void allFluentInterfacesRejectExternalImplementations() throws IOException {
         for (String type : new String[] {
                 "ObjectUntil<String>", "ObjectAwait<String>",
