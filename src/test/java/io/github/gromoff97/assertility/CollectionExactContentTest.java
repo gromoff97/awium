@@ -3,6 +3,7 @@ package io.github.gromoff97.assertility;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -57,6 +58,12 @@ class CollectionExactContentTest {
     }
 
     @Test
+    void negativeAnyOrderAggregateFactoryReturnsAUsablePublicCondition() {
+        assertNotNull(AwaitConditions.doesNotContainExactlyInAnyOrderElementsOf(
+                List.of("a")));
+    }
+
+    @Test
     void orderedFormsAreOrderSensitiveAndAnyOrderFormsAreNot()
             throws Exception {
         assertStatus(AwaitConditions.containsExactly("a", "b"),
@@ -71,8 +78,10 @@ class CollectionExactContentTest {
         ExactList<String> differentActual = new ExactList<>(List.of("a"));
         ExpectedCollection<String> differentExpected =
                 new ExpectedCollection<>(List.of("a", "b"));
-        evaluate(AwaitConditions.containsExactlyElementsOf(differentExpected),
+        Evaluation<?> different = evaluate(
+                AwaitConditions.containsExactlyElementsOf(differentExpected),
                 differentActual, false);
+        assertEquals(Evaluation.Status.UNSATISFIED, different.status());
         assertAccess(differentActual, 1, 0, 0);
         assertExpectedAccess(differentExpected, 1, 0, 0);
 

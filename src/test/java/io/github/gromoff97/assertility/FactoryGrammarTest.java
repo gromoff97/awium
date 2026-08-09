@@ -108,6 +108,55 @@ class FactoryGrammarTest {
     }
 
     @Test
+    void everyTerminalOverloadValidatesTheFinalConfigurationPair() {
+        AtomicInteger sourceCalls = new AtomicInteger();
+        ObjectAwait.AfterEvery<String> object = Assertility.await(
+                (AwaitSources.Source<String>) () -> {
+                    sourceCalls.incrementAndGet();
+                    return "value";
+                }).every(Duration.ofSeconds(20));
+        OptionalAwait.AfterEvery<String> optional = Assertility.await(
+                (AwaitSources.OptionalSource<String>) () -> {
+                    sourceCalls.incrementAndGet();
+                    return Optional.of("value");
+                }).every(Duration.ofSeconds(20));
+        CollectionAwait.AfterEvery<String, List<String>> collection =
+                Assertility.await((AwaitSources.CollectionSource<String,
+                        List<String>>) () -> {
+                            sourceCalls.incrementAndGet();
+                            return List.of("value");
+                        }).every(Duration.ofSeconds(20));
+        MapAwait.AfterEvery<String, String, Map<String, String>> map =
+                Assertility.await((AwaitSources.MapSource<String, String,
+                        Map<String, String>>) () -> {
+                            sourceCalls.incrementAndGet();
+                            return Map.of("key", "value");
+                        }).every(Duration.ofSeconds(20));
+        Condition<String, String> selecting = AwaitConditions.condition(
+                "selecting", Evaluation::satisfied);
+
+        List<Executable> terminals = List.of(
+                () -> object.until(AwaitConditions.isNotNull),
+                () -> object.until(
+                        AwaitConditions.isNotNull.because("preserving")),
+                () -> object.until(selecting),
+                () -> object.until(selecting.because("selecting")),
+                () -> optional.until(AwaitConditions.present),
+                () -> optional.until(
+                        AwaitConditions.present.because("present")),
+                () -> collection.until(AwaitConditions.nonEmpty),
+                () -> collection.until(
+                        AwaitConditions.nonEmpty.because("collection")),
+                () -> map.until(AwaitConditions.nonEmpty),
+                () -> map.until(AwaitConditions.nonEmpty.because("map")));
+
+        for (Executable terminal : terminals) {
+            assertThrows(AwaitConfigurationConflictException.class, terminal);
+        }
+        assertEquals(0, sourceCalls.get());
+    }
+
+    @Test
     void nullConditionWinsOverFinalConfigurationConflictForEveryOverload() {
         ObjectAwait.AfterEvery<String> object = Assertility
                 .await((AwaitSources.Source<String>) () -> "value")

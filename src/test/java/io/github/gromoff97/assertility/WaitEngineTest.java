@@ -240,6 +240,106 @@ class WaitEngineTest {
     }
 
     @Test
+    void classifiesAnAcquisitionParkingFailureForTheNextAttempt() {
+        var time = new FakeTime(0);
+        var failure = new IllegalStateException("park failed");
+        ObservationEvaluator<String, String> evaluator = evaluator(
+                () -> "actual", actual -> Evaluation.unsatisfied("not yet"));
+
+        WaitOutcome<String> outcome = new WaitEngine(
+                config(5, 20, 0), time, nanos -> {
+                    throw failure;
+                }, new InterruptGuard()).waitFor(evaluator);
+
+        assertEquals(WaitOutcome.Kind.UNCONTROLLED, outcome.kind());
+        assertEquals(ObservationOutcome.Origin.WAITING,
+                outcome.observation().origin());
+        assertEquals(2, outcome.observation().attempt());
+        assertSame(failure, outcome.observation().cause());
+    }
+
+    @Test
+    void classifiesAStabilityParkingFailureForTheNextAttempt() {
+        var time = new FakeTime(0);
+        var failure = new IllegalStateException("stability park failed");
+        ObservationEvaluator<String, String> evaluator = evaluator(
+                () -> "actual", actual -> Evaluation.satisfied("ready"));
+
+        WaitOutcome<String> outcome = new WaitEngine(
+                config(5, 20, 10), time, nanos -> {
+                    throw failure;
+                }, new InterruptGuard()).waitFor(evaluator);
+
+        assertEquals(WaitOutcome.Kind.UNCONTROLLED, outcome.kind());
+        assertEquals(ObservationOutcome.Origin.WAITING,
+                outcome.observation().origin());
+        assertEquals(2, outcome.observation().attempt());
+        assertSame(failure, outcome.observation().cause());
+    }
+
+    @Test
+    void detectsAnInterruptRaisedWhileParkedForTheNextAttempt() {
+        var time = new FakeTime(0);
+        var parkCalls = new int[1];
+        ObservationEvaluator<String, String> evaluator = evaluator(
+                () -> "actual", actual -> Evaluation.unsatisfied("not yet"));
+
+        WaitOutcome<String> outcome = new WaitEngine(
+                config(5, 20, 0), time, nanos -> {
+                    parkCalls[0]++;
+                    Thread.currentThread().interrupt();
+                }, new InterruptGuard()).waitFor(evaluator);
+
+        assertEquals(WaitOutcome.Kind.UNCONTROLLED, outcome.kind());
+        assertEquals(ObservationOutcome.Origin.WAITING,
+                outcome.observation().origin());
+        assertEquals(2, outcome.observation().attempt());
+        assertEquals(InterruptedException.class,
+                outcome.observation().cause().getClass());
+        assertEquals(1, parkCalls[0]);
+        assertTrue(Thread.currentThread().isInterrupted());
+    }
+
+    @Test
+    void detectsAnInterruptRaisedWhileParkedForStability() {
+        var time = new FakeTime(0);
+        var parkCalls = new int[1];
+        ObservationEvaluator<String, String> evaluator = evaluator(
+                () -> "actual", actual -> Evaluation.satisfied("ready"));
+
+        WaitOutcome<String> outcome = new WaitEngine(
+                config(5, 20, 10), time, nanos -> {
+                    parkCalls[0]++;
+                    Thread.currentThread().interrupt();
+                }, new InterruptGuard()).waitFor(evaluator);
+
+        assertEquals(WaitOutcome.Kind.UNCONTROLLED, outcome.kind());
+        assertEquals(ObservationOutcome.Origin.WAITING,
+                outcome.observation().origin());
+        assertEquals(2, outcome.observation().attempt());
+        assertEquals(InterruptedException.class,
+                outcome.observation().cause().getClass());
+        assertEquals(1, parkCalls[0]);
+        assertTrue(Thread.currentThread().isInterrupted());
+    }
+
+    @Test
+    void fatalParkingSignalsEscapeUnchanged() {
+        var time = new FakeTime(0);
+        var fatal = new ThrowableFixtures.Fatal("fatal park");
+        ObservationEvaluator<String, String> evaluator = evaluator(
+                () -> "actual", actual -> Evaluation.unsatisfied("not yet"));
+
+        ThrowableFixtures.Fatal thrown = assertThrows(
+                ThrowableFixtures.Fatal.class,
+                () -> new WaitEngine(config(5, 20, 0), time, nanos -> {
+                    throw fatal;
+                }, new InterruptGuard()).waitFor(evaluator));
+
+        assertSame(fatal, thrown);
+    }
+
+    @Test
     void detectsWaitingInterruptionBeforeTheFirstObservation() {
         var time = new FakeTime(0);
         var sourceCalls = new int[1];

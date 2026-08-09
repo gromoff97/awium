@@ -1,6 +1,7 @@
 package io.github.gromoff97.assertility;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -128,6 +129,14 @@ class ObjectAndOptionalConditionsTest {
                 AwaitConditions.hasValueEqualTo("expected").description());
         assertEquals("optional value not equal to unexpected",
                 AwaitConditions.hasValueNotEqualTo("unexpected").description());
+    }
+
+    @Test
+    void internalFactoriesAlwaysCreateThePublishedFieldDescriptors() {
+        assertNotNull(ObjectConditions.isNull());
+        assertNotNull(ObjectConditions.isNotNull());
+        assertNotNull(OptionalConditions.present());
+        assertNotNull(OptionalConditions.absent());
     }
 
     private static Evaluation<Object> evaluate(

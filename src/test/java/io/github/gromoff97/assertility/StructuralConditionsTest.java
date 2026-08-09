@@ -2,6 +2,7 @@ package io.github.gromoff97.assertility;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -189,6 +190,12 @@ class StructuralConditionsTest {
             assertThrows(IllegalArgumentException.class, () -> factory.apply(-1));
             assertDoesNotThrow(() -> factory.apply(0));
         }
+    }
+
+    @Test
+    void stateFactoriesAlwaysCreateThePublishedFieldDescriptors() {
+        assertNotNull(StructuralConditions.empty());
+        assertNotNull(StructuralConditions.nonEmpty());
     }
 
     private static void assertCollectionEvaluation(Case testCase,

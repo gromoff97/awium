@@ -1,6 +1,7 @@
 package io.github.gromoff97.assertility;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -43,6 +44,43 @@ class ObjectAndOptionalAwaitTest {
     }
 
     @Test
+    void voidAndNullableSelectingTerminalsReturnNullOnSuccess() {
+        Void nullValue = Assertility.await(
+                (AwaitSources.Source<Object>) () -> null)
+                .until(AwaitConditions.isNull);
+        Void absentValue = Assertility.await(
+                (AwaitSources.OptionalSource<Object>) Optional::empty)
+                .until(AwaitConditions.absent);
+        String selectedNull = Assertility.await(
+                (AwaitSources.Source<String>) () -> "value")
+                .until(AwaitConditions.<String, String>passed(value -> null)
+                        .because("nullable property"));
+
+        assertNull(nullValue);
+        assertNull(absentValue);
+        assertNull(selectedNull);
+    }
+
+    @Test
+    void optionalValueConditionsReturnTheContainedValueThroughUntil() {
+        var equalValue = new Object();
+        var differentValue = new Object();
+
+        Object equal = Assertility.await(
+                (AwaitSources.OptionalSource<Object>)
+                        () -> Optional.of(equalValue))
+                .until(AwaitConditions.hasValueEqualTo(equalValue));
+        Object different = Assertility.await(
+                (AwaitSources.OptionalSource<Object>)
+                        () -> Optional.of(differentValue))
+                .until(AwaitConditions.hasValueNotEqualTo(equalValue)
+                        .because("different value"));
+
+        assertSame(equalValue, equal);
+        assertSame(differentValue, different);
+    }
+
+    @Test
     void collectionAndMapStructuralTerminalsPreserveConcreteSources() {
         ArrayList<String> list = new ArrayList<>(List.of("value"));
         HashMap<String, Integer> map = new HashMap<>(Map.of("value", 1));
@@ -80,6 +118,49 @@ class ObjectAndOptionalAwaitTest {
     }
 
     @Test
+    void reusableStageStartsFreshAfterControlledAndUncontrolledFailures() {
+        FakeTime time = new FakeTime(0);
+        AtomicInteger sourceCalls = new AtomicInteger();
+        ObjectUntil<String> stage = stage(time, () -> {
+            sourceCalls.incrementAndGet();
+            return "value";
+        });
+        Condition<String, String> never = AwaitConditions.condition(
+                "never", value -> Evaluation.unsatisfied("not yet"));
+        var failure = new IllegalStateException("condition failed");
+        Condition<String, String> broken = AwaitConditions.condition(
+                "broken", value -> {
+                    throw failure;
+                });
+
+        assertThrows(AwaitTimeoutException.class, () -> stage.until(never));
+        assertSame(failure, assertThrows(
+                AwaitConditionEvaluationException.class,
+                () -> stage.until(broken)).getCause());
+        String result = stage.until(AwaitConditions.condition(
+                "ready", Evaluation::satisfied));
+
+        assertEquals("value", result);
+        assertEquals(5, sourceCalls.get());
+    }
+
+    @Test
+    void reusableConditionRetainsOnlyItsOwnStateAcrossFreshWaits() {
+        FakeTime time = new FakeTime(0);
+        AtomicInteger evaluations = new AtomicInteger();
+        ObjectUntil<String> stage = stage(time, () -> "value");
+        Condition<String, String> secondEvaluationOnward =
+                AwaitConditions.condition("second evaluation onward", value ->
+                        evaluations.incrementAndGet() >= 2
+                                ? Evaluation.satisfied(value)
+                                : Evaluation.unsatisfied("first evaluation"));
+
+        assertEquals("value", stage.until(secondEvaluationOnward));
+        assertEquals("value", stage.until(secondEvaluationOnward));
+        assertEquals(3, evaluations.get());
+    }
+
+    @Test
     void collectionAndMapNullObservationsUseFacadeSpecificMismatch() {
         StructuralCondition structural = AwaitConditions.nonEmpty;
 
@@ -109,6 +190,15 @@ class ObjectAndOptionalAwaitTest {
                         .withUpTo(Duration.ofNanos(2)),
                 time, time, new InterruptGuard(), new FailureFactory());
         return new MapStageAdapters.MapAfterUpToStage<>(chain);
+    }
+
+    private static <T> ObjectUntil<T> stage(
+            FakeTime time, AwaitSources.Source<T> source) {
+        AwaitChain<T> chain = new AwaitChain<>(source,
+                WaitConfig.defaults().withEvery(Duration.ofNanos(1))
+                        .withUpTo(Duration.ofNanos(3)),
+                time, time, new InterruptGuard(), new FailureFactory());
+        return new ObjectStageAdapters.ObjectAfterUpToStage<>(chain);
     }
 
     private static final class CyclingSource implements AwaitSources.Source<String> {

@@ -3,6 +3,7 @@ package io.github.gromoff97.assertility;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -57,6 +58,12 @@ class CollectionMembershipTest {
                         pair.mismatchingNextCalls(), explained);
             }
         }
+    }
+
+    @Test
+    void aggregateAnyFactoriesReturnUsablePublicConditions() {
+        assertNotNull(AwaitConditions.containsAnyElementsOf(List.of("a")));
+        assertNotNull(AwaitConditions.containsNoElementsOf(List.of("a")));
     }
 
     @Test

@@ -131,6 +131,71 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
+    void timingFieldsRemainRelativeToANonZeroClockOrigin() {
+        long started = 100 * SECOND;
+        WaitOutcome<Object> between = WaitOutcome.timeoutBetween(
+                started, started + 10 * SECOND,
+                new WaitOutcome.LastObservation(
+                        2, started + 9 * SECOND, "not yet", null));
+        WaitOutcome<Object> late = WaitOutcome.lateUnsatisfied(
+                started, started + 10 * SECOND + 200 * MILLISECOND,
+                ObservationOutcome.unsatisfied(
+                        "actual", "not yet", null, 3));
+        WaitOutcome<Object> stability = WaitOutcome.stabilityLoss(
+                started, started + 7 * SECOND,
+                started + 9 * SECOND + 100 * MILLISECOND,
+                ObservationOutcome.unsatisfied(
+                        "actual", "lost", null, 4));
+
+        String betweenMessage = assertThrows(AwaitTimeoutException.class,
+                () -> complete(between, "condition", null,
+                        config(SECOND, 10 * SECOND, 0))).getMessage();
+        String lateMessage = assertThrows(AwaitTimeoutException.class,
+                () -> complete(late, "condition", null,
+                        config(SECOND, 10 * SECOND, 0))).getMessage();
+        String stabilityMessage = assertThrows(
+                AwaitStabilizationException.class,
+                () -> complete(stability, "condition", null,
+                        config(SECOND, 10 * SECOND, 5 * SECOND))).getMessage();
+
+        assertTrue(betweenMessage.contains("Completed after: 9 seconds"));
+        assertTrue(betweenMessage.contains("Elapsed: 10 seconds"));
+        assertTrue(lateMessage.contains(
+                "Elapsed: 10 seconds 200 milliseconds"));
+        assertTrue(stabilityMessage.contains(
+                "Failure detected after: 2 seconds 100 milliseconds"));
+        assertTrue(stabilityMessage.contains("Acquired after: 7 seconds"));
+    }
+
+    @Test
+    void assertionCausesAreRetainedInBetweenAndStabilityDiagnostics() {
+        var betweenAssertion = new AssertionError("between assertion");
+        var stabilityAssertion = new AssertionError("stability assertion");
+        WaitOutcome<Object> between = WaitOutcome.timeoutBetween(0, 10,
+                new WaitOutcome.LastObservation(
+                        2, 9, "assertion did not pass", betweenAssertion));
+        WaitOutcome<Object> stability = WaitOutcome.stabilityLoss(0, 2, 3,
+                ObservationOutcome.unsatisfied("actual",
+                        "assertion did not pass", stabilityAssertion, 2));
+
+        AwaitTimeoutException betweenFailure = assertThrows(
+                AwaitTimeoutException.class,
+                () -> complete(between, "condition", null,
+                        config(1, 10, 0)));
+        AwaitStabilizationException stabilityFailure = assertThrows(
+                AwaitStabilizationException.class,
+                () -> complete(stability, "condition", null,
+                        config(1, 10, 5)));
+
+        assertSame(betweenAssertion, betweenFailure.getCause());
+        assertTrue(betweenFailure.getMessage().contains(
+                "Cause: AssertionError: between assertion"));
+        assertSame(stabilityAssertion, stabilityFailure.getCause());
+        assertTrue(stabilityFailure.getMessage().contains(
+                "Cause: AssertionError: stability assertion"));
+    }
+
+    @Test
     void formatsAConditionFailureInGlobalFieldOrder() {
         var cause = new IllegalStateException("connection is closed");
         WaitOutcome<Object> outcome = WaitOutcome.uncontrolled(
