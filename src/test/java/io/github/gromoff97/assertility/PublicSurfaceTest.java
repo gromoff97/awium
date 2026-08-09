@@ -58,6 +58,10 @@ import java.util.regex.Pattern;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.ArrayType;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.ExecutableType;
+import javax.lang.model.type.IntersectionType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
@@ -410,10 +414,15 @@ class PublicSurfaceTest {
                         package fixture;
                         final class Door { void lock() {} }
                         """),
+                Map.entry(Path.of("fixture", "Timer.java"), """
+                        package fixture;
+                        final class Timer { void schedule() {} }
+                        """),
                 Map.entry(Path.of("fixture", "Allowed.java"), """
                         package fixture;
                         final class Allowed {
                             private final Door door = new Door();
+                            private final Timer timer = new Timer();
 
                             void start() {}
                             void schedule() {}
@@ -421,6 +430,7 @@ class PublicSurfaceTest {
                                 this.start();
                                 schedule();
                                 door.lock();
+                                timer.schedule();
                                 Runnable task = this::schedule;
                                 String text = "Thread.sleep synchronized notify";
                                 // CompletableFuture worker.start();
@@ -438,6 +448,105 @@ class PublicSurfaceTest {
             assertThrows(AssertionError.class,
                     () -> assertApprovedProductionSources(invalid));
         }
+    }
+
+    @Test
+    void productionSourceAuditRejectsForbiddenExecutableSignatures() {
+        Map.ofEntries(
+                Map.entry("HttpClient async return", """
+                        class Mutant {
+                            void run(java.net.http.HttpClient client,
+                                    java.net.http.HttpRequest request,
+                                    java.net.http.HttpResponse.BodyHandler<String> handler) {
+                                client.sendAsync(request, handler);
+                            }
+                        }
+                        """),
+                Map.entry("asynchronous socket return", """
+                        class Mutant {
+                            void run(java.nio.channels.AsynchronousSocketChannel channel,
+                                    java.net.SocketAddress address) {
+                                channel.connect(address);
+                            }
+                        }
+                        """),
+                Map.entry("lookup VarHandle return", """
+                        class Mutant {
+                            int state;
+                            void run(java.lang.invoke.MethodHandles.Lookup lookup)
+                                    throws ReflectiveOperationException {
+                                lookup.findVarHandle(Mutant.class, "state", int.class);
+                            }
+                        }
+                        """),
+                Map.entry("array VarHandle return", """
+                        class Mutant {
+                            void run() {
+                                java.lang.invoke.MethodHandles
+                                        .arrayElementVarHandle(int[].class);
+                            }
+                        }
+                        """),
+                Map.entry("nested generic array return", """
+                        package io.github.gromoff97.assertility;
+                        class Mutant {
+                            Object run() {
+                                return PublicSurfaceTest.ExecutableSignatureFixture
+                                        .forbiddenGenericArrayReturn();
+                            }
+                        }
+                        """),
+                Map.entry("intersection return", """
+                        package io.github.gromoff97.assertility;
+                        class Mutant {
+                            Object run() {
+                                return PublicSurfaceTest.ExecutableSignatureFixture
+                                        .forbiddenIntersectionReturn();
+                            }
+                        }
+                        """),
+                Map.entry("lower wildcard parameter", """
+                        package io.github.gromoff97.assertility;
+                        class Mutant {
+                            void run() {
+                                PublicSurfaceTest.ExecutableSignatureFixture
+                                        .forbiddenLowerWildcardParameter(null);
+                            }
+                        }
+                        """),
+                Map.entry("implicit Executor parameter", """
+                        class Mutant {
+                            void run() {
+                                java.net.http.HttpClient.newBuilder().executor(null);
+                            }
+                        }
+                        """))
+                .forEach(PublicSurfaceTest::assertRejectedProductionSource);
+    }
+
+    @Test
+    void productionSourceAuditRejectsAllJdkSchedulerFamilies() {
+        Map.ofEntries(
+                Map.entry("util Timer", "class Mutant { java.util.Timer timer; }"),
+                Map.entry("util TimerTask", """
+                        class Mutant extends java.util.TimerTask {
+                            public void run() {}
+                        }
+                        """),
+                Map.entry("Swing Timer subtype", """
+                        class Mutant extends javax.swing.Timer {
+                            Mutant() { super(1, null); }
+                        }
+                        """),
+                Map.entry("JMX Timer subtype", """
+                        class Mutant extends javax.management.timer.Timer {}
+                        """),
+                Map.entry("JMX TimerMBean", """
+                        class Mutant {
+                            javax.management.timer.TimerMBean timer;
+                        }
+                        """))
+                .forEach(PublicSurfaceTest::assertRejectedProductionSource);
     }
 
     @Test
@@ -739,7 +848,9 @@ class PublicSurfaceTest {
                     requiredType("java.util.concurrent.CompletionService"),
                     requiredType("java.util.concurrent.ThreadFactory"),
                     requiredType("java.util.Timer"),
-                    requiredType("java.util.TimerTask"));
+                    requiredType("java.util.TimerTask"),
+                    requiredType("javax.swing.Timer"),
+                    requiredType("javax.management.timer.TimerMBean"));
         }
 
         @Override
@@ -839,6 +950,12 @@ class PublicSurfaceTest {
             String ownerName = owner.getQualifiedName().toString();
             String name = executable.getSimpleName().toString();
 
+            if (hasForbiddenSignature(resolvedExecutableType(tree, executable))
+                    || hasForbiddenSignature(
+                    (ExecutableType) executable.asType())) {
+                reject(tree, "forbidden concurrency type in executable "
+                        + ownerName + "." + name);
+            }
             if (executable.getKind()
                     == javax.lang.model.element.ElementKind.CONSTRUCTOR) {
                 if (isAssignable(owner.asType(), threadType)) {
@@ -884,6 +1001,65 @@ class PublicSurfaceTest {
             if (isForbiddenMechanism(owner)) {
                 reject(tree, "concurrency mechanism " + ownerName + "." + name);
             }
+        }
+
+        private ExecutableType resolvedExecutableType(
+                Tree tree, ExecutableElement fallback) {
+            if (tree instanceof MethodInvocationTree invocation) {
+                TypeMirror resolved = trees.getTypeMirror(new TreePath(
+                        getCurrentPath(), invocation.getMethodSelect()));
+                if (resolved instanceof ExecutableType executable) {
+                    return executable;
+                }
+            }
+            return (ExecutableType) fallback.asType();
+        }
+
+        private boolean hasForbiddenSignature(ExecutableType executable) {
+            Set<TypeMirror> visited = Collections.newSetFromMap(
+                    new IdentityHashMap<>());
+            return hasForbiddenType(executable.getReturnType(), visited)
+                    || executable.getParameterTypes().stream()
+                    .anyMatch(type -> hasForbiddenType(type, visited));
+        }
+
+        private boolean hasForbiddenType(
+                TypeMirror type, Set<TypeMirror> visited) {
+            if (!visited.add(type)) {
+                return false;
+            }
+            return switch (type.getKind()) {
+                case ARRAY -> hasForbiddenType(
+                        ((ArrayType) type).getComponentType(), visited);
+                case DECLARED -> {
+                    DeclaredType declared = (DeclaredType) type;
+                    yield declared.asElement() instanceof TypeElement element
+                            && isForbiddenMechanism(element)
+                            || hasForbiddenType(declared.getEnclosingType(), visited)
+                            || declared.getTypeArguments().stream()
+                            .anyMatch(argument -> hasForbiddenType(
+                                    argument, visited));
+                }
+                case TYPEVAR -> {
+                    javax.lang.model.type.TypeVariable variable =
+                            (javax.lang.model.type.TypeVariable) type;
+                    yield hasForbiddenType(variable.getUpperBound(), visited)
+                            || hasForbiddenType(variable.getLowerBound(), visited);
+                }
+                case WILDCARD -> {
+                    javax.lang.model.type.WildcardType wildcard =
+                            (javax.lang.model.type.WildcardType) type;
+                    yield wildcard.getExtendsBound() != null
+                            && hasForbiddenType(
+                                    wildcard.getExtendsBound(), visited)
+                            || wildcard.getSuperBound() != null
+                            && hasForbiddenType(
+                                    wildcard.getSuperBound(), visited);
+                }
+                case INTERSECTION -> ((IntersectionType) type).getBounds().stream()
+                        .anyMatch(bound -> hasForbiddenType(bound, visited));
+                default -> false;
+            };
         }
 
         private boolean isApprovedLockSupportTypeReference(Tree tree) {
@@ -1277,5 +1453,23 @@ class PublicSurfaceTest {
     }
 
     public static final class PredicateResult {
+    }
+
+    public static final class ExecutableSignatureFixture {
+        public static List<? extends Future<?>[]> forbiddenGenericArrayReturn() {
+            return null;
+        }
+
+        public static <T extends Future<?> & java.io.Serializable>
+                T forbiddenIntersectionReturn() {
+            return null;
+        }
+
+        public static void forbiddenLowerWildcardParameter(
+                List<? super java.util.concurrent.ForkJoinTask<?>> value) {
+        }
+
+        private ExecutableSignatureFixture() {
+        }
     }
 }
