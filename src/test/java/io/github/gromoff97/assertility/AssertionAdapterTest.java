@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Constructor;
+import java.time.Duration;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
@@ -84,6 +85,47 @@ class AssertionAdapterTest {
         assertNull(evaluation.result());
         assertEquals(1, invocations[0]);
         assertEquals("assertion to pass", condition.description());
+    }
+
+    @Test
+    void assertedSucceedsAfterDiscardedAssertionRetriesWithoutRenderingThem() {
+        var time = new FakeTime(0);
+        var actual = new Payment(42);
+        var discarded = new MessageReadingAssertion();
+        var invocations = new int[1];
+
+        Payment result = stage(time, actual).until(
+                AwaitConditions.<Payment>asserted(payment -> {
+                    if (invocations[0]++ < 2) {
+                        throw discarded;
+                    }
+                }).because("payment assertion"));
+
+        assertSame(actual, result);
+        assertEquals(3, invocations[0]);
+        assertEquals(0, discarded.messageReads);
+        assertEquals(java.util.List.of(1L, 1L), time.parkRequests());
+    }
+
+    @Test
+    void passedReturnsTheFinalSelectedResultAfterDiscardedAssertionRetries() {
+        var time = new FakeTime(0);
+        var actual = new Payment(42);
+        var discarded = new MessageReadingAssertion();
+        var invocations = new int[1];
+
+        Long result = stage(time, actual).until(
+                AwaitConditions.<Payment, Long>passed(payment -> {
+                    if (invocations[0]++ < 2) {
+                        throw discarded;
+                    }
+                    return payment.id();
+                }).because("payment selection"));
+
+        assertEquals(42L, result);
+        assertEquals(3, invocations[0]);
+        assertEquals(0, discarded.messageReads);
+        assertEquals(java.util.List.of(1L, 1L), time.parkRequests());
     }
 
     @Test
@@ -184,6 +226,15 @@ class AssertionAdapterTest {
                 .filter(method -> !method.isSynthetic())
                 .allMatch(method -> isPublic(method.getModifiers())
                         && isStatic(method.getModifiers())));
+    }
+
+    private static ObjectUntil<Payment> stage(FakeTime time, Payment actual) {
+        WaitConfig config = WaitConfig.defaults()
+                .withEvery(Duration.ofNanos(1))
+                .withUpTo(Duration.ofNanos(10));
+        AwaitChain<Payment> chain = new AwaitChain<>(() -> actual, config,
+                time, time, new InterruptGuard(), new FailureFactory());
+        return new ObjectStageAdapters.ObjectAfterUpToStage<>(chain);
     }
 
     private record Payment(long id) {

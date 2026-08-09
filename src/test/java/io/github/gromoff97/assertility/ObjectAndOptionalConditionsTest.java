@@ -109,6 +109,27 @@ class ObjectAndOptionalConditionsTest {
                 () -> AwaitConditions.hasValueNotEqualTo(null)).getMessage());
     }
 
+    @Test
+    void builtInObjectAndOptionalConditionsExposeExactDescriptions() {
+        assertEquals("value to be null", AwaitConditions.isNull.description());
+        assertEquals("value to be non-null",
+                ConditionAdapters.preserving(AwaitConditions.isNotNull)
+                        .description().get());
+        assertEquals("value equal to expected",
+                ConditionAdapters.preserving(AwaitConditions.equalTo("expected"))
+                        .description().get());
+        assertEquals("value not equal to unexpected",
+                ConditionAdapters.preserving(
+                        AwaitConditions.notEqualTo("unexpected"))
+                        .description().get());
+        assertEquals("optional to be absent",
+                AwaitConditions.absent.description());
+        assertEquals("optional value equal to expected",
+                AwaitConditions.hasValueEqualTo("expected").description());
+        assertEquals("optional value not equal to unexpected",
+                AwaitConditions.hasValueNotEqualTo("unexpected").description());
+    }
+
     private static Evaluation<Object> evaluate(
             PreservingCondition<Object> condition, Object actual) throws Exception {
         return ConditionAdapters.preserving(condition).evaluate(actual);
