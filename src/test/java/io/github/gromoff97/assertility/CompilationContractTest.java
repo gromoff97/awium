@@ -187,7 +187,7 @@ class CompilationContractTest {
             assertFalse(compiles("""
                     import io.github.gromoff97.assertility.*;
                     final class Contract {
-                        final class Broken implements %s {}
+                        abstract class Broken implements %s {}
                     }
                     """.formatted(type)), type);
         }
