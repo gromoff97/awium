@@ -61,7 +61,7 @@ class ArtifactContractIT {
     }
 
     @Test
-    void currentProjectPomDeclaresOnlyTestScopedJunit() throws Exception {
+    void currentProjectPomDeclaresOnlyApprovedTestDependencies() throws Exception {
         Path pom = Path.of("pom.xml");
         assertTrue(Files.isRegularFile(pom), pom.toAbsolutePath().toString());
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -77,9 +77,12 @@ class ArtifactContractIT {
             assertEquals("test", text(dependency, "scope"));
         }
 
-        assertEquals(Set.of("org.junit.jupiter:junit-jupiter"),
+        assertEquals(Set.of(
+                        "org.junit.jupiter:junit-jupiter",
+                        "org.openrewrite:rewrite-java",
+                        "org.openrewrite:rewrite-java-21"),
                 Set.copyOf(coordinates));
-        assertEquals(1, coordinates.size());
+        assertEquals(3, coordinates.size());
     }
 
     private static Element child(Element parent, String name) {
