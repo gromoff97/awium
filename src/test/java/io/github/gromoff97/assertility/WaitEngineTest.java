@@ -8,8 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 @SuppressWarnings("removal")
 class WaitEngineTest {
@@ -60,6 +64,52 @@ class WaitEngineTest {
         assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
         assertEquals(List.of(0L, 8L), starts);
         assertEquals(List.of(5L), time.parkRequests());
+        assertEquals("ready", outcome.result());
+    }
+
+    @Test
+    void startsALaterAttemptOneNanosecondBeforeTheAcquisitionDeadline() {
+        var time = new FakeTime(0);
+        var starts = new ArrayList<Long>();
+        var calls = new int[1];
+
+        WaitOutcome<String> outcome = wait(time, config(9, 10, 0), () -> {
+            starts.add(time.nanoTime());
+            return "actual";
+        }, actual -> calls[0]++ == 0
+                ? Evaluation.unsatisfied("not yet")
+                : Evaluation.satisfied("ready"));
+
+        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        assertEquals(List.of(0L, 9L), starts);
+        assertEquals(List.of(9L), time.parkRequests());
+        assertEquals(9, outcome.completedNanos());
+        assertEquals(2, outcome.completedAttempts());
+        assertEquals("ready", outcome.result());
+    }
+
+    @Test
+    void acceptsALaterSuccessCompletingOneNanosecondBeforeTheDeadline() {
+        var time = new FakeTime(0);
+        var starts = new ArrayList<Long>();
+        var calls = new int[1];
+
+        WaitOutcome<String> outcome = wait(time, config(4, 10, 0), () -> {
+            starts.add(time.nanoTime());
+            return "actual";
+        }, actual -> {
+            if (calls[0]++ == 0) {
+                return Evaluation.unsatisfied("not yet");
+            }
+            time.advanceNanos(5);
+            return Evaluation.satisfied("ready");
+        });
+
+        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        assertEquals(List.of(0L, 4L), starts);
+        assertEquals(List.of(4L), time.parkRequests());
+        assertEquals(9, outcome.completedNanos());
+        assertEquals(2, outcome.completedAttempts());
         assertEquals("ready", outcome.result());
     }
 
@@ -247,6 +297,98 @@ class WaitEngineTest {
         assertEquals("boundary", outcome.result());
     }
 
+    @ParameterizedTest
+    @MethodSource("stabilityDurationRelations")
+    void observesTheExactStabilityBoundaryForEveryDurationRelation(
+            long every,
+            long stableFor,
+            List<Long> expectedStarts,
+            List<Long> expectedParks) {
+        var time = new FakeTime(0);
+        var starts = new ArrayList<Long>();
+
+        WaitOutcome<Long> outcome = wait(
+                time, config(every, 20, stableFor), () -> {
+                    starts.add(time.nanoTime());
+                    return time.nanoTime();
+                }, Evaluation::satisfied);
+
+        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        assertEquals(expectedStarts, starts);
+        assertEquals(expectedParks, time.parkRequests());
+        assertEquals(stableFor, outcome.completedNanos());
+        assertEquals(expectedStarts.size(), outcome.completedAttempts());
+        assertEquals(stableFor, outcome.result());
+    }
+
+    @Test
+    void rechecksTheStabilityTargetAfterPrematureAndSpuriousWakeups() {
+        var time = new FakeTime(0);
+        time.wakeAfter(2);
+        time.wakeAfter(0);
+        time.wakeAfter(1);
+        var starts = new ArrayList<Long>();
+
+        WaitOutcome<Long> outcome = wait(time, config(5, 20, 5), () -> {
+            starts.add(time.nanoTime());
+            return time.nanoTime();
+        }, Evaluation::satisfied);
+
+        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        assertEquals(List.of(0L, 5L), starts);
+        assertEquals(List.of(5L, 3L, 3L, 2L), time.parkRequests());
+        assertEquals(5L, outcome.result());
+    }
+
+    @Test
+    void usesOverflowSafeDeadlinesDuringStability() {
+        long started = Long.MAX_VALUE - 2;
+        var time = new FakeTime(started);
+        var starts = new ArrayList<Long>();
+
+        WaitOutcome<Long> outcome = wait(time, config(4, 20, 6), () -> {
+            starts.add(time.nanoTime());
+            return time.nanoTime();
+        }, Evaluation::satisfied);
+
+        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        assertEquals(List.of(
+                started, Long.MIN_VALUE + 1, Long.MIN_VALUE + 3), starts);
+        assertEquals(List.of(4L, 2L), time.parkRequests());
+        assertEquals(Long.MIN_VALUE + 3, outcome.completedNanos());
+        assertEquals(Long.MIN_VALUE + 3, outcome.result());
+    }
+
+    @Test
+    void stabilizesBeyondUpToAfterAcquisitionAtTheLastValidNanosecond() {
+        var time = new FakeTime(0);
+        var starts = new ArrayList<Long>();
+        var calls = new int[1];
+
+        WaitOutcome<String> outcome = wait(time, config(4, 10, 5), () -> {
+            starts.add(time.nanoTime());
+            return "actual";
+        }, actual -> {
+            int call = calls[0]++;
+            if (call == 0) {
+                return Evaluation.unsatisfied("not yet");
+            }
+            if (call == 1) {
+                time.advanceNanos(5);
+                return Evaluation.satisfied("acquired");
+            }
+            return Evaluation.satisfied(call == 2 ? "stable" : "boundary");
+        });
+
+        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        assertEquals(List.of(0L, 4L, 13L, 14L), starts);
+        assertEquals(List.of(4L, 4L, 1L), time.parkRequests());
+        assertEquals(9, outcome.acquiredNanos());
+        assertEquals(14, outcome.completedNanos());
+        assertEquals(4, outcome.completedAttempts());
+        assertEquals("boundary", outcome.result());
+    }
+
     @Test
     void treatsARegularSatisfiedObservationCompletingAfterBoundaryAsFinal() {
         var time = new FakeTime(0);
@@ -332,6 +474,15 @@ class WaitEngineTest {
                 outcome.observation().origin());
         assertEquals(2, outcome.observation().attempt());
         assertFalse(outcome.observation().isSatisfied());
+    }
+
+    private static Stream<Arguments> stabilityDurationRelations() {
+        return Stream.of(
+                Arguments.of(5L, 3L, List.of(0L, 3L), List.of(3L)),
+                Arguments.of(5L, 5L, List.of(0L, 5L), List.of(5L)),
+                Arguments.of(4L, 12L,
+                        List.of(0L, 4L, 8L, 12L),
+                        List.of(4L, 4L, 4L)));
     }
 
     private static WaitConfig config(long every, long upTo, long stableFor) {
