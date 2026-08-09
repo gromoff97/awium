@@ -18,6 +18,7 @@ import org.openrewrite.SourceFile;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaParser;
 import org.openrewrite.java.MethodMatcher;
+import org.openrewrite.java.search.FindMissingTypes;
 import org.openrewrite.java.tree.Flag;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JavaType;
@@ -97,10 +98,32 @@ class ArchitectureContractTest {
                         "import static missing.Type.method; "
                                 + "final class StaticImport {}"),
                 Map.of(Path.of("Call.java"),
-                        "final class Call { void run() { missing(); } }"))) {
+                        "final class Call { void run() { missing(); } }"),
+                Map.of(Path.of("Cast.java"),
+                        "final class Cast { Object value = (MissingType) null; }"),
+                Map.of(Path.of("ClassLiteral.java"),
+                        "final class ClassLiteral { Class<?> type = MissingType.class; }"),
+                Map.of(Path.of("Annotation.java"),
+                        "@Missing final class Annotation {}"),
+                Map.of(Path.of("Throws.java"),
+                        "final class Throws { void run() throws MissingType {} }"),
+                Map.of(Path.of("InstanceOf.java"),
+                        "final class InstanceOf { boolean test(Object value) { return value instanceof MissingType; } }"))) {
             assertThrows(AssertionError.class,
                     () -> assertApprovedSources(invalid));
         }
+    }
+
+    @Test
+    void architectureAuditRequiresEmptyNamespaceHolderConstructors() {
+        assertRejectedAt(MAIN_PACKAGE.resolve("Assertility.java"), """
+                package io.github.gromoff97.assertility;
+                public final class Assertility {
+                    private Assertility() {
+                        int ignored = 1;
+                    }
+                }
+                """);
     }
 
     @Test
@@ -482,6 +505,13 @@ class ArchitectureContractTest {
                 throw new AssertionError(source.getSourcePath()
                         + ": expected a typed Java compilation unit");
             }
+            List<FindMissingTypes.MissingTypeResult> missingTypes =
+                    FindMissingTypes.findMissingTypes(unit, false);
+            if (!missingTypes.isEmpty()) {
+                throw new AssertionError(source.getSourcePath()
+                        + ": OpenRewrite type attribution failed: "
+                        + missingTypes.getFirst().getMessage());
+            }
             try {
                 visitor.visit(unit, context);
             } catch (RuntimeException failure) {
@@ -504,6 +534,10 @@ class ArchitectureContractTest {
                 MAIN_PACKAGE.resolve("JdkTime.java").normalize();
         private static final Path INTERRUPT_GUARD =
                 MAIN_PACKAGE.resolve("InterruptGuard.java").normalize();
+        private static final Set<Path> NAMESPACE_HOLDERS = Set.of(
+                MAIN_PACKAGE.resolve("Assertility.java").normalize(),
+                MAIN_PACKAGE.resolve("AwaitConditions.java").normalize(),
+                MAIN_PACKAGE.resolve("AwaitSources.java").normalize());
         private static final String THREAD = "java.lang.Thread";
         private static final String LOCK_SUPPORT =
                 "java.util.concurrent.locks.LockSupport";
@@ -566,6 +600,12 @@ class ArchitectureContractTest {
             JavaType.Method method = declaration.getMethodType();
             requireMethod(declaration, method);
             checkSignature(declaration, method);
+            if (method.isConstructor()
+                    && NAMESPACE_HOLDERS.contains(currentPath())
+                    && declaration.getBody() != null
+                    && !declaration.getBody().getStatements().isEmpty()) {
+                reject(declaration, "namespace holder constructor must be empty");
+            }
             if (method.hasFlags(Flag.Synchronized)) {
                 reject(declaration, "synchronized method");
             }

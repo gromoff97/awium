@@ -6,10 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -89,33 +85,6 @@ class InterruptGuardTest {
         assertTrue(condition.hasActual());
         assertSame(actual, condition.actual());
         assertTrue(Thread.currentThread().isInterrupted());
-    }
-
-    @Test
-    void onlyInterruptGuardOwnsProductionFlagReadsAndWrites() throws IOException {
-        Path production = Path.of("src/main/java/io/github/gromoff97/assertility");
-        List<Path> offenders;
-        try (var files = Files.walk(production)) {
-            offenders = files.filter(path -> path.toString().endsWith(".java"))
-                    .filter(path -> !path.getFileName().toString()
-                            .equals("InterruptGuard.java"))
-                    .filter(InterruptGuardTest::containsInterruptMechanics)
-                    .toList();
-        }
-
-        assertEquals(List.of(), offenders);
-        String guardSource = Files.readString(production.resolve("InterruptGuard.java"));
-        assertFalse(guardSource.contains("Thread.interrupted("));
-    }
-
-    private static boolean containsInterruptMechanics(Path path) {
-        try {
-            String source = Files.readString(path).replaceAll("\\s+", "");
-            return source.contains("Thread.currentThread().isInterrupted()")
-                    || source.contains("Thread.currentThread().interrupt()");
-        } catch (IOException failure) {
-            throw new AssertionError(failure);
-        }
     }
 
     private static void assertFlagOnly(

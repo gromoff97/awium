@@ -11,7 +11,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
@@ -36,13 +35,9 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.function.Predicate;
-import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
 class PublicSurfaceTest {
-
-    private static final Path MAIN_PACKAGE = Path.of("src", "main", "java", "io",
-            "github", "gromoff97", "assertility");
 
     @Test
     void exposesExactlyTheApprovedPublicApiIncludingNestedTypes()
@@ -144,7 +139,7 @@ class PublicSurfaceTest {
 
     @Test
     void namespaceHoldersAndFailureHierarchiesAreClosedExactly()
-            throws ReflectiveOperationException, IOException {
+            throws ReflectiveOperationException {
         for (Class<?> holder : List.of(Assertility.class, AwaitConditions.class,
                 AwaitSources.class)) {
             assertTrue(isPublic(holder.getModifiers()), holder.getName());
@@ -162,13 +157,6 @@ class PublicSurfaceTest {
                     .allMatch(field -> isStatic(field.getModifiers())),
                     holder.getName());
 
-            String source = Files.readString(MAIN_PACKAGE.resolve(
-                    holder.getSimpleName() + ".java"));
-            Pattern emptyConstructor = Pattern.compile("private\\s+"
-                    + Pattern.quote(holder.getSimpleName())
-                    + "\\s*\\(\\s*\\)\\s*\\{\\s*}");
-            assertEquals(1, emptyConstructor.matcher(source).results().count(),
-                    holder.getName());
         }
 
         assertEquals(5, Arrays.stream(Assertility.class.getDeclaredMethods())
