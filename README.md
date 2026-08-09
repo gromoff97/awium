@@ -1,220 +1,203 @@
 # Assertility
 
-Assertility is a Java 21 library for polling an AssertJ-style expectation and
-returning the useful value from the same successful observation. It uses
-Awaitility for polling and AssertJ for diagnostics.
-
-The Maven coordinate is
-`io.github.gromoff97:assertility:0.1.0-SNAPSHOT`. The project requires Java 21.
-Awaitility and AssertJ are part of the public runtime API and are therefore
-regular compile dependencies.
-
-Examples below assume these imports:
+Assertility is a Java 21 await-and-assert library with no compile or runtime
+dependencies. It polls a checked source in the calling thread and returns the
+natural result from the same successful observation.
 
 ```java
-import static io.github.gromoff97.assertility.Assertility.*;
-import static org.assertj.core.api.Assertions.assertThat;
+import static io.github.gromoff97.assertility.Assertility.await;
+import static io.github.gromoff97.assertility.AwaitConditions.present;
+
+import java.time.Duration;
+
+Payment payment = await(paymentRepository::findById)
+        .every(Duration.ofMillis(100))
+        .upTo(Duration.ofSeconds(10))
+        .stableFor(Duration.ofSeconds(5))
+        .until(present.because("Payment must become and remain available"));
 ```
 
-## Await and retrieve
+## Installation
 
-Use `awaitUntil(source)` for the default Awaitility configuration. The terminal
-method states the expectation and determines the return type:
+```xml
+<dependency>
+    <groupId>io.github.gromoff97</groupId>
+    <artifactId>assertility</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+The library requires Java 21. Its published compile and runtime dependency
+graphs are empty; JUnit is used only to test Assertility itself.
+
+Examples below assume:
 
 ```java
-Payment payment = awaitUntil(paymentDao::loadPayments)
-        .as("payment %s", transactionId)
-        .single(payment -> payment.transactionId().equals(transactionId));
+import static io.github.gromoff97.assertility.Assertility.await;
+import static io.github.gromoff97.assertility.AwaitConditions.*;
+
+import io.github.gromoff97.assertility.AwaitSources;
+import io.github.gromoff97.assertility.Evaluation;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 ```
 
-`as` adds business context to a thrown `AwaitFailure`. It is available only
-immediately after a source on the throwing path. `as(String)` treats its value
-literally; `as(String, Object...)` uses `String.format` semantics. It is not
-available on a `tryAwait` path.
+## Sources and timing
 
-Use a `ConditionFactory` when the wait needs a custom timeout, poll interval,
-delay, stability window, ignored exceptions, alias, or other Awaitility policy:
+`await(...)` accepts a repeatedly invokable source, never a direct value. Five
+checked-exception-capable source categories keep terminal typing precise:
+
+- `AwaitSources.Source<T>`
+- `AwaitSources.OptionalSource<T>`
+- `AwaitSources.CollectionSource<E, C>`
+- `AwaitSources.SequencedCollectionSource<E, C>`
+- `AwaitSources.MapSource<K, V, M>`
+
+Concrete-return lambdas and method references normally select the right
+category. Type a fundamentally ambiguous source explicitly:
 
 ```java
-ConditionFactory factory = org.awaitility.Awaitility.await()
-        .pollInterval(Duration.ofMillis(50))
-        .atMost(Duration.ofSeconds(2))
-        .during(Duration.ofMillis(100));
-
-Payment payment = await(factory)
-        .until(paymentDao::loadPayment)
-        .as("payment %s reaches the final state", transactionId)
-        .returns(Status.COMPLETED, Payment::status);
+AwaitSources.OptionalSource<Payment> source = () -> null;
+await(source).until(absent);
 ```
 
-Assertility does not duplicate `ConditionFactory` configuration methods in its
-own chain.
+The optional configuration order is `every -> upTo -> stableFor -> until`.
+Methods may be skipped, but cannot be repeated or called backward in one chain.
+Defaults are:
 
-## Result mode
+- `every`: 100 milliseconds
+- `upTo`: 10 seconds
+- `stableFor`: zero (disabled)
 
-`tryAwaitUntil(source)` and `tryAwait(factory).until(source)` use the same
-polling engine and terminal API without throwing an expected final wait
-failure:
+The first observation is immediate. `every` is a fixed delay from the end of
+one observation to the start of the next. `upTo` limits acquisition only. Once
+the condition first succeeds, a configured `stableFor` period may extend the
+total call beyond `upTo`; success then returns the final satisfied boundary
+observation. A stability mismatch fails immediately instead of restarting
+acquisition.
+
+`until(...)` starts the wait. The source runs once per observation, and success
+never invokes it again just to obtain the return value. A retained stage may be
+used for multiple sequential waits; each call gets fresh timing and attempt
+state while retaining the caller-owned source and condition objects.
+
+## Result typing and conditions
+
+The condition determines the terminal result type:
+
+- preserving conditions such as `equalTo`, `nonEmpty`, and `containsEntry`
+  return the exact observed source value;
+- `present` returns the contained `T` from `Optional<T>`;
+- custom `Condition<S, R>` instances return their selected `R`;
+- `isNull` and `absent` return `Void` and are normally used as statements.
 
 ```java
-AwaitResult<Payment> result = tryAwait(factory)
-        .until(paymentDao::loadPayments)
-        .single(Payment::transactionId, transactionId);
+Payment payment = await(paymentRepository::load)
+        .until(equalTo(expectedPayment));
 
-if (result.isSuccess()) {
-    Payment payment = result.get();
-} else {
-    AwaitFailure failure = result.failure().orElseThrow();
-}
+Receipt receipt = await(paymentRepository::load)
+        .until(condition("payment has a receipt", payment ->
+                payment.receipt() == null
+                        ? Evaluation.unsatisfied("receipt was absent")
+                        : Evaluation.satisfied(payment.receipt())));
 ```
 
-`AwaitResult.get()` returns the value on success and rethrows the stored
-`AwaitFailure` on failure. `failure()` is empty on success.
-
-## Common terminals
-
-Object terminals include `isNull`, `isNotNull`, `isEqualTo`, `isNotEqualTo`,
-`returns`, `matches`, and `satisfies`. `returns(expected, extractor)` compares
-the extracted value but returns the original object:
+Every raw condition form supports one eager `because(...)` explanation. It is
+included in terminal diagnostics without changing evaluation or result typing:
 
 ```java
-Payment payment = awaitUntil(paymentDao::loadPayment)
-        .returns(Status.COMPLETED, Payment::status);
+await(paymentRepository::load)
+        .until(equalTo(expectedPayment)
+                .because("payment %s must be replicated", paymentId));
 ```
 
-Use `satisfies` for several assertions on one observation or for custom AssertJ
-configuration:
+Sources and callback adapters may throw checked exceptions. `asserted(...)`
+retries an `AssertionError` and preserves the observed source; `passed(...)`
+returns the callback result:
 
 ```java
-Payment payment = awaitUntil(paymentDao::loadPayment)
-        .satisfies(actual -> {
-            assertThat(actual.status()).isEqualTo(Status.COMPLETED);
-            assertThat(actual.completedAt()).isNotNull();
-        });
+AwaitSources.Source<Payment> source = paymentRepository::loadChecked;
+
+Payment payment = await(source).until(asserted(actual -> {
+    if (!actual.isComplete()) {
+        throw new AssertionError("payment was not complete");
+    }
+}));
+
+Receipt receipt = await(source).until(passed(Payment::loadReceiptChecked));
 ```
 
-An `AssertionError` from `satisfies` is an unmet observation and is retried.
-Predicate overloads of `matches`, Optional selectors, and collection selectors
-also have a description form for clearer timeout diagnostics.
+Other checked or unchecked callback failures stop immediately and preserve the
+original cause.
 
-Specialized facades add `isTrue`/`isFalse`, comparable bounds, and String
-emptiness/content checks.
+## Collection and Map examples
 
-## Optional and collections
-
-Positive Optional terminals return the contained value. Collection state and
-content terminals preserve the concrete source collection, while selectors
-return selected elements:
+Collection state and membership conditions preserve the concrete collection:
 
 ```java
-Payment optionalPayment = awaitUntil(paymentDao::findPayment)
-        .contains(expectedPayment);
+List<Payment> payments = await(paymentRepository::findAll)
+        .until(nonEmpty.because("at least one payment must exist"));
 
-Payment singlePayment = awaitUntil(paymentDao::loadPayments)
-        .single(Payment::transactionId, transactionId);
-Payment anyCompleted = awaitUntil(paymentDao::loadPayments)
-        .any(payment -> payment.status() == Status.COMPLETED);
-List<Payment> twoCompleted = awaitUntil(paymentDao::loadPayments)
-        .exactly(2, Payment::status, Status.COMPLETED);
+List<Payment> exact = await(paymentRepository::findAll)
+        .until(containsExactly(firstPayment, secondPayment));
+
+Set<Payment> accepted = await(paymentRepository::findAccepted)
+        .until(containsAll(firstPayment, secondPayment));
 ```
 
-`single` requires exactly one match. `any` chooses randomly from every match in
-the final successful observation, so it never promises encounter order.
-`exactly` requires a count of at least two and returns an unmodifiable
-`List<E>` snapshot of all matches. `all` is non-vacuous and returns the source
-collection; `none` allows an empty collection and also returns the source.
+Ordered exactness is available only when the source return type is a Java 21
+`SequencedCollection`. General collections provide membership and any-order
+exactness through conditions such as `containsExactlyInAnyOrder(...)`.
 
-Extractor-based collection overloads use the order `(extractor, expected)`.
-That order avoids ambiguity with `(String description, Predicate)` when the
-expected property is a String.
-
-Ordered content methods such as `containsExactly` are exposed only for a source
-declared as a Java 21 `SequencedCollection`. General collections still expose
-unordered content methods such as `containsExactlyInAnyOrder`.
-
-## Map, Future, and executable sources
+Map conditions likewise return the concrete map:
 
 ```java
-Map<String, Payment> indexed = awaitUntil(paymentDao::indexPayments)
-        .containsEntry(transactionId, expectedPayment);
+Map<String, Payment> indexed = await(paymentRepository::index)
+        .until(containsEntry(paymentId, expectedPayment));
 
-CompletableFuture<Payment> completed = awaitUntil(paymentDao::requestPayment)
-        .isDone();
-Payment response = completed.join();
-
-awaitUntil(paymentDao::refresh).doesNotThrowAnyException();
+Map<String, Payment> completeIndex = await(paymentRepository::index)
+        .until(containsExactlyEntriesOf(expectedIndex)
+                .because("the payment index must converge"));
 ```
 
-Map terminals preserve the concrete map. Map keys deliberately follow the Map
-`equals`/`hashCode` contract; entry values use Assertility recursive equality.
-`isDone` only polls `Future.isDone()` and returns the same Future—it never calls
-`get()` during polling. An executable retries ordinary exceptions and
-`AssertionError` until one invocation succeeds; its throwing result is `void`
-and its result-mode type is `AwaitResult<Void>`.
+## Threading and interruption
 
-## Return values
+Polling, source retrieval, and condition evaluation all run on the exact
+platform or virtual thread that calls `until(...)`. Assertility creates no
+worker, executor, scheduler, or virtual thread, so caller `ThreadLocal` values
+remain visible.
 
-| Terminal family | Throwing path | Result path |
-| --- | --- | --- |
-| Object/common assertion on `T` | exact `T` | `AwaitResult<T>` |
-| `isNull()` on `T` | `T`, whose runtime value is `null` | `AwaitResult<T>` |
-| Boolean/String/comparable assertion | exact source | `AwaitResult<source type>` |
-| Collection state/content/`all`/`none` on `C` | exact `C` | `AwaitResult<C>` |
-| Collection `single` or `any` | selected `E` | `AwaitResult<E>` |
-| Collection `exactly` | selected `List<E>` | `AwaitResult<List<E>>` |
-| Optional `isEmpty` | exact `Optional<T>` | `AwaitResult<Optional<T>>` |
-| Positive Optional terminal | contained `T` | `AwaitResult<T>` |
-| Map assertion on `M` | exact `M` | `AwaitResult<M>` |
-| Future `isDone` on `F` | exact `F` | `AwaitResult<F>` |
-| Executable success | `void` | `AwaitResult<Void>` |
+This first release supports one-thread use only. Another thread may interrupt
+the caller as an external cancellation controller, but it must not access or
+mutate the stage, source, condition, expected values, or observed in-memory
+objects. Assertility restores the interrupt flag and throws
+`AwaitInterruptedException`. Because callbacks run in the caller, Assertility
+cannot preempt a source or condition that blocks indefinitely.
 
-The source is invoked once per poll. A successful value is derived from that
-same observation; Assertility does not make an extra source call to retrieve
-it. With Awaitility `during`, the returned value comes from the final successful
-observation after the stability window.
+## Failures
 
-## Equality and failures
+Expected completed waits are assertion failures:
 
-Built-in value equality uses AssertJ recursive comparison with strict type
-checking. This applies to object equality and `returns`, Optional `contains`,
-collection elements and extractor-based selectors/quantifiers, and map entry
-values. Map keys are the intentional exception described above. Use
-`satisfies` when comparison needs ignored fields, custom comparators, non-strict
-types, or another assertion engine.
-
-An unmet terminal, timeout, stability/minimum-time failure, exhausted ignored
-exception, or factory fail-fast outcome becomes `AwaitFailure`. Throwing paths
-throw it; result paths store it. Its cause preserves the original Awaitility
-failure and the lower assertion diagnostic, while `as` supplies the outer
-business context.
-
-Invalid arguments fail before polling. Unexpected unchecked failures from a
-value source, predicate, extractor, or callback propagate immediately. An
-unexpected checked exception is wrapped in `AwaitExecutionException` unless
-the supplied factory explicitly ignores it. Interruption restores the thread
-interrupt flag and propagates immediately; fatal JVM errors are never retried.
-
-## Type inference
-
-`var` works for every non-void throwing result and every `AwaitResult`. It
-cannot resolve an ambiguous source expression: overload selection happens
-before the terminal result is inferred. Give fundamentally ambiguous lambdas a
-typed source when necessary:
-
-```java
-AwaitSources.OptionalSource<String> empty = Optional::empty;
-AwaitSources.StringSource nullable = () -> null;
-AwaitSources.Executable failing = () -> {
-    throw new IOException("not ready");
-};
+```text
+AwaitFailure extends AssertionError
+├── AwaitTimeoutException
+└── AwaitStabilizationException
 ```
 
-## Deliberate boundary
+Broken execution is unchecked and preserves the exact cause:
 
-Assertility is stateless across polling iterations. It cannot accumulate
-records from a consumptive event source that returns only newly received
-batches. Such a wait needs an explicit stateful design for ownership,
-deduplication, ordering, replay, memory bounds, diagnostics, and return value;
-this initial API does not mutate external state to simulate it.
+```text
+AwaitUncontrolledException extends RuntimeException
+├── AwaitSourceRetrievalException
+├── AwaitConditionEvaluationException
+├── AwaitInterruptedException
+└── AwaitUnhandledException
+```
+
+Invalid sources, conditions, durations, and cross-field timing configuration
+fail before polling. `VirtualMachineError` and `ThreadDeath` are rethrown
+unchanged.
 
 Assertility is licensed under the [Apache License 2.0](LICENSE).

@@ -2,6 +2,7 @@ package io.github.gromoff97.assertility;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -239,9 +240,11 @@ class DiagnosticsSnapshotTest {
     void protectsDescriptionAndActualRenderingWithoutChangingClassification() {
         var actual = new ThrowingValue(new IllegalStateException("bad value"));
         var cause = new IllegalArgumentException("condition broke");
+        var descriptions = new int[1];
         ConditionRuntime<Object, Object> runtime = new ConditionRuntime<>(
                 value -> Evaluation.satisfied(value),
                 () -> {
+                    descriptions[0]++;
                     throw new IllegalStateException("bad description");
                 }, null);
         WaitOutcome<Object> outcome = WaitOutcome.uncontrolled(
@@ -262,12 +265,14 @@ class DiagnosticsSnapshotTest {
                 Actual: <value unavailable: toString() threw IllegalStateException>
                 Cause: IllegalArgumentException: condition broke""",
                 failure.getMessage());
+        assertEquals(1, descriptions[0]);
         assertEquals(1, actual.calls);
     }
 
     @Test
     void usesDescriptionFallbackForNullAndBlankValues() {
         for (String description : new String[] {null, "", " \t\n"}) {
+            var calls = new int[1];
             WaitOutcome<Object> outcome = WaitOutcome.uncontrolled(
                     ObservationOutcome.uncontrolled(
                             ObservationOutcome.Origin.SOURCE,
@@ -275,10 +280,16 @@ class DiagnosticsSnapshotTest {
 
             AwaitSourceRetrievalException failure = assertThrows(
                     AwaitSourceRetrievalException.class,
-                    () -> complete(outcome, description, null, config(1, 2, 0)));
+                    () -> new FailureFactory().complete(outcome,
+                            new ConditionRuntime<>(
+                                    value -> Evaluation.satisfied(value), () -> {
+                                        calls[0]++;
+                                        return description;
+                                    }, null), config(1, 2, 0)));
 
             assertTrue(failure.getMessage().contains(
                     "Condition: condition description unavailable"));
+            assertEquals(1, calls[0]);
         }
     }
 
@@ -338,6 +349,147 @@ class DiagnosticsSnapshotTest {
         assertEquals(1, cause.calls);
         assertTrue(failure.getMessage().endsWith(
                 "Cause: CountingCause: broken"));
+    }
+
+    @Test
+    void normalizesEveryMultilineUncontrolledFieldAndReadsCallbacksOnce() {
+        var actual = new CountingValue("actual one\ractual two");
+        var cause = new CountingCause("cause one\r\n cause two\rcause three");
+        var descriptions = new int[1];
+        ConditionRuntime<Object, Object> runtime = new ConditionRuntime<>(
+                value -> Evaluation.satisfied(value), () -> {
+                    descriptions[0]++;
+                    return "condition one\r\n condition two\rcondition three";
+                }, "because one\r\nbecause two");
+        WaitOutcome<Object> outcome = WaitOutcome.uncontrolled(
+                ObservationOutcome.uncontrolled(
+                        ObservationOutcome.Origin.CONDITION, cause, 2, actual));
+
+        AwaitConditionEvaluationException failure = assertThrows(
+                AwaitConditionEvaluationException.class,
+                () -> new FailureFactory().complete(
+                        outcome, runtime, config(1, 2, 0)));
+
+        assertEquals("""
+                Await condition evaluation failed
+
+                Attempt: 2
+                Condition:
+                    condition one
+                     condition two
+                    condition three
+                Actual:
+                    actual one
+                    actual two
+                Because:
+                    because one
+                    because two
+                Cause:
+                    CountingCause: cause one
+                     cause two
+                    cause three""", failure.getMessage());
+        assertEquals(1, descriptions[0]);
+        assertEquals(1, actual.calls);
+        assertEquals(1, cause.calls);
+    }
+
+    @Test
+    void rendersNullBlankThrowingAndAnonymousCauseMessages() {
+        var nullMessage = new CountingCause(null);
+        var blankMessage = new CountingCause(" \t");
+        RuntimeException anonymous = new RuntimeException() {
+            private static final long serialVersionUID = 1L;
+        };
+        RuntimeException anonymousMessageFailure = new RuntimeException() {
+            private static final long serialVersionUID = 1L;
+        };
+        var throwingMessage = new ThrowingMessageCause(anonymousMessageFailure);
+
+        AwaitSourceRetrievalException nullFailure = sourceFailure(nullMessage);
+        AwaitSourceRetrievalException blankFailure = sourceFailure(blankMessage);
+        AwaitSourceRetrievalException anonymousFailure = sourceFailure(anonymous);
+        AwaitSourceRetrievalException throwingFailure = sourceFailure(
+                throwingMessage);
+
+        assertTrue(nullFailure.getMessage().endsWith("Cause: CountingCause"));
+        assertTrue(blankFailure.getMessage().endsWith("Cause: CountingCause"));
+        assertTrue(anonymousFailure.getMessage().endsWith(
+                "Cause: " + anonymous.getClass().getName()));
+        assertTrue(throwingFailure.getMessage().endsWith(
+                "Cause: ThrowingMessageCause: <message unavailable: "
+                        + "getMessage() threw "
+                        + anonymousMessageFailure.getClass().getName() + ">"));
+        assertSame(throwingMessage, throwingFailure.getCause());
+        assertEquals(1, nullMessage.calls);
+        assertEquals(1, blankMessage.calls);
+        assertEquals(1, throwingMessage.calls);
+    }
+
+    @Test
+    void diagnosticCallbacksMaySetTheInterruptFlagWithoutChangingTheOutcome() {
+        var sourceCause = new IllegalStateException("source broke");
+        WaitOutcome<Object> sourceOutcome = WaitOutcome.uncontrolled(
+                ObservationOutcome.uncontrolled(
+                        ObservationOutcome.Origin.SOURCE, sourceCause, 1));
+        var interruptingActual = new InterruptingValue();
+        WaitOutcome<Object> timeoutOutcome = WaitOutcome.lateUnsatisfied(0, 2,
+                ObservationOutcome.unsatisfied(
+                        interruptingActual, "not ready", null, 1));
+
+        Thread.interrupted();
+        try {
+            AwaitSourceRetrievalException sourceFailure = assertThrows(
+                    AwaitSourceRetrievalException.class,
+                    () -> new FailureFactory().complete(sourceOutcome,
+                            new ConditionRuntime<>(
+                                    value -> Evaluation.satisfied(value), () -> {
+                                        Thread.currentThread().interrupt();
+                                        return "condition";
+                                    }, null), config(1, 2, 0)));
+            assertSame(sourceCause, sourceFailure.getCause());
+            assertFalse(sourceFailure.getMessage().contains("Interrupt flag"));
+            assertTrue(Thread.currentThread().isInterrupted());
+        } finally {
+            Thread.interrupted();
+        }
+
+        try {
+            AwaitTimeoutException timeoutFailure = assertThrows(
+                    AwaitTimeoutException.class,
+                    () -> complete(timeoutOutcome, "condition", null,
+                            config(1, 2, 0)));
+            assertNull(timeoutFailure.getCause());
+            assertFalse(timeoutFailure.getMessage().contains("Interrupt flag"));
+            assertTrue(Thread.currentThread().isInterrupted());
+            assertEquals(1, interruptingActual.calls);
+        } finally {
+            Thread.interrupted();
+        }
+    }
+
+    @Test
+    void callbackFreeEmergencyBranchFailureEscapesWithoutAnotherWrapper() {
+        var actual = new NullStringValue();
+        var formatterFailure = new IllegalStateException("formatter broke");
+        var formatterCalls = new int[1];
+        DiagnosticFormatter formatter = context -> {
+            formatterCalls[0]++;
+            context.actualValue();
+            throw formatterFailure;
+        };
+        WaitOutcome<Object> outcome = WaitOutcome.lateUnsatisfied(0, 2,
+                ObservationOutcome.unsatisfied(actual, "not ready", null, 1));
+
+        NullPointerException failure = assertThrows(NullPointerException.class,
+                () -> new FailureFactory(formatter).complete(outcome,
+                        runtime("condition", null), config(1, 2, 0)));
+
+        assertNull(failure.getCause());
+        assertEquals(0, failure.getSuppressed().length);
+        assertEquals(1, formatterCalls[0]);
+        assertEquals(1, actual.calls);
+        assertNull(ValueRenderer.render(new NullStringValue()));
+        assertEquals(" \t", ValueRenderer.render(new CountingValue(" \t")));
     }
 
     @Test
@@ -479,6 +631,14 @@ class DiagnosticsSnapshotTest {
                 () -> complete(outcome, "condition", null, config(1, 2, 0)));
     }
 
+    private static AwaitSourceRetrievalException sourceFailure(Throwable cause) {
+        WaitOutcome<Object> outcome = WaitOutcome.uncontrolled(
+                ObservationOutcome.uncontrolled(
+                        ObservationOutcome.Origin.SOURCE, cause, 1));
+        return assertThrows(AwaitSourceRetrievalException.class,
+                () -> complete(outcome, "condition", null, config(1, 2, 0)));
+    }
+
     private static <R> R complete(WaitOutcome<R> outcome, String description,
             String explanation, WaitConfig config) {
         return new FailureFactory().complete(
@@ -579,6 +739,44 @@ class DiagnosticsSnapshotTest {
         public String getMessage() {
             calls++;
             return message;
+        }
+    }
+
+    private static final class ThrowingMessageCause extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        private final RuntimeException thrown;
+        private int calls;
+
+        private ThrowingMessageCause(RuntimeException thrown) {
+            this.thrown = thrown;
+        }
+
+        @Override
+        public String getMessage() {
+            calls++;
+            throw thrown;
+        }
+    }
+
+    private static final class InterruptingValue {
+        private int calls;
+
+        @Override
+        public String toString() {
+            calls++;
+            Thread.currentThread().interrupt();
+            return "actual";
+        }
+    }
+
+    private static final class NullStringValue {
+        private int calls;
+
+        @Override
+        public String toString() {
+            calls++;
+            return null;
         }
     }
 }
