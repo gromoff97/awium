@@ -1,10 +1,34 @@
 package io.github.gromoff97.assertility;
 
 import java.util.Objects;
+import java.util.Optional;
 
 public final class AwaitConditions {
 
+    public static final Present present = OptionalConditions.present();
+    public static final Condition<Optional<?>, Void> absent =
+            OptionalConditions.absent();
+    public static final Condition<Object, Void> isNull = ObjectConditions.isNull();
+    public static final PreservingCondition<Object> isNotNull =
+            ObjectConditions.isNotNull();
+
     private AwaitConditions() {
+    }
+
+    public static PreservingCondition<Object> equalTo(Object expected) {
+        return ObjectConditions.equalTo(expected);
+    }
+
+    public static PreservingCondition<Object> notEqualTo(Object unexpected) {
+        return ObjectConditions.notEqualTo(unexpected);
+    }
+
+    public static <T> Condition<Optional<T>, T> hasValueEqualTo(T expected) {
+        return OptionalConditions.hasValueEqualTo(expected);
+    }
+
+    public static <T> Condition<Optional<T>, T> hasValueNotEqualTo(T unexpected) {
+        return OptionalConditions.hasValueNotEqualTo(unexpected);
     }
 
     public static <S, R> Condition<S, R> condition(
