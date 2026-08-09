@@ -197,7 +197,8 @@ class PublicSurfaceTest {
     void excludedApiAuditRejectsTypeFieldConstructorAndMethodLeaks() {
         for (Class<?> type : List.of(AwaitResult.class,
                 ForbiddenFieldName.class, ForbiddenFieldSignature.class,
-                ForbiddenConstructorSignature.class, ForbiddenMethodName.class)) {
+                ForbiddenConstructorSignature.class, ForbiddenMethodName.class,
+                ForbiddenInheritedField.class, ForbiddenInheritedMethod.class)) {
             assertThrows(AssertionError.class,
                     () -> assertNoExcludedApiSurface(Set.of(type)),
                     type.getSimpleName());
@@ -223,8 +224,13 @@ class PublicSurfaceTest {
             }
             Arrays.stream(type.getGenericInterfaces()).forEach(parent ->
                     assertAllowedSignature(parent.getTypeName(), forbiddenTypes));
+            for (Field field : type.getFields()) {
+                assertFalse(forbiddenNames.contains(field.getName()),
+                        field.toGenericString());
+                assertAllowedSignature(field.toGenericString(), forbiddenTypes);
+            }
             for (Field field : type.getDeclaredFields()) {
-                if (isApiMember(field.getModifiers())) {
+                if (isProtected(field.getModifiers())) {
                     assertFalse(forbiddenNames.contains(field.getName()),
                             field.toGenericString());
                     assertAllowedSignature(field.toGenericString(), forbiddenTypes);
@@ -236,8 +242,13 @@ class PublicSurfaceTest {
                             forbiddenTypes);
                 }
             }
+            for (Method method : type.getMethods()) {
+                assertFalse(forbiddenNames.contains(method.getName()),
+                        method.toGenericString());
+                assertAllowedSignature(method.toGenericString(), forbiddenTypes);
+            }
             for (Method method : type.getDeclaredMethods()) {
-                if (isApiMember(method.getModifiers())) {
+                if (isProtected(method.getModifiers())) {
                     assertFalse(forbiddenNames.contains(method.getName()),
                             method.toGenericString());
                     assertAllowedSignature(method.toGenericString(), forbiddenTypes);
@@ -282,65 +293,228 @@ class PublicSurfaceTest {
                 Map.entry("thread subclass", "class Mutant extends Thread {}"),
                 Map.entry("worker start",
                         "class Mutant { void run(Thread worker) { worker.start(); } }"),
+                Map.entry("worker start reference",
+                        "class Mutant { java.util.function.Consumer<Thread> start = Thread::start; }"),
+                Map.entry("thread construction",
+                        "class Mutant { Thread worker = new Thread(); }"),
+                Map.entry("thread constructor reference",
+                        "class Mutant { java.util.function.Function<Runnable, Thread> factory = Thread::new; }"),
+                Map.entry("qualified thread constructor reference",
+                        "class Mutant { java.util.function.Function<Runnable, Thread> factory = java.lang.Thread::new; }"),
+                Map.entry("virtual thread builder",
+                        "class Mutant { Thread.Builder.OfVirtual builder = Thread.ofVirtual(); }"),
+                Map.entry("platform thread builder",
+                        "class Mutant { Thread.Builder.OfPlatform builder = java.lang.Thread.ofPlatform(); }"),
+                Map.entry("virtual thread builder reference",
+                        "class Mutant { java.util.function.Supplier<Thread.Builder.OfVirtual> builder = Thread::ofVirtual; }"),
+                Map.entry("platform thread builder reference",
+                        "class Mutant { java.util.function.Supplier<Thread.Builder.OfPlatform> builder = java.lang.Thread::ofPlatform; }"),
+                Map.entry("static-imported virtual thread builder", """
+                        import static java.lang.Thread.ofVirtual;
+                        class Mutant { Thread worker = ofVirtual().unstarted(() -> {}); }
+                        """),
+                Map.entry("static-imported platform thread builder", """
+                        import static java.lang.Thread.ofPlatform;
+                        class Mutant { Thread worker = ofPlatform().unstarted(() -> {}); }
+                        """),
+                Map.entry("static-imported virtual thread starter", """
+                        import static java.lang.Thread.startVirtualThread;
+                        class Mutant { Thread worker = startVirtualThread(() -> {}); }
+                        """),
+                Map.entry("virtual thread starter reference", """
+                        class Mutant {
+                            interface Starter { Thread start(Runnable task); }
+                            Starter starter = Thread::startVirtualThread;
+                        }
+                        """),
+                Map.entry("sleep",
+                        "class Mutant { void run() throws InterruptedException { Thread.sleep(1); } }"),
+                Map.entry("qualified sleep",
+                        "class Mutant { void run() throws InterruptedException { java.lang.Thread.sleep(1); } }"),
+                Map.entry("sleep reference", """
+                        class Mutant {
+                            interface Sleeper {
+                                void sleep(long millis) throws InterruptedException;
+                            }
+                            Sleeper sleeper = Thread::sleep;
+                        }
+                        """),
+                Map.entry("static-imported sleep", """
+                        import static java.lang.Thread.sleep;
+                        class Mutant {
+                            void run() throws InterruptedException { sleep(1); }
+                        }
+                        """),
+                Map.entry("wildcard static-imported sleep", """
+                        import static java.lang.Thread.*;
+                        class Mutant {
+                            void run() throws InterruptedException { sleep(1); }
+                        }
+                        """),
+                Map.entry("completable future reference",
+                        "class Mutant { java.util.function.Supplier<java.util.concurrent.CompletableFuture<Void>> worker = java.util.concurrent.CompletableFuture::new; }"),
+                Map.entry("static-imported executor factory", """
+                        import static java.util.concurrent.Executors.newFixedThreadPool;
+                        class Mutant { Object worker = newFixedThreadPool(1); }
+                        """),
+                Map.entry("executor method reference", """
+                        class Mutant {
+                            java.util.concurrent.Executor executor;
+                            java.util.function.Consumer<Runnable> submit =
+                                    executor::execute;
+                        }
+                        """),
                 Map.entry("interrupt read reference",
                         "class Mutant { java.util.function.BooleanSupplier read = Thread::interrupted; }"),
                 Map.entry("interrupt restore reference",
-                        "class Mutant { Object restore(Thread t) { return t::interrupt; } }"),
-                Map.entry("sleep",
-                        "class Mutant { void run() throws Exception { Thread.sleep(1); } }"),
-                Map.entry("executor", "class Mutant { Executor worker; }"),
-                Map.entry("future", "class Mutant { CompletableFuture<?> future; }"),
-                Map.entry("thread construction",
-                        "class Mutant { Thread worker = new Thread(); }"),
-                Map.entry("thread builder",
-                        "class Mutant { Object builder = Thread.ofVirtual(); }"),
+                        "class Mutant { java.util.function.Consumer<Thread> restore = Thread::interrupt; }"),
+                Map.entry("static-imported interrupt read", """
+                        import static java.lang.Thread.interrupted;
+                        class Mutant { boolean read() { return interrupted(); } }
+                        """),
+                Map.entry("wildcard static-imported interrupt read", """
+                        import static java.lang.Thread.*;
+                        class Mutant { boolean read() { return interrupted(); } }
+                        """),
+                Map.entry("qualified interrupt read reference",
+                        "class Mutant { java.util.function.BooleanSupplier read = java.lang.Thread::interrupted; }"),
+                Map.entry("qualified interrupt restore reference",
+                        "class Mutant { java.util.function.Consumer<Thread> restore = java.lang.Thread::interrupt; }"),
                 Map.entry("monitor method",
-                        "class Mutant { void run(Object lock) throws Exception { lock.wait(); } }"),
+                        "class Mutant { void run(Object lock) throws InterruptedException { lock.wait(); } }"),
+                Map.entry("unqualified monitor methods", """
+                        class Mutant {
+                            void run() throws InterruptedException {
+                                wait();
+                                notify();
+                                notifyAll();
+                            }
+                        }
+                        """),
+                Map.entry("monitor method reference",
+                        "class Mutant { Runnable notifier = this::notify; }"),
                 Map.entry("synchronized monitor",
                         "class Mutant { synchronized void run() {} }"),
-                Map.entry("atomic", "class Mutant { AtomicInteger state; }"),
-                Map.entry("scheduler", "class Mutant { Timer timer; }"),
-                Map.entry("schedule call",
-                        "class Mutant { void run(Object scheduler) { scheduler.schedule(); } }"),
-                Map.entry("lock", "class Mutant { ReentrantLock lock; }"),
+                Map.entry("atomic",
+                        "class Mutant { java.util.concurrent.atomic.AtomicInteger state; }"),
+                Map.entry("simple atomic", """
+                        import java.util.concurrent.atomic.AtomicInteger;
+                        class Mutant { AtomicInteger state; }
+                        """),
+                Map.entry("atomic method reference", """
+                        class Mutant {
+                            java.util.concurrent.atomic.AtomicInteger state;
+                            java.util.function.IntSupplier update = state::incrementAndGet;
+                        }
+                        """),
+                Map.entry("var-handle atomic",
+                        "class Mutant { java.lang.invoke.VarHandle state; }"),
+                Map.entry("scheduler",
+                        "class Mutant { java.util.Timer timer; }"),
+                Map.entry("unqualified schedule call", """
+                        class Mutant {
+                            void schedule() {}
+                            void run() { schedule(); }
+                        }
+                        """),
+                Map.entry("schedule reference", """
+                        class Mutant {
+                            void schedule() {}
+                            Runnable task = this::schedule;
+                        }
+                        """),
+                Map.entry("lock",
+                        "class Mutant { java.util.concurrent.locks.Lock lock; }"),
+                Map.entry("simple lock", """
+                        import java.util.concurrent.locks.Lock;
+                        class Mutant { Lock lock; }
+                        """),
+                Map.entry("lock call", """
+                        class Mutant {
+                            void run(java.util.concurrent.locks.Lock lock) {
+                                lock.lock();
+                                lock.unlock();
+                            }
+                        }
+                        """),
+                Map.entry("lock reference", """
+                        class Mutant {
+                            java.util.concurrent.locks.Lock lock;
+                            Runnable acquire = lock::lock;
+                        }
+                        """),
                 Map.entry("LockSupport outside JdkTime",
-                        "class Mutant { void run() { LockSupport.park(); } }"),
+                        "class Mutant { void run() { java.util.concurrent.locks.LockSupport.park(); } }"),
                 Map.entry("interrupt read",
                         "class Mutant { boolean read(Thread t) { return t.isInterrupted(); } }"),
                 Map.entry("interrupt restore",
                         "class Mutant { void restore(Thread t) { t.interrupt(); } }"));
 
-        mutants.forEach((name, source) -> assertThrows(AssertionError.class,
-                () -> assertApprovedProductionSources(
-                        Map.of(Path.of(name + ".java"), source)), name));
+        mutants.forEach(PublicSurfaceTest::assertRejectedProductionSource);
+        for (String type : List.of("AbstractExecutorService", "Executor",
+                "ExecutorCompletionService", "ExecutorService", "Executors",
+                "CompletableFuture", "CompletionService", "CompletionStage",
+                "Future", "FutureTask", "ForkJoinPool",
+                "ScheduledExecutorService", "ScheduledFuture",
+                "ScheduledThreadPoolExecutor", "ThreadFactory",
+                "ThreadPoolExecutor")) {
+            assertRejectedProductionSource("qualified " + type,
+                    "class Mutant { java.util.concurrent.%s worker; }"
+                            .formatted(type));
+            assertRejectedProductionSource("simple " + type, """
+                    import java.util.concurrent.%s;
+                    class Mutant { %s worker; }
+                    """.formatted(type, type));
+        }
+    }
+
+    private static void assertRejectedProductionSource(
+            String name, String source) {
+        assertThrows(AssertionError.class, () -> assertApprovedProductionSources(
+                Map.of(Path.of(name + ".java"), source)), name);
     }
 
     private static void assertApprovedProductionSources(
             Map<Path, String> sources) {
         List<Pattern> forbidden = List.of(
-                Pattern.compile("\\bThread\\s*\\.\\s*sleep\\s*\\("),
-                Pattern.compile("\\b(?:Executor|ExecutorService|Executors|"
-                        + "CompletableFuture|CompletionStage|Future|FutureTask|"
-                        + "ForkJoinPool|ThreadFactory)\\b"),
+                Pattern.compile("\\b(?:java\\s*\\.\\s*lang\\s*\\.\\s*)?"
+                        + "Thread\\s*(?:\\.\\s*(?:sleep|ofVirtual|ofPlatform|"
+                        + "startVirtualThread)\\s*\\(|::\\s*(?:sleep|ofVirtual|"
+                        + "ofPlatform|startVirtualThread|new)\\b)"),
+                Pattern.compile("\\bimport\\s+static\\s+java\\s*\\.\\s*lang"
+                        + "\\s*\\.\\s*Thread\\s*\\.\\s*(?:sleep|ofVirtual|"
+                        + "ofPlatform|startVirtualThread|\\*)\\s*;"),
+                Pattern.compile("\\b(?:AbstractExecutorService|Executor|"
+                        + "ExecutorCompletionService|ExecutorService|Executors|"
+                        + "CompletableFuture|CompletionService|CompletionStage|"
+                        + "Future|FutureTask|ForkJoinPool|ScheduledExecutorService|"
+                        + "ScheduledFuture|ScheduledThreadPoolExecutor|ThreadFactory|"
+                        + "ThreadPoolExecutor)\\b"),
                 Pattern.compile("new\\s+(?:java\\s*\\.\\s*lang\\s*\\.\\s*)?"
                         + "Thread\\s*\\("),
-                Pattern.compile("\\bThread\\s*\\.\\s*(?:ofVirtual|ofPlatform|"
-                        + "startVirtualThread)\\s*\\("),
                 Pattern.compile("\\bextends\\s+(?:java\\s*\\.\\s*lang"
                         + "\\s*\\.\\s*)?Thread\\b"),
                 Pattern.compile("(?:\\.|::)\\s*start\\s*(?:\\(|\\b)"),
                 Pattern.compile("\\bsynchronized\\b"),
-                Pattern.compile("(?:\\.|::)\\s*(?:wait|notify|notifyAll)"
-                        + "\\s*(?:\\(|\\b)"),
-                Pattern.compile("java\\.util\\.concurrent\\.atomic|"
-                        + "\\bAtomic[A-Z][A-Za-z0-9_]*\\b"),
-                Pattern.compile("\\b(?:ScheduledExecutorService|"
-                        + "ScheduledThreadPoolExecutor|Timer|TimerTask)\\b|"
-                        + "(?:\\.|::)\\s*schedule"
-                        + "(?:AtFixedRate|WithFixedDelay)?\\s*(?:\\(|\\b)"),
-                Pattern.compile("java\\.util\\.concurrent\\.locks\\."
-                        + "(?!LockSupport\\b)|\\b(?:ReentrantLock|ReadWriteLock|"
-                        + "StampedLock)\\b"));
+                Pattern.compile("\\b(?:wait|notify|notifyAll)\\s*\\(|"
+                        + "::\\s*(?:wait|notify|notifyAll)\\b"),
+                Pattern.compile("java\\s*\\.\\s*util\\s*\\.\\s*concurrent"
+                        + "\\s*\\.\\s*atomic\\b|"
+                        + "\\bAtomic[A-Z][A-Za-z0-9_]*\\b|\\bVarHandle\\b|"
+                        + "(?:\\.|::)\\s*(?:compareAndExchange(?:Acquire|Release)?|"
+                        + "compareAndSet|weakCompareAndSet[A-Za-z]*|getAndSet|"
+                        + "getAndAdd|getAndIncrement|getAndDecrement|incrementAndGet|"
+                        + "decrementAndGet|getAndUpdate|updateAndGet|getAndAccumulate|"
+                        + "accumulateAndGet)\\s*(?:\\(|\\b)"),
+                Pattern.compile("\\b(?:Timer|TimerTask)\\b|"
+                        + "\\bschedule(?:AtFixedRate|WithFixedDelay)?\\s*\\(|"
+                        + "::\\s*schedule(?:AtFixedRate|WithFixedDelay)?\\b"),
+                Pattern.compile("java\\s*\\.\\s*util\\s*\\.\\s*concurrent"
+                        + "\\s*\\.\\s*locks\\s*\\.\\s*(?!LockSupport\\b)|"
+                        + "\\b(?:Lock|ReadWriteLock|ReentrantLock|"
+                        + "ReentrantReadWriteLock|StampedLock)\\b|"
+                        + "\\b(?:lock|lockInterruptibly|tryLock|unlock|"
+                        + "newCondition)\\s*\\(|::\\s*(?:lock|unlock)\\b"));
 
         sources.forEach((path, source) -> forbidden.forEach(pattern ->
                 assertFalse(pattern.matcher(source).find(),
@@ -363,8 +537,9 @@ class PublicSurfaceTest {
         Pattern interruptAccess = Pattern.compile(
                 "\\.\\s*(?:isInterrupted|interrupted|interrupt)\\s*\\(|"
                         + "::\\s*(?:isInterrupted|interrupted|interrupt)\\b|"
-                        + "import\\s+static\\s+java\\.lang\\.Thread\\s*\\.\\s*"
-                        + "(?:isInterrupted|interrupted|interrupt)\\s*;");
+                        + "\\bimport\\s+static\\s+java\\s*\\.\\s*lang\\s*\\."
+                        + "\\s*Thread\\s*\\.\\s*(?:isInterrupted|interrupted|"
+                        + "interrupt|\\*)\\s*;");
         sources.forEach((path, source) -> {
             String remaining = source;
             if (path.equals(interruptGuard)) {
@@ -608,5 +783,23 @@ class PublicSurfaceTest {
         public Object map() {
             return null;
         }
+    }
+
+    static class ForbiddenInheritedFieldParent {
+        public java.util.concurrent.Future<?> leaked;
+    }
+
+    public static final class ForbiddenInheritedField
+            extends ForbiddenInheritedFieldParent {
+    }
+
+    interface ForbiddenInheritedMethodParent {
+        default java.util.function.Predicate<?> map() {
+            return null;
+        }
+    }
+
+    public static final class ForbiddenInheritedMethod
+            implements ForbiddenInheritedMethodParent {
     }
 }
