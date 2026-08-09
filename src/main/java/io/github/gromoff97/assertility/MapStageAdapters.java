@@ -16,13 +16,15 @@ abstract static class MapTerminals<K, V, M extends Map<K, V>>
     public final M until(StructuralCondition condition) {
         Objects.requireNonNull(condition, "condition must not be null");
         chain.config().validatePair();
-        return chain.execute(ConditionAdapters.structural(condition, "map was null"));
+        return chain.execute(ConditionAdapters.structural(
+                condition, "map", Map::size));
     }
 
     public final M until(ExplainedStructuralCondition condition) {
         Objects.requireNonNull(condition, "condition must not be null");
         chain.config().validatePair();
-        return chain.execute(ConditionAdapters.structural(condition, "map was null"));
+        return chain.execute(ConditionAdapters.structural(
+                condition, "map", Map::size));
     }
 }
 

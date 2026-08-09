@@ -46,7 +46,7 @@ class ObjectAndOptionalAwaitTest {
     void collectionAndMapStructuralTerminalsPreserveConcreteSources() {
         ArrayList<String> list = new ArrayList<>(List.of("value"));
         HashMap<String, Integer> map = new HashMap<>(Map.of("value", 1));
-        StructuralCondition structural = satisfiedStructural();
+        StructuralCondition structural = AwaitConditions.nonEmpty;
 
         ArrayList<String> returnedList = Assertility.await(
                 (AwaitSources.SequencedCollectionSource<String,
@@ -81,7 +81,7 @@ class ObjectAndOptionalAwaitTest {
 
     @Test
     void collectionAndMapNullObservationsUseFacadeSpecificMismatch() {
-        StructuralCondition structural = satisfiedStructural();
+        StructuralCondition structural = AwaitConditions.nonEmpty;
 
         AwaitTimeoutException collectionFailure = assertThrows(
                 AwaitTimeoutException.class,
@@ -109,12 +109,6 @@ class ObjectAndOptionalAwaitTest {
                         .withUpTo(Duration.ofNanos(2)),
                 time, time, new InterruptGuard(), new FailureFactory());
         return new MapStageAdapters.MapAfterUpToStage<>(chain);
-    }
-
-    private static StructuralCondition satisfiedStructural() {
-        return new StructuralCondition(new ConditionRuntime<>(
-                actual -> Evaluation.satisfied(actual),
-                () -> "structure to match", null));
     }
 
     private static final class CyclingSource implements AwaitSources.Source<String> {

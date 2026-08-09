@@ -6,6 +6,9 @@ import java.util.Optional;
 public final class AwaitConditions {
 
     public static final Present present = OptionalConditions.present();
+    public static final StructuralCondition empty = StructuralConditions.empty();
+    public static final StructuralCondition nonEmpty =
+            StructuralConditions.nonEmpty();
     public static final Condition<Optional<?>, Void> absent =
             OptionalConditions.absent();
     public static final Condition<Object, Void> isNull = ObjectConditions.isNull();
@@ -21,6 +24,30 @@ public final class AwaitConditions {
 
     public static PreservingCondition<Object> notEqualTo(Object unexpected) {
         return ObjectConditions.notEqualTo(unexpected);
+    }
+
+    public static StructuralCondition sizeExactly(int expected) {
+        return StructuralConditions.sizeExactly(expected);
+    }
+
+    public static StructuralCondition sizeNotExactly(int unexpected) {
+        return StructuralConditions.sizeNotExactly(unexpected);
+    }
+
+    public static StructuralCondition sizeGreaterThan(int lowerBound) {
+        return StructuralConditions.sizeGreaterThan(lowerBound);
+    }
+
+    public static StructuralCondition sizeAtLeast(int lowerBound) {
+        return StructuralConditions.sizeAtLeast(lowerBound);
+    }
+
+    public static StructuralCondition sizeLessThan(int upperBound) {
+        return StructuralConditions.sizeLessThan(upperBound);
+    }
+
+    public static StructuralCondition sizeAtMost(int upperBound) {
+        return StructuralConditions.sizeAtMost(upperBound);
     }
 
     public static <T> Condition<Optional<T>, T> hasValueEqualTo(T expected) {

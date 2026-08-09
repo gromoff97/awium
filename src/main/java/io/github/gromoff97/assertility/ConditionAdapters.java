@@ -1,6 +1,7 @@
 package io.github.gromoff97.assertility;
 
 import java.util.Optional;
+import java.util.function.ToIntFunction;
 
 final class ConditionAdapters {
 
@@ -53,17 +54,22 @@ final class ConditionAdapters {
     }
 
     static <S> ConditionRuntime<S, S> structural(
-            StructuralCondition condition, String nullMismatch) {
-        ConditionRuntime<Object, Object> runtime = condition.runtime();
-        return new ConditionRuntime<>(actual -> actual == null
-                ? Evaluation.unsatisfied(nullMismatch)
-                : withResult(runtime.evaluate(actual), actual),
-                runtime.description(), runtime.explanation());
+            StructuralCondition condition, String subject,
+            ToIntFunction<? super S> size) {
+        return new ConditionRuntime<>(actual -> {
+            if (actual == null) {
+                return Evaluation.unsatisfied(subject + " was null");
+            }
+            int actualSize = size.applyAsInt(actual);
+            return condition.evaluate(actualSize, actual, subject);
+        }, () -> condition.description(subject), null);
     }
 
     static <S> ConditionRuntime<S, S> structural(
-            ExplainedStructuralCondition condition, String nullMismatch) {
-        return ConditionAdapters.<S>structural(condition.delegate(), nullMismatch)
+            ExplainedStructuralCondition condition, String subject,
+            ToIntFunction<? super S> size) {
+        return ConditionAdapters.<S>structural(
+                condition.delegate(), subject, size)
                 .explained(condition.explanation());
     }
 

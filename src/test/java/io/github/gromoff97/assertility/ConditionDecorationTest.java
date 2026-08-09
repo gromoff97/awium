@@ -38,10 +38,9 @@ class ConditionDecorationTest {
         ConditionRuntime<Object, Object> preservingRuntime = runtime();
         ConditionRuntime<Optional<?>, Object> presentRuntime = new ConditionRuntime<>(
                 value -> Evaluation.satisfied(value.orElse(null)), () -> "present", null);
-        ConditionRuntime<Object, Object> structuralRuntime = runtime();
         var preserving = new PreservingCondition<>(preservingRuntime);
         var present = new Present(presentRuntime);
-        var structural = new StructuralCondition(structuralRuntime);
+        var structural = AwaitConditions.nonEmpty;
 
         var explainedPreserving = preserving.because("preserving");
         var explainedPresent = present.because("present %s", "value");
@@ -54,7 +53,6 @@ class ConditionDecorationTest {
         assertSame(present, explainedPresent.delegate());
         assertEquals("present value", explainedPresent.explanation());
         assertEquals("present literal", present.because("present literal").explanation());
-        assertSame(structuralRuntime, structural.runtime());
         assertSame(structural, explainedStructural.delegate());
         assertEquals("structural", explainedStructural.explanation());
         assertEquals("structural value",
@@ -179,24 +177,28 @@ class ConditionDecorationTest {
         assertNull(rawPresent.explanation());
         assertEquals("present", explainedPresent.explanation());
 
-        var structuralEvaluations = new int[1];
-        var structural = new StructuralCondition(new ConditionRuntime<>(value -> {
-            structuralEvaluations[0]++;
-            return Evaluation.satisfied(new Object());
-        }, description, null));
-        ConditionRuntime<StringBuilder, StringBuilder> rawStructural =
-                ConditionAdapters.structural(structural, "collection was null");
-        ConditionRuntime<StringBuilder, StringBuilder> explainedStructural =
+        var structural = AwaitConditions.nonEmpty;
+        var actualCollection = new java.util.ArrayList<>(java.util.List.of("value"));
+        ConditionRuntime<java.util.ArrayList<String>,
+                java.util.ArrayList<String>> rawStructural =
                 ConditionAdapters.structural(
-                        structural.because("structural"), "collection was null");
+                        structural, "collection", java.util.Collection::size);
+        ConditionRuntime<java.util.ArrayList<String>,
+                java.util.ArrayList<String>> explainedStructural =
+                ConditionAdapters.structural(
+                        structural.because("structural"), "collection",
+                        java.util.Collection::size);
 
-        assertSame(actual, rawStructural.evaluate(actual).result());
-        assertSame(actual, explainedStructural.evaluate(actual).result());
-        Evaluation<StringBuilder> nullEvaluation = rawStructural.evaluate(null);
+        assertSame(actualCollection,
+                rawStructural.evaluate(actualCollection).result());
+        assertSame(actualCollection,
+                explainedStructural.evaluate(actualCollection).result());
+        Evaluation<java.util.ArrayList<String>> nullEvaluation =
+                rawStructural.evaluate(null);
         assertEquals(Evaluation.Status.UNSATISFIED, nullEvaluation.status());
         assertEquals("collection was null", nullEvaluation.mismatch());
-        assertEquals(2, structuralEvaluations[0]);
-        assertSame(description, rawStructural.description());
+        assertEquals("collection to be non-empty",
+                rawStructural.description().get());
         assertNull(rawStructural.explanation());
         assertEquals("structural", explainedStructural.explanation());
     }

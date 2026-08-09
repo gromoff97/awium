@@ -17,14 +17,14 @@ abstract static class CollectionTerminals<E, C extends Collection<E>>
         Objects.requireNonNull(condition, "condition must not be null");
         chain.config().validatePair();
         return chain.execute(ConditionAdapters.structural(
-                condition, "collection was null"));
+                condition, "collection", Collection::size));
     }
 
     public final C until(ExplainedStructuralCondition condition) {
         Objects.requireNonNull(condition, "condition must not be null");
         chain.config().validatePair();
         return chain.execute(ConditionAdapters.structural(
-                condition, "collection was null"));
+                condition, "collection", Collection::size));
     }
 }
 

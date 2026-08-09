@@ -4,10 +4,12 @@ import java.util.Objects;
 
 public final class StructuralCondition {
 
-    private final ConditionRuntime<Object, Object> runtime;
+    private final StructuralConditions.Relation relation;
+    private final int bound;
 
-    StructuralCondition(ConditionRuntime<Object, Object> runtime) {
-        this.runtime = Objects.requireNonNull(runtime);
+    StructuralCondition(StructuralConditions.Relation relation, int bound) {
+        this.relation = Objects.requireNonNull(relation);
+        this.bound = bound;
     }
 
     public final ExplainedStructuralCondition because(String explanation) {
@@ -19,7 +21,13 @@ public final class StructuralCondition {
         return ConditionDecorators.explain(this, format, arguments);
     }
 
-    ConditionRuntime<Object, Object> runtime() {
-        return runtime;
+    <S> Evaluation<S> evaluate(int size, S actual, String subject) {
+        return relation.matches(size, bound)
+                ? Evaluation.satisfied(actual)
+                : Evaluation.unsatisfied(relation.mismatch(subject, size));
+    }
+
+    String description(String subject) {
+        return relation.description(subject, bound);
     }
 }
