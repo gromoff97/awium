@@ -28,7 +28,7 @@ Payment payment = await(paymentRepository::findById)
 ```
 
 The library requires Java 21. Its published compile and runtime dependency
-graphs are empty; JUnit is used only to test Assertility itself.
+graphs are empty; JUnit and OpenRewrite are used only to test Assertility itself.
 
 Examples below assume:
 
