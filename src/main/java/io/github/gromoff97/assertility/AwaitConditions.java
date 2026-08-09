@@ -1,5 +1,6 @@
 package io.github.gromoff97.assertility;
 
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -56,6 +57,64 @@ public final class AwaitConditions {
 
     public static <T> Condition<Optional<T>, T> hasValueNotEqualTo(T unexpected) {
         return OptionalConditions.hasValueNotEqualTo(unexpected);
+    }
+
+    public static <E> PreservingCondition<Collection<? super E>> contains(
+            E expected) {
+        return CollectionConditions.contains(expected);
+    }
+
+    public static <E> PreservingCondition<Collection<? super E>> doesNotContain(
+            E expected) {
+        return CollectionConditions.doesNotContain(expected);
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <E> PreservingCondition<Collection<? super E>> containsAll(
+            E... expected) {
+        return CollectionConditions.containsAll(expected);
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <E> PreservingCondition<Collection<? super E>>
+            doesNotContainAll(E... expected) {
+        return CollectionConditions.doesNotContainAll(expected);
+    }
+
+    public static <E> PreservingCondition<Collection<? super E>>
+            containsAllElementsOf(Collection<? extends E> expected) {
+        return CollectionConditions.containsAllElementsOf(expected);
+    }
+
+    public static <E> PreservingCondition<Collection<? super E>>
+            doesNotContainAllElementsOf(Collection<? extends E> expected) {
+        return CollectionConditions.doesNotContainAllElementsOf(expected);
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <E> PreservingCondition<Collection<? super E>> containsAnyOf(
+            E... expected) {
+        return CollectionConditions.containsAnyOf(expected);
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <E> PreservingCondition<Collection<? super E>> containsNoneOf(
+            E... expected) {
+        return CollectionConditions.containsNoneOf(expected);
+    }
+
+    public static <E> PreservingCondition<Collection<? super E>>
+            containsAnyElementsOf(Collection<? extends E> expected) {
+        return CollectionConditions.containsAnyElementsOf(expected);
+    }
+
+    public static <E> PreservingCondition<Collection<? super E>>
+            containsNoElementsOf(Collection<? extends E> expected) {
+        return CollectionConditions.containsNoElementsOf(expected);
     }
 
     public static <S, R> Condition<S, R> condition(
