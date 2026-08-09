@@ -8,11 +8,12 @@ import static java.lang.reflect.Modifier.isPublic;
 import static java.lang.reflect.Modifier.isStatic;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
@@ -28,6 +29,7 @@ import java.util.SequencedCollection;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class PublicSurfaceTest {
 
@@ -35,28 +37,15 @@ class PublicSurfaceTest {
             "github", "gromoff97", "assertility");
 
     @Test
-    void exposesExactlyTheApprovedTopLevelTypes() throws Exception {
-        Set<Class<?>> expected = Set.copyOf(publicTypes());
-        Set<Class<?>> actual = new java.util.HashSet<>();
-        Path classes = Path.of("target", "classes", "io", "github", "gromoff97",
-                "assertility");
-        try (var entries = Files.list(classes)) {
-            for (Path entry : entries.filter(path -> {
-                String name = path.getFileName().toString();
-                return name.endsWith(".class") && !name.contains("$");
-            }).toList()) {
-                String name = entry.getFileName().toString();
-                Class<?> type = Class.forName("io.github.gromoff97.assertility."
-                        + name.substring(0, name.length() - ".class".length()));
-                if (isPublic(type.getModifiers())) {
-                    actual.add(type);
-                }
-            }
-        }
+    void exposesExactlyTheApprovedPublicApiIncludingNestedTypes()
+            throws Exception {
+        Set<Class<?>> actual = discoveredPublicApiTypes();
 
-        assertEquals(expected, actual);
-        for (Class<?> type : actual) {
-            assertNull(type.getEnclosingClass(), type.getName());
+        assertEquals(Set.copyOf(approvedPublicApiTypes()), actual);
+        Set<Class<?>> topLevel = Set.copyOf(actual.stream()
+                .filter(type -> type.getEnclosingClass() == null).toList());
+        assertEquals(Set.copyOf(publicTypes()), topLevel);
+        for (Class<?> type : topLevel) {
             assertEquals("io.github.gromoff97.assertility", type.getPackageName());
         }
     }
@@ -191,25 +180,8 @@ class PublicSurfaceTest {
 
     @Test
     void publicApiContainsNoExcludedSourceTerminalOrContinuationSurface()
-            throws ClassNotFoundException {
-        Set<String> forbiddenNames = Set.of("map", "flatMap", "not", "allOf",
-                "anyOf", "execute", "start", "result");
-        List<String> forbiddenTypes = List.of("java.util.concurrent.Future",
-                "java.util.concurrent.Callable", "java.lang.Runnable",
-                "java.lang.Iterable", "java.util.function.Predicate",
-                "org.assertj", "org.awaitility");
-
-        for (Class<?> type : publicApiTypes()) {
-            for (Method method : type.getDeclaredMethods()) {
-                if (isPublic(method.getModifiers())) {
-                    assertFalse(forbiddenNames.contains(method.getName()),
-                            method.toGenericString());
-                    forbiddenTypes.forEach(forbidden -> assertFalse(
-                            method.toGenericString().contains(forbidden),
-                            method.toGenericString()));
-                }
-            }
-        }
+            throws Exception {
+        assertNoExcludedApiSurface(discoveredPublicApiTypes());
         for (String absent : List.of("AwaitResult", "ExecutableSource",
                 "FutureSource", "IterableSource")) {
             try {
@@ -222,23 +194,150 @@ class PublicSurfaceTest {
     }
 
     @Test
+    void excludedApiAuditRejectsTypeFieldConstructorAndMethodLeaks() {
+        for (Class<?> type : List.of(AwaitResult.class,
+                ForbiddenFieldName.class, ForbiddenFieldSignature.class,
+                ForbiddenConstructorSignature.class, ForbiddenMethodName.class)) {
+            assertThrows(AssertionError.class,
+                    () -> assertNoExcludedApiSurface(Set.of(type)),
+                    type.getSimpleName());
+        }
+    }
+
+    private static void assertNoExcludedApiSurface(Collection<Class<?>> types) {
+        Set<String> forbiddenNames = Set.of("map", "flatMap", "not", "allOf",
+                "anyOf", "execute", "start", "result", "AwaitResult",
+                "ExecutableSource", "FutureSource", "IterableSource");
+        List<String> forbiddenTypes = List.of("java.util.concurrent.Future",
+                "java.util.concurrent.Callable", "java.lang.Runnable",
+                "java.lang.Iterable", "java.util.function.Predicate",
+                "org.assertj", "org.awaitility");
+
+        for (Class<?> type : types) {
+            assertFalse(forbiddenNames.contains(type.getSimpleName()),
+                    type.toGenericString());
+            assertAllowedSignature(type.toGenericString(), forbiddenTypes);
+            if (type.getGenericSuperclass() != null) {
+                assertAllowedSignature(type.getGenericSuperclass().getTypeName(),
+                        forbiddenTypes);
+            }
+            Arrays.stream(type.getGenericInterfaces()).forEach(parent ->
+                    assertAllowedSignature(parent.getTypeName(), forbiddenTypes));
+            for (Field field : type.getDeclaredFields()) {
+                if (isApiMember(field.getModifiers())) {
+                    assertFalse(forbiddenNames.contains(field.getName()),
+                            field.toGenericString());
+                    assertAllowedSignature(field.toGenericString(), forbiddenTypes);
+                }
+            }
+            for (Constructor<?> constructor : type.getDeclaredConstructors()) {
+                if (isApiMember(constructor.getModifiers())) {
+                    assertAllowedSignature(constructor.toGenericString(),
+                            forbiddenTypes);
+                }
+            }
+            for (Method method : type.getDeclaredMethods()) {
+                if (isApiMember(method.getModifiers())) {
+                    assertFalse(forbiddenNames.contains(method.getName()),
+                            method.toGenericString());
+                    assertAllowedSignature(method.toGenericString(), forbiddenTypes);
+                }
+            }
+        }
+    }
+
+    private static boolean isApiMember(int modifiers) {
+        return isPublic(modifiers) || isProtected(modifiers);
+    }
+
+    private static void assertAllowedSignature(
+            String signature, Collection<String> forbiddenTypes) {
+        forbiddenTypes.forEach(forbidden -> assertFalse(
+                signature.contains(forbidden), signature));
+    }
+
+    @Test
     void productionSourcesUseOnlyTheApprovedWaitingAndInterruptionMechanics()
             throws IOException {
-        Map<Path, String> sources = productionSources();
+        assertApprovedProductionSources(productionSources(MAIN_PACKAGE));
+    }
+
+    @Test
+    void productionSourceAuditRecursesIntoSubpackages(@TempDir Path root)
+            throws IOException {
+        Path nested = root.resolve("worker").resolve("Mutant.java");
+        Files.createDirectories(nested.getParent());
+        Files.writeString(nested, """
+                final class Mutant extends Thread {
+                }
+                """);
+
+        assertThrows(AssertionError.class,
+                () -> assertApprovedProductionSources(productionSources(root)));
+    }
+
+    @Test
+    void productionSourceAuditRejectsEveryApprovedBan() {
+        Map<String, String> mutants = Map.ofEntries(
+                Map.entry("thread subclass", "class Mutant extends Thread {}"),
+                Map.entry("worker start",
+                        "class Mutant { void run(Thread worker) { worker.start(); } }"),
+                Map.entry("interrupt read reference",
+                        "class Mutant { java.util.function.BooleanSupplier read = Thread::interrupted; }"),
+                Map.entry("interrupt restore reference",
+                        "class Mutant { Object restore(Thread t) { return t::interrupt; } }"),
+                Map.entry("sleep",
+                        "class Mutant { void run() throws Exception { Thread.sleep(1); } }"),
+                Map.entry("executor", "class Mutant { Executor worker; }"),
+                Map.entry("future", "class Mutant { CompletableFuture<?> future; }"),
+                Map.entry("thread construction",
+                        "class Mutant { Thread worker = new Thread(); }"),
+                Map.entry("thread builder",
+                        "class Mutant { Object builder = Thread.ofVirtual(); }"),
+                Map.entry("monitor method",
+                        "class Mutant { void run(Object lock) throws Exception { lock.wait(); } }"),
+                Map.entry("synchronized monitor",
+                        "class Mutant { synchronized void run() {} }"),
+                Map.entry("atomic", "class Mutant { AtomicInteger state; }"),
+                Map.entry("scheduler", "class Mutant { Timer timer; }"),
+                Map.entry("schedule call",
+                        "class Mutant { void run(Object scheduler) { scheduler.schedule(); } }"),
+                Map.entry("lock", "class Mutant { ReentrantLock lock; }"),
+                Map.entry("LockSupport outside JdkTime",
+                        "class Mutant { void run() { LockSupport.park(); } }"),
+                Map.entry("interrupt read",
+                        "class Mutant { boolean read(Thread t) { return t.isInterrupted(); } }"),
+                Map.entry("interrupt restore",
+                        "class Mutant { void restore(Thread t) { t.interrupt(); } }"));
+
+        mutants.forEach((name, source) -> assertThrows(AssertionError.class,
+                () -> assertApprovedProductionSources(
+                        Map.of(Path.of(name + ".java"), source)), name));
+    }
+
+    private static void assertApprovedProductionSources(
+            Map<Path, String> sources) {
         List<Pattern> forbidden = List.of(
-                Pattern.compile("Thread\\.sleep\\s*\\("),
+                Pattern.compile("\\bThread\\s*\\.\\s*sleep\\s*\\("),
                 Pattern.compile("\\b(?:Executor|ExecutorService|Executors|"
-                        + "CompletableFuture|ForkJoinPool|ThreadFactory)\\b"),
-                Pattern.compile("new\\s+Thread\\s*\\("),
-                Pattern.compile("Thread\\.(?:ofVirtual|ofPlatform|"
+                        + "CompletableFuture|CompletionStage|Future|FutureTask|"
+                        + "ForkJoinPool|ThreadFactory)\\b"),
+                Pattern.compile("new\\s+(?:java\\s*\\.\\s*lang\\s*\\.\\s*)?"
+                        + "Thread\\s*\\("),
+                Pattern.compile("\\bThread\\s*\\.\\s*(?:ofVirtual|ofPlatform|"
                         + "startVirtualThread)\\s*\\("),
+                Pattern.compile("\\bextends\\s+(?:java\\s*\\.\\s*lang"
+                        + "\\s*\\.\\s*)?Thread\\b"),
+                Pattern.compile("(?:\\.|::)\\s*start\\s*(?:\\(|\\b)"),
                 Pattern.compile("\\bsynchronized\\b"),
-                Pattern.compile("\\.(?:wait|notify|notifyAll)\\s*\\("),
+                Pattern.compile("(?:\\.|::)\\s*(?:wait|notify|notifyAll)"
+                        + "\\s*(?:\\(|\\b)"),
                 Pattern.compile("java\\.util\\.concurrent\\.atomic|"
                         + "\\bAtomic[A-Z][A-Za-z0-9_]*\\b"),
                 Pattern.compile("\\b(?:ScheduledExecutorService|"
                         + "ScheduledThreadPoolExecutor|Timer|TimerTask)\\b|"
-                        + "\\.schedule(?:AtFixedRate|WithFixedDelay)?\\s*\\("),
+                        + "(?:\\.|::)\\s*schedule"
+                        + "(?:AtFixedRate|WithFixedDelay)?\\s*(?:\\(|\\b)"),
                 Pattern.compile("java\\.util\\.concurrent\\.locks\\."
                         + "(?!LockSupport\\b)|\\b(?:ReentrantLock|ReadWriteLock|"
                         + "StampedLock)\\b"));
@@ -262,7 +361,10 @@ class PublicSurfaceTest {
 
         Path interruptGuard = MAIN_PACKAGE.resolve("InterruptGuard.java");
         Pattern interruptAccess = Pattern.compile(
-                "\\.(?:isInterrupted|interrupted|interrupt)\\s*\\(");
+                "\\.\\s*(?:isInterrupted|interrupted|interrupt)\\s*\\(|"
+                        + "::\\s*(?:isInterrupted|interrupted|interrupt)\\b|"
+                        + "import\\s+static\\s+java\\.lang\\.Thread\\s*\\.\\s*"
+                        + "(?:isInterrupted|interrupted|interrupt)\\s*;");
         sources.forEach((path, source) -> {
             String remaining = source;
             if (path.equals(interruptGuard)) {
@@ -300,22 +402,61 @@ class PublicSurfaceTest {
                 .filter(type -> type.getSuperclass() == parent).toList());
     }
 
-    private static Set<Class<?>> publicApiTypes() {
+    private static Set<Class<?>> approvedPublicApiTypes() {
         Set<Class<?>> types = new java.util.HashSet<>(publicTypes());
         types.addAll(fluentStages());
-        types.addAll(Arrays.asList(AwaitSources.class.getDeclaredClasses()));
+        types.addAll(List.of(AwaitSources.Source.class,
+                AwaitSources.OptionalSource.class,
+                AwaitSources.CollectionSource.class,
+                AwaitSources.SequencedCollectionSource.class,
+                AwaitSources.MapSource.class));
         return types;
     }
 
-    private static Map<Path, String> productionSources() throws IOException {
+    private static Map<Path, String> productionSources(Path root)
+            throws IOException {
         Map<Path, String> sources = new LinkedHashMap<>();
-        try (var paths = Files.list(MAIN_PACKAGE)) {
+        try (var paths = Files.walk(root)) {
             for (Path path : paths.filter(file -> file.toString().endsWith(".java"))
                     .sorted().toList()) {
                 sources.put(path, Files.readString(path));
             }
         }
         return sources;
+    }
+
+    private static Set<Class<?>> discoveredPublicApiTypes() throws Exception {
+        Path classes = Path.of("target", "classes");
+        Set<Class<?>> types = new java.util.HashSet<>();
+        try (var entries = Files.walk(classes)) {
+            for (Path entry : entries.filter(Files::isRegularFile)
+                    .filter(path -> path.toString().endsWith(".class"))
+                    .sorted().toList()) {
+                String binaryName = classes.relativize(entry).toString()
+                        .replace(entry.getFileSystem().getSeparator(), ".");
+                binaryName = binaryName.substring(
+                        0, binaryName.length() - ".class".length());
+                if (binaryName.equals("module-info")) {
+                    continue;
+                }
+                Class<?> type = Class.forName(binaryName, false,
+                        PublicSurfaceTest.class.getClassLoader());
+                if (isPublicApiType(type)) {
+                    types.add(type);
+                }
+            }
+        }
+        return Set.copyOf(types);
+    }
+
+    private static boolean isPublicApiType(Class<?> type) {
+        for (Class<?> current = type; current != null;
+                current = current.getEnclosingClass()) {
+            if (!isPublic(current.getModifiers())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static Map<Class<?>, Set<Class<?>>> expectedPermittedSubtypes() {
@@ -444,5 +585,28 @@ class PublicSurfaceTest {
         assertFalse(Arrays.stream(type.getDeclaredConstructors())
                 .anyMatch(constructor -> isPublic(constructor.getModifiers())
                         || isProtected(constructor.getModifiers())), type.getName());
+    }
+
+    public static final class AwaitResult {
+    }
+
+    public static final class ForbiddenFieldName {
+        public Object result;
+    }
+
+    public static final class ForbiddenFieldSignature {
+        public java.util.concurrent.Future<?> leaked;
+    }
+
+    public static final class ForbiddenConstructorSignature {
+        public ForbiddenConstructorSignature(
+                java.util.function.Predicate<?> predicate) {
+        }
+    }
+
+    public static final class ForbiddenMethodName {
+        public Object map() {
+            return null;
+        }
     }
 }
