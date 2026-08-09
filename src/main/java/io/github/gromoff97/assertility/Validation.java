@@ -1,80 +1,17 @@
 package io.github.gromoff97.assertility;
 
-import org.awaitility.core.ConditionFactory;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 
 final class Validation {
+
     private Validation() {
     }
 
-    static ConditionFactory factory(ConditionFactory factory) {
-        return Objects.requireNonNull(factory, "factory");
-    }
-
-    static <T> AwaitSources.Source<T> source(AwaitSources.Source<T> source) {
-        return Objects.requireNonNull(source, "source");
-    }
-
-    static <T> T callback(T callback, String name) {
-        return Objects.requireNonNull(callback, name);
-    }
-
-    static String predicateDescription(String description) {
-        Objects.requireNonNull(description, "description");
-        if (description.isBlank()) {
-            throw new IllegalArgumentException("description must not be blank");
+    static String nonBlank(String value, String name) {
+        Objects.requireNonNull(value, name + " must not be null");
+        if (value.isBlank()) {
+            throw new IllegalArgumentException(name + " must not be blank");
         }
-        return description;
-    }
-
-    static String literalDescription(String description) {
-        return Objects.requireNonNull(description, "description");
-    }
-
-    static String formattedDescription(String format, Object[] args) {
-        Objects.requireNonNull(format, "format");
-        Objects.requireNonNull(args, "args");
-        return String.format(format, args);
-    }
-
-    static CharSequence[] stringFragments(CharSequence[] values) {
-        Objects.requireNonNull(values, "values");
-        var copy = values.clone();
-        for (var index = 0; index < copy.length; index++) {
-            Objects.requireNonNull(copy[index], "values[" + index + "]");
-        }
-        return copy;
-    }
-
-    static int size(int size) {
-        if (size < 0) {
-            throw new IllegalArgumentException("size must be non-negative");
-        }
-        return size;
-    }
-
-    static int exactCount(int count) {
-        if (count < 2) {
-            throw new IllegalArgumentException("exactly count must be at least 2");
-        }
-        return count;
-    }
-
-    static <E> E[] values(E[] values, String name) {
-        Objects.requireNonNull(values, name);
-        return values.clone();
-    }
-
-    static <E> List<E> iterable(Iterable<? extends E> values, String name) {
-        Objects.requireNonNull(values, name);
-        var snapshot = new ArrayList<E>();
-        for (var value : values) {
-            snapshot.add(value);
-        }
-        return Collections.unmodifiableList(snapshot);
+        return value;
     }
 }
