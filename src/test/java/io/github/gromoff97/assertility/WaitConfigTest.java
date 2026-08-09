@@ -28,6 +28,19 @@ class WaitConfigTest {
     }
 
     @Test
+    void acceptsTheSmallestStrictlyValidDurationPair() {
+        WaitConfig config = WaitConfig.defaults()
+                .withEvery(Duration.ofNanos(1))
+                .withUpTo(Duration.ofNanos(2))
+                .withStableFor(Duration.ofNanos(1));
+
+        assertEquals(1, config.everyNanos());
+        assertEquals(2, config.upToNanos());
+        assertEquals(1, config.stableForNanos());
+        config.validatePair();
+    }
+
+    @Test
     void configurationCreatesIndependentCandidates() {
         WaitConfig defaults = WaitConfig.defaults();
         WaitConfig interval = defaults.withEvery(Duration.ofSeconds(20));
