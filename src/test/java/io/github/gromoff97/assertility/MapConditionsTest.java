@@ -112,23 +112,37 @@ class MapConditionsTest {
     void membershipPairsUseIdenticalCallsAtEveryStoppingBoundary()
             throws Exception {
         assertMembershipAccess(MembershipCase.KEY_MATCH,
+                Evaluation.Status.SATISFIED, Evaluation.Status.UNSATISFIED,
                 access(mapAccess(0, 0, 1, 1, 2, 2, 2, 0, 2), NONE));
         assertMembershipAccess(MembershipCase.VALUE_MATCH,
+                Evaluation.Status.SATISFIED, Evaluation.Status.UNSATISFIED,
                 access(mapAccess(0, 0, 1, 1, 2, 2, 0, 2, 2), NONE));
         assertMembershipAccess(MembershipCase.ENTRY_MATCH,
+                Evaluation.Status.SATISFIED, Evaluation.Status.UNSATISFIED,
                 access(mapAccess(0, 0, 1, 1, 2, 2, 2, 1, 3), NONE));
         assertMembershipAccess(MembershipCase.ANY_MATCH,
+                Evaluation.Status.SATISFIED, Evaluation.Status.UNSATISFIED,
                 access(mapAccess(0, 0, 1, 1, 2, 2, 4, 1, 5),
                         mapAccess(0, 1, 1, 1, 3, 2, 4, 1, 0)));
         assertMembershipAccess(MembershipCase.ALL_FOUND,
+                Evaluation.Status.SATISFIED, Evaluation.Status.UNSATISFIED,
                 access(mapAccess(0, 0, 1, 1, 2, 2, 3, 2, 5),
                         mapAccess(0, 1, 1, 1, 3, 2, 3, 2, 0)));
         assertMembershipAccess(MembershipCase.KEY_EXHAUSTED,
+                Evaluation.Status.UNSATISFIED, Evaluation.Status.SATISFIED,
                 access(mapAccess(0, 0, 1, 1, 4, 3, 3, 0, 3), NONE));
+        assertMembershipAccess(MembershipCase.VALUE_EXHAUSTED,
+                Evaluation.Status.UNSATISFIED, Evaluation.Status.SATISFIED,
+                access(mapAccess(0, 0, 1, 1, 4, 3, 0, 3, 3), NONE));
+        assertMembershipAccess(MembershipCase.ENTRY_EXHAUSTED,
+                Evaluation.Status.UNSATISFIED, Evaluation.Status.SATISFIED,
+                access(mapAccess(0, 0, 1, 1, 4, 3, 3, 1, 4), NONE));
         assertMembershipAccess(MembershipCase.ANY_EXHAUSTED,
+                Evaluation.Status.UNSATISFIED, Evaluation.Status.SATISFIED,
                 access(mapAccess(0, 0, 1, 1, 4, 3, 6, 0, 6),
                         mapAccess(0, 1, 1, 1, 3, 2, 6, 0, 0)));
         assertMembershipAccess(MembershipCase.ALL_EXHAUSTED,
+                Evaluation.Status.UNSATISFIED, Evaluation.Status.SATISFIED,
                 access(mapAccess(0, 0, 1, 1, 4, 3, 4, 1, 5),
                         mapAccess(0, 1, 1, 1, 3, 2, 4, 1, 0)));
     }
@@ -149,15 +163,19 @@ class MapConditionsTest {
     void exactPairsUseIdenticalCallsAtEveryCardinalityBoundary()
             throws Exception {
         assertExactAccess(ExactCase.DIFFERENT_SIZE,
+                Evaluation.Status.UNSATISFIED, Evaluation.Status.SATISFIED,
                 access(mapAccess(1, 0, 0, 0, 0, 0, 0, 0, 0),
                         mapAccess(1, 0, 0, 0, 0, 0, 0, 0, 0)));
         assertExactAccess(ExactCase.EMPTY,
+                Evaluation.Status.SATISFIED, Evaluation.Status.UNSATISFIED,
                 access(mapAccess(1, 0, 0, 0, 0, 0, 0, 0, 0),
                         mapAccess(1, 0, 0, 0, 0, 0, 0, 0, 0)));
         assertExactAccess(ExactCase.MATCH,
+                Evaluation.Status.SATISFIED, Evaluation.Status.UNSATISFIED,
                 access(mapAccess(1, 0, 1, 1, 3, 2, 2, 2, 4),
                         mapAccess(1, 0, 1, 1, 3, 2, 2, 2, 0)));
         assertExactAccess(ExactCase.CONTENT_MISMATCH,
+                Evaluation.Status.UNSATISFIED, Evaluation.Status.SATISFIED,
                 access(mapAccess(1, 0, 1, 1, 2, 2, 2, 2, 4),
                         mapAccess(1, 0, 1, 1, 3, 2, 2, 2, 0)));
     }
@@ -437,21 +455,29 @@ class MapConditionsTest {
     }
 
     private static void assertMembershipAccess(MembershipCase testCase,
-            Access expected) throws Exception {
+            Evaluation.Status positiveStatus,
+            Evaluation.Status negativeStatus, Access expected)
+            throws Exception {
         assertPairedAccess(membershipRun(testCase, true),
-                membershipRun(testCase, false), expected, testCase.name());
+                membershipRun(testCase, false), positiveStatus, negativeStatus,
+                expected, testCase.name());
     }
 
-    private static void assertExactAccess(ExactCase testCase, Access expected)
+    private static void assertExactAccess(ExactCase testCase,
+            Evaluation.Status positiveStatus,
+            Evaluation.Status negativeStatus, Access expected)
             throws Exception {
         assertPairedAccess(exactRun(testCase, true),
-                exactRun(testCase, false), expected, testCase.name());
+                exactRun(testCase, false), positiveStatus, negativeStatus,
+                expected, testCase.name());
     }
 
     private static void assertPairedAccess(MapRun positive, MapRun negative,
-            Access expected, String name) throws Exception {
-        assertNotEquals(positive.evaluate().status(),
-                negative.evaluate().status(), name);
+            Evaluation.Status positiveStatus,
+            Evaluation.Status negativeStatus, Access expected, String name)
+            throws Exception {
+        assertEquals(positiveStatus, positive.evaluate().status(), name);
+        assertEquals(negativeStatus, negative.evaluate().status(), name);
         assertEquals(expected, snapshot(positive), name);
         assertEquals(expected, snapshot(negative), name);
     }
@@ -480,10 +506,15 @@ class MapConditionsTest {
     private static MapRun membershipRun(MembershipCase testCase,
             boolean positive) {
         return switch (testCase) {
-            case KEY_MATCH -> singularRun(positive, Singular.KEY, "b");
-            case VALUE_MATCH -> singularRun(positive, Singular.VALUE, "2");
-            case ENTRY_MATCH -> singularRun(positive, Singular.ENTRY, "b");
-            case KEY_EXHAUSTED -> singularRun(positive, Singular.KEY, "x");
+            case KEY_MATCH -> singularRun(positive, Singular.KEY, "b", "2");
+            case VALUE_MATCH -> singularRun(positive, Singular.VALUE, "b", "2");
+            case ENTRY_MATCH -> singularRun(positive, Singular.ENTRY, "b", "2");
+            case KEY_EXHAUSTED ->
+                    singularRun(positive, Singular.KEY, "x", "2");
+            case VALUE_EXHAUSTED ->
+                    singularRun(positive, Singular.VALUE, "b", "9");
+            case ENTRY_EXHAUSTED ->
+                    singularRun(positive, Singular.ENTRY, "b", "9");
             case ANY_MATCH -> aggregateRun(positive, false,
                     List.of(probe("x", "9"), probe("b", "2")));
             case ANY_EXHAUSTED -> aggregateRun(positive, false,
@@ -496,12 +527,12 @@ class MapConditionsTest {
     }
 
     private static MapRun singularRun(boolean positive, Singular singular,
-            String expectedLabel) {
+            String expectedKeyLabel, String expectedValueLabel) {
         List<EntryProbe> actualEntries = List.of(
                 probe("a", "1"), probe("b", "2"), probe("c", "3"));
         var actual = entryMap(actualEntries);
-        CountingValue expectedKey = new CountingValue(expectedLabel);
-        CountingValue expectedValue = new CountingValue("2");
+        CountingValue expectedKey = new CountingValue(expectedKeyLabel);
+        CountingValue expectedValue = new CountingValue(expectedValueLabel);
         PreservingCondition<?> condition = switch (singular) {
             case KEY -> positive
                     ? AwaitConditions.containsKey(expectedKey)
@@ -764,6 +795,8 @@ class MapConditionsTest {
         ANY_MATCH,
         ALL_FOUND,
         KEY_EXHAUSTED,
+        VALUE_EXHAUSTED,
+        ENTRY_EXHAUSTED,
         ANY_EXHAUSTED,
         ALL_EXHAUSTED
     }
