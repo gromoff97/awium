@@ -55,13 +55,17 @@ OptionalSource<Payment> source = () -> null;
 await(source).until(absent);
 ```
 
-The optional configuration order is `every -> upTo -> stableFor -> until`.
-Methods may be skipped, but cannot be repeated or called backward in one chain.
-Defaults are:
+`every`, `upTo`, and `stableFor` are optional and may be called in any order or
+repeated. Each call returns a new immutable stage; the last value supplied for a
+setting is used by `until(...)`. Defaults are:
 
 - `every`: 100 milliseconds
 - `upTo`: 10 seconds
 - `stableFor`: zero (disabled)
+
+Each duration is validated when supplied. The final `every < upTo` relationship
+is validated by `until(...)` before polling, so a temporarily conflicting
+intermediate configuration may be repaired by a later call.
 
 The first observation is immediate. `every` is a fixed delay from the end of
 one observation to the start of the next. `upTo` limits acquisition only. Once
