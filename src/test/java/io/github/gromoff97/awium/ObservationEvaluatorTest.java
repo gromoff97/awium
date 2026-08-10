@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.engine.*;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -36,9 +38,9 @@ class ObservationEvaluatorTest {
             return Evaluation.satisfied(result);
         });
 
-        ObservationOutcome<Object> outcome = evaluator.evaluate(7);
+        AttemptResult<Object> outcome = evaluator.evaluate(7);
 
-        assertEquals(ObservationOutcome.Status.SATISFIED, outcome.status());
+        assertEquals(AttemptResult.Status.SATISFIED, outcome.status());
         assertTrue(outcome.hasActual());
         assertSame(actual, outcome.actual());
         assertSame(result, outcome.result());
@@ -55,9 +57,9 @@ class ObservationEvaluatorTest {
                 value -> Evaluation.assertionUnsatisfied(
                         "assertion did not pass", assertion));
 
-        ObservationOutcome<Object> outcome = evaluator.evaluate(3);
+        AttemptResult<Object> outcome = evaluator.evaluate(3);
 
-        assertEquals(ObservationOutcome.Status.UNSATISFIED, outcome.status());
+        assertEquals(AttemptResult.Status.UNSATISFIED, outcome.status());
         assertTrue(outcome.hasActual());
         assertSame(actual, outcome.actual());
         assertEquals("assertion did not pass", outcome.mismatch());
@@ -74,10 +76,10 @@ class ObservationEvaluatorTest {
             return Evaluation.satisfied(value);
         });
 
-        ObservationOutcome<Object> outcome = evaluator.evaluate(2);
+        AttemptResult<Object> outcome = evaluator.evaluate(2);
 
-        assertEquals(ObservationOutcome.Status.UNCONTROLLED, outcome.status());
-        assertEquals(ObservationOutcome.Origin.SOURCE, outcome.origin());
+        assertEquals(AttemptResult.Status.UNCONTROLLED, outcome.status());
+        assertEquals(AttemptResult.Origin.SOURCE, outcome.origin());
         assertSame(failure, outcome.cause());
         assertFalse(outcome.hasActual());
         assertNull(outcome.actual());
@@ -92,10 +94,10 @@ class ObservationEvaluatorTest {
         var evaluator = evaluator(() -> actual,
                 value -> throwFromCondition(failure));
 
-        ObservationOutcome<Object> outcome = evaluator.evaluate(4);
+        AttemptResult<Object> outcome = evaluator.evaluate(4);
 
-        assertEquals(ObservationOutcome.Status.UNCONTROLLED, outcome.status());
-        assertEquals(ObservationOutcome.Origin.CONDITION, outcome.origin());
+        assertEquals(AttemptResult.Status.UNCONTROLLED, outcome.status());
+        assertEquals(AttemptResult.Origin.CONDITION, outcome.origin());
         assertSame(failure, outcome.cause());
         assertTrue(outcome.hasActual());
         assertSame(actual, outcome.actual());
@@ -109,10 +111,10 @@ class ObservationEvaluatorTest {
         var evaluator = evaluator(() -> actual,
                 value -> Evaluation.uncontrolled(failure));
 
-        ObservationOutcome<Object> outcome = evaluator.evaluate(5);
+        AttemptResult<Object> outcome = evaluator.evaluate(5);
 
-        assertEquals(ObservationOutcome.Status.UNCONTROLLED, outcome.status());
-        assertEquals(ObservationOutcome.Origin.CONDITION, outcome.origin());
+        assertEquals(AttemptResult.Status.UNCONTROLLED, outcome.status());
+        assertEquals(AttemptResult.Origin.CONDITION, outcome.origin());
         assertSame(failure, outcome.cause());
         assertTrue(outcome.hasActual());
         assertSame(actual, outcome.actual());
@@ -127,10 +129,10 @@ class ObservationEvaluatorTest {
             return null;
         });
 
-        ObservationOutcome<Object> outcome = evaluator.evaluate(6);
+        AttemptResult<Object> outcome = evaluator.evaluate(6);
 
-        assertEquals(ObservationOutcome.Status.UNCONTROLLED, outcome.status());
-        assertEquals(ObservationOutcome.Origin.CONDITION, outcome.origin());
+        assertEquals(AttemptResult.Status.UNCONTROLLED, outcome.status());
+        assertEquals(AttemptResult.Origin.CONDITION, outcome.origin());
         assertTrue(outcome.hasActual());
         assertSame(actual, outcome.actual());
         assertEquals(NullPointerException.class, outcome.cause().getClass());
@@ -147,10 +149,10 @@ class ObservationEvaluatorTest {
             throw interrupted;
         }, Evaluation::satisfied);
 
-        ObservationOutcome<Object> outcome = evaluator.evaluate(1);
+        AttemptResult<Object> outcome = evaluator.evaluate(1);
 
-        assertEquals(ObservationOutcome.Status.UNCONTROLLED, outcome.status());
-        assertEquals(ObservationOutcome.Origin.SOURCE, outcome.origin());
+        assertEquals(AttemptResult.Status.UNCONTROLLED, outcome.status());
+        assertEquals(AttemptResult.Origin.SOURCE, outcome.origin());
         assertSame(interrupted, outcome.cause());
         assertFalse(outcome.hasActual());
         assertTrue(Thread.currentThread().isInterrupted());
@@ -165,10 +167,10 @@ class ObservationEvaluatorTest {
             throw interrupted;
         });
 
-        ObservationOutcome<Object> outcome = evaluator.evaluate(1);
+        AttemptResult<Object> outcome = evaluator.evaluate(1);
 
-        assertEquals(ObservationOutcome.Status.UNCONTROLLED, outcome.status());
-        assertEquals(ObservationOutcome.Origin.CONDITION, outcome.origin());
+        assertEquals(AttemptResult.Status.UNCONTROLLED, outcome.status());
+        assertEquals(AttemptResult.Origin.CONDITION, outcome.origin());
         assertSame(interrupted, outcome.cause());
         assertTrue(outcome.hasActual());
         assertSame(actual, outcome.actual());
@@ -227,9 +229,9 @@ class ObservationEvaluatorTest {
             return Evaluation.satisfied(value);
         });
 
-        ObservationOutcome<Object> outcome = evaluator.evaluate(8);
+        AttemptResult<Object> outcome = evaluator.evaluate(8);
 
-        assertFlagInterruption(outcome, ObservationOutcome.Origin.SOURCE,
+        assertFlagInterruption(outcome, AttemptResult.Origin.SOURCE,
                 actual, 8);
         assertEquals(0, conditionCalls[0]);
     }
@@ -244,9 +246,9 @@ class ObservationEvaluatorTest {
             return evaluation;
         });
 
-        ObservationOutcome<Object> outcome = evaluator.evaluate(9);
+        AttemptResult<Object> outcome = evaluator.evaluate(9);
 
-        assertFlagInterruption(outcome, ObservationOutcome.Origin.CONDITION,
+        assertFlagInterruption(outcome, AttemptResult.Origin.CONDITION,
                 actual, 9);
         assertNull(outcome.result());
         assertNull(outcome.mismatch());
@@ -261,9 +263,9 @@ class ObservationEvaluatorTest {
             return throwFromSource(failure);
         }, Evaluation::satisfied);
 
-        ObservationOutcome<Object> outcome = evaluator.evaluate(10);
+        AttemptResult<Object> outcome = evaluator.evaluate(10);
 
-        assertEquals(ObservationOutcome.Origin.SOURCE, outcome.origin());
+        assertEquals(AttemptResult.Origin.SOURCE, outcome.origin());
         assertSame(failure, outcome.cause());
         assertFalse(outcome.hasActual());
         assertTrue(Thread.currentThread().isInterrupted());
@@ -278,9 +280,9 @@ class ObservationEvaluatorTest {
             return throwFromCondition(failure);
         });
 
-        ObservationOutcome<Object> outcome = evaluator.evaluate(11);
+        AttemptResult<Object> outcome = evaluator.evaluate(11);
 
-        assertEquals(ObservationOutcome.Origin.CONDITION, outcome.origin());
+        assertEquals(AttemptResult.Origin.CONDITION, outcome.origin());
         assertSame(failure, outcome.cause());
         assertSame(actual, outcome.actual());
         assertTrue(Thread.currentThread().isInterrupted());
@@ -349,20 +351,20 @@ class ObservationEvaluatorTest {
         throw new AssertionError("unreachable");
     }
 
-    private static ObservationEvaluator<Object, Object> evaluator(
+    private static AttemptEvaluator<Object, Object> evaluator(
             AwaitSources.Source<Object> source,
             ConditionRuntime.Evaluator<Object, Object> condition) {
-        return new ObservationEvaluator<>(source,
+        return new AttemptEvaluator<>(source,
                 new ConditionRuntime<>(condition, () -> "test condition", null),
-                new InterruptGuard());
+                new Interrupts());
     }
 
     private static void assertFlagInterruption(
-            ObservationOutcome<?> outcome,
-            ObservationOutcome.Origin origin,
+            AttemptResult<?> outcome,
+            AttemptResult.Origin origin,
             Object actual,
             long attempt) {
-        assertEquals(ObservationOutcome.Status.UNCONTROLLED, outcome.status());
+        assertEquals(AttemptResult.Status.UNCONTROLLED, outcome.status());
         assertEquals(origin, outcome.origin());
         assertTrue(outcome.hasActual());
         assertSame(actual, outcome.actual());

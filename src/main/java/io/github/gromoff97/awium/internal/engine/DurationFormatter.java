@@ -1,6 +1,6 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.internal.engine;
 
-final class DurationFormatter {
+public final class DurationFormatter {
 
     private static final long[] UNIT_NANOS = {
         86_400_000_000_000L,
@@ -12,13 +12,14 @@ final class DurationFormatter {
         1L
     };
     private static final String[] UNIT_NAMES = {
-        "day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond"
+        "day", "hour", "minute", "second", "millisecond", "microsecond",
+        "nanosecond"
     };
 
     private DurationFormatter() {
     }
 
-    static String format(long nanos) {
+    public static String format(long nanos) {
         StringBuilder result = new StringBuilder();
         for (int index = 0; index < UNIT_NANOS.length; index++) {
             long count = nanos / UNIT_NANOS[index];

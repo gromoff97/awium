@@ -410,6 +410,10 @@ class PublicSurfaceTest {
     }
 
     private static boolean isPublicApiType(Class<?> type) {
+        if (type.getPackageName().startsWith(
+                "io.github.gromoff97.awium.internal.")) {
+            return false;
+        }
         for (Class<?> current = type; current != null;
                 current = current.getEnclosingClass()) {
             if (!isPublic(current.getModifiers())) {

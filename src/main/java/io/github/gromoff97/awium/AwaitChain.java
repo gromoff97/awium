@@ -1,30 +1,38 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.engine.Interrupts;
+import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
+import io.github.gromoff97.awium.internal.engine.WaitEngine;
+
 import java.time.Duration;
 import java.util.Objects;
+import java.util.concurrent.locks.LockSupport;
+import java.util.function.LongConsumer;
+import java.util.function.LongSupplier;
 
 final class AwaitChain<S> {
 
     private final AwaitSources.Source<S> source;
-    private final WaitConfig config;
-    private final NanoClock clock;
-    private final Parker parker;
-    private final InterruptGuard interruptGuard;
+    private final WaitConfiguration config;
+    private final LongSupplier clock;
+    private final LongConsumer parker;
+    private final Interrupts interrupts;
     private final FailureFactory failureFactory;
 
     AwaitChain(AwaitSources.Source<S> source) {
-        this(source, WaitConfig.defaults(), JdkTime.CLOCK, JdkTime.PARKER,
-                new InterruptGuard(), new FailureFactory());
+        this(source, WaitConfiguration.defaults(), System::nanoTime,
+                LockSupport::parkNanos, new Interrupts(),
+                new FailureFactory());
     }
 
-    AwaitChain(AwaitSources.Source<S> source, WaitConfig config,
-            NanoClock clock, Parker parker, InterruptGuard interruptGuard,
+    AwaitChain(AwaitSources.Source<S> source, WaitConfiguration config,
+            LongSupplier clock, LongConsumer parker, Interrupts interrupts,
             FailureFactory failureFactory) {
         this.source = Objects.requireNonNull(source);
         this.config = Objects.requireNonNull(config);
         this.clock = Objects.requireNonNull(clock);
         this.parker = Objects.requireNonNull(parker);
-        this.interruptGuard = Objects.requireNonNull(interruptGuard);
+        this.interrupts = Objects.requireNonNull(interrupts);
         this.failureFactory = Objects.requireNonNull(failureFactory);
     }
 
@@ -32,7 +40,7 @@ final class AwaitChain<S> {
         return source;
     }
 
-    WaitConfig config() {
+    WaitConfiguration config() {
         return config;
     }
 
@@ -49,14 +57,15 @@ final class AwaitChain<S> {
     }
 
     <R> R execute(ConditionRuntime<S, R> condition) {
-        WaitEngine engine = new WaitEngine(config, clock, parker, interruptGuard);
-        ObservationEvaluator<S, R> evaluator = new ObservationEvaluator<>(
-                source, condition, interruptGuard);
-        return failureFactory.complete(engine.waitFor(evaluator), condition, config);
+        WaitEngine engine = new WaitEngine(config, clock, parker, interrupts);
+        AttemptEvaluator<S, R> evaluator = new AttemptEvaluator<>(
+                source, condition, interrupts);
+        return failureFactory.complete(
+                engine.waitFor(evaluator::evaluate), condition, config);
     }
 
-    private AwaitChain<S> withConfig(WaitConfig candidate) {
+    private AwaitChain<S> withConfig(WaitConfiguration candidate) {
         return new AwaitChain<>(source, candidate, clock, parker,
-                interruptGuard, failureFactory);
+                interrupts, failureFactory);
     }
 }

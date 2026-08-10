@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.engine.*;
+
 import static java.lang.reflect.Modifier.isFinal;
 import static java.lang.reflect.Modifier.isPrivate;
 import static java.lang.reflect.Modifier.isPublic;
@@ -229,11 +231,11 @@ class AssertionAdapterTest {
     }
 
     private static ObjectUntil<Payment> stage(FakeTime time, Payment actual) {
-        WaitConfig config = WaitConfig.defaults()
+        WaitConfiguration config = WaitConfiguration.defaults()
                 .withEvery(Duration.ofNanos(1))
                 .withUpTo(Duration.ofNanos(10));
         AwaitChain<Payment> chain = new AwaitChain<>(() -> actual, config,
-                time, time, new InterruptGuard(), new FailureFactory());
+                time, time, new Interrupts(), new FailureFactory());
         return new ObjectStageAdapters.ObjectAfterUpToStage<>(chain);
     }
 

@@ -1,6 +1,9 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.engine.*;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
@@ -31,6 +34,16 @@ class ArchitectureContractTest {
 
     private static final Path MAIN_PACKAGE = Path.of("src", "main", "java", "io",
             "github", "gromoff97", "awium");
+
+    @Test
+    void waitingCoreLivesBehindTheInternalEngineBoundary() {
+        for (String type : List.of("WaitEngine", "WaitConfiguration",
+                "AttemptResult", "WaitResult", "Interrupts",
+                "DurationFormatter")) {
+            assertDoesNotThrow(() -> Class.forName(
+                    "io.github.gromoff97.awium.internal.engine." + type), type);
+        }
+    }
 
     @Test
     void productionSourcesUseOnlyApprovedWaitingAndInterruptionMechanics()
@@ -384,7 +397,7 @@ class ArchitectureContractTest {
                             Runnable acquire = lock::lock;
                         }
                         """),
-                Map.entry("LockSupport outside JdkTime",
+                Map.entry("LockSupport outside the approved park port",
                         "class Mutant { void run() { java.util.concurrent.locks.LockSupport.park(); } }"),
                 Map.entry("interrupt read",
                         "class Mutant { boolean read(Thread t) { return t.isInterrupted(); } }"),
@@ -412,17 +425,17 @@ class ArchitectureContractTest {
     @Test
     void architectureAuditAllowsExactlyApprovedPorts() {
         assertApprovedSources(Map.of(
-                MAIN_PACKAGE.resolve("JdkTime.java"), """
+                MAIN_PACKAGE.resolve("AwaitChain.java"), """
                         package io.github.gromoff97.awium;
                         import java.util.concurrent.locks.LockSupport;
-                        final class JdkTime {
+                        final class AwaitChain {
                             java.util.function.LongConsumer parker =
                                     LockSupport::parkNanos;
                         }
                         """,
-                MAIN_PACKAGE.resolve("InterruptGuard.java"), """
-                        package io.github.gromoff97.awium;
-                        final class InterruptGuard {
+                MAIN_PACKAGE.resolve("internal/engine/Interrupts.java"), """
+                        package io.github.gromoff97.awium.internal.engine;
+                        final class Interrupts {
                             boolean read() {
                                 return Thread.currentThread().isInterrupted();
                             }
@@ -432,23 +445,24 @@ class ArchitectureContractTest {
                         }
                         """));
 
-        assertRejectedAt(MAIN_PACKAGE.resolve("JdkTime.java"), """
+        assertRejectedAt(MAIN_PACKAGE.resolve("AwaitChain.java"), """
                 package io.github.gromoff97.awium;
-                final class JdkTime {}
+                final class AwaitChain {}
                 """);
-        assertRejectedAt(MAIN_PACKAGE.resolve("JdkTime.java"), """
+        assertRejectedAt(MAIN_PACKAGE.resolve("AwaitChain.java"), """
                 package io.github.gromoff97.awium;
                 import java.util.concurrent.locks.LockSupport;
-                final class JdkTime {
+                final class AwaitChain {
                     interface BlockerParker {
                         void park(Object blocker, long nanos);
                     }
                     BlockerParker parker = LockSupport::parkNanos;
                 }
                 """);
-        assertRejectedAt(MAIN_PACKAGE.resolve("InterruptGuard.java"), """
-                package io.github.gromoff97.awium;
-                final class InterruptGuard {
+        assertRejectedAt(MAIN_PACKAGE.resolve(
+                "internal/engine/Interrupts.java"), """
+                package io.github.gromoff97.awium.internal.engine;
+                final class Interrupts {
                     boolean first() {
                         return Thread.currentThread().isInterrupted();
                     }
@@ -530,10 +544,10 @@ class ArchitectureContractTest {
     private static final class ArchitectureVisitor
             extends JavaIsoVisitor<ExecutionContext> {
 
-        private static final Path JDK_TIME =
-                MAIN_PACKAGE.resolve("JdkTime.java").normalize();
-        private static final Path INTERRUPT_GUARD =
-                MAIN_PACKAGE.resolve("InterruptGuard.java").normalize();
+        private static final Path PARK_PORT =
+                MAIN_PACKAGE.resolve("AwaitChain.java").normalize();
+        private static final Path INTERRUPTS = MAIN_PACKAGE
+                .resolve("internal/engine/Interrupts.java").normalize();
         private static final Set<Path> NAMESPACE_HOLDERS = Set.of(
                 MAIN_PACKAGE.resolve("Awium.java").normalize(),
                 MAIN_PACKAGE.resolve("AwaitConditions.java").normalize(),
@@ -712,11 +726,11 @@ class ArchitectureContractTest {
             if (LOCK_SUPPORT_METHOD.matches(method)) {
                 if (tree instanceof J.MemberReference
                         && PARK_NANOS.matches(method)
-                        && currentPath().equals(JDK_TIME)) {
+                        && currentPath().equals(PARK_PORT)) {
                     parks++;
                     return;
                 }
-                reject(tree, "LockSupport outside JdkTime::parkNanos");
+                reject(tree, "LockSupport outside the approved parkNanos port");
             }
             if (THREAD_METHOD.matches(method)
                     && INTERRUPT_METHODS.contains(name)) {
@@ -729,7 +743,7 @@ class ArchitectureContractTest {
                     }
                     return;
                 }
-                reject(tree, "Thread interrupt access outside InterruptGuard");
+                reject(tree, "Thread interrupt access outside Interrupts");
             }
             if (THREAD_METHOD.matches(method)
                     && THREAD_WORK_METHODS.contains(name)) {
@@ -823,7 +837,7 @@ class ArchitectureContractTest {
         }
 
         private boolean isApprovedLockSupportReference() {
-            if (!currentPath().equals(JDK_TIME)) {
+            if (!currentPath().equals(PARK_PORT)) {
                 return false;
             }
             J.Import imported = getCursor().firstEnclosing(J.Import.class);
@@ -839,7 +853,7 @@ class ArchitectureContractTest {
 
         private boolean isApprovedInterruptCall(
                 J.MethodInvocation invocation, String name) {
-            return currentPath().equals(INTERRUPT_GUARD)
+            return currentPath().equals(INTERRUPTS)
                     && (name.equals("isInterrupted") || name.equals("interrupt"))
                     && hasNoArguments(invocation)
                     && invocation.getSelect() instanceof J.MethodInvocation current
@@ -877,13 +891,13 @@ class ArchitectureContractTest {
         }
 
         private void verifyApprovedOccurrences() {
-            if (auditedPaths.contains(JDK_TIME) && parks != 1) {
-                throw new AssertionError(JDK_TIME
+            if (auditedPaths.contains(PARK_PORT) && parks != 1) {
+                throw new AssertionError(PARK_PORT
                         + ": expected exactly one LockSupport::parkNanos");
             }
-            if (auditedPaths.contains(INTERRUPT_GUARD)
+            if (auditedPaths.contains(INTERRUPTS)
                     && (interruptReads != 1 || interruptRestores != 1)) {
-                throw new AssertionError(INTERRUPT_GUARD
+                throw new AssertionError(INTERRUPTS
                         + ": expected exactly one interrupt read and restoration");
             }
         }

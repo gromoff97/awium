@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.engine.*;
+
 import io.github.gromoff97.awium.exception.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -392,9 +394,9 @@ class CollectionExactContentTest {
         AwaitChain<ExactList<String>> chain = new AwaitChain<>(() -> {
             time.advanceNanos(2);
             return actual;
-        }, WaitConfig.defaults().withEvery(Duration.ofNanos(1))
+        }, WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                 .withUpTo(Duration.ofNanos(2)), time, time,
-                new InterruptGuard(), new FailureFactory());
+                new Interrupts(), new FailureFactory());
         return new SequencedCollectionStageAdapters
                 .SequencedCollectionAfterUpToStage<>(chain);
     }

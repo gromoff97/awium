@@ -1,11 +1,12 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.engine.*;
+
 import io.github.gromoff97.awium.exception.*;
 
 import static java.lang.reflect.Modifier.isFinal;
 import static java.lang.reflect.Modifier.isPublic;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -20,7 +21,7 @@ class WaitConfigTest {
 
     @Test
     void defaultsUseTheSpecifiedEffectiveDurations() {
-        WaitConfig config = WaitConfig.defaults();
+        WaitConfiguration config = WaitConfiguration.defaults();
 
         assertEquals(Duration.ofMillis(100).toNanos(), config.everyNanos());
         assertEquals(Duration.ofSeconds(10).toNanos(), config.upToNanos());
@@ -30,7 +31,7 @@ class WaitConfigTest {
 
     @Test
     void acceptsTheSmallestStrictlyValidDurationPair() {
-        WaitConfig config = WaitConfig.defaults()
+        WaitConfiguration config = WaitConfiguration.defaults()
                 .withEvery(Duration.ofNanos(1))
                 .withUpTo(Duration.ofNanos(2))
                 .withStableFor(Duration.ofNanos(1));
@@ -43,29 +44,29 @@ class WaitConfigTest {
 
     @Test
     void configurationCreatesIndependentCandidates() {
-        WaitConfig defaults = WaitConfig.defaults();
-        WaitConfig interval = defaults.withEvery(Duration.ofSeconds(20));
-        WaitConfig stable = defaults.withStableFor(Duration.ofSeconds(2));
+        WaitConfiguration defaults = WaitConfiguration.defaults();
+        WaitConfiguration interval = defaults.withEvery(Duration.ofSeconds(20));
+        WaitConfiguration stable = defaults.withStableFor(Duration.ofSeconds(2));
 
         assertNotSame(defaults, interval);
         assertNotSame(defaults, stable);
-        assertEquals(WaitConfig.defaults(), defaults);
+        assertEquals(WaitConfiguration.defaults(), defaults);
         assertEquals(Duration.ofSeconds(20).toNanos(), interval.everyNanos());
         assertEquals(Duration.ofSeconds(2).toNanos(), stable.stableForNanos());
 
         assertThrows(AwaitConfigurationConflictException.class,
                 () -> interval.withUpTo(Duration.ofSeconds(10)));
-        WaitConfig validBranch = interval.withUpTo(Duration.ofSeconds(30));
+        WaitConfiguration validBranch = interval.withUpTo(Duration.ofSeconds(30));
         assertEquals(Duration.ofSeconds(30).toNanos(), validBranch.upToNanos());
         assertEquals(Duration.ofSeconds(10).toNanos(), interval.upToNanos());
     }
 
     @Test
     void eachDurationRejectsNullBeforeOtherValidation() {
-        WaitConfig invalidPair = WaitConfig.defaults().withEvery(Duration.ofSeconds(20));
+        WaitConfiguration invalidPair = WaitConfiguration.defaults().withEvery(Duration.ofSeconds(20));
 
-        for (Function<Duration, WaitConfig> operation
-                : List.<Function<Duration, WaitConfig>>of(
+        for (Function<Duration, WaitConfiguration> operation
+                : List.<Function<Duration, WaitConfiguration>>of(
                 invalidPair::withEvery,
                 invalidPair::withUpTo,
                 invalidPair::withStableFor)) {
@@ -79,12 +80,12 @@ class WaitConfigTest {
     void intervalAndTimeoutMustBePositive() {
         for (Duration invalid : List.of(Duration.ZERO, Duration.ofNanos(-1))) {
             var intervalFailure = assertThrows(IllegalArgumentException.class,
-                    () -> WaitConfig.defaults().withEvery(invalid));
+                    () -> WaitConfiguration.defaults().withEvery(invalid));
             assertEquals("poll interval must be greater than zero",
                     intervalFailure.getMessage());
 
             var timeoutFailure = assertThrows(IllegalArgumentException.class,
-                    () -> WaitConfig.defaults()
+                    () -> WaitConfiguration.defaults()
                             .withEvery(Duration.ofSeconds(20))
                             .withUpTo(invalid));
             assertEquals("acquisition timeout must be greater than zero",
@@ -94,12 +95,12 @@ class WaitConfigTest {
 
     @Test
     void stabilityMayBeZeroButNotNegative() {
-        assertEquals(0L, WaitConfig.defaults()
+        assertEquals(0L, WaitConfiguration.defaults()
                 .withStableFor(Duration.ZERO)
                 .stableForNanos());
 
         var failure = assertThrows(IllegalArgumentException.class,
-                () -> WaitConfig.defaults().withStableFor(Duration.ofNanos(-1)));
+                () -> WaitConfiguration.defaults().withStableFor(Duration.ofNanos(-1)));
         assertEquals("stability duration must not be negative", failure.getMessage());
     }
 
@@ -107,18 +108,18 @@ class WaitConfigTest {
     void durationsMustFitInSignedLongNanoseconds() {
         Duration maximum = Duration.ofNanos(Long.MAX_VALUE);
         assertEquals(Long.MAX_VALUE,
-                WaitConfig.defaults().withEvery(maximum).everyNanos());
+                WaitConfiguration.defaults().withEvery(maximum).everyNanos());
         assertEquals(Long.MAX_VALUE,
-                WaitConfig.defaults().withUpTo(maximum).upToNanos());
+                WaitConfiguration.defaults().withUpTo(maximum).upToNanos());
         assertEquals(Long.MAX_VALUE,
-                WaitConfig.defaults().withStableFor(maximum).stableForNanos());
+                WaitConfiguration.defaults().withStableFor(maximum).stableForNanos());
 
         Duration overflow = Duration.ofSeconds(Long.MAX_VALUE);
-        for (Function<Duration, WaitConfig> operation
-                : List.<Function<Duration, WaitConfig>>of(
-                WaitConfig.defaults()::withEvery,
-                WaitConfig.defaults()::withUpTo,
-                WaitConfig.defaults()::withStableFor)) {
+        for (Function<Duration, WaitConfiguration> operation
+                : List.<Function<Duration, WaitConfiguration>>of(
+                WaitConfiguration.defaults()::withEvery,
+                WaitConfiguration.defaults()::withUpTo,
+                WaitConfiguration.defaults()::withStableFor)) {
             var failure = assertThrows(IllegalArgumentException.class,
                     () -> operation.apply(overflow));
             assertEquals("duration exceeds the supported nanosecond range",
@@ -129,8 +130,8 @@ class WaitConfigTest {
 
     @Test
     void onlyTimeoutAndTerminalValidationCheckThePair() {
-        WaitConfig interval = WaitConfig.defaults().withEvery(Duration.ofSeconds(20));
-        WaitConfig stable = interval.withStableFor(Duration.ofSeconds(1));
+        WaitConfiguration interval = WaitConfiguration.defaults().withEvery(Duration.ofSeconds(20));
+        WaitConfiguration stable = interval.withStableFor(Duration.ofSeconds(1));
 
         var terminalFailure = assertThrows(AwaitConfigurationConflictException.class,
                 stable::validatePair);
@@ -146,7 +147,7 @@ class WaitConfigTest {
     @Test
     void equalIntervalAndTimeoutAlsoConflict() {
         var failure = assertThrows(AwaitConfigurationConflictException.class,
-                () -> WaitConfig.defaults().withUpTo(Duration.ofMillis(100)));
+                () -> WaitConfiguration.defaults().withUpTo(Duration.ofMillis(100)));
 
         assertEquals(
                 "poll interval (100 milliseconds) must be shorter than acquisition timeout (100 milliseconds)",
@@ -176,39 +177,4 @@ class WaitConfigTest {
                 DurationFormatter.format(1_001_001_001));
     }
 
-    @Test
-    void deadlinesRemainCorrectAcrossNanoTimeWraparound() {
-        long now = Long.MAX_VALUE - 2;
-        long deadline = Deadline.after(now, 5);
-
-        assertEquals(Long.MIN_VALUE + 2, deadline);
-        assertFalse(Deadline.reached(now, deadline));
-        assertEquals(5, Deadline.remaining(now, deadline));
-        assertFalse(Deadline.reached(now + 4, deadline));
-        assertEquals(1, Deadline.remaining(now + 4, deadline));
-        assertTrue(Deadline.reached(deadline, deadline));
-        assertEquals(0, Deadline.remaining(deadline, deadline));
-        assertTrue(Deadline.reached(deadline + 1, deadline));
-        assertEquals(0, Deadline.remaining(deadline + 1, deadline));
-    }
-
-    @Test
-    void fakeTimeImplementsBothTimePortsWithoutSleeping() {
-        FakeTime time = new FakeTime(Long.MAX_VALUE - 2);
-        NanoClock clock = time;
-        Parker parker = time;
-
-        parker.parkNanos(5);
-
-        assertEquals(Long.MIN_VALUE + 2, clock.nanoTime());
-    }
-
-    @Test
-    void jdkTimeExposesSingletonDelegates() {
-        long before = JdkTime.CLOCK.nanoTime();
-        JdkTime.PARKER.parkNanos(0);
-        long after = JdkTime.CLOCK.nanoTime();
-
-        assertTrue(after - before >= 0);
-    }
 }

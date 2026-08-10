@@ -1,39 +1,43 @@
 package io.github.gromoff97.awium;
 
-import java.util.Objects;
+import io.github.gromoff97.awium.internal.engine.AttemptResult;
+import io.github.gromoff97.awium.internal.engine.Interrupts;
 
-final class ObservationEvaluator<S, R> {
+import java.util.Objects;
+import java.util.function.LongFunction;
+
+final class AttemptEvaluator<S, R>
+        implements LongFunction<AttemptResult<R>> {
 
     private final AwaitSources.Source<S> source;
     private final ConditionRuntime<S, R> condition;
-    private final InterruptGuard interruptGuard;
+    private final Interrupts interrupts;
 
-    ObservationEvaluator(
+    AttemptEvaluator(
             AwaitSources.Source<S> source,
             ConditionRuntime<S, R> condition,
-            InterruptGuard interruptGuard) {
+            Interrupts interrupts) {
         this.source = Objects.requireNonNull(source);
         this.condition = Objects.requireNonNull(condition);
-        this.interruptGuard = Objects.requireNonNull(interruptGuard);
+        this.interrupts = Objects.requireNonNull(interrupts);
     }
 
     @SuppressWarnings("removal")
-    ObservationOutcome<R> evaluate(long attempt) {
+    AttemptResult<R> evaluate(long attempt) {
         S actual;
         try {
             actual = source.get();
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
         } catch (InterruptedException interrupted) {
-            return interruptGuard.fromThrown(
-                    ObservationOutcome.Origin.SOURCE, interrupted, attempt);
+            return interrupts.fromThrown(
+                    AttemptResult.Origin.SOURCE, interrupted, attempt);
         } catch (Throwable uncontrolled) {
-            return ObservationOutcome.uncontrolled(
-                    ObservationOutcome.Origin.SOURCE, uncontrolled, attempt);
+            return AttemptResult.uncontrolled(
+                    AttemptResult.Origin.SOURCE, uncontrolled, attempt);
         }
 
-        ObservationOutcome<R> interrupted =
-                interruptGuard.checkSource(attempt, actual);
+        AttemptResult<R> interrupted = interrupts.checkSource(attempt, actual);
         if (interrupted != null) {
             return interrupted;
         }
@@ -44,32 +48,37 @@ final class ObservationEvaluator<S, R> {
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
         } catch (InterruptedException conditionInterrupted) {
-            return interruptGuard.fromThrown(ObservationOutcome.Origin.CONDITION,
+            return interrupts.fromThrown(AttemptResult.Origin.CONDITION,
                     conditionInterrupted, attempt, actual);
         } catch (Throwable uncontrolled) {
-            return ObservationOutcome.uncontrolled(
-                    ObservationOutcome.Origin.CONDITION,
+            return AttemptResult.uncontrolled(
+                    AttemptResult.Origin.CONDITION,
                     uncontrolled, attempt, actual);
         }
 
-        interrupted = interruptGuard.checkCondition(attempt, actual);
+        interrupted = interrupts.checkCondition(attempt, actual);
         if (interrupted != null) {
             return interrupted;
         }
         if (evaluation == null) {
-            return ObservationOutcome.uncontrolled(
-                    ObservationOutcome.Origin.CONDITION,
+            return AttemptResult.uncontrolled(
+                    AttemptResult.Origin.CONDITION,
                     new NullPointerException("condition returned null Evaluation"),
                     attempt, actual);
         }
         return switch (evaluation.status()) {
-            case SATISFIED -> ObservationOutcome.satisfied(
+            case SATISFIED -> AttemptResult.satisfied(
                     actual, evaluation.result(), attempt);
-            case UNSATISFIED -> ObservationOutcome.unsatisfied(
+            case UNSATISFIED -> AttemptResult.unsatisfied(
                     actual, evaluation.mismatch(), evaluation.assertionCause(), attempt);
-            case UNCONTROLLED -> ObservationOutcome.uncontrolled(
-                    ObservationOutcome.Origin.CONDITION,
+            case UNCONTROLLED -> AttemptResult.uncontrolled(
+                    AttemptResult.Origin.CONDITION,
                     evaluation.uncontrolledCause(), attempt, actual);
         };
+    }
+
+    @Override
+    public AttemptResult<R> apply(long attempt) {
+        return evaluate(attempt);
     }
 }

@@ -3,8 +3,10 @@ package io.github.gromoff97.awium;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.LongConsumer;
+import java.util.function.LongSupplier;
 
-final class FakeTime implements NanoClock, Parker {
+final class FakeTime implements LongSupplier, LongConsumer {
 
     private final ArrayDeque<Long> parkAdvances = new ArrayDeque<>();
     private final List<Long> parkRequests = new ArrayList<>();
@@ -15,16 +17,24 @@ final class FakeTime implements NanoClock, Parker {
     }
 
     @Override
-    public long nanoTime() {
+    public long getAsLong() {
         return nowNanos;
     }
 
     @Override
-    public void parkNanos(long nanos) {
+    public void accept(long nanos) {
         parkRequests.add(nanos);
         nowNanos += parkAdvances.isEmpty()
                 ? nanos
                 : Math.min(nanos, parkAdvances.removeFirst());
+    }
+
+    long nanoTime() {
+        return getAsLong();
+    }
+
+    void parkNanos(long nanos) {
+        accept(nanos);
     }
 
     void advanceNanos(long nanos) {

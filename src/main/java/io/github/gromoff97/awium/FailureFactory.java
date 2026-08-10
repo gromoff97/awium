@@ -7,6 +7,9 @@ import io.github.gromoff97.awium.exception.AwaitStabilizationException;
 import io.github.gromoff97.awium.exception.AwaitTimeoutException;
 import io.github.gromoff97.awium.exception.AwaitUncontrolledException;
 import io.github.gromoff97.awium.exception.AwaitUnhandledException;
+import io.github.gromoff97.awium.internal.engine.AttemptResult;
+import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
+import io.github.gromoff97.awium.internal.engine.WaitResult;
 
 import java.util.Objects;
 
@@ -23,9 +26,9 @@ final class FailureFactory {
     }
 
     @SuppressWarnings("removal")
-    <R> R complete(WaitOutcome<R> outcome, ConditionRuntime<?, R> runtime,
-            WaitConfig config) {
-        if (outcome.kind() == WaitOutcome.Kind.SUCCESS) {
+    <R> R complete(WaitResult<R> outcome, ConditionRuntime<?, R> runtime,
+            WaitConfiguration config) {
+        if (outcome.kind() == WaitResult.Kind.SUCCESS) {
             return outcome.result();
         }
 
@@ -56,7 +59,7 @@ final class FailureFactory {
     }
 
     private static AwaitUncontrolledException uncontrolled(
-            ObservationOutcome<?> observation, String message) {
+            AttemptResult<?> observation, String message) {
         Throwable cause = observation.cause();
         if (cause instanceof InterruptedException) {
             return new AwaitInterruptedException(message, cause);

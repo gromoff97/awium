@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.engine.*;
+
 import io.github.gromoff97.awium.exception.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,8 +22,8 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void formatsTheBetweenObservationsTimeoutBaselineVerbatim() {
-        WaitOutcome<Object> outcome = WaitOutcome.timeoutBetween(0, 10 * SECOND,
-                new WaitOutcome.LastObservation(4, 9 * SECOND,
+        WaitResult<Object> outcome = WaitResult.timeoutBetween(0, 10 * SECOND,
+                new WaitResult.LastObservation(4, 9 * SECOND,
                         "collection was empty", null));
 
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
@@ -47,9 +49,9 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void formatsALateUnsatisfiedTimeoutWithTheTerminalAttempt() {
-        WaitOutcome<Object> outcome = WaitOutcome.lateUnsatisfied(0,
+        WaitResult<Object> outcome = WaitResult.lateUnsatisfied(0,
                 10 * SECOND + 200 * MILLISECOND,
-                ObservationOutcome.unsatisfied(
+                AttemptResult.unsatisfied(
                         "Payment[id=42, status=PENDING]",
                         "payment status was PENDING", null, 100));
 
@@ -75,9 +77,9 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void formatsALateSatisfiedTimeoutWithTheTerminalAttempt() {
-        WaitOutcome<Object> outcome = WaitOutcome.lateSatisfied(0,
+        WaitResult<Object> outcome = WaitResult.lateSatisfied(0,
                 10 * SECOND + 200 * MILLISECOND,
-                ObservationOutcome.satisfied(
+                AttemptResult.satisfied(
                         "Optional[Payment[id=42, status=COMPLETED]]",
                         new Object(), 100));
 
@@ -104,9 +106,9 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void formatsAStabilityLossVerbatim() {
-        WaitOutcome<Object> outcome = WaitOutcome.stabilityLoss(0, 7 * SECOND,
+        WaitResult<Object> outcome = WaitResult.stabilityLoss(0, 7 * SECOND,
                 9 * SECOND + 100 * MILLISECOND,
-                ObservationOutcome.unsatisfied(
+                AttemptResult.unsatisfied(
                         "Optional.empty", "optional was empty", null, 71));
 
         AwaitStabilizationException failure = assertThrows(
@@ -135,18 +137,18 @@ class DiagnosticsSnapshotTest {
     @Test
     void timingFieldsRemainRelativeToANonZeroClockOrigin() {
         long started = 100 * SECOND;
-        WaitOutcome<Object> between = WaitOutcome.timeoutBetween(
+        WaitResult<Object> between = WaitResult.timeoutBetween(
                 started, started + 10 * SECOND,
-                new WaitOutcome.LastObservation(
+                new WaitResult.LastObservation(
                         2, started + 9 * SECOND, "not yet", null));
-        WaitOutcome<Object> late = WaitOutcome.lateUnsatisfied(
+        WaitResult<Object> late = WaitResult.lateUnsatisfied(
                 started, started + 10 * SECOND + 200 * MILLISECOND,
-                ObservationOutcome.unsatisfied(
+                AttemptResult.unsatisfied(
                         "actual", "not yet", null, 3));
-        WaitOutcome<Object> stability = WaitOutcome.stabilityLoss(
+        WaitResult<Object> stability = WaitResult.stabilityLoss(
                 started, started + 7 * SECOND,
                 started + 9 * SECOND + 100 * MILLISECOND,
-                ObservationOutcome.unsatisfied(
+                AttemptResult.unsatisfied(
                         "actual", "lost", null, 4));
 
         String betweenMessage = assertThrows(AwaitTimeoutException.class,
@@ -173,11 +175,11 @@ class DiagnosticsSnapshotTest {
     void assertionCausesAreRetainedInBetweenAndStabilityDiagnostics() {
         var betweenAssertion = new AssertionError("between assertion");
         var stabilityAssertion = new AssertionError("stability assertion");
-        WaitOutcome<Object> between = WaitOutcome.timeoutBetween(0, 10,
-                new WaitOutcome.LastObservation(
+        WaitResult<Object> between = WaitResult.timeoutBetween(0, 10,
+                new WaitResult.LastObservation(
                         2, 9, "assertion did not pass", betweenAssertion));
-        WaitOutcome<Object> stability = WaitOutcome.stabilityLoss(0, 2, 3,
-                ObservationOutcome.unsatisfied("actual",
+        WaitResult<Object> stability = WaitResult.stabilityLoss(0, 2, 3,
+                AttemptResult.unsatisfied("actual",
                         "assertion did not pass", stabilityAssertion, 2));
 
         AwaitTimeoutException betweenFailure = assertThrows(
@@ -200,9 +202,9 @@ class DiagnosticsSnapshotTest {
     @Test
     void formatsAConditionFailureInGlobalFieldOrder() {
         var cause = new IllegalStateException("connection is closed");
-        WaitOutcome<Object> outcome = WaitOutcome.uncontrolled(
-                ObservationOutcome.uncontrolled(
-                        ObservationOutcome.Origin.CONDITION, cause, 7,
+        WaitResult<Object> outcome = WaitResult.uncontrolled(
+                AttemptResult.uncontrolled(
+                        AttemptResult.Origin.CONDITION, cause, 7,
                         "Payment[id=42, status=PENDING]"));
 
         AwaitConditionEvaluationException failure = assertThrows(
@@ -226,9 +228,9 @@ class DiagnosticsSnapshotTest {
     void formatsAnInterruptionVerbatim() {
         var cause = new InterruptedException(
                 "caller thread interrupt flag was set");
-        WaitOutcome<Object> outcome = WaitOutcome.uncontrolled(
-                ObservationOutcome.uncontrolled(
-                        ObservationOutcome.Origin.CONDITION, cause, 12,
+        WaitResult<Object> outcome = WaitResult.uncontrolled(
+                AttemptResult.uncontrolled(
+                        AttemptResult.Origin.CONDITION, cause, 12,
                         "Payment[id=42, status=PENDING]"));
 
         AwaitInterruptedException failure = assertThrows(
@@ -253,12 +255,12 @@ class DiagnosticsSnapshotTest {
     void mapsSourceAndWaitingFailuresWithoutBorrowingAnActual() {
         var sourceCause = new AssertionError("source broke");
         var waitingCause = new IllegalStateException("parker broke");
-        WaitOutcome<Object> source = WaitOutcome.uncontrolled(
-                ObservationOutcome.uncontrolled(
-                        ObservationOutcome.Origin.SOURCE, sourceCause, 3));
-        WaitOutcome<Object> waiting = WaitOutcome.uncontrolled(
-                ObservationOutcome.uncontrolled(
-                        ObservationOutcome.Origin.WAITING, waitingCause, 4));
+        WaitResult<Object> source = WaitResult.uncontrolled(
+                AttemptResult.uncontrolled(
+                        AttemptResult.Origin.SOURCE, sourceCause, 3));
+        WaitResult<Object> waiting = WaitResult.uncontrolled(
+                AttemptResult.uncontrolled(
+                        AttemptResult.Origin.WAITING, waitingCause, 4));
 
         AwaitSourceRetrievalException sourceFailure = assertThrows(
                 AwaitSourceRetrievalException.class,
@@ -294,8 +296,8 @@ class DiagnosticsSnapshotTest {
                     descriptions[0]++;
                     return "condition";
                 }, null);
-        WaitOutcome<Object> outcome = WaitOutcome.success(0, 0, 0,
-                ObservationOutcome.satisfied(actual, result, 1));
+        WaitResult<Object> outcome = WaitResult.success(0, 0, 0,
+                AttemptResult.satisfied(actual, result, 1));
 
         assertSame(result, new FailureFactory().complete(
                 outcome, runtime, config(1, 2, 0)));
@@ -314,9 +316,9 @@ class DiagnosticsSnapshotTest {
                     descriptions[0]++;
                     throw new IllegalStateException("bad description");
                 }, null);
-        WaitOutcome<Object> outcome = WaitOutcome.uncontrolled(
-                ObservationOutcome.uncontrolled(
-                        ObservationOutcome.Origin.CONDITION, cause, 1, actual));
+        WaitResult<Object> outcome = WaitResult.uncontrolled(
+                AttemptResult.uncontrolled(
+                        AttemptResult.Origin.CONDITION, cause, 1, actual));
 
         AwaitConditionEvaluationException failure = assertThrows(
                 AwaitConditionEvaluationException.class,
@@ -340,9 +342,9 @@ class DiagnosticsSnapshotTest {
     void usesDescriptionFallbackForNullAndBlankValues() {
         for (String description : new String[] {null, "", " \t\n"}) {
             var calls = new int[1];
-            WaitOutcome<Object> outcome = WaitOutcome.uncontrolled(
-                    ObservationOutcome.uncontrolled(
-                            ObservationOutcome.Origin.SOURCE,
+            WaitResult<Object> outcome = WaitResult.uncontrolled(
+                    AttemptResult.uncontrolled(
+                            AttemptResult.Origin.SOURCE,
                             new IllegalStateException(), 1));
 
             AwaitSourceRetrievalException failure = assertThrows(
@@ -363,8 +365,8 @@ class DiagnosticsSnapshotTest {
     @Test
     void readsATerminalAssertionMessageOnceAndReusesIt() {
         var assertion = new CountingAssertion("expected\r\nbut was");
-        WaitOutcome<Object> outcome = WaitOutcome.lateUnsatisfied(0, 2,
-                ObservationOutcome.unsatisfied("actual",
+        WaitResult<Object> outcome = WaitResult.lateUnsatisfied(0, 2,
+                AttemptResult.unsatisfied("actual",
                         "assertion did not pass", assertion, 1));
 
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
@@ -405,9 +407,9 @@ class DiagnosticsSnapshotTest {
     @Test
     void readsAnUncontrolledCauseMessageOnce() {
         var cause = new CountingCause("broken");
-        WaitOutcome<Object> outcome = WaitOutcome.uncontrolled(
-                ObservationOutcome.uncontrolled(
-                        ObservationOutcome.Origin.SOURCE, cause, 1));
+        WaitResult<Object> outcome = WaitResult.uncontrolled(
+                AttemptResult.uncontrolled(
+                        AttemptResult.Origin.SOURCE, cause, 1));
 
         AwaitSourceRetrievalException failure = assertThrows(
                 AwaitSourceRetrievalException.class,
@@ -428,9 +430,9 @@ class DiagnosticsSnapshotTest {
                     descriptions[0]++;
                     return "condition one\r\n condition two\rcondition three";
                 }, "because one\r\nbecause two");
-        WaitOutcome<Object> outcome = WaitOutcome.uncontrolled(
-                ObservationOutcome.uncontrolled(
-                        ObservationOutcome.Origin.CONDITION, cause, 2, actual));
+        WaitResult<Object> outcome = WaitResult.uncontrolled(
+                AttemptResult.uncontrolled(
+                        AttemptResult.Origin.CONDITION, cause, 2, actual));
 
         AwaitConditionEvaluationException failure = assertThrows(
                 AwaitConditionEvaluationException.class,
@@ -495,12 +497,12 @@ class DiagnosticsSnapshotTest {
     @Test
     void diagnosticCallbacksMaySetTheInterruptFlagWithoutChangingTheOutcome() {
         var sourceCause = new IllegalStateException("source broke");
-        WaitOutcome<Object> sourceOutcome = WaitOutcome.uncontrolled(
-                ObservationOutcome.uncontrolled(
-                        ObservationOutcome.Origin.SOURCE, sourceCause, 1));
+        WaitResult<Object> sourceOutcome = WaitResult.uncontrolled(
+                AttemptResult.uncontrolled(
+                        AttemptResult.Origin.SOURCE, sourceCause, 1));
         var interruptingActual = new InterruptingValue();
-        WaitOutcome<Object> timeoutOutcome = WaitOutcome.lateUnsatisfied(0, 2,
-                ObservationOutcome.unsatisfied(
+        WaitResult<Object> timeoutOutcome = WaitResult.lateUnsatisfied(0, 2,
+                AttemptResult.unsatisfied(
                         interruptingActual, "not ready", null, 1));
 
         Thread.interrupted();
@@ -544,8 +546,8 @@ class DiagnosticsSnapshotTest {
             context.actualValue();
             throw formatterFailure;
         };
-        WaitOutcome<Object> outcome = WaitOutcome.lateUnsatisfied(0, 2,
-                ObservationOutcome.unsatisfied(actual, "not ready", null, 1));
+        WaitResult<Object> outcome = WaitResult.lateUnsatisfied(0, 2,
+                AttemptResult.unsatisfied(actual, "not ready", null, 1));
 
         NullPointerException failure = assertThrows(NullPointerException.class,
                 () -> new FailureFactory(formatter).complete(outcome,
@@ -574,8 +576,8 @@ class DiagnosticsSnapshotTest {
                     descriptions[0]++;
                     return "condition";
                 }, "payment must complete");
-        WaitOutcome<Object> outcome = WaitOutcome.lateUnsatisfied(0, 2,
-                ObservationOutcome.unsatisfied(actual, "not ready", null, 7));
+        WaitResult<Object> outcome = WaitResult.lateUnsatisfied(0, 2,
+                AttemptResult.unsatisfied(actual, "not ready", null, 7));
 
         AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
                 () -> new FailureFactory(formatter).complete(
@@ -604,8 +606,8 @@ class DiagnosticsSnapshotTest {
             context.actualValue();
             throw formatterFailure;
         };
-        WaitOutcome<Object> outcome = WaitOutcome.lateUnsatisfied(0, 2,
-                ObservationOutcome.unsatisfied(actual, "not ready", null, 3));
+        WaitResult<Object> outcome = WaitResult.lateUnsatisfied(0, 2,
+                AttemptResult.unsatisfied(actual, "not ready", null, 3));
 
         AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
                 () -> new FailureFactory(formatter).complete(outcome,
@@ -622,15 +624,15 @@ class DiagnosticsSnapshotTest {
         var valueFatal = new ThrowableFixtures.Fatal("value fatal");
         var messageFatal = new ThrowableFixtures.Fatal("message fatal");
         var formatterFatal = new ThrowableFixtures.Fatal("formatter fatal");
-        WaitOutcome<Object> sourceFailure = WaitOutcome.uncontrolled(
-                ObservationOutcome.uncontrolled(ObservationOutcome.Origin.SOURCE,
+        WaitResult<Object> sourceFailure = WaitResult.uncontrolled(
+                AttemptResult.uncontrolled(AttemptResult.Origin.SOURCE,
                         new IllegalStateException("source"), 1));
-        WaitOutcome<Object> valueFailure = WaitOutcome.lateUnsatisfied(0, 2,
-                ObservationOutcome.unsatisfied(new ThrowingValue(valueFatal),
+        WaitResult<Object> valueFailure = WaitResult.lateUnsatisfied(0, 2,
+                AttemptResult.unsatisfied(new ThrowingValue(valueFatal),
                         "not ready", null, 1));
         var assertion = new CountingAssertion(messageFatal);
-        WaitOutcome<Object> assertionFailure = WaitOutcome.lateUnsatisfied(0, 2,
-                ObservationOutcome.unsatisfied("actual",
+        WaitResult<Object> assertionFailure = WaitResult.lateUnsatisfied(0, 2,
+                AttemptResult.unsatisfied("actual",
                         "assertion did not pass", assertion, 1));
 
         assertSame(descriptionFatal, assertThrows(ThrowableFixtures.Fatal.class,
@@ -691,23 +693,23 @@ class DiagnosticsSnapshotTest {
 
     private static AwaitTimeoutException assertionTimeout(
             CountingAssertion assertion) {
-        WaitOutcome<Object> outcome = WaitOutcome.lateUnsatisfied(0, 2,
-                ObservationOutcome.unsatisfied("actual",
+        WaitResult<Object> outcome = WaitResult.lateUnsatisfied(0, 2,
+                AttemptResult.unsatisfied("actual",
                         "assertion did not pass", assertion, 1));
         return assertThrows(AwaitTimeoutException.class,
                 () -> complete(outcome, "condition", null, config(1, 2, 0)));
     }
 
     private static AwaitSourceRetrievalException sourceFailure(Throwable cause) {
-        WaitOutcome<Object> outcome = WaitOutcome.uncontrolled(
-                ObservationOutcome.uncontrolled(
-                        ObservationOutcome.Origin.SOURCE, cause, 1));
+        WaitResult<Object> outcome = WaitResult.uncontrolled(
+                AttemptResult.uncontrolled(
+                        AttemptResult.Origin.SOURCE, cause, 1));
         return assertThrows(AwaitSourceRetrievalException.class,
                 () -> complete(outcome, "condition", null, config(1, 2, 0)));
     }
 
-    private static <R> R complete(WaitOutcome<R> outcome, String description,
-            String explanation, WaitConfig config) {
+    private static <R> R complete(WaitResult<R> outcome, String description,
+            String explanation, WaitConfiguration config) {
         return new FailureFactory().complete(
                 outcome, runtime(description, explanation), config);
     }
@@ -718,8 +720,8 @@ class DiagnosticsSnapshotTest {
                 () -> description, explanation);
     }
 
-    private static WaitConfig config(long every, long upTo, long stableFor) {
-        return new WaitConfig(every, upTo, stableFor);
+    private static WaitConfiguration config(long every, long upTo, long stableFor) {
+        return new WaitConfiguration(every, upTo, stableFor);
     }
 
     private static final class CountingValue {

@@ -1,5 +1,9 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.engine.AttemptResult;
+import io.github.gromoff97.awium.internal.engine.DurationFormatter;
+import io.github.gromoff97.awium.internal.engine.WaitResult;
+
 final class Diagnostics implements DiagnosticFormatter {
 
     @Override
@@ -16,8 +20,8 @@ final class Diagnostics implements DiagnosticFormatter {
     }
 
     private static String timeoutBetween(FailureContext<?> context) {
-        WaitOutcome<?> outcome = context.outcome();
-        WaitOutcome.LastObservation last = outcome.lastObservation();
+        WaitResult<?> outcome = context.outcome();
+        WaitResult.LastObservation last = outcome.lastObservation();
         FailureContext.AssertionDiagnostic assertion = last.assertionCause() == null
                 ? null : context.assertionDiagnostic("assertion did not pass");
         StringBuilder out = heading("Await timed out");
@@ -40,7 +44,7 @@ final class Diagnostics implements DiagnosticFormatter {
     }
 
     private static String lateUnsatisfied(FailureContext<?> context) {
-        ObservationOutcome<?> observation = context.outcome().observation();
+        AttemptResult<?> observation = context.outcome().observation();
         FailureContext.AssertionDiagnostic assertion =
                 observation.assertionCause() == null ? null
                         : context.assertionDiagnostic("assertion did not pass");
@@ -70,8 +74,8 @@ final class Diagnostics implements DiagnosticFormatter {
     }
 
     private static String stabilityLoss(FailureContext<?> context) {
-        WaitOutcome<?> outcome = context.outcome();
-        ObservationOutcome<?> observation = outcome.observation();
+        WaitResult<?> outcome = context.outcome();
+        AttemptResult<?> observation = outcome.observation();
         FailureContext.AssertionDiagnostic assertion =
                 observation.assertionCause() == null ? null
                         : context.assertionDiagnostic("assertion did not pass");
@@ -97,7 +101,7 @@ final class Diagnostics implements DiagnosticFormatter {
     }
 
     private static String uncontrolled(FailureContext<?> context) {
-        ObservationOutcome<?> observation = context.outcome().observation();
+        AttemptResult<?> observation = context.outcome().observation();
         boolean interrupted = observation.cause() instanceof InterruptedException;
         String heading = interrupted ? "Await was interrupted" : switch (
                 observation.origin()) {
@@ -121,7 +125,7 @@ final class Diagnostics implements DiagnosticFormatter {
 
     private static void timeoutTiming(StringBuilder out,
             FailureContext<?> context, boolean attempts) {
-        WaitOutcome<?> outcome = context.outcome();
+        WaitResult<?> outcome = context.outcome();
         field(out, 4, "Waited up to", duration(context.config().upToNanos()));
         field(out, 4, "Elapsed", duration(
                 outcome.completedNanos() - outcome.startedNanos()));
@@ -173,7 +177,7 @@ final class Diagnostics implements DiagnosticFormatter {
         return DurationFormatter.format(nanos);
     }
 
-    private static String origin(ObservationOutcome.Origin origin) {
+    private static String origin(AttemptResult.Origin origin) {
         return switch (origin) {
             case WAITING -> "waiting";
             case SOURCE -> "source";

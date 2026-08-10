@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.engine.*;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -11,7 +13,7 @@ import org.junit.jupiter.api.Test;
 
 class InterruptGuardTest {
 
-    private final InterruptGuard guard = new InterruptGuard();
+    private final Interrupts guard = new Interrupts();
 
     @AfterEach
     void clearInterruptFlag() {
@@ -22,18 +24,18 @@ class InterruptGuardTest {
     void detectsTheFlagBeforeSourceWithoutClearingIt() {
         Thread.currentThread().interrupt();
 
-        ObservationOutcome<Object> outcome = guard.checkWaiting(1);
+        AttemptResult<Object> outcome = guard.checkWaiting(1);
 
-        assertFlagOnly(outcome, ObservationOutcome.Origin.WAITING, false, null, 1);
+        assertFlagOnly(outcome, AttemptResult.Origin.WAITING, false, null, 1);
     }
 
     @Test
     void detectsTheFlagAfterParkWithoutClearingIt() {
         Thread.currentThread().interrupt();
 
-        ObservationOutcome<Object> outcome = guard.checkWaiting(12);
+        AttemptResult<Object> outcome = guard.checkWaiting(12);
 
-        assertFlagOnly(outcome, ObservationOutcome.Origin.WAITING,
+        assertFlagOnly(outcome, AttemptResult.Origin.WAITING,
                 false, null, 12);
     }
 
@@ -41,9 +43,9 @@ class InterruptGuardTest {
     void detectsTheFlagAfterSourceAndRetainsANullActual() {
         Thread.currentThread().interrupt();
 
-        ObservationOutcome<Object> outcome = guard.checkSource(2, null);
+        AttemptResult<Object> outcome = guard.checkSource(2, null);
 
-        assertFlagOnly(outcome, ObservationOutcome.Origin.SOURCE, true, null, 2);
+        assertFlagOnly(outcome, AttemptResult.Origin.SOURCE, true, null, 2);
     }
 
     @Test
@@ -51,9 +53,9 @@ class InterruptGuardTest {
         var actual = new Object();
         Thread.currentThread().interrupt();
 
-        ObservationOutcome<Object> outcome = guard.checkCondition(3, actual);
+        AttemptResult<Object> outcome = guard.checkCondition(3, actual);
 
-        assertFlagOnly(outcome, ObservationOutcome.Origin.CONDITION,
+        assertFlagOnly(outcome, AttemptResult.Origin.CONDITION,
                 true, actual, 3);
     }
 
@@ -68,8 +70,8 @@ class InterruptGuardTest {
     @Test
     void preservesThrownInterruptionAndRestoresTheFlagAtEitherCallbackOrigin() {
         var sourceFailure = new InterruptedException("source stopped");
-        ObservationOutcome<Object> source = guard.fromThrown(
-                ObservationOutcome.Origin.SOURCE, sourceFailure, 4);
+        AttemptResult<Object> source = guard.fromThrown(
+                AttemptResult.Origin.SOURCE, sourceFailure, 4);
 
         assertSame(sourceFailure, source.cause());
         assertFalse(source.hasActual());
@@ -78,8 +80,8 @@ class InterruptGuardTest {
 
         var actual = new Object();
         var conditionFailure = new InterruptedException("condition stopped");
-        ObservationOutcome<Object> condition = guard.fromThrown(
-                ObservationOutcome.Origin.CONDITION, conditionFailure, 5, actual);
+        AttemptResult<Object> condition = guard.fromThrown(
+                AttemptResult.Origin.CONDITION, conditionFailure, 5, actual);
 
         assertSame(conditionFailure, condition.cause());
         assertTrue(condition.hasActual());
@@ -88,12 +90,12 @@ class InterruptGuardTest {
     }
 
     private static void assertFlagOnly(
-            ObservationOutcome<?> outcome,
-            ObservationOutcome.Origin origin,
+            AttemptResult<?> outcome,
+            AttemptResult.Origin origin,
             boolean hasActual,
             Object actual,
             long attempt) {
-        assertEquals(ObservationOutcome.Status.UNCONTROLLED, outcome.status());
+        assertEquals(AttemptResult.Status.UNCONTROLLED, outcome.status());
         assertEquals(origin, outcome.origin());
         assertEquals(hasActual, outcome.hasActual());
         assertSame(actual, outcome.actual());

@@ -1,5 +1,8 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
+import io.github.gromoff97.awium.internal.engine.WaitResult;
+
 import java.util.Objects;
 
 final class FailureContext<R> {
@@ -9,9 +12,9 @@ final class FailureContext<R> {
     static final String ACTUAL_DIAGNOSTICS_FAILED =
             "<value unavailable: diagnostics failed>";
 
-    private final WaitOutcome<R> outcome;
+    private final WaitResult<R> outcome;
     private final ConditionRuntime<?, R> runtime;
-    private final WaitConfig config;
+    private final WaitConfiguration config;
 
     private boolean descriptionMaterialized;
     private String description;
@@ -22,18 +25,18 @@ final class FailureContext<R> {
     private boolean causeMaterialized;
     private String cause;
 
-    FailureContext(WaitOutcome<R> outcome, ConditionRuntime<?, R> runtime,
-            WaitConfig config) {
+    FailureContext(WaitResult<R> outcome, ConditionRuntime<?, R> runtime,
+            WaitConfiguration config) {
         this.outcome = Objects.requireNonNull(outcome);
         this.runtime = Objects.requireNonNull(runtime);
         this.config = Objects.requireNonNull(config);
     }
 
-    WaitOutcome<R> outcome() {
+    WaitResult<R> outcome() {
         return outcome;
     }
 
-    WaitConfig config() {
+    WaitConfiguration config() {
         return config;
     }
 

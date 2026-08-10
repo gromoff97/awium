@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.engine.*;
+
 import io.github.gromoff97.awium.exception.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -103,9 +105,9 @@ class ObjectAndOptionalAwaitTest {
     void reusableStageRetainsTheExactSourceAndStartsEachTerminalFresh() {
         CyclingSource source = new CyclingSource();
         FakeTime time = new FakeTime(0);
-        AwaitChain<String> chain = new AwaitChain<>(source, WaitConfig.defaults()
+        AwaitChain<String> chain = new AwaitChain<>(source, WaitConfiguration.defaults()
                 .withEvery(Duration.ofNanos(1)).withUpTo(Duration.ofNanos(10)),
-                time, time, new InterruptGuard(), new FailureFactory());
+                time, time, new Interrupts(), new FailureFactory());
         ObjectUntil<String> stage =
                 new ObjectStageAdapters.ObjectAfterUpToStage<>(chain);
         Condition<String, String> evenObservation = AwaitConditions.condition(
@@ -179,27 +181,27 @@ class ObjectAndOptionalAwaitTest {
     private static CollectionUntil<String, List<String>> nullCollectionStage() {
         FakeTime time = new FakeTime(0);
         AwaitChain<List<String>> chain = new AwaitChain<>(() -> null,
-                WaitConfig.defaults().withEvery(Duration.ofNanos(1))
+                WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)),
-                time, time, new InterruptGuard(), new FailureFactory());
+                time, time, new Interrupts(), new FailureFactory());
         return new CollectionStageAdapters.CollectionAfterUpToStage<>(chain);
     }
 
     private static MapUntil<String, String, Map<String, String>> nullMapStage() {
         FakeTime time = new FakeTime(0);
         AwaitChain<Map<String, String>> chain = new AwaitChain<>(() -> null,
-                WaitConfig.defaults().withEvery(Duration.ofNanos(1))
+                WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)),
-                time, time, new InterruptGuard(), new FailureFactory());
+                time, time, new Interrupts(), new FailureFactory());
         return new MapStageAdapters.MapAfterUpToStage<>(chain);
     }
 
     private static <T> ObjectUntil<T> stage(
             FakeTime time, AwaitSources.Source<T> source) {
         AwaitChain<T> chain = new AwaitChain<>(source,
-                WaitConfig.defaults().withEvery(Duration.ofNanos(1))
+                WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(3)),
-                time, time, new InterruptGuard(), new FailureFactory());
+                time, time, new Interrupts(), new FailureFactory());
         return new ObjectStageAdapters.ObjectAfterUpToStage<>(chain);
     }
 
