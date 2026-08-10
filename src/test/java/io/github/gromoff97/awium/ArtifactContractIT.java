@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.InputStream;
@@ -26,16 +27,17 @@ class ArtifactContractIT {
             "main", "io", "github", "gromoff97", "awium", "Awium.class");
 
     @Test
-    void currentBuildJarHasTheStableAutomaticModuleIdentity() throws Exception {
+    void currentBuildJarIsAnExplicitModuleWithOnlySupportedExports()
+            throws Exception {
         assertTrue(Files.isRegularFile(JAR), JAR.toString());
         assertTrue(Files.isRegularFile(MAIN_CLASS), MAIN_CLASS.toString());
 
         try (JarFile jar = new JarFile(JAR.toFile())) {
             Manifest manifest = jar.getManifest();
             assertNotNull(manifest);
-            assertEquals("io.github.gromoff97.awium",
-                    manifest.getMainAttributes().getValue("Automatic-Module-Name"));
-            assertFalse(jar.stream().anyMatch(entry ->
+            assertNull(manifest.getMainAttributes()
+                    .getValue("Automatic-Module-Name"));
+            assertTrue(jar.stream().anyMatch(entry ->
                     entry.getName().equals("module-info.class")
                             || entry.getName().endsWith("/module-info.class")));
 
@@ -53,7 +55,12 @@ class ArtifactContractIT {
         ModuleReference module = modules.iterator().next();
         assertEquals("io.github.gromoff97.awium",
                 module.descriptor().name());
-        assertTrue(module.descriptor().isAutomatic());
+        assertFalse(module.descriptor().isAutomatic());
+        assertEquals(Set.of("io.github.gromoff97.awium",
+                        "io.github.gromoff97.awium.exception"),
+                module.descriptor().exports().stream()
+                        .map(export -> export.source())
+                        .collect(java.util.stream.Collectors.toSet()));
     }
 
     @Test

@@ -32,12 +32,6 @@ tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.addAll(listOf("-Xlint:all", "-parameters"))
 }
 
-tasks.jar {
-    manifest {
-        attributes["Automatic-Module-Name"] = "io.github.gromoff97.awium"
-    }
-}
-
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
