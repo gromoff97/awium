@@ -20,15 +20,32 @@ public record Attempt<R>(
             throw new IllegalArgumentException(
                     "attempt number must be greater than zero");
         }
-        if (status == Status.UNSATISFIED) {
-            Objects.requireNonNull(mismatch);
-        }
-        if (status == Status.UNCONTROLLED) {
-            Objects.requireNonNull(origin);
-            Objects.requireNonNull(cause);
-        } else if (origin != null || cause != null) {
-            throw new IllegalArgumentException(
-                    "controlled attempts must not have origin or cause");
+        switch (status) {
+            case SATISFIED -> {
+                if (origin != null || cause != null || !hasActual
+                        || mismatch != null || assertionCause != null) {
+                    throw new IllegalArgumentException(
+                            "invalid satisfied attempt state");
+                }
+            }
+            case UNSATISFIED -> {
+                Objects.requireNonNull(mismatch);
+                if (origin != null || cause != null || !hasActual
+                        || result != null) {
+                    throw new IllegalArgumentException(
+                            "invalid unsatisfied attempt state");
+                }
+            }
+            case UNCONTROLLED -> {
+                Objects.requireNonNull(origin);
+                Objects.requireNonNull(cause);
+                if (result != null || mismatch != null
+                        || assertionCause != null
+                        || !hasActual && actual != null) {
+                    throw new IllegalArgumentException(
+                            "invalid uncontrolled attempt state");
+                }
+            }
         }
     }
 

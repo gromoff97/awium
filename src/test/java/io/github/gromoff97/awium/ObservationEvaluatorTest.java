@@ -8,6 +8,7 @@ import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
 import io.github.gromoff97.awium.sources.Source;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -40,25 +41,119 @@ class ObservationEvaluatorTest {
     }
 
     @Test
-    void rejectsInvalidAttemptState() {
-        assertThrows(IllegalArgumentException.class,
-                () -> Attempt.satisfied("actual", "result", 0, 1));
-        assertThrows(NullPointerException.class,
-                () -> Attempt.unsatisfied("actual", null, null, 1, 1));
-        assertThrows(NullPointerException.class,
-                () -> Attempt.uncontrolled(null, false, null,
-                        new RuntimeException(), 1, 1));
-        assertThrows(NullPointerException.class,
-                () -> Attempt.uncontrolled(Attempt.Origin.SOURCE, false, null,
-                        null, 1, 1));
-        assertThrows(IllegalArgumentException.class,
-                () -> new Attempt<>(Attempt.Status.SATISFIED,
-                        Attempt.Origin.SOURCE, true, "actual", "result",
-                        null, null, new RuntimeException(), 1, 1));
+    void rejectsMissingStatusAndNonPositiveAttemptNumbers() {
+        assertAll(
+                () -> assertThrows(NullPointerException.class,
+                        () -> new Attempt<>(null, null, true, "actual",
+                                "result", null, null, null, 1, 1)),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> Attempt.satisfied(
+                                "actual", "result", 0, 1)),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> Attempt.satisfied(
+                                "actual", "result", -1, 1)));
     }
 
     @Test
-    void acceptsWrappedAttemptCompletionTime() {
+    void rejectsInvalidSatisfiedFields() {
+        assertAll(
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new Attempt<>(Attempt.Status.SATISFIED,
+                                Attempt.Origin.SOURCE, true, "actual", "result",
+                                null, null, null, 1, 1)),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new Attempt<>(Attempt.Status.SATISFIED,
+                                null, true, "actual", "result", null, null,
+                                new RuntimeException(), 1, 1)),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new Attempt<>(Attempt.Status.SATISFIED,
+                                null, false, null, "result", null, null,
+                                null, 1, 1)),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new Attempt<>(Attempt.Status.SATISFIED,
+                                null, true, "actual", "result", "mismatch",
+                                null, null, 1, 1)),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new Attempt<>(Attempt.Status.SATISFIED,
+                                null, true, "actual", "result", null,
+                                new AssertionError(), null, 1, 1)));
+    }
+
+    @Test
+    void rejectsInvalidUnsatisfiedFields() {
+        assertAll(
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new Attempt<>(Attempt.Status.UNSATISFIED,
+                                Attempt.Origin.CONDITION, true, "actual", null,
+                                "mismatch", null, null, 1, 1)),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new Attempt<>(Attempt.Status.UNSATISFIED,
+                                null, true, "actual", null, "mismatch", null,
+                                new RuntimeException(), 1, 1)),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new Attempt<>(Attempt.Status.UNSATISFIED,
+                                null, false, null, null, "mismatch", null,
+                                null, 1, 1)),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new Attempt<>(Attempt.Status.UNSATISFIED,
+                                null, true, "actual", "result", "mismatch",
+                                null, null, 1, 1)),
+                () -> assertThrows(NullPointerException.class,
+                        () -> new Attempt<>(Attempt.Status.UNSATISFIED,
+                                null, true, "actual", null, null, null,
+                                null, 1, 1)));
+    }
+
+    @Test
+    void rejectsInvalidUncontrolledFields() {
+        var cause = new RuntimeException();
+        assertAll(
+                () -> assertThrows(NullPointerException.class,
+                        () -> new Attempt<>(Attempt.Status.UNCONTROLLED,
+                                null, false, null, null, null, null, cause,
+                                1, 1)),
+                () -> assertThrows(NullPointerException.class,
+                        () -> new Attempt<>(Attempt.Status.UNCONTROLLED,
+                                Attempt.Origin.SOURCE, false, null, null, null,
+                                null, null, 1, 1)),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new Attempt<>(Attempt.Status.UNCONTROLLED,
+                                Attempt.Origin.SOURCE, false, null, "result",
+                                null, null, cause, 1, 1)),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new Attempt<>(Attempt.Status.UNCONTROLLED,
+                                Attempt.Origin.SOURCE, false, null, null,
+                                "mismatch", null, cause, 1, 1)),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new Attempt<>(Attempt.Status.UNCONTROLLED,
+                                Attempt.Origin.SOURCE, false, null, null, null,
+                                new AssertionError(), cause, 1, 1)),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> new Attempt<>(Attempt.Status.UNCONTROLLED,
+                                Attempt.Origin.SOURCE, false, "actual", null,
+                                null, null, cause, 1, 1)));
+    }
+
+    @Test
+    void acceptsValidNullPayloadsAndWrappedAttemptCompletionTime() {
+        Attempt<Object> satisfied = Attempt.satisfied(null, null, 1, 1);
+        Attempt<Object> unsatisfied = Attempt.unsatisfied(
+                null, "mismatch", new AssertionError(), 1, 1);
+        Attempt<Object> uncontrolledWithoutActual = Attempt.uncontrolled(
+                Attempt.Origin.SOURCE, false, null,
+                new RuntimeException(), 1, 1);
+        Attempt<Object> uncontrolledWithNullActual = Attempt.uncontrolled(
+                Attempt.Origin.CONDITION, true, null,
+                new RuntimeException(), 1, 1);
+
+        assertAll(
+                () -> assertNull(satisfied.actual()),
+                () -> assertNull(satisfied.result()),
+                () -> assertNull(unsatisfied.actual()),
+                () -> assertFalse(uncontrolledWithoutActual.hasActual()),
+                () -> assertNull(uncontrolledWithoutActual.actual()),
+                () -> assertTrue(uncontrolledWithNullActual.hasActual()),
+                () -> assertNull(uncontrolledWithNullActual.actual()));
         assertEquals(Long.MIN_VALUE, Attempt.satisfied(
                 "actual", "result", 1, Long.MIN_VALUE).completedNanos());
     }
