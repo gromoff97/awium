@@ -30,8 +30,11 @@ public final class FailureFactory {
     public <R> R complete(WaitOutcome<R> outcome,
             RuntimeCondition<?, R> condition,
             WaitConfiguration configuration) {
-        if (outcome.kind() == WaitOutcome.Kind.SUCCESS) {
-            return outcome.result();
+        if (outcome instanceof WaitOutcome.Success<R>(
+                long started, long acquired, long completed,
+                Attempt.Satisfied<R>(Object actual, R result,
+                        long number, long attemptCompleted))) {
+            return result;
         }
 
         String message;
@@ -49,29 +52,38 @@ public final class FailureFactory {
         }
 
         Throwable cause = terminalCause(outcome);
-        switch (outcome.kind()) {
-            case TIMEOUT_BETWEEN_OBSERVATIONS, LATE_UNSATISFIED_TIMEOUT,
-                    LATE_SATISFIED_TIMEOUT -> throw new AwaitTimeoutException(
-                            message, cause);
-            case STABILITY_LOSS -> throw new AwaitStabilizationException(
-                            message, cause);
-            case UNCONTROLLED -> throw uncontrolled(outcome.attempt(), message);
-            case SUCCESS -> throw new AssertionError("unreachable");
+        switch (outcome) {
+            case WaitOutcome.TimeoutBetweenObservations<R> ignored ->
+                    throw new AwaitTimeoutException(message, cause);
+            case WaitOutcome.LateUnsatisfiedTimeout<R> ignored ->
+                    throw new AwaitTimeoutException(message, cause);
+            case WaitOutcome.LateSatisfiedTimeout<R> ignored ->
+                    throw new AwaitTimeoutException(message, cause);
+            case WaitOutcome.StabilityLoss<R> ignored ->
+                    throw new AwaitStabilizationException(message, cause);
+            case WaitOutcome.Uncontrolled<R> uncontrolled ->
+                    throw uncontrolled(uncontrolled.attempt(), message);
+            case WaitOutcome.Success<R> ignored ->
+                    throw new AssertionError("unreachable");
         }
-        throw new AssertionError("unreachable");
     }
 
     private static Throwable terminalCause(WaitOutcome<?> outcome) {
-        return switch (outcome.kind()) {
-            case TIMEOUT_BETWEEN_OBSERVATIONS, LATE_UNSATISFIED_TIMEOUT,
-                    STABILITY_LOSS -> outcome.attempt().assertionCause();
-            case UNCONTROLLED -> outcome.attempt().cause();
-            case SUCCESS, LATE_SATISFIED_TIMEOUT -> null;
+        return switch (outcome) {
+            case WaitOutcome.TimeoutBetweenObservations<?> value ->
+                    value.attempt().assertionCause();
+            case WaitOutcome.LateUnsatisfiedTimeout<?> value ->
+                    value.attempt().assertionCause();
+            case WaitOutcome.StabilityLoss<?> value ->
+                    value.attempt().assertionCause();
+            case WaitOutcome.Uncontrolled<?> value -> value.attempt().cause();
+            case WaitOutcome.Success<?> ignored -> null;
+            case WaitOutcome.LateSatisfiedTimeout<?> ignored -> null;
         };
     }
 
     private static AwaitUncontrolledException uncontrolled(
-            Attempt<?> attempt, String message) {
+            Attempt.Uncontrolled<?> attempt, String message) {
         Throwable cause = attempt.cause();
         if (cause instanceof InterruptedException) {
             return new AwaitInterruptedException(message, cause);

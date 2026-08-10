@@ -14,6 +14,7 @@ import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -80,7 +81,7 @@ class InterruptGuardTest {
     void normalCallbacksLeaveTheFlagClear() {
         Attempt<Object> outcome = wait(Object::new, Evaluation::satisfied);
 
-        assertEquals(Attempt.Status.SATISFIED, outcome.status());
+        assertInstanceOf(Attempt.Satisfied.class, outcome);
         assertFalse(currentThread().isInterrupted());
     }
 
@@ -91,8 +92,9 @@ class InterruptGuardTest {
             throw sourceFailure;
         }, Evaluation::satisfied);
 
-        assertSame(sourceFailure, source.cause());
-        assertFalse(source.hasActual());
+        var before = assertInstanceOf(
+                Attempt.Uncontrolled.BeforeObservation.class, source);
+        assertSame(sourceFailure, before.cause());
         assertTrue(currentThread().isInterrupted());
         interrupted();
 
@@ -102,9 +104,10 @@ class InterruptGuardTest {
             throw conditionFailure;
         });
 
-        assertSame(conditionFailure, condition.cause());
-        assertTrue(condition.hasActual());
-        assertSame(actual, condition.actual());
+        var after = assertInstanceOf(
+                Attempt.Uncontrolled.AfterObservation.class, condition);
+        assertSame(conditionFailure, after.cause());
+        assertSame(actual, after.actual());
         assertTrue(currentThread().isInterrupted());
     }
 
@@ -124,14 +127,22 @@ class InterruptGuardTest {
     private static void assertFlagOnly(Attempt<?> outcome,
             Attempt.Origin origin, boolean hasActual, Object actual,
             long number) {
-        assertEquals(Attempt.Status.UNCONTROLLED, outcome.status());
-        assertEquals(origin, outcome.origin());
-        assertEquals(hasActual, outcome.hasActual());
-        assertSame(actual, outcome.actual());
-        assertEquals(number, outcome.number());
-        assertEquals(InterruptedException.class, outcome.cause().getClass());
+        Attempt.Uncontrolled<?> uncontrolled = assertInstanceOf(
+                Attempt.Uncontrolled.class, outcome);
+        if (hasActual) {
+            var after = assertInstanceOf(
+                    Attempt.Uncontrolled.AfterObservation.class, outcome);
+            assertSame(actual, after.actual());
+        } else {
+            assertInstanceOf(
+                    Attempt.Uncontrolled.BeforeObservation.class, outcome);
+        }
+        assertEquals(origin, uncontrolled.origin());
+        assertEquals(number, uncontrolled.number());
+        assertEquals(InterruptedException.class,
+                uncontrolled.cause().getClass());
         assertEquals("caller thread interrupt flag was set",
-                outcome.cause().getMessage());
+                uncontrolled.cause().getMessage());
         assertTrue(currentThread().isInterrupted());
     }
 }

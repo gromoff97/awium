@@ -6,8 +6,6 @@ import io.github.gromoff97.awium.sources.Source;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.*;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
-import static io.github.gromoff97.awium.engine.Attempt.*;
-import static io.github.gromoff97.awium.engine.WaitOutcome.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 
@@ -17,8 +15,9 @@ import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
 import io.github.gromoff97.awium.engine.*;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -37,87 +36,24 @@ import org.junit.jupiter.params.provider.MethodSource;
 class WaitEngineTest {
 
     @Test
-    void exposesOneValidatedWaitOutcomeRecord() {
-        Attempt<String> attempt = satisfied(
+    void outcomeVariantsAcceptOnlyCompatibleAttempts() {
+        var satisfied = new Attempt.Satisfied<>(
                 "actual", "result", 1, 123);
-        WaitOutcome<String> outcome = success(100, 110, 123,
-                attempt);
-
-        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
-        assertEquals(123, outcome.attempt().completedNanos());
-        assertEquals("result", outcome.result());
-        assertEquals(1, outcome.completedAttempts());
-    }
-
-    @Test
-    void rejectsMissingWaitOutcomeState() {
-        Attempt<String> attempt = satisfied(
-                "actual", "result", 1, 123);
-
-        assertThrows(NullPointerException.class,
-                () -> new WaitOutcome<>(null, 100, 110, 123, attempt));
-        assertThrows(NullPointerException.class,
-                () -> success(100, 110, 123, null));
-    }
-
-    @Test
-    void rejectsWaitOutcomeKindsThatDoNotMatchTheAttemptStatus() {
-        Attempt<String> satisfied = satisfied(
-                "actual", "result", 1, 123);
-        Attempt<String> unsatisfied = unsatisfied(
+        var unsatisfied = new Attempt.Unsatisfied<String>(
                 "actual", "not ready", null, 1, 123);
-        Attempt<String> uncontrolled = uncontrolled(
-                Attempt.Origin.SOURCE, false, null,
+        var uncontrolled =
+                new Attempt.Uncontrolled.BeforeObservation<String>(
+                Attempt.Origin.SOURCE,
                 new IllegalStateException(), 1, 123);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new WaitOutcome<>(WaitOutcome.Kind.SUCCESS,
-                        100, 110, 123, unsatisfied));
-        assertThrows(IllegalArgumentException.class,
-                () -> new WaitOutcome<>(
-                        WaitOutcome.Kind.TIMEOUT_BETWEEN_OBSERVATIONS,
-                        100, 0, 123, satisfied));
-        assertThrows(IllegalArgumentException.class,
-                () -> new WaitOutcome<>(
-                        WaitOutcome.Kind.LATE_UNSATISFIED_TIMEOUT,
-                        100, 0, 123, satisfied));
-        assertThrows(IllegalArgumentException.class,
-                () -> new WaitOutcome<>(
-                        WaitOutcome.Kind.LATE_SATISFIED_TIMEOUT,
-                        100, 0, 123, unsatisfied));
-        assertThrows(IllegalArgumentException.class,
-                () -> new WaitOutcome<>(WaitOutcome.Kind.STABILITY_LOSS,
-                        100, 110, 123, satisfied));
-        assertThrows(IllegalArgumentException.class,
-                () -> new WaitOutcome<>(WaitOutcome.Kind.UNCONTROLLED,
-                        0, 0, 0, satisfied));
-        assertThrows(IllegalArgumentException.class,
-                () -> new WaitOutcome<>(WaitOutcome.Kind.SUCCESS,
-                        100, 110, 123, uncontrolled));
-    }
-
-    @Test
-    void waitOutcomeFactoriesCreateCompatibleKinds() {
-        Attempt<String> satisfied = satisfied(
-                "actual", "result", 1, 123);
-        Attempt<String> unsatisfied = unsatisfied(
-                "actual", "not ready", null, 1, 123);
-        Attempt<String> uncontrolled = uncontrolled(
-                Attempt.Origin.SOURCE, false, null,
-                new IllegalStateException(), 1, 123);
-
-        assertEquals(WaitOutcome.Kind.SUCCESS,
-                success(100, 110, 123, satisfied).kind());
-        assertEquals(WaitOutcome.Kind.TIMEOUT_BETWEEN_OBSERVATIONS,
-                timeoutBetween(100, 123, unsatisfied).kind());
-        assertEquals(WaitOutcome.Kind.LATE_UNSATISFIED_TIMEOUT,
-                lateUnsatisfied(100, 123, unsatisfied).kind());
-        assertEquals(WaitOutcome.Kind.LATE_SATISFIED_TIMEOUT,
-                lateSatisfied(100, 123, satisfied).kind());
-        assertEquals(WaitOutcome.Kind.STABILITY_LOSS,
-                stabilityLoss(100, 110, 123, unsatisfied).kind());
-        assertEquals(WaitOutcome.Kind.UNCONTROLLED,
-                uncontrolled(uncontrolled).kind());
+        assertAll(
+                () -> assertEquals("result", new WaitOutcome.Success<>(
+                        100, 110, 123, satisfied).attempt().result()),
+                () -> assertSame(unsatisfied,
+                        new WaitOutcome.TimeoutBetweenObservations<>(
+                                100, 123, unsatisfied).attempt()),
+                () -> assertSame(uncontrolled,
+                        new WaitOutcome.Uncontrolled<>(uncontrolled).attempt()));
     }
 
     @AfterEach
@@ -136,14 +72,16 @@ class WaitEngineTest {
             return "actual";
         }, actual -> satisfied(result));
 
-        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        var success = assertInstanceOf(WaitOutcome.Success.class, outcome);
+        var satisfied = assertInstanceOf(
+                Attempt.Satisfied.class, success.attempt());
         assertEquals(List.of(100L), starts);
         assertEquals(List.of(), time.parkRequests());
-        assertEquals(100, outcome.startedNanos());
-        assertEquals(100, outcome.acquiredNanos());
-        assertEquals(100, outcome.completedNanos());
-        assertEquals(1, outcome.completedAttempts());
-        assertSame(result, outcome.result());
+        assertEquals(100, success.startedNanos());
+        assertEquals(100, success.acquiredNanos());
+        assertEquals(100, success.completedNanos());
+        assertEquals(1, success.completedAttempts());
+        assertSame(result, satisfied.result());
     }
 
     @Test
@@ -163,10 +101,12 @@ class WaitEngineTest {
             return satisfied("ready");
         });
 
-        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        var success = assertInstanceOf(WaitOutcome.Success.class, outcome);
+        var satisfied = assertInstanceOf(
+                Attempt.Satisfied.class, success.attempt());
         assertEquals(List.of(0L, 8L), starts);
         assertEquals(List.of(5L), time.parkRequests());
-        assertEquals("ready", outcome.result());
+        assertEquals("ready", satisfied.result());
     }
 
     @Test
@@ -182,12 +122,14 @@ class WaitEngineTest {
                 ? unsatisfied("not yet")
                 : satisfied("ready"));
 
-        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        var success = assertInstanceOf(WaitOutcome.Success.class, outcome);
+        var satisfied = assertInstanceOf(
+                Attempt.Satisfied.class, success.attempt());
         assertEquals(List.of(0L, 9L), starts);
         assertEquals(List.of(9L), time.parkRequests());
-        assertEquals(9, outcome.completedNanos());
-        assertEquals(2, outcome.completedAttempts());
-        assertEquals("ready", outcome.result());
+        assertEquals(9, success.completedNanos());
+        assertEquals(2, success.completedAttempts());
+        assertEquals("ready", satisfied.result());
     }
 
     @Test
@@ -207,12 +149,14 @@ class WaitEngineTest {
             return satisfied("ready");
         });
 
-        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        var success = assertInstanceOf(WaitOutcome.Success.class, outcome);
+        var satisfied = assertInstanceOf(
+                Attempt.Satisfied.class, success.attempt());
         assertEquals(List.of(0L, 4L), starts);
         assertEquals(List.of(4L), time.parkRequests());
-        assertEquals(9, outcome.completedNanos());
-        assertEquals(2, outcome.completedAttempts());
-        assertEquals("ready", outcome.result());
+        assertEquals(9, success.completedNanos());
+        assertEquals(2, success.completedAttempts());
+        assertEquals("ready", satisfied.result());
     }
 
     @Test
@@ -232,16 +176,18 @@ class WaitEngineTest {
                     : unsatisfied("mismatch " + call);
         });
 
-        assertEquals(WaitOutcome.Kind.TIMEOUT_BETWEEN_OBSERVATIONS,
-                outcome.kind());
+        var timeout = assertInstanceOf(
+                WaitOutcome.TimeoutBetweenObservations.class, outcome);
+        var unsatisfied = assertInstanceOf(
+                Attempt.Unsatisfied.class, timeout.attempt());
         assertEquals(List.of(0L, 4L, 8L), starts);
         assertEquals(List.of(4L, 4L, 2L), time.parkRequests());
-        assertEquals(3, outcome.completedAttempts());
-        assertEquals(10, outcome.completedNanos());
-        assertEquals(3, outcome.attempt().number());
-        assertEquals(8, outcome.attempt().completedNanos());
-        assertEquals("mismatch 3", outcome.attempt().mismatch());
-        assertSame(assertion, outcome.attempt().assertionCause());
+        assertEquals(3, timeout.completedAttempts());
+        assertEquals(10, timeout.completedNanos());
+        assertEquals(3, unsatisfied.number());
+        assertEquals(8, unsatisfied.completedNanos());
+        assertEquals("mismatch 3", unsatisfied.mismatch());
+        assertSame(assertion, unsatisfied.assertionCause());
     }
 
     @Test
@@ -256,12 +202,15 @@ class WaitEngineTest {
                     return assertionUnsatisfied("late", assertion);
                 });
 
-        assertEquals(WaitOutcome.Kind.LATE_UNSATISFIED_TIMEOUT, outcome.kind());
-        assertEquals(1, outcome.completedAttempts());
-        assertEquals(10, outcome.completedNanos());
-        assertSame(actual, outcome.attempt().actual());
-        assertEquals("late", outcome.attempt().mismatch());
-        assertSame(assertion, outcome.attempt().assertionCause());
+        var timeout = assertInstanceOf(
+                WaitOutcome.LateUnsatisfiedTimeout.class, outcome);
+        var unsatisfied = assertInstanceOf(
+                Attempt.Unsatisfied.class, timeout.attempt());
+        assertEquals(1, timeout.completedAttempts());
+        assertEquals(10, timeout.completedNanos());
+        assertSame(actual, unsatisfied.actual());
+        assertEquals("late", unsatisfied.mismatch());
+        assertSame(assertion, unsatisfied.assertionCause());
     }
 
     @Test
@@ -276,11 +225,14 @@ class WaitEngineTest {
                     return satisfied(result);
                 });
 
-        assertEquals(WaitOutcome.Kind.LATE_SATISFIED_TIMEOUT, outcome.kind());
-        assertEquals(1, outcome.completedAttempts());
-        assertEquals(11, outcome.completedNanos());
-        assertSame(actual, outcome.attempt().actual());
-        assertSame(result, outcome.attempt().result());
+        var timeout = assertInstanceOf(
+                WaitOutcome.LateSatisfiedTimeout.class, outcome);
+        var satisfied = assertInstanceOf(
+                Attempt.Satisfied.class, timeout.attempt());
+        assertEquals(1, timeout.completedAttempts());
+        assertEquals(11, timeout.completedNanos());
+        assertSame(actual, satisfied.actual());
+        assertSame(result, satisfied.result());
     }
 
     @Test
@@ -299,7 +251,7 @@ class WaitEngineTest {
                 ? unsatisfied("not ready")
                 : satisfied("ready"));
 
-        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        assertInstanceOf(WaitOutcome.Success.class, outcome);
         assertEquals(List.of(0L, 5L), starts);
         assertEquals(List.of(5L, 3L, 3L, 2L), time.parkRequests());
     }
@@ -318,7 +270,7 @@ class WaitEngineTest {
                 ? unsatisfied("not ready")
                 : satisfied("ready"));
 
-        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        assertInstanceOf(WaitOutcome.Success.class, outcome);
         assertEquals(List.of(started, Long.MIN_VALUE + 1), starts);
         assertEquals(List.of(4L), time.parkRequests());
         assertEquals(2, outcome.completedAttempts());
@@ -334,11 +286,14 @@ class WaitEngineTest {
             throw failure;
         }, Evaluation::satisfied);
 
-        assertEquals(WaitOutcome.Kind.UNCONTROLLED, outcome.kind());
-        assertSame(failure, outcome.attempt().cause());
-        assertEquals(Attempt.Origin.SOURCE,
-                outcome.attempt().origin());
-        assertEquals(1, outcome.attempt().number());
+        var uncontrolled = assertInstanceOf(
+                WaitOutcome.Uncontrolled.class, outcome);
+        var attempt = assertInstanceOf(
+                Attempt.Uncontrolled.BeforeObservation.class,
+                uncontrolled.attempt());
+        assertSame(failure, attempt.cause());
+        assertEquals(Attempt.Origin.SOURCE, attempt.origin());
+        assertEquals(1, attempt.number());
     }
 
     @Test
@@ -351,11 +306,14 @@ class WaitEngineTest {
                 }, () -> "actual",
                 actual -> unsatisfied("not yet"));
 
-        assertEquals(WaitOutcome.Kind.UNCONTROLLED, outcome.kind());
-        assertEquals(Attempt.Origin.WAITING,
-                outcome.attempt().origin());
-        assertEquals(2, outcome.attempt().number());
-        assertSame(failure, outcome.attempt().cause());
+        var uncontrolled = assertInstanceOf(
+                WaitOutcome.Uncontrolled.class, outcome);
+        var attempt = assertInstanceOf(
+                Attempt.Uncontrolled.BeforeObservation.class,
+                uncontrolled.attempt());
+        assertEquals(Attempt.Origin.WAITING, attempt.origin());
+        assertEquals(2, attempt.number());
+        assertSame(failure, attempt.cause());
     }
 
     @Test
@@ -367,11 +325,14 @@ class WaitEngineTest {
                     throw failure;
                 }, () -> "actual", actual -> satisfied("ready"));
 
-        assertEquals(WaitOutcome.Kind.UNCONTROLLED, outcome.kind());
-        assertEquals(Attempt.Origin.WAITING,
-                outcome.attempt().origin());
-        assertEquals(2, outcome.attempt().number());
-        assertSame(failure, outcome.attempt().cause());
+        var uncontrolled = assertInstanceOf(
+                WaitOutcome.Uncontrolled.class, outcome);
+        var attempt = assertInstanceOf(
+                Attempt.Uncontrolled.BeforeObservation.class,
+                uncontrolled.attempt());
+        assertEquals(Attempt.Origin.WAITING, attempt.origin());
+        assertEquals(2, attempt.number());
+        assertSame(failure, attempt.cause());
     }
 
     @Test
@@ -385,12 +346,15 @@ class WaitEngineTest {
                 }, () -> "actual",
                 actual -> unsatisfied("not yet"));
 
-        assertEquals(WaitOutcome.Kind.UNCONTROLLED, outcome.kind());
-        assertEquals(Attempt.Origin.WAITING,
-                outcome.attempt().origin());
-        assertEquals(2, outcome.attempt().number());
+        var uncontrolled = assertInstanceOf(
+                WaitOutcome.Uncontrolled.class, outcome);
+        var attempt = assertInstanceOf(
+                Attempt.Uncontrolled.BeforeObservation.class,
+                uncontrolled.attempt());
+        assertEquals(Attempt.Origin.WAITING, attempt.origin());
+        assertEquals(2, attempt.number());
         assertEquals(InterruptedException.class,
-                outcome.attempt().cause().getClass());
+                attempt.cause().getClass());
         assertEquals(1, parkCalls[0]);
         assertTrue(currentThread().isInterrupted());
     }
@@ -405,12 +369,15 @@ class WaitEngineTest {
                     currentThread().interrupt();
                 }, () -> "actual", actual -> satisfied("ready"));
 
-        assertEquals(WaitOutcome.Kind.UNCONTROLLED, outcome.kind());
-        assertEquals(Attempt.Origin.WAITING,
-                outcome.attempt().origin());
-        assertEquals(2, outcome.attempt().number());
+        var uncontrolled = assertInstanceOf(
+                WaitOutcome.Uncontrolled.class, outcome);
+        var attempt = assertInstanceOf(
+                Attempt.Uncontrolled.BeforeObservation.class,
+                uncontrolled.attempt());
+        assertEquals(Attempt.Origin.WAITING, attempt.origin());
+        assertEquals(2, attempt.number());
         assertEquals(InterruptedException.class,
-                outcome.attempt().cause().getClass());
+                attempt.cause().getClass());
         assertEquals(1, parkCalls[0]);
         assertTrue(currentThread().isInterrupted());
     }
@@ -441,13 +408,16 @@ class WaitEngineTest {
             return new Object();
         }, Evaluation::satisfied);
 
-        assertEquals(WaitOutcome.Kind.UNCONTROLLED, outcome.kind());
+        var uncontrolled = assertInstanceOf(
+                WaitOutcome.Uncontrolled.class, outcome);
+        var attempt = assertInstanceOf(
+                Attempt.Uncontrolled.BeforeObservation.class,
+                uncontrolled.attempt());
         assertEquals(0, sourceCalls[0]);
-        assertEquals(Attempt.Origin.WAITING,
-                outcome.attempt().origin());
-        assertEquals(1, outcome.attempt().number());
+        assertEquals(Attempt.Origin.WAITING, attempt.origin());
+        assertEquals(1, attempt.number());
         assertEquals(InterruptedException.class,
-                outcome.attempt().cause().getClass());
+                attempt.cause().getClass());
         assertTrue(currentThread().isInterrupted());
     }
 
@@ -478,13 +448,15 @@ class WaitEngineTest {
             return "actual";
         }, actual -> satisfied(results.get(calls[0]++)));
 
-        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        var success = assertInstanceOf(WaitOutcome.Success.class, outcome);
+        var satisfied = assertInstanceOf(
+                Attempt.Satisfied.class, success.attempt());
         assertEquals(List.of(0L, 5L, 10L, 12L), starts);
         assertEquals(List.of(5L, 5L, 2L), time.parkRequests());
-        assertEquals(0, outcome.acquiredNanos());
-        assertEquals(12, outcome.completedNanos());
-        assertEquals(4, outcome.completedAttempts());
-        assertEquals("boundary", outcome.result());
+        assertEquals(0, success.acquiredNanos());
+        assertEquals(12, success.completedNanos());
+        assertEquals(4, success.completedAttempts());
+        assertEquals("boundary", satisfied.result());
     }
 
     @ParameterizedTest
@@ -503,12 +475,14 @@ class WaitEngineTest {
                     return time.nanoTime();
                 }, Evaluation::satisfied);
 
-        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        var success = assertInstanceOf(WaitOutcome.Success.class, outcome);
+        var satisfied = assertInstanceOf(
+                Attempt.Satisfied.class, success.attempt());
         assertEquals(expectedStarts, starts);
         assertEquals(expectedParks, time.parkRequests());
-        assertEquals(stableFor, outcome.completedNanos());
-        assertEquals(expectedStarts.size(), outcome.completedAttempts());
-        assertEquals(stableFor, outcome.result());
+        assertEquals(stableFor, success.completedNanos());
+        assertEquals(expectedStarts.size(), success.completedAttempts());
+        assertEquals(stableFor, satisfied.result());
     }
 
     @Test
@@ -524,10 +498,12 @@ class WaitEngineTest {
             return time.nanoTime();
         }, Evaluation::satisfied);
 
-        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        var success = assertInstanceOf(WaitOutcome.Success.class, outcome);
+        var satisfied = assertInstanceOf(
+                Attempt.Satisfied.class, success.attempt());
         assertEquals(List.of(0L, 5L), starts);
         assertEquals(List.of(5L, 3L, 3L, 2L), time.parkRequests());
-        assertEquals(5L, outcome.result());
+        assertEquals(5L, satisfied.result());
     }
 
     @Test
@@ -541,12 +517,14 @@ class WaitEngineTest {
             return time.nanoTime();
         }, Evaluation::satisfied);
 
-        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        var success = assertInstanceOf(WaitOutcome.Success.class, outcome);
+        var satisfied = assertInstanceOf(
+                Attempt.Satisfied.class, success.attempt());
         assertEquals(List.of(
                 started, Long.MIN_VALUE + 1, Long.MIN_VALUE + 3), starts);
         assertEquals(List.of(4L, 2L), time.parkRequests());
-        assertEquals(Long.MIN_VALUE + 3, outcome.completedNanos());
-        assertEquals(Long.MIN_VALUE + 3, outcome.result());
+        assertEquals(Long.MIN_VALUE + 3, success.completedNanos());
+        assertEquals(Long.MIN_VALUE + 3, satisfied.result());
     }
 
     @Test
@@ -570,13 +548,15 @@ class WaitEngineTest {
             return satisfied(call == 2 ? "stable" : "boundary");
         });
 
-        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        var success = assertInstanceOf(WaitOutcome.Success.class, outcome);
+        var satisfied = assertInstanceOf(
+                Attempt.Satisfied.class, success.attempt());
         assertEquals(List.of(0L, 4L, 13L, 14L), starts);
         assertEquals(List.of(4L, 4L, 1L), time.parkRequests());
-        assertEquals(9, outcome.acquiredNanos());
-        assertEquals(14, outcome.completedNanos());
-        assertEquals(4, outcome.completedAttempts());
-        assertEquals("boundary", outcome.result());
+        assertEquals(9, success.acquiredNanos());
+        assertEquals(14, success.completedNanos());
+        assertEquals(4, success.completedAttempts());
+        assertEquals("boundary", satisfied.result());
     }
 
     @Test
@@ -596,12 +576,14 @@ class WaitEngineTest {
             return satisfied("late boundary");
         });
 
-        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        var success = assertInstanceOf(WaitOutcome.Success.class, outcome);
+        var satisfied = assertInstanceOf(
+                Attempt.Satisfied.class, success.attempt());
         assertEquals(List.of(0L, 6L), starts);
         assertEquals(List.of(6L), time.parkRequests());
-        assertEquals(11, outcome.completedNanos());
-        assertEquals(2, outcome.completedAttempts());
-        assertEquals("late boundary", outcome.result());
+        assertEquals(11, success.completedNanos());
+        assertEquals(2, success.completedAttempts());
+        assertEquals("late boundary", satisfied.result());
     }
 
     @Test
@@ -617,13 +599,15 @@ class WaitEngineTest {
                         ? satisfied(new Object())
                         : assertionUnsatisfied("lost", assertion));
 
-        assertEquals(WaitOutcome.Kind.STABILITY_LOSS, outcome.kind());
-        assertEquals(0, outcome.acquiredNanos());
-        assertEquals(5, outcome.completedNanos());
-        assertEquals(2, outcome.completedAttempts());
-        assertSame(failingActual, outcome.attempt().actual());
-        assertEquals("lost", outcome.attempt().mismatch());
-        assertSame(assertion, outcome.attempt().assertionCause());
+        var loss = assertInstanceOf(WaitOutcome.StabilityLoss.class, outcome);
+        var unsatisfied = assertInstanceOf(
+                Attempt.Unsatisfied.class, loss.attempt());
+        assertEquals(0, loss.acquiredNanos());
+        assertEquals(5, loss.completedNanos());
+        assertEquals(2, loss.completedAttempts());
+        assertSame(failingActual, unsatisfied.actual());
+        assertEquals("lost", unsatisfied.mismatch());
+        assertSame(assertion, unsatisfied.assertionCause());
         assertEquals(List.of(5L), time.parkRequests());
     }
 
@@ -637,10 +621,12 @@ class WaitEngineTest {
             return time.nanoTime();
         }, Evaluation::satisfied);
 
-        assertEquals(WaitOutcome.Kind.SUCCESS, outcome.kind());
+        var success = assertInstanceOf(WaitOutcome.Success.class, outcome);
+        var satisfied = assertInstanceOf(
+                Attempt.Satisfied.class, success.attempt());
         assertEquals(List.of(0L, 2L, 4L, 6L, 8L), starts);
-        assertEquals(8L, outcome.result());
-        assertEquals(5, outcome.completedAttempts());
+        assertEquals(8L, satisfied.result());
+        assertEquals(5, success.completedAttempts());
     }
 
     @Test
@@ -658,12 +644,14 @@ class WaitEngineTest {
                     throw failure;
                 });
 
-        assertEquals(WaitOutcome.Kind.UNCONTROLLED, outcome.kind());
-        assertSame(failure, outcome.attempt().cause());
-        assertEquals(Attempt.Origin.CONDITION,
-                outcome.attempt().origin());
-        assertEquals(2, outcome.attempt().number());
-        assertFalse(outcome.attempt().status() == Attempt.Status.SATISFIED);
+        var uncontrolled = assertInstanceOf(
+                WaitOutcome.Uncontrolled.class, outcome);
+        var attempt = assertInstanceOf(
+                Attempt.Uncontrolled.AfterObservation.class,
+                uncontrolled.attempt());
+        assertSame(failure, attempt.cause());
+        assertEquals(Attempt.Origin.CONDITION, attempt.origin());
+        assertEquals(2, attempt.number());
     }
 
     private static Stream<Arguments> stabilityDurationRelations() {

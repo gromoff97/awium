@@ -74,20 +74,25 @@ public final class FailureMessage {
     }
 
     private static String format(Context context) {
-        return switch (context.outcome.kind()) {
-            case TIMEOUT_BETWEEN_OBSERVATIONS -> timeoutBetween(context);
-            case LATE_UNSATISFIED_TIMEOUT -> lateUnsatisfied(context);
-            case LATE_SATISFIED_TIMEOUT -> lateSatisfied(context);
-            case STABILITY_LOSS -> stabilityLoss(context);
-            case UNCONTROLLED -> uncontrolled(context);
-            case SUCCESS -> throw new IllegalArgumentException(
+        return switch (context.outcome) {
+            case WaitOutcome.TimeoutBetweenObservations<?> outcome ->
+                    timeoutBetween(context, outcome);
+            case WaitOutcome.LateUnsatisfiedTimeout<?> outcome ->
+                    lateUnsatisfied(context, outcome);
+            case WaitOutcome.LateSatisfiedTimeout<?> outcome ->
+                    lateSatisfied(context, outcome);
+            case WaitOutcome.StabilityLoss<?> outcome ->
+                    stabilityLoss(context, outcome);
+            case WaitOutcome.Uncontrolled<?> outcome ->
+                    uncontrolled(context, outcome);
+            case WaitOutcome.Success<?> ignored -> throw new IllegalArgumentException(
                     "successful outcomes have no failure diagnostics");
         };
     }
 
-    private static String timeoutBetween(Context context) {
-        WaitOutcome<?> outcome = context.outcome;
-        Attempt<?> last = outcome.attempt();
+    private static String timeoutBetween(Context context,
+            WaitOutcome.TimeoutBetweenObservations<?> outcome) {
+        Attempt.Unsatisfied<?> last = outcome.attempt();
         AssertionDiagnostic assertion = last.assertionCause() == null
                 ? null : context.assertionDiagnostic("assertion did not pass");
         StringBuilder out = heading("Await timed out");
@@ -105,12 +110,14 @@ public final class FailureMessage {
             field(out, 0, "Cause", assertion.cause());
         }
         out.append('\n').append("Timing:\n");
-        timeoutTiming(out, context, false);
+        timeoutTiming(out, context, outcome.startedNanos(),
+                outcome.completedNanos(), false);
         return finish(out);
     }
 
-    private static String lateUnsatisfied(Context context) {
-        Attempt<?> attempt = context.outcome.attempt();
+    private static String lateUnsatisfied(Context context,
+            WaitOutcome.LateUnsatisfiedTimeout<?> outcome) {
+        Attempt.Unsatisfied<?> attempt = outcome.attempt();
         AssertionDiagnostic assertion = attempt.assertionCause() == null
                 ? null : context.assertionDiagnostic("assertion did not pass");
         StringBuilder out = heading("Await timed out");
@@ -123,24 +130,27 @@ public final class FailureMessage {
             field(out, 0, "Cause", assertion.cause());
         }
         out.append('\n').append("Timing:\n");
-        timeoutTiming(out, context, true);
+        timeoutTiming(out, context, outcome.startedNanos(),
+                outcome.completedNanos(), true);
         return finish(out);
     }
 
-    private static String lateSatisfied(Context context) {
+    private static String lateSatisfied(Context context,
+            WaitOutcome.LateSatisfiedTimeout<?> outcome) {
         StringBuilder out = heading("Await timed out");
         field(out, 0, "Condition", context.conditionDescription());
         field(out, 0, "Observed", context.actualValue());
         field(out, 0, "Reason", "condition became satisfied after the timeout");
         optionalField(out, "Because", context.condition.explanation());
         out.append('\n').append("Timing:\n");
-        timeoutTiming(out, context, true);
+        timeoutTiming(out, context, outcome.startedNanos(),
+                outcome.completedNanos(), true);
         return finish(out);
     }
 
-    private static String stabilityLoss(Context context) {
-        WaitOutcome<?> outcome = context.outcome;
-        Attempt<?> attempt = outcome.attempt();
+    private static String stabilityLoss(Context context,
+            WaitOutcome.StabilityLoss<?> outcome) {
+        Attempt.Unsatisfied<?> attempt = outcome.attempt();
         AssertionDiagnostic assertion = attempt.assertionCause() == null
                 ? null : context.assertionDiagnostic("assertion did not pass");
         StringBuilder out = heading("Await lost stability");
@@ -164,8 +174,9 @@ public final class FailureMessage {
         return finish(out);
     }
 
-    private static String uncontrolled(Context context) {
-        Attempt<?> attempt = context.outcome.attempt();
+    private static String uncontrolled(Context context,
+            WaitOutcome.Uncontrolled<?> outcome) {
+        Attempt.Uncontrolled<?> attempt = outcome.attempt();
         boolean interrupted = attempt.cause() instanceof InterruptedException;
         String title = interrupted ? "Await was interrupted" : switch (
                 attempt.origin()) {
@@ -179,7 +190,7 @@ public final class FailureMessage {
             field(out, 0, "Origin", origin(attempt.origin()));
         }
         field(out, 0, "Condition", context.conditionDescription());
-        if (attempt.hasActual()) {
+        if (attempt instanceof Attempt.Uncontrolled.AfterObservation<?>) {
             field(out, 0, "Actual", context.actualValue());
         }
         optionalField(out, "Because", context.condition.explanation());
@@ -188,14 +199,14 @@ public final class FailureMessage {
     }
 
     private static void timeoutTiming(StringBuilder out, Context context,
-            boolean attempts) {
-        WaitOutcome<?> outcome = context.outcome;
+            long startedNanos, long completedNanos, boolean attempts) {
         field(out, 4, "Waited up to", duration(
                 context.configuration.upToNanos()));
         field(out, 4, "Elapsed", duration(
-                outcome.completedNanos() - outcome.startedNanos()));
+                completedNanos - startedNanos));
         if (attempts) {
-            field(out, 4, "Attempts", Long.toString(outcome.completedAttempts()));
+            field(out, 4, "Attempts", Long.toString(
+                    context.outcome.completedAttempts()));
         }
         field(out, 4, "Interval", duration(
                 context.configuration.everyNanos()));
@@ -207,7 +218,8 @@ public final class FailureMessage {
                 Long.toString(context.outcome.completedAttempts()));
         field(out, 0, "Condition",
                 context.materializedConditionDescription());
-        if (context.outcome.attempt().hasActual()) {
+        if (!(context.outcome.attempt()
+                instanceof Attempt.Uncontrolled.BeforeObservation<?>)) {
             field(out, 0, "Actual", context.materializedActualValue());
         }
         optionalField(out, "Because", context.condition.explanation());
@@ -325,6 +337,17 @@ public final class FailureMessage {
         };
     }
 
+    private static Object actual(Attempt<?> attempt) {
+        return switch (attempt) {
+            case Attempt.Satisfied<?> value -> value.actual();
+            case Attempt.Unsatisfied<?> value -> value.actual();
+            case Attempt.Uncontrolled.AfterObservation<?> value -> value.actual();
+            case Attempt.Uncontrolled.BeforeObservation<?> ignored ->
+                    throw new IllegalArgumentException(
+                            "attempt has no observed actual");
+        };
+    }
+
     public static final class Context {
 
         private final WaitOutcome<?> outcome;
@@ -368,7 +391,7 @@ public final class FailureMessage {
         public String actualValue() {
             if (!actualMaterialized) {
                 actualMaterialized = true;
-                actual = render(outcome.attempt().actual());
+                actual = render(actual(outcome.attempt()));
             }
             return actual;
         }
@@ -382,11 +405,17 @@ public final class FailureMessage {
         }
 
         private Throwable terminalCause() {
-            return switch (outcome.kind()) {
-                case TIMEOUT_BETWEEN_OBSERVATIONS, LATE_UNSATISFIED_TIMEOUT,
-                        STABILITY_LOSS -> outcome.attempt().assertionCause();
-                case UNCONTROLLED -> outcome.attempt().cause();
-                case SUCCESS, LATE_SATISFIED_TIMEOUT -> null;
+            return switch (outcome) {
+                case WaitOutcome.TimeoutBetweenObservations<?> value ->
+                        value.attempt().assertionCause();
+                case WaitOutcome.LateUnsatisfiedTimeout<?> value ->
+                        value.attempt().assertionCause();
+                case WaitOutcome.StabilityLoss<?> value ->
+                        value.attempt().assertionCause();
+                case WaitOutcome.Uncontrolled<?> value ->
+                        value.attempt().cause();
+                case WaitOutcome.Success<?> ignored -> null;
+                case WaitOutcome.LateSatisfiedTimeout<?> ignored -> null;
             };
         }
 

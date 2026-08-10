@@ -9,12 +9,11 @@ import io.github.gromoff97.awium.engine.WaitEngine;
 import io.github.gromoff97.awium.sources.Source;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.*;
-import static io.github.gromoff97.awium.engine.Attempt.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -36,129 +35,60 @@ class ObservationEvaluatorTest {
     }
 
     @Test
-    void exposesOneValidatedAttemptRecord() {
-        Attempt<String> attempt = satisfied(
-                "actual", "result", 1, 123);
+    void attemptVariantsExposeOnlyApplicableState() {
+        var satisfied = new Attempt.Satisfied<>(null, null, 1, 10);
+        var unsatisfied = new Attempt.Unsatisfied<>(
+                null, "not ready", null, 2, 20);
+        var before = new Attempt.Uncontrolled.BeforeObservation<String>(
+                Attempt.Origin.SOURCE, new RuntimeException("source"), 3, 30);
+        var after = new Attempt.Uncontrolled.AfterObservation<String>(
+                Attempt.Origin.CONDITION, null,
+                new RuntimeException("condition"), 4, 40);
 
-        assertEquals(Attempt.Status.SATISFIED, attempt.status());
-        assertEquals(123, attempt.completedNanos());
+        assertAll(
+                () -> assertNull(satisfied.actual()),
+                () -> assertNull(satisfied.result()),
+                () -> assertEquals("not ready", unsatisfied.mismatch()),
+                () -> assertEquals(Attempt.Origin.SOURCE, before.origin()),
+                () -> assertEquals(Attempt.Origin.CONDITION, after.origin()),
+                () -> assertNull(after.actual()),
+                () -> assertEquals(4, after.number()));
     }
 
     @Test
-    void rejectsMissingStatusAndNonPositiveAttemptNumbers() {
-        assertAll(
-                () -> assertThrows(NullPointerException.class,
-                        () -> new Attempt<>(null, null, true, "actual",
-                                "result", null, null, null, 1, 1)),
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> satisfied(
-                                "actual", "result", 0, 1)),
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> satisfied(
-                                "actual", "result", -1, 1)));
-    }
-
-    @Test
-    void rejectsInvalidSatisfiedFields() {
+    void attemptVariantsValidateTheirOwnRequiredFields() {
+        RuntimeException cause = new RuntimeException();
         assertAll(
                 () -> assertThrows(IllegalArgumentException.class,
-                        () -> new Attempt<>(Attempt.Status.SATISFIED,
-                                Attempt.Origin.SOURCE, true, "actual", "result",
-                                null, null, null, 1, 1)),
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> new Attempt<>(Attempt.Status.SATISFIED,
-                                null, true, "actual", "result", null, null,
-                                new RuntimeException(), 1, 1)),
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> new Attempt<>(Attempt.Status.SATISFIED,
-                                null, false, null, "result", null, null,
-                                null, 1, 1)),
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> new Attempt<>(Attempt.Status.SATISFIED,
-                                null, true, "actual", "result", "mismatch",
-                                null, null, 1, 1)),
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> new Attempt<>(Attempt.Status.SATISFIED,
-                                null, true, "actual", "result", null,
-                                new AssertionError(), null, 1, 1)));
-    }
-
-    @Test
-    void rejectsInvalidUnsatisfiedFields() {
-        assertAll(
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> new Attempt<>(Attempt.Status.UNSATISFIED,
-                                Attempt.Origin.CONDITION, true, "actual", null,
-                                "mismatch", null, null, 1, 1)),
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> new Attempt<>(Attempt.Status.UNSATISFIED,
-                                null, true, "actual", null, "mismatch", null,
-                                new RuntimeException(), 1, 1)),
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> new Attempt<>(Attempt.Status.UNSATISFIED,
-                                null, false, null, null, "mismatch", null,
-                                null, 1, 1)),
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> new Attempt<>(Attempt.Status.UNSATISFIED,
-                                null, true, "actual", "result", "mismatch",
-                                null, null, 1, 1)),
+                        () -> new Attempt.Satisfied<>("actual", "result", 0, 1)),
                 () -> assertThrows(NullPointerException.class,
-                        () -> new Attempt<>(Attempt.Status.UNSATISFIED,
-                                null, true, "actual", null, null, null,
-                                null, 1, 1)));
-    }
-
-    @Test
-    void rejectsInvalidUncontrolledFields() {
-        var cause = new RuntimeException();
-        assertAll(
+                        () -> new Attempt.Unsatisfied<>(
+                                "actual", null, null, 1, 1)),
                 () -> assertThrows(NullPointerException.class,
-                        () -> new Attempt<>(Attempt.Status.UNCONTROLLED,
-                                null, false, null, null, null, null, cause,
-                                1, 1)),
+                        () -> new Attempt.Uncontrolled.BeforeObservation<>(
+                                null, cause, 1, 1)),
                 () -> assertThrows(NullPointerException.class,
-                        () -> new Attempt<>(Attempt.Status.UNCONTROLLED,
-                                Attempt.Origin.SOURCE, false, null, null, null,
-                                null, null, 1, 1)),
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> new Attempt<>(Attempt.Status.UNCONTROLLED,
-                                Attempt.Origin.SOURCE, false, null, "result",
-                                null, null, cause, 1, 1)),
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> new Attempt<>(Attempt.Status.UNCONTROLLED,
-                                Attempt.Origin.SOURCE, false, null, null,
-                                "mismatch", null, cause, 1, 1)),
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> new Attempt<>(Attempt.Status.UNCONTROLLED,
-                                Attempt.Origin.SOURCE, false, null, null, null,
-                                new AssertionError(), cause, 1, 1)),
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> new Attempt<>(Attempt.Status.UNCONTROLLED,
-                                Attempt.Origin.SOURCE, false, "actual", null,
-                                null, null, cause, 1, 1)));
+                        () -> new Attempt.Uncontrolled.AfterObservation<>(
+                                Attempt.Origin.CONDITION, "actual", null, 1, 1)));
     }
 
     @Test
     void acceptsValidNullPayloadsAndWrappedAttemptCompletionTime() {
-        Attempt<Object> satisfied = satisfied(null, null, 1, 1);
-        Attempt<Object> unsatisfied = unsatisfied(
+        var satisfied = new Attempt.Satisfied<Object>(null, null, 1, 1);
+        var unsatisfied = new Attempt.Unsatisfied<Object>(
                 null, "mismatch", new AssertionError(), 1, 1);
-        Attempt<Object> uncontrolledWithoutActual = uncontrolled(
-                Attempt.Origin.SOURCE, false, null,
-                new RuntimeException(), 1, 1);
-        Attempt<Object> uncontrolledWithNullActual = uncontrolled(
-                Attempt.Origin.CONDITION, true, null,
-                new RuntimeException(), 1, 1);
+        var before = new Attempt.Uncontrolled.BeforeObservation<Object>(
+                Attempt.Origin.SOURCE, new RuntimeException(), 1, 1);
+        var after = new Attempt.Uncontrolled.AfterObservation<Object>(
+                Attempt.Origin.CONDITION, null, new RuntimeException(), 1, 1);
 
         assertAll(
                 () -> assertNull(satisfied.actual()),
                 () -> assertNull(satisfied.result()),
                 () -> assertNull(unsatisfied.actual()),
-                () -> assertFalse(uncontrolledWithoutActual.hasActual()),
-                () -> assertNull(uncontrolledWithoutActual.actual()),
-                () -> assertTrue(uncontrolledWithNullActual.hasActual()),
-                () -> assertNull(uncontrolledWithNullActual.actual()));
-        assertEquals(Long.MIN_VALUE, satisfied(
+                () -> assertNull(after.actual()),
+                () -> assertEquals(Attempt.Origin.SOURCE, before.origin()));
+        assertEquals(Long.MIN_VALUE, new Attempt.Satisfied<>(
                 "actual", "result", 1, Long.MIN_VALUE).completedNanos());
     }
 
@@ -177,12 +107,11 @@ class ObservationEvaluatorTest {
             return satisfied(result);
         });
 
-        assertEquals(Attempt.Status.SATISFIED, outcome.status());
-        assertTrue(outcome.hasActual());
-        assertSame(actual, outcome.actual());
-        assertSame(result, outcome.result());
-        assertEquals(1, outcome.number());
-        assertEquals(2, outcome.completedNanos());
+        var satisfied = assertInstanceOf(Attempt.Satisfied.class, outcome);
+        assertSame(actual, satisfied.actual());
+        assertSame(result, satisfied.result());
+        assertEquals(1, satisfied.number());
+        assertEquals(2, satisfied.completedNanos());
         assertEquals(1, calls[0]);
         assertEquals(1, calls[1]);
     }
@@ -196,12 +125,11 @@ class ObservationEvaluatorTest {
                 value -> assertionUnsatisfied(
                         "assertion did not pass", assertion));
 
-        assertEquals(Attempt.Status.UNSATISFIED, outcome.status());
-        assertTrue(outcome.hasActual());
-        assertSame(actual, outcome.actual());
-        assertEquals("assertion did not pass", outcome.mismatch());
-        assertSame(assertion, outcome.assertionCause());
-        assertEquals(1, outcome.number());
+        var unsatisfied = assertInstanceOf(Attempt.Unsatisfied.class, outcome);
+        assertSame(actual, unsatisfied.actual());
+        assertEquals("assertion did not pass", unsatisfied.mismatch());
+        assertSame(assertion, unsatisfied.assertionCause());
+        assertEquals(1, unsatisfied.number());
     }
 
     @ParameterizedTest
@@ -215,12 +143,11 @@ class ObservationEvaluatorTest {
                     return satisfied(value);
                 });
 
-        assertEquals(Attempt.Status.UNCONTROLLED, outcome.status());
-        assertEquals(Attempt.Origin.SOURCE, outcome.origin());
-        assertSame(failure, outcome.cause());
-        assertFalse(outcome.hasActual());
-        assertNull(outcome.actual());
-        assertEquals(1, outcome.number());
+        var uncontrolled = assertInstanceOf(
+                Attempt.Uncontrolled.BeforeObservation.class, outcome);
+        assertEquals(Attempt.Origin.SOURCE, uncontrolled.origin());
+        assertSame(failure, uncontrolled.cause());
+        assertEquals(1, uncontrolled.number());
         assertEquals(0, conditionCalls[0]);
     }
 
@@ -233,12 +160,12 @@ class ObservationEvaluatorTest {
         Attempt<Object> outcome = attempt(
                 () -> actual, value -> throwFromCondition(failure));
 
-        assertEquals(Attempt.Status.UNCONTROLLED, outcome.status());
-        assertEquals(Attempt.Origin.CONDITION, outcome.origin());
-        assertSame(failure, outcome.cause());
-        assertTrue(outcome.hasActual());
-        assertSame(actual, outcome.actual());
-        assertEquals(1, outcome.number());
+        var uncontrolled = assertInstanceOf(
+                Attempt.Uncontrolled.AfterObservation.class, outcome);
+        assertEquals(Attempt.Origin.CONDITION, uncontrolled.origin());
+        assertSame(failure, uncontrolled.cause());
+        assertSame(actual, uncontrolled.actual());
+        assertEquals(1, uncontrolled.number());
     }
 
     @Test
@@ -249,11 +176,11 @@ class ObservationEvaluatorTest {
         Attempt<Object> outcome = attempt(() -> actual,
                 value -> uncontrolled(failure));
 
-        assertEquals(Attempt.Status.UNCONTROLLED, outcome.status());
-        assertEquals(Attempt.Origin.CONDITION, outcome.origin());
-        assertSame(failure, outcome.cause());
-        assertTrue(outcome.hasActual());
-        assertSame(actual, outcome.actual());
+        var uncontrolled = assertInstanceOf(
+                Attempt.Uncontrolled.AfterObservation.class, outcome);
+        assertEquals(Attempt.Origin.CONDITION, uncontrolled.origin());
+        assertSame(failure, uncontrolled.cause());
+        assertSame(actual, uncontrolled.actual());
     }
 
     @Test
@@ -266,13 +193,14 @@ class ObservationEvaluatorTest {
             return null;
         });
 
-        assertEquals(Attempt.Status.UNCONTROLLED, outcome.status());
-        assertEquals(Attempt.Origin.CONDITION, outcome.origin());
-        assertTrue(outcome.hasActual());
-        assertSame(actual, outcome.actual());
-        assertEquals(NullPointerException.class, outcome.cause().getClass());
+        var uncontrolled = assertInstanceOf(
+                Attempt.Uncontrolled.AfterObservation.class, outcome);
+        assertEquals(Attempt.Origin.CONDITION, uncontrolled.origin());
+        assertSame(actual, uncontrolled.actual());
+        assertEquals(NullPointerException.class,
+                uncontrolled.cause().getClass());
         assertEquals("condition returned null Evaluation",
-                outcome.cause().getMessage());
+                uncontrolled.cause().getMessage());
         assertEquals(1, conditionCalls[0]);
     }
 
@@ -285,10 +213,10 @@ class ObservationEvaluatorTest {
             throw interrupted;
         }, Evaluation::satisfied);
 
-        assertEquals(Attempt.Status.UNCONTROLLED, outcome.status());
-        assertEquals(Attempt.Origin.SOURCE, outcome.origin());
-        assertSame(interrupted, outcome.cause());
-        assertFalse(outcome.hasActual());
+        var uncontrolled = assertInstanceOf(
+                Attempt.Uncontrolled.BeforeObservation.class, outcome);
+        assertEquals(Attempt.Origin.SOURCE, uncontrolled.origin());
+        assertSame(interrupted, uncontrolled.cause());
         assertTrue(currentThread().isInterrupted());
     }
 
@@ -302,11 +230,11 @@ class ObservationEvaluatorTest {
             throw interrupted;
         });
 
-        assertEquals(Attempt.Status.UNCONTROLLED, outcome.status());
-        assertEquals(Attempt.Origin.CONDITION, outcome.origin());
-        assertSame(interrupted, outcome.cause());
-        assertTrue(outcome.hasActual());
-        assertSame(actual, outcome.actual());
+        var uncontrolled = assertInstanceOf(
+                Attempt.Uncontrolled.AfterObservation.class, outcome);
+        assertEquals(Attempt.Origin.CONDITION, uncontrolled.origin());
+        assertSame(interrupted, uncontrolled.cause());
+        assertSame(actual, uncontrolled.actual());
         assertTrue(currentThread().isInterrupted());
     }
 
@@ -377,9 +305,6 @@ class ObservationEvaluatorTest {
         });
 
         assertFlagInterruption(outcome, Attempt.Origin.CONDITION, actual);
-        assertNull(outcome.result());
-        assertNull(outcome.mismatch());
-        assertNull(outcome.assertionCause());
     }
 
     @ParameterizedTest
@@ -390,9 +315,10 @@ class ObservationEvaluatorTest {
             return throwFromSource(failure);
         }, Evaluation::satisfied);
 
-        assertEquals(Attempt.Origin.SOURCE, outcome.origin());
-        assertSame(failure, outcome.cause());
-        assertFalse(outcome.hasActual());
+        var uncontrolled = assertInstanceOf(
+                Attempt.Uncontrolled.BeforeObservation.class, outcome);
+        assertEquals(Attempt.Origin.SOURCE, uncontrolled.origin());
+        assertSame(failure, uncontrolled.cause());
         assertTrue(currentThread().isInterrupted());
     }
 
@@ -406,9 +332,11 @@ class ObservationEvaluatorTest {
             return throwFromCondition(failure);
         });
 
-        assertEquals(Attempt.Origin.CONDITION, outcome.origin());
-        assertSame(failure, outcome.cause());
-        assertSame(actual, outcome.actual());
+        var uncontrolled = assertInstanceOf(
+                Attempt.Uncontrolled.AfterObservation.class, outcome);
+        assertEquals(Attempt.Origin.CONDITION, uncontrolled.origin());
+        assertSame(failure, uncontrolled.cause());
+        assertSame(actual, uncontrolled.actual());
         assertTrue(currentThread().isInterrupted());
     }
 
@@ -485,14 +413,15 @@ class ObservationEvaluatorTest {
 
     private static void assertFlagInterruption(Attempt<?> outcome,
             Attempt.Origin origin, Object actual) {
-        assertEquals(Attempt.Status.UNCONTROLLED, outcome.status());
-        assertEquals(origin, outcome.origin());
-        assertTrue(outcome.hasActual());
-        assertSame(actual, outcome.actual());
-        assertEquals(1, outcome.number());
-        assertEquals(InterruptedException.class, outcome.cause().getClass());
+        var uncontrolled = assertInstanceOf(
+                Attempt.Uncontrolled.AfterObservation.class, outcome);
+        assertEquals(origin, uncontrolled.origin());
+        assertSame(actual, uncontrolled.actual());
+        assertEquals(1, uncontrolled.number());
+        assertEquals(InterruptedException.class,
+                uncontrolled.cause().getClass());
         assertEquals("caller thread interrupt flag was set",
-                outcome.cause().getMessage());
+                uncontrolled.cause().getMessage());
         assertTrue(currentThread().isInterrupted());
     }
 }
