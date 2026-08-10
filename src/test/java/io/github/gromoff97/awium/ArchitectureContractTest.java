@@ -97,6 +97,16 @@ class ArchitectureContractTest {
     }
 
     @Test
+    void architectureAuditRejectsObsoleteProductTypes() {
+        for (String type : List.of("AwaitSources", "ObjectAwait",
+                "CollectionAwait", "MapAwait", "SequencedCollectionAwait",
+                "AttemptResult", "WaitResult")) {
+            assertRejected("obsolete " + type,
+                    "final class " + type + " {}");
+        }
+    }
+
+    @Test
     void productionSourcesUseOnlyApprovedWaitingAndInterruptionMechanics()
             throws IOException {
         assertApprovedSources(productionSources(MAIN_PACKAGE));
@@ -627,6 +637,9 @@ class ArchitectureContractTest {
                 "isInterrupted", "interrupted", "interrupt");
         private static final Set<String> MONITOR_METHODS = Set.of(
                 "wait", "notify", "notifyAll");
+        private static final Set<String> OBSOLETE_PRODUCT_TYPES = Set.of(
+                "AwaitSources", "ObjectAwait", "CollectionAwait", "MapAwait",
+                "SequencedCollectionAwait", "AttemptResult", "WaitResult");
         private static final List<String> FORBIDDEN_ROOTS = List.of(
                 "java.util.concurrent.Executor",
                 "java.util.concurrent.Future",
@@ -654,6 +667,10 @@ class ArchitectureContractTest {
         public J.ClassDeclaration visitClassDeclaration(
                 J.ClassDeclaration declaration, ExecutionContext context) {
             requireType(declaration, declaration.getType(), "class declaration");
+            if (OBSOLETE_PRODUCT_TYPES.contains(declaration.getSimpleName())) {
+                reject(declaration, "obsolete product type "
+                        + declaration.getSimpleName());
+            }
             if (TypeUtils.isAssignableTo(THREAD, declaration.getType())) {
                 reject(declaration, "Thread subclass");
             }

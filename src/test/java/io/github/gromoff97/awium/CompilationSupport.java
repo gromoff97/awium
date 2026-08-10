@@ -14,6 +14,12 @@ final class CompilationSupport {
     }
 
     static boolean compiles(Path parent, String source) throws IOException {
+        return compiles(parent, source,
+                Path.of(System.getProperty("java.class.path")));
+    }
+
+    static boolean compiles(Path parent, String source, Path classpath)
+            throws IOException {
         Path directory = Files.createTempDirectory(parent, "javac-");
         Path sourceFile = directory.resolve("Contract.java");
         Files.writeString(sourceFile, source);
@@ -22,7 +28,7 @@ final class CompilationSupport {
         return compiler.run(null, OutputStream.nullOutputStream(),
                 OutputStream.nullOutputStream(), "--release", "21", "-Xlint:all",
                 "-Werror", "-proc:none", "-classpath",
-                System.getProperty("java.class.path"), "-d", directory.toString(),
+                classpath.toString(), "-d", directory.toString(),
                 sourceFile.toString()) == 0;
     }
 }

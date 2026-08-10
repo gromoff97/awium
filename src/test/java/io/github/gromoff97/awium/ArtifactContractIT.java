@@ -18,6 +18,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class ArtifactContractIT {
 
@@ -57,10 +58,49 @@ class ArtifactContractIT {
                 module.descriptor().name());
         assertFalse(module.descriptor().isAutomatic());
         assertEquals(Set.of("io.github.gromoff97.awium",
+                        "io.github.gromoff97.awium.await",
+                        "io.github.gromoff97.awium.sources",
+                        "io.github.gromoff97.awium.conditioning",
+                        "io.github.gromoff97.awium.conditioning.conditions",
+                        "io.github.gromoff97.awium.conditioning.providers",
                         "io.github.gromoff97.awium.exceptions"),
                 module.descriptor().exports().stream()
                         .map(export -> export.source())
                         .collect(java.util.stream.Collectors.toSet()));
+    }
+
+    @Test
+    void packagedJarCompilesDirectMethodReferences(@TempDir Path directory)
+            throws Exception {
+        assertTrue(CompilationSupport.compiles(directory, """
+                import static io.github.gromoff97.awium.Awium.await;
+                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+                import java.util.List;
+                import java.util.Map;
+                import java.util.Optional;
+
+                final class Contract {
+                    String object() {
+                        return await(this::loadObject).until(equalTo("value"));
+                    }
+                    String optional() {
+                        return await(this::loadOptional).until(present);
+                    }
+                    List<String> collection() {
+                        return await(this::loadCollection).until(nonEmpty);
+                    }
+                    Map<String, Integer> map() {
+                        return await(this::loadMap).until(nonEmpty);
+                    }
+                    String loadObject() { return "value"; }
+                    Optional<String> loadOptional() {
+                        return Optional.of("value");
+                    }
+                    List<String> loadCollection() { return List.of("value"); }
+                    Map<String, Integer> loadMap() { return Map.of("value", 1); }
+                }
+                """, JAR));
     }
 
     @Test

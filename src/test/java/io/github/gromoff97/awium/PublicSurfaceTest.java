@@ -56,6 +56,64 @@ import org.junit.jupiter.api.Test;
 
 class PublicSurfaceTest {
 
+    private static final Path MAIN_SOURCES = Path.of("src", "main", "java");
+
+    @Test
+    void containsExactlyTheApprovedTopLevelProductSources() throws Exception {
+        Set<Path> expected = Set.of(
+                Path.of("io/github/gromoff97/awium/Awium.java"),
+                Path.of("io/github/gromoff97/awium/await/Await.java"),
+                Path.of("io/github/gromoff97/awium/await/OptionalAwait.java"),
+                Path.of("io/github/gromoff97/awium/await/StructuralAwait.java"),
+                Path.of("io/github/gromoff97/awium/await/stages/AbstractAwaitStage.java"),
+                Path.of("io/github/gromoff97/awium/await/stages/AwaitStage.java"),
+                Path.of("io/github/gromoff97/awium/await/stages/OptionalAwaitStage.java"),
+                Path.of("io/github/gromoff97/awium/await/stages/StructuralAwaitStage.java"),
+                Path.of("io/github/gromoff97/awium/sources/Source.java"),
+                Path.of("io/github/gromoff97/awium/sources/OptionalSource.java"),
+                Path.of("io/github/gromoff97/awium/sources/CollectionSource.java"),
+                Path.of("io/github/gromoff97/awium/sources/MapSource.java"),
+                Path.of("io/github/gromoff97/awium/conditioning/Evaluation.java"),
+                Path.of("io/github/gromoff97/awium/conditioning/ValueEquality.java"),
+                Path.of("io/github/gromoff97/awium/conditioning/CheckedConsumer.java"),
+                Path.of("io/github/gromoff97/awium/conditioning/CheckedFunction.java"),
+                Path.of("io/github/gromoff97/awium/conditioning/conditions/Condition.java"),
+                Path.of("io/github/gromoff97/awium/conditioning/conditions/PreservingCondition.java"),
+                Path.of("io/github/gromoff97/awium/conditioning/conditions/PresentCondition.java"),
+                Path.of("io/github/gromoff97/awium/conditioning/conditions/StructuralCondition.java"),
+                Path.of("io/github/gromoff97/awium/conditioning/conditions/RuntimeCondition.java"),
+                Path.of("io/github/gromoff97/awium/conditioning/providers/ConditionProvider.java"),
+                Path.of("io/github/gromoff97/awium/conditioning/providers/ObjectConditionProvider.java"),
+                Path.of("io/github/gromoff97/awium/conditioning/providers/OptionalConditionProvider.java"),
+                Path.of("io/github/gromoff97/awium/conditioning/providers/CollectionConditionProvider.java"),
+                Path.of("io/github/gromoff97/awium/conditioning/providers/MapConditionProvider.java"),
+                Path.of("io/github/gromoff97/awium/engine/WaitEngine.java"),
+                Path.of("io/github/gromoff97/awium/engine/WaitConfiguration.java"),
+                Path.of("io/github/gromoff97/awium/engine/Attempt.java"),
+                Path.of("io/github/gromoff97/awium/engine/WaitOutcome.java"),
+                Path.of("io/github/gromoff97/awium/diagnostics/FailureFactory.java"),
+                Path.of("io/github/gromoff97/awium/diagnostics/FailureMessage.java"),
+                Path.of("io/github/gromoff97/awium/exceptions/AwaitFailure.java"),
+                Path.of("io/github/gromoff97/awium/exceptions/AwaitTimeoutException.java"),
+                Path.of("io/github/gromoff97/awium/exceptions/AwaitStabilizationException.java"),
+                Path.of("io/github/gromoff97/awium/exceptions/AwaitUncontrolledException.java"),
+                Path.of("io/github/gromoff97/awium/exceptions/AwaitSourceRetrievalException.java"),
+                Path.of("io/github/gromoff97/awium/exceptions/AwaitConditionEvaluationException.java"),
+                Path.of("io/github/gromoff97/awium/exceptions/AwaitInterruptedException.java"),
+                Path.of("io/github/gromoff97/awium/exceptions/AwaitUnhandledException.java"),
+                Path.of("io/github/gromoff97/awium/exceptions/AwaitConfigurationConflictException.java"));
+
+        Set<Path> actual;
+        try (var sources = Files.walk(MAIN_SOURCES)) {
+            actual = Set.copyOf(sources.filter(Files::isRegularFile)
+                    .filter(path -> path.toString().endsWith(".java"))
+                    .filter(path -> !path.endsWith("module-info.java"))
+                    .map(MAIN_SOURCES::relativize).toList());
+        }
+        assertEquals(41, actual.size());
+        assertEquals(expected, actual);
+    }
+
     @Test
     void exposesExactlyTheApprovedPublicApiIncludingNestedTypes()
             throws Exception {

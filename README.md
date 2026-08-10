@@ -6,7 +6,7 @@ natural result from the same successful observation.
 
 ```java
 import static io.github.gromoff97.awium.Awium.await;
-import static io.github.gromoff97.awium.AwaitConditions.present;
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.present;
 
 import java.time.Duration;
 
@@ -32,10 +32,10 @@ Examples below assume:
 
 ```java
 import static io.github.gromoff97.awium.Awium.await;
-import static io.github.gromoff97.awium.AwaitConditions.*;
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 
-import io.github.gromoff97.awium.AwaitSources;
-import io.github.gromoff97.awium.Evaluation;
+import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.sources.OptionalSource;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -44,20 +44,14 @@ import java.util.Set;
 
 ## Sources and timing
 
-`await(...)` accepts a repeatedly invokable source, never a direct value. Five
-checked-exception-capable source categories keep terminal typing precise:
-
-- `AwaitSources.Source<T>`
-- `AwaitSources.OptionalSource<T>`
-- `AwaitSources.CollectionSource<E, C>`
-- `AwaitSources.SequencedCollectionSource<E, C>`
-- `AwaitSources.MapSource<K, V, M>`
-
+`await(...)` accepts a repeatedly invokable source, never a direct value.
 Concrete-return lambdas and method references normally select the right
-category. Type a fundamentally ambiguous source explicitly:
+category. The checked-exception-capable `Source<T>`, `OptionalSource<T>`,
+`CollectionSource<C>`, and `MapSource<M>` interfaces are needed only to type an
+otherwise ambiguous source explicitly:
 
 ```java
-AwaitSources.OptionalSource<Payment> source = () -> null;
+OptionalSource<Payment> source = () -> null;
 await(source).until(absent);
 ```
 
@@ -116,15 +110,15 @@ retries an `AssertionError` and preserves the observed source; `passed(...)`
 returns the callback result:
 
 ```java
-AwaitSources.Source<Payment> source = paymentRepository::loadChecked;
-
-Payment payment = await(source).until(asserted(actual -> {
+Payment payment = await(paymentRepository::loadChecked)
+        .until(asserted(actual -> {
     if (!actual.isComplete()) {
         throw new AssertionError("payment was not complete");
     }
 }));
 
-Receipt receipt = await(source).until(passed(Payment::loadReceiptChecked));
+Receipt receipt = await(paymentRepository::loadChecked)
+        .until(passed(Payment::loadReceiptChecked));
 ```
 
 Other checked or unchecked callback failures stop immediately and preserve the
