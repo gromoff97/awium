@@ -1,5 +1,8 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.engine.AttemptEvaluator;
+import io.github.gromoff97.awium.sources.Source;
+
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.*;
@@ -604,7 +607,7 @@ class WaitEngineTest {
     private static <S, R> WaitResult<R> wait(
             FakeTime time,
             WaitConfiguration config,
-            AwaitSources.Source<S> source,
+            Source<S> source,
             CheckedFunction<S, Evaluation<R>> condition) {
         var guard = new Interrupts();
         return new WaitEngine(config, time, time, guard)
@@ -614,7 +617,7 @@ class WaitEngineTest {
     }
 
     private static <S, R> AttemptEvaluator<S, R> evaluator(
-            AwaitSources.Source<S> source,
+            Source<S> source,
             CheckedFunction<S, Evaluation<R>> condition) {
         var guard = new Interrupts();
         return new AttemptEvaluator<>(source,

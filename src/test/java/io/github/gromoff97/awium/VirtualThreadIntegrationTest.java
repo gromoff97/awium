@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.sources.Source;
+
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.*;
@@ -33,7 +35,7 @@ class VirtualThreadIntegrationTest {
             enteringThread[0] = Thread.currentThread();
             local.set("virtual state");
             try {
-                result[0] = Awium.await((AwaitSources.Source<Integer>) () -> {
+                result[0] = Awium.await((Source<Integer>) () -> {
                     callbackThreads.add(Thread.currentThread());
                     callbackValues.add(local.get());
                     return ++observations[0];

@@ -1,31 +1,28 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.internal.engine;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
-import io.github.gromoff97.awium.internal.engine.AttemptResult;
-import io.github.gromoff97.awium.internal.engine.Interrupts;
+import io.github.gromoff97.awium.sources.Source;
 
 import java.util.Objects;
 import java.util.function.LongFunction;
 
-final class AttemptEvaluator<S, R>
+public final class AttemptEvaluator<S, R>
         implements LongFunction<AttemptResult<R>> {
 
-    private final AwaitSources.Source<S> source;
+    private final Source<S> source;
     private final RuntimeCondition<S, R> condition;
     private final Interrupts interrupts;
 
-    AttemptEvaluator(
-            AwaitSources.Source<S> source,
-            RuntimeCondition<S, R> condition,
-            Interrupts interrupts) {
+    public AttemptEvaluator(Source<S> source,
+            RuntimeCondition<S, R> condition, Interrupts interrupts) {
         this.source = Objects.requireNonNull(source);
         this.condition = Objects.requireNonNull(condition);
         this.interrupts = Objects.requireNonNull(interrupts);
     }
 
     @SuppressWarnings("removal")
-    AttemptResult<R> evaluate(long attempt) {
+    public AttemptResult<R> evaluate(long attempt) {
         S actual;
         try {
             actual = source.get();

@@ -9,6 +9,9 @@ import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 import io.github.gromoff97.awium.internal.diagnostic.*;
 
 import io.github.gromoff97.awium.internal.engine.*;
+import io.github.gromoff97.awium.await.Await;
+import io.github.gromoff97.awium.await.stages.AwaitStage;
+import io.github.gromoff97.awium.sources.Source;
 
 import static java.lang.reflect.Modifier.isFinal;
 import static java.lang.reflect.Modifier.isPrivate;
@@ -238,13 +241,12 @@ class AssertionAdapterTest {
                         && isStatic(method.getModifiers())));
     }
 
-    private static ObjectAwait.Until<Payment> stage(FakeTime time, Payment actual) {
+    private static Await.Until<Payment> stage(FakeTime time, Payment actual) {
         WaitConfiguration config = WaitConfiguration.defaults()
                 .withEvery(Duration.ofNanos(1))
                 .withUpTo(Duration.ofNanos(10));
-        AwaitChain<Payment> chain = new AwaitChain<>(() -> actual, config,
+        return new AwaitStage<>((Source<Payment>) () -> actual, config,
                 time, time, new Interrupts(), new FailureFactory());
-        return new ObjectStages.ObjectAfterUpToStage<>(chain);
     }
 
     private record Payment(long id) {

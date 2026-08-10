@@ -1,5 +1,8 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.engine.AttemptEvaluator;
+import io.github.gromoff97.awium.sources.Source;
+
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.*;
@@ -358,7 +361,7 @@ class ObservationEvaluatorTest {
     }
 
     private static AttemptEvaluator<Object, Object> evaluator(
-            AwaitSources.Source<Object> source,
+            Source<Object> source,
             CheckedFunction<Object, Evaluation<Object>> condition) {
         return new AttemptEvaluator<>(source,
                 new RuntimeCondition<>(condition, () -> "test condition", null),

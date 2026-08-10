@@ -7,6 +7,16 @@ import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
 import io.github.gromoff97.awium.exceptions.*;
+import io.github.gromoff97.awium.await.Await;
+import io.github.gromoff97.awium.await.OptionalAwait;
+import io.github.gromoff97.awium.await.StructuralAwait;
+import io.github.gromoff97.awium.await.stages.AwaitStage;
+import io.github.gromoff97.awium.await.stages.OptionalAwaitStage;
+import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
+import io.github.gromoff97.awium.sources.CollectionSource;
+import io.github.gromoff97.awium.sources.MapSource;
+import io.github.gromoff97.awium.sources.OptionalSource;
+import io.github.gromoff97.awium.sources.Source;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isFinal;
@@ -38,7 +48,6 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.SequencedCollection;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
@@ -58,6 +67,8 @@ class PublicSurfaceTest {
         assertEquals(Set.copyOf(publicTypes()), topLevel);
         for (Class<?> type : topLevel) {
             assertTrue(Set.of("io.github.gromoff97.awium",
+                    "io.github.gromoff97.awium.await",
+                    "io.github.gromoff97.awium.sources",
                     "io.github.gromoff97.awium.conditioning",
                     "io.github.gromoff97.awium.conditioning.conditions",
                     "io.github.gromoff97.awium.conditioning.providers",
@@ -108,19 +119,17 @@ class PublicSurfaceTest {
     }
 
     @Test
-    void exposesExactlyFiveSourceAndTwoCallbackSams() throws Exception {
-        Set<Class<?>> sources = Set.of(AwaitSources.Source.class,
-                AwaitSources.OptionalSource.class,
-                AwaitSources.CollectionSource.class,
-                AwaitSources.SequencedCollectionSource.class,
-                AwaitSources.MapSource.class);
+    void exposesExactlyFourSourceAndTwoCallbackSams() throws Exception {
+        Set<Class<?>> sources = Set.of(Source.class, OptionalSource.class,
+                CollectionSource.class, MapSource.class);
         Set<Class<?>> callbacks = Set.of(CheckedConsumer.class,
                 CheckedFunction.class);
 
-        assertEquals(sources, Set.copyOf(Arrays.asList(
-                AwaitSources.class.getDeclaredClasses())));
+        assertEquals(sources, Set.copyOf(publicTypes().stream()
+                .filter(sources::contains).toList()));
         assertEquals(callbacks, Set.copyOf(publicTypes().stream()
                 .filter(Class::isInterface)
+                .filter(type -> !sources.contains(type))
                 .filter(type -> !fluentStages().contains(type)).toList()));
         sources.forEach(PublicSurfaceTest::assertCheckedSam);
         callbacks.forEach(PublicSurfaceTest::assertCheckedSam);
@@ -131,14 +140,12 @@ class PublicSurfaceTest {
             }
         };
         CheckedFunction<String, Integer> function = String::length;
-        AwaitSources.Source<String> source = () -> "source";
-        AwaitSources.OptionalSource<String> optionalSource =
+        Source<String> source = () -> "source";
+        OptionalSource<String> optionalSource =
                 () -> Optional.of("optional");
-        AwaitSources.CollectionSource<String, Collection<String>> collectionSource =
+        CollectionSource<Collection<String>> collectionSource =
                 () -> List.of("collection");
-        AwaitSources.SequencedCollectionSource<String, SequencedCollection<String>>
-                sequencedSource = () -> List.of("sequenced");
-        AwaitSources.MapSource<String, Integer, Map<String, Integer>> mapSource =
+        MapSource<Map<String, Integer>> mapSource =
                 () -> Map.of("map", 1);
 
         consumer.accept("value");
@@ -146,15 +153,14 @@ class PublicSurfaceTest {
         assertEquals("source", source.get());
         assertEquals("optional", optionalSource.get().orElseThrow());
         assertEquals("collection", collectionSource.get().iterator().next());
-        assertEquals("sequenced", sequencedSource.get().getFirst());
         assertEquals(1, mapSource.get().get("map"));
     }
 
     @Test
-    void allTwentyFluentStagesHaveExactPermittedSubtypeSets() {
+    void allTwelveFluentStagesHaveExactPermittedSubtypeSets() {
         Map<Class<?>, Set<Class<?>>> expected = expectedPermittedSubtypes();
 
-        assertEquals(20, expected.size());
+        assertEquals(12, expected.size());
         assertEquals(expected.keySet(), Set.copyOf(fluentStages()));
         expected.forEach((stage, permitted) -> {
             assertTrue(stage.isInterface(), stage.getName());
@@ -167,8 +173,7 @@ class PublicSurfaceTest {
     @Test
     void namespaceHoldersAndFailureHierarchiesAreClosedExactly()
             throws ReflectiveOperationException {
-        for (Class<?> holder : List.of(Awium.class, ConditionProvider.class,
-                AwaitSources.class)) {
+        for (Class<?> holder : List.of(Awium.class, ConditionProvider.class)) {
             assertTrue(isPublic(holder.getModifiers()), holder.getName());
             assertTrue(isFinal(holder.getModifiers()), holder.getName());
             Constructor<?> constructor = holder.getDeclaredConstructor();
@@ -186,7 +191,7 @@ class PublicSurfaceTest {
 
         }
 
-        assertEquals(5, Arrays.stream(Awium.class.getDeclaredMethods())
+        assertEquals(4, Arrays.stream(Awium.class.getDeclaredMethods())
                 .filter(method -> isPublic(method.getModifiers())).count());
         assertEquals(Set.of(AwaitTimeoutException.class,
                         AwaitStabilizationException.class),
@@ -389,11 +394,7 @@ class PublicSurfaceTest {
         Set<Class<?>> types = new java.util.HashSet<>(publicTypes());
         types.addAll(fluentStages());
         types.addAll(explainedTypes());
-        types.addAll(List.of(AwaitSources.Source.class,
-                AwaitSources.OptionalSource.class,
-                AwaitSources.CollectionSource.class,
-                AwaitSources.SequencedCollectionSource.class,
-                AwaitSources.MapSource.class, Evaluation.Status.class));
+        types.add(Evaluation.Status.class);
         return types;
     }
 
@@ -422,8 +423,14 @@ class PublicSurfaceTest {
     }
 
     private static boolean isPublicApiType(Class<?> type) {
-        if (type.getPackageName().startsWith(
-                "io.github.gromoff97.awium.internal.")) {
+        if (!Set.of("io.github.gromoff97.awium",
+                "io.github.gromoff97.awium.await",
+                "io.github.gromoff97.awium.sources",
+                "io.github.gromoff97.awium.conditioning",
+                "io.github.gromoff97.awium.conditioning.conditions",
+                "io.github.gromoff97.awium.conditioning.providers",
+                "io.github.gromoff97.awium.exceptions")
+                .contains(type.getPackageName())) {
             return false;
         }
         for (Class<?> current = type; current != null;
@@ -437,80 +444,44 @@ class PublicSurfaceTest {
 
     private static Map<Class<?>, Set<Class<?>>> expectedPermittedSubtypes() {
         return Map.ofEntries(
-                Map.entry(ObjectAwait.class,
-                        Set.of(ObjectStages.ObjectInitialStage.class)),
-                Map.entry(ObjectAwait.AfterEvery.class,
-                        Set.of(ObjectStages.ObjectAfterEveryStage.class)),
-                Map.entry(ObjectAwait.AfterUpTo.class,
-                        Set.of(ObjectAwait.AfterEvery.class,
-                                ObjectStages.ObjectAfterUpToStage.class)),
-                Map.entry(ObjectAwait.Until.class,
-                        Set.of(ObjectAwait.AfterUpTo.class,
+                Map.entry(Await.class, Set.of(AwaitStage.class)),
+                Map.entry(Await.AfterEvery.class, Set.of(AwaitStage.class)),
+                Map.entry(Await.AfterUpTo.class,
+                        Set.of(Await.AfterEvery.class, AwaitStage.class)),
+                Map.entry(Await.Until.class,
+                        Set.of(Await.AfterUpTo.class,
                                 OptionalAwait.class, OptionalAwait.Until.class,
-                                CollectionAwait.class, CollectionAwait.Until.class,
-                                MapAwait.class, MapAwait.Until.class,
-                                ObjectStages.ObjectTerminalStage.class)),
+                                StructuralAwait.class, StructuralAwait.Until.class,
+                                AwaitStage.class)),
                 Map.entry(OptionalAwait.class,
-                        Set.of(OptionalStages.OptionalInitialStage.class)),
+                        Set.of(OptionalAwaitStage.class)),
                 Map.entry(OptionalAwait.AfterEvery.class,
-                        Set.of(OptionalStages.OptionalAfterEveryStage.class)),
+                        Set.of(OptionalAwaitStage.class)),
                 Map.entry(OptionalAwait.AfterUpTo.class,
                         Set.of(OptionalAwait.AfterEvery.class,
-                                OptionalStages.OptionalAfterUpToStage.class)),
+                                OptionalAwaitStage.class)),
                 Map.entry(OptionalAwait.Until.class,
                         Set.of(OptionalAwait.AfterUpTo.class,
-                                OptionalStages.OptionalTerminalStage.class)),
-                Map.entry(CollectionAwait.class,
-                        Set.of(CollectionStages.CollectionInitialStage.class)),
-                Map.entry(CollectionAwait.AfterEvery.class,
-                        Set.of(CollectionStages.CollectionAfterEveryStage.class)),
-                Map.entry(CollectionAwait.AfterUpTo.class,
-                        Set.of(CollectionAwait.AfterEvery.class,
-                                CollectionStages.CollectionAfterUpToStage.class)),
-                Map.entry(CollectionAwait.Until.class,
-                        Set.of(CollectionAwait.AfterUpTo.class,
-                                SequencedCollectionAwait.class,
-                                SequencedCollectionAwait.Until.class,
-                                CollectionStages.CollectionTerminalStage.class)),
-                Map.entry(SequencedCollectionAwait.class,
-                        Set.of(SequencedCollectionStages
-                                .SequencedCollectionInitialStage.class)),
-                Map.entry(SequencedCollectionAwait.AfterEvery.class,
-                        Set.of(SequencedCollectionStages
-                                .SequencedCollectionAfterEveryStage.class)),
-                Map.entry(SequencedCollectionAwait.AfterUpTo.class,
-                        Set.of(SequencedCollectionAwait.AfterEvery.class,
-                                SequencedCollectionStages
-                                        .SequencedCollectionAfterUpToStage.class)),
-                Map.entry(SequencedCollectionAwait.Until.class,
-                        Set.of(SequencedCollectionAwait.AfterUpTo.class,
-                                SequencedCollectionStages
-                                        .SequencedCollectionTerminalStage.class)),
-                Map.entry(MapAwait.class,
-                        Set.of(MapStages.MapInitialStage.class)),
-                Map.entry(MapAwait.AfterEvery.class,
-                        Set.of(MapStages.MapAfterEveryStage.class)),
-                Map.entry(MapAwait.AfterUpTo.class,
-                        Set.of(MapAwait.AfterEvery.class,
-                                MapStages.MapAfterUpToStage.class)),
-                Map.entry(MapAwait.Until.class,
-                        Set.of(MapAwait.AfterUpTo.class,
-                                MapStages.MapTerminalStage.class)));
+                                OptionalAwaitStage.class)),
+                Map.entry(StructuralAwait.class,
+                        Set.of(StructuralAwaitStage.class)),
+                Map.entry(StructuralAwait.AfterEvery.class,
+                        Set.of(StructuralAwaitStage.class)),
+                Map.entry(StructuralAwait.AfterUpTo.class,
+                        Set.of(StructuralAwait.AfterEvery.class,
+                                StructuralAwaitStage.class)),
+                Map.entry(StructuralAwait.Until.class,
+                        Set.of(StructuralAwait.AfterUpTo.class,
+                                StructuralAwaitStage.class)));
     }
 
     private static List<Class<?>> fluentStages() {
-        return List.of(ObjectAwait.class, ObjectAwait.AfterEvery.class,
-                ObjectAwait.AfterUpTo.class, ObjectAwait.Until.class,
+        return List.of(Await.class, Await.AfterEvery.class,
+                Await.AfterUpTo.class, Await.Until.class,
                 OptionalAwait.class, OptionalAwait.AfterEvery.class,
                 OptionalAwait.AfterUpTo.class, OptionalAwait.Until.class,
-                CollectionAwait.class, CollectionAwait.AfterEvery.class,
-                CollectionAwait.AfterUpTo.class, CollectionAwait.Until.class,
-                SequencedCollectionAwait.class,
-                SequencedCollectionAwait.AfterEvery.class,
-                SequencedCollectionAwait.AfterUpTo.class,
-                SequencedCollectionAwait.Until.class, MapAwait.class,
-                MapAwait.AfterEvery.class, MapAwait.AfterUpTo.class,
-                MapAwait.Until.class);
+                StructuralAwait.class, StructuralAwait.AfterEvery.class,
+                StructuralAwait.AfterUpTo.class, StructuralAwait.Until.class);
     }
 
     private static List<Class<?>> closedConditionTypes() {
@@ -530,12 +501,12 @@ class PublicSurfaceTest {
 
     private static List<Class<?>> publicTypes() {
         return List.of(Awium.class, ConditionProvider.class,
-                AwaitSources.class, Condition.class, Evaluation.class,
+                Source.class, OptionalSource.class, CollectionSource.class,
+                MapSource.class, Condition.class, Evaluation.class,
                 ValueEquality.class, RuntimeCondition.class,
                 CheckedConsumer.class, CheckedFunction.class,
                 PreservingCondition.class, PresentCondition.class, StructuralCondition.class,
-                ObjectAwait.class, OptionalAwait.class, CollectionAwait.class,
-                SequencedCollectionAwait.class, MapAwait.class,
+                Await.class, OptionalAwait.class, StructuralAwait.class,
                 AwaitConfigurationConflictException.class, AwaitFailure.class,
                 AwaitTimeoutException.class, AwaitStabilizationException.class,
                 AwaitUncontrolledException.class,

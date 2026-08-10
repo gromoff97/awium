@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.sources.Source;
+
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.*;
@@ -38,7 +40,7 @@ class RealTimeIntegrationTest {
         int[] observations = {0};
 
         try {
-            int result = Awium.await((AwaitSources.Source<Integer>) () -> {
+            int result = Awium.await((Source<Integer>) () -> {
                 sourceStarts.add(System.nanoTime());
                 callbackThreads.add(Thread.currentThread());
                 callbackValues.add(local.get());
@@ -81,7 +83,7 @@ class RealTimeIntegrationTest {
         Thread caller = Thread.ofPlatform().name("awium-platform-caller")
                 .unstarted(() -> {
                     try {
-                        Awium.await((AwaitSources.Source<Integer>) () -> 1)
+                        Awium.await((Source<Integer>) () -> 1)
                                 .every(Duration.ofSeconds(5))
                                 .upTo(Duration.ofSeconds(10))
                                 .until(ConditionProvider.condition(

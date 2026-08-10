@@ -25,7 +25,8 @@ class CompilationContractTest {
                 import static io.github.gromoff97.awium.Awium.await;
                 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
                 import static java.time.Duration.ofMillis;
-                import io.github.gromoff97.awium.AwaitSources;
+                import io.github.gromoff97.awium.await.Await;
+                import io.github.gromoff97.awium.sources.Source;
                 import io.github.gromoff97.awium.conditioning.Evaluation;
                 import io.github.gromoff97.awium.conditioning.conditions.Condition;
                 import io.github.gromoff97.awium.conditioning.conditions.StructuralCondition;
@@ -35,7 +36,7 @@ class CompilationContractTest {
                     static String object() { return "value"; }
                     static Optional<String> optional() { return Optional.of("value"); }
                     static Collection<String> collection() { return List.of("value"); }
-                    static ArrayList<String> sequenced() {
+                    static List<String> list() {
                         return new ArrayList<>(List.of("value"));
                     }
                     static HashMap<String, Integer> map() {
@@ -44,7 +45,7 @@ class CompilationContractTest {
 
                     void check(StructuralCondition structural,
                             StructuralCondition.ExplainedCondition explainedStructural) {
-                        AwaitSources.Source<String> source = Contract::object;
+                        Source<String> source = Contract::object;
                         String immediate = await(source).until(isNotNull);
                         String every = await(source).every(ofMillis(1)).until(isNotNull);
                         String upTo = await(source).upTo(ofMillis(2)).until(isNotNull);
@@ -66,7 +67,7 @@ class CompilationContractTest {
                                 condition("length",
                                         (String value) -> Evaluation.satisfied(value.length()))
                                         .because("needed"));
-                        Void nil = await((AwaitSources.Source<String>) () -> null)
+                        Void nil = await((Source<String>) () -> null)
                                 .until(isNull);
                         String presentValue = await(Contract::optional).until(present);
                         String explainedPresent = await(Contract::optional)
@@ -75,7 +76,7 @@ class CompilationContractTest {
 
                         Collection<String> collectionValue = await(Contract::collection)
                                 .until(structural);
-                        ArrayList<String> sequencedValue = await(Contract::sequenced)
+                        List<String> ordered = await(Contract::list)
                                 .until(explainedStructural);
                         HashMap<String, Integer> mapValue = await(Contract::map)
                                 .until(structural);
@@ -117,9 +118,9 @@ class CompilationContractTest {
                 """));
         assertFalse(compiles("""
                 import static io.github.gromoff97.awium.Awium.await;
-                import io.github.gromoff97.awium.AwaitSources;
+                import io.github.gromoff97.awium.sources.Source;
                 final class Contract {
-                    void check(AwaitSources.Source<String> source) {
+                    void check(Source<String> source) {
                         await(source).until(null);
                     }
                 }
@@ -137,10 +138,10 @@ class CompilationContractTest {
         }) {
             assertFalse(compiles("""
                     import static io.github.gromoff97.awium.Awium.await;
-                    import io.github.gromoff97.awium.AwaitSources;
+                    import io.github.gromoff97.awium.sources.Source;
                     import java.time.Duration;
                     final class Contract {
-                        void check(AwaitSources.Source<String> source) {
+                        void check(Source<String> source) {
                             Duration d = Duration.ofSeconds(1);
                             await(source).%s;
                         }
@@ -153,20 +154,20 @@ class CompilationContractTest {
     void categorySpecificTerminalsRejectWrongConditions() throws IOException {
         assertFalse(compiles("""
                 import static io.github.gromoff97.awium.Awium.await;
-                import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.sources.Source;
                 import io.github.gromoff97.awium.conditioning.conditions.*;
                 final class Contract {
-                    void check(AwaitSources.Source<String> source, PresentCondition condition) {
+                    void check(Source<String> source, PresentCondition condition) {
                         await(source).until(condition);
                     }
                 }
                 """));
         assertFalse(compiles("""
                 import static io.github.gromoff97.awium.Awium.await;
-                import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.sources.Source;
                 import io.github.gromoff97.awium.conditioning.conditions.*;
                 final class Contract {
-                    void check(AwaitSources.Source<String> source,
+                    void check(Source<String> source,
                             StructuralCondition condition) {
                         await(source).until(condition);
                     }
@@ -180,23 +181,21 @@ class CompilationContractTest {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.Awium.await;
                 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
-                import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.sources.*;
                 import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;
 
                 final class Contract {
-                    void check(
-                            AwaitSources.SequencedCollectionSource<String,
-                                    ArrayList<String>> sequenced,
-                            AwaitSources.CollectionSource<String,
-                                    Collection<String>> collection,
+                    static List<String> list() { return List.of("a", "b"); }
+
+                    void check(CollectionSource<Collection<String>> collection,
                             Collection<String> expected) {
-                        ArrayList<String> ordered = await(sequenced)
+                        List<String> ordered = await(Contract::list)
                                 .until(containsExactly("a", "b"));
-                        await(sequenced).until(doesNotContainExactly("b", "a")
+                        await(Contract::list).until(doesNotContainExactly("b", "a")
                                 .because("ordered"));
-                        await(sequenced).until(containsExactlyElementsOf(expected));
-                        await(sequenced).until(doesNotContainExactlyElementsOf(
+                        await(Contract::list).until(containsExactlyElementsOf(expected));
+                        await(Contract::list).until(doesNotContainExactlyElementsOf(
                                 expected).because("ordered"));
 
                         Collection<String> anyOrder = await(collection)
@@ -209,8 +208,8 @@ class CompilationContractTest {
                                 doesNotContainExactlyInAnyOrderElementsOf(expected)
                                         .because("any order"));
 
-                        await(sequenced).until(containsExactlyInAnyOrder("a"));
-                        await(sequenced).until(
+                        await(Contract::list).until(containsExactlyInAnyOrder("a"));
+                        await(Contract::list).until(
                                 containsExactlyInAnyOrderElementsOf(expected));
                     }
                 }
@@ -228,13 +227,12 @@ class CompilationContractTest {
             assertFalse(compiles("""
                     import static io.github.gromoff97.awium.Awium.await;
                     import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
-                    import io.github.gromoff97.awium.*;
+                    import io.github.gromoff97.awium.sources.CollectionSource;
                     import io.github.gromoff97.awium.conditioning.conditions.*;
                     import java.util.*;
 
                     final class Contract {
-                        void check(AwaitSources.CollectionSource<String,
-                                Collection<String>> source,
+                        void check(CollectionSource<Set<String>> source,
                                 Collection<String> expected) {
                             await(source).until(%s);
                         }
@@ -246,25 +244,17 @@ class CompilationContractTest {
     @Test
     void allFluentInterfacesRejectExternalImplementations() throws IOException {
         for (String type : new String[] {
-                "ObjectAwait.Until<String>", "ObjectAwait<String>",
-                "ObjectAwait.AfterEvery<String>", "ObjectAwait.AfterUpTo<String>",
+                "Await.Until<String>", "Await<String>",
+                "Await.AfterEvery<String>", "Await.AfterUpTo<String>",
                 "OptionalAwait.Until<String>", "OptionalAwait<String>",
                 "OptionalAwait.AfterEvery<String>", "OptionalAwait.AfterUpTo<String>",
-                "CollectionAwait.Until<String, java.util.Collection<String>>",
-                "CollectionAwait<String, java.util.Collection<String>>",
-                "CollectionAwait.AfterEvery<String, java.util.Collection<String>>",
-                "CollectionAwait.AfterUpTo<String, java.util.Collection<String>>",
-                "SequencedCollectionAwait.Until<String, java.util.SequencedCollection<String>>",
-                "SequencedCollectionAwait<String, java.util.SequencedCollection<String>>",
-                "SequencedCollectionAwait.AfterEvery<String, java.util.SequencedCollection<String>>",
-                "SequencedCollectionAwait.AfterUpTo<String, java.util.SequencedCollection<String>>",
-                "MapAwait.Until<String, Integer, java.util.Map<String, Integer>>",
-                "MapAwait<String, Integer, java.util.Map<String, Integer>>",
-                "MapAwait.AfterEvery<String, Integer, java.util.Map<String, Integer>>",
-                "MapAwait.AfterUpTo<String, Integer, java.util.Map<String, Integer>>"
+                "StructuralAwait.Until<java.util.Collection<String>>",
+                "StructuralAwait<java.util.Collection<String>>",
+                "StructuralAwait.AfterEvery<java.util.Collection<String>>",
+                "StructuralAwait.AfterUpTo<java.util.Collection<String>>"
         }) {
             assertFalse(compiles("""
-                    import io.github.gromoff97.awium.*;
+                    import io.github.gromoff97.awium.await.*;
                     import io.github.gromoff97.awium.conditioning.conditions.*;
                     final class Contract {
                         abstract class Broken implements %s {}
@@ -277,13 +267,14 @@ class CompilationContractTest {
     void disjointGrammarStagesCannotBeCastToRecoverMethods() throws IOException {
         assertFalse(compiles("""
                 import static io.github.gromoff97.awium.Awium.await;
-                import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.await.Await;
+                import io.github.gromoff97.awium.sources.Source;
                 import io.github.gromoff97.awium.conditioning.conditions.*;
                 final class Contract {
-                    void check(AwaitSources.Source<String> source) {
-                        ObjectAwait<String> initial = await(source);
-                        ObjectAwait.AfterEvery<String> impossible =
-                                (ObjectAwait.AfterEvery<String>) initial;
+                    void check(Source<String> source) {
+                        Await<String> initial = await(source);
+                        Await.AfterEvery<String> impossible =
+                                (Await.AfterEvery<String>) initial;
                     }
                 }
                 """));

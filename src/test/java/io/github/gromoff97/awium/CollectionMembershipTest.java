@@ -11,6 +11,9 @@ import io.github.gromoff97.awium.internal.diagnostic.*;
 import io.github.gromoff97.awium.internal.engine.*;
 
 import io.github.gromoff97.awium.exceptions.*;
+import io.github.gromoff97.awium.await.StructuralAwait;
+import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
+import io.github.gromoff97.awium.sources.CollectionSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -324,6 +327,7 @@ class CollectionMembershipTest {
                 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
                 import static io.github.gromoff97.awium.Awium.await;
                 import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.sources.CollectionSource;
                 import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;
 
@@ -345,8 +349,8 @@ class CollectionMembershipTest {
                         containsNoElementsOf(values);
                         PreservingCondition<Collection<? super Integer>> typed =
                                 containsAllElementsOf(integers);
-                        AwaitSources.CollectionSource<Number, ArrayList<Number>>
-                                source = () -> new ArrayList<>(integers);
+                        CollectionSource<ArrayList<Number>> source =
+                                () -> new ArrayList<>(integers);
                         ArrayList<Number> result = await(source)
                                 .until(containsAllElementsOf(integers));
                     }
@@ -359,13 +363,12 @@ class CollectionMembershipTest {
         assertFalse(CompilationSupport.compiles(temporaryDirectory, """
                 import static io.github.gromoff97.awium.Awium.await;
                 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
-                import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.sources.CollectionSource;
                 import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;
                 final class Contract {
                     void check(Collection<Object> broad,
-                            AwaitSources.CollectionSource<String,
-                                    ArrayList<String>> source) {
+                            CollectionSource<ArrayList<String>> source) {
                         await(source).until(containsAllElementsOf(broad));
                     }
                 }
@@ -443,25 +446,26 @@ class CollectionMembershipTest {
         assertEquals(message, assertThrows(type, executable).getMessage());
     }
 
-    private static CollectionAwait.Until<String,
+    private static StructuralAwait.Until<
             ProbeContainers.MembershipCollection<String>> timedCollection(
                     ProbeContainers.MembershipCollection<String> actual) {
         FakeTime time = new FakeTime(0);
-        AwaitChain<ProbeContainers.MembershipCollection<String>> chain =
-                new AwaitChain<>(() -> {
+        return new StructuralAwaitStage<>(
+                (CollectionSource<
+                        ProbeContainers.MembershipCollection<String>>) () -> {
                     time.advanceNanos(2);
                     return actual;
-                }, WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
+                }, Collection::size,
+                WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)), time, time,
                 new Interrupts(), new FailureFactory());
-        return new CollectionStages.CollectionAfterUpToStage<>(chain);
     }
 
     private static <E> ProbeContainers.MembershipCollection<E> await(
             ProbeContainers.MembershipCollection<E> actual,
             PreservingCondition<? super ProbeContainers.MembershipCollection<E>>
                     condition) {
-        return Awium.await((AwaitSources.CollectionSource<E,
+        return Awium.await((CollectionSource<
                 ProbeContainers.MembershipCollection<E>>) () -> actual)
                 .until(condition);
     }

@@ -1,0 +1,67 @@
+package io.github.gromoff97.awium.await.stages;
+
+import io.github.gromoff97.awium.await.OptionalAwait;
+import io.github.gromoff97.awium.conditioning.conditions.PresentCondition;
+import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
+import io.github.gromoff97.awium.internal.diagnostic.FailureFactory;
+import io.github.gromoff97.awium.internal.engine.Interrupts;
+import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
+import io.github.gromoff97.awium.sources.OptionalSource;
+
+import java.time.Duration;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.LongConsumer;
+import java.util.function.LongSupplier;
+
+public final class OptionalAwaitStage<T>
+        extends AbstractAwaitStage<Optional<T>>
+        implements OptionalAwait<T>, OptionalAwait.Until<T>,
+                OptionalAwait.AfterEvery<T>, OptionalAwait.AfterUpTo<T> {
+
+    public OptionalAwaitStage(OptionalSource<T> source) {
+        super(source);
+    }
+
+    public OptionalAwaitStage(OptionalSource<T> source,
+            WaitConfiguration configuration, LongSupplier clock,
+            LongConsumer parker, Interrupts interrupts,
+            FailureFactory failureFactory) {
+        super(source, configuration, clock, parker, interrupts, failureFactory);
+    }
+
+    private OptionalAwaitStage(OptionalAwaitStage<T> stage,
+            WaitConfiguration configuration) {
+        super(stage, configuration);
+    }
+
+    @Override
+    public OptionalAwait.AfterEvery<T> every(Duration interval) {
+        return new OptionalAwaitStage<>(
+                this, configuration().withEvery(interval));
+    }
+
+    @Override
+    public OptionalAwait.AfterUpTo<T> upTo(Duration timeout) {
+        return new OptionalAwaitStage<>(
+                this, configuration().withUpTo(timeout));
+    }
+
+    @Override
+    public OptionalAwait.Until<T> stableFor(Duration stability) {
+        return new OptionalAwaitStage<>(
+                this, configuration().withStableFor(stability));
+    }
+
+    @Override
+    public T until(PresentCondition condition) {
+        return complete(RuntimeCondition.present(
+                Objects.requireNonNull(condition, "condition must not be null")));
+    }
+
+    @Override
+    public T until(PresentCondition.ExplainedCondition condition) {
+        return complete(RuntimeCondition.present(
+                Objects.requireNonNull(condition, "condition must not be null")));
+    }
+}

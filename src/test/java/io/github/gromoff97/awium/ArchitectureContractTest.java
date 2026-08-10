@@ -69,11 +69,9 @@ class ArchitectureContractTest {
     @Test
     void fluentImplementationUsesNestedApiTypesAndMinimalAdapters() {
         for (String type : List.of(
-                "io.github.gromoff97.awium.ObjectAwait$Until",
-                "io.github.gromoff97.awium.OptionalAwait$Until",
-                "io.github.gromoff97.awium.CollectionAwait$Until",
-                "io.github.gromoff97.awium.SequencedCollectionAwait$Until",
-                "io.github.gromoff97.awium.MapAwait$Until",
+                "io.github.gromoff97.awium.await.Await$Until",
+                "io.github.gromoff97.awium.await.OptionalAwait$Until",
+                "io.github.gromoff97.awium.await.StructuralAwait$Until",
                 "io.github.gromoff97.awium.conditioning.conditions.Condition$ExplainedCondition",
                 "io.github.gromoff97.awium.conditioning.conditions.PreservingCondition$ExplainedCondition",
                 "io.github.gromoff97.awium.conditioning.conditions.PresentCondition$ExplainedCondition",
@@ -470,10 +468,10 @@ class ArchitectureContractTest {
     @Test
     void architectureAuditAllowsExactlyApprovedPorts() {
         assertApprovedSources(Map.of(
-                MAIN_PACKAGE.resolve("AwaitChain.java"), """
-                        package io.github.gromoff97.awium;
+                MAIN_PACKAGE.resolve("await/stages/AbstractAwaitStage.java"), """
+                        package io.github.gromoff97.awium.await.stages;
                         import java.util.concurrent.locks.LockSupport;
-                        final class AwaitChain {
+                        abstract class AbstractAwaitStage {
                             java.util.function.LongConsumer parker =
                                     LockSupport::parkNanos;
                         }
@@ -490,14 +488,16 @@ class ArchitectureContractTest {
                         }
                         """));
 
-        assertRejectedAt(MAIN_PACKAGE.resolve("AwaitChain.java"), """
-                package io.github.gromoff97.awium;
-                final class AwaitChain {}
+        assertRejectedAt(MAIN_PACKAGE.resolve(
+                "await/stages/AbstractAwaitStage.java"), """
+                package io.github.gromoff97.awium.await.stages;
+                abstract class AbstractAwaitStage {}
                 """);
-        assertRejectedAt(MAIN_PACKAGE.resolve("AwaitChain.java"), """
-                package io.github.gromoff97.awium;
+        assertRejectedAt(MAIN_PACKAGE.resolve(
+                "await/stages/AbstractAwaitStage.java"), """
+                package io.github.gromoff97.awium.await.stages;
                 import java.util.concurrent.locks.LockSupport;
-                final class AwaitChain {
+                abstract class AbstractAwaitStage {
                     interface BlockerParker {
                         void park(Object blocker, long nanos);
                     }
@@ -590,15 +590,15 @@ class ArchitectureContractTest {
             extends JavaIsoVisitor<ExecutionContext> {
 
         private static final Path PARK_PORT =
-                MAIN_PACKAGE.resolve("AwaitChain.java").normalize();
+                MAIN_PACKAGE.resolve(
+                        "await/stages/AbstractAwaitStage.java").normalize();
         private static final Path INTERRUPTS = MAIN_PACKAGE
                 .resolve("internal/engine/Interrupts.java").normalize();
         private static final Set<Path> NAMESPACE_HOLDERS = Set.of(
                 MAIN_PACKAGE.resolve("Awium.java").normalize(),
                 MAIN_PACKAGE.resolve(
                         "conditioning/providers/ConditionProvider.java")
-                        .normalize(),
-                MAIN_PACKAGE.resolve("AwaitSources.java").normalize());
+                        .normalize());
         private static final String THREAD = "java.lang.Thread";
         private static final String LOCK_SUPPORT =
                 "java.util.concurrent.locks.LockSupport";

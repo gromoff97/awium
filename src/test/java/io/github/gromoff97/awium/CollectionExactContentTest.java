@@ -11,6 +11,9 @@ import io.github.gromoff97.awium.internal.diagnostic.*;
 import io.github.gromoff97.awium.internal.engine.*;
 
 import io.github.gromoff97.awium.exceptions.*;
+import io.github.gromoff97.awium.await.StructuralAwait;
+import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
+import io.github.gromoff97.awium.sources.CollectionSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -376,8 +379,8 @@ class CollectionExactContentTest {
             RuntimeException cause) {
         AwaitConditionEvaluationException failure = assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> Awium.await((AwaitSources.SequencedCollectionSource<
-                        E, ExactList<E>>) () -> actual).until(condition));
+                () -> Awium.await((CollectionSource<ExactList<E>>) () -> actual)
+                        .until(condition));
         assertSame(cause, failure.getCause());
     }
 
@@ -396,17 +399,17 @@ class CollectionExactContentTest {
         assertEquals(next, expected.nextCalls);
     }
 
-    private static SequencedCollectionAwait.Until<String, ExactList<String>> timed(
+    private static StructuralAwait.Until<ExactList<String>> timed(
             ExactList<String> actual) {
         FakeTime time = new FakeTime(0);
-        AwaitChain<ExactList<String>> chain = new AwaitChain<>(() -> {
-            time.advanceNanos(2);
-            return actual;
-        }, WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
+        return new StructuralAwaitStage<>(
+                (CollectionSource<ExactList<String>>) () -> {
+                    time.advanceNanos(2);
+                    return actual;
+                }, Collection::size,
+                WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                 .withUpTo(Duration.ofNanos(2)), time, time,
                 new Interrupts(), new FailureFactory());
-        return new SequencedCollectionStages
-                .SequencedCollectionAfterUpToStage<>(chain);
     }
 
     private record Pair(String name,

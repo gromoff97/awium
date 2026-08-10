@@ -11,6 +11,10 @@ import io.github.gromoff97.awium.internal.diagnostic.*;
 import io.github.gromoff97.awium.internal.engine.*;
 
 import io.github.gromoff97.awium.exceptions.*;
+import io.github.gromoff97.awium.await.StructuralAwait;
+import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
+import io.github.gromoff97.awium.sources.CollectionSource;
+import io.github.gromoff97.awium.sources.MapSource;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -103,11 +107,11 @@ class StructuralConditionsTest {
         var map = new ProbeContainers.ProbeMap<Object, Object>(1);
 
         ProbeContainers.ProbeCollection<Object> returnedCollection =
-                Awium.await((AwaitSources.CollectionSource<Object,
+                Awium.await((CollectionSource<
                         ProbeContainers.ProbeCollection<Object>>) () -> collection)
                         .until(ConditionProvider.nonEmpty);
         ProbeContainers.ProbeMap<Object, Object> returnedMap =
-                Awium.await((AwaitSources.MapSource<Object, Object,
+                Awium.await((MapSource<
                         ProbeContainers.ProbeMap<Object, Object>>) () -> map)
                         .until(ConditionProvider.nonEmpty.because("required"));
 
@@ -160,23 +164,23 @@ class StructuralConditionsTest {
 
         assertSame(collectionCause, assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> Awium.await((AwaitSources.CollectionSource<Object,
+                () -> Awium.await((CollectionSource<
                         ProbeContainers.ProbeCollection<Object>>) () -> collection)
                         .until(ConditionProvider.nonEmpty)).getCause());
         assertSame(explainedCollectionCause, assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> Awium.await((AwaitSources.CollectionSource<Object,
+                () -> Awium.await((CollectionSource<
                         ProbeContainers.ProbeCollection<Object>>)
                         () -> explainedCollection)
                         .until(ConditionProvider.nonEmpty.because("required")))
                 .getCause());
         assertSame(mapCause, assertThrows(AwaitConditionEvaluationException.class,
-                () -> Awium.await((AwaitSources.MapSource<Object, Object,
+                () -> Awium.await((MapSource<
                         ProbeContainers.ProbeMap<Object, Object>>) () -> map)
                         .until(ConditionProvider.nonEmpty)).getCause());
         assertSame(explainedMapCause, assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> Awium.await((AwaitSources.MapSource<Object, Object,
+                () -> Awium.await((MapSource<
                         ProbeContainers.ProbeMap<Object, Object>>) () -> explainedMap)
                         .until(ConditionProvider.nonEmpty.because("required")))
                 .getCause());
@@ -276,32 +280,32 @@ class StructuralConditionsTest {
         return RuntimeCondition.structural(condition, "map", Map::size);
     }
 
-    private static CollectionAwait.Until<Object,
+    private static StructuralAwait.Until<
             ProbeContainers.ProbeCollection<Object>> timedCollection(
                     ProbeContainers.ProbeCollection<Object> actual) {
         FakeTime time = new FakeTime(0);
-        AwaitChain<ProbeContainers.ProbeCollection<Object>> chain = new AwaitChain<>(
-                () -> {
+        return new StructuralAwaitStage<>(
+                (CollectionSource<ProbeContainers.ProbeCollection<Object>>) () -> {
                     time.advanceNanos(2);
                     return actual;
-                }, WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
+                }, Collection::size,
+                WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)), time, time,
                 new Interrupts(), new FailureFactory());
-        return new CollectionStages.CollectionAfterUpToStage<>(chain);
     }
 
-    private static MapAwait.Until<Object, Object,
+    private static StructuralAwait.Until<
             ProbeContainers.ProbeMap<Object, Object>> timedMap(
                     ProbeContainers.ProbeMap<Object, Object> actual) {
         FakeTime time = new FakeTime(0);
-        AwaitChain<ProbeContainers.ProbeMap<Object, Object>> chain = new AwaitChain<>(
-                () -> {
+        return new StructuralAwaitStage<>(
+                (MapSource<ProbeContainers.ProbeMap<Object, Object>>) () -> {
                     time.advanceNanos(2);
                     return actual;
-                }, WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
+                }, Map::size,
+                WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)), time, time,
                 new Interrupts(), new FailureFactory());
-        return new MapStages.MapAfterUpToStage<>(chain);
     }
 
     private static void assertSatisfied(Evaluation<?> evaluation, Object actual) {

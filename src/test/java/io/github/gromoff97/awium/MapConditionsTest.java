@@ -11,6 +11,9 @@ import io.github.gromoff97.awium.internal.diagnostic.*;
 import io.github.gromoff97.awium.internal.engine.*;
 
 import io.github.gromoff97.awium.exceptions.*;
+import io.github.gromoff97.awium.await.StructuralAwait;
+import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
+import io.github.gromoff97.awium.sources.MapSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -395,14 +398,13 @@ class MapConditionsTest {
         assertTrue(CompilationSupport.compiles(temporaryDirectory, """
                 import static io.github.gromoff97.awium.Awium.await;
                 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
-                import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.sources.MapSource;
                 import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;
 
                 final class Contract {
                     void check(Map<Integer, String> expected,
-                            AwaitSources.MapSource<Number, CharSequence,
-                                    HashMap<Number, CharSequence>> source) {
+                            MapSource<HashMap<Number, CharSequence>> source) {
                         PreservingCondition<Map<? super Integer, ? super String>>
                                 typed = containsAllEntriesOf(expected);
                         HashMap<Number, CharSequence> result = await(source)
@@ -416,14 +418,13 @@ class MapConditionsTest {
         assertFalse(CompilationSupport.compiles(temporaryDirectory, """
                 import static io.github.gromoff97.awium.Awium.await;
                 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
-                import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.sources.MapSource;
                 import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;
 
                 final class Contract {
                     void check(Map<Object, Object> broad,
-                            AwaitSources.MapSource<String, String,
-                                    HashMap<String, String>> source) {
+                            MapSource<HashMap<String, String>> source) {
                         await(source).until(containsAllEntriesOf(broad));
                     }
                 }
@@ -510,7 +511,7 @@ class MapConditionsTest {
         MapRun run = failureRun.run();
         AwaitConditionEvaluationException failure = assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> Awium.await((AwaitSources.MapSource<Object, Object,
+                () -> Awium.await((MapSource<
                         ProbeContainers.EntryMap<Object, Object>>)
                                 run::actual)
                         .until(castObject(run.condition())));
@@ -703,18 +704,18 @@ class MapConditionsTest {
         assertEquals(0, map.hashCodeCalls);
     }
 
-    private static MapAwait.Until<String, String,
+    private static StructuralAwait.Until<
             ProbeContainers.EntryMap<String, String>> timed(
                     ProbeContainers.EntryMap<String, String> actual) {
         FakeTime time = new FakeTime(0);
-        AwaitChain<ProbeContainers.EntryMap<String, String>> chain =
-                new AwaitChain<>(() -> {
+        return new StructuralAwaitStage<>(
+                (MapSource<ProbeContainers.EntryMap<String, String>>) () -> {
                     time.advanceNanos(2);
                     return actual;
-                }, WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
+                }, Map::size,
+                WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)), time, time,
                 new Interrupts(), new FailureFactory());
-        return new MapStages.MapAfterUpToStage<>(chain);
     }
 
     @SuppressWarnings("unchecked")

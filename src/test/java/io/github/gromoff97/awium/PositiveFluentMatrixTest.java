@@ -5,6 +5,10 @@ import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+import io.github.gromoff97.awium.sources.CollectionSource;
+import io.github.gromoff97.awium.sources.MapSource;
+import io.github.gromoff97.awium.sources.OptionalSource;
+import io.github.gromoff97.awium.sources.Source;
 
 import static io.github.gromoff97.awium.Awium.await;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
@@ -30,7 +34,7 @@ class PositiveFluentMatrixTest {
     @Test
     void objectFacadeExecutesEveryValidConfigurationPath() {
         var actual = new Object();
-        AwaitSources.Source<Object> source = () -> actual;
+        Source<Object> source = () -> actual;
 
         assertAllSame(actual,
                 await(source).until(isNotNull),
@@ -58,7 +62,7 @@ class PositiveFluentMatrixTest {
     @Test
     void optionalFacadeExecutesEveryValidConfigurationPath() {
         var value = new Object();
-        AwaitSources.OptionalSource<Object> source = () -> Optional.of(value);
+        OptionalSource<Object> source = () -> Optional.of(value);
 
         assertAllSame(value,
                 await(source).until(present),
@@ -80,8 +84,7 @@ class PositiveFluentMatrixTest {
     @Test
     void collectionFacadeExecutesEveryValidConfigurationPath() {
         var actual = new ArrayList<>(List.of("value"));
-        AwaitSources.CollectionSource<String, ArrayList<String>> source =
-                () -> actual;
+        CollectionSource<ArrayList<String>> source = () -> actual;
 
         assertAllSame(actual,
                 await(source).until(nonEmpty),
@@ -103,8 +106,7 @@ class PositiveFluentMatrixTest {
     @Test
     void sequencedCollectionFacadeExecutesEveryValidConfigurationPath() {
         var actual = new ArrayList<>(List.of("value"));
-        AwaitSources.SequencedCollectionSource<String, ArrayList<String>> source =
-                () -> actual;
+        CollectionSource<ArrayList<String>> source = () -> actual;
 
         assertAllSame(actual,
                 await(source).until(nonEmpty),
@@ -126,8 +128,7 @@ class PositiveFluentMatrixTest {
     @Test
     void mapFacadeExecutesEveryValidConfigurationPath() {
         var actual = new LinkedHashMap<>(java.util.Map.of("key", "value"));
-        AwaitSources.MapSource<String, String,
-                LinkedHashMap<String, String>> source = () -> actual;
+        MapSource<LinkedHashMap<String, String>> source = () -> actual;
 
         assertAllSame(actual,
                 await(source).until(nonEmpty),

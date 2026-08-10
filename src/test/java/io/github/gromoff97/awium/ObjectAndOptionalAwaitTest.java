@@ -11,6 +11,14 @@ import io.github.gromoff97.awium.internal.diagnostic.*;
 import io.github.gromoff97.awium.internal.engine.*;
 
 import io.github.gromoff97.awium.exceptions.*;
+import io.github.gromoff97.awium.await.Await;
+import io.github.gromoff97.awium.await.StructuralAwait;
+import io.github.gromoff97.awium.await.stages.AwaitStage;
+import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
+import io.github.gromoff97.awium.sources.CollectionSource;
+import io.github.gromoff97.awium.sources.MapSource;
+import io.github.gromoff97.awium.sources.OptionalSource;
+import io.github.gromoff97.awium.sources.Source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -33,10 +41,10 @@ class ObjectAndOptionalAwaitTest {
     void objectTerminalsReturnPreservedAndConditionSelectedResults() {
         Object actual = new Object();
         Object preserved = Awium.await(
-                (AwaitSources.Source<Object>) () -> actual)
+                (Source<Object>) () -> actual)
                 .until(ConditionProvider.isNotNull);
         Integer selected = Awium.await(
-                (AwaitSources.Source<String>) () -> "value")
+                (Source<String>) () -> "value")
                 .until(ConditionProvider.<String, Integer>condition("length",
                         value -> Evaluation.satisfied(value.length())));
 
@@ -49,7 +57,7 @@ class ObjectAndOptionalAwaitTest {
         Object value = new Object();
 
         Object result = Awium.await(
-                (AwaitSources.OptionalSource<Object>) () -> Optional.of(value))
+                (OptionalSource<Object>) () -> Optional.of(value))
                 .until(ConditionProvider.present);
 
         assertSame(value, result);
@@ -58,13 +66,13 @@ class ObjectAndOptionalAwaitTest {
     @Test
     void voidAndNullableSelectingTerminalsReturnNullOnSuccess() {
         Void nullValue = Awium.await(
-                (AwaitSources.Source<Object>) () -> null)
+                (Source<Object>) () -> null)
                 .until(ConditionProvider.isNull);
         Void absentValue = Awium.await(
-                (AwaitSources.OptionalSource<Object>) Optional::empty)
+                (OptionalSource<Object>) Optional::empty)
                 .until(ConditionProvider.absent);
         String selectedNull = Awium.await(
-                (AwaitSources.Source<String>) () -> "value")
+                (Source<String>) () -> "value")
                 .until(ConditionProvider.<String, String>passed(value -> null)
                         .because("nullable property"));
 
@@ -79,11 +87,11 @@ class ObjectAndOptionalAwaitTest {
         var differentValue = new Object();
 
         Object equal = Awium.await(
-                (AwaitSources.OptionalSource<Object>)
+                (OptionalSource<Object>)
                         () -> Optional.of(equalValue))
                 .until(ConditionProvider.hasValueEqualTo(equalValue));
         Object different = Awium.await(
-                (AwaitSources.OptionalSource<Object>)
+                (OptionalSource<Object>)
                         () -> Optional.of(differentValue))
                 .until(ConditionProvider.hasValueNotEqualTo(equalValue)
                         .because("different value"));
@@ -99,11 +107,11 @@ class ObjectAndOptionalAwaitTest {
         StructuralCondition structural = ConditionProvider.nonEmpty;
 
         ArrayList<String> returnedList = Awium.await(
-                (AwaitSources.SequencedCollectionSource<String,
-                        ArrayList<String>>) () -> list).until(structural);
+                (CollectionSource<ArrayList<String>>) () -> list)
+                .until(structural);
         HashMap<String, Integer> returnedMap = Awium.await(
-                (AwaitSources.MapSource<String, Integer,
-                        HashMap<String, Integer>>) () -> map).until(structural);
+                (MapSource<HashMap<String, Integer>>) () -> map)
+                .until(structural);
 
         assertSame(list, returnedList);
         assertSame(map, returnedMap);
@@ -113,17 +121,15 @@ class ObjectAndOptionalAwaitTest {
     void reusableStageRetainsTheExactSourceAndStartsEachTerminalFresh() {
         CyclingSource source = new CyclingSource();
         FakeTime time = new FakeTime(0);
-        AwaitChain<String> chain = new AwaitChain<>(source, WaitConfiguration.defaults()
-                .withEvery(Duration.ofNanos(1)).withUpTo(Duration.ofNanos(10)),
+        AwaitStage<String> stage = new AwaitStage<>(source,
+                WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
+                        .withUpTo(Duration.ofNanos(10)),
                 time, time, new Interrupts(), new FailureFactory());
-        ObjectAwait.Until<String> stage =
-                new ObjectStages.ObjectAfterUpToStage<>(chain);
         Condition<String, String> evenObservation = ConditionProvider.condition(
                 "even observation", value -> Integer.parseInt(value.substring(1)) % 2 == 0
                         ? Evaluation.satisfied(value)
                         : Evaluation.unsatisfied("odd observation"));
 
-        assertSame(source, chain.source());
         assertEquals("v2", stage.until(evenObservation));
         assertEquals("v4", stage.until(evenObservation));
         assertEquals(4, source.calls.get());
@@ -133,7 +139,7 @@ class ObjectAndOptionalAwaitTest {
     void reusableStageStartsFreshAfterControlledAndUncontrolledFailures() {
         FakeTime time = new FakeTime(0);
         AtomicInteger sourceCalls = new AtomicInteger();
-        ObjectAwait.Until<String> stage = stage(time, () -> {
+        Await.Until<String> stage = stage(time, () -> {
             sourceCalls.incrementAndGet();
             return "value";
         });
@@ -160,7 +166,7 @@ class ObjectAndOptionalAwaitTest {
     void reusableConditionRetainsOnlyItsOwnStateAcrossFreshWaits() {
         FakeTime time = new FakeTime(0);
         AtomicInteger evaluations = new AtomicInteger();
-        ObjectAwait.Until<String> stage = stage(time, () -> "value");
+        Await.Until<String> stage = stage(time, () -> "value");
         Condition<String, String> secondEvaluationOnward =
                 ConditionProvider.condition("second evaluation onward", value ->
                         evaluations.incrementAndGet() >= 2
@@ -186,34 +192,35 @@ class ObjectAndOptionalAwaitTest {
         assertTrue(mapFailure.getMessage().contains("map was null"));
     }
 
-    private static CollectionAwait.Until<String, List<String>> nullCollectionStage() {
+    private static StructuralAwait.Until<List<String>> nullCollectionStage() {
         FakeTime time = new FakeTime(0);
-        AwaitChain<List<String>> chain = new AwaitChain<>(() -> null,
+        return new StructuralAwaitStage<>(
+                (CollectionSource<List<String>>) () -> null,
+                java.util.Collection::size,
                 WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)),
                 time, time, new Interrupts(), new FailureFactory());
-        return new CollectionStages.CollectionAfterUpToStage<>(chain);
     }
 
-    private static MapAwait.Until<String, String, Map<String, String>> nullMapStage() {
+    private static StructuralAwait.Until<Map<String, String>> nullMapStage() {
         FakeTime time = new FakeTime(0);
-        AwaitChain<Map<String, String>> chain = new AwaitChain<>(() -> null,
+        return new StructuralAwaitStage<>(
+                (MapSource<Map<String, String>>) () -> null,
+                Map::size,
                 WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)),
                 time, time, new Interrupts(), new FailureFactory());
-        return new MapStages.MapAfterUpToStage<>(chain);
     }
 
-    private static <T> ObjectAwait.Until<T> stage(
-            FakeTime time, AwaitSources.Source<T> source) {
-        AwaitChain<T> chain = new AwaitChain<>(source,
+    private static <T> Await.Until<T> stage(
+            FakeTime time, Source<T> source) {
+        return new AwaitStage<>(source,
                 WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(3)),
                 time, time, new Interrupts(), new FailureFactory());
-        return new ObjectStages.ObjectAfterUpToStage<>(chain);
     }
 
-    private static final class CyclingSource implements AwaitSources.Source<String> {
+    private static final class CyclingSource implements Source<String> {
         private final AtomicInteger calls = new AtomicInteger();
 
         @Override
