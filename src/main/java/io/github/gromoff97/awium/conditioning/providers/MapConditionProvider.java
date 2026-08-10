@@ -1,24 +1,28 @@
 package io.github.gromoff97.awium.conditioning.providers;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.ValueEquality;
 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Predicate;
+
+import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
+import static io.github.gromoff97.awium.conditioning.ValueEquality.equal;
+import static java.util.Objects.requireNonNull;
 
 final class MapConditionProvider {
 
     private MapConditionProvider() {
+        throw new AssertionError("Utility class");
     }
 
     static <K> PreservingCondition<Map<? super K, ?>> containsKey(K expected) {
         return condition(actual -> anyMatch(actual, entry ->
-                        ValueEquality.equal(entry.getKey(), expected)), true,
+                        equal(entry.getKey(), expected)), true,
                 "map to contain expected key",
                 "map did not contain expected key");
     }
@@ -26,7 +30,7 @@ final class MapConditionProvider {
     static <K> PreservingCondition<Map<? super K, ?>> doesNotContainKey(
             K expected) {
         return condition(actual -> anyMatch(actual, entry ->
-                        ValueEquality.equal(entry.getKey(), expected)), false,
+                        equal(entry.getKey(), expected)), false,
                 "map not to contain expected key",
                 "map contained expected key");
     }
@@ -34,7 +38,7 @@ final class MapConditionProvider {
     static <V> PreservingCondition<Map<?, ? super V>> containsValue(
             V expected) {
         return condition(actual -> anyMatch(actual, entry ->
-                        ValueEquality.equal(entry.getValue(), expected)), true,
+                        equal(entry.getValue(), expected)), true,
                 "map to contain expected value",
                 "map did not contain expected value");
     }
@@ -42,7 +46,7 @@ final class MapConditionProvider {
     static <V> PreservingCondition<Map<?, ? super V>> doesNotContainValue(
             V expected) {
         return condition(actual -> anyMatch(actual, entry ->
-                        ValueEquality.equal(entry.getValue(), expected)), false,
+                        equal(entry.getValue(), expected)), false,
                 "map not to contain expected value",
                 "map contained expected value");
     }
@@ -113,11 +117,11 @@ final class MapConditionProvider {
             String description, String mismatch) {
         RuntimeCondition<M, M> runtime = new RuntimeCondition<>(actual -> {
             if (actual == null) {
-                return Evaluation.unsatisfied("map was null");
+                return unsatisfied("map was null");
             }
             return matches.test(actual) == positive
-                    ? Evaluation.satisfied(actual)
-                    : Evaluation.unsatisfied(mismatch);
+                    ? satisfied(actual)
+                    : unsatisfied(mismatch);
         }, () -> description, null);
         return PreservingCondition.of(runtime);
     }
@@ -223,20 +227,20 @@ final class MapConditionProvider {
 
     private static boolean entryMatches(Map.Entry<?, ?> actual,
             Map.Entry<?, ?> expected) {
-        return ValueEquality.equal(actual.getKey(), expected.getKey())
-                && ValueEquality.equal(
+        return equal(actual.getKey(), expected.getKey())
+                && equal(
                         actual.getValue(), expected.getValue());
     }
 
     private static boolean entryMatches(Map.Entry<?, ?> actual,
             Object expectedKey, Object expectedValue) {
-        return ValueEquality.equal(actual.getKey(), expectedKey)
-                && ValueEquality.equal(actual.getValue(), expectedValue);
+        return equal(actual.getKey(), expectedKey)
+                && equal(actual.getValue(), expectedValue);
     }
 
     private static <K, V> Map<? extends K, ? extends V> validate(
             Map<? extends K, ? extends V> expected) {
-        Objects.requireNonNull(expected, "expected entries must not be null");
+        requireNonNull(expected, "expected entries must not be null");
         if (expected.isEmpty()) {
             throw new IllegalArgumentException(
                     "expected entries must not be empty");
@@ -246,7 +250,7 @@ final class MapConditionProvider {
 
     private static <K, V> Map<? extends K, ? extends V> validateExact(
             Map<? extends K, ? extends V> expected) {
-        return Objects.requireNonNull(
+        return requireNonNull(
                 expected, "expected entries must not be null");
     }
 }

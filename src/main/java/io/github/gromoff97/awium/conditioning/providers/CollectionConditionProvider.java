@@ -1,33 +1,37 @@
 package io.github.gromoff97.awium.conditioning.providers;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.ValueEquality;
 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
 import java.util.SequencedCollection;
+
+import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
+import static io.github.gromoff97.awium.conditioning.ValueEquality.equal;
+import static java.util.Collections.singletonList;
+import static java.util.Objects.requireNonNull;
 
 final class CollectionConditionProvider {
 
     private CollectionConditionProvider() {
+        throw new AssertionError("Utility class");
     }
 
     static <E> PreservingCondition<Collection<? super E>> contains(E expected) {
-        return membership(Collections.singletonList(expected), false, true,
+        return membership(singletonList(expected), false, true,
                 "collection to contain expected element",
                 "collection did not contain expected element");
     }
 
     static <E> PreservingCondition<Collection<? super E>> doesNotContain(
             E expected) {
-        return membership(Collections.singletonList(expected), false, false,
+        return membership(singletonList(expected), false, false,
                 "collection not to contain expected element",
                 "collection contained expected element");
     }
@@ -169,14 +173,14 @@ final class CollectionConditionProvider {
         RuntimeCondition<Collection<? super E>, Collection<? super E>> runtime =
                 new RuntimeCondition<>(actual -> {
                     if (actual == null) {
-                        return Evaluation.unsatisfied("collection was null");
+                        return unsatisfied("collection was null");
                     }
                     boolean matches = all
                             ? allFound(actual, expected)
                             : anyMatch(actual, expected);
                     return matches == positive
-                            ? Evaluation.satisfied(actual)
-                            : Evaluation.unsatisfied(mismatch);
+                            ? satisfied(actual)
+                            : unsatisfied(mismatch);
                 }, () -> description, null);
         return PreservingCondition.of(runtime);
     }
@@ -185,7 +189,7 @@ final class CollectionConditionProvider {
             Iterable<?> expected) {
         for (Object actualElement : actual) {
             for (Object expectedElement : expected) {
-                if (ValueEquality.equal(actualElement, expectedElement)) {
+                if (equal(actualElement, expectedElement)) {
                     return true;
                 }
             }
@@ -203,7 +207,7 @@ final class CollectionConditionProvider {
         int remaining = found.length;
         for (Object actualElement : actual) {
             for (int index = 0; index < positions.size(); index++) {
-                if (!found[index] && ValueEquality.equal(
+                if (!found[index] && equal(
                         actualElement, positions.get(index))) {
                     found[index] = true;
                     if (--remaining == 0) {
@@ -220,12 +224,12 @@ final class CollectionConditionProvider {
             String description, String mismatch) {
         RuntimeCondition<C, C> runtime = new RuntimeCondition<>(actual -> {
             if (actual == null) {
-                return Evaluation.unsatisfied("collection was null");
+                return unsatisfied("collection was null");
             }
             boolean matches = exactContent(actual, expected, ordered);
             return matches == positive
-                    ? Evaluation.satisfied(actual)
-                    : Evaluation.unsatisfied(mismatch);
+                    ? satisfied(actual)
+                    : unsatisfied(mismatch);
         }, () -> description, null);
         return PreservingCondition.of(runtime);
     }
@@ -248,7 +252,7 @@ final class CollectionConditionProvider {
 
     private static boolean ordered(Iterator<?> actual, Iterator<?> expected) {
         while (actual.hasNext() && expected.hasNext()) {
-            if (!ValueEquality.equal(actual.next(), expected.next())) {
+            if (!equal(actual.next(), expected.next())) {
                 return false;
             }
         }
@@ -265,7 +269,7 @@ final class CollectionConditionProvider {
             Object actualElement = actual.next();
             boolean found = false;
             for (int index = 0; index < positions.size(); index++) {
-                if (!consumed[index] && ValueEquality.equal(
+                if (!consumed[index] && equal(
                         actualElement, positions.get(index))) {
                     consumed[index] = true;
                     matched++;
@@ -281,7 +285,7 @@ final class CollectionConditionProvider {
     }
 
     private static <E> E[] validate(E[] expected) {
-        Objects.requireNonNull(expected, "expected elements must not be null");
+        requireNonNull(expected, "expected elements must not be null");
         if (expected.length == 0) {
             throw new IllegalArgumentException(
                     "expected elements must not be empty");
@@ -291,7 +295,7 @@ final class CollectionConditionProvider {
 
     private static <E> Collection<? extends E> validate(
             Collection<? extends E> expected) {
-        Objects.requireNonNull(expected, "expected elements must not be null");
+        requireNonNull(expected, "expected elements must not be null");
         if (expected.isEmpty()) {
             throw new IllegalArgumentException(
                     "expected elements must not be empty");
@@ -300,13 +304,13 @@ final class CollectionConditionProvider {
     }
 
     private static <E> E[] validateExact(E[] expected) {
-        return Objects.requireNonNull(
+        return requireNonNull(
                 expected, "expected elements must not be null");
     }
 
     private static <E> Collection<? extends E> validateExact(
             Collection<? extends E> expected) {
-        return Objects.requireNonNull(
+        return requireNonNull(
                 expected, "expected elements must not be null");
     }
 }

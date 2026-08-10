@@ -6,8 +6,9 @@ import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
 
 import java.util.Arrays;
-import java.util.Objects;
 import java.util.function.Function;
+
+import static java.util.Objects.requireNonNull;
 
 public final class FailureMessage {
 
@@ -36,7 +37,7 @@ public final class FailureMessage {
     }
 
     public FailureMessage(Function<Context, String> formatter) {
-        this.formatter = Objects.requireNonNull(formatter);
+        this.formatter = requireNonNull(formatter);
     }
 
     @SuppressWarnings("removal")
@@ -45,7 +46,7 @@ public final class FailureMessage {
             WaitConfiguration configuration) {
         Context context = new Context(outcome, condition, configuration);
         try {
-            return Objects.requireNonNull(formatter.apply(context),
+            return requireNonNull(formatter.apply(context),
                     "diagnostic formatter returned null");
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
@@ -56,7 +57,7 @@ public final class FailureMessage {
 
     public String emergency(WaitOutcome<?> outcome,
             RuntimeCondition<?, ?> condition, Throwable formattingFailure) {
-        Objects.requireNonNull(formattingFailure);
+        requireNonNull(formattingFailure);
         return emergency(new Context(outcome, condition, null),
                 formattingFailure);
     }
@@ -342,8 +343,8 @@ public final class FailureMessage {
         private Context(WaitOutcome<?> outcome,
                 RuntimeCondition<?, ?> condition,
                 WaitConfiguration configuration) {
-            this.outcome = Objects.requireNonNull(outcome);
-            this.condition = Objects.requireNonNull(condition);
+            this.outcome = requireNonNull(outcome);
+            this.condition = requireNonNull(condition);
             this.configuration = configuration;
         }
 
@@ -439,8 +440,6 @@ public final class FailureMessage {
     }
 
     static final class FormattingFailure extends RuntimeException {
-
-        private static final long serialVersionUID = 1L;
 
         private final transient Context context;
 

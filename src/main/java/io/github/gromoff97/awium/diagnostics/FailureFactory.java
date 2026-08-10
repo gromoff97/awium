@@ -12,7 +12,7 @@ import io.github.gromoff97.awium.exceptions.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException;
 import io.github.gromoff97.awium.exceptions.AwaitUnhandledException;
 
-import java.util.Objects;
+import static java.util.Objects.requireNonNull;
 
 public final class FailureFactory {
 
@@ -23,7 +23,7 @@ public final class FailureFactory {
     }
 
     public FailureFactory(FailureMessage failureMessage) {
-        this.failureMessage = Objects.requireNonNull(failureMessage);
+        this.failureMessage = requireNonNull(failureMessage);
     }
 
     @SuppressWarnings("removal")

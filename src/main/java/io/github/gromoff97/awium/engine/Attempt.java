@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.engine;
 
-import java.util.Objects;
+import static java.util.Objects.requireNonNull;
 
 public record Attempt<R>(
         Status status,
@@ -15,7 +15,7 @@ public record Attempt<R>(
         long completedNanos) {
 
     public Attempt {
-        Objects.requireNonNull(status);
+        requireNonNull(status);
         if (number <= 0) {
             throw new IllegalArgumentException(
                     "attempt number must be greater than zero");
@@ -29,7 +29,7 @@ public record Attempt<R>(
                 }
             }
             case UNSATISFIED -> {
-                Objects.requireNonNull(mismatch);
+                requireNonNull(mismatch);
                 if (origin != null || cause != null || !hasActual
                         || result != null) {
                     throw new IllegalArgumentException(
@@ -37,8 +37,8 @@ public record Attempt<R>(
                 }
             }
             case UNCONTROLLED -> {
-                Objects.requireNonNull(origin);
-                Objects.requireNonNull(cause);
+                requireNonNull(origin);
+                requireNonNull(cause);
                 if (result != null || mismatch != null
                         || assertionCause != null
                         || !hasActual && actual != null) {

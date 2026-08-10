@@ -2,21 +2,19 @@ package io.github.gromoff97.awium.await.stages;
 
 import io.github.gromoff97.awium.await.OptionalAwait;
 import io.github.gromoff97.awium.conditioning.conditions.PresentCondition;
-import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.sources.OptionalSource;
 
 import java.time.Duration;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
-public final class OptionalAwaitStage<T>
-        extends AbstractAwaitStage<Optional<T>>
-        implements OptionalAwait<T>, OptionalAwait.Until<T>,
-                OptionalAwait.AfterEvery<T>, OptionalAwait.AfterUpTo<T> {
+import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.present;
+import static java.util.Objects.requireNonNull;
+
+public final class OptionalAwaitStage<T> extends AbstractAwaitStage<Optional<T>> implements OptionalAwait<T>, OptionalAwait.Until<T>, OptionalAwait.AfterEvery<T>, OptionalAwait.AfterUpTo<T> {
 
     public OptionalAwaitStage(OptionalSource<T> source) {
         super(source);
@@ -53,13 +51,13 @@ public final class OptionalAwaitStage<T>
 
     @Override
     public T until(PresentCondition condition) {
-        return complete(RuntimeCondition.present(
-                Objects.requireNonNull(condition, "condition must not be null")));
+        return complete(present(
+                requireNonNull(condition, "condition must not be null")));
     }
 
     @Override
     public T until(PresentCondition.ExplainedCondition condition) {
-        return complete(RuntimeCondition.present(
-                Objects.requireNonNull(condition, "condition must not be null")));
+        return complete(present(
+                requireNonNull(condition, "condition must not be null")));
     }
 }

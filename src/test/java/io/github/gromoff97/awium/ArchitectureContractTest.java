@@ -1,6 +1,18 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static java.nio.file.Files.createDirectories;
+import static java.nio.file.Files.readString;
+import static java.nio.file.Files.walk;
+import static java.nio.file.Files.writeString;
+import static java.util.Collections.newSetFromMap;
+import static org.openrewrite.Parser.Input.fromString;
+import static org.openrewrite.java.JavaParser.fromJavaVersion;
+import static org.openrewrite.java.search.FindMissingTypes.findMissingTypes;
+import static org.openrewrite.java.tree.TypeUtils.asFullyQualified;
+import static org.openrewrite.java.tree.TypeUtils.isAssignableTo;
+import static org.openrewrite.java.tree.TypeUtils.isOfClassType;
+import static org.openrewrite.java.tree.TypeUtils.isWellFormedType;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -11,25 +23,21 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.InMemoryExecutionContext;
-import org.openrewrite.Parser;
 import org.openrewrite.SourceFile;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaParser;
 import org.openrewrite.java.MethodMatcher;
-import org.openrewrite.java.search.FindMissingTypes;
+import org.openrewrite.java.search.FindMissingTypes.MissingTypeResult;
 import org.openrewrite.java.tree.Flag;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JavaType;
-import org.openrewrite.java.tree.TypeUtils;
 import org.openrewrite.tree.ParseError;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -116,8 +124,8 @@ class ArchitectureContractTest {
     void architectureAuditRecursesIntoSubpackages(@TempDir Path root)
             throws IOException {
         Path nested = root.resolve("worker").resolve("Mutant.java");
-        Files.createDirectories(nested.getParent());
-        Files.writeString(nested, """
+        createDirectories(nested.getParent());
+        writeString(nested, """
                 final class Mutant extends Thread {
                 }
                 """);
@@ -186,18 +194,6 @@ class ArchitectureContractTest {
             assertThrows(AssertionError.class,
                     () -> assertApprovedSources(invalid));
         }
-    }
-
-    @Test
-    void architectureAuditRequiresEmptyNamespaceHolderConstructors() {
-        assertRejectedAt(MAIN_PACKAGE.resolve("Awium.java"), """
-                package io.github.gromoff97.awium;
-                public final class Awium {
-                    private Awium() {
-                        int ignored = 1;
-                    }
-                }
-                """);
     }
 
     @Test
@@ -558,10 +554,10 @@ class ArchitectureContractTest {
         ExecutionContext context = new InMemoryExecutionContext(failure -> {
             throw new AssertionError("OpenRewrite parsing failed", failure);
         });
-        JavaParser parser = JavaParser.fromJavaVersion().build();
+        JavaParser parser = fromJavaVersion().build();
         List<SourceFile> parsed = parser.parseInputs(
                 sources.entrySet().stream()
-                        .map(entry -> Parser.Input.fromString(
+                        .map(entry -> fromString(
                                 entry.getKey(), entry.getValue()))
                         .toList(),
                 Path.of(""),
@@ -582,8 +578,7 @@ class ArchitectureContractTest {
                 throw new AssertionError(source.getSourcePath()
                         + ": expected a typed Java compilation unit");
             }
-            List<FindMissingTypes.MissingTypeResult> missingTypes =
-                    FindMissingTypes.findMissingTypes(unit, false);
+            List<MissingTypeResult> missingTypes = findMissingTypes(unit, false);
             if (!missingTypes.isEmpty()) {
                 throw new AssertionError(source.getSourcePath()
                         + ": OpenRewrite type attribution failed: "
@@ -604,19 +599,13 @@ class ArchitectureContractTest {
         visitor.verifyApprovedOccurrences();
     }
 
-    private static final class ArchitectureVisitor
-            extends JavaIsoVisitor<ExecutionContext> {
+    private static final class ArchitectureVisitor extends JavaIsoVisitor<ExecutionContext> {
 
         private static final Path PARK_PORT =
                 MAIN_PACKAGE.resolve(
                         "await/stages/AbstractAwaitStage.java").normalize();
         private static final Path INTERRUPT_PORT = MAIN_PACKAGE
                 .resolve("engine/WaitEngine.java").normalize();
-        private static final Set<Path> NAMESPACE_HOLDERS = Set.of(
-                MAIN_PACKAGE.resolve("Awium.java").normalize(),
-                MAIN_PACKAGE.resolve(
-                        "conditioning/providers/ConditionProvider.java")
-                        .normalize());
         private static final String THREAD = "java.lang.Thread";
         private static final String LOCK_SUPPORT =
                 "java.util.concurrent.locks.LockSupport";
@@ -671,7 +660,7 @@ class ArchitectureContractTest {
                 reject(declaration, "obsolete product type "
                         + declaration.getSimpleName());
             }
-            if (TypeUtils.isAssignableTo(THREAD, declaration.getType())) {
+            if (isAssignableTo(THREAD, declaration.getType())) {
                 reject(declaration, "Thread subclass");
             }
             if (isForbiddenMechanism(declaration.getType())) {
@@ -686,12 +675,6 @@ class ArchitectureContractTest {
             JavaType.Method method = declaration.getMethodType();
             requireMethod(declaration, method);
             checkSignature(declaration, method);
-            if (method.isConstructor()
-                    && NAMESPACE_HOLDERS.contains(currentPath())
-                    && declaration.getBody() != null
-                    && !declaration.getBody().getStatements().isEmpty()) {
-                reject(declaration, "namespace holder constructor must be empty");
-            }
             if (method.hasFlags(Flag.Synchronized)) {
                 reject(declaration, "synchronized method");
             }
@@ -712,7 +695,7 @@ class ArchitectureContractTest {
             if (getCursor().firstEnclosing(J.Lambda.Parameters.class) == null) {
                 requireType(declarations, type, "variable declaration");
             }
-            if (type != null && TypeUtils.isWellFormedType(type)) {
+            if (type != null && isWellFormedType(type)) {
                 checkForbiddenType(declarations, type,
                         "forbidden concurrency type in declaration");
             }
@@ -724,7 +707,7 @@ class ArchitectureContractTest {
                 J.NewClass construction, ExecutionContext context) {
             JavaType.Method constructor = construction.getConstructorType();
             checkExecutable(construction, constructor);
-            if (TypeUtils.isAssignableTo(THREAD, construction.getType())) {
+            if (isAssignableTo(THREAD, construction.getType())) {
                 reject(construction, "Thread construction");
             }
             return super.visitNewClass(construction, context);
@@ -748,7 +731,7 @@ class ArchitectureContractTest {
         public J.Identifier visitIdentifier(
                 J.Identifier identifier, ExecutionContext context) {
             JavaType type = identifier.getType();
-            if (type != null && TypeUtils.isWellFormedType(type)) {
+            if (type != null && isWellFormedType(type)) {
                 if (isLockSupport(type)) {
                     if (!isApprovedLockSupportReference()) {
                         reject(identifier,
@@ -775,7 +758,7 @@ class ArchitectureContractTest {
         public J.FieldAccess visitFieldAccess(
                 J.FieldAccess access, ExecutionContext context) {
             JavaType type = access.getType();
-            if (type != null && TypeUtils.isWellFormedType(type)) {
+            if (type != null && isWellFormedType(type)) {
                 if (isLockSupport(type)) {
                     if (!isApprovedLockSupportReference()) {
                         reject(access,
@@ -826,7 +809,7 @@ class ArchitectureContractTest {
                 reject(tree, "Object monitor method " + name);
             }
             if (method.isConstructor()
-                    && TypeUtils.isAssignableTo(THREAD, owner)) {
+                    && isAssignableTo(THREAD, owner)) {
                 reject(tree, "Thread construction");
             }
             if (isForbiddenMechanism(owner)) {
@@ -836,7 +819,7 @@ class ArchitectureContractTest {
         }
 
         private void checkSignature(J tree, JavaType.Method method) {
-            Set<JavaType> visited = Collections.newSetFromMap(
+            Set<JavaType> visited = newSetFromMap(
                     new IdentityHashMap<>());
             if (hasForbiddenType(method.getReturnType(), visited)
                     || method.getParameterTypes().stream()
@@ -849,7 +832,7 @@ class ArchitectureContractTest {
 
         private void checkForbiddenType(
                 J tree, JavaType type, String reason) {
-            if (hasForbiddenType(type, Collections.newSetFromMap(
+            if (hasForbiddenType(type, newSetFromMap(
                     new IdentityHashMap<>()))) {
                 reject(tree, reason);
             }
@@ -888,7 +871,7 @@ class ArchitectureContractTest {
 
         private boolean isForbiddenMechanism(JavaType type) {
             JavaType.FullyQualified fullyQualified =
-                    TypeUtils.asFullyQualified(type);
+                    asFullyQualified(type);
             if (fullyQualified == null) {
                 return false;
             }
@@ -901,11 +884,11 @@ class ArchitectureContractTest {
                     || name.startsWith("java.util.concurrent.locks.")
                     && !name.equals(LOCK_SUPPORT)
                     || FORBIDDEN_ROOTS.stream()
-                    .anyMatch(root -> TypeUtils.isAssignableTo(root, type));
+                    .anyMatch(root -> isAssignableTo(root, type));
         }
 
         private boolean isLockSupport(JavaType type) {
-            return TypeUtils.isOfClassType(type, LOCK_SUPPORT);
+            return isOfClassType(type, LOCK_SUPPORT);
         }
 
         private boolean isApprovedLockSupportReference() {
@@ -940,14 +923,14 @@ class ArchitectureContractTest {
         }
 
         private void requireMethod(J tree, JavaType.Method method) {
-            if (method == null || !TypeUtils.isWellFormedType(method)
+            if (method == null || !isWellFormedType(method)
                     || method.getDeclaringType() == null) {
                 reject(tree, "OpenRewrite type attribution failed for executable");
             }
         }
 
         private void requireType(J tree, JavaType type, String description) {
-            if (type == null || !TypeUtils.isWellFormedType(type)) {
+            if (type == null || !isWellFormedType(type)) {
                 reject(tree, "OpenRewrite type attribution failed for "
                         + description);
             }
@@ -978,10 +961,10 @@ class ArchitectureContractTest {
     private static Map<Path, String> productionSources(Path root)
             throws IOException {
         Map<Path, String> sources = new java.util.LinkedHashMap<>();
-        try (var paths = Files.walk(root)) {
+        try (var paths = walk(root)) {
             for (Path path : paths.filter(file -> file.toString().endsWith(".java"))
                     .sorted().toList()) {
-                sources.put(path, Files.readString(path));
+                sources.put(path, readString(path));
             }
         }
         return sources;

@@ -8,6 +8,10 @@ import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
 import io.github.gromoff97.awium.sources.Source;
 
+import static io.github.gromoff97.awium.conditioning.Evaluation.*;
+import static io.github.gromoff97.awium.engine.Attempt.*;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -28,12 +32,12 @@ class ObservationEvaluatorTest {
 
     @AfterEach
     void clearInterruptFlag() {
-        Thread.interrupted();
+        interrupted();
     }
 
     @Test
     void exposesOneValidatedAttemptRecord() {
-        Attempt<String> attempt = Attempt.satisfied(
+        Attempt<String> attempt = satisfied(
                 "actual", "result", 1, 123);
 
         assertEquals(Attempt.Status.SATISFIED, attempt.status());
@@ -47,10 +51,10 @@ class ObservationEvaluatorTest {
                         () -> new Attempt<>(null, null, true, "actual",
                                 "result", null, null, null, 1, 1)),
                 () -> assertThrows(IllegalArgumentException.class,
-                        () -> Attempt.satisfied(
+                        () -> satisfied(
                                 "actual", "result", 0, 1)),
                 () -> assertThrows(IllegalArgumentException.class,
-                        () -> Attempt.satisfied(
+                        () -> satisfied(
                                 "actual", "result", -1, 1)));
     }
 
@@ -136,13 +140,13 @@ class ObservationEvaluatorTest {
 
     @Test
     void acceptsValidNullPayloadsAndWrappedAttemptCompletionTime() {
-        Attempt<Object> satisfied = Attempt.satisfied(null, null, 1, 1);
-        Attempt<Object> unsatisfied = Attempt.unsatisfied(
+        Attempt<Object> satisfied = satisfied(null, null, 1, 1);
+        Attempt<Object> unsatisfied = unsatisfied(
                 null, "mismatch", new AssertionError(), 1, 1);
-        Attempt<Object> uncontrolledWithoutActual = Attempt.uncontrolled(
+        Attempt<Object> uncontrolledWithoutActual = uncontrolled(
                 Attempt.Origin.SOURCE, false, null,
                 new RuntimeException(), 1, 1);
-        Attempt<Object> uncontrolledWithNullActual = Attempt.uncontrolled(
+        Attempt<Object> uncontrolledWithNullActual = uncontrolled(
                 Attempt.Origin.CONDITION, true, null,
                 new RuntimeException(), 1, 1);
 
@@ -154,7 +158,7 @@ class ObservationEvaluatorTest {
                 () -> assertNull(uncontrolledWithoutActual.actual()),
                 () -> assertTrue(uncontrolledWithNullActual.hasActual()),
                 () -> assertNull(uncontrolledWithNullActual.actual()));
-        assertEquals(Long.MIN_VALUE, Attempt.satisfied(
+        assertEquals(Long.MIN_VALUE, satisfied(
                 "actual", "result", 1, Long.MIN_VALUE).completedNanos());
     }
 
@@ -170,7 +174,7 @@ class ObservationEvaluatorTest {
         }, value -> {
             calls[1]++;
             assertSame(actual, value);
-            return Evaluation.satisfied(result);
+            return satisfied(result);
         });
 
         assertEquals(Attempt.Status.SATISFIED, outcome.status());
@@ -189,7 +193,7 @@ class ObservationEvaluatorTest {
         var assertion = new AssertionError("failed");
 
         Attempt<Object> outcome = attempt(() -> actual,
-                value -> Evaluation.assertionUnsatisfied(
+                value -> assertionUnsatisfied(
                         "assertion did not pass", assertion));
 
         assertEquals(Attempt.Status.UNSATISFIED, outcome.status());
@@ -208,7 +212,7 @@ class ObservationEvaluatorTest {
         Attempt<Object> outcome = attempt(
                 () -> throwFromSource(failure), value -> {
                     conditionCalls[0]++;
-                    return Evaluation.satisfied(value);
+                    return satisfied(value);
                 });
 
         assertEquals(Attempt.Status.UNCONTROLLED, outcome.status());
@@ -243,7 +247,7 @@ class ObservationEvaluatorTest {
         var failure = new IllegalStateException("built-in failed");
 
         Attempt<Object> outcome = attempt(() -> actual,
-                value -> Evaluation.uncontrolled(failure));
+                value -> uncontrolled(failure));
 
         assertEquals(Attempt.Status.UNCONTROLLED, outcome.status());
         assertEquals(Attempt.Origin.CONDITION, outcome.origin());
@@ -277,7 +281,7 @@ class ObservationEvaluatorTest {
         var interrupted = new InterruptedException("source stopped");
 
         Attempt<Object> outcome = attempt(() -> {
-            Thread.currentThread().interrupt();
+            currentThread().interrupt();
             throw interrupted;
         }, Evaluation::satisfied);
 
@@ -285,7 +289,7 @@ class ObservationEvaluatorTest {
         assertEquals(Attempt.Origin.SOURCE, outcome.origin());
         assertSame(interrupted, outcome.cause());
         assertFalse(outcome.hasActual());
-        assertTrue(Thread.currentThread().isInterrupted());
+        assertTrue(currentThread().isInterrupted());
     }
 
     @Test
@@ -294,7 +298,7 @@ class ObservationEvaluatorTest {
         var interrupted = new InterruptedException("condition stopped");
 
         Attempt<Object> outcome = attempt(() -> actual, value -> {
-            Thread.currentThread().interrupt();
+            currentThread().interrupt();
             throw interrupted;
         });
 
@@ -303,7 +307,7 @@ class ObservationEvaluatorTest {
         assertSame(interrupted, outcome.cause());
         assertTrue(outcome.hasActual());
         assertSame(actual, outcome.actual());
-        assertTrue(Thread.currentThread().isInterrupted());
+        assertTrue(currentThread().isInterrupted());
     }
 
     @Test
@@ -318,7 +322,7 @@ class ObservationEvaluatorTest {
                     throw virtualMachineError;
                 }, value -> {
                     conditionCalls[0]++;
-                    return Evaluation.satisfied(value);
+                    return satisfied(value);
                 })));
         assertSame(threadDeath, assertThrows(ThreadDeath.class,
                 () -> attempt(() -> {
@@ -350,11 +354,11 @@ class ObservationEvaluatorTest {
         var conditionCalls = new int[1];
 
         Attempt<Object> outcome = attempt(() -> {
-            Thread.currentThread().interrupt();
+            currentThread().interrupt();
             return actual;
         }, value -> {
             conditionCalls[0]++;
-            return Evaluation.satisfied(value);
+            return satisfied(value);
         });
 
         assertFlagInterruption(outcome, Attempt.Origin.SOURCE, actual);
@@ -368,7 +372,7 @@ class ObservationEvaluatorTest {
         var actual = new Object();
 
         Attempt<Object> outcome = attempt(() -> actual, value -> {
-            Thread.currentThread().interrupt();
+            currentThread().interrupt();
             return evaluation;
         });
 
@@ -382,14 +386,14 @@ class ObservationEvaluatorTest {
     @MethodSource("abruptNonInterruptions")
     void abruptSourceThrowableWinsOverCallbackSetFlag(Throwable failure) {
         Attempt<Object> outcome = attempt(() -> {
-            Thread.currentThread().interrupt();
+            currentThread().interrupt();
             return throwFromSource(failure);
         }, Evaluation::satisfied);
 
         assertEquals(Attempt.Origin.SOURCE, outcome.origin());
         assertSame(failure, outcome.cause());
         assertFalse(outcome.hasActual());
-        assertTrue(Thread.currentThread().isInterrupted());
+        assertTrue(currentThread().isInterrupted());
     }
 
     @ParameterizedTest
@@ -398,14 +402,14 @@ class ObservationEvaluatorTest {
         var actual = new Object();
 
         Attempt<Object> outcome = attempt(() -> actual, value -> {
-            Thread.currentThread().interrupt();
+            currentThread().interrupt();
             return throwFromCondition(failure);
         });
 
         assertEquals(Attempt.Origin.CONDITION, outcome.origin());
         assertSame(failure, outcome.cause());
         assertSame(actual, outcome.actual());
-        assertTrue(Thread.currentThread().isInterrupted());
+        assertTrue(currentThread().isInterrupted());
     }
 
     @Test
@@ -413,19 +417,19 @@ class ObservationEvaluatorTest {
         var sourceFatal = new ThrowableFixtures.Fatal("source fatal");
         assertSame(sourceFatal, assertThrows(ThrowableFixtures.Fatal.class,
                 () -> attempt(() -> {
-                    Thread.currentThread().interrupt();
+                    currentThread().interrupt();
                     throw sourceFatal;
                 }, Evaluation::satisfied)));
-        assertTrue(Thread.currentThread().isInterrupted());
-        Thread.interrupted();
+        assertTrue(currentThread().isInterrupted());
+        interrupted();
 
         var conditionFatal = new ThrowableFixtures.Fatal("condition fatal");
         assertSame(conditionFatal, assertThrows(ThrowableFixtures.Fatal.class,
                 () -> attempt(Object::new, actual -> {
-                    Thread.currentThread().interrupt();
+                    currentThread().interrupt();
                     throw conditionFatal;
                 })));
-        assertTrue(Thread.currentThread().isInterrupted());
+        assertTrue(currentThread().isInterrupted());
     }
 
     private static Stream<Arguments> actualValues() {
@@ -446,8 +450,8 @@ class ObservationEvaluatorTest {
 
     private static Stream<Arguments> normalConditionReturns() {
         return Stream.of(
-                Arguments.of(Evaluation.satisfied(new Object())),
-                Arguments.of(Evaluation.unsatisfied("not ready")),
+                Arguments.of(satisfied(new Object())),
+                Arguments.of(unsatisfied("not ready")),
                 Arguments.of((Object) null));
     }
 
@@ -489,6 +493,6 @@ class ObservationEvaluatorTest {
         assertEquals(InterruptedException.class, outcome.cause().getClass());
         assertEquals("caller thread interrupt flag was set",
                 outcome.cause().getMessage());
-        assertTrue(Thread.currentThread().isInterrupted());
+        assertTrue(currentThread().isInterrupted());
     }
 }

@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.Evaluation.*;
+import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.*;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.*;
@@ -24,7 +26,7 @@ class ConditionDecorationTest {
         var condition = new Condition<Object, Object>() {
             @Override
             public Evaluation<Object> evaluate(Object value) {
-                return Evaluation.satisfied(value);
+                return satisfied(value);
             }
 
             @Override
@@ -48,10 +50,10 @@ class ConditionDecorationTest {
     void closedDescriptorsKeepTheirRuntimeAndCloseDecoration() throws Exception {
         RuntimeCondition<Object, Object> preservingRuntime = runtime();
         RuntimeCondition<Optional<?>, Object> presentRuntime = new RuntimeCondition<>(
-                value -> Evaluation.satisfied(value.orElse(null)), () -> "present", null);
+                value -> satisfied(value.orElse(null)), () -> "present", null);
         var preserving = PreservingCondition.of(preservingRuntime);
         var present = PresentCondition.of(presentRuntime);
-        var structural = ConditionProvider.nonEmpty;
+        var structural = nonEmpty;
 
         var explainedPreserving = preserving.because("preserving");
         var explainedPresent = present.because("present %s", "value");
@@ -81,7 +83,7 @@ class ConditionDecorationTest {
             @Override
             public Evaluation<Object> evaluate(Object actual) {
                 evaluations[0]++;
-                return Evaluation.satisfied(actual);
+                return satisfied(actual);
             }
 
             @Override
@@ -131,7 +133,7 @@ class ConditionDecorationTest {
             @Override
             public Evaluation<String> evaluate(Object actual) {
                 evaluations[0]++;
-                return Evaluation.satisfied("selected");
+                return satisfied("selected");
             }
 
             @Override
@@ -140,8 +142,8 @@ class ConditionDecorationTest {
             }
         };
 
-        RuntimeCondition<Object, String> raw = RuntimeCondition.open(condition);
-        RuntimeCondition<Object, String> explained = RuntimeCondition.open(
+        RuntimeCondition<Object, String> raw = open(condition);
+        RuntimeCondition<Object, String> explained = open(
                 condition.because("because value"));
 
         assertEquals("selected", raw.evaluate(this).result());
@@ -162,7 +164,7 @@ class ConditionDecorationTest {
                 return "custom condition";
             }
         };
-        assertNull(RuntimeCondition.open(nullEvaluation).evaluate(this));
+        assertNull(open(nullEvaluation).evaluate(this));
     }
 
     @Test
@@ -171,12 +173,12 @@ class ConditionDecorationTest {
         var description = (java.util.function.Supplier<String>) () -> "descriptor";
         var actual = new StringBuilder("actual");
         var preserving = PreservingCondition.of(new RuntimeCondition<>(
-                value -> Evaluation.satisfied(new Object()), description, null));
+                value -> satisfied(new Object()), description, null));
 
         RuntimeCondition<StringBuilder, StringBuilder> rawPreserving =
-                RuntimeCondition.preserving(preserving);
+                preserving(preserving);
         RuntimeCondition<StringBuilder, StringBuilder> explainedPreserving =
-                RuntimeCondition.preserving(preserving.because("preserving"));
+                preserving(preserving.because("preserving"));
 
         assertSame(actual, rawPreserving.evaluate(actual).result());
         assertSame(actual, explainedPreserving.evaluate(actual).result());
@@ -185,11 +187,11 @@ class ConditionDecorationTest {
         assertEquals("preserving", explainedPreserving.explanation());
 
         var present = PresentCondition.of(new RuntimeCondition<>(
-                value -> Evaluation.satisfied(value.orElse(null)), description, null));
+                value -> satisfied(value.orElse(null)), description, null));
         RuntimeCondition<Optional<String>, String> rawPresent =
-                RuntimeCondition.present(present);
+                present(present);
         RuntimeCondition<Optional<String>, String> explainedPresent =
-                RuntimeCondition.present(present.because("present"));
+                present(present.because("present"));
 
         assertEquals("value", rawPresent.evaluate(Optional.of("value")).result());
         assertEquals("value",
@@ -198,15 +200,15 @@ class ConditionDecorationTest {
         assertNull(rawPresent.explanation());
         assertEquals("present", explainedPresent.explanation());
 
-        var structural = ConditionProvider.nonEmpty;
+        var structural = nonEmpty;
         var actualCollection = new java.util.ArrayList<>(java.util.List.of("value"));
         RuntimeCondition<java.util.ArrayList<String>,
                 java.util.ArrayList<String>> rawStructural =
-                RuntimeCondition.structural(
+                structural(
                         structural, "collection", java.util.Collection::size);
         RuntimeCondition<java.util.ArrayList<String>,
                 java.util.ArrayList<String>> explainedStructural =
-                RuntimeCondition.structural(
+                structural(
                         structural.because("structural"), "collection",
                         java.util.Collection::size);
 
@@ -230,13 +232,13 @@ class ConditionDecorationTest {
         var cause = new IllegalStateException("broken");
         var description = (java.util.function.Supplier<String>) () -> "descriptor";
         var preserving = PreservingCondition.of(new RuntimeCondition<>(
-                value -> Evaluation.assertionUnsatisfied("failed", assertion),
+                value -> assertionUnsatisfied("failed", assertion),
                 description, null));
         var present = PresentCondition.of(new RuntimeCondition<>(
-                value -> Evaluation.uncontrolled(cause), description, null));
+                value -> uncontrolled(cause), description, null));
 
         Evaluation<Object> preservingEvaluation =
-                RuntimeCondition.preserving(preserving).evaluate(this);
+                preserving(preserving).evaluate(this);
         Evaluation<String> presentEvaluation = RuntimeCondition.<String>present(present)
                 .evaluate(Optional.of("value"));
 
@@ -257,6 +259,5 @@ class ConditionDecorationTest {
     }
 
     private static final class RenderFailure extends RuntimeException {
-        private static final long serialVersionUID = 1L;
     }
 }

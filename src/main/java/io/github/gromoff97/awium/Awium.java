@@ -13,33 +13,35 @@ import io.github.gromoff97.awium.sources.Source;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 public final class Awium {
 
     private Awium() {
+        throw new AssertionError("Utility class");
     }
 
     public static <T> Await<T> await(Source<T> source) {
-        return new AwaitStage<>(Objects.requireNonNull(
+        return new AwaitStage<>(requireNonNull(
                 source, "source must not be null"));
     }
 
     public static <T> OptionalAwait<T> await(
             OptionalSource<T> source) {
-        return new OptionalAwaitStage<>(Objects.requireNonNull(
+        return new OptionalAwaitStage<>(requireNonNull(
                 source, "source must not be null"));
     }
 
     public static <C extends Collection<?>> StructuralAwait<C> await(
             CollectionSource<C> source) {
-        return new StructuralAwaitStage<>(Objects.requireNonNull(
+        return new StructuralAwaitStage<>(requireNonNull(
                 source, "source must not be null"), Collection::size);
     }
 
     public static <M extends Map<?, ?>> StructuralAwait<M> await(
             MapSource<M> source) {
-        return new StructuralAwaitStage<>(Objects.requireNonNull(
+        return new StructuralAwaitStage<>(requireNonNull(
                 source, "source must not be null"), Map::size);
     }
 }

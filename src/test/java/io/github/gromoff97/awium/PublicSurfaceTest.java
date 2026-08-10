@@ -24,6 +24,8 @@ import static java.lang.reflect.Modifier.isPrivate;
 import static java.lang.reflect.Modifier.isProtected;
 import static java.lang.reflect.Modifier.isPublic;
 import static java.lang.reflect.Modifier.isStatic;
+import static java.nio.file.Files.walk;
+import static java.util.Collections.newSetFromMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -33,7 +35,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
@@ -104,7 +105,7 @@ class PublicSurfaceTest {
                 Path.of("io/github/gromoff97/awium/exceptions/AwaitConfigurationConflictException.java"));
 
         Set<Path> actual;
-        try (var sources = Files.walk(MAIN_SOURCES)) {
+        try (var sources = walk(MAIN_SOURCES)) {
             actual = Set.copyOf(sources.filter(Files::isRegularFile)
                     .filter(path -> path.toString().endsWith(".java"))
                     .filter(path -> !path.endsWith("module-info.java"))
@@ -360,7 +361,7 @@ class PublicSurfaceTest {
     }
 
     private static Set<Class<?>> typeHierarchy(Class<?> type) {
-        Set<Class<?>> hierarchy = Collections.newSetFromMap(
+        Set<Class<?>> hierarchy = newSetFromMap(
                 new IdentityHashMap<>());
         List<Class<?>> pending = new ArrayList<>(List.of(type));
         while (!pending.isEmpty()) {
@@ -378,7 +379,7 @@ class PublicSurfaceTest {
 
     private static void assertAllowedType(Type type) {
         assertFalse(isForbiddenApiType(type,
-                        Collections.newSetFromMap(new IdentityHashMap<>())),
+                        newSetFromMap(new IdentityHashMap<>())),
                 type.getTypeName());
     }
 
@@ -459,7 +460,7 @@ class PublicSurfaceTest {
     private static Set<Class<?>> discoveredPublicApiTypes() throws Exception {
         Path classes = Path.of("build", "classes", "java", "main");
         Set<Class<?>> types = new java.util.HashSet<>();
-        try (var entries = Files.walk(classes)) {
+        try (var entries = walk(classes)) {
             for (Path entry : entries.filter(Files::isRegularFile)
                     .filter(path -> path.toString().endsWith(".class"))
                     .sorted().toList()) {
@@ -611,8 +612,7 @@ class PublicSurfaceTest {
         public java.util.concurrent.Future<?> leaked;
     }
 
-    public static final class ForbiddenInheritedField
-            extends ForbiddenInheritedFieldParent {
+    public static final class ForbiddenInheritedField extends ForbiddenInheritedFieldParent {
     }
 
     interface ForbiddenInheritedMethodParent {
@@ -621,8 +621,7 @@ class PublicSurfaceTest {
         }
     }
 
-    public static final class ForbiddenInheritedMethod
-            implements ForbiddenInheritedMethodParent {
+    public static final class ForbiddenInheritedMethod implements ForbiddenInheritedMethodParent {
     }
 
     public static final class ForbiddenForkJoinTaskSignature {
@@ -633,8 +632,7 @@ class PublicSurfaceTest {
         public java.util.concurrent.CompletableFuture<?> leaked;
     }
 
-    static final class FutureSubtype<T>
-            extends java.util.concurrent.CompletableFuture<T> {
+    static final class FutureSubtype<T> extends java.util.concurrent.CompletableFuture<T> {
     }
 
     public static final class ForbiddenFutureSubtypeSignature {
@@ -665,8 +663,7 @@ class PublicSurfaceTest {
         protected java.util.concurrent.Future<?> leaked;
     }
 
-    public static final class ForbiddenInheritedProtectedSignature
-            extends ForbiddenInheritedProtectedParent {
+    public static final class ForbiddenInheritedProtectedSignature extends ForbiddenInheritedProtectedParent {
     }
 
     public static final class AllowedConcurrencyNames {

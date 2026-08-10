@@ -1,5 +1,10 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.CompilationSupport.compiles;
+import static java.nio.file.Files.exists;
+import static java.nio.file.Files.isRegularFile;
+import static java.nio.file.Files.readAllBytes;
+import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -10,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.InputStream;
 import java.lang.module.ModuleFinder;
 import java.lang.module.ModuleReference;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
@@ -30,8 +34,8 @@ class ArtifactContractIT {
     @Test
     void currentBuildJarIsAnExplicitModuleWithOnlySupportedExports()
             throws Exception {
-        assertTrue(Files.isRegularFile(JAR), JAR.toString());
-        assertTrue(Files.isRegularFile(MAIN_CLASS), MAIN_CLASS.toString());
+        assertTrue(isRegularFile(JAR), JAR.toString());
+        assertTrue(isRegularFile(MAIN_CLASS), MAIN_CLASS.toString());
 
         try (JarFile jar = new JarFile(JAR.toFile())) {
             Manifest manifest = jar.getManifest();
@@ -46,7 +50,7 @@ class ArtifactContractIT {
                     "io/github/gromoff97/awium/Awium.class");
             assertNotNull(packagedClass);
             try (InputStream content = jar.getInputStream(packagedClass)) {
-                assertArrayEquals(Files.readAllBytes(MAIN_CLASS),
+                assertArrayEquals(readAllBytes(MAIN_CLASS),
                         content.readAllBytes());
             }
         }
@@ -66,13 +70,13 @@ class ArtifactContractIT {
                         "io.github.gromoff97.awium.exceptions"),
                 module.descriptor().exports().stream()
                         .map(export -> export.source())
-                        .collect(java.util.stream.Collectors.toSet()));
+                        .collect(toSet()));
     }
 
     @Test
     void packagedJarCompilesDirectMethodReferences(@TempDir Path directory)
             throws Exception {
-        assertTrue(CompilationSupport.compiles(directory, """
+        assertTrue(compiles(directory, """
                 import static io.github.gromoff97.awium.Awium.await;
                 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 
@@ -108,11 +112,11 @@ class ArtifactContractIT {
         for (Path required : List.of(Path.of("build.gradle.kts"),
                 Path.of("settings.gradle.kts"), Path.of("gradlew"),
                 Path.of("gradlew.bat"))) {
-            assertTrue(Files.isRegularFile(required), required.toString());
+            assertTrue(isRegularFile(required), required.toString());
         }
         for (Path forbidden : List.of(Path.of("pom.xml"), Path.of("mvnw"),
                 Path.of("mvnw.cmd"), Path.of(".mvn"))) {
-            assertFalse(Files.exists(forbidden), forbidden.toString());
+            assertFalse(exists(forbidden), forbidden.toString());
         }
     }
 }

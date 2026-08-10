@@ -2,11 +2,15 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.sources.Source;
 
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.Awium.await;
+import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.ofVirtual;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -32,19 +36,19 @@ class VirtualThreadIntegrationTest {
         int[] result = {0};
 
         Runnable waitTask = () -> {
-            enteringThread[0] = Thread.currentThread();
+            enteringThread[0] = currentThread();
             local.set("virtual state");
             try {
-                result[0] = Awium.await((Source<Integer>) () -> {
-                    callbackThreads.add(Thread.currentThread());
+                result[0] = await((Source<Integer>) () -> {
+                    callbackThreads.add(currentThread());
                     callbackValues.add(local.get());
                     return ++observations[0];
                 }).every(Duration.ofMillis(20)).upTo(Duration.ofSeconds(2))
-                        .until(ConditionProvider.condition("third observation", value -> {
-                            callbackThreads.add(Thread.currentThread());
+                        .until(condition("third observation", value -> {
+                            callbackThreads.add(currentThread());
                             callbackValues.add(local.get());
-                            return value == 3 ? Evaluation.satisfied(value)
-                                    : Evaluation.unsatisfied(
+                            return value == 3 ? satisfied(value)
+                                    : unsatisfied(
                                             "not the third observation");
                         }));
             } catch (Throwable thrown) {
@@ -54,7 +58,7 @@ class VirtualThreadIntegrationTest {
             }
         };
 
-        Thread caller = Thread.ofVirtual().name("awium-virtual-caller")
+        Thread caller = ofVirtual().name("awium-virtual-caller")
                 .start(waitTask);
         caller.join(5_000);
         if (caller.isAlive()) {

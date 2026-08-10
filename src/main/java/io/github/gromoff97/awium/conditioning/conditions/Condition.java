@@ -2,7 +2,9 @@ package io.github.gromoff97.awium.conditioning.conditions;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 
-import java.util.Objects;
+import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.formattedExplanation;
+import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.literalExplanation;
+import static java.util.Objects.requireNonNull;
 
 public abstract class Condition<S, R> {
 
@@ -15,13 +17,13 @@ public abstract class Condition<S, R> {
 
     public final ExplainedCondition<S, R> because(String explanation) {
         return new ExplainedCondition<>(this,
-                RuntimeCondition.literalExplanation(explanation));
+                literalExplanation(explanation));
     }
 
     public final ExplainedCondition<S, R> because(
             String format, Object... arguments) {
         return new ExplainedCondition<>(this,
-                RuntimeCondition.formattedExplanation(format, arguments));
+                formattedExplanation(format, arguments));
     }
 
     public static final class ExplainedCondition<S, R> {
@@ -31,8 +33,8 @@ public abstract class Condition<S, R> {
 
         private ExplainedCondition(Condition<S, R> delegate,
                 String explanation) {
-            this.delegate = Objects.requireNonNull(delegate);
-            this.explanation = Objects.requireNonNull(explanation);
+            this.delegate = requireNonNull(delegate);
+            this.explanation = requireNonNull(explanation);
         }
 
         public Condition<S, R> delegate() {

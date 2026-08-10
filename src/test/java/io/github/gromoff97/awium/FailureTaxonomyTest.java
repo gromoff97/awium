@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.CompilationSupport.compiles;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.*;
@@ -13,6 +14,7 @@ import static java.lang.reflect.Modifier.isFinal;
 import static java.lang.reflect.Modifier.isPrivate;
 import static java.lang.reflect.Modifier.isProtected;
 import static java.lang.reflect.Modifier.isPublic;
+import static java.lang.reflect.Modifier.isStatic;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -20,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -81,7 +82,7 @@ class FailureTaxonomyTest {
                 }
                 """;
 
-        assertFalse(CompilationSupport.compiles(temporaryDirectory, source));
+        assertFalse(compiles(temporaryDirectory, source));
     }
 
     @Test
@@ -104,7 +105,7 @@ class FailureTaxonomyTest {
                 }
                 """;
 
-        assertTrue(CompilationSupport.compiles(temporaryDirectory, source));
+        assertTrue(compiles(temporaryDirectory, source));
     }
 
     @Test
@@ -142,7 +143,7 @@ class FailureTaxonomyTest {
 
     private static boolean isPublicInstance(Method method) {
         return isPublic(method.getModifiers())
-                && !Modifier.isStatic(method.getModifiers());
+                && !isStatic(method.getModifiers());
     }
 
     private static List<Class<?>> failureTypes() {

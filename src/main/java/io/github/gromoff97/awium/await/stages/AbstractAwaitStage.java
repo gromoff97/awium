@@ -8,10 +8,13 @@ import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
 import io.github.gromoff97.awium.sources.Source;
 
-import java.util.Objects;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
+
+import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
+import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
+import static java.util.Objects.requireNonNull;
 
 public abstract class AbstractAwaitStage<S> {
 
@@ -22,18 +25,18 @@ public abstract class AbstractAwaitStage<S> {
     private final FailureFactory failureFactory;
 
     protected AbstractAwaitStage(Source<S> source) {
-        this(source, WaitConfiguration.defaults(), System::nanoTime,
+        this(source, defaults(), System::nanoTime,
                 LockSupport::parkNanos, new FailureFactory());
     }
 
     protected AbstractAwaitStage(Source<S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker, FailureFactory failureFactory) {
-        this.source = Objects.requireNonNull(source);
-        this.configuration = Objects.requireNonNull(configuration);
-        this.clock = Objects.requireNonNull(clock);
-        this.parker = Objects.requireNonNull(parker);
-        this.failureFactory = Objects.requireNonNull(failureFactory);
+        this.source = requireNonNull(source);
+        this.configuration = requireNonNull(configuration);
+        this.clock = requireNonNull(clock);
+        this.parker = requireNonNull(parker);
+        this.failureFactory = requireNonNull(failureFactory);
     }
 
     protected AbstractAwaitStage(AbstractAwaitStage<S> stage,
@@ -43,25 +46,25 @@ public abstract class AbstractAwaitStage<S> {
     }
 
     public final S until(PreservingCondition<? super S> condition) {
-        return complete(RuntimeCondition.preserving(
-                Objects.requireNonNull(condition, "condition must not be null")));
+        return complete(preserving(
+                requireNonNull(condition, "condition must not be null")));
     }
 
     public final S until(
             PreservingCondition.ExplainedCondition<? super S> condition) {
-        return complete(RuntimeCondition.preserving(
-                Objects.requireNonNull(condition, "condition must not be null")));
+        return complete(preserving(
+                requireNonNull(condition, "condition must not be null")));
     }
 
     public final <R> R until(Condition<? super S, ? extends R> condition) {
         return complete(RuntimeCondition.<S, R>open(
-                Objects.requireNonNull(condition, "condition must not be null")));
+                requireNonNull(condition, "condition must not be null")));
     }
 
     public final <R> R until(
             Condition.ExplainedCondition<? super S, ? extends R> condition) {
         return complete(RuntimeCondition.<S, R>open(
-                Objects.requireNonNull(condition, "condition must not be null")));
+                requireNonNull(condition, "condition must not be null")));
     }
 
     protected final Source<S> source() {

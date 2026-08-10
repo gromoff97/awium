@@ -1,14 +1,15 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.Awium.await;
+import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.structural;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
-
-import io.github.gromoff97.awium.engine.*;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.StructuralAwait;
@@ -32,19 +33,19 @@ import org.junit.jupiter.api.Test;
 class StructuralConditionsTest {
 
     private static final List<Case> CASES = List.of(
-            new Case(ConditionProvider.empty, 0, 1, "to be empty"),
-            new Case(ConditionProvider.nonEmpty, 1, 0, "to be non-empty"),
-            new Case(ConditionProvider.sizeExactly(2), 2, 1,
+            new Case(empty, 0, 1, "to be empty"),
+            new Case(nonEmpty, 1, 0, "to be non-empty"),
+            new Case(sizeExactly(2), 2, 1,
                     "size to be exactly 2"),
-            new Case(ConditionProvider.sizeNotExactly(2), 1, 2,
+            new Case(sizeNotExactly(2), 1, 2,
                     "size not to be exactly 2"),
-            new Case(ConditionProvider.sizeGreaterThan(2), 3, 2,
+            new Case(sizeGreaterThan(2), 3, 2,
                     "size to be greater than 2"),
-            new Case(ConditionProvider.sizeAtLeast(2), 2, 1,
+            new Case(sizeAtLeast(2), 2, 1,
                     "size to be at least 2"),
-            new Case(ConditionProvider.sizeLessThan(2), 1, 2,
+            new Case(sizeLessThan(2), 1, 2,
                     "size to be less than 2"),
-            new Case(ConditionProvider.sizeAtMost(2), 2, 3,
+            new Case(sizeAtMost(2), 2, 3,
                     "size to be at most 2"));
 
     @Test
@@ -82,12 +83,12 @@ class StructuralConditionsTest {
     @Test
     void namedRelationPairsAreExactComplements() throws Exception {
         List<Pair> pairs = List.of(
-                new Pair(ConditionProvider.sizeExactly(2),
-                        ConditionProvider.sizeNotExactly(2)),
-                new Pair(ConditionProvider.sizeGreaterThan(2),
-                        ConditionProvider.sizeAtMost(2)),
-                new Pair(ConditionProvider.sizeAtLeast(2),
-                        ConditionProvider.sizeLessThan(2)));
+                new Pair(sizeExactly(2),
+                        sizeNotExactly(2)),
+                new Pair(sizeGreaterThan(2),
+                        sizeAtMost(2)),
+                new Pair(sizeAtLeast(2),
+                        sizeLessThan(2)));
 
         for (Pair pair : pairs) {
             for (int size = 0; size <= 4; size++) {
@@ -107,13 +108,13 @@ class StructuralConditionsTest {
         var map = new ProbeContainers.ProbeMap<Object, Object>(1);
 
         ProbeContainers.ProbeCollection<Object> returnedCollection =
-                Awium.await((CollectionSource<
+                await((CollectionSource<
                         ProbeContainers.ProbeCollection<Object>>) () -> collection)
-                        .until(ConditionProvider.nonEmpty);
+                        .until(nonEmpty);
         ProbeContainers.ProbeMap<Object, Object> returnedMap =
-                Awium.await((MapSource<
+                await((MapSource<
                         ProbeContainers.ProbeMap<Object, Object>>) () -> map)
-                        .until(ConditionProvider.nonEmpty.because("required"));
+                        .until(nonEmpty.because("required"));
 
         assertSame(collection, returnedCollection);
         assertSame(map, returnedMap);
@@ -130,15 +131,15 @@ class StructuralConditionsTest {
 
         assertThrows(AwaitTimeoutException.class,
                 () -> timedCollection(rawCollection)
-                        .until(ConditionProvider.empty));
+                        .until(empty));
         assertThrows(AwaitTimeoutException.class,
                 () -> timedCollection(explainedCollection)
-                        .until(ConditionProvider.empty.because("required")));
+                        .until(empty.because("required")));
         assertThrows(AwaitTimeoutException.class,
-                () -> timedMap(rawMap).until(ConditionProvider.empty));
+                () -> timedMap(rawMap).until(empty));
         assertThrows(AwaitTimeoutException.class,
                 () -> timedMap(explainedMap)
-                        .until(ConditionProvider.empty.because("required")));
+                        .until(empty.because("required")));
 
         assertNoFallback(rawCollection);
         assertNoFallback(explainedCollection);
@@ -164,25 +165,25 @@ class StructuralConditionsTest {
 
         assertSame(collectionCause, assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> Awium.await((CollectionSource<
+                () -> await((CollectionSource<
                         ProbeContainers.ProbeCollection<Object>>) () -> collection)
-                        .until(ConditionProvider.nonEmpty)).getCause());
+                        .until(nonEmpty)).getCause());
         assertSame(explainedCollectionCause, assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> Awium.await((CollectionSource<
+                () -> await((CollectionSource<
                         ProbeContainers.ProbeCollection<Object>>)
                         () -> explainedCollection)
-                        .until(ConditionProvider.nonEmpty.because("required")))
+                        .until(nonEmpty.because("required")))
                 .getCause());
         assertSame(mapCause, assertThrows(AwaitConditionEvaluationException.class,
-                () -> Awium.await((MapSource<
+                () -> await((MapSource<
                         ProbeContainers.ProbeMap<Object, Object>>) () -> map)
-                        .until(ConditionProvider.nonEmpty)).getCause());
+                        .until(nonEmpty)).getCause());
         assertSame(explainedMapCause, assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> Awium.await((MapSource<
+                () -> await((MapSource<
                         ProbeContainers.ProbeMap<Object, Object>>) () -> explainedMap)
-                        .until(ConditionProvider.nonEmpty.because("required")))
+                        .until(nonEmpty.because("required")))
                 .getCause());
 
         assertNoFallback(collection);
@@ -249,10 +250,10 @@ class StructuralConditionsTest {
     }
 
     private static String mismatch(String subject, Case testCase, int size) {
-        if (testCase.condition() == ConditionProvider.empty) {
+        if (testCase.condition() == empty) {
             return subject + " was non-empty";
         }
-        if (testCase.condition() == ConditionProvider.nonEmpty) {
+        if (testCase.condition() == nonEmpty) {
             return subject + " was empty";
         }
         return subject + " size was " + size;
@@ -260,24 +261,24 @@ class StructuralConditionsTest {
 
     private static <C extends Collection<?>> RuntimeCondition<C, C> collection(
             StructuralCondition condition) {
-        return RuntimeCondition.structural(
+        return structural(
                 condition, "collection", Collection::size);
     }
 
     private static <C extends Collection<?>> RuntimeCondition<C, C> collection(
             StructuralCondition.ExplainedCondition condition) {
-        return RuntimeCondition.structural(
+        return structural(
                 condition, "collection", Collection::size);
     }
 
     private static <M extends Map<?, ?>> RuntimeCondition<M, M> map(
             StructuralCondition condition) {
-        return RuntimeCondition.structural(condition, "map", Map::size);
+        return structural(condition, "map", Map::size);
     }
 
     private static <M extends Map<?, ?>> RuntimeCondition<M, M> map(
             StructuralCondition.ExplainedCondition condition) {
-        return RuntimeCondition.structural(condition, "map", Map::size);
+        return structural(condition, "map", Map::size);
     }
 
     private static StructuralAwait.Until<
@@ -289,7 +290,7 @@ class StructuralConditionsTest {
                     time.advanceNanos(2);
                     return actual;
                 }, Collection::size,
-                WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
+                defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)), time, time,
                 new FailureFactory());
     }
@@ -303,7 +304,7 @@ class StructuralConditionsTest {
                     time.advanceNanos(2);
                     return actual;
                 }, Map::size,
-                WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
+                defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)), time, time,
                 new FailureFactory());
     }

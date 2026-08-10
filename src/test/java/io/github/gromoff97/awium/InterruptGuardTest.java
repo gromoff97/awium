@@ -8,6 +8,10 @@ import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
 import io.github.gromoff97.awium.sources.Source;
 
+import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -20,13 +24,13 @@ class InterruptGuardTest {
 
     @AfterEach
     void clearInterruptFlag() {
-        Thread.interrupted();
+        interrupted();
     }
 
     @Test
     void detectsTheFlagBeforeSourceWithoutClearingIt() {
         var sourceCalls = new int[1];
-        Thread.currentThread().interrupt();
+        currentThread().interrupt();
 
         Attempt<Object> outcome = wait(() -> {
             sourceCalls[0]++;
@@ -41,10 +45,10 @@ class InterruptGuardTest {
     void detectsTheFlagAfterParkWithoutClearingIt() {
         var time = new FakeTime(0);
         WaitEngine engine = new WaitEngine(new WaitConfiguration(1, 2, 0),
-                time, nanos -> Thread.currentThread().interrupt());
+                time, nanos -> currentThread().interrupt());
 
         Attempt<Object> outcome = engine.waitFor(Object::new,
-                condition(value -> Evaluation.unsatisfied("not ready")))
+                condition(value -> unsatisfied("not ready")))
                 .attempt();
 
         assertFlagOnly(outcome, Attempt.Origin.WAITING, false, null, 2);
@@ -53,7 +57,7 @@ class InterruptGuardTest {
     @Test
     void detectsTheFlagAfterSourceAndRetainsANullActual() {
         Attempt<Object> outcome = wait(() -> {
-            Thread.currentThread().interrupt();
+            currentThread().interrupt();
             return null;
         }, Evaluation::satisfied);
 
@@ -65,8 +69,8 @@ class InterruptGuardTest {
         var actual = new Object();
 
         Attempt<Object> outcome = wait(() -> actual, value -> {
-            Thread.currentThread().interrupt();
-            return Evaluation.satisfied(value);
+            currentThread().interrupt();
+            return satisfied(value);
         });
 
         assertFlagOnly(outcome, Attempt.Origin.CONDITION, true, actual, 1);
@@ -77,7 +81,7 @@ class InterruptGuardTest {
         Attempt<Object> outcome = wait(Object::new, Evaluation::satisfied);
 
         assertEquals(Attempt.Status.SATISFIED, outcome.status());
-        assertFalse(Thread.currentThread().isInterrupted());
+        assertFalse(currentThread().isInterrupted());
     }
 
     @Test
@@ -89,8 +93,8 @@ class InterruptGuardTest {
 
         assertSame(sourceFailure, source.cause());
         assertFalse(source.hasActual());
-        assertTrue(Thread.currentThread().isInterrupted());
-        Thread.interrupted();
+        assertTrue(currentThread().isInterrupted());
+        interrupted();
 
         var actual = new Object();
         var conditionFailure = new InterruptedException("condition stopped");
@@ -101,7 +105,7 @@ class InterruptGuardTest {
         assertSame(conditionFailure, condition.cause());
         assertTrue(condition.hasActual());
         assertSame(actual, condition.actual());
-        assertTrue(Thread.currentThread().isInterrupted());
+        assertTrue(currentThread().isInterrupted());
     }
 
     private static Attempt<Object> wait(
@@ -128,6 +132,6 @@ class InterruptGuardTest {
         assertEquals(InterruptedException.class, outcome.cause().getClass());
         assertEquals("caller thread interrupt flag was set",
                 outcome.cause().getMessage());
-        assertTrue(Thread.currentThread().isInterrupted());
+        assertTrue(currentThread().isInterrupted());
     }
 }

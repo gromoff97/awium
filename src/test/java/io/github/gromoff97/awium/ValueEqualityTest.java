@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.ValueEquality.equal;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 
-import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
@@ -18,42 +18,42 @@ class ValueEqualityTest {
         var expected = new RightOperand();
         var actual = new LeftOperand(expected);
 
-        assertTrue(ValueEquality.equal(null, null));
-        assertFalse(ValueEquality.equal(null, actual));
-        assertFalse(ValueEquality.equal(actual, null));
-        assertTrue(ValueEquality.equal(actual, expected));
+        assertTrue(equal(null, null));
+        assertFalse(equal(null, actual));
+        assertFalse(equal(actual, null));
+        assertTrue(equal(actual, expected));
         assertTrue(actual.compared);
         assertFalse(expected.compared);
     }
 
     @Test
     void comparesEveryPrimitiveArrayTypeByContent() {
-        assertTrue(ValueEquality.equal(new boolean[]{true}, new boolean[]{true}));
-        assertTrue(ValueEquality.equal(new byte[]{1}, new byte[]{1}));
-        assertTrue(ValueEquality.equal(new short[]{1}, new short[]{1}));
-        assertTrue(ValueEquality.equal(new int[]{1, 2}, new int[]{1, 2}));
-        assertTrue(ValueEquality.equal(new long[]{1}, new long[]{1}));
-        assertTrue(ValueEquality.equal(new char[]{'a'}, new char[]{'a'}));
-        assertTrue(ValueEquality.equal(new float[]{1.5F}, new float[]{1.5F}));
-        assertTrue(ValueEquality.equal(new double[]{1.5}, new double[]{1.5}));
+        assertTrue(equal(new boolean[]{true}, new boolean[]{true}));
+        assertTrue(equal(new byte[]{1}, new byte[]{1}));
+        assertTrue(equal(new short[]{1}, new short[]{1}));
+        assertTrue(equal(new int[]{1, 2}, new int[]{1, 2}));
+        assertTrue(equal(new long[]{1}, new long[]{1}));
+        assertTrue(equal(new char[]{'a'}, new char[]{'a'}));
+        assertTrue(equal(new float[]{1.5F}, new float[]{1.5F}));
+        assertTrue(equal(new double[]{1.5}, new double[]{1.5}));
 
-        assertFalse(ValueEquality.equal(new boolean[]{true}, new boolean[]{false}));
-        assertFalse(ValueEquality.equal(new byte[]{1}, new byte[]{2}));
-        assertFalse(ValueEquality.equal(new short[]{1}, new short[]{2}));
-        assertFalse(ValueEquality.equal(new int[]{1}, new int[]{2}));
-        assertFalse(ValueEquality.equal(new long[]{1}, new long[]{2}));
-        assertFalse(ValueEquality.equal(new char[]{'a'}, new char[]{'b'}));
-        assertFalse(ValueEquality.equal(new float[]{1.5F}, new float[]{2.5F}));
-        assertFalse(ValueEquality.equal(new double[]{1.5}, new double[]{2.5}));
+        assertFalse(equal(new boolean[]{true}, new boolean[]{false}));
+        assertFalse(equal(new byte[]{1}, new byte[]{2}));
+        assertFalse(equal(new short[]{1}, new short[]{2}));
+        assertFalse(equal(new int[]{1}, new int[]{2}));
+        assertFalse(equal(new long[]{1}, new long[]{2}));
+        assertFalse(equal(new char[]{'a'}, new char[]{'b'}));
+        assertFalse(equal(new float[]{1.5F}, new float[]{2.5F}));
+        assertFalse(equal(new double[]{1.5}, new double[]{2.5}));
     }
 
     @Test
     void rejectsArrayKindAndPrimitiveTypeMismatches() {
-        assertFalse(ValueEquality.equal(new int[]{1, 2}, new long[]{1, 2}));
-        assertFalse(ValueEquality.equal(new int[]{1}, new Object[]{1}));
-        assertFalse(ValueEquality.equal(new Object[]{1}, new int[]{1}));
-        assertFalse(ValueEquality.equal(new Object[]{1}, 1));
-        assertFalse(ValueEquality.equal(1, new Object[]{1}));
+        assertFalse(equal(new int[]{1, 2}, new long[]{1, 2}));
+        assertFalse(equal(new int[]{1}, new Object[]{1}));
+        assertFalse(equal(new Object[]{1}, new int[]{1}));
+        assertFalse(equal(new Object[]{1}, 1));
+        assertFalse(equal(1, new Object[]{1}));
     }
 
     @Test
@@ -61,20 +61,20 @@ class ValueEqualityTest {
         var expectedLeaf = new RightOperand();
         var actualLeaf = new LeftOperand(expectedLeaf);
 
-        assertTrue(ValueEquality.equal(
+        assertTrue(equal(
                 new Object[]{new int[]{1, 2}, new Object[]{actualLeaf}},
                 new Object[]{new int[]{1, 2}, new Object[]{expectedLeaf}}));
         assertTrue(actualLeaf.compared);
         assertFalse(expectedLeaf.compared);
-        assertFalse(ValueEquality.equal(
+        assertFalse(equal(
                 new Object[]{new int[]{1, 2}},
                 new Object[]{new int[]{1, 3}}));
-        assertFalse(ValueEquality.equal(new Object[]{1}, new Object[]{1, 2}));
+        assertFalse(equal(new Object[]{1}, new Object[]{1, 2}));
     }
 
     @Test
     void stopsAtTheFirstUnequalObjectArrayElement() {
-        assertFalse(ValueEquality.equal(
+        assertFalse(equal(
                 new Object[]{"different", new FailIfCompared()},
                 new Object[]{"expected", new Object()}));
     }
@@ -85,7 +85,7 @@ class ValueEqualityTest {
         Object[] rightSelf = new Object[1];
         leftSelf[0] = leftSelf;
         rightSelf[0] = rightSelf;
-        assertTrue(ValueEquality.equal(leftSelf, rightSelf));
+        assertTrue(equal(leftSelf, rightSelf));
 
         Object[] leftFirst = new Object[2];
         Object[] leftSecond = new Object[2];
@@ -100,10 +100,10 @@ class ValueEqualityTest {
         rightFirst[1] = rightSecond;
         rightSecond[0] = "second";
         rightSecond[1] = rightFirst;
-        assertTrue(ValueEquality.equal(leftFirst, rightFirst));
+        assertTrue(equal(leftFirst, rightFirst));
 
         rightSecond[0] = "different";
-        assertFalse(ValueEquality.equal(leftFirst, rightFirst));
+        assertFalse(equal(leftFirst, rightFirst));
     }
 
     @Test
@@ -115,7 +115,7 @@ class ValueEqualityTest {
             right = new Object[]{right};
         }
 
-        assertTrue(ValueEquality.equal(left, right));
+        assertTrue(equal(left, right));
     }
 
     private static final class LeftOperand {

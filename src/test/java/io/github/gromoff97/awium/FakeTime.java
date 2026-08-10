@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import static java.lang.Math.min;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +28,7 @@ final class FakeTime implements LongSupplier, LongConsumer {
         parkRequests.add(nanos);
         nowNanos += parkAdvances.isEmpty()
                 ? nanos
-                : Math.min(nanos, parkAdvances.removeFirst());
+                : min(nanos, parkAdvances.removeFirst());
     }
 
     long nanoTime() {

@@ -1,10 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static java.util.Collections.emptyIterator;
+
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,7 @@ import java.util.Set;
 final class ProbeContainers {
 
     private ProbeContainers() {
+        throw new AssertionError("Utility class");
     }
 
     static final class ProbeCollection<E> extends AbstractCollection<E> {
@@ -53,7 +55,7 @@ final class ProbeContainers {
         @Override
         public Iterator<E> iterator() {
             iteratorCalls++;
-            return Collections.emptyIterator();
+            return emptyIterator();
         }
 
         @Override

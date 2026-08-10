@@ -1,14 +1,16 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.Awium.await;
+import static io.github.gromoff97.awium.CompilationSupport.compiles;
+import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
-
-import io.github.gromoff97.awium.engine.*;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.StructuralAwait;
@@ -43,36 +45,36 @@ import org.junit.jupiter.api.io.TempDir;
 class MapConditionsTest {
 
     private static final List<Pair> PAIRS = List.of(
-            new Pair("containsKey", ConditionProvider.containsKey("b"),
-                    ConditionProvider.doesNotContainKey("b"),
+            new Pair("containsKey", containsKey("b"),
+                    doesNotContainKey("b"),
                     map("a", "1", "b", "2"),
                     map("a", "1", "c", "2")),
-            new Pair("containsValue", ConditionProvider.containsValue("2"),
-                    ConditionProvider.doesNotContainValue("2"),
+            new Pair("containsValue", containsValue("2"),
+                    doesNotContainValue("2"),
                     map("a", "1", "b", "2"),
                     map("a", "1", "b", "3")),
-            new Pair("containsEntry", ConditionProvider.containsEntry("b", "2"),
-                    ConditionProvider.doesNotContainEntry("b", "2"),
+            new Pair("containsEntry", containsEntry("b", "2"),
+                    doesNotContainEntry("b", "2"),
                     map("a", "1", "b", "2"),
                     map("a", "1", "b", "3")),
             new Pair("containsAllEntriesOf",
-                    ConditionProvider.containsAllEntriesOf(
+                    containsAllEntriesOf(
                             map("a", "1", "b", "2")),
-                    ConditionProvider.doesNotContainAllEntriesOf(
+                    doesNotContainAllEntriesOf(
                             map("a", "1", "b", "2")),
                     map("a", "1", "b", "2", "c", "3"),
                     map("a", "1", "b", "3")),
             new Pair("containsAnyEntriesOf",
-                    ConditionProvider.containsAnyEntriesOf(
+                    containsAnyEntriesOf(
                             map("x", "9", "b", "2")),
-                    ConditionProvider.containsNoEntriesOf(
+                    containsNoEntriesOf(
                             map("x", "9", "b", "2")),
                     map("a", "1", "b", "2"),
                     map("a", "1", "c", "3")),
             new Pair("containsExactlyEntriesOf",
-                    ConditionProvider.containsExactlyEntriesOf(
+                    containsExactlyEntriesOf(
                             map("a", "1", "b", "2")),
-                    ConditionProvider.doesNotContainExactlyEntriesOf(
+                    doesNotContainExactlyEntriesOf(
                             map("a", "1", "b", "2")),
                     map("b", "2", "a", "1"),
                     map("a", "1", "b", "3")));
@@ -98,18 +100,18 @@ class MapConditionsTest {
         var expected = entryMap(entry("a", "1"));
         List<PreservingCondition<? super ProbeContainers.EntryMap<String,
                 String>>> conditions = List.of(
-                        ConditionProvider.containsKey("a"),
-                        ConditionProvider.doesNotContainKey("a"),
-                        ConditionProvider.containsValue("1"),
-                        ConditionProvider.doesNotContainValue("1"),
-                        ConditionProvider.containsEntry("a", "1"),
-                        ConditionProvider.doesNotContainEntry("a", "1"),
-                        ConditionProvider.containsAllEntriesOf(expected),
-                        ConditionProvider.doesNotContainAllEntriesOf(expected),
-                        ConditionProvider.containsAnyEntriesOf(expected),
-                        ConditionProvider.containsNoEntriesOf(expected),
-                        ConditionProvider.containsExactlyEntriesOf(expected),
-                        ConditionProvider.doesNotContainExactlyEntriesOf(expected));
+                        containsKey("a"),
+                        doesNotContainKey("a"),
+                        containsValue("1"),
+                        doesNotContainValue("1"),
+                        containsEntry("a", "1"),
+                        doesNotContainEntry("a", "1"),
+                        containsAllEntriesOf(expected),
+                        doesNotContainAllEntriesOf(expected),
+                        containsAnyEntriesOf(expected),
+                        containsNoEntriesOf(expected),
+                        containsExactlyEntriesOf(expected),
+                        doesNotContainExactlyEntriesOf(expected));
 
         for (PreservingCondition<? super ProbeContainers.EntryMap<String,
                 String>> condition : conditions) {
@@ -169,7 +171,7 @@ class MapConditionsTest {
         var actual = entryMap(entry("a", "1"));
 
         assertSatisfied(evaluate(
-                ConditionProvider.containsAllEntriesOf(expected), actual, false),
+                containsAllEntriesOf(expected), actual, false),
                 actual);
         assertEquals(1, actual.nextCalls);
     }
@@ -205,7 +207,7 @@ class MapConditionsTest {
         var actual = entryMap(
                 entry((Object) first, "v"), entry((Object) second, "v"));
 
-        assertStatus(ConditionProvider.containsExactlyEntriesOf(
+        assertStatus(containsExactlyEntriesOf(
                         entryMap(entry((Object) x, "v"),
                                 entry((Object) y, "v"))),
                 actual, Evaluation.Status.UNSATISFIED);
@@ -214,7 +216,7 @@ class MapConditionsTest {
 
         first.equalsCalls = 0;
         second.equalsCalls = 0;
-        assertStatus(ConditionProvider.containsExactlyEntriesOf(
+        assertStatus(containsExactlyEntriesOf(
                         entryMap(entry((Object) y, "v"),
                                 entry((Object) x, "v"))),
                 actual, Evaluation.Status.SATISFIED);
@@ -231,11 +233,11 @@ class MapConditionsTest {
         Directional expectedValue = new Directional(false);
         var actual = entryMap(entry(actualKey, actualValue));
 
-        assertStatus(ConditionProvider.containsKey(expectedKey), actual,
+        assertStatus(containsKey(expectedKey), actual,
                 Evaluation.Status.SATISFIED);
-        assertStatus(ConditionProvider.containsValue(expectedValue), actual,
+        assertStatus(containsValue(expectedValue), actual,
                 Evaluation.Status.SATISFIED);
-        assertStatus(ConditionProvider.containsEntry(expectedKey, expectedValue),
+        assertStatus(containsEntry(expectedKey, expectedValue),
                 actual, Evaluation.Status.SATISFIED);
         assertEquals(2, actualKey.equalsCalls);
         assertEquals(2, actualValue.equalsCalls);
@@ -245,13 +247,13 @@ class MapConditionsTest {
         var mismatched = entry("actual", "value");
         mismatched.valueFailure = new IllegalStateException(
                 "value must not be read");
-        assertStatus(ConditionProvider.containsEntry("expected", "value"),
+        assertStatus(containsEntry("expected", "value"),
                 entryMap(mismatched), Evaluation.Status.UNSATISFIED);
         assertEquals(0, mismatched.valueCalls);
 
         Map<Object, Object> arrays = new LinkedHashMap<>();
         arrays.put(new int[] {1, 2}, new Object[] {new int[] {3, 4}});
-        assertStatus(ConditionProvider.containsEntry(new int[] {1, 2},
+        assertStatus(containsEntry(new int[] {1, 2},
                         new Object[] {new int[] {3, 4}}),
                 arrays, Evaluation.Status.SATISFIED);
     }
@@ -262,24 +264,24 @@ class MapConditionsTest {
         HashMap<String, String> nullable = new HashMap<>();
         nullable.put(null, null);
         nullable.put("present", null);
-        assertStatus(ConditionProvider.containsKey((String) null), nullable,
+        assertStatus(containsKey((String) null), nullable,
                 Evaluation.Status.SATISFIED);
-        assertStatus(ConditionProvider.containsValue((String) null), nullable,
+        assertStatus(containsValue((String) null), nullable,
                 Evaluation.Status.SATISFIED);
-        assertStatus(ConditionProvider.containsEntry("present", null), nullable,
+        assertStatus(containsEntry("present", null), nullable,
                 Evaluation.Status.SATISFIED);
-        assertStatus(ConditionProvider.containsEntry("absent", null), nullable,
+        assertStatus(containsEntry("absent", null), nullable,
                 Evaluation.Status.UNSATISFIED);
 
         TreeMap<String, String> tree = new TreeMap<>();
         tree.put("a", "1");
-        assertStatus(ConditionProvider.containsKey((String) null), tree,
+        assertStatus(containsKey((String) null), tree,
                 Evaluation.Status.UNSATISFIED);
-        assertStatus(ConditionProvider.containsEntry(null, null), tree,
+        assertStatus(containsEntry(null, null), tree,
                 Evaluation.Status.UNSATISFIED);
 
         var rejecting = entryMap(entry("a", "1"));
-        assertStatus(ConditionProvider.containsEntry("a", "1"), rejecting,
+        assertStatus(containsEntry("a", "1"), rejecting,
                 Evaluation.Status.SATISFIED);
         assertNoLookupCalls(rejecting);
     }
@@ -296,9 +298,9 @@ class MapConditionsTest {
         unequal.put(new int[] {1}, "a");
         unequal.put(new int[] {1}, "a");
 
-        assertStatus(ConditionProvider.containsExactlyEntriesOf(equal), actual,
+        assertStatus(containsExactlyEntriesOf(equal), actual,
                 Evaluation.Status.SATISFIED);
-        assertStatus(ConditionProvider.containsExactlyEntriesOf(unequal), actual,
+        assertStatus(containsExactlyEntriesOf(unequal), actual,
                 Evaluation.Status.UNSATISFIED);
     }
 
@@ -336,12 +338,12 @@ class MapConditionsTest {
         }
 
         List<Executable> nullFactories = List.of(
-                () -> ConditionProvider.containsAllEntriesOf(null),
-                () -> ConditionProvider.doesNotContainAllEntriesOf(null),
-                () -> ConditionProvider.containsAnyEntriesOf(null),
-                () -> ConditionProvider.containsNoEntriesOf(null),
-                () -> ConditionProvider.containsExactlyEntriesOf(null),
-                () -> ConditionProvider.doesNotContainExactlyEntriesOf(null));
+                () -> containsAllEntriesOf(null),
+                () -> doesNotContainAllEntriesOf(null),
+                () -> containsAnyEntriesOf(null),
+                () -> containsNoEntriesOf(null),
+                () -> containsExactlyEntriesOf(null),
+                () -> doesNotContainExactlyEntriesOf(null));
         nullFactories.forEach(factory -> assertEquals(
                 "expected entries must not be null",
                 assertThrows(NullPointerException.class, factory).getMessage()));
@@ -358,9 +360,9 @@ class MapConditionsTest {
         }
 
         var emptyActual = MapConditionsTest.<String, String>entryMap();
-        assertStatus(ConditionProvider.containsExactlyEntriesOf(Map.of()),
+        assertStatus(containsExactlyEntriesOf(Map.of()),
                 emptyActual, Evaluation.Status.SATISFIED);
-        assertStatus(ConditionProvider.doesNotContainExactlyEntriesOf(Map.of()),
+        assertStatus(doesNotContainExactlyEntriesOf(Map.of()),
                 emptyActual, Evaluation.Status.UNSATISFIED);
     }
 
@@ -384,7 +386,7 @@ class MapConditionsTest {
 
         assertThrows(AwaitTimeoutException.class,
                 () -> timed(actual).until(
-                        ConditionProvider.containsKey("missing")
+                        containsKey("missing")
                                 .because("required")));
 
         assertEquals(1, actual.entrySetCalls);
@@ -395,7 +397,7 @@ class MapConditionsTest {
     @Test
     void genericFactoriesPreserveBoundsAndConcreteMapResults()
             throws IOException {
-        assertTrue(CompilationSupport.compiles(temporaryDirectory, """
+        assertTrue(compiles(temporaryDirectory, """
                 import static io.github.gromoff97.awium.Awium.await;
                 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
                 import io.github.gromoff97.awium.sources.MapSource;
@@ -415,7 +417,7 @@ class MapConditionsTest {
                     }
                 }
                 """));
-        assertFalse(CompilationSupport.compiles(temporaryDirectory, """
+        assertFalse(compiles(temporaryDirectory, """
                 import static io.github.gromoff97.awium.Awium.await;
                 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
                 import io.github.gromoff97.awium.sources.MapSource;
@@ -449,8 +451,8 @@ class MapConditionsTest {
             PreservingCondition<? super M> condition, M actual,
             boolean explained) throws Exception {
         RuntimeCondition<M, M> runtime = explained
-                ? RuntimeCondition.preserving(condition.because("reason"))
-                : RuntimeCondition.preserving(condition);
+                ? preserving(condition.because("reason"))
+                : preserving(condition);
         assertEquals(explained ? "reason" : null, runtime.explanation());
         assertFalse(runtime.description().get().isBlank());
         return runtime.evaluate(actual);
@@ -511,7 +513,7 @@ class MapConditionsTest {
         MapRun run = failureRun.run();
         AwaitConditionEvaluationException failure = assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> Awium.await((MapSource<
+                () -> await((MapSource<
                         ProbeContainers.EntryMap<Object, Object>>)
                                 run::actual)
                         .until(castObject(run.condition())));
@@ -550,14 +552,14 @@ class MapConditionsTest {
         CountingValue expectedValue = new CountingValue(expectedValueLabel);
         PreservingCondition<?> condition = switch (singular) {
             case KEY -> positive
-                    ? ConditionProvider.containsKey(expectedKey)
-                    : ConditionProvider.doesNotContainKey(expectedKey);
+                    ? containsKey(expectedKey)
+                    : doesNotContainKey(expectedKey);
             case VALUE -> positive
-                    ? ConditionProvider.containsValue(expectedValue)
-                    : ConditionProvider.doesNotContainValue(expectedValue);
+                    ? containsValue(expectedValue)
+                    : doesNotContainValue(expectedValue);
             case ENTRY -> positive
-                    ? ConditionProvider.containsEntry(expectedKey, expectedValue)
-                    : ConditionProvider.doesNotContainEntry(
+                    ? containsEntry(expectedKey, expectedValue)
+                    : doesNotContainEntry(
                             expectedKey, expectedValue);
         };
         return new MapRun(actual, null, condition, actualEntries, List.of(),
@@ -572,11 +574,11 @@ class MapConditionsTest {
         var expected = entryMap(expectedEntries);
         PreservingCondition<?> condition = all
                 ? positive
-                        ? ConditionProvider.containsAllEntriesOf(expected)
-                        : ConditionProvider.doesNotContainAllEntriesOf(expected)
+                        ? containsAllEntriesOf(expected)
+                        : doesNotContainAllEntriesOf(expected)
                 : positive
-                        ? ConditionProvider.containsAnyEntriesOf(expected)
-                        : ConditionProvider.containsNoEntriesOf(expected);
+                        ? containsAnyEntriesOf(expected)
+                        : containsNoEntriesOf(expected);
         return new MapRun(actual, expected, condition, actualEntries,
                 expectedEntries, List.of());
     }
@@ -596,8 +598,8 @@ class MapConditionsTest {
         var actual = entryMap(actualEntries);
         var expected = entryMap(expectedEntries);
         PreservingCondition<?> condition = positive
-                ? ConditionProvider.containsExactlyEntriesOf(expected)
-                : ConditionProvider.doesNotContainExactlyEntriesOf(expected);
+                ? containsExactlyEntriesOf(expected)
+                : doesNotContainExactlyEntriesOf(expected);
         return new MapRun(actual, expected, condition, actualEntries,
                 expectedEntries, List.of());
     }
@@ -637,12 +639,12 @@ class MapConditionsTest {
 
         PreservingCondition<?> condition = exact
                 ? positive
-                        ? ConditionProvider.containsExactlyEntriesOf(expected)
-                        : ConditionProvider.doesNotContainExactlyEntriesOf(
+                        ? containsExactlyEntriesOf(expected)
+                        : doesNotContainExactlyEntriesOf(
                                 expected)
                 : positive
-                        ? ConditionProvider.containsAnyEntriesOf(expected)
-                        : ConditionProvider.containsNoEntriesOf(expected);
+                        ? containsAnyEntriesOf(expected)
+                        : containsNoEntriesOf(expected);
         return new FailureRun(new MapRun(actual, expected, condition,
                 List.of(actualEntry), List.of(expectedEntry), List.of()), cause);
     }
@@ -713,7 +715,7 @@ class MapConditionsTest {
                     time.advanceNanos(2);
                     return actual;
                 }, Map::size,
-                WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
+                defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)), time, time,
                 new FailureFactory());
     }

@@ -1,6 +1,8 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -36,7 +38,7 @@ class AssertionAdapterTest {
         var condition = ConditionProvider.<Payment, Long>condition(
                 "payment id", payment -> {
                     invocations[0]++;
-                    return Evaluation.satisfied(payment.id());
+                    return satisfied(payment.id());
                 });
 
         Evaluation<Long> evaluation = condition.evaluate(new Payment(42));
@@ -52,17 +54,17 @@ class AssertionAdapterTest {
             throws Exception {
         assertEquals("description must not be null",
                 assertThrows(NullPointerException.class,
-                        () -> ConditionProvider.condition(null,
-                                payment -> Evaluation.satisfied(payment)))
+                        () -> condition(null,
+                                payment -> satisfied(payment)))
                         .getMessage());
         assertEquals("description must not be blank",
                 assertThrows(IllegalArgumentException.class,
-                        () -> ConditionProvider.condition(" \n ",
-                                payment -> Evaluation.satisfied(payment)))
+                        () -> condition(" \n ",
+                                payment -> satisfied(payment)))
                         .getMessage());
         assertEquals("evaluation must not be null",
                 assertThrows(NullPointerException.class,
-                        () -> ConditionProvider.condition("payment", null))
+                        () -> condition("payment", null))
                         .getMessage());
 
         var condition = ConditionProvider.<Payment, Payment>condition(
@@ -220,10 +222,10 @@ class AssertionAdapterTest {
     void assertionFactoriesRejectNullCallbacks() {
         assertEquals("assertion must not be null",
                 assertThrows(NullPointerException.class,
-                        () -> ConditionProvider.asserted(null)).getMessage());
+                        () -> asserted(null)).getMessage());
         assertEquals("assertion must not be null",
                 assertThrows(NullPointerException.class,
-                        () -> ConditionProvider.passed(null)).getMessage());
+                        () -> passed(null)).getMessage());
     }
 
     @Test
@@ -242,7 +244,7 @@ class AssertionAdapterTest {
     }
 
     private static Await.Until<Payment> stage(FakeTime time, Payment actual) {
-        WaitConfiguration config = WaitConfiguration.defaults()
+        WaitConfiguration config = defaults()
                 .withEvery(Duration.ofNanos(1))
                 .withUpTo(Duration.ofNanos(10));
         return new AwaitStage<>((Source<Payment>) () -> actual, config,
@@ -253,7 +255,6 @@ class AssertionAdapterTest {
     }
 
     private static final class MessageReadingAssertion extends AssertionError {
-        private static final long serialVersionUID = 1L;
         private int messageReads;
 
         @Override

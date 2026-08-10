@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.Evaluation.*;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.*;
@@ -22,7 +23,7 @@ class EvaluationContractTest {
 
     @Test
     void satisfiedAcceptsNull() {
-        Evaluation<String> evaluation = Evaluation.satisfied(null);
+        Evaluation<String> evaluation = satisfied(null);
 
         assertNull(evaluation.result());
         assertEquals(Evaluation.Status.SATISFIED, evaluation.status());
@@ -31,11 +32,11 @@ class EvaluationContractTest {
     @Test
     void unsatisfiedValidatesMismatch() {
         var nullFailure = assertThrows(NullPointerException.class,
-                () -> Evaluation.unsatisfied(null));
+                () -> unsatisfied(null));
         assertEquals("mismatch must not be null", nullFailure.getMessage());
 
         var blankFailure = assertThrows(IllegalArgumentException.class,
-                () -> Evaluation.unsatisfied("  \n"));
+                () -> unsatisfied("  \n"));
         assertEquals("mismatch must not be blank", blankFailure.getMessage());
     }
 
@@ -53,8 +54,8 @@ class EvaluationContractTest {
         assertEquals(Evaluation.Status.UNCONTROLLED, uncontrolledFailure.status());
         assertSame(uncontrolled, uncontrolledFailure.uncontrolledCause());
         assertThrows(NullPointerException.class,
-                () -> Evaluation.assertionUnsatisfied("failed", null));
-        assertThrows(NullPointerException.class, () -> Evaluation.uncontrolled(null));
+                () -> assertionUnsatisfied("failed", null));
+        assertThrows(NullPointerException.class, () -> uncontrolled(null));
     }
 
     @Test
@@ -63,17 +64,17 @@ class EvaluationContractTest {
         var assertion = new AssertionError("failed");
         var cause = new IllegalStateException("broken");
 
-        Evaluation<Object> satisfied = Evaluation.narrow(Evaluation.satisfied(result));
-        Evaluation<Object> unsatisfied = Evaluation.narrow(Evaluation.unsatisfied("no"));
-        Evaluation<Object> assertionFailure = Evaluation.narrow(
-                Evaluation.assertionUnsatisfied("failed", assertion));
-        Evaluation<Object> uncontrolled = Evaluation.narrow(Evaluation.uncontrolled(cause));
+        Evaluation<Object> satisfied = narrow(satisfied(result));
+        Evaluation<Object> unsatisfied = narrow(unsatisfied("no"));
+        Evaluation<Object> assertionFailure = narrow(
+                assertionUnsatisfied("failed", assertion));
+        Evaluation<Object> uncontrolled = narrow(uncontrolled(cause));
 
         assertSame(result, satisfied.result());
         assertEquals("no", unsatisfied.mismatch());
         assertSame(assertion, assertionFailure.assertionCause());
         assertSame(cause, uncontrolled.uncontrolledCause());
-        assertNull(Evaluation.narrow(null));
+        assertNull(narrow(null));
     }
 
     @Test

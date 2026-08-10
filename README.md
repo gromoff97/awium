@@ -14,7 +14,7 @@ Payment payment = await(paymentRepository::findById)
         .every(Duration.ofMillis(100))
         .upTo(Duration.ofSeconds(10))
         .stableFor(Duration.ofSeconds(5))
-        .until(present.because("Payment must become and remain available"));
+        .until(present.because("Checkout cannot continue without the payment"));
 ```
 
 ## Installation
@@ -97,12 +97,21 @@ Receipt receipt = await(paymentRepository::load)
 ```
 
 Every raw condition form supports one eager `because(...)` explanation. It is
-included in terminal diagnostics without changing evaluation or result typing:
+included in terminal diagnostics without changing evaluation or result typing.
+`because` states why the business requires the condition; it should not merely
+repeat what the condition checks:
 
 ```java
+// Avoid: repeats nonEmpty.
+nonEmpty.because("The collection must not be empty");
+
+// Prefer: states the business consequence.
+nonEmpty.because("Settlement requires at least one eligible payment");
+
 await(paymentRepository::load)
         .until(equalTo(expectedPayment)
-                .because("payment %s must be replicated", paymentId));
+                .because("Refund processing requires payment %s in the replica",
+                        paymentId));
 ```
 
 Sources and callback adapters may throw checked exceptions. `asserted(...)`
@@ -130,7 +139,8 @@ Collection state and membership conditions preserve the concrete collection:
 
 ```java
 List<Payment> payments = await(paymentRepository::findAll)
-        .until(nonEmpty.because("at least one payment must exist"));
+        .until(nonEmpty.because(
+                "Settlement requires at least one eligible payment"));
 
 List<Payment> exact = await(paymentRepository::findAll)
         .until(containsExactly(firstPayment, secondPayment));
@@ -151,7 +161,7 @@ Map<String, Payment> indexed = await(paymentRepository::index)
 
 Map<String, Payment> completeIndex = await(paymentRepository::index)
         .until(containsExactlyEntriesOf(expectedIndex)
-                .because("the payment index must converge"));
+                .because("Reconciliation requires the complete payment index"));
 ```
 
 ## Threading and interruption

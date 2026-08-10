@@ -2,7 +2,11 @@ package io.github.gromoff97.awium.conditioning.conditions;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 
-import java.util.Objects;
+import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
+import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.formattedExplanation;
+import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.literalExplanation;
+import static java.util.Objects.requireNonNull;
 
 public final class StructuralCondition {
 
@@ -10,25 +14,25 @@ public final class StructuralCondition {
     private final int bound;
 
     private StructuralCondition(Relation relation, int bound) {
-        this.relation = Objects.requireNonNull(relation);
+        this.relation = requireNonNull(relation);
         this.bound = bound;
     }
 
     public final ExplainedCondition because(String explanation) {
         return new ExplainedCondition(this,
-                RuntimeCondition.literalExplanation(explanation));
+                literalExplanation(explanation));
     }
 
     public final ExplainedCondition because(
             String format, Object... arguments) {
         return new ExplainedCondition(this,
-                RuntimeCondition.formattedExplanation(format, arguments));
+                formattedExplanation(format, arguments));
     }
 
     <S> Evaluation<S> evaluate(int size, S actual, String subject) {
         return relation.matches(size, bound)
-                ? Evaluation.satisfied(actual)
-                : Evaluation.unsatisfied(relation.mismatch(subject, size));
+                ? satisfied(actual)
+                : unsatisfied(relation.mismatch(subject, size));
     }
 
     String description(String subject) {
@@ -81,8 +85,8 @@ public final class StructuralCondition {
 
         private ExplainedCondition(StructuralCondition delegate,
                 String explanation) {
-            this.delegate = Objects.requireNonNull(delegate);
-            this.explanation = Objects.requireNonNull(explanation);
+            this.delegate = requireNonNull(delegate);
+            this.explanation = requireNonNull(explanation);
         }
 
         public StructuralCondition delegate() {

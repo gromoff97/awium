@@ -11,9 +11,12 @@ import io.github.gromoff97.awium.conditioning.conditions.StructuralCondition;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.SequencedCollection;
+
+import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
+import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+import static java.util.Objects.requireNonNull;
 
 public final class ConditionProvider {
 
@@ -28,6 +31,7 @@ public final class ConditionProvider {
             ObjectConditionProvider.isNotNull();
 
     private ConditionProvider() {
+        throw new AssertionError("Utility class");
     }
 
     public static PreservingCondition<Object> equalTo(Object expected) {
@@ -247,11 +251,11 @@ public final class ConditionProvider {
     public static <S, R> Condition<S, R> condition(
             String description,
             CheckedFunction<? super S, Evaluation<R>> evaluation) {
-        Objects.requireNonNull(description, "description must not be null");
+        requireNonNull(description, "description must not be null");
         if (description.isBlank()) {
             throw new IllegalArgumentException("description must not be blank");
         }
-        Objects.requireNonNull(evaluation, "evaluation must not be null");
+        requireNonNull(evaluation, "evaluation must not be null");
         return new Condition<>() {
             @Override
             public Evaluation<R> evaluate(S actual) throws Exception {
@@ -267,13 +271,13 @@ public final class ConditionProvider {
 
     public static <S> PreservingCondition<S> asserted(
             CheckedConsumer<? super S> assertion) {
-        Objects.requireNonNull(assertion, "assertion must not be null");
+        requireNonNull(assertion, "assertion must not be null");
         return PreservingCondition.of(new RuntimeCondition<>(actual -> {
             try {
                 assertion.accept(actual);
-                return Evaluation.satisfied(actual);
+                return satisfied(actual);
             } catch (AssertionError error) {
-                return Evaluation.assertionUnsatisfied(
+                return assertionUnsatisfied(
                         "assertion did not pass", error);
             }
         }, () -> "assertion to pass", null));
@@ -281,13 +285,13 @@ public final class ConditionProvider {
 
     public static <S, R> Condition<S, R> passed(
             CheckedFunction<? super S, ? extends R> assertion) {
-        Objects.requireNonNull(assertion, "assertion must not be null");
+        requireNonNull(assertion, "assertion must not be null");
         return condition("assertion to pass", actual -> {
             try {
                 R result = assertion.apply(actual);
-                return Evaluation.satisfied(result);
+                return satisfied(result);
             } catch (AssertionError error) {
-                return Evaluation.assertionUnsatisfied(
+                return assertionUnsatisfied(
                         "assertion did not pass", error);
             }
         });

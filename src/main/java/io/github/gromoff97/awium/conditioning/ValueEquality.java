@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium.conditioning;
 
+import static java.lang.System.identityHashCode;
+
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Deque;
@@ -10,6 +12,7 @@ import java.util.Set;
 public final class ValueEquality {
 
     private ValueEquality() {
+        throw new AssertionError("Utility class");
     }
 
     public static boolean equal(Object actual, Object expected) {
@@ -104,8 +107,7 @@ public final class ValueEquality {
 
         @Override
         public int hashCode() {
-            return 31 * System.identityHashCode(actual)
-                    + System.identityHashCode(expected);
+            return 31 * identityHashCode(actual) + identityHashCode(expected);
         }
     }
 }

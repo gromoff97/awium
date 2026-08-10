@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.engine;
 
-import java.util.Objects;
+import static java.util.Objects.requireNonNull;
 
 public record WaitOutcome<R>(
         Kind kind,
@@ -10,8 +10,8 @@ public record WaitOutcome<R>(
         Attempt<R> attempt) {
 
     public WaitOutcome {
-        Objects.requireNonNull(kind);
-        Objects.requireNonNull(attempt);
+        requireNonNull(kind);
+        requireNonNull(attempt);
         Attempt.Status expected = switch (kind) {
             case SUCCESS, LATE_SATISFIED_TIMEOUT -> Attempt.Status.SATISFIED;
             case TIMEOUT_BETWEEN_OBSERVATIONS, LATE_UNSATISFIED_TIMEOUT,

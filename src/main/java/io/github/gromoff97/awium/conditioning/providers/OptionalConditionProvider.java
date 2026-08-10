@@ -1,27 +1,31 @@
 package io.github.gromoff97.awium.conditioning.providers;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.ValueEquality;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.PresentCondition;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 
-import java.util.Objects;
 import java.util.Optional;
+
+import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
+import static io.github.gromoff97.awium.conditioning.ValueEquality.equal;
+import static java.util.Objects.requireNonNull;
 
 final class OptionalConditionProvider {
 
     private OptionalConditionProvider() {
+        throw new AssertionError("Utility class");
     }
 
     static PresentCondition present() {
         return PresentCondition.of(new RuntimeCondition<>(actual -> {
             if (actual == null) {
-                return Evaluation.unsatisfied("optional was null");
+                return unsatisfied("optional was null");
             }
             return actual.isPresent()
-                    ? Evaluation.satisfied(actual.orElseThrow())
-                    : Evaluation.unsatisfied("optional was empty");
+                    ? satisfied(actual.orElseThrow())
+                    : unsatisfied("optional was empty");
         }, () -> "optional to remain present", null));
     }
 
@@ -30,11 +34,11 @@ final class OptionalConditionProvider {
             @Override
             public Evaluation<Void> evaluate(Optional<?> actual) {
                 if (actual == null) {
-                    return Evaluation.unsatisfied("optional was null");
+                    return unsatisfied("optional was null");
                 }
                 return actual.isEmpty()
-                        ? Evaluation.satisfied(null)
-                        : Evaluation.unsatisfied("optional was present");
+                        ? satisfied(null)
+                        : unsatisfied("optional was present");
             }
 
             @Override
@@ -45,12 +49,12 @@ final class OptionalConditionProvider {
     }
 
     static <T> Condition<Optional<T>, T> hasValueEqualTo(T expected) {
-        Objects.requireNonNull(expected, "expected must not be null");
+        requireNonNull(expected, "expected must not be null");
         return valueCondition(expected, true);
     }
 
     static <T> Condition<Optional<T>, T> hasValueNotEqualTo(T unexpected) {
-        Objects.requireNonNull(unexpected, "unexpected must not be null");
+        requireNonNull(unexpected, "unexpected must not be null");
         return valueCondition(unexpected, false);
     }
 
@@ -60,15 +64,15 @@ final class OptionalConditionProvider {
             @Override
             public Evaluation<T> evaluate(Optional<T> actual) {
                 if (actual == null) {
-                    return Evaluation.unsatisfied("optional was null");
+                    return unsatisfied("optional was null");
                 }
                 if (actual.isEmpty()) {
-                    return Evaluation.unsatisfied("optional was empty");
+                    return unsatisfied("optional was empty");
                 }
                 T value = actual.orElseThrow();
-                return ValueEquality.equal(value, operand) == equal
-                        ? Evaluation.satisfied(value)
-                        : Evaluation.unsatisfied(equal
+                return equal(value, operand) == equal
+                        ? satisfied(value)
+                        : unsatisfied(equal
                                 ? "optional value was not equal"
                                 : "optional value was equal");
             }

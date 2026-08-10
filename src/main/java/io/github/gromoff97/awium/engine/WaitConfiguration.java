@@ -1,10 +1,11 @@
 package io.github.gromoff97.awium.engine;
 
-import io.github.gromoff97.awium.diagnostics.FailureMessage;
+import static io.github.gromoff97.awium.diagnostics.FailureMessage.configurationConflict;
 import io.github.gromoff97.awium.exceptions.AwaitConfigurationConflictException;
 
 import java.time.Duration;
-import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 public record WaitConfiguration(
         long everyNanos, long upToNanos, long stableForNanos) {
@@ -39,7 +40,7 @@ public record WaitConfiguration(
     public void validatePair() {
         if (everyNanos >= upToNanos) {
             throw new AwaitConfigurationConflictException(
-                    FailureMessage.configurationConflict(
+                    configurationConflict(
                             everyNanos, upToNanos));
         }
     }
@@ -62,7 +63,7 @@ public record WaitConfiguration(
     }
 
     private static long nanos(Duration value) {
-        Objects.requireNonNull(value, "duration must not be null");
+        requireNonNull(value, "duration must not be null");
         try {
             return value.toNanos();
         } catch (ArithmeticException overflow) {

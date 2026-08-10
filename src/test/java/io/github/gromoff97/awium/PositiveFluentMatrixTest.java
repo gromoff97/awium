@@ -11,10 +11,6 @@ import io.github.gromoff97.awium.sources.OptionalSource;
 import io.github.gromoff97.awium.sources.Source;
 
 import static io.github.gromoff97.awium.Awium.await;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.isNotNull;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.nonEmpty;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.present;
 import static java.time.Duration.ZERO;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;

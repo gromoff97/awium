@@ -2,11 +2,17 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.sources.Source;
 
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.Awium.await;
+import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
+import static java.lang.System.nanoTime;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.ofPlatform;
+import static java.util.concurrent.locks.LockSupport.parkNanos;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
 import io.github.gromoff97.awium.exceptions.*;
 
@@ -18,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.locks.LockSupport;
 import org.junit.jupiter.api.Test;
 
 class RealTimeIntegrationTest {
@@ -29,7 +34,7 @@ class RealTimeIntegrationTest {
         Duration callbackDuration = Duration.ofMillis(120);
         long minimumDelayNanos = Duration.ofMillis(50).toNanos();
         long minimumStartGapNanos = callbackDuration.plusMillis(50).toNanos();
-        Thread caller = Thread.currentThread();
+        Thread caller = currentThread();
         ThreadLocal<String> local = new ThreadLocal<>();
         local.set("caller state");
         List<Thread> callbackThreads = new ArrayList<>();
@@ -40,21 +45,21 @@ class RealTimeIntegrationTest {
         int[] observations = {0};
 
         try {
-            int result = Awium.await((Source<Integer>) () -> {
-                sourceStarts.add(System.nanoTime());
-                callbackThreads.add(Thread.currentThread());
+            int result = await((Source<Integer>) () -> {
+                sourceStarts.add(nanoTime());
+                callbackThreads.add(currentThread());
                 callbackValues.add(local.get());
                 return ++observations[0];
             }).every(interval).upTo(Duration.ofSeconds(2))
-                    .until(ConditionProvider.condition("third observation", value -> {
-                        callbackThreads.add(Thread.currentThread());
+                    .until(condition("third observation", value -> {
+                        callbackThreads.add(currentThread());
                         callbackValues.add(local.get());
-                        conditionStarts.add(System.nanoTime());
+                        conditionStarts.add(nanoTime());
                         parkFor(callbackDuration);
                         Evaluation<Integer> evaluation = value == 3
-                                ? Evaluation.satisfied(value)
-                                : Evaluation.unsatisfied("not the third observation");
-                        conditionEnds.add(System.nanoTime());
+                                ? satisfied(value)
+                                : unsatisfied("not the third observation");
+                        conditionEnds.add(nanoTime());
                         return evaluation;
                     }));
 
@@ -80,24 +85,24 @@ class RealTimeIntegrationTest {
     void externalControllerCancelsTheCallerWhileItIsParked() throws Exception {
         Throwable[] terminal = new Throwable[1];
         boolean[] interrupted = new boolean[1];
-        Thread caller = Thread.ofPlatform().name("awium-platform-caller")
+        Thread caller = ofPlatform().name("awium-platform-caller")
                 .unstarted(() -> {
                     try {
-                        Awium.await((Source<Integer>) () -> 1)
+                        await((Source<Integer>) () -> 1)
                                 .every(Duration.ofSeconds(5))
                                 .upTo(Duration.ofSeconds(10))
-                                .until(ConditionProvider.condition(
+                                .until(condition(
                                         "never satisfied", value ->
-                                                Evaluation.unsatisfied("not ready")));
+                                                unsatisfied("not ready")));
                     } catch (Throwable failure) {
                         terminal[0] = failure;
-                        interrupted[0] = Thread.currentThread().isInterrupted();
+                        interrupted[0] = currentThread().isInterrupted();
                     }
                 });
         caller.start();
         awaitTimedWaiting(caller);
 
-        Thread controller = Thread.ofPlatform().daemon()
+        Thread controller = ofPlatform().daemon()
                 .name("awium-interrupt-controller")
                 .start(caller::interrupt);
         controller.join(2_000);
@@ -113,19 +118,19 @@ class RealTimeIntegrationTest {
     }
 
     private static void awaitTimedWaiting(Thread caller) {
-        long deadline = System.nanoTime() + Duration.ofSeconds(2).toNanos();
+        long deadline = nanoTime() + Duration.ofSeconds(2).toNanos();
         while (caller.getState() != Thread.State.TIMED_WAITING
-                && System.nanoTime() < deadline) {
-            LockSupport.parkNanos(Duration.ofMillis(1).toNanos());
+                && nanoTime() < deadline) {
+            parkNanos(Duration.ofMillis(1).toNanos());
         }
         assertSame(Thread.State.TIMED_WAITING, caller.getState());
     }
 
     private static void parkFor(Duration duration) {
-        long deadline = System.nanoTime() + duration.toNanos();
+        long deadline = nanoTime() + duration.toNanos();
         long remaining;
-        while ((remaining = deadline - System.nanoTime()) > 0) {
-            LockSupport.parkNanos(remaining);
+        while ((remaining = deadline - nanoTime()) > 0) {
+            parkNanos(remaining);
         }
     }
 }

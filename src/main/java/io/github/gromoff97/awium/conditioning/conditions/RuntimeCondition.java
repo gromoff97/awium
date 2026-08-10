@@ -4,10 +4,16 @@ import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 
 import java.util.Locale;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
+
+import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
+import static io.github.gromoff97.awium.conditioning.Evaluation.narrow;
+import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+import static io.github.gromoff97.awium.conditioning.Evaluation.uncontrolled;
+import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
+import static java.util.Objects.requireNonNull;
 
 public record RuntimeCondition<S, R>(
         CheckedFunction<S, Evaluation<R>> evaluator,
@@ -15,8 +21,8 @@ public record RuntimeCondition<S, R>(
         String explanation) {
 
     public RuntimeCondition {
-        Objects.requireNonNull(evaluator);
-        Objects.requireNonNull(description);
+        requireNonNull(evaluator);
+        requireNonNull(description);
     }
 
     public Evaluation<R> evaluate(S actual) throws Exception {
@@ -30,7 +36,7 @@ public record RuntimeCondition<S, R>(
     public static <S, R> RuntimeCondition<S, R> open(
             Condition<? super S, ? extends R> condition) {
         return new RuntimeCondition<>(
-                actual -> Evaluation.narrow(condition.evaluate(actual)),
+                actual -> narrow(condition.evaluate(actual)),
                 condition::description, null);
     }
 
@@ -61,7 +67,7 @@ public record RuntimeCondition<S, R>(
             Evaluation<Object> evaluation = runtime.evaluate(actual);
             if (evaluation != null
                     && evaluation.status() == Evaluation.Status.SATISFIED) {
-                return Evaluation.satisfied(actual.orElse(null));
+                return satisfied(actual.orElse(null));
             }
             return withResult(evaluation, null);
         }, runtime.description(), runtime.explanation());
@@ -78,7 +84,7 @@ public record RuntimeCondition<S, R>(
             ToIntFunction<? super S> size) {
         return new RuntimeCondition<>(actual -> {
             if (actual == null) {
-                return Evaluation.unsatisfied(subject + " was null");
+                return unsatisfied(subject + " was null");
             }
             return condition.evaluate(size.applyAsInt(actual), actual, subject);
         }, () -> condition.description(subject), null);
@@ -98,12 +104,12 @@ public record RuntimeCondition<S, R>(
             return null;
         }
         return switch (evaluation.status()) {
-            case SATISFIED -> Evaluation.satisfied(satisfiedResult);
+            case SATISFIED -> satisfied(satisfiedResult);
             case UNSATISFIED -> evaluation.assertionCause() == null
-                    ? Evaluation.unsatisfied(evaluation.mismatch())
-                    : Evaluation.assertionUnsatisfied(
+                    ? unsatisfied(evaluation.mismatch())
+                    : assertionUnsatisfied(
                             evaluation.mismatch(), evaluation.assertionCause());
-            case UNCONTROLLED -> Evaluation.uncontrolled(
+            case UNCONTROLLED -> uncontrolled(
                     evaluation.uncontrolledCause());
         };
     }
@@ -113,14 +119,14 @@ public record RuntimeCondition<S, R>(
     }
 
     static String formattedExplanation(String format, Object[] arguments) {
-        Objects.requireNonNull(format, "format must not be null");
-        Objects.requireNonNull(arguments, "arguments must not be null");
+        requireNonNull(format, "format must not be null");
+        requireNonNull(arguments, "arguments must not be null");
         return nonBlank(String.format(Locale.ROOT, format, arguments),
                 "explanation");
     }
 
     private static String nonBlank(String value, String name) {
-        Objects.requireNonNull(value, name + " must not be null");
+        requireNonNull(value, name + " must not be null");
         if (value.isBlank()) {
             throw new IllegalArgumentException(name + " must not be blank");
         }

@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.conditioning;
 
-import java.util.Objects;
+import static java.util.Objects.requireNonNull;
 
 public final class Evaluation<R> {
 
@@ -34,12 +34,12 @@ public final class Evaluation<R> {
             String mismatch, AssertionError cause) {
         return new Evaluation<>(Status.UNSATISFIED, null,
                 nonBlank(mismatch, "mismatch"),
-                Objects.requireNonNull(cause), null);
+                requireNonNull(cause), null);
     }
 
     public static <R> Evaluation<R> uncontrolled(Throwable cause) {
         return new Evaluation<>(Status.UNCONTROLLED, null, null, null,
-                Objects.requireNonNull(cause));
+                requireNonNull(cause));
     }
 
     public Status status() {
@@ -67,17 +67,17 @@ public final class Evaluation<R> {
             return null;
         }
         return switch (source.status) {
-            case SATISFIED -> Evaluation.satisfied(source.result);
+            case SATISFIED -> satisfied(source.result);
             case UNSATISFIED -> source.assertionCause == null
-                    ? Evaluation.unsatisfied(source.mismatch)
-                    : Evaluation.assertionUnsatisfied(
+                    ? unsatisfied(source.mismatch)
+                    : assertionUnsatisfied(
                             source.mismatch, source.assertionCause);
-            case UNCONTROLLED -> Evaluation.uncontrolled(source.uncontrolledCause);
+            case UNCONTROLLED -> uncontrolled(source.uncontrolledCause);
         };
     }
 
     private static String nonBlank(String value, String name) {
-        Objects.requireNonNull(value, name + " must not be null");
+        requireNonNull(value, name + " must not be null");
         if (value.isBlank()) {
             throw new IllegalArgumentException(name + " must not be blank");
         }

@@ -1,6 +1,9 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.engine.WaitOutcome.*;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -32,7 +35,7 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void formatsTheBetweenObservationsTimeoutBaselineVerbatim() {
-        WaitOutcome<Object> outcome = WaitOutcome.timeoutBetween(0, 10 * SECOND,
+        WaitOutcome<Object> outcome = timeoutBetween(0, 10 * SECOND,
                 unsatisfied(null, "collection was empty", null,
                         4, 9 * SECOND));
 
@@ -59,7 +62,7 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void formatsALateUnsatisfiedTimeoutWithTheTerminalAttempt() {
-        WaitOutcome<Object> outcome = WaitOutcome.lateUnsatisfied(0,
+        WaitOutcome<Object> outcome = lateUnsatisfied(0,
                 10 * SECOND + 200 * MILLISECOND,
                 unsatisfied(
                         "Payment[id=42, status=PENDING]",
@@ -87,7 +90,7 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void formatsALateSatisfiedTimeoutWithTheTerminalAttempt() {
-        WaitOutcome<Object> outcome = WaitOutcome.lateSatisfied(0,
+        WaitOutcome<Object> outcome = lateSatisfied(0,
                 10 * SECOND + 200 * MILLISECOND,
                 satisfied(
                         "Optional[Payment[id=42, status=COMPLETED]]",
@@ -116,7 +119,7 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void formatsAStabilityLossVerbatim() {
-        WaitOutcome<Object> outcome = WaitOutcome.stabilityLoss(0, 7 * SECOND,
+        WaitOutcome<Object> outcome = stabilityLoss(0, 7 * SECOND,
                 9 * SECOND + 100 * MILLISECOND,
                 unsatisfied(
                         "Optional.empty", "optional was empty", null, 71));
@@ -147,15 +150,15 @@ class DiagnosticsSnapshotTest {
     @Test
     void timingFieldsRemainRelativeToANonZeroClockOrigin() {
         long started = 100 * SECOND;
-        WaitOutcome<Object> between = WaitOutcome.timeoutBetween(
+        WaitOutcome<Object> between = timeoutBetween(
                 started, started + 10 * SECOND,
                 unsatisfied(null, "not yet", null,
                         2, started + 9 * SECOND));
-        WaitOutcome<Object> late = WaitOutcome.lateUnsatisfied(
+        WaitOutcome<Object> late = lateUnsatisfied(
                 started, started + 10 * SECOND + 200 * MILLISECOND,
                 unsatisfied(
                         "actual", "not yet", null, 3));
-        WaitOutcome<Object> stability = WaitOutcome.stabilityLoss(
+        WaitOutcome<Object> stability = stabilityLoss(
                 started, started + 7 * SECOND,
                 started + 9 * SECOND + 100 * MILLISECOND,
                 unsatisfied(
@@ -185,10 +188,10 @@ class DiagnosticsSnapshotTest {
     void assertionCausesAreRetainedInBetweenAndStabilityDiagnostics() {
         var betweenAssertion = new AssertionError("between assertion");
         var stabilityAssertion = new AssertionError("stability assertion");
-        WaitOutcome<Object> between = WaitOutcome.timeoutBetween(0, 10,
+        WaitOutcome<Object> between = timeoutBetween(0, 10,
                 unsatisfied(null, "assertion did not pass",
                         betweenAssertion, 2, 9));
-        WaitOutcome<Object> stability = WaitOutcome.stabilityLoss(0, 2, 3,
+        WaitOutcome<Object> stability = stabilityLoss(0, 2, 3,
                 unsatisfied("actual",
                         "assertion did not pass", stabilityAssertion, 2));
 
@@ -306,7 +309,7 @@ class DiagnosticsSnapshotTest {
                     descriptions[0]++;
                     return "condition";
                 }, null);
-        WaitOutcome<Object> outcome = WaitOutcome.success(0, 0, 0,
+        WaitOutcome<Object> outcome = success(0, 0, 0,
                 satisfied(actual, result, 1));
 
         assertSame(result, complete(new FailureFactory(),
@@ -375,7 +378,7 @@ class DiagnosticsSnapshotTest {
     @Test
     void readsATerminalAssertionMessageOnceAndReusesIt() {
         var assertion = new CountingAssertion("expected\r\nbut was");
-        WaitOutcome<Object> outcome = WaitOutcome.lateUnsatisfied(0, 2,
+        WaitOutcome<Object> outcome = lateUnsatisfied(0, 2,
                 unsatisfied("actual",
                         "assertion did not pass", assertion, 1));
 
@@ -477,10 +480,8 @@ class DiagnosticsSnapshotTest {
         var nullMessage = new CountingCause(null);
         var blankMessage = new CountingCause(" \t");
         RuntimeException anonymous = new RuntimeException() {
-            private static final long serialVersionUID = 1L;
         };
         RuntimeException anonymousMessageFailure = new RuntimeException() {
-            private static final long serialVersionUID = 1L;
         };
         var throwingMessage = new ThrowingMessageCause(anonymousMessageFailure);
 
@@ -511,25 +512,25 @@ class DiagnosticsSnapshotTest {
                 uncontrolled(
                         Attempt.Origin.SOURCE, sourceCause, 1));
         var interruptingActual = new InterruptingValue();
-        WaitOutcome<Object> timeoutOutcome = WaitOutcome.lateUnsatisfied(0, 2,
+        WaitOutcome<Object> timeoutOutcome = lateUnsatisfied(0, 2,
                 unsatisfied(
                         interruptingActual, "not ready", null, 1));
 
-        Thread.interrupted();
+        interrupted();
         try {
             AwaitSourceRetrievalException sourceFailure = assertThrows(
                     AwaitSourceRetrievalException.class,
                     () -> complete(new FailureFactory(), sourceOutcome,
                             new RuntimeCondition<>(
                                     value -> Evaluation.satisfied(value), () -> {
-                                        Thread.currentThread().interrupt();
+                                        currentThread().interrupt();
                                         return "condition";
                                     }, null), config(1, 2, 0)));
             assertSame(sourceCause, sourceFailure.getCause());
             assertFalse(sourceFailure.getMessage().contains("Interrupt flag"));
-            assertTrue(Thread.currentThread().isInterrupted());
+            assertTrue(currentThread().isInterrupted());
         } finally {
-            Thread.interrupted();
+            interrupted();
         }
 
         try {
@@ -539,10 +540,10 @@ class DiagnosticsSnapshotTest {
                             config(1, 2, 0)));
             assertNull(timeoutFailure.getCause());
             assertFalse(timeoutFailure.getMessage().contains("Interrupt flag"));
-            assertTrue(Thread.currentThread().isInterrupted());
+            assertTrue(currentThread().isInterrupted());
             assertEquals(1, interruptingActual.calls);
         } finally {
-            Thread.interrupted();
+            interrupted();
         }
     }
 
@@ -556,7 +557,7 @@ class DiagnosticsSnapshotTest {
             context.actualValue();
             throw formatterFailure;
         };
-        WaitOutcome<Object> outcome = WaitOutcome.lateUnsatisfied(0, 2,
+        WaitOutcome<Object> outcome = lateUnsatisfied(0, 2,
                 unsatisfied(actual, "not ready", null, 1));
 
         NullPointerException failure = assertThrows(NullPointerException.class,
@@ -586,7 +587,7 @@ class DiagnosticsSnapshotTest {
                     descriptions[0]++;
                     return "condition";
                 }, "payment must complete");
-        WaitOutcome<Object> outcome = WaitOutcome.lateUnsatisfied(0, 2,
+        WaitOutcome<Object> outcome = lateUnsatisfied(0, 2,
                 unsatisfied(actual, "not ready", null, 7));
 
         AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
@@ -616,7 +617,7 @@ class DiagnosticsSnapshotTest {
             context.actualValue();
             throw formatterFailure;
         };
-        WaitOutcome<Object> outcome = WaitOutcome.lateUnsatisfied(0, 2,
+        WaitOutcome<Object> outcome = lateUnsatisfied(0, 2,
                 unsatisfied(actual, "not ready", null, 3));
 
         AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
@@ -638,11 +639,11 @@ class DiagnosticsSnapshotTest {
         WaitOutcome<Object> sourceFailure = WaitOutcome.uncontrolled(
                 uncontrolled(Attempt.Origin.SOURCE,
                         new IllegalStateException("source"), 1));
-        WaitOutcome<Object> valueFailure = WaitOutcome.lateUnsatisfied(0, 2,
+        WaitOutcome<Object> valueFailure = lateUnsatisfied(0, 2,
                 unsatisfied(new ThrowingValue(valueFatal),
                         "not ready", null, 1));
         var assertion = new CountingAssertion(messageFatal);
-        WaitOutcome<Object> assertionFailure = WaitOutcome.lateUnsatisfied(0, 2,
+        WaitOutcome<Object> assertionFailure = lateUnsatisfied(0, 2,
                 unsatisfied("actual",
                         "assertion did not pass", assertion, 1));
 
@@ -706,7 +707,7 @@ class DiagnosticsSnapshotTest {
                         renderedActual(null)));
 
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
-                () -> complete(WaitOutcome.lateUnsatisfied(0,
+                () -> complete(lateUnsatisfied(0,
                                 SECOND + MILLISECOND + 1_001,
                                 unsatisfied("actual", "not ready", null, 1)),
                         "condition", null, config(0, 90 * SECOND, 0)));
@@ -726,7 +727,7 @@ class DiagnosticsSnapshotTest {
 
     private static AwaitTimeoutException assertionTimeout(
             CountingAssertion assertion) {
-        WaitOutcome<Object> outcome = WaitOutcome.lateUnsatisfied(0, 2,
+        WaitOutcome<Object> outcome = lateUnsatisfied(0, 2,
                 unsatisfied("actual",
                         "assertion did not pass", assertion, 1));
         return assertThrows(AwaitTimeoutException.class,
@@ -749,7 +750,7 @@ class DiagnosticsSnapshotTest {
 
     private static String renderedActual(Object actual) {
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
-                () -> complete(WaitOutcome.lateUnsatisfied(0, 2,
+                () -> complete(lateUnsatisfied(0, 2,
                                 unsatisfied(actual, "not ready", null, 1)),
                         "condition", null, config(1, 2, 0)));
         String prefix = "Observed: ";
@@ -820,8 +821,6 @@ class DiagnosticsSnapshotTest {
     }
 
     private static final class CountingAssertion extends AssertionError {
-        private static final long serialVersionUID = 1L;
-
         private final String message;
         private final Throwable thrown;
         private int calls;
@@ -850,8 +849,6 @@ class DiagnosticsSnapshotTest {
     }
 
     private static final class CountingCause extends RuntimeException {
-        private static final long serialVersionUID = 1L;
-
         private final String message;
         private int calls;
 
@@ -867,8 +864,6 @@ class DiagnosticsSnapshotTest {
     }
 
     private static final class ThrowingMessageCause extends RuntimeException {
-        private static final long serialVersionUID = 1L;
-
         private final RuntimeException thrown;
         private int calls;
 
@@ -889,7 +884,7 @@ class DiagnosticsSnapshotTest {
         @Override
         public String toString() {
             calls++;
-            Thread.currentThread().interrupt();
+            currentThread().interrupt();
             return "actual";
         }
     }

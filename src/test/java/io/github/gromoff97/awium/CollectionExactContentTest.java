@@ -1,14 +1,17 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.Awium.await;
+import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
+import static java.lang.reflect.Modifier.isStatic;
+import static java.util.stream.Collectors.toSet;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
-
-import io.github.gromoff97.awium.engine.*;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.StructuralAwait;
@@ -24,7 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.lang.reflect.Modifier;
 import java.time.Duration;
 import java.util.AbstractCollection;
 import java.util.AbstractList;
@@ -42,23 +44,23 @@ class CollectionExactContentTest {
 
     private static final List<Pair> PAIRS = List.of(
             new Pair("containsExactly",
-                    ConditionProvider.containsExactly("a", "a"),
-                    ConditionProvider.doesNotContainExactly("a", "a"),
+                    containsExactly("a", "a"),
+                    doesNotContainExactly("a", "a"),
                     List.of("a", "a"), List.of("a", "b")),
             new Pair("containsExactlyElementsOf",
-                    ConditionProvider.containsExactlyElementsOf(
+                    containsExactlyElementsOf(
                             List.of("a", "a")),
-                    ConditionProvider.doesNotContainExactlyElementsOf(
+                    doesNotContainExactlyElementsOf(
                             List.of("a", "a")),
                     List.of("a", "a"), List.of("a", "b")),
             new Pair("containsExactlyInAnyOrder",
-                    ConditionProvider.containsExactlyInAnyOrder("a", "b"),
-                    ConditionProvider.doesNotContainExactlyInAnyOrder("a", "b"),
+                    containsExactlyInAnyOrder("a", "b"),
+                    doesNotContainExactlyInAnyOrder("a", "b"),
                     List.of("b", "a"), List.of("a", "a")),
             new Pair("containsExactlyInAnyOrderElementsOf",
-                    ConditionProvider.containsExactlyInAnyOrderElementsOf(
+                    containsExactlyInAnyOrderElementsOf(
                             List.of("a", "b")),
-                    ConditionProvider.doesNotContainExactlyInAnyOrderElementsOf(
+                    doesNotContainExactlyInAnyOrderElementsOf(
                             List.of("a", "b")),
                     List.of("b", "a"), List.of("a", "a")));
 
@@ -74,16 +76,16 @@ class CollectionExactContentTest {
 
     @Test
     void negativeAnyOrderAggregateFactoryReturnsAUsablePublicCondition() {
-        assertNotNull(ConditionProvider.doesNotContainExactlyInAnyOrderElementsOf(
+        assertNotNull(doesNotContainExactlyInAnyOrderElementsOf(
                 List.of("a")));
     }
 
     @Test
     void orderedFormsAreOrderSensitiveAndAnyOrderFormsAreNot()
             throws Exception {
-        assertStatus(ConditionProvider.containsExactly("a", "b"),
+        assertStatus(containsExactly("a", "b"),
                 List.of("b", "a"), Evaluation.Status.UNSATISFIED);
-        assertStatus(ConditionProvider.containsExactlyInAnyOrder("a", "b"),
+        assertStatus(containsExactlyInAnyOrder("a", "b"),
                 List.of("b", "a"), Evaluation.Status.SATISFIED);
     }
 
@@ -94,7 +96,7 @@ class CollectionExactContentTest {
         ExpectedCollection<String> differentExpected =
                 new ExpectedCollection<>(List.of("a", "b"));
         Evaluation<?> different = evaluate(
-                ConditionProvider.containsExactlyElementsOf(differentExpected),
+                containsExactlyElementsOf(differentExpected),
                 differentActual, false);
         assertEquals(Evaluation.Status.UNSATISFIED, different.status());
         assertAccess(differentActual, 1, 0, 0);
@@ -104,7 +106,7 @@ class CollectionExactContentTest {
         ExpectedCollection<String> emptyExpected =
                 new ExpectedCollection<>(List.of());
         Evaluation<?> empty = evaluate(
-                ConditionProvider.containsExactlyElementsOf(emptyExpected),
+                containsExactlyElementsOf(emptyExpected),
                 emptyActual, false);
         assertEquals(Evaluation.Status.SATISFIED, empty.status());
         assertAccess(emptyActual, 1, 0, 0);
@@ -114,7 +116,7 @@ class CollectionExactContentTest {
         ExpectedCollection<String> equalExpected =
                 new ExpectedCollection<>(List.of("a", "b"));
         Evaluation<?> equal = evaluate(
-                ConditionProvider.containsExactlyElementsOf(equalExpected),
+                containsExactlyElementsOf(equalExpected),
                 equalActual, false);
         assertEquals(Evaluation.Status.SATISFIED, equal.status());
         assertAccess(equalActual, 1, 1, 2);
@@ -129,7 +131,7 @@ class CollectionExactContentTest {
 
         assertThrows(AwaitTimeoutException.class,
                 () -> timed(actual).until(
-                        ConditionProvider.containsExactlyElementsOf(expected)
+                        containsExactlyElementsOf(expected)
                                 .because("required")));
 
         assertAccess(actual, 1, 1, 1);
@@ -141,7 +143,7 @@ class CollectionExactContentTest {
             throws Exception {
         String[] array = {"before"};
         PreservingCondition<?> arrayCondition =
-                ConditionProvider.containsExactly(array);
+                containsExactly(array);
         array[0] = "after";
         assertEquals(Evaluation.Status.SATISFIED,
                 evaluate(castString(arrayCondition),
@@ -149,36 +151,36 @@ class CollectionExactContentTest {
 
         ArrayList<String> values = new ArrayList<>(List.of("before"));
         PreservingCondition<?> collectionCondition =
-                ConditionProvider.containsExactlyElementsOf(values);
+                containsExactlyElementsOf(values);
         values.set(0, "after");
         assertEquals(Evaluation.Status.SATISFIED,
                 evaluate(castString(collectionCondition),
                         new ExactList<>(List.of("after")), false).status());
 
-        assertStatus(ConditionProvider.containsExactly(), List.of(),
+        assertStatus(containsExactly(), List.of(),
                 Evaluation.Status.SATISFIED);
-        assertStatus(ConditionProvider.doesNotContainExactly(), List.of(),
+        assertStatus(doesNotContainExactly(), List.of(),
                 Evaluation.Status.UNSATISFIED);
-        assertStatus(ConditionProvider.containsExactlyInAnyOrderElementsOf(
+        assertStatus(containsExactlyInAnyOrderElementsOf(
                 List.of()), List.of(), Evaluation.Status.SATISFIED);
     }
 
     @Test
     void exactFactoriesRejectOnlyNullAggregateReferences() {
         List<Executable> factories = List.of(
-                () -> ConditionProvider.containsExactly((Object[]) null),
-                () -> ConditionProvider.doesNotContainExactly((Object[]) null),
-                () -> ConditionProvider.containsExactlyInAnyOrder(
+                () -> containsExactly((Object[]) null),
+                () -> doesNotContainExactly((Object[]) null),
+                () -> containsExactlyInAnyOrder(
                         (Object[]) null),
-                () -> ConditionProvider.doesNotContainExactlyInAnyOrder(
+                () -> doesNotContainExactlyInAnyOrder(
                         (Object[]) null),
-                () -> ConditionProvider.containsExactlyElementsOf(
+                () -> containsExactlyElementsOf(
                         (Collection<Object>) null),
-                () -> ConditionProvider.doesNotContainExactlyElementsOf(
+                () -> doesNotContainExactlyElementsOf(
                         (Collection<Object>) null),
-                () -> ConditionProvider.containsExactlyInAnyOrderElementsOf(
+                () -> containsExactlyInAnyOrderElementsOf(
                         (Collection<Object>) null),
-                () -> ConditionProvider.doesNotContainExactlyInAnyOrderElementsOf(
+                () -> doesNotContainExactlyInAnyOrderElementsOf(
                         (Collection<Object>) null));
 
         factories.forEach(factory -> assertEquals(
@@ -189,7 +191,7 @@ class CollectionExactContentTest {
     @Test
     void nullAndIncompatibleElementsUseLibraryEquality() throws Exception {
         String expectedNull = null;
-        assertStatus(ConditionProvider.containsExactly(expectedNull),
+        assertStatus(containsExactly(expectedNull),
                 Arrays.asList((String) null), Evaluation.Status.SATISFIED);
         assertStatus(ConditionProvider.<Object>containsExactlyInAnyOrder(1, null),
                 Arrays.asList(null, "not an integer"),
@@ -197,7 +199,7 @@ class CollectionExactContentTest {
 
         int[] actualArray = {1, 2};
         int[] expectedArray = {1, 2};
-        assertStatus(ConditionProvider.containsExactly(expectedArray),
+        assertStatus(containsExactly(expectedArray),
                 List.<Object>of(actualArray), Evaluation.Status.SATISFIED);
     }
 
@@ -206,7 +208,7 @@ class CollectionExactContentTest {
         Directional actual = new Directional(true);
         Directional expected = new Directional(false);
 
-        assertStatus(ConditionProvider.containsExactlyInAnyOrder(expected),
+        assertStatus(containsExactlyInAnyOrder(expected),
                 List.of(actual), Evaluation.Status.SATISFIED);
 
         assertEquals(1, actual.equalsCalls);
@@ -221,14 +223,14 @@ class CollectionExactContentTest {
         ExpectedValue x = new ExpectedValue("x");
         ExpectedValue y = new ExpectedValue("y");
 
-        assertStatus(ConditionProvider.containsExactlyInAnyOrder(x, y),
+        assertStatus(containsExactlyInAnyOrder(x, y),
                 List.of(first, second), Evaluation.Status.UNSATISFIED);
         assertEquals(2, first.equalsCalls + second.equalsCalls);
         assertEquals(0, x.equalsCalls + y.equalsCalls);
 
         first.equalsCalls = 0;
         second.equalsCalls = 0;
-        assertStatus(ConditionProvider.containsExactlyInAnyOrder(y, x),
+        assertStatus(containsExactlyInAnyOrder(y, x),
                 List.of(first, second), Evaluation.Status.SATISFIED);
         assertEquals(2, first.equalsCalls + second.equalsCalls);
         assertEquals(0, x.equalsCalls + y.equalsCalls);
@@ -237,26 +239,26 @@ class CollectionExactContentTest {
     @Test
     void negativeExactCannotTurnAccessOrEqualityFailuresIntoSuccess() {
         assertFailFast(actualWithSizeFailure("actual size"),
-                ConditionProvider.doesNotContainExactlyInAnyOrder("a"));
+                doesNotContainExactlyInAnyOrder("a"));
 
         ExpectedCollection<String> expectedSize =
                 new ExpectedCollection<>(List.of("a"));
         expectedSize.sizeFailure = new IllegalStateException("expected size");
         assertFailFast(new ExactList<>(List.of("a")),
-                ConditionProvider.doesNotContainExactlyElementsOf(expectedSize),
+                doesNotContainExactlyElementsOf(expectedSize),
                 expectedSize.sizeFailure);
 
         ExactList<String> actualIterator = new ExactList<>(List.of("a"));
         actualIterator.iteratorFailure = new IllegalStateException(
                 "actual iterator");
         assertFailFast(actualIterator,
-                ConditionProvider.doesNotContainExactly("a"),
+                doesNotContainExactly("a"),
                 actualIterator.iteratorFailure);
 
         ExactList<String> actualNext = new ExactList<>(List.of("a"));
         actualNext.nextFailure = new IllegalStateException("actual next");
         assertFailFast(actualNext,
-                ConditionProvider.doesNotContainExactly("a"),
+                doesNotContainExactly("a"),
                 actualNext.nextFailure);
 
         ExpectedCollection<String> expectedIterator =
@@ -264,20 +266,20 @@ class CollectionExactContentTest {
         expectedIterator.iteratorFailure = new IllegalStateException(
                 "expected iterator");
         assertFailFast(new ExactList<>(List.of("a")),
-                ConditionProvider.doesNotContainExactlyElementsOf(
+                doesNotContainExactlyElementsOf(
                         expectedIterator), expectedIterator.iteratorFailure);
 
         ExpectedCollection<String> expectedNext =
                 new ExpectedCollection<>(List.of("a"));
         expectedNext.nextFailure = new IllegalStateException("expected next");
         assertFailFast(new ExactList<>(List.of("a")),
-                ConditionProvider.doesNotContainExactlyElementsOf(expectedNext),
+                doesNotContainExactlyElementsOf(expectedNext),
                 expectedNext.nextFailure);
 
         ThrowingEquals throwing = new ThrowingEquals(
                 new IllegalStateException("equality"));
         assertFailFast(new ExactList<>(List.of(throwing)),
-                ConditionProvider.doesNotContainExactlyInAnyOrder(
+                doesNotContainExactlyInAnyOrder(
                         new ThrowingEquals(null)), throwing.failure);
     }
 
@@ -288,11 +290,11 @@ class CollectionExactContentTest {
                 new ExpectedCollection<>(List.of("a"));
         assertEquals(Evaluation.Status.UNSATISFIED,
                 RuntimeCondition.<ExactList<String>>preserving(
-                        ConditionProvider.containsExactlyElementsOf(expected))
+                        containsExactlyElementsOf(expected))
                         .evaluate(null).status());
         assertEquals(Evaluation.Status.UNSATISFIED,
                 RuntimeCondition.<ExactList<String>>preserving(
-                        ConditionProvider.doesNotContainExactlyElementsOf(expected))
+                        doesNotContainExactlyElementsOf(expected))
                         .evaluate(null).status());
         assertExpectedAccess(expected, 0, 0, 0);
     }
@@ -308,12 +310,12 @@ class CollectionExactContentTest {
                 .filter(method -> method.isVarArgs()
                         && names.contains(method.getName()))
                 .peek(method -> {
-                    assertTrue(Modifier.isStatic(method.getModifiers()));
+                    assertTrue(isStatic(method.getModifiers()));
                     assertTrue(method.isAnnotationPresent(SafeVarargs.class),
                             method.getName());
                 })
                 .map(java.lang.reflect.Method::getName)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(toSet());
 
         assertEquals(names, discovered);
     }
@@ -350,8 +352,8 @@ class CollectionExactContentTest {
             PreservingCondition<? super ExactList<E>> condition,
             ExactList<E> actual, boolean explained) throws Exception {
         RuntimeCondition<ExactList<E>, ExactList<E>> runtime = explained
-                ? RuntimeCondition.preserving(condition.because("reason"))
-                : RuntimeCondition.preserving(condition);
+                ? preserving(condition.because("reason"))
+                : preserving(condition);
         assertEquals(explained ? "reason" : null, runtime.explanation());
         assertFalse(runtime.description().get().isBlank());
         return runtime.evaluate(actual);
@@ -379,7 +381,7 @@ class CollectionExactContentTest {
             RuntimeException cause) {
         AwaitConditionEvaluationException failure = assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> Awium.await((CollectionSource<ExactList<E>>) () -> actual)
+                () -> await((CollectionSource<ExactList<E>>) () -> actual)
                         .until(condition));
         assertSame(cause, failure.getCause());
     }
@@ -407,7 +409,7 @@ class CollectionExactContentTest {
                     time.advanceNanos(2);
                     return actual;
                 }, Collection::size,
-                WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
+                defaults().withEvery(Duration.ofNanos(1))
                 .withUpTo(Duration.ofNanos(2)), time, time,
                 new FailureFactory());
     }
@@ -498,8 +500,7 @@ class CollectionExactContentTest {
         }
     }
 
-    private static final class ExpectedCollection<E>
-            extends AbstractCollection<E> {
+    private static final class ExpectedCollection<E> extends AbstractCollection<E> {
         private final List<? extends E> elements;
         private RuntimeException sizeFailure;
         private RuntimeException iteratorFailure;

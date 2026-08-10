@@ -4,9 +4,20 @@ import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.sources.Source;
 
-import java.util.Objects;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
+
+import static io.github.gromoff97.awium.engine.Attempt.satisfied;
+import static io.github.gromoff97.awium.engine.Attempt.unsatisfied;
+import static io.github.gromoff97.awium.engine.WaitOutcome.lateSatisfied;
+import static io.github.gromoff97.awium.engine.WaitOutcome.lateUnsatisfied;
+import static io.github.gromoff97.awium.engine.WaitOutcome.stabilityLoss;
+import static io.github.gromoff97.awium.engine.WaitOutcome.success;
+import static io.github.gromoff97.awium.engine.WaitOutcome.timeoutBetween;
+import static io.github.gromoff97.awium.engine.WaitOutcome.uncontrolled;
+import static java.lang.Math.min;
+import static java.lang.Thread.currentThread;
+import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("removal")
 public final class WaitEngine {
@@ -20,15 +31,15 @@ public final class WaitEngine {
 
     public WaitEngine(WaitConfiguration config, LongSupplier clock,
             LongConsumer parker) {
-        this.config = Objects.requireNonNull(config);
-        this.clock = Objects.requireNonNull(clock);
-        this.parker = Objects.requireNonNull(parker);
+        this.config = requireNonNull(config);
+        this.clock = requireNonNull(clock);
+        this.parker = requireNonNull(parker);
     }
 
     public <S, R> WaitOutcome<R> waitFor(
             Source<S> source, RuntimeCondition<S, R> condition) {
-        Objects.requireNonNull(source);
-        Objects.requireNonNull(condition);
+        requireNonNull(source);
+        requireNonNull(condition);
         long started = clock.getAsLong();
         long acquisitionDeadline = after(started, config.upToNanos());
         Attempt<R> lastUnsatisfied = null;
@@ -38,35 +49,35 @@ public final class WaitEngine {
             Attempt<R> interrupted = interrupted(
                     Attempt.Origin.WAITING, number, false, null);
             if (interrupted != null) {
-                return WaitOutcome.uncontrolled(interrupted);
+                return uncontrolled(interrupted);
             }
 
             long before = clock.getAsLong();
             if (number > 1 && reached(before, acquisitionDeadline)) {
-                return WaitOutcome.timeoutBetween(
+                return timeoutBetween(
                         started, before, lastUnsatisfied);
             }
 
             Attempt<R> observed = evaluate(source, condition, number);
             long completed = observed.completedNanos();
             if (observed.status() == Attempt.Status.UNCONTROLLED) {
-                return WaitOutcome.uncontrolled(observed);
+                return uncontrolled(observed);
             }
             if (reached(completed, acquisitionDeadline)) {
                 return observed.status() == Attempt.Status.SATISFIED
-                        ? WaitOutcome.lateSatisfied(started, completed, observed)
-                        : WaitOutcome.lateUnsatisfied(started, completed, observed);
+                        ? lateSatisfied(started, completed, observed)
+                        : lateUnsatisfied(started, completed, observed);
             }
             if (observed.status() == Attempt.Status.SATISFIED) {
                 return stabilize(source, condition, started, observed);
             }
 
             lastUnsatisfied = observed;
-            long delay = Math.min(config.everyNanos(),
+            long delay = min(config.everyNanos(),
                     remaining(completed, acquisitionDeadline));
             Attempt<R> parked = parkUntil(after(completed, delay), number + 1);
             if (parked != null) {
-                return WaitOutcome.uncontrolled(parked);
+                return uncontrolled(parked);
             }
             number++;
         }
@@ -77,7 +88,7 @@ public final class WaitEngine {
             Attempt<R> acquired) {
         long acquiredAt = acquired.completedNanos();
         if (config.stableForNanos() == 0) {
-            return WaitOutcome.success(
+            return success(
                     started, acquiredAt, acquiredAt, acquired);
         }
 
@@ -86,31 +97,31 @@ public final class WaitEngine {
         long completed = acquiredAt;
 
         for (;;) {
-            long delay = Math.min(config.everyNanos(),
+            long delay = min(config.everyNanos(),
                     remaining(completed, stabilityDeadline));
             Attempt<R> parked = parkUntil(after(completed, delay), number + 1);
             if (parked != null) {
-                return WaitOutcome.uncontrolled(parked);
+                return uncontrolled(parked);
             }
             number++;
 
             Attempt<R> interrupted = interrupted(
                     Attempt.Origin.WAITING, number, false, null);
             if (interrupted != null) {
-                return WaitOutcome.uncontrolled(interrupted);
+                return uncontrolled(interrupted);
             }
 
             Attempt<R> observed = evaluate(source, condition, number);
             completed = observed.completedNanos();
             if (observed.status() == Attempt.Status.UNCONTROLLED) {
-                return WaitOutcome.uncontrolled(observed);
+                return uncontrolled(observed);
             }
             if (observed.status() == Attempt.Status.UNSATISFIED) {
-                return WaitOutcome.stabilityLoss(
+                return stabilityLoss(
                         started, acquiredAt, completed, observed);
             }
             if (reached(completed, stabilityDeadline)) {
-                return WaitOutcome.success(
+                return success(
                         started, acquiredAt, completed, observed);
             }
         }
@@ -164,9 +175,9 @@ public final class WaitEngine {
                     number, completed);
         }
         return switch (evaluation.status()) {
-            case SATISFIED -> Attempt.satisfied(
+            case SATISFIED -> satisfied(
                     actual, evaluation.result(), number, completed);
-            case UNSATISFIED -> Attempt.unsatisfied(actual,
+            case UNSATISFIED -> unsatisfied(actual,
                     evaluation.mismatch(), evaluation.assertionCause(),
                     number, completed);
             case UNCONTROLLED -> Attempt.uncontrolled(
@@ -198,7 +209,7 @@ public final class WaitEngine {
 
     private <R> Attempt<R> interrupted(Attempt.Origin origin, long number,
             boolean hasActual, Object actual) {
-        if (!Thread.currentThread().isInterrupted()) {
+        if (!currentThread().isInterrupted()) {
             return null;
         }
         return interrupted(origin, new InterruptedException(FLAG_MESSAGE),
@@ -208,9 +219,9 @@ public final class WaitEngine {
     private <R> Attempt<R> interrupted(Attempt.Origin origin,
             InterruptedException interrupted, long number,
             boolean hasActual, Object actual) {
-        Thread.currentThread().interrupt();
+        currentThread().interrupt();
         return Attempt.uncontrolled(origin, hasActual, actual,
-                Objects.requireNonNull(interrupted), number, clock.getAsLong());
+                requireNonNull(interrupted), number, clock.getAsLong());
     }
 
     private static long after(long now, long durationNanos) {

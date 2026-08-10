@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.engine.*;
 
 import io.github.gromoff97.awium.exceptions.*;
 
+import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.lang.reflect.Modifier.isFinal;
 import static java.lang.reflect.Modifier.isPublic;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,7 +22,7 @@ class WaitConfigTest {
 
     @Test
     void defaultsUseTheSpecifiedEffectiveDurations() {
-        WaitConfiguration config = WaitConfiguration.defaults();
+        WaitConfiguration config = defaults();
 
         assertEquals(Duration.ofMillis(100).toNanos(), config.everyNanos());
         assertEquals(Duration.ofSeconds(10).toNanos(), config.upToNanos());
@@ -31,7 +32,7 @@ class WaitConfigTest {
 
     @Test
     void acceptsTheSmallestStrictlyValidDurationPair() {
-        WaitConfiguration config = WaitConfiguration.defaults()
+        WaitConfiguration config = defaults()
                 .withEvery(Duration.ofNanos(1))
                 .withUpTo(Duration.ofNanos(2))
                 .withStableFor(Duration.ofNanos(1));
@@ -44,13 +45,13 @@ class WaitConfigTest {
 
     @Test
     void configurationCreatesIndependentCandidates() {
-        WaitConfiguration defaults = WaitConfiguration.defaults();
+        WaitConfiguration defaults = defaults();
         WaitConfiguration interval = defaults.withEvery(Duration.ofSeconds(20));
         WaitConfiguration stable = defaults.withStableFor(Duration.ofSeconds(2));
 
         assertNotSame(defaults, interval);
         assertNotSame(defaults, stable);
-        assertEquals(WaitConfiguration.defaults(), defaults);
+        assertEquals(defaults(), defaults);
         assertEquals(Duration.ofSeconds(20).toNanos(), interval.everyNanos());
         assertEquals(Duration.ofSeconds(2).toNanos(), stable.stableForNanos());
 
@@ -63,7 +64,7 @@ class WaitConfigTest {
 
     @Test
     void eachDurationRejectsNullBeforeOtherValidation() {
-        WaitConfiguration invalidPair = WaitConfiguration.defaults().withEvery(Duration.ofSeconds(20));
+        WaitConfiguration invalidPair = defaults().withEvery(Duration.ofSeconds(20));
 
         for (Function<Duration, WaitConfiguration> operation
                 : List.<Function<Duration, WaitConfiguration>>of(
@@ -80,12 +81,12 @@ class WaitConfigTest {
     void intervalAndTimeoutMustBePositive() {
         for (Duration invalid : List.of(Duration.ZERO, Duration.ofNanos(-1))) {
             var intervalFailure = assertThrows(IllegalArgumentException.class,
-                    () -> WaitConfiguration.defaults().withEvery(invalid));
+                    () -> defaults().withEvery(invalid));
             assertEquals("poll interval must be greater than zero",
                     intervalFailure.getMessage());
 
             var timeoutFailure = assertThrows(IllegalArgumentException.class,
-                    () -> WaitConfiguration.defaults()
+                    () -> defaults()
                             .withEvery(Duration.ofSeconds(20))
                             .withUpTo(invalid));
             assertEquals("acquisition timeout must be greater than zero",
@@ -95,12 +96,12 @@ class WaitConfigTest {
 
     @Test
     void stabilityMayBeZeroButNotNegative() {
-        assertEquals(0L, WaitConfiguration.defaults()
+        assertEquals(0L, defaults()
                 .withStableFor(Duration.ZERO)
                 .stableForNanos());
 
         var failure = assertThrows(IllegalArgumentException.class,
-                () -> WaitConfiguration.defaults().withStableFor(Duration.ofNanos(-1)));
+                () -> defaults().withStableFor(Duration.ofNanos(-1)));
         assertEquals("stability duration must not be negative", failure.getMessage());
     }
 
@@ -108,18 +109,18 @@ class WaitConfigTest {
     void durationsMustFitInSignedLongNanoseconds() {
         Duration maximum = Duration.ofNanos(Long.MAX_VALUE);
         assertEquals(Long.MAX_VALUE,
-                WaitConfiguration.defaults().withEvery(maximum).everyNanos());
+                defaults().withEvery(maximum).everyNanos());
         assertEquals(Long.MAX_VALUE,
-                WaitConfiguration.defaults().withUpTo(maximum).upToNanos());
+                defaults().withUpTo(maximum).upToNanos());
         assertEquals(Long.MAX_VALUE,
-                WaitConfiguration.defaults().withStableFor(maximum).stableForNanos());
+                defaults().withStableFor(maximum).stableForNanos());
 
         Duration overflow = Duration.ofSeconds(Long.MAX_VALUE);
         for (Function<Duration, WaitConfiguration> operation
                 : List.<Function<Duration, WaitConfiguration>>of(
-                WaitConfiguration.defaults()::withEvery,
-                WaitConfiguration.defaults()::withUpTo,
-                WaitConfiguration.defaults()::withStableFor)) {
+                defaults()::withEvery,
+                defaults()::withUpTo,
+                defaults()::withStableFor)) {
             var failure = assertThrows(IllegalArgumentException.class,
                     () -> operation.apply(overflow));
             assertEquals("duration exceeds the supported nanosecond range",
@@ -130,7 +131,7 @@ class WaitConfigTest {
 
     @Test
     void onlyTimeoutAndTerminalValidationCheckThePair() {
-        WaitConfiguration interval = WaitConfiguration.defaults().withEvery(Duration.ofSeconds(20));
+        WaitConfiguration interval = defaults().withEvery(Duration.ofSeconds(20));
         WaitConfiguration stable = interval.withStableFor(Duration.ofSeconds(1));
 
         var terminalFailure = assertThrows(AwaitConfigurationConflictException.class,
@@ -147,7 +148,7 @@ class WaitConfigTest {
     @Test
     void equalIntervalAndTimeoutAlsoConflict() {
         var failure = assertThrows(AwaitConfigurationConflictException.class,
-                () -> WaitConfiguration.defaults().withUpTo(Duration.ofMillis(100)));
+                () -> defaults().withUpTo(Duration.ofMillis(100)));
 
         assertEquals(
                 "poll interval (100 milliseconds) must be shorter than acquisition timeout (100 milliseconds)",

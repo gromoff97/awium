@@ -9,9 +9,7 @@ import java.time.Duration;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
-public final class AwaitStage<S> extends AbstractAwaitStage<S>
-        implements Await<S>, Await.Until<S>, Await.AfterEvery<S>,
-                Await.AfterUpTo<S> {
+public final class AwaitStage<S> extends AbstractAwaitStage<S> implements Await<S>, Await.Until<S>, Await.AfterEvery<S>, Await.AfterUpTo<S> {
 
     public AwaitStage(Source<S> source) {
         super(source);

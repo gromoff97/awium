@@ -1,13 +1,15 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
-import java.util.Objects;
+import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.formattedExplanation;
+import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.literalExplanation;
+import static java.util.Objects.requireNonNull;
 
 public final class PreservingCondition<S> {
 
     private final RuntimeCondition<S, S> runtime;
 
     private PreservingCondition(RuntimeCondition<S, S> runtime) {
-        this.runtime = Objects.requireNonNull(runtime);
+        this.runtime = requireNonNull(runtime);
     }
 
     public static <S> PreservingCondition<S> of(
@@ -17,13 +19,13 @@ public final class PreservingCondition<S> {
 
     public final ExplainedCondition<S> because(String explanation) {
         return new ExplainedCondition<>(this,
-                RuntimeCondition.literalExplanation(explanation));
+                literalExplanation(explanation));
     }
 
     public final ExplainedCondition<S> because(
             String format, Object... arguments) {
         return new ExplainedCondition<>(this,
-                RuntimeCondition.formattedExplanation(format, arguments));
+                formattedExplanation(format, arguments));
     }
 
     public RuntimeCondition<S, S> runtime() {
@@ -37,8 +39,8 @@ public final class PreservingCondition<S> {
 
         private ExplainedCondition(PreservingCondition<S> delegate,
                 String explanation) {
-            this.delegate = Objects.requireNonNull(delegate);
-            this.explanation = Objects.requireNonNull(explanation);
+            this.delegate = requireNonNull(delegate);
+            this.explanation = requireNonNull(explanation);
         }
 
         public PreservingCondition<S> delegate() {
