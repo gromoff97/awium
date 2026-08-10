@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.exception.*;
+
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isFinal;
 import static java.lang.reflect.Modifier.isPrivate;
@@ -49,7 +51,23 @@ class PublicSurfaceTest {
                 .filter(type -> type.getEnclosingClass() == null).toList());
         assertEquals(Set.copyOf(publicTypes()), topLevel);
         for (Class<?> type : topLevel) {
-            assertEquals("io.github.gromoff97.awium", type.getPackageName());
+            assertTrue(Set.of("io.github.gromoff97.awium",
+                    "io.github.gromoff97.awium.exception")
+                    .contains(type.getPackageName()), type.getName());
+        }
+    }
+
+    @Test
+    void publicFailuresLiveInTheirOwnPackage() {
+        for (Class<?> type : List.of(AwaitConfigurationConflictException.class,
+                AwaitFailure.class, AwaitTimeoutException.class,
+                AwaitStabilizationException.class,
+                AwaitUncontrolledException.class,
+                AwaitSourceRetrievalException.class,
+                AwaitConditionEvaluationException.class,
+                AwaitInterruptedException.class, AwaitUnhandledException.class)) {
+            assertEquals("io.github.gromoff97.awium.exception",
+                    type.getPackageName(), type.getName());
         }
     }
 
@@ -489,13 +507,8 @@ class PublicSurfaceTest {
     private static List<Class<?>> restrictedConstructionTypes() {
         List<Class<?>> types = new ArrayList<>(closedConditionTypes());
         types.add(Evaluation.class);
-        types.add(AwaitConfigurationConflictException.class);
-        types.addAll(List.of(AwaitFailure.class, AwaitTimeoutException.class,
-                AwaitStabilizationException.class,
-                AwaitUncontrolledException.class,
-                AwaitSourceRetrievalException.class,
-                AwaitConditionEvaluationException.class,
-                AwaitInterruptedException.class, AwaitUnhandledException.class));
+        types.addAll(List.of(AwaitFailure.class,
+                AwaitUncontrolledException.class));
         return types;
     }
 

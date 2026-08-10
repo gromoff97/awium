@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.exception;
 
 import java.io.Serial;
 
@@ -7,7 +7,7 @@ public final class AwaitConfigurationConflictException extends IllegalArgumentEx
     @Serial
     private static final long serialVersionUID = 1L;
 
-    AwaitConfigurationConflictException(String message) {
+    public AwaitConfigurationConflictException(String message) {
         super(message);
     }
 }

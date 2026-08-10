@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.exception;
 
 import java.io.Serial;
 
@@ -8,7 +8,7 @@ public final class AwaitConditionEvaluationException
     @Serial
     private static final long serialVersionUID = 1L;
 
-    AwaitConditionEvaluationException(String message, Throwable cause) {
+    public AwaitConditionEvaluationException(String message, Throwable cause) {
         super(message, cause);
     }
 }

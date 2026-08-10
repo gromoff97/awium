@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.exception.*;
+
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isFinal;
 import static java.lang.reflect.Modifier.isPrivate;
@@ -24,7 +26,7 @@ class FailureTaxonomyTest {
     Path temporaryDirectory;
 
     @Test
-    void exposesTheControlledFailureHierarchyWithoutConstructionAccess()
+    void exposesTheControlledFailureHierarchy()
             throws ReflectiveOperationException {
         assertTrue(isPublic(AwaitFailure.class.getModifiers()));
         assertTrue(isAbstract(AwaitFailure.class.getModifiers()));
@@ -36,7 +38,7 @@ class FailureTaxonomyTest {
     }
 
     @Test
-    void exposesTheUncontrolledFailureHierarchyWithoutConstructionAccess()
+    void exposesTheUncontrolledFailureHierarchy()
             throws ReflectiveOperationException {
         assertTrue(isPublic(AwaitUncontrolledException.class.getModifiers()));
         assertTrue(isAbstract(AwaitUncontrolledException.class.getModifiers()));
@@ -60,18 +62,32 @@ class FailureTaxonomyTest {
     }
 
     @Test
-    void rejectsExternalConstructionAndSubclassing() throws Exception {
+    void rejectsExternalSubclassing() throws Exception {
         String source = """
                 package external;
 
-                import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.exception.AwaitFailure;
 
                 final class Contract extends AwaitFailure {
                     Contract() {
                         super("failure", null);
                     }
+                }
+                """;
 
-                    static void construct() {
+        assertFalse(CompilationSupport.compiles(temporaryDirectory, source));
+    }
+
+    @Test
+    void allowsExternalLeafConstruction() throws Exception {
+        String source = """
+                package external;
+
+                import io.github.gromoff97.awium.exception.*;
+
+                final class Contract {
+                    void construct() {
+                        new AwaitConfigurationConflictException("failure");
                         new AwaitTimeoutException("failure", null);
                         new AwaitStabilizationException("failure", null);
                         new AwaitSourceRetrievalException("failure", null);
@@ -82,7 +98,7 @@ class FailureTaxonomyTest {
                 }
                 """;
 
-        assertFalse(CompilationSupport.compiles(temporaryDirectory, source));
+        assertTrue(CompilationSupport.compiles(temporaryDirectory, source));
     }
 
     @Test
@@ -97,7 +113,7 @@ class FailureTaxonomyTest {
         assertTrue(isPublic(type.getModifiers()), type.getName());
         assertTrue(isFinal(type.getModifiers()), type.getName());
         assertEquals(parent, type.getSuperclass());
-        assertPackagePrivateMessageCauseConstructor(type);
+        assertPublicMessageCauseConstructor(type);
     }
 
     private static void assertPackagePrivateMessageCauseConstructor(Class<?> type)
@@ -108,6 +124,14 @@ class FailureTaxonomyTest {
         assertFalse(isPublic(constructor.getModifiers()), type.getName());
         assertFalse(isProtected(constructor.getModifiers()), type.getName());
         assertFalse(isPrivate(constructor.getModifiers()), type.getName());
+    }
+
+    private static void assertPublicMessageCauseConstructor(Class<?> type)
+            throws ReflectiveOperationException {
+        Constructor<?> constructor = type.getDeclaredConstructor(
+                String.class, Throwable.class);
+        assertEquals(1, type.getDeclaredConstructors().length, type.getName());
+        assertTrue(isPublic(constructor.getModifiers()), type.getName());
     }
 
     private static boolean isPublicInstance(Method method) {

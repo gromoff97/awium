@@ -1,7 +1,8 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.exception.*;
+
 import static java.lang.reflect.Modifier.isFinal;
-import static java.lang.reflect.Modifier.isProtected;
 import static java.lang.reflect.Modifier.isPublic;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -153,15 +154,16 @@ class WaitConfigTest {
     }
 
     @Test
-    void conflictExceptionIsPublicFinalAndLibraryConstructibleOnly() {
+    void conflictExceptionIsPublicFinalAndExternallyConstructible()
+            throws ReflectiveOperationException {
         assertTrue(isPublic(AwaitConfigurationConflictException.class.getModifiers()));
         assertTrue(isFinal(AwaitConfigurationConflictException.class.getModifiers()));
         assertTrue(IllegalArgumentException.class
                 .isAssignableFrom(AwaitConfigurationConflictException.class));
-        assertFalse(List.of(AwaitConfigurationConflictException.class
-                        .getDeclaredConstructors()).stream()
-                .anyMatch(constructor -> isPublic(constructor.getModifiers())
-                        || isProtected(constructor.getModifiers())));
+        assertEquals(1, AwaitConfigurationConflictException.class
+                .getDeclaredConstructors().length);
+        assertTrue(isPublic(AwaitConfigurationConflictException.class
+                .getDeclaredConstructor(String.class).getModifiers()));
     }
 
     @Test

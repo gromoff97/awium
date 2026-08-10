@@ -1,5 +1,13 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.exception.AwaitConditionEvaluationException;
+import io.github.gromoff97.awium.exception.AwaitInterruptedException;
+import io.github.gromoff97.awium.exception.AwaitSourceRetrievalException;
+import io.github.gromoff97.awium.exception.AwaitStabilizationException;
+import io.github.gromoff97.awium.exception.AwaitTimeoutException;
+import io.github.gromoff97.awium.exception.AwaitUncontrolledException;
+import io.github.gromoff97.awium.exception.AwaitUnhandledException;
+
 import java.util.Objects;
 
 final class FailureFactory {

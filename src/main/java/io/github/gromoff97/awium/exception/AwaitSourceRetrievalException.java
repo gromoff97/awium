@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.exception;
 
 import java.io.Serial;
 
@@ -7,7 +7,7 @@ public final class AwaitSourceRetrievalException extends AwaitUncontrolledExcept
     @Serial
     private static final long serialVersionUID = 1L;
 
-    AwaitSourceRetrievalException(String message, Throwable cause) {
+    public AwaitSourceRetrievalException(String message, Throwable cause) {
         super(message, cause);
     }
 }
