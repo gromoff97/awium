@@ -110,11 +110,11 @@ class CollectionMembershipTest {
         var arrays = new ProbeContainers.MembershipCollection<Object>(
                 List.of(new int[] {1, 2}));
 
-        assertSatisfied(ConditionAdapters.<
+        assertSatisfied(ConditionRuntime.<
                 ProbeContainers.MembershipCollection<Directional>>preserving(
                         AwaitConditions.contains(expected)).evaluate(directional),
                 directional);
-        assertSatisfied(ConditionAdapters.<
+        assertSatisfied(ConditionRuntime.<
                 ProbeContainers.MembershipCollection<Object>>preserving(
                         AwaitConditions.contains(new int[] {1, 2})).evaluate(arrays),
                 arrays);
@@ -137,11 +137,11 @@ class CollectionMembershipTest {
         var negativeActual = new ProbeContainers.MembershipCollection<>(
                 List.of(negativeFirst, negativeSecond));
 
-        Evaluation<?> positive = ConditionAdapters.<
+        Evaluation<?> positive = ConditionRuntime.<
                 ProbeContainers.MembershipCollection<CountingValue>>preserving(
                         AwaitConditions.containsAnyOf(expected)).evaluate(
                                 positiveActual);
-        Evaluation<?> negative = ConditionAdapters.<
+        Evaluation<?> negative = ConditionRuntime.<
                 ProbeContainers.MembershipCollection<CountingValue>>preserving(
                         AwaitConditions.containsNoneOf(expected)).evaluate(
                                 negativeActual);
@@ -398,8 +398,8 @@ class CollectionMembershipTest {
                             MembershipCollection<String>> condition,
                     boolean explained) {
         return explained
-                ? ConditionAdapters.preserving(condition.because("reason"))
-                : ConditionAdapters.preserving(condition);
+                ? ConditionRuntime.preserving(condition.because("reason"))
+                : ConditionRuntime.preserving(condition);
     }
 
     private static void assertNullActual(
@@ -435,7 +435,7 @@ class CollectionMembershipTest {
         assertEquals(message, assertThrows(type, executable).getMessage());
     }
 
-    private static CollectionUntil<String,
+    private static CollectionAwait.Until<String,
             ProbeContainers.MembershipCollection<String>> timedCollection(
                     ProbeContainers.MembershipCollection<String> actual) {
         FakeTime time = new FakeTime(0);
@@ -446,7 +446,7 @@ class CollectionMembershipTest {
                 }, WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)), time, time,
                 new Interrupts(), new FailureFactory());
-        return new CollectionStageAdapters.CollectionAfterUpToStage<>(chain);
+        return new CollectionStages.CollectionAfterUpToStage<>(chain);
     }
 
     private static <E> ProbeContainers.MembershipCollection<E> await(

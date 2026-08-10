@@ -257,27 +257,27 @@ class StructuralConditionsTest {
 
     private static <C extends Collection<?>> ConditionRuntime<C, C> collection(
             StructuralCondition condition) {
-        return ConditionAdapters.structural(
+        return ConditionRuntime.structural(
                 condition, "collection", Collection::size);
     }
 
     private static <C extends Collection<?>> ConditionRuntime<C, C> collection(
-            ExplainedStructuralCondition condition) {
-        return ConditionAdapters.structural(
+            StructuralCondition.Explained condition) {
+        return ConditionRuntime.structural(
                 condition, "collection", Collection::size);
     }
 
     private static <M extends Map<?, ?>> ConditionRuntime<M, M> map(
             StructuralCondition condition) {
-        return ConditionAdapters.structural(condition, "map", Map::size);
+        return ConditionRuntime.structural(condition, "map", Map::size);
     }
 
     private static <M extends Map<?, ?>> ConditionRuntime<M, M> map(
-            ExplainedStructuralCondition condition) {
-        return ConditionAdapters.structural(condition, "map", Map::size);
+            StructuralCondition.Explained condition) {
+        return ConditionRuntime.structural(condition, "map", Map::size);
     }
 
-    private static CollectionUntil<Object,
+    private static CollectionAwait.Until<Object,
             ProbeContainers.ProbeCollection<Object>> timedCollection(
                     ProbeContainers.ProbeCollection<Object> actual) {
         FakeTime time = new FakeTime(0);
@@ -288,10 +288,10 @@ class StructuralConditionsTest {
                 }, WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)), time, time,
                 new Interrupts(), new FailureFactory());
-        return new CollectionStageAdapters.CollectionAfterUpToStage<>(chain);
+        return new CollectionStages.CollectionAfterUpToStage<>(chain);
     }
 
-    private static MapUntil<Object, Object,
+    private static MapAwait.Until<Object, Object,
             ProbeContainers.ProbeMap<Object, Object>> timedMap(
                     ProbeContainers.ProbeMap<Object, Object> actual) {
         FakeTime time = new FakeTime(0);
@@ -302,7 +302,7 @@ class StructuralConditionsTest {
                 }, WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)), time, time,
                 new Interrupts(), new FailureFactory());
-        return new MapStageAdapters.MapAfterUpToStage<>(chain);
+        return new MapStages.MapAfterUpToStage<>(chain);
     }
 
     private static void assertSatisfied(Evaluation<?> evaluation, Object actual) {

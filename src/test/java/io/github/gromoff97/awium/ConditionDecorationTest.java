@@ -124,8 +124,8 @@ class ConditionDecorationTest {
             }
         };
 
-        ConditionRuntime<Object, String> raw = ConditionAdapters.open(condition);
-        ConditionRuntime<Object, String> explained = ConditionAdapters.open(
+        ConditionRuntime<Object, String> raw = ConditionRuntime.open(condition);
+        ConditionRuntime<Object, String> explained = ConditionRuntime.open(
                 condition.because("because value"));
 
         assertEquals("selected", raw.evaluate(this).result());
@@ -141,7 +141,7 @@ class ConditionDecorationTest {
                 return null;
             }
         };
-        assertNull(ConditionAdapters.open(nullEvaluation).evaluate(this));
+        assertNull(ConditionRuntime.open(nullEvaluation).evaluate(this));
     }
 
     @Test
@@ -153,9 +153,9 @@ class ConditionDecorationTest {
                 value -> Evaluation.satisfied(new Object()), description, null));
 
         ConditionRuntime<StringBuilder, StringBuilder> rawPreserving =
-                ConditionAdapters.preserving(preserving);
+                ConditionRuntime.preserving(preserving);
         ConditionRuntime<StringBuilder, StringBuilder> explainedPreserving =
-                ConditionAdapters.preserving(preserving.because("preserving"));
+                ConditionRuntime.preserving(preserving.because("preserving"));
 
         assertSame(actual, rawPreserving.evaluate(actual).result());
         assertSame(actual, explainedPreserving.evaluate(actual).result());
@@ -166,9 +166,9 @@ class ConditionDecorationTest {
         var present = new Present(new ConditionRuntime<>(
                 value -> Evaluation.satisfied(value.orElse(null)), description, null));
         ConditionRuntime<Optional<String>, String> rawPresent =
-                ConditionAdapters.present(present);
+                ConditionRuntime.present(present);
         ConditionRuntime<Optional<String>, String> explainedPresent =
-                ConditionAdapters.present(present.because("present"));
+                ConditionRuntime.present(present.because("present"));
 
         assertEquals("value", rawPresent.evaluate(Optional.of("value")).result());
         assertEquals("value",
@@ -181,11 +181,11 @@ class ConditionDecorationTest {
         var actualCollection = new java.util.ArrayList<>(java.util.List.of("value"));
         ConditionRuntime<java.util.ArrayList<String>,
                 java.util.ArrayList<String>> rawStructural =
-                ConditionAdapters.structural(
+                ConditionRuntime.structural(
                         structural, "collection", java.util.Collection::size);
         ConditionRuntime<java.util.ArrayList<String>,
                 java.util.ArrayList<String>> explainedStructural =
-                ConditionAdapters.structural(
+                ConditionRuntime.structural(
                         structural.because("structural"), "collection",
                         java.util.Collection::size);
 
@@ -215,8 +215,8 @@ class ConditionDecorationTest {
                 value -> Evaluation.uncontrolled(cause), description, null));
 
         Evaluation<Object> preservingEvaluation =
-                ConditionAdapters.preserving(preserving).evaluate(this);
-        Evaluation<String> presentEvaluation = ConditionAdapters.<String>present(present)
+                ConditionRuntime.preserving(preserving).evaluate(this);
+        Evaluation<String> presentEvaluation = ConditionRuntime.<String>present(present)
                 .evaluate(Optional.of("value"));
 
         assertEquals("failed", preservingEvaluation.mismatch());

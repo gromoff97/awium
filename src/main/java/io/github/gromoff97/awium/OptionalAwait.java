@@ -1,25 +1,38 @@
 package io.github.gromoff97.awium;
 
 import java.time.Duration;
+import java.util.Optional;
 
-public sealed interface OptionalAwait<T> extends OptionalUntil<T>
-        permits OptionalStageAdapters.OptionalInitialStage {
+public sealed interface OptionalAwait<T> extends ObjectAwait.Until<Optional<T>>
+        permits OptionalStages.OptionalInitialStage {
 
     AfterEvery<T> every(Duration interval);
 
     AfterUpTo<T> upTo(Duration timeout);
 
-    OptionalUntil<T> stableFor(Duration stability);
+    Until<T> stableFor(Duration stability);
+
+    T until(Present condition);
+
+    T until(Present.Explained condition);
+
+    sealed interface Until<T> extends ObjectAwait.Until<Optional<T>>
+            permits AfterUpTo, OptionalStages.OptionalTerminalStage {
+
+        T until(Present condition);
+
+        T until(Present.Explained condition);
+    }
 
     sealed interface AfterEvery<T> extends AfterUpTo<T>
-            permits OptionalStageAdapters.OptionalAfterEveryStage {
+            permits OptionalStages.OptionalAfterEveryStage {
 
         AfterUpTo<T> upTo(Duration timeout);
     }
 
-    sealed interface AfterUpTo<T> extends OptionalUntil<T>
-            permits AfterEvery, OptionalStageAdapters.OptionalAfterUpToStage {
+    sealed interface AfterUpTo<T> extends Until<T>
+            permits AfterEvery, OptionalStages.OptionalAfterUpToStage {
 
-        OptionalUntil<T> stableFor(Duration stability);
+        Until<T> stableFor(Duration stability);
     }
 }

@@ -49,16 +49,16 @@ class FactoryGrammarTest {
     @Test
     void everyFluentStateIsSealedAndClosedByFinalAdapters() {
         List<Class<?>> stages = List.of(
-                ObjectUntil.class, ObjectAwait.class,
+                ObjectAwait.Until.class, ObjectAwait.class,
                 ObjectAwait.AfterEvery.class, ObjectAwait.AfterUpTo.class,
-                OptionalUntil.class, OptionalAwait.class,
+                OptionalAwait.Until.class, OptionalAwait.class,
                 OptionalAwait.AfterEvery.class, OptionalAwait.AfterUpTo.class,
-                CollectionUntil.class, CollectionAwait.class,
+                CollectionAwait.Until.class, CollectionAwait.class,
                 CollectionAwait.AfterEvery.class, CollectionAwait.AfterUpTo.class,
-                SequencedCollectionUntil.class, SequencedCollectionAwait.class,
+                SequencedCollectionAwait.Until.class, SequencedCollectionAwait.class,
                 SequencedCollectionAwait.AfterEvery.class,
                 SequencedCollectionAwait.AfterUpTo.class,
-                MapUntil.class, MapAwait.class,
+                MapAwait.Until.class, MapAwait.class,
                 MapAwait.AfterEvery.class, MapAwait.AfterUpTo.class);
 
         assertEquals(20, stages.size());
@@ -165,23 +165,23 @@ class FactoryGrammarTest {
                 .every(Duration.ofSeconds(20));
         assertNullCondition(() -> object.until((PreservingCondition<String>) null));
         assertNullCondition(() -> object.until(
-                (ExplainedPreservingCondition<String>) null));
+                (PreservingCondition.Explained<String>) null));
         assertNullCondition(() -> object.until((Condition<String, String>) null));
         assertNullCondition(() -> object.until(
-                (ExplainedCondition<String, String>) null));
+                (Condition.Explained<String, String>) null));
 
         OptionalAwait.AfterEvery<String> optional = Awium
                 .await((AwaitSources.OptionalSource<String>) Optional::empty)
                 .every(Duration.ofSeconds(20));
         assertNullCondition(() -> optional.until((Present) null));
-        assertNullCondition(() -> optional.until((ExplainedPresent) null));
+        assertNullCondition(() -> optional.until((Present.Explained) null));
 
         CollectionAwait.AfterEvery<String, Collection<String>> collection =
                 Awium.await((AwaitSources.CollectionSource<String,
                         Collection<String>>) List::of).every(Duration.ofSeconds(20));
         assertNullCondition(() -> collection.until((StructuralCondition) null));
         assertNullCondition(() -> collection.until(
-                (ExplainedStructuralCondition) null));
+                (StructuralCondition.Explained) null));
 
         SequencedCollectionAwait.AfterEvery<String, SequencedCollection<String>>
                 sequenced = Awium.await(
@@ -190,13 +190,13 @@ class FactoryGrammarTest {
                         .every(Duration.ofSeconds(20));
         assertNullCondition(() -> sequenced.until((StructuralCondition) null));
         assertNullCondition(() -> sequenced.until(
-                (ExplainedStructuralCondition) null));
+                (StructuralCondition.Explained) null));
 
         MapAwait.AfterEvery<String, String, Map<String, String>> map =
                 Awium.await((AwaitSources.MapSource<String, String,
                         Map<String, String>>) Map::of).every(Duration.ofSeconds(20));
         assertNullCondition(() -> map.until((StructuralCondition) null));
-        assertNullCondition(() -> map.until((ExplainedStructuralCondition) null));
+        assertNullCondition(() -> map.until((StructuralCondition.Explained) null));
     }
 
     @Test
@@ -228,15 +228,12 @@ class FactoryGrammarTest {
     }
 
     @Test
-    void terminalAdapterCannotBeCastBackToAConfigurationState() {
-        ObjectUntil<String> terminal = Awium
+    void terminalAdapterIsNotAConfigurationState() {
+        ObjectAwait.Until<String> terminal = Awium
                 .await((AwaitSources.Source<String>) () -> "value")
                 .stableFor(Duration.ZERO);
 
-        assertThrows(ClassCastException.class, () -> {
-            ObjectAwait<String> ignored = (ObjectAwait<String>) terminal;
-        });
-        assertFalse(terminal instanceof ObjectAwait<?>);
+        assertFalse(((Object) terminal) instanceof ObjectAwait<?>);
     }
 
     private static Condition<String, String> countingCondition(AtomicInteger calls) {

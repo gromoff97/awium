@@ -110,8 +110,8 @@ class ObjectAndOptionalAwaitTest {
         AwaitChain<String> chain = new AwaitChain<>(source, WaitConfiguration.defaults()
                 .withEvery(Duration.ofNanos(1)).withUpTo(Duration.ofNanos(10)),
                 time, time, new Interrupts(), new FailureFactory());
-        ObjectUntil<String> stage =
-                new ObjectStageAdapters.ObjectAfterUpToStage<>(chain);
+        ObjectAwait.Until<String> stage =
+                new ObjectStages.ObjectAfterUpToStage<>(chain);
         Condition<String, String> evenObservation = AwaitConditions.condition(
                 "even observation", value -> Integer.parseInt(value.substring(1)) % 2 == 0
                         ? Evaluation.satisfied(value)
@@ -127,7 +127,7 @@ class ObjectAndOptionalAwaitTest {
     void reusableStageStartsFreshAfterControlledAndUncontrolledFailures() {
         FakeTime time = new FakeTime(0);
         AtomicInteger sourceCalls = new AtomicInteger();
-        ObjectUntil<String> stage = stage(time, () -> {
+        ObjectAwait.Until<String> stage = stage(time, () -> {
             sourceCalls.incrementAndGet();
             return "value";
         });
@@ -154,7 +154,7 @@ class ObjectAndOptionalAwaitTest {
     void reusableConditionRetainsOnlyItsOwnStateAcrossFreshWaits() {
         FakeTime time = new FakeTime(0);
         AtomicInteger evaluations = new AtomicInteger();
-        ObjectUntil<String> stage = stage(time, () -> "value");
+        ObjectAwait.Until<String> stage = stage(time, () -> "value");
         Condition<String, String> secondEvaluationOnward =
                 AwaitConditions.condition("second evaluation onward", value ->
                         evaluations.incrementAndGet() >= 2
@@ -180,31 +180,31 @@ class ObjectAndOptionalAwaitTest {
         assertTrue(mapFailure.getMessage().contains("map was null"));
     }
 
-    private static CollectionUntil<String, List<String>> nullCollectionStage() {
+    private static CollectionAwait.Until<String, List<String>> nullCollectionStage() {
         FakeTime time = new FakeTime(0);
         AwaitChain<List<String>> chain = new AwaitChain<>(() -> null,
                 WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)),
                 time, time, new Interrupts(), new FailureFactory());
-        return new CollectionStageAdapters.CollectionAfterUpToStage<>(chain);
+        return new CollectionStages.CollectionAfterUpToStage<>(chain);
     }
 
-    private static MapUntil<String, String, Map<String, String>> nullMapStage() {
+    private static MapAwait.Until<String, String, Map<String, String>> nullMapStage() {
         FakeTime time = new FakeTime(0);
         AwaitChain<Map<String, String>> chain = new AwaitChain<>(() -> null,
                 WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)),
                 time, time, new Interrupts(), new FailureFactory());
-        return new MapStageAdapters.MapAfterUpToStage<>(chain);
+        return new MapStages.MapAfterUpToStage<>(chain);
     }
 
-    private static <T> ObjectUntil<T> stage(
+    private static <T> ObjectAwait.Until<T> stage(
             FakeTime time, AwaitSources.Source<T> source) {
         AwaitChain<T> chain = new AwaitChain<>(source,
                 WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(3)),
                 time, time, new Interrupts(), new FailureFactory());
-        return new ObjectStageAdapters.ObjectAfterUpToStage<>(chain);
+        return new ObjectStages.ObjectAfterUpToStage<>(chain);
     }
 
     private static final class CyclingSource implements AwaitSources.Source<String> {

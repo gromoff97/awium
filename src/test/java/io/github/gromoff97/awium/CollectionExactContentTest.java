@@ -278,11 +278,11 @@ class CollectionExactContentTest {
         ExpectedCollection<String> expected =
                 new ExpectedCollection<>(List.of("a"));
         assertEquals(Evaluation.Status.UNSATISFIED,
-                ConditionAdapters.<ExactList<String>>preserving(
+                ConditionRuntime.<ExactList<String>>preserving(
                         AwaitConditions.containsExactlyElementsOf(expected))
                         .evaluate(null).status());
         assertEquals(Evaluation.Status.UNSATISFIED,
-                ConditionAdapters.<ExactList<String>>preserving(
+                ConditionRuntime.<ExactList<String>>preserving(
                         AwaitConditions.doesNotContainExactlyElementsOf(expected))
                         .evaluate(null).status());
         assertExpectedAccess(expected, 0, 0, 0);
@@ -341,8 +341,8 @@ class CollectionExactContentTest {
             PreservingCondition<? super ExactList<E>> condition,
             ExactList<E> actual, boolean explained) throws Exception {
         ConditionRuntime<ExactList<E>, ExactList<E>> runtime = explained
-                ? ConditionAdapters.preserving(condition.because("reason"))
-                : ConditionAdapters.preserving(condition);
+                ? ConditionRuntime.preserving(condition.because("reason"))
+                : ConditionRuntime.preserving(condition);
         assertEquals(explained ? "reason" : null, runtime.explanation());
         assertFalse(runtime.description().get().isBlank());
         return runtime.evaluate(actual);
@@ -390,7 +390,7 @@ class CollectionExactContentTest {
         assertEquals(next, expected.nextCalls);
     }
 
-    private static SequencedCollectionUntil<String, ExactList<String>> timed(
+    private static SequencedCollectionAwait.Until<String, ExactList<String>> timed(
             ExactList<String> actual) {
         FakeTime time = new FakeTime(0);
         AwaitChain<ExactList<String>> chain = new AwaitChain<>(() -> {
@@ -399,7 +399,7 @@ class CollectionExactContentTest {
         }, WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                 .withUpTo(Duration.ofNanos(2)), time, time,
                 new Interrupts(), new FailureFactory());
-        return new SequencedCollectionStageAdapters
+        return new SequencedCollectionStages
                 .SequencedCollectionAfterUpToStage<>(chain);
     }
 

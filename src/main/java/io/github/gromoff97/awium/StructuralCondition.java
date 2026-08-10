@@ -12,11 +12,11 @@ public final class StructuralCondition {
         this.bound = bound;
     }
 
-    public final ExplainedStructuralCondition because(String explanation) {
+    public final Explained because(String explanation) {
         return ConditionDecorators.explain(this, explanation);
     }
 
-    public final ExplainedStructuralCondition because(
+    public final Explained because(
             String format, Object... arguments) {
         return ConditionDecorators.explain(this, format, arguments);
     }
@@ -29,5 +29,24 @@ public final class StructuralCondition {
 
     String description(String subject) {
         return relation.description(subject, bound);
+    }
+
+    public static final class Explained {
+
+        private final StructuralCondition delegate;
+        private final String explanation;
+
+        Explained(StructuralCondition delegate, String explanation) {
+            this.delegate = Objects.requireNonNull(delegate);
+            this.explanation = Objects.requireNonNull(explanation);
+        }
+
+        StructuralCondition delegate() {
+            return delegate;
+        }
+
+        String explanation() {
+            return explanation;
+        }
     }
 }

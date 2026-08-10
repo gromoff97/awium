@@ -35,7 +35,7 @@ class CompilationContractTest {
                     }
 
                     void check(StructuralCondition structural,
-                            ExplainedStructuralCondition explainedStructural) {
+                            StructuralCondition.Explained explainedStructural) {
                         AwaitSources.Source<String> source = Contract::object;
                         String immediate = await(source).until(isNotNull);
                         String every = await(source).every(ofMillis(1)).until(isNotNull);
@@ -234,19 +234,19 @@ class CompilationContractTest {
     @Test
     void allFluentInterfacesRejectExternalImplementations() throws IOException {
         for (String type : new String[] {
-                "ObjectUntil<String>", "ObjectAwait<String>",
+                "ObjectAwait.Until<String>", "ObjectAwait<String>",
                 "ObjectAwait.AfterEvery<String>", "ObjectAwait.AfterUpTo<String>",
-                "OptionalUntil<String>", "OptionalAwait<String>",
+                "OptionalAwait.Until<String>", "OptionalAwait<String>",
                 "OptionalAwait.AfterEvery<String>", "OptionalAwait.AfterUpTo<String>",
-                "CollectionUntil<String, java.util.Collection<String>>",
+                "CollectionAwait.Until<String, java.util.Collection<String>>",
                 "CollectionAwait<String, java.util.Collection<String>>",
                 "CollectionAwait.AfterEvery<String, java.util.Collection<String>>",
                 "CollectionAwait.AfterUpTo<String, java.util.Collection<String>>",
-                "SequencedCollectionUntil<String, java.util.SequencedCollection<String>>",
+                "SequencedCollectionAwait.Until<String, java.util.SequencedCollection<String>>",
                 "SequencedCollectionAwait<String, java.util.SequencedCollection<String>>",
                 "SequencedCollectionAwait.AfterEvery<String, java.util.SequencedCollection<String>>",
                 "SequencedCollectionAwait.AfterUpTo<String, java.util.SequencedCollection<String>>",
-                "MapUntil<String, Integer, java.util.Map<String, Integer>>",
+                "MapAwait.Until<String, Integer, java.util.Map<String, Integer>>",
                 "MapAwait<String, Integer, java.util.Map<String, Integer>>",
                 "MapAwait.AfterEvery<String, Integer, java.util.Map<String, Integer>>",
                 "MapAwait.AfterUpTo<String, Integer, java.util.Map<String, Integer>>"
@@ -327,7 +327,7 @@ class CompilationContractTest {
         assertFalse(compiles("""
                 import io.github.gromoff97.awium.Condition;
                 import io.github.gromoff97.awium.Evaluation;
-                import io.github.gromoff97.awium.ExplainedCondition;
+                import io.github.gromoff97.awium.Condition.Explained;
 
                 final class Contract extends Condition<Contract.Payment, Contract.Payment> {
                     record Payment(long id) {}
@@ -338,7 +338,7 @@ class CompilationContractTest {
                     }
 
                     @Override
-                    public ExplainedCondition<Payment, Payment> because(String value) {
+                    public Condition.Explained<Payment, Payment> because(String value) {
                         return null;
                     }
                 }
@@ -350,7 +350,7 @@ class CompilationContractTest {
         assertFalse(compiles("""
                 import io.github.gromoff97.awium.Condition;
                 import io.github.gromoff97.awium.Evaluation;
-                import io.github.gromoff97.awium.ExplainedCondition;
+                import io.github.gromoff97.awium.Condition.Explained;
 
                 final class Contract extends Condition<Contract.Payment, Contract.Payment> {
                     record Payment(long id) {}
@@ -361,7 +361,7 @@ class CompilationContractTest {
                     }
 
                     @Override
-                    public ExplainedCondition<Payment, Payment> because(
+                    public Condition.Explained<Payment, Payment> because(
                             String format, Object... arguments) {
                         return null;
                     }

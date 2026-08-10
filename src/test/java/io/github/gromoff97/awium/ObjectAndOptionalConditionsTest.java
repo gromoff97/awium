@@ -52,7 +52,7 @@ class ObjectAndOptionalConditionsTest {
         Optional<String> present = Optional.of("value");
 
         assertEquals("optional to remain present",
-                ConditionAdapters.<String>present(AwaitConditions.present)
+                ConditionRuntime.<String>present(AwaitConditions.present)
                         .description().get());
         assertUnsatisfied(evaluatePresent(null), "optional was null");
         assertUnsatisfied(AwaitConditions.absent.evaluate(null), "optional was null");
@@ -114,13 +114,13 @@ class ObjectAndOptionalConditionsTest {
     void builtInObjectAndOptionalConditionsExposeExactDescriptions() {
         assertEquals("value to be null", AwaitConditions.isNull.description());
         assertEquals("value to be non-null",
-                ConditionAdapters.preserving(AwaitConditions.isNotNull)
+                ConditionRuntime.preserving(AwaitConditions.isNotNull)
                         .description().get());
         assertEquals("value equal to expected",
-                ConditionAdapters.preserving(AwaitConditions.equalTo("expected"))
+                ConditionRuntime.preserving(AwaitConditions.equalTo("expected"))
                         .description().get());
         assertEquals("value not equal to unexpected",
-                ConditionAdapters.preserving(
+                ConditionRuntime.preserving(
                         AwaitConditions.notEqualTo("unexpected"))
                         .description().get());
         assertEquals("optional to be absent",
@@ -141,12 +141,12 @@ class ObjectAndOptionalConditionsTest {
 
     private static Evaluation<Object> evaluate(
             PreservingCondition<Object> condition, Object actual) throws Exception {
-        return ConditionAdapters.preserving(condition).evaluate(actual);
+        return ConditionRuntime.preserving(condition).evaluate(actual);
     }
 
     private static <T> Evaluation<T> evaluatePresent(Optional<T> actual)
             throws Exception {
-        return ConditionAdapters.<T>present(AwaitConditions.present).evaluate(actual);
+        return ConditionRuntime.<T>present(AwaitConditions.present).evaluate(actual);
     }
 
     private static void assertSatisfied(Evaluation<?> evaluation, Object result) {

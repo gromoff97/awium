@@ -4,27 +4,42 @@ import java.time.Duration;
 import java.util.Collection;
 
 public sealed interface CollectionAwait<E, C extends Collection<E>>
-        extends CollectionUntil<E, C>
-        permits CollectionStageAdapters.CollectionInitialStage {
+        extends ObjectAwait.Until<C>
+        permits CollectionStages.CollectionInitialStage {
 
     AfterEvery<E, C> every(Duration interval);
 
     AfterUpTo<E, C> upTo(Duration timeout);
 
-    CollectionUntil<E, C> stableFor(Duration stability);
+    Until<E, C> stableFor(Duration stability);
+
+    C until(StructuralCondition condition);
+
+    C until(StructuralCondition.Explained condition);
+
+    sealed interface Until<E, C extends Collection<E>>
+            extends ObjectAwait.Until<C>
+            permits AfterUpTo, SequencedCollectionAwait,
+                    SequencedCollectionAwait.Until,
+                    CollectionStages.CollectionTerminalStage {
+
+        C until(StructuralCondition condition);
+
+        C until(StructuralCondition.Explained condition);
+    }
 
     sealed interface AfterEvery<E, C extends Collection<E>>
             extends AfterUpTo<E, C>
-            permits CollectionStageAdapters.CollectionAfterEveryStage {
+            permits CollectionStages.CollectionAfterEveryStage {
 
         AfterUpTo<E, C> upTo(Duration timeout);
     }
 
     sealed interface AfterUpTo<E, C extends Collection<E>>
-            extends CollectionUntil<E, C>
+            extends Until<E, C>
             permits AfterEvery,
-                    CollectionStageAdapters.CollectionAfterUpToStage {
+                    CollectionStages.CollectionAfterUpToStage {
 
-        CollectionUntil<E, C> stableFor(Duration stability);
+        Until<E, C> stableFor(Duration stability);
     }
 }

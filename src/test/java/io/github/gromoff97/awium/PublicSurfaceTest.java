@@ -377,6 +377,7 @@ class PublicSurfaceTest {
     private static Set<Class<?>> approvedPublicApiTypes() {
         Set<Class<?>> types = new java.util.HashSet<>(publicTypes());
         types.addAll(fluentStages());
+        types.addAll(explainedTypes());
         types.addAll(List.of(AwaitSources.Source.class,
                 AwaitSources.OptionalSource.class,
                 AwaitSources.CollectionSource.class,
@@ -426,86 +427,86 @@ class PublicSurfaceTest {
     private static Map<Class<?>, Set<Class<?>>> expectedPermittedSubtypes() {
         return Map.ofEntries(
                 Map.entry(ObjectAwait.class,
-                        Set.of(ObjectStageAdapters.ObjectInitialStage.class)),
+                        Set.of(ObjectStages.ObjectInitialStage.class)),
                 Map.entry(ObjectAwait.AfterEvery.class,
-                        Set.of(ObjectStageAdapters.ObjectAfterEveryStage.class)),
+                        Set.of(ObjectStages.ObjectAfterEveryStage.class)),
                 Map.entry(ObjectAwait.AfterUpTo.class,
                         Set.of(ObjectAwait.AfterEvery.class,
-                                ObjectStageAdapters.ObjectAfterUpToStage.class)),
-                Map.entry(ObjectUntil.class,
-                        Set.of(ObjectAwait.class, ObjectAwait.AfterUpTo.class,
-                                OptionalUntil.class, CollectionUntil.class,
-                                MapUntil.class,
-                                ObjectStageAdapters.ObjectTerminalStage.class)),
+                                ObjectStages.ObjectAfterUpToStage.class)),
+                Map.entry(ObjectAwait.Until.class,
+                        Set.of(ObjectAwait.AfterUpTo.class,
+                                OptionalAwait.class, OptionalAwait.Until.class,
+                                CollectionAwait.class, CollectionAwait.Until.class,
+                                MapAwait.class, MapAwait.Until.class,
+                                ObjectStages.ObjectTerminalStage.class)),
                 Map.entry(OptionalAwait.class,
-                        Set.of(OptionalStageAdapters.OptionalInitialStage.class)),
+                        Set.of(OptionalStages.OptionalInitialStage.class)),
                 Map.entry(OptionalAwait.AfterEvery.class,
-                        Set.of(OptionalStageAdapters.OptionalAfterEveryStage.class)),
+                        Set.of(OptionalStages.OptionalAfterEveryStage.class)),
                 Map.entry(OptionalAwait.AfterUpTo.class,
                         Set.of(OptionalAwait.AfterEvery.class,
-                                OptionalStageAdapters.OptionalAfterUpToStage.class)),
-                Map.entry(OptionalUntil.class,
-                        Set.of(OptionalAwait.class, OptionalAwait.AfterUpTo.class,
-                                OptionalStageAdapters.OptionalTerminalStage.class)),
+                                OptionalStages.OptionalAfterUpToStage.class)),
+                Map.entry(OptionalAwait.Until.class,
+                        Set.of(OptionalAwait.AfterUpTo.class,
+                                OptionalStages.OptionalTerminalStage.class)),
                 Map.entry(CollectionAwait.class,
-                        Set.of(CollectionStageAdapters.CollectionInitialStage.class)),
+                        Set.of(CollectionStages.CollectionInitialStage.class)),
                 Map.entry(CollectionAwait.AfterEvery.class,
-                        Set.of(CollectionStageAdapters.CollectionAfterEveryStage.class)),
+                        Set.of(CollectionStages.CollectionAfterEveryStage.class)),
                 Map.entry(CollectionAwait.AfterUpTo.class,
                         Set.of(CollectionAwait.AfterEvery.class,
-                                CollectionStageAdapters.CollectionAfterUpToStage.class)),
-                Map.entry(CollectionUntil.class,
-                        Set.of(CollectionAwait.class,
-                                CollectionAwait.AfterUpTo.class,
-                                SequencedCollectionUntil.class,
-                                CollectionStageAdapters.CollectionTerminalStage.class)),
+                                CollectionStages.CollectionAfterUpToStage.class)),
+                Map.entry(CollectionAwait.Until.class,
+                        Set.of(CollectionAwait.AfterUpTo.class,
+                                SequencedCollectionAwait.class,
+                                SequencedCollectionAwait.Until.class,
+                                CollectionStages.CollectionTerminalStage.class)),
                 Map.entry(SequencedCollectionAwait.class,
-                        Set.of(SequencedCollectionStageAdapters
+                        Set.of(SequencedCollectionStages
                                 .SequencedCollectionInitialStage.class)),
                 Map.entry(SequencedCollectionAwait.AfterEvery.class,
-                        Set.of(SequencedCollectionStageAdapters
+                        Set.of(SequencedCollectionStages
                                 .SequencedCollectionAfterEveryStage.class)),
                 Map.entry(SequencedCollectionAwait.AfterUpTo.class,
                         Set.of(SequencedCollectionAwait.AfterEvery.class,
-                                SequencedCollectionStageAdapters
+                                SequencedCollectionStages
                                         .SequencedCollectionAfterUpToStage.class)),
-                Map.entry(SequencedCollectionUntil.class,
-                        Set.of(SequencedCollectionAwait.class,
-                                SequencedCollectionAwait.AfterUpTo.class,
-                                SequencedCollectionStageAdapters
+                Map.entry(SequencedCollectionAwait.Until.class,
+                        Set.of(SequencedCollectionAwait.AfterUpTo.class,
+                                SequencedCollectionStages
                                         .SequencedCollectionTerminalStage.class)),
                 Map.entry(MapAwait.class,
-                        Set.of(MapStageAdapters.MapInitialStage.class)),
+                        Set.of(MapStages.MapInitialStage.class)),
                 Map.entry(MapAwait.AfterEvery.class,
-                        Set.of(MapStageAdapters.MapAfterEveryStage.class)),
+                        Set.of(MapStages.MapAfterEveryStage.class)),
                 Map.entry(MapAwait.AfterUpTo.class,
                         Set.of(MapAwait.AfterEvery.class,
-                                MapStageAdapters.MapAfterUpToStage.class)),
-                Map.entry(MapUntil.class,
-                        Set.of(MapAwait.class, MapAwait.AfterUpTo.class,
-                                MapStageAdapters.MapTerminalStage.class)));
+                                MapStages.MapAfterUpToStage.class)),
+                Map.entry(MapAwait.Until.class,
+                        Set.of(MapAwait.AfterUpTo.class,
+                                MapStages.MapTerminalStage.class)));
     }
 
     private static List<Class<?>> fluentStages() {
         return List.of(ObjectAwait.class, ObjectAwait.AfterEvery.class,
-                ObjectAwait.AfterUpTo.class, ObjectUntil.class,
+                ObjectAwait.AfterUpTo.class, ObjectAwait.Until.class,
                 OptionalAwait.class, OptionalAwait.AfterEvery.class,
-                OptionalAwait.AfterUpTo.class, OptionalUntil.class,
+                OptionalAwait.AfterUpTo.class, OptionalAwait.Until.class,
                 CollectionAwait.class, CollectionAwait.AfterEvery.class,
-                CollectionAwait.AfterUpTo.class, CollectionUntil.class,
+                CollectionAwait.AfterUpTo.class, CollectionAwait.Until.class,
                 SequencedCollectionAwait.class,
                 SequencedCollectionAwait.AfterEvery.class,
                 SequencedCollectionAwait.AfterUpTo.class,
-                SequencedCollectionUntil.class, MapAwait.class,
+                SequencedCollectionAwait.Until.class, MapAwait.class,
                 MapAwait.AfterEvery.class, MapAwait.AfterUpTo.class,
-                MapUntil.class);
+                MapAwait.Until.class);
     }
 
     private static List<Class<?>> closedConditionTypes() {
         return List.of(PreservingCondition.class, Present.class,
-                StructuralCondition.class, ExplainedCondition.class,
-                ExplainedPreservingCondition.class, ExplainedPresent.class,
-                ExplainedStructuralCondition.class);
+                StructuralCondition.class, Condition.Explained.class,
+                PreservingCondition.Explained.class, Present.Explained.class,
+                StructuralCondition.Explained.class);
     }
 
     private static List<Class<?>> restrictedConstructionTypes() {
@@ -521,12 +522,8 @@ class PublicSurfaceTest {
                 AwaitSources.class, Condition.class, Evaluation.class,
                 ThrowingConsumer.class, ThrowingFunction.class,
                 PreservingCondition.class, Present.class, StructuralCondition.class,
-                ExplainedCondition.class, ExplainedPreservingCondition.class,
-                ExplainedPresent.class, ExplainedStructuralCondition.class,
-                ObjectAwait.class, ObjectUntil.class, OptionalAwait.class,
-                OptionalUntil.class, CollectionAwait.class, CollectionUntil.class,
-                SequencedCollectionAwait.class, SequencedCollectionUntil.class,
-                MapAwait.class, MapUntil.class,
+                ObjectAwait.class, OptionalAwait.class, CollectionAwait.class,
+                SequencedCollectionAwait.class, MapAwait.class,
                 AwaitConfigurationConflictException.class, AwaitFailure.class,
                 AwaitTimeoutException.class, AwaitStabilizationException.class,
                 AwaitUncontrolledException.class,
@@ -536,8 +533,8 @@ class PublicSurfaceTest {
     }
 
     private static List<Class<?>> explainedTypes() {
-        return List.of(ExplainedCondition.class, ExplainedPreservingCondition.class,
-                ExplainedPresent.class, ExplainedStructuralCondition.class);
+        return List.of(Condition.Explained.class, PreservingCondition.Explained.class,
+                Present.Explained.class, StructuralCondition.Explained.class);
     }
 
     private static void assertNoPublicOrProtectedConstructor(Class<?> type) {

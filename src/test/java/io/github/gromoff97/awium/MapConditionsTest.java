@@ -104,7 +104,7 @@ class MapConditionsTest {
 
         for (PreservingCondition<? super ProbeContainers.EntryMap<String,
                 String>> condition : conditions) {
-            Evaluation<?> evaluation = ConditionAdapters.<
+            Evaluation<?> evaluation = ConditionRuntime.<
                     ProbeContainers.EntryMap<String, String>>preserving(
                             condition).evaluate(null);
             assertEquals(Evaluation.Status.UNSATISFIED, evaluation.status());
@@ -440,8 +440,8 @@ class MapConditionsTest {
             PreservingCondition<? super M> condition, M actual,
             boolean explained) throws Exception {
         ConditionRuntime<M, M> runtime = explained
-                ? ConditionAdapters.preserving(condition.because("reason"))
-                : ConditionAdapters.preserving(condition);
+                ? ConditionRuntime.preserving(condition.because("reason"))
+                : ConditionRuntime.preserving(condition);
         assertEquals(explained ? "reason" : null, runtime.explanation());
         assertFalse(runtime.description().get().isBlank());
         return runtime.evaluate(actual);
@@ -695,7 +695,7 @@ class MapConditionsTest {
         assertEquals(0, map.hashCodeCalls);
     }
 
-    private static MapUntil<String, String,
+    private static MapAwait.Until<String, String,
             ProbeContainers.EntryMap<String, String>> timed(
                     ProbeContainers.EntryMap<String, String> actual) {
         FakeTime time = new FakeTime(0);
@@ -706,7 +706,7 @@ class MapConditionsTest {
                 }, WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)), time, time,
                 new Interrupts(), new FailureFactory());
-        return new MapStageAdapters.MapAfterUpToStage<>(chain);
+        return new MapStages.MapAfterUpToStage<>(chain);
     }
 
     @SuppressWarnings("unchecked")

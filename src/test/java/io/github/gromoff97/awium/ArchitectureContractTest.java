@@ -61,6 +61,26 @@ class ArchitectureContractTest {
     }
 
     @Test
+    void fluentImplementationUsesNestedApiTypesAndMinimalAdapters() {
+        for (String type : List.of("ObjectAwait$Until",
+                "OptionalAwait$Until", "CollectionAwait$Until",
+                "SequencedCollectionAwait$Until", "MapAwait$Until",
+                "Condition$Explained", "PreservingCondition$Explained",
+                "Present$Explained", "StructuralCondition$Explained")) {
+            assertDoesNotThrow(() -> Class.forName(
+                    "io.github.gromoff97.awium." + type), type);
+        }
+        for (String type : List.of("ObjectUntil", "OptionalUntil",
+                "CollectionUntil", "SequencedCollectionUntil", "MapUntil",
+                "ExplainedCondition", "ExplainedPreservingCondition",
+                "ExplainedPresent", "ExplainedStructuralCondition",
+                "ConditionAdapters")) {
+            assertThrows(ClassNotFoundException.class, () -> Class.forName(
+                    "io.github.gromoff97.awium." + type), type);
+        }
+    }
+
+    @Test
     void productionSourcesUseOnlyApprovedWaitingAndInterruptionMechanics()
             throws IOException {
         assertApprovedSources(productionSources(MAIN_PACKAGE));

@@ -2,24 +2,47 @@ package io.github.gromoff97.awium;
 
 import java.time.Duration;
 
-public sealed interface ObjectAwait<T> extends ObjectUntil<T>
-        permits ObjectStageAdapters.ObjectInitialStage {
+public sealed interface ObjectAwait<T>
+        permits ObjectStages.ObjectInitialStage {
 
     AfterEvery<T> every(Duration interval);
 
     AfterUpTo<T> upTo(Duration timeout);
 
-    ObjectUntil<T> stableFor(Duration stability);
+    Until<T> stableFor(Duration stability);
+
+    T until(PreservingCondition<? super T> condition);
+
+    T until(PreservingCondition.Explained<? super T> condition);
+
+    <R> R until(Condition<? super T, ? extends R> condition);
+
+    <R> R until(Condition.Explained<? super T, ? extends R> condition);
+
+    sealed interface Until<T>
+            permits AfterUpTo, OptionalAwait, OptionalAwait.Until,
+                    CollectionAwait, CollectionAwait.Until,
+                    MapAwait, MapAwait.Until,
+                    ObjectStages.ObjectTerminalStage {
+
+        T until(PreservingCondition<? super T> condition);
+
+        T until(PreservingCondition.Explained<? super T> condition);
+
+        <R> R until(Condition<? super T, ? extends R> condition);
+
+        <R> R until(Condition.Explained<? super T, ? extends R> condition);
+    }
 
     sealed interface AfterEvery<T> extends AfterUpTo<T>
-            permits ObjectStageAdapters.ObjectAfterEveryStage {
+            permits ObjectStages.ObjectAfterEveryStage {
 
         AfterUpTo<T> upTo(Duration timeout);
     }
 
-    sealed interface AfterUpTo<T> extends ObjectUntil<T>
-            permits AfterEvery, ObjectStageAdapters.ObjectAfterUpToStage {
+    sealed interface AfterUpTo<T> extends Until<T>
+            permits AfterEvery, ObjectStages.ObjectAfterUpToStage {
 
-        ObjectUntil<T> stableFor(Duration stability);
+        Until<T> stableFor(Duration stability);
     }
 }

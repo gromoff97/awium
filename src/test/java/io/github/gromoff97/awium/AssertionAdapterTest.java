@@ -232,13 +232,13 @@ class AssertionAdapterTest {
                         && isStatic(method.getModifiers())));
     }
 
-    private static ObjectUntil<Payment> stage(FakeTime time, Payment actual) {
+    private static ObjectAwait.Until<Payment> stage(FakeTime time, Payment actual) {
         WaitConfiguration config = WaitConfiguration.defaults()
                 .withEvery(Duration.ofNanos(1))
                 .withUpTo(Duration.ofNanos(10));
         AwaitChain<Payment> chain = new AwaitChain<>(() -> actual, config,
                 time, time, new Interrupts(), new FailureFactory());
-        return new ObjectStageAdapters.ObjectAfterUpToStage<>(chain);
+        return new ObjectStages.ObjectAfterUpToStage<>(chain);
     }
 
     private record Payment(long id) {
