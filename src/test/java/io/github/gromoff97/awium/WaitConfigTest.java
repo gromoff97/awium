@@ -169,13 +169,18 @@ class WaitConfigTest {
 
     @Test
     void durationFormattingUsesReadableExactUnits() {
-        assertTrue(conflictMessage(1).contains("(1 nanosecond)"));
-        assertTrue(conflictMessage(100_000_000)
-                .contains("(100 milliseconds)"));
-        assertTrue(conflictMessage(Duration.ofSeconds(90).toNanos())
-                .contains("(1 minute 30 seconds)"));
-        assertTrue(conflictMessage(1_001_001_001).contains(
-                "(1 second 1 millisecond 1 microsecond 1 nanosecond)"));
+        assertEquals(
+                "poll interval (1 nanosecond) must be shorter than acquisition timeout (1 nanosecond)",
+                conflictMessage(1));
+        assertEquals(
+                "poll interval (100 milliseconds) must be shorter than acquisition timeout (100 milliseconds)",
+                conflictMessage(100_000_000));
+        assertEquals(
+                "poll interval (1 minute 30 seconds) must be shorter than acquisition timeout (1 minute 30 seconds)",
+                conflictMessage(Duration.ofSeconds(90).toNanos()));
+        assertEquals(
+                "poll interval (1 second 1 millisecond 1 microsecond 1 nanosecond) must be shorter than acquisition timeout (1 second 1 millisecond 1 microsecond 1 nanosecond)",
+                conflictMessage(1_001_001_001));
     }
 
     private static String conflictMessage(long nanos) {

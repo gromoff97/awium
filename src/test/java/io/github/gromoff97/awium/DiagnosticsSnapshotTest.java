@@ -673,10 +673,16 @@ class DiagnosticsSnapshotTest {
         String message = sourceFailure(outcome,
                 "first\r\n second\rthird\n").getMessage();
 
-        assertTrue(message.contains(
-                "Condition:\n    first\n     second\n    third\n\nCause:"));
-        assertFalse(List.of(message.split("\n", -1)).stream()
-                .anyMatch(line -> line.endsWith(" ")));
+        assertEquals("""
+                Await source retrieval failed
+
+                Attempt: 1
+                Condition:
+                    first
+                     second
+                    third
+
+                Cause: IllegalStateException: failure""", message);
     }
 
     @Test
@@ -704,11 +710,18 @@ class DiagnosticsSnapshotTest {
                                 SECOND + MILLISECOND + 1_001,
                                 unsatisfied("actual", "not ready", null, 1)),
                         "condition", null, config(0, 90 * SECOND, 0)));
-        assertTrue(failure.getMessage().contains(
-                "Waited up to: 1 minute 30 seconds"));
-        assertTrue(failure.getMessage().contains(
-                "Elapsed: 1 second 1 millisecond 1 microsecond 1 nanosecond"));
-        assertTrue(failure.getMessage().contains("Interval: 0 nanoseconds"));
+        assertEquals("""
+                Await timed out
+
+                Condition: condition
+                Observed: actual
+                Mismatch: not ready
+
+                Timing:
+                    Waited up to: 1 minute 30 seconds
+                    Elapsed: 1 second 1 millisecond 1 microsecond 1 nanosecond
+                    Attempts: 1
+                    Interval: 0 nanoseconds""", failure.getMessage());
     }
 
     private static AwaitTimeoutException assertionTimeout(
