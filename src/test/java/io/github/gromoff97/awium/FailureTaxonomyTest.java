@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.exception.*;
+import io.github.gromoff97.awium.exceptions.*;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isFinal;
@@ -66,7 +66,7 @@ class FailureTaxonomyTest {
         String source = """
                 package external;
 
-                import io.github.gromoff97.awium.exception.AwaitFailure;
+                import io.github.gromoff97.awium.exceptions.AwaitFailure;
 
                 final class Contract extends AwaitFailure {
                     Contract() {
@@ -83,7 +83,7 @@ class FailureTaxonomyTest {
         String source = """
                 package external;
 
-                import io.github.gromoff97.awium.exception.*;
+                import io.github.gromoff97.awium.exceptions.*;
 
                 final class Contract {
                     void construct() {

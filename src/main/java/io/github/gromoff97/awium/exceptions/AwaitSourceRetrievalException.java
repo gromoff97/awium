@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.exception;
+package io.github.gromoff97.awium.exceptions;
 
 import java.io.Serial;
 

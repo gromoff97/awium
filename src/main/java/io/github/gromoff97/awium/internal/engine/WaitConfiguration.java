@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.internal.engine;
 
-import io.github.gromoff97.awium.exception.AwaitConfigurationConflictException;
+import io.github.gromoff97.awium.exceptions.AwaitConfigurationConflictException;
 
 import java.time.Duration;
 import java.util.Objects;

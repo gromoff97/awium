@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.internal.diagnostic.*;
 
 import io.github.gromoff97.awium.internal.engine.*;
 
-import io.github.gromoff97.awium.exception.*;
+import io.github.gromoff97.awium.exceptions.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;

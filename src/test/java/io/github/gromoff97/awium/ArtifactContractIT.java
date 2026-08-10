@@ -57,7 +57,7 @@ class ArtifactContractIT {
                 module.descriptor().name());
         assertFalse(module.descriptor().isAutomatic());
         assertEquals(Set.of("io.github.gromoff97.awium",
-                        "io.github.gromoff97.awium.exception"),
+                        "io.github.gromoff97.awium.exceptions"),
                 module.descriptor().exports().stream()
                         .map(export -> export.source())
                         .collect(java.util.stream.Collectors.toSet()));

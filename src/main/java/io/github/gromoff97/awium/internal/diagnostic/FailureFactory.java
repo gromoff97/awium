@@ -1,12 +1,12 @@
 package io.github.gromoff97.awium.internal.diagnostic;
 
-import io.github.gromoff97.awium.exception.AwaitConditionEvaluationException;
-import io.github.gromoff97.awium.exception.AwaitInterruptedException;
-import io.github.gromoff97.awium.exception.AwaitSourceRetrievalException;
-import io.github.gromoff97.awium.exception.AwaitStabilizationException;
-import io.github.gromoff97.awium.exception.AwaitTimeoutException;
-import io.github.gromoff97.awium.exception.AwaitUncontrolledException;
-import io.github.gromoff97.awium.exception.AwaitUnhandledException;
+import io.github.gromoff97.awium.exceptions.AwaitConditionEvaluationException;
+import io.github.gromoff97.awium.exceptions.AwaitInterruptedException;
+import io.github.gromoff97.awium.exceptions.AwaitSourceRetrievalException;
+import io.github.gromoff97.awium.exceptions.AwaitStabilizationException;
+import io.github.gromoff97.awium.exceptions.AwaitTimeoutException;
+import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException;
+import io.github.gromoff97.awium.exceptions.AwaitUnhandledException;
 import io.github.gromoff97.awium.internal.engine.AttemptResult;
 import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
 import io.github.gromoff97.awium.internal.engine.WaitResult;

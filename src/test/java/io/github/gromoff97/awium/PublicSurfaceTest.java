@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.exception.*;
+import io.github.gromoff97.awium.exceptions.*;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isFinal;
@@ -52,7 +52,7 @@ class PublicSurfaceTest {
         assertEquals(Set.copyOf(publicTypes()), topLevel);
         for (Class<?> type : topLevel) {
             assertTrue(Set.of("io.github.gromoff97.awium",
-                    "io.github.gromoff97.awium.exception")
+                    "io.github.gromoff97.awium.exceptions")
                     .contains(type.getPackageName()), type.getName());
         }
     }
@@ -66,7 +66,7 @@ class PublicSurfaceTest {
                 AwaitSourceRetrievalException.class,
                 AwaitConditionEvaluationException.class,
                 AwaitInterruptedException.class, AwaitUnhandledException.class)) {
-            assertEquals("io.github.gromoff97.awium.exception",
+            assertEquals("io.github.gromoff97.awium.exceptions",
                     type.getPackageName(), type.getName());
         }
     }
