@@ -7,7 +7,7 @@
     <groupId>io.github.gromoff97</groupId>
     <artifactId>awium</artifactId>
     <version>0.1.0-SNAPSHOT</version>
-    <name>AWIUM</name>
+    <name>Awium</name>
     <description>Await-and-retrieve assertions for Java</description>
     <url>https://github.com/gromoff97/awium</url>
 

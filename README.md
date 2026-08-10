@@ -1,6 +1,6 @@
-# AWIUM
+# Awium
 
-AWIUM is a Java 21 await-and-assert library with no compile or runtime
+Awium is a Java 21 await-and-assert library with no compile or runtime
 dependencies. It polls a checked source in the calling thread and returns the
 natural result from the same successful observation.
 
@@ -28,7 +28,7 @@ Payment payment = await(paymentRepository::findById)
 ```
 
 The library requires Java 21. Its published compile and runtime dependency
-graphs are empty; JUnit and OpenRewrite are used only to test AWIUM itself.
+graphs are empty; JUnit and OpenRewrite are used only to test Awium itself.
 
 Examples below assume:
 
@@ -165,15 +165,15 @@ Map<String, Payment> completeIndex = await(paymentRepository::index)
 ## Threading and interruption
 
 Polling, source retrieval, and condition evaluation all run on the exact
-platform or virtual thread that calls `until(...)`. AWIUM creates no
+platform or virtual thread that calls `until(...)`. Awium creates no
 worker, executor, scheduler, or virtual thread, so caller `ThreadLocal` values
 remain visible.
 
 This first release supports one-thread use only. Another thread may interrupt
 the caller as an external cancellation controller, but it must not access or
 mutate the stage, source, condition, expected values, or observed in-memory
-objects. AWIUM restores the interrupt flag and throws
-`AwaitInterruptedException`. Because callbacks run in the caller, AWIUM
+objects. Awium restores the interrupt flag and throws
+`AwaitInterruptedException`. Because callbacks run in the caller, Awium
 cannot preempt a source or condition that blocks indefinitely.
 
 ## Failures
@@ -200,4 +200,4 @@ Invalid sources, conditions, durations, and cross-field timing configuration
 fail before polling. `VirtualMachineError` and `ThreadDeath` are rethrown
 unchanged.
 
-AWIUM is licensed under the [Apache License 2.0](LICENSE).
+Awium is licensed under the [Apache License 2.0](LICENSE).
