@@ -60,16 +60,10 @@ class FactoryGrammarTest {
     }
 
     @Test
-    void everyFluentStateIsSealedAndClosedByFinalAdapters() {
+    void everyFluentInterfaceIsSealedAndClosedByFinalAdapters() {
         List<Class<?>> stages = List.of(
-                Await.Until.class, Await.class,
-                Await.AfterEvery.class, Await.AfterUpTo.class,
-                OptionalAwait.Until.class, OptionalAwait.class,
-                OptionalAwait.AfterEvery.class, OptionalAwait.AfterUpTo.class,
-                StructuralAwait.Until.class, StructuralAwait.class,
-                StructuralAwait.AfterEvery.class, StructuralAwait.AfterUpTo.class);
+                Await.class, OptionalAwait.class, StructuralAwait.class);
 
-        assertEquals(12, stages.size());
         assertTrue(stages.stream().allMatch(Class::isSealed));
         for (Class<?> stage : stages) {
             for (Class<?> permitted : stage.getPermittedSubclasses()) {
@@ -91,46 +85,46 @@ class FactoryGrammarTest {
     }
 
     @Test
-    void configurationOnlyBuildsStagesAndFailedBranchesDoNotPoisonTheOriginal() {
+    void repeatedConfigurationUsesTheLastValueWithoutMutatingEarlierStages() {
         AtomicInteger calls = new AtomicInteger();
         Await<String> initial = await(() -> {
             calls.incrementAndGet();
             return "value";
         });
 
-        Await.AfterEvery<String> every = initial.every(Duration.ofSeconds(20));
-        initial.upTo(SECOND);
-        initial.stableFor(Duration.ZERO);
-        assertEquals(0, calls.get());
+        Await<String> slow = initial.every(Duration.ofSeconds(20));
+        Await<String> repaired = slow
+                .upTo(Duration.ofSeconds(10))
+                .every(Duration.ofMillis(1))
+                .upTo(SECOND)
+                .stableFor(Duration.ofSeconds(2))
+                .stableFor(Duration.ZERO);
 
+        assertEquals("value", repaired.until(isNotNull));
         assertThrows(AwaitConfigurationConflictException.class,
-                () -> every.upTo(Duration.ofSeconds(10)));
-        String value = every.upTo(Duration.ofSeconds(30))
-                .until(isNotNull);
-
-        assertEquals("value", value);
+                () -> slow.until(isNotNull));
         assertEquals(1, calls.get());
     }
 
     @Test
     void everyTerminalOverloadValidatesTheFinalConfigurationPair() {
         AtomicInteger sourceCalls = new AtomicInteger();
-        Await.AfterEvery<String> object = await(
+        Await<String> object = await(
                 (Source<String>) () -> {
                     sourceCalls.incrementAndGet();
                     return "value";
                 }).every(Duration.ofSeconds(20));
-        OptionalAwait.AfterEvery<String> optional = await(
+        OptionalAwait<String> optional = await(
                 (OptionalSource<String>) () -> {
                     sourceCalls.incrementAndGet();
                     return Optional.of("value");
                 }).every(Duration.ofSeconds(20));
-        StructuralAwait.AfterEvery<List<String>> collection =
+        StructuralAwait<List<String>> collection =
                 await((CollectionSource<List<String>>) () -> {
                             sourceCalls.incrementAndGet();
                             return List.of("value");
                         }).every(Duration.ofSeconds(20));
-        StructuralAwait.AfterEvery<Map<String, String>> map =
+        StructuralAwait<Map<String, String>> map =
                 await((MapSource<Map<String, String>>) () -> {
                             sourceCalls.incrementAndGet();
                             return Map.of("key", "value");
@@ -161,7 +155,7 @@ class FactoryGrammarTest {
 
     @Test
     void nullConditionWinsOverFinalConfigurationConflictForEveryOverload() {
-        Await.AfterEvery<String> object = await((Source<String>) () -> "value")
+        Await<String> object = await((Source<String>) () -> "value")
                 .every(Duration.ofSeconds(20));
         assertNullCondition(() -> object.until((PreservingCondition<String>) null));
         assertNullCondition(() -> object.until(
@@ -170,19 +164,19 @@ class FactoryGrammarTest {
         assertNullCondition(() -> object.until(
                 (Condition.ExplainedCondition<String, String>) null));
 
-        OptionalAwait.AfterEvery<String> optional = await((OptionalSource<String>) Optional::empty)
+        OptionalAwait<String> optional = await((OptionalSource<String>) Optional::empty)
                 .every(Duration.ofSeconds(20));
         assertNullCondition(() -> optional.until((PresentCondition) null));
         assertNullCondition(() -> optional.until((PresentCondition.ExplainedCondition) null));
 
-        StructuralAwait.AfterEvery<Collection<String>> collection =
+        StructuralAwait<Collection<String>> collection =
                 await((CollectionSource<Collection<String>>) List::of)
                         .every(Duration.ofSeconds(20));
         assertNullCondition(() -> collection.until((StructuralCondition) null));
         assertNullCondition(() -> collection.until(
                 (StructuralCondition.ExplainedCondition) null));
 
-        StructuralAwait.AfterEvery<Map<String, String>> map =
+        StructuralAwait<Map<String, String>> map =
                 await((MapSource<Map<String, String>>) Map::of)
                         .every(Duration.ofSeconds(20));
         assertNullCondition(() -> map.until((StructuralCondition) null));
@@ -192,7 +186,7 @@ class FactoryGrammarTest {
     @Test
     void javaEvaluationOrderPrecedesFinalConfigurationValidation() {
         AtomicInteger conditionExpressions = new AtomicInteger();
-        Await.AfterEvery<String> stage = await((Source<String>) () -> "value")
+        Await<String> stage = await((Source<String>) () -> "value")
                 .every(Duration.ofSeconds(20));
         RuntimeException expected = new RuntimeException("factory failed");
 
@@ -204,7 +198,7 @@ class FactoryGrammarTest {
     }
 
     @Test
-    void receiverConflictPreventsConditionExpressionEvaluation() {
+    void conditionExpressionPrecedesDeferredConfigurationValidation() {
         AtomicInteger conditionExpressions = new AtomicInteger();
 
         assertThrows(AwaitConfigurationConflictException.class, () -> await((Source<String>) () -> "value")
@@ -212,15 +206,7 @@ class FactoryGrammarTest {
                 .upTo(Duration.ofSeconds(10))
                 .until(countingCondition(conditionExpressions)));
 
-        assertEquals(0, conditionExpressions.get());
-    }
-
-    @Test
-    void terminalUsesTheSameConcreteImplementationBehindTheNarrowType() {
-        Await.Until<String> terminal = await((Source<String>) () -> "value")
-                .stableFor(Duration.ZERO);
-
-        assertTrue(((Object) terminal) instanceof Await<?>);
+        assertEquals(1, conditionExpressions.get());
     }
 
     private static Condition<String, String> countingCondition(AtomicInteger calls) {

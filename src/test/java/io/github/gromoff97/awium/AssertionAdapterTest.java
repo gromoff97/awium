@@ -243,7 +243,7 @@ class AssertionAdapterTest {
                         && isStatic(method.getModifiers())));
     }
 
-    private static Await.Until<Payment> stage(FakeTime time, Payment actual) {
+    private static Await<Payment> stage(FakeTime time, Payment actual) {
         WaitConfiguration config = defaults()
                 .withEvery(Duration.ofNanos(1))
                 .withUpTo(Duration.ofNanos(10));

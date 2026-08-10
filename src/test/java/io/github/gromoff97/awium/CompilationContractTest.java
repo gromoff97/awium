@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -128,22 +129,23 @@ class CompilationContractTest {
     }
 
     @Test
-    void duplicateAndBackwardConfigurationDoNotCompile() throws IOException {
+    void configurationOrderAndRepetitionCompile() throws IOException {
         for (String chain : new String[] {
                 "every(d).every(d)",
                 "upTo(d).every(d)",
-                "upTo(d).upTo(d)",
                 "stableFor(d).upTo(d)",
-                "stableFor(d).stableFor(d)"
+                "stableFor(d).every(d).upTo(d)",
+                "upTo(d).stableFor(d).upTo(d).every(d).stableFor(d)"
         }) {
-            assertFalse(compiles("""
+            assertTrue(compiles("""
                     import static io.github.gromoff97.awium.Awium.await;
+                    import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.isNotNull;
                     import io.github.gromoff97.awium.sources.Source;
                     import java.time.Duration;
                     final class Contract {
-                        void check(Source<String> source) {
-                            Duration d = Duration.ofSeconds(1);
-                            await(source).%s;
+                        String check(Source<String> source) {
+                            Duration d = Duration.ofMillis(1);
+                            return await(source).%s.until(isNotNull);
                         }
                     }
                     """.formatted(chain)), chain);
@@ -243,16 +245,10 @@ class CompilationContractTest {
 
     @Test
     void allFluentInterfacesRejectExternalImplementations() throws IOException {
-        for (String type : new String[] {
-                "Await.Until<String>", "Await<String>",
-                "Await.AfterEvery<String>", "Await.AfterUpTo<String>",
-                "OptionalAwait.Until<String>", "OptionalAwait<String>",
-                "OptionalAwait.AfterEvery<String>", "OptionalAwait.AfterUpTo<String>",
-                "StructuralAwait.Until<java.util.Collection<String>>",
-                "StructuralAwait<java.util.Collection<String>>",
-                "StructuralAwait.AfterEvery<java.util.Collection<String>>",
-                "StructuralAwait.AfterUpTo<java.util.Collection<String>>"
-        }) {
+        for (String type : List.of(
+                "Await<String>",
+                "OptionalAwait<String>",
+                "StructuralAwait<java.util.Collection<String>>")) {
             assertFalse(compiles("""
                     import io.github.gromoff97.awium.await.*;
                     import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -261,23 +257,6 @@ class CompilationContractTest {
                     }
                     """.formatted(type)), type);
         }
-    }
-
-    @Test
-    void disjointGrammarStagesCannotBeCastToRecoverMethods() throws IOException {
-        assertFalse(compiles("""
-                import static io.github.gromoff97.awium.Awium.await;
-                import io.github.gromoff97.awium.await.Await;
-                import io.github.gromoff97.awium.sources.Source;
-                import io.github.gromoff97.awium.conditioning.conditions.*;
-                final class Contract {
-                    void check(Source<String> source) {
-                        Await<String> initial = await(source);
-                        Await.AfterEvery<String> impossible =
-                                (Await.AfterEvery<String>) initial;
-                    }
-                }
-                """));
     }
 
     @Test

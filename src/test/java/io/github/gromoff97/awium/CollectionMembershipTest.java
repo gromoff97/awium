@@ -448,7 +448,7 @@ class CollectionMembershipTest {
         assertEquals(message, assertThrows(type, executable).getMessage());
     }
 
-    private static StructuralAwait.Until<
+    private static StructuralAwait<
             ProbeContainers.MembershipCollection<String>> timedCollection(
                     ProbeContainers.MembershipCollection<String> actual) {
         FakeTime time = new FakeTime(0);

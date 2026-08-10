@@ -26,10 +26,8 @@ public record WaitConfiguration(
     }
 
     public WaitConfiguration withUpTo(Duration value) {
-        WaitConfiguration candidate = new WaitConfiguration(everyNanos,
+        return new WaitConfiguration(everyNanos,
                 positiveNanos(value, "acquisition timeout"), stableForNanos);
-        candidate.validatePair();
-        return candidate;
     }
 
     public WaitConfiguration withStableFor(Duration value) {

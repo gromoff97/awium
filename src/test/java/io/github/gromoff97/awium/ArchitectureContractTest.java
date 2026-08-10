@@ -83,11 +83,11 @@ class ArchitectureContractTest {
     }
 
     @Test
-    void fluentImplementationUsesNestedApiTypesAndMinimalAdapters() {
+    void fluentImplementationUsesThreeApiInterfacesAndMinimalAdapters() {
         for (String type : List.of(
-                "io.github.gromoff97.awium.await.Await$Until",
-                "io.github.gromoff97.awium.await.OptionalAwait$Until",
-                "io.github.gromoff97.awium.await.StructuralAwait$Until",
+                "io.github.gromoff97.awium.await.Await",
+                "io.github.gromoff97.awium.await.OptionalAwait",
+                "io.github.gromoff97.awium.await.StructuralAwait",
                 "io.github.gromoff97.awium.conditioning.conditions.Condition$ExplainedCondition",
                 "io.github.gromoff97.awium.conditioning.conditions.PreservingCondition$ExplainedCondition",
                 "io.github.gromoff97.awium.conditioning.conditions.PresentCondition$ExplainedCondition",

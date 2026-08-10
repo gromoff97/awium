@@ -401,7 +401,7 @@ class CollectionExactContentTest {
         assertEquals(next, expected.nextCalls);
     }
 
-    private static StructuralAwait.Until<ExactList<String>> timed(
+    private static StructuralAwait<ExactList<String>> timed(
             ExactList<String> actual) {
         FakeTime time = new FakeTime(0);
         return new StructuralAwaitStage<>(

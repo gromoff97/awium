@@ -46,7 +46,12 @@ class PositiveFluentMatrixTest {
                 await(source).upTo(UP_TO).stableFor(ZERO)
                         .until(isNotNull),
                 await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(isNotNull.because("object all")));
+                        .until(isNotNull.because("object all")),
+                await(source).stableFor(ZERO).upTo(UP_TO).every(EVERY)
+                        .until(isNotNull),
+                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
+                        .every(EVERY).upTo(UP_TO).stableFor(ZERO)
+                        .until(isNotNull));
 
         Condition<Object, Object> selecting = condition(
                 "select actual", Evaluation::satisfied);
@@ -74,7 +79,12 @@ class PositiveFluentMatrixTest {
                 await(source).upTo(UP_TO).stableFor(ZERO)
                         .until(present),
                 await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(present.because("optional all")));
+                        .until(present.because("optional all")),
+                await(source).stableFor(ZERO).upTo(UP_TO).every(EVERY)
+                        .until(present),
+                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
+                        .every(EVERY).upTo(UP_TO).stableFor(ZERO)
+                        .until(present));
     }
 
     @Test
@@ -96,7 +106,12 @@ class PositiveFluentMatrixTest {
                 await(source).upTo(UP_TO).stableFor(ZERO)
                         .until(nonEmpty),
                 await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(nonEmpty.because("collection all")));
+                        .until(nonEmpty.because("collection all")),
+                await(source).stableFor(ZERO).upTo(UP_TO).every(EVERY)
+                        .until(nonEmpty),
+                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
+                        .every(EVERY).upTo(UP_TO).stableFor(ZERO)
+                        .until(nonEmpty));
     }
 
     @Test
@@ -118,7 +133,12 @@ class PositiveFluentMatrixTest {
                 await(source).upTo(UP_TO).stableFor(ZERO)
                         .until(nonEmpty),
                 await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(nonEmpty.because("sequenced all")));
+                        .until(nonEmpty.because("sequenced all")),
+                await(source).stableFor(ZERO).upTo(UP_TO).every(EVERY)
+                        .until(nonEmpty),
+                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
+                        .every(EVERY).upTo(UP_TO).stableFor(ZERO)
+                        .until(nonEmpty));
     }
 
     @Test
@@ -140,11 +160,16 @@ class PositiveFluentMatrixTest {
                 await(source).upTo(UP_TO).stableFor(ZERO)
                         .until(nonEmpty),
                 await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(nonEmpty.because("map all")));
+                        .until(nonEmpty.because("map all")),
+                await(source).stableFor(ZERO).upTo(UP_TO).every(EVERY)
+                        .until(nonEmpty),
+                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
+                        .every(EVERY).upTo(UP_TO).stableFor(ZERO)
+                        .until(nonEmpty));
     }
 
     private static void assertAllSame(Object expected, Object... actuals) {
-        assertEquals(8, actuals.length);
+        assertEquals(10, actuals.length);
         for (Object actual : actuals) {
             assertSame(expected, actual);
         }

@@ -141,7 +141,7 @@ class ObjectAndOptionalAwaitTest {
     void reusableStageStartsFreshAfterControlledAndUncontrolledFailures() {
         FakeTime time = new FakeTime(0);
         AtomicInteger sourceCalls = new AtomicInteger();
-        Await.Until<String> stage = stage(time, () -> {
+        Await<String> stage = stage(time, () -> {
             sourceCalls.incrementAndGet();
             return "value";
         });
@@ -168,7 +168,7 @@ class ObjectAndOptionalAwaitTest {
     void reusableConditionRetainsOnlyItsOwnStateAcrossFreshWaits() {
         FakeTime time = new FakeTime(0);
         AtomicInteger evaluations = new AtomicInteger();
-        Await.Until<String> stage = stage(time, () -> "value");
+        Await<String> stage = stage(time, () -> "value");
         Condition<String, String> secondEvaluationOnward =
                 condition("second evaluation onward", value ->
                         evaluations.incrementAndGet() >= 2
@@ -194,7 +194,7 @@ class ObjectAndOptionalAwaitTest {
         assertTrue(mapFailure.getMessage().contains("map was null"));
     }
 
-    private static StructuralAwait.Until<List<String>> nullCollectionStage() {
+    private static StructuralAwait<List<String>> nullCollectionStage() {
         FakeTime time = new FakeTime(0);
         return new StructuralAwaitStage<>(
                 (CollectionSource<List<String>>) () -> null,
@@ -204,7 +204,7 @@ class ObjectAndOptionalAwaitTest {
                 time, time, new FailureFactory());
     }
 
-    private static StructuralAwait.Until<Map<String, String>> nullMapStage() {
+    private static StructuralAwait<Map<String, String>> nullMapStage() {
         FakeTime time = new FakeTime(0);
         return new StructuralAwaitStage<>(
                 (MapSource<Map<String, String>>) () -> null,
@@ -214,7 +214,7 @@ class ObjectAndOptionalAwaitTest {
                 time, time, new FailureFactory());
     }
 
-    private static <T> Await.Until<T> stage(
+    private static <T> Await<T> stage(
             FakeTime time, Source<T> source) {
         return new AwaitStage<>(source,
                 defaults().withEvery(Duration.ofNanos(1))

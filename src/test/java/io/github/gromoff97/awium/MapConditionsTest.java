@@ -706,7 +706,7 @@ class MapConditionsTest {
         assertEquals(0, map.hashCodeCalls);
     }
 
-    private static StructuralAwait.Until<
+    private static StructuralAwait<
             ProbeContainers.EntryMap<String, String>> timed(
                     ProbeContainers.EntryMap<String, String> actual) {
         FakeTime time = new FakeTime(0);

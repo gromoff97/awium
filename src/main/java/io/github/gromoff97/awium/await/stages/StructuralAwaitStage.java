@@ -15,7 +15,7 @@ import java.util.function.ToIntFunction;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.structural;
 import static java.util.Objects.requireNonNull;
 
-public final class StructuralAwaitStage<S> extends AbstractAwaitStage<S> implements StructuralAwait<S>, StructuralAwait.Until<S>, StructuralAwait.AfterEvery<S>, StructuralAwait.AfterUpTo<S> {
+public final class StructuralAwaitStage<S> extends AbstractAwaitStage<S> implements StructuralAwait<S> {
 
     private final String subject;
     private final ToIntFunction<? super S> size;
@@ -60,19 +60,19 @@ public final class StructuralAwaitStage<S> extends AbstractAwaitStage<S> impleme
     }
 
     @Override
-    public StructuralAwait.AfterEvery<S> every(Duration interval) {
+    public StructuralAwait<S> every(Duration interval) {
         return new StructuralAwaitStage<>(
                 this, configuration().withEvery(interval));
     }
 
     @Override
-    public StructuralAwait.AfterUpTo<S> upTo(Duration timeout) {
+    public StructuralAwait<S> upTo(Duration timeout) {
         return new StructuralAwaitStage<>(
                 this, configuration().withUpTo(timeout));
     }
 
     @Override
-    public StructuralAwait.Until<S> stableFor(Duration stability) {
+    public StructuralAwait<S> stableFor(Duration stability) {
         return new StructuralAwaitStage<>(
                 this, configuration().withStableFor(stability));
     }

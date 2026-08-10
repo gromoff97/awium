@@ -281,7 +281,7 @@ class StructuralConditionsTest {
         return structural(condition, "map", Map::size);
     }
 
-    private static StructuralAwait.Until<
+    private static StructuralAwait<
             ProbeContainers.ProbeCollection<Object>> timedCollection(
                     ProbeContainers.ProbeCollection<Object> actual) {
         FakeTime time = new FakeTime(0);
@@ -295,7 +295,7 @@ class StructuralConditionsTest {
                 new FailureFactory());
     }
 
-    private static StructuralAwait.Until<
+    private static StructuralAwait<
             ProbeContainers.ProbeMap<Object, Object>> timedMap(
                     ProbeContainers.ProbeMap<Object, Object> actual) {
         FakeTime time = new FakeTime(0);

@@ -55,8 +55,10 @@ class WaitConfigTest {
         assertEquals(Duration.ofSeconds(20).toNanos(), interval.everyNanos());
         assertEquals(Duration.ofSeconds(2).toNanos(), stable.stableForNanos());
 
+        WaitConfiguration invalidBranch = interval.withUpTo(
+                Duration.ofSeconds(10));
         assertThrows(AwaitConfigurationConflictException.class,
-                () -> interval.withUpTo(Duration.ofSeconds(10)));
+                invalidBranch::validatePair);
         WaitConfiguration validBranch = interval.withUpTo(Duration.ofSeconds(30));
         assertEquals(Duration.ofSeconds(30).toNanos(), validBranch.upToNanos());
         assertEquals(Duration.ofSeconds(10).toNanos(), interval.upToNanos());
@@ -130,26 +132,25 @@ class WaitConfigTest {
     }
 
     @Test
-    void onlyTimeoutAndTerminalValidationCheckThePair() {
-        WaitConfiguration interval = defaults().withEvery(Duration.ofSeconds(20));
-        WaitConfiguration stable = interval.withStableFor(Duration.ofSeconds(1));
+    void onlyTerminalValidationChecksTheFinalPair() {
+        WaitConfiguration intermediate = defaults()
+                .withEvery(Duration.ofSeconds(20))
+                .withUpTo(Duration.ofSeconds(10));
+        WaitConfiguration repaired = intermediate
+                .withEvery(Duration.ofSeconds(1));
 
-        var terminalFailure = assertThrows(AwaitConfigurationConflictException.class,
-                stable::validatePair);
-        assertEquals(
-                "poll interval (20 seconds) must be shorter than acquisition timeout (10 seconds)",
-                terminalFailure.getMessage());
-
-        var timeoutFailure = assertThrows(AwaitConfigurationConflictException.class,
-                () -> interval.withUpTo(Duration.ofSeconds(10)));
-        assertEquals(terminalFailure.getMessage(), timeoutFailure.getMessage());
+        assertThrows(AwaitConfigurationConflictException.class,
+                intermediate::validatePair);
+        repaired.validatePair();
     }
 
     @Test
-    void equalIntervalAndTimeoutAlsoConflict() {
-        var failure = assertThrows(AwaitConfigurationConflictException.class,
-                () -> defaults().withUpTo(Duration.ofMillis(100)));
+    void equalIntervalAndTimeoutConflictOnlyWhenValidated() {
+        WaitConfiguration equal = defaults()
+                .withUpTo(Duration.ofMillis(100));
 
+        var failure = assertThrows(AwaitConfigurationConflictException.class,
+                equal::validatePair);
         assertEquals(
                 "poll interval (100 milliseconds) must be shorter than acquisition timeout (100 milliseconds)",
                 failure.getMessage());

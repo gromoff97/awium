@@ -14,7 +14,7 @@ import java.util.function.LongSupplier;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.present;
 import static java.util.Objects.requireNonNull;
 
-public final class OptionalAwaitStage<T> extends AbstractAwaitStage<Optional<T>> implements OptionalAwait<T>, OptionalAwait.Until<T>, OptionalAwait.AfterEvery<T>, OptionalAwait.AfterUpTo<T> {
+public final class OptionalAwaitStage<T> extends AbstractAwaitStage<Optional<T>> implements OptionalAwait<T> {
 
     public OptionalAwaitStage(OptionalSource<T> source) {
         super(source);
@@ -32,19 +32,19 @@ public final class OptionalAwaitStage<T> extends AbstractAwaitStage<Optional<T>>
     }
 
     @Override
-    public OptionalAwait.AfterEvery<T> every(Duration interval) {
+    public OptionalAwait<T> every(Duration interval) {
         return new OptionalAwaitStage<>(
                 this, configuration().withEvery(interval));
     }
 
     @Override
-    public OptionalAwait.AfterUpTo<T> upTo(Duration timeout) {
+    public OptionalAwait<T> upTo(Duration timeout) {
         return new OptionalAwaitStage<>(
                 this, configuration().withUpTo(timeout));
     }
 
     @Override
-    public OptionalAwait.Until<T> stableFor(Duration stability) {
+    public OptionalAwait<T> stableFor(Duration stability) {
         return new OptionalAwaitStage<>(
                 this, configuration().withStableFor(stability));
     }

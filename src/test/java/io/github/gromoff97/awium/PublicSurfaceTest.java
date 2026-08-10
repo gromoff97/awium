@@ -216,10 +216,10 @@ class PublicSurfaceTest {
     }
 
     @Test
-    void allTwelveFluentStagesHaveExactPermittedSubtypeSets() {
+    void allThreeFluentInterfacesHaveExactPermittedSubtypeSets() {
         Map<Class<?>, Set<Class<?>>> expected = expectedPermittedSubtypes();
 
-        assertEquals(12, expected.size());
+        assertEquals(3, expected.size());
         assertEquals(expected.keySet(), Set.copyOf(fluentStages()));
         expected.forEach((stage, permitted) -> {
             assertTrue(stage.isInterface(), stage.getName());
@@ -502,45 +502,16 @@ class PublicSurfaceTest {
     }
 
     private static Map<Class<?>, Set<Class<?>>> expectedPermittedSubtypes() {
-        return Map.ofEntries(
-                Map.entry(Await.class, Set.of(AwaitStage.class)),
-                Map.entry(Await.AfterEvery.class, Set.of(AwaitStage.class)),
-                Map.entry(Await.AfterUpTo.class,
-                        Set.of(Await.AfterEvery.class, AwaitStage.class)),
-                Map.entry(Await.Until.class,
-                        Set.of(Await.AfterUpTo.class,
-                                OptionalAwait.class, OptionalAwait.Until.class,
-                                StructuralAwait.class, StructuralAwait.Until.class,
-                                AwaitStage.class)),
-                Map.entry(OptionalAwait.class,
-                        Set.of(OptionalAwaitStage.class)),
-                Map.entry(OptionalAwait.AfterEvery.class,
-                        Set.of(OptionalAwaitStage.class)),
-                Map.entry(OptionalAwait.AfterUpTo.class,
-                        Set.of(OptionalAwait.AfterEvery.class,
-                                OptionalAwaitStage.class)),
-                Map.entry(OptionalAwait.Until.class,
-                        Set.of(OptionalAwait.AfterUpTo.class,
-                                OptionalAwaitStage.class)),
-                Map.entry(StructuralAwait.class,
-                        Set.of(StructuralAwaitStage.class)),
-                Map.entry(StructuralAwait.AfterEvery.class,
-                        Set.of(StructuralAwaitStage.class)),
-                Map.entry(StructuralAwait.AfterUpTo.class,
-                        Set.of(StructuralAwait.AfterEvery.class,
-                                StructuralAwaitStage.class)),
-                Map.entry(StructuralAwait.Until.class,
-                        Set.of(StructuralAwait.AfterUpTo.class,
-                                StructuralAwaitStage.class)));
+        return Map.of(
+                Await.class, Set.of(
+                        AwaitStage.class, OptionalAwait.class,
+                        StructuralAwait.class),
+                OptionalAwait.class, Set.of(OptionalAwaitStage.class),
+                StructuralAwait.class, Set.of(StructuralAwaitStage.class));
     }
 
     private static List<Class<?>> fluentStages() {
-        return List.of(Await.class, Await.AfterEvery.class,
-                Await.AfterUpTo.class, Await.Until.class,
-                OptionalAwait.class, OptionalAwait.AfterEvery.class,
-                OptionalAwait.AfterUpTo.class, OptionalAwait.Until.class,
-                StructuralAwait.class, StructuralAwait.AfterEvery.class,
-                StructuralAwait.AfterUpTo.class, StructuralAwait.Until.class);
+        return List.of(Await.class, OptionalAwait.class, StructuralAwait.class);
     }
 
     private static List<Class<?>> closedConditionTypes() {
