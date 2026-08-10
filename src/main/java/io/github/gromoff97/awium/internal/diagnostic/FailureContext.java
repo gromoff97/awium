@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.internal.diagnostic;
 
-import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
-import io.github.gromoff97.awium.internal.engine.WaitResult;
+import io.github.gromoff97.awium.engine.WaitConfiguration;
+import io.github.gromoff97.awium.engine.WaitOutcome;
 
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -13,7 +13,7 @@ public final class FailureContext<R> {
     static final String ACTUAL_DIAGNOSTICS_FAILED =
             "<value unavailable: diagnostics failed>";
 
-    private final WaitResult<R> outcome;
+    private final WaitOutcome<R> outcome;
     private final Supplier<String> descriptionSupplier;
     private final String explanation;
     private final WaitConfiguration config;
@@ -27,7 +27,7 @@ public final class FailureContext<R> {
     private boolean causeMaterialized;
     private String cause;
 
-    public FailureContext(WaitResult<R> outcome,
+    public FailureContext(WaitOutcome<R> outcome,
             Supplier<String> descriptionSupplier, String explanation,
             WaitConfiguration config) {
         this.outcome = Objects.requireNonNull(outcome);
@@ -36,7 +36,7 @@ public final class FailureContext<R> {
         this.config = Objects.requireNonNull(config);
     }
 
-    public WaitResult<R> outcome() {
+    public WaitOutcome<R> outcome() {
         return outcome;
     }
 
@@ -70,13 +70,13 @@ public final class FailureContext<R> {
     }
 
     public boolean hasActual() {
-        return outcome.observation() != null && outcome.observation().hasActual();
+        return outcome.attempt().hasActual();
     }
 
     public String actualValue() {
         if (!actualMaterialized) {
             actualMaterialized = true;
-            actual = ValueRenderer.render(outcome.observation().actual());
+            actual = ValueRenderer.render(outcome.attempt().actual());
         }
         return actual;
     }
@@ -92,10 +92,10 @@ public final class FailureContext<R> {
     public Throwable terminalCause() {
         return switch (outcome.kind()) {
             case TIMEOUT_BETWEEN_OBSERVATIONS ->
-                    outcome.lastObservation().assertionCause();
+                    outcome.attempt().assertionCause();
             case LATE_UNSATISFIED_TIMEOUT, STABILITY_LOSS ->
-                    outcome.observation().assertionCause();
-            case UNCONTROLLED -> outcome.observation().cause();
+                    outcome.attempt().assertionCause();
+            case UNCONTROLLED -> outcome.attempt().cause();
             case SUCCESS, LATE_SATISFIED_TIMEOUT -> null;
         };
     }

@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium.internal.diagnostic;
 
-import io.github.gromoff97.awium.internal.engine.AttemptResult;
+import io.github.gromoff97.awium.engine.Attempt;
+import io.github.gromoff97.awium.engine.WaitOutcome;
 import io.github.gromoff97.awium.internal.engine.DurationFormatter;
-import io.github.gromoff97.awium.internal.engine.WaitResult;
 
 import java.util.function.Function;
 
@@ -23,8 +23,8 @@ public final class Diagnostics
     }
 
     private static String timeoutBetween(FailureContext<?> context) {
-        WaitResult<?> outcome = context.outcome();
-        WaitResult.LastObservation last = outcome.lastObservation();
+        WaitOutcome<?> outcome = context.outcome();
+        Attempt<?> last = outcome.attempt();
         FailureContext.AssertionDiagnostic assertion = last.assertionCause() == null
                 ? null : context.assertionDiagnostic("assertion did not pass");
         StringBuilder out = heading("Await timed out");
@@ -32,7 +32,7 @@ public final class Diagnostics
         field(out, 0, "Reason",
                 "acquisition deadline elapsed before the next observation");
         out.append('\n').append("Last observation:\n");
-        field(out, 4, "Attempt", Long.toString(last.attempt()));
+        field(out, 4, "Attempt", Long.toString(last.number()));
         field(out, 4, "Completed after", duration(
                 last.completedNanos() - outcome.startedNanos()));
         field(out, 4, "Mismatch", assertion == null
@@ -47,7 +47,7 @@ public final class Diagnostics
     }
 
     private static String lateUnsatisfied(FailureContext<?> context) {
-        AttemptResult<?> observation = context.outcome().observation();
+        Attempt<?> observation = context.outcome().attempt();
         FailureContext.AssertionDiagnostic assertion =
                 observation.assertionCause() == null ? null
                         : context.assertionDiagnostic("assertion did not pass");
@@ -77,8 +77,8 @@ public final class Diagnostics
     }
 
     private static String stabilityLoss(FailureContext<?> context) {
-        WaitResult<?> outcome = context.outcome();
-        AttemptResult<?> observation = outcome.observation();
+        WaitOutcome<?> outcome = context.outcome();
+        Attempt<?> observation = outcome.attempt();
         FailureContext.AssertionDiagnostic assertion =
                 observation.assertionCause() == null ? null
                         : context.assertionDiagnostic("assertion did not pass");
@@ -104,7 +104,7 @@ public final class Diagnostics
     }
 
     private static String uncontrolled(FailureContext<?> context) {
-        AttemptResult<?> observation = context.outcome().observation();
+        Attempt<?> observation = context.outcome().attempt();
         boolean interrupted = observation.cause() instanceof InterruptedException;
         String heading = interrupted ? "Await was interrupted" : switch (
                 observation.origin()) {
@@ -113,7 +113,7 @@ public final class Diagnostics
             case WAITING -> "Await execution was unhandled";
         };
         StringBuilder out = heading(heading);
-        field(out, 0, "Attempt", Long.toString(observation.attempt()));
+        field(out, 0, "Attempt", Long.toString(observation.number()));
         if (interrupted) {
             field(out, 0, "Origin", origin(observation.origin()));
         }
@@ -128,7 +128,7 @@ public final class Diagnostics
 
     private static void timeoutTiming(StringBuilder out,
             FailureContext<?> context, boolean attempts) {
-        WaitResult<?> outcome = context.outcome();
+        WaitOutcome<?> outcome = context.outcome();
         field(out, 4, "Waited up to", duration(context.config().upToNanos()));
         field(out, 4, "Elapsed", duration(
                 outcome.completedNanos() - outcome.startedNanos()));
@@ -181,7 +181,7 @@ public final class Diagnostics
         return DurationFormatter.format(nanos);
     }
 
-    private static String origin(AttemptResult.Origin origin) {
+    private static String origin(Attempt.Origin origin) {
         return switch (origin) {
             case WAITING -> "waiting";
             case SOURCE -> "source";

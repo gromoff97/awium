@@ -8,7 +8,7 @@ import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
 import io.github.gromoff97.awium.internal.diagnostic.*;
 
-import io.github.gromoff97.awium.internal.engine.*;
+import io.github.gromoff97.awium.engine.*;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.StructuralAwait;
@@ -458,7 +458,7 @@ class CollectionMembershipTest {
                 }, Collection::size,
                 WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)), time, time,
-                new Interrupts(), new FailureFactory());
+                new FailureFactory());
     }
 
     private static <E> ProbeContainers.MembershipCollection<E> await(

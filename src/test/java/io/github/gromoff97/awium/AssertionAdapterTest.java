@@ -8,7 +8,7 @@ import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
 import io.github.gromoff97.awium.internal.diagnostic.*;
 
-import io.github.gromoff97.awium.internal.engine.*;
+import io.github.gromoff97.awium.engine.*;
 import io.github.gromoff97.awium.await.Await;
 import io.github.gromoff97.awium.await.stages.AwaitStage;
 import io.github.gromoff97.awium.sources.Source;
@@ -246,7 +246,7 @@ class AssertionAdapterTest {
                 .withEvery(Duration.ofNanos(1))
                 .withUpTo(Duration.ofNanos(10));
         return new AwaitStage<>((Source<Payment>) () -> actual, config,
-                time, time, new Interrupts(), new FailureFactory());
+                time, time, new FailureFactory());
     }
 
     private record Payment(long id) {

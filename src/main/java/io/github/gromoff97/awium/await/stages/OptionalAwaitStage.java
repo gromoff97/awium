@@ -3,9 +3,8 @@ package io.github.gromoff97.awium.await.stages;
 import io.github.gromoff97.awium.await.OptionalAwait;
 import io.github.gromoff97.awium.conditioning.conditions.PresentCondition;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
+import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.internal.diagnostic.FailureFactory;
-import io.github.gromoff97.awium.internal.engine.Interrupts;
-import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.OptionalSource;
 
 import java.time.Duration;
@@ -25,9 +24,8 @@ public final class OptionalAwaitStage<T>
 
     public OptionalAwaitStage(OptionalSource<T> source,
             WaitConfiguration configuration, LongSupplier clock,
-            LongConsumer parker, Interrupts interrupts,
-            FailureFactory failureFactory) {
-        super(source, configuration, clock, parker, interrupts, failureFactory);
+            LongConsumer parker, FailureFactory failureFactory) {
+        super(source, configuration, clock, parker, failureFactory);
     }
 
     private OptionalAwaitStage(OptionalAwaitStage<T> stage,

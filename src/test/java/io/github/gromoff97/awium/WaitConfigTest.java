@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.engine.*;
+import io.github.gromoff97.awium.engine.*;
+import io.github.gromoff97.awium.internal.engine.DurationFormatter;
 
 import io.github.gromoff97.awium.exceptions.*;
 

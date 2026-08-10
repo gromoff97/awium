@@ -8,7 +8,7 @@ import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
 import io.github.gromoff97.awium.internal.diagnostic.*;
 
-import io.github.gromoff97.awium.internal.engine.*;
+import io.github.gromoff97.awium.engine.*;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.Await;
@@ -124,7 +124,7 @@ class ObjectAndOptionalAwaitTest {
         AwaitStage<String> stage = new AwaitStage<>(source,
                 WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(10)),
-                time, time, new Interrupts(), new FailureFactory());
+                time, time, new FailureFactory());
         Condition<String, String> evenObservation = ConditionProvider.condition(
                 "even observation", value -> Integer.parseInt(value.substring(1)) % 2 == 0
                         ? Evaluation.satisfied(value)
@@ -199,7 +199,7 @@ class ObjectAndOptionalAwaitTest {
                 java.util.Collection::size,
                 WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)),
-                time, time, new Interrupts(), new FailureFactory());
+                time, time, new FailureFactory());
     }
 
     private static StructuralAwait.Until<Map<String, String>> nullMapStage() {
@@ -209,7 +209,7 @@ class ObjectAndOptionalAwaitTest {
                 Map::size,
                 WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)),
-                time, time, new Interrupts(), new FailureFactory());
+                time, time, new FailureFactory());
     }
 
     private static <T> Await.Until<T> stage(
@@ -217,7 +217,7 @@ class ObjectAndOptionalAwaitTest {
         return new AwaitStage<>(source,
                 WaitConfiguration.defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(3)),
-                time, time, new Interrupts(), new FailureFactory());
+                time, time, new FailureFactory());
     }
 
     private static final class CyclingSource implements Source<String> {

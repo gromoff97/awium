@@ -3,9 +3,8 @@ package io.github.gromoff97.awium.await.stages;
 import io.github.gromoff97.awium.await.StructuralAwait;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.conditioning.conditions.StructuralCondition;
+import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.internal.diagnostic.FailureFactory;
-import io.github.gromoff97.awium.internal.engine.Interrupts;
-import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.CollectionSource;
 import io.github.gromoff97.awium.sources.MapSource;
 
@@ -38,20 +37,18 @@ public final class StructuralAwaitStage<S> extends AbstractAwaitStage<S>
 
     public StructuralAwaitStage(CollectionSource<? extends S> source,
             ToIntFunction<? super S> size, WaitConfiguration configuration,
-            LongSupplier clock, LongConsumer parker, Interrupts interrupts,
+            LongSupplier clock, LongConsumer parker,
             FailureFactory failureFactory) {
-        super(source::get, configuration, clock, parker, interrupts,
-                failureFactory);
+        super(source::get, configuration, clock, parker, failureFactory);
         this.subject = "collection";
         this.size = Objects.requireNonNull(size);
     }
 
     public StructuralAwaitStage(MapSource<? extends S> source,
             ToIntFunction<? super S> size, WaitConfiguration configuration,
-            LongSupplier clock, LongConsumer parker, Interrupts interrupts,
+            LongSupplier clock, LongConsumer parker,
             FailureFactory failureFactory) {
-        super(source::get, configuration, clock, parker, interrupts,
-                failureFactory);
+        super(source::get, configuration, clock, parker, failureFactory);
         this.subject = "map";
         this.size = Objects.requireNonNull(size);
     }

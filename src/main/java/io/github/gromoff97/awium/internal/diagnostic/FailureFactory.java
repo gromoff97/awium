@@ -7,9 +7,9 @@ import io.github.gromoff97.awium.exceptions.AwaitStabilizationException;
 import io.github.gromoff97.awium.exceptions.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException;
 import io.github.gromoff97.awium.exceptions.AwaitUnhandledException;
-import io.github.gromoff97.awium.internal.engine.AttemptResult;
-import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
-import io.github.gromoff97.awium.internal.engine.WaitResult;
+import io.github.gromoff97.awium.engine.Attempt;
+import io.github.gromoff97.awium.engine.WaitConfiguration;
+import io.github.gromoff97.awium.engine.WaitOutcome;
 
 import java.util.Objects;
 import java.util.function.Function;
@@ -28,9 +28,9 @@ public final class FailureFactory {
     }
 
     @SuppressWarnings("removal")
-    public <R> R complete(WaitResult<R> outcome, Supplier<String> description,
+    public <R> R complete(WaitOutcome<R> outcome, Supplier<String> description,
             String explanation, WaitConfiguration config) {
-        if (outcome.kind() == WaitResult.Kind.SUCCESS) {
+        if (outcome.kind() == WaitOutcome.Kind.SUCCESS) {
             return outcome.result();
         }
 
@@ -55,14 +55,14 @@ public final class FailureFactory {
             case STABILITY_LOSS -> throw new AwaitStabilizationException(
                     message, cause);
             case UNCONTROLLED -> throw uncontrolled(
-                    outcome.observation(), message);
+                    outcome.attempt(), message);
             case SUCCESS -> throw new AssertionError("unreachable");
         }
         throw new AssertionError("unreachable");
     }
 
     private static AwaitUncontrolledException uncontrolled(
-            AttemptResult<?> observation, String message) {
+            Attempt<?> observation, String message) {
         Throwable cause = observation.cause();
         if (cause instanceof InterruptedException) {
             return new AwaitInterruptedException(message, cause);

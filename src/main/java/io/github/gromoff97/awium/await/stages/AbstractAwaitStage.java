@@ -3,11 +3,9 @@ package io.github.gromoff97.awium.await.stages;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
+import io.github.gromoff97.awium.engine.WaitConfiguration;
+import io.github.gromoff97.awium.engine.WaitEngine;
 import io.github.gromoff97.awium.internal.diagnostic.FailureFactory;
-import io.github.gromoff97.awium.internal.engine.AttemptEvaluator;
-import io.github.gromoff97.awium.internal.engine.Interrupts;
-import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
-import io.github.gromoff97.awium.internal.engine.WaitEngine;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.util.Objects;
@@ -21,30 +19,27 @@ public abstract class AbstractAwaitStage<S> {
     private final WaitConfiguration configuration;
     private final LongSupplier clock;
     private final LongConsumer parker;
-    private final Interrupts interrupts;
     private final FailureFactory failureFactory;
 
     protected AbstractAwaitStage(Source<S> source) {
         this(source, WaitConfiguration.defaults(), System::nanoTime,
-                LockSupport::parkNanos, new Interrupts(), new FailureFactory());
+                LockSupport::parkNanos, new FailureFactory());
     }
 
     protected AbstractAwaitStage(Source<S> source,
             WaitConfiguration configuration, LongSupplier clock,
-            LongConsumer parker, Interrupts interrupts,
-            FailureFactory failureFactory) {
+            LongConsumer parker, FailureFactory failureFactory) {
         this.source = Objects.requireNonNull(source);
         this.configuration = Objects.requireNonNull(configuration);
         this.clock = Objects.requireNonNull(clock);
         this.parker = Objects.requireNonNull(parker);
-        this.interrupts = Objects.requireNonNull(interrupts);
         this.failureFactory = Objects.requireNonNull(failureFactory);
     }
 
     protected AbstractAwaitStage(AbstractAwaitStage<S> stage,
             WaitConfiguration configuration) {
         this(stage.source, configuration, stage.clock, stage.parker,
-                stage.interrupts, stage.failureFactory);
+                stage.failureFactory);
     }
 
     public final S until(PreservingCondition<? super S> condition) {
@@ -79,11 +74,9 @@ public abstract class AbstractAwaitStage<S> {
 
     protected final <R> R complete(RuntimeCondition<S, R> condition) {
         configuration.validatePair();
-        WaitEngine engine = new WaitEngine(
-                configuration, clock, parker, interrupts);
+        WaitEngine engine = new WaitEngine(configuration, clock, parker);
         return failureFactory.complete(
-                engine.waitFor(new AttemptEvaluator<>(
-                        source, condition, interrupts)::evaluate),
+                engine.waitFor(source, condition),
                 condition.description(), condition.explanation(), configuration);
     }
 }

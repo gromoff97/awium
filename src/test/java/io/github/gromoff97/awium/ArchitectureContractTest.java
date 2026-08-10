@@ -8,8 +8,6 @@ import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
 import io.github.gromoff97.awium.internal.diagnostic.*;
 
-import io.github.gromoff97.awium.internal.engine.*;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -44,11 +42,18 @@ class ArchitectureContractTest {
             "github", "gromoff97", "awium");
 
     @Test
-    void waitingCoreLivesBehindTheInternalEngineBoundary() {
-        for (String type : List.of("WaitEngine", "WaitConfiguration",
-                "AttemptResult", "WaitResult", "Interrupts",
-                "DurationFormatter")) {
+    void waitingCoreLivesInTheDedicatedEnginePackage() {
+        for (String type : List.of("Attempt", "WaitOutcome", "WaitEngine",
+                "WaitConfiguration")) {
             assertDoesNotThrow(() -> Class.forName(
+                    "io.github.gromoff97.awium.engine." + type), type);
+        }
+        assertDoesNotThrow(() -> Class.forName(
+                "io.github.gromoff97.awium.internal.engine.DurationFormatter"));
+        for (String type : List.of("AttemptEvaluator", "AttemptResult",
+                "Interrupts", "WaitConfiguration", "WaitEngine",
+                "WaitResult")) {
+            assertThrows(ClassNotFoundException.class, () -> Class.forName(
                     "io.github.gromoff97.awium.internal.engine." + type), type);
         }
     }
@@ -476,9 +481,9 @@ class ArchitectureContractTest {
                                     LockSupport::parkNanos;
                         }
                         """,
-                MAIN_PACKAGE.resolve("internal/engine/Interrupts.java"), """
-                        package io.github.gromoff97.awium.internal.engine;
-                        final class Interrupts {
+                MAIN_PACKAGE.resolve("engine/WaitEngine.java"), """
+                        package io.github.gromoff97.awium.engine;
+                        final class WaitEngine {
                             boolean read() {
                                 return Thread.currentThread().isInterrupted();
                             }
@@ -505,9 +510,9 @@ class ArchitectureContractTest {
                 }
                 """);
         assertRejectedAt(MAIN_PACKAGE.resolve(
-                "internal/engine/Interrupts.java"), """
-                package io.github.gromoff97.awium.internal.engine;
-                final class Interrupts {
+                "engine/WaitEngine.java"), """
+                package io.github.gromoff97.awium.engine;
+                final class WaitEngine {
                     boolean first() {
                         return Thread.currentThread().isInterrupted();
                     }
@@ -592,8 +597,8 @@ class ArchitectureContractTest {
         private static final Path PARK_PORT =
                 MAIN_PACKAGE.resolve(
                         "await/stages/AbstractAwaitStage.java").normalize();
-        private static final Path INTERRUPTS = MAIN_PACKAGE
-                .resolve("internal/engine/Interrupts.java").normalize();
+        private static final Path INTERRUPT_PORT = MAIN_PACKAGE
+                .resolve("engine/WaitEngine.java").normalize();
         private static final Set<Path> NAMESPACE_HOLDERS = Set.of(
                 MAIN_PACKAGE.resolve("Awium.java").normalize(),
                 MAIN_PACKAGE.resolve(
@@ -790,7 +795,7 @@ class ArchitectureContractTest {
                     }
                     return;
                 }
-                reject(tree, "Thread interrupt access outside Interrupts");
+                reject(tree, "Thread interrupt access outside WaitEngine");
             }
             if (THREAD_METHOD.matches(method)
                     && THREAD_WORK_METHODS.contains(name)) {
@@ -900,7 +905,7 @@ class ArchitectureContractTest {
 
         private boolean isApprovedInterruptCall(
                 J.MethodInvocation invocation, String name) {
-            return currentPath().equals(INTERRUPTS)
+            return currentPath().equals(INTERRUPT_PORT)
                     && (name.equals("isInterrupted") || name.equals("interrupt"))
                     && hasNoArguments(invocation)
                     && invocation.getSelect() instanceof J.MethodInvocation current
@@ -942,9 +947,9 @@ class ArchitectureContractTest {
                 throw new AssertionError(PARK_PORT
                         + ": expected exactly one LockSupport::parkNanos");
             }
-            if (auditedPaths.contains(INTERRUPTS)
+            if (auditedPaths.contains(INTERRUPT_PORT)
                     && (interruptReads != 1 || interruptRestores != 1)) {
-                throw new AssertionError(INTERRUPTS
+                throw new AssertionError(INTERRUPT_PORT
                         + ": expected exactly one interrupt read and restoration");
             }
         }
