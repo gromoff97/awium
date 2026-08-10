@@ -368,7 +368,7 @@ class PublicSurfaceTest {
     }
 
     private static Set<Class<?>> discoveredPublicApiTypes() throws Exception {
-        Path classes = Path.of("target", "classes");
+        Path classes = Path.of("build", "classes", "java", "main");
         Set<Class<?>> types = new java.util.HashSet<>();
         try (var entries = Files.walk(classes)) {
             for (Path entry : entries.filter(Files::isRegularFile)

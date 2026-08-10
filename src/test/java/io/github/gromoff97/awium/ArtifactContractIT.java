@@ -11,23 +11,19 @@ import java.lang.module.ModuleFinder;
 import java.lang.module.ModuleReference;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-import javax.xml.parsers.DocumentBuilderFactory;
 import org.junit.jupiter.api.Test;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 
 class ArtifactContractIT {
 
     private static final Path JAR = Path.of(
-            "target", "awium-0.1.0-SNAPSHOT.jar");
-    private static final Path MAIN_CLASS = Path.of("target", "classes", "io",
-            "github", "gromoff97", "awium", "Awium.class");
+            "build", "libs", "awium-0.1.0-SNAPSHOT.jar");
+    private static final Path MAIN_CLASS = Path.of("build", "classes", "java",
+            "main", "io", "github", "gromoff97", "awium", "Awium.class");
 
     @Test
     void currentBuildJarHasTheStableAutomaticModuleIdentity() throws Exception {
@@ -61,49 +57,15 @@ class ArtifactContractIT {
     }
 
     @Test
-    void currentProjectPomDeclaresOnlyApprovedTestDependencies() throws Exception {
-        Path pom = Path.of("pom.xml");
-        assertTrue(Files.isRegularFile(pom), pom.toAbsolutePath().toString());
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        factory.setNamespaceAware(true);
-        Element project = factory.newDocumentBuilder().parse(pom.toFile())
-                .getDocumentElement();
-        Element dependencies = child(project, "dependencies");
-        List<String> coordinates = new ArrayList<>();
-
-        for (Element dependency : children(dependencies, "dependency")) {
-            coordinates.add(text(dependency, "groupId") + ":"
-                    + text(dependency, "artifactId"));
-            assertEquals("test", text(dependency, "scope"));
+    void currentProjectUsesOnlyTheGradleBuild() {
+        for (Path required : List.of(Path.of("build.gradle.kts"),
+                Path.of("settings.gradle.kts"), Path.of("gradlew"),
+                Path.of("gradlew.bat"))) {
+            assertTrue(Files.isRegularFile(required), required.toString());
         }
-
-        assertEquals(Set.of(
-                        "org.junit.jupiter:junit-jupiter",
-                        "org.openrewrite:rewrite-java",
-                        "org.openrewrite:rewrite-java-21"),
-                Set.copyOf(coordinates));
-        assertEquals(3, coordinates.size());
-    }
-
-    private static Element child(Element parent, String name) {
-        List<Element> matches = children(parent, name);
-        assertEquals(1, matches.size(), name);
-        return matches.getFirst();
-    }
-
-    private static String text(Element parent, String name) {
-        return child(parent, name).getTextContent().strip();
-    }
-
-    private static List<Element> children(Element parent, String name) {
-        List<Element> matches = new ArrayList<>();
-        for (Node node = parent.getFirstChild(); node != null;
-                node = node.getNextSibling()) {
-            if (node instanceof Element element
-                    && name.equals(element.getLocalName())) {
-                matches.add(element);
-            }
+        for (Path forbidden : List.of(Path.of("pom.xml"), Path.of("mvnw"),
+                Path.of("mvnw.cmd"), Path.of(".mvn"))) {
+            assertFalse(Files.exists(forbidden), forbidden.toString());
         }
-        return matches;
     }
 }

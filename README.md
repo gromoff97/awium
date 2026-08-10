@@ -19,12 +19,10 @@ Payment payment = await(paymentRepository::findById)
 
 ## Installation
 
-```xml
-<dependency>
-    <groupId>io.github.gromoff97</groupId>
-    <artifactId>awium</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
-</dependency>
+```kotlin
+dependencies {
+    testImplementation("io.github.gromoff97:awium:0.1.0-SNAPSHOT")
+}
 ```
 
 The library requires Java 21. Its published compile and runtime dependency
