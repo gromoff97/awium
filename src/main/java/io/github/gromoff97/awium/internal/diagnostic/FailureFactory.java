@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.internal.diagnostic;
 
 import io.github.gromoff97.awium.exception.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.exception.AwaitInterruptedException;
@@ -12,30 +12,33 @@ import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
 import io.github.gromoff97.awium.internal.engine.WaitResult;
 
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
-final class FailureFactory {
+public final class FailureFactory {
 
-    private final DiagnosticFormatter formatter;
+    private final Function<FailureContext<?>, String> formatter;
 
-    FailureFactory() {
+    public FailureFactory() {
         this(new Diagnostics());
     }
 
-    FailureFactory(DiagnosticFormatter formatter) {
+    public FailureFactory(Function<FailureContext<?>, String> formatter) {
         this.formatter = Objects.requireNonNull(formatter);
     }
 
     @SuppressWarnings("removal")
-    <R> R complete(WaitResult<R> outcome, ConditionRuntime<?, R> runtime,
-            WaitConfiguration config) {
+    public <R> R complete(WaitResult<R> outcome, Supplier<String> description,
+            String explanation, WaitConfiguration config) {
         if (outcome.kind() == WaitResult.Kind.SUCCESS) {
             return outcome.result();
         }
 
-        FailureContext<R> context = new FailureContext<>(outcome, runtime, config);
+        FailureContext<R> context = new FailureContext<>(outcome, description,
+                explanation, config);
         String message;
         try {
-            message = Objects.requireNonNull(formatter.format(context),
+            message = Objects.requireNonNull(formatter.apply(context),
                     "diagnostic formatter returned null");
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;

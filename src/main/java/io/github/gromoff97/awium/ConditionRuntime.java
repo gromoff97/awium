@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import java.util.Objects;
+import java.util.function.Supplier;
 
 record ConditionRuntime<S, R>(
         Evaluator<S, R> evaluator,
@@ -13,8 +14,7 @@ record ConditionRuntime<S, R>(
     }
 
     @FunctionalInterface
-    interface Description {
-        String get();
+    interface Description extends Supplier<String> {
     }
 
     ConditionRuntime {

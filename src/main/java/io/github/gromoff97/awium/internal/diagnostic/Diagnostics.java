@@ -1,13 +1,16 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.internal.diagnostic;
 
 import io.github.gromoff97.awium.internal.engine.AttemptResult;
 import io.github.gromoff97.awium.internal.engine.DurationFormatter;
 import io.github.gromoff97.awium.internal.engine.WaitResult;
 
-final class Diagnostics implements DiagnosticFormatter {
+import java.util.function.Function;
+
+public final class Diagnostics
+        implements Function<FailureContext<?>, String> {
 
     @Override
-    public String format(FailureContext<?> context) {
+    public String apply(FailureContext<?> context) {
         return switch (context.outcome().kind()) {
             case TIMEOUT_BETWEEN_OBSERVATIONS -> timeoutBetween(context);
             case LATE_UNSATISFIED_TIMEOUT -> lateUnsatisfied(context);
@@ -142,7 +145,8 @@ final class Diagnostics implements DiagnosticFormatter {
         }
     }
 
-    static void field(StringBuilder out, int indent, String label, String value) {
+    public static void field(StringBuilder out, int indent, String label,
+            String value) {
         String normalized = normalizeNewlines(value);
         String prefix = " ".repeat(indent);
         if (!normalized.contains("\n")) {
@@ -160,7 +164,7 @@ final class Diagnostics implements DiagnosticFormatter {
         }
     }
 
-    static String normalizeNewlines(String value) {
+    public static String normalizeNewlines(String value) {
         return value.replace("\r\n", "\n").replace('\r', '\n');
     }
 

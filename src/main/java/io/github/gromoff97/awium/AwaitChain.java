@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.diagnostic.FailureFactory;
 import io.github.gromoff97.awium.internal.engine.Interrupts;
 import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
 import io.github.gromoff97.awium.internal.engine.WaitEngine;
@@ -61,7 +62,8 @@ final class AwaitChain<S> {
         AttemptEvaluator<S, R> evaluator = new AttemptEvaluator<>(
                 source, condition, interrupts);
         return failureFactory.complete(
-                engine.waitFor(evaluator::evaluate), condition, config);
+                engine.waitFor(evaluator::evaluate), condition.description(),
+                condition.explanation(), config);
     }
 
     private AwaitChain<S> withConfig(WaitConfiguration candidate) {

@@ -1,11 +1,12 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.internal.diagnostic;
 
 import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
 import io.github.gromoff97.awium.internal.engine.WaitResult;
 
 import java.util.Objects;
+import java.util.function.Supplier;
 
-final class FailureContext<R> {
+public final class FailureContext<R> {
 
     static final String DESCRIPTION_UNAVAILABLE =
             "condition description unavailable";
@@ -13,7 +14,8 @@ final class FailureContext<R> {
             "<value unavailable: diagnostics failed>";
 
     private final WaitResult<R> outcome;
-    private final ConditionRuntime<?, R> runtime;
+    private final Supplier<String> descriptionSupplier;
+    private final String explanation;
     private final WaitConfiguration config;
 
     private boolean descriptionMaterialized;
@@ -25,31 +27,33 @@ final class FailureContext<R> {
     private boolean causeMaterialized;
     private String cause;
 
-    FailureContext(WaitResult<R> outcome, ConditionRuntime<?, R> runtime,
+    public FailureContext(WaitResult<R> outcome,
+            Supplier<String> descriptionSupplier, String explanation,
             WaitConfiguration config) {
         this.outcome = Objects.requireNonNull(outcome);
-        this.runtime = Objects.requireNonNull(runtime);
+        this.descriptionSupplier = Objects.requireNonNull(descriptionSupplier);
+        this.explanation = explanation;
         this.config = Objects.requireNonNull(config);
     }
 
-    WaitResult<R> outcome() {
+    public WaitResult<R> outcome() {
         return outcome;
     }
 
-    WaitConfiguration config() {
+    public WaitConfiguration config() {
         return config;
     }
 
-    String explanation() {
-        return runtime.explanation();
+    public String explanation() {
+        return explanation;
     }
 
     @SuppressWarnings("removal")
-    String conditionDescription() {
+    public String conditionDescription() {
         if (!descriptionMaterialized) {
             descriptionMaterialized = true;
             try {
-                String rendered = runtime.description().get();
+                String rendered = descriptionSupplier.get();
                 description = rendered == null || rendered.isBlank()
                         ? DESCRIPTION_UNAVAILABLE : rendered;
             } catch (VirtualMachineError | ThreadDeath fatal) {
@@ -61,15 +65,15 @@ final class FailureContext<R> {
         return description;
     }
 
-    String materializedConditionDescription() {
+    public String materializedConditionDescription() {
         return descriptionMaterialized ? description : DESCRIPTION_UNAVAILABLE;
     }
 
-    boolean hasActual() {
+    public boolean hasActual() {
         return outcome.observation() != null && outcome.observation().hasActual();
     }
 
-    String actualValue() {
+    public String actualValue() {
         if (!actualMaterialized) {
             actualMaterialized = true;
             actual = ValueRenderer.render(outcome.observation().actual());
@@ -77,15 +81,15 @@ final class FailureContext<R> {
         return actual;
     }
 
-    String materializedActualValue() {
+    public String materializedActualValue() {
         return actualMaterialized ? actual : ACTUAL_DIAGNOSTICS_FAILED;
     }
 
-    long attempt() {
+    public long attempt() {
         return outcome.completedAttempts();
     }
 
-    Throwable terminalCause() {
+    public Throwable terminalCause() {
         return switch (outcome.kind()) {
             case TIMEOUT_BETWEEN_OBSERVATIONS ->
                     outcome.lastObservation().assertionCause();

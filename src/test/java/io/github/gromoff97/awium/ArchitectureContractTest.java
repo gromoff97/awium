@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.diagnostic.*;
+
 import io.github.gromoff97.awium.internal.engine.*;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -43,6 +45,19 @@ class ArchitectureContractTest {
             assertDoesNotThrow(() -> Class.forName(
                     "io.github.gromoff97.awium.internal.engine." + type), type);
         }
+    }
+
+    @Test
+    void failureRenderingLivesBehindTheInternalDiagnosticBoundary() {
+        for (String type : List.of("FailureFactory", "FailureContext",
+                "Diagnostics", "ValueRenderer")) {
+            assertDoesNotThrow(() -> Class.forName(
+                    "io.github.gromoff97.awium.internal.diagnostic." + type),
+                    type);
+        }
+        assertThrows(ClassNotFoundException.class,
+                () -> Class.forName("io.github.gromoff97.awium."
+                        + "DiagnosticFormatter"));
     }
 
     @Test

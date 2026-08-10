@@ -1,14 +1,14 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.internal.diagnostic;
 
 import java.util.Arrays;
 
-final class ValueRenderer {
+public final class ValueRenderer {
 
     private ValueRenderer() {
     }
 
     @SuppressWarnings("removal")
-    static String render(Object value) {
+    public static String render(Object value) {
         try {
             if (value instanceof boolean[] array) {
                 return Arrays.toString(array);
@@ -46,7 +46,7 @@ final class ValueRenderer {
         }
     }
 
-    static String typeName(Throwable failure) {
+    public static String typeName(Throwable failure) {
         String simpleName = failure.getClass().getSimpleName();
         return simpleName.isBlank() ? failure.getClass().getName() : simpleName;
     }

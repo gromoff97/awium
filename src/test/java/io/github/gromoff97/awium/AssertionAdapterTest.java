@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.diagnostic.*;
+
 import io.github.gromoff97.awium.internal.engine.*;
 
 import static java.lang.reflect.Modifier.isFinal;

@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.diagnostic.*;
+
 import io.github.gromoff97.awium.internal.engine.*;
 
 import io.github.gromoff97.awium.exception.*;
@@ -12,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("removal")
@@ -299,7 +302,7 @@ class DiagnosticsSnapshotTest {
         WaitResult<Object> outcome = WaitResult.success(0, 0, 0,
                 AttemptResult.satisfied(actual, result, 1));
 
-        assertSame(result, new FailureFactory().complete(
+        assertSame(result, complete(new FailureFactory(),
                 outcome, runtime, config(1, 2, 0)));
         assertEquals(0, descriptions[0]);
         assertEquals(0, actual.calls);
@@ -322,7 +325,7 @@ class DiagnosticsSnapshotTest {
 
         AwaitConditionEvaluationException failure = assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> new FailureFactory().complete(
+                () -> complete(new FailureFactory(),
                         outcome, runtime, config(1, 2, 0)));
 
         assertSame(cause, failure.getCause());
@@ -349,7 +352,7 @@ class DiagnosticsSnapshotTest {
 
             AwaitSourceRetrievalException failure = assertThrows(
                     AwaitSourceRetrievalException.class,
-                    () -> new FailureFactory().complete(outcome,
+                    () -> complete(new FailureFactory(), outcome,
                             new ConditionRuntime<>(
                                     value -> Evaluation.satisfied(value), () -> {
                                         calls[0]++;
@@ -436,7 +439,7 @@ class DiagnosticsSnapshotTest {
 
         AwaitConditionEvaluationException failure = assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> new FailureFactory().complete(
+                () -> complete(new FailureFactory(),
                         outcome, runtime, config(1, 2, 0)));
 
         assertEquals("""
@@ -509,7 +512,7 @@ class DiagnosticsSnapshotTest {
         try {
             AwaitSourceRetrievalException sourceFailure = assertThrows(
                     AwaitSourceRetrievalException.class,
-                    () -> new FailureFactory().complete(sourceOutcome,
+                    () -> complete(new FailureFactory(), sourceOutcome,
                             new ConditionRuntime<>(
                                     value -> Evaluation.satisfied(value), () -> {
                                         Thread.currentThread().interrupt();
@@ -541,7 +544,7 @@ class DiagnosticsSnapshotTest {
         var actual = new NullStringValue();
         var formatterFailure = new IllegalStateException("formatter broke");
         var formatterCalls = new int[1];
-        DiagnosticFormatter formatter = context -> {
+        Function<FailureContext<?>, String> formatter = context -> {
             formatterCalls[0]++;
             context.actualValue();
             throw formatterFailure;
@@ -550,7 +553,7 @@ class DiagnosticsSnapshotTest {
                 AttemptResult.unsatisfied(actual, "not ready", null, 1));
 
         NullPointerException failure = assertThrows(NullPointerException.class,
-                () -> new FailureFactory(formatter).complete(outcome,
+                () -> complete(new FailureFactory(formatter), outcome,
                         runtime("condition", null), config(1, 2, 0)));
 
         assertNull(failure.getCause());
@@ -567,7 +570,7 @@ class DiagnosticsSnapshotTest {
         var formatterCalls = new int[1];
         var descriptions = new int[1];
         var actual = new CountingValue("actual");
-        DiagnosticFormatter formatter = context -> {
+        Function<FailureContext<?>, String> formatter = context -> {
             formatterCalls[0]++;
             throw formatterFailure;
         };
@@ -580,7 +583,7 @@ class DiagnosticsSnapshotTest {
                 AttemptResult.unsatisfied(actual, "not ready", null, 7));
 
         AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
-                () -> new FailureFactory(formatter).complete(
+                () -> complete(new FailureFactory(formatter),
                         outcome, runtime, config(1, 2, 0)));
 
         assertSame(formatterFailure, failure.getCause());
@@ -601,7 +604,7 @@ class DiagnosticsSnapshotTest {
     void emergencyFormattingReusesAlreadyMaterializedFragments() {
         var formatterFailure = new IllegalStateException("formatter broke");
         var actual = new CountingValue("rendered actual");
-        DiagnosticFormatter formatter = context -> {
+        Function<FailureContext<?>, String> formatter = context -> {
             context.conditionDescription();
             context.actualValue();
             throw formatterFailure;
@@ -610,7 +613,7 @@ class DiagnosticsSnapshotTest {
                 AttemptResult.unsatisfied(actual, "not ready", null, 3));
 
         AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
-                () -> new FailureFactory(formatter).complete(outcome,
+                () -> complete(new FailureFactory(formatter), outcome,
                         runtime("rendered condition", null), config(1, 2, 0)));
 
         assertEquals(1, actual.calls);
@@ -636,7 +639,7 @@ class DiagnosticsSnapshotTest {
                         "assertion did not pass", assertion, 1));
 
         assertSame(descriptionFatal, assertThrows(ThrowableFixtures.Fatal.class,
-                () -> new FailureFactory().complete(sourceFailure,
+                () -> complete(new FailureFactory(), sourceFailure,
                         new ConditionRuntime<>(value -> Evaluation.satisfied(value),
                                 () -> {
                                     throw descriptionFatal;
@@ -647,9 +650,9 @@ class DiagnosticsSnapshotTest {
                 () -> complete(assertionFailure, "condition", null,
                         config(1, 2, 0))));
         assertSame(formatterFatal, assertThrows(ThrowableFixtures.Fatal.class,
-                () -> new FailureFactory(context -> {
+                () -> complete(new FailureFactory(context -> {
                     throw formatterFatal;
-                }).complete(sourceFailure, runtime("condition", null),
+                }), sourceFailure, runtime("condition", null),
                         config(1, 2, 0))));
     }
 
@@ -711,7 +714,13 @@ class DiagnosticsSnapshotTest {
     private static <R> R complete(WaitResult<R> outcome, String description,
             String explanation, WaitConfiguration config) {
         return new FailureFactory().complete(
-                outcome, runtime(description, explanation), config);
+                outcome, () -> description, explanation, config);
+    }
+
+    private static <R> R complete(FailureFactory factory, WaitResult<R> outcome,
+            ConditionRuntime<?, R> runtime, WaitConfiguration config) {
+        return factory.complete(outcome, runtime.description(),
+                runtime.explanation(), config);
     }
 
     private static <R> ConditionRuntime<Object, R> runtime(
