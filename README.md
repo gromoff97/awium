@@ -1,12 +1,12 @@
-# Assertility
+# AWIUM
 
-Assertility is a Java 21 await-and-assert library with no compile or runtime
+AWIUM is a Java 21 await-and-assert library with no compile or runtime
 dependencies. It polls a checked source in the calling thread and returns the
 natural result from the same successful observation.
 
 ```java
-import static io.github.gromoff97.assertility.Assertility.await;
-import static io.github.gromoff97.assertility.AwaitConditions.present;
+import static io.github.gromoff97.awium.Awium.await;
+import static io.github.gromoff97.awium.AwaitConditions.present;
 
 import java.time.Duration;
 
@@ -22,22 +22,22 @@ Payment payment = await(paymentRepository::findById)
 ```xml
 <dependency>
     <groupId>io.github.gromoff97</groupId>
-    <artifactId>assertility</artifactId>
+    <artifactId>awium</artifactId>
     <version>0.1.0-SNAPSHOT</version>
 </dependency>
 ```
 
 The library requires Java 21. Its published compile and runtime dependency
-graphs are empty; JUnit and OpenRewrite are used only to test Assertility itself.
+graphs are empty; JUnit and OpenRewrite are used only to test AWIUM itself.
 
 Examples below assume:
 
 ```java
-import static io.github.gromoff97.assertility.Assertility.await;
-import static io.github.gromoff97.assertility.AwaitConditions.*;
+import static io.github.gromoff97.awium.Awium.await;
+import static io.github.gromoff97.awium.AwaitConditions.*;
 
-import io.github.gromoff97.assertility.AwaitSources;
-import io.github.gromoff97.assertility.Evaluation;
+import io.github.gromoff97.awium.AwaitSources;
+import io.github.gromoff97.awium.Evaluation;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -165,15 +165,15 @@ Map<String, Payment> completeIndex = await(paymentRepository::index)
 ## Threading and interruption
 
 Polling, source retrieval, and condition evaluation all run on the exact
-platform or virtual thread that calls `until(...)`. Assertility creates no
+platform or virtual thread that calls `until(...)`. AWIUM creates no
 worker, executor, scheduler, or virtual thread, so caller `ThreadLocal` values
 remain visible.
 
 This first release supports one-thread use only. Another thread may interrupt
 the caller as an external cancellation controller, but it must not access or
 mutate the stage, source, condition, expected values, or observed in-memory
-objects. Assertility restores the interrupt flag and throws
-`AwaitInterruptedException`. Because callbacks run in the caller, Assertility
+objects. AWIUM restores the interrupt flag and throws
+`AwaitInterruptedException`. Because callbacks run in the caller, AWIUM
 cannot preempt a source or condition that blocks indefinitely.
 
 ## Failures
@@ -200,4 +200,4 @@ Invalid sources, conditions, durations, and cross-field timing configuration
 fail before polling. `VirtualMachineError` and `ThreadDeath` are rethrown
 unchanged.
 
-Assertility is licensed under the [Apache License 2.0](LICENSE).
+AWIUM is licensed under the [Apache License 2.0](LICENSE).

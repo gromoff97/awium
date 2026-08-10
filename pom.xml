@@ -5,11 +5,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.github.gromoff97</groupId>
-    <artifactId>assertility</artifactId>
+    <artifactId>awium</artifactId>
     <version>0.1.0-SNAPSHOT</version>
-    <name>assertility</name>
+    <name>AWIUM</name>
     <description>Await-and-retrieve assertions for Java</description>
-    <url>https://github.com/gromoff97/assertility</url>
+    <url>https://github.com/gromoff97/awium</url>
 
     <licenses>
         <license>
@@ -89,7 +89,7 @@
                 <configuration>
                     <archive>
                         <manifestEntries>
-                            <Automatic-Module-Name>io.github.gromoff97.assertility</Automatic-Module-Name>
+                            <Automatic-Module-Name>io.github.gromoff97.awium</Automatic-Module-Name>
                         </manifestEntries>
                     </archive>
                 </configuration>
@@ -108,17 +108,17 @@
                         <version>${pitest.version}</version>
                         <configuration>
                             <targetClasses>
-                                <param>io.github.gromoff97.assertility.*</param>
+                                <param>io.github.gromoff97.awium.*</param>
                             </targetClasses>
                             <targetTests>
-                                <param>io.github.gromoff97.assertility.*Test</param>
+                                <param>io.github.gromoff97.awium.*Test</param>
                             </targetTests>
                             <excludedTestClasses>
-                                <param>io.github.gromoff97.assertility.ArchitectureContractTest</param>
-                                <param>io.github.gromoff97.assertility.CompilationContractTest</param>
-                                <param>io.github.gromoff97.assertility.PublicSurfaceTest</param>
-                                <param>io.github.gromoff97.assertility.RealTimeIntegrationTest</param>
-                                <param>io.github.gromoff97.assertility.VirtualThreadIntegrationTest</param>
+                                <param>io.github.gromoff97.awium.ArchitectureContractTest</param>
+                                <param>io.github.gromoff97.awium.CompilationContractTest</param>
+                                <param>io.github.gromoff97.awium.PublicSurfaceTest</param>
+                                <param>io.github.gromoff97.awium.RealTimeIntegrationTest</param>
+                                <param>io.github.gromoff97.awium.VirtualThreadIntegrationTest</param>
                             </excludedTestClasses>
                             <threads>4</threads>
                             <outputFormats>

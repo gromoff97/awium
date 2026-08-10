@@ -1,0 +1,375 @@
+package io.github.gromoff97.awium;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+class CompilationContractTest {
+
+    @TempDir
+    Path temporaryDirectory;
+
+    @Test
+    void allFacadesTimingSubsetsAndTerminalResultsCompile() throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.Awium.await;
+                import static io.github.gromoff97.awium.AwaitConditions.*;
+                import static io.github.gromoff97.awium.Evaluation.satisfied;
+                import static java.time.Duration.ofMillis;
+                import io.github.gromoff97.awium.*;
+                import java.util.*;
+
+                final class Contract {
+                    static String object() { return "value"; }
+                    static Optional<String> optional() { return Optional.of("value"); }
+                    static Collection<String> collection() { return List.of("value"); }
+                    static ArrayList<String> sequenced() {
+                        return new ArrayList<>(List.of("value"));
+                    }
+                    static HashMap<String, Integer> map() {
+                        return new HashMap<>(Map.of("value", 1));
+                    }
+
+                    void check(StructuralCondition structural,
+                            ExplainedStructuralCondition explainedStructural) {
+                        AwaitSources.Source<String> source = Contract::object;
+                        String immediate = await(source).until(isNotNull);
+                        String every = await(source).every(ofMillis(1)).until(isNotNull);
+                        String upTo = await(source).upTo(ofMillis(2)).until(isNotNull);
+                        String stable = await(source).stableFor(ofMillis(1)).until(isNotNull);
+                        String everyUpTo = await(source).every(ofMillis(1))
+                                .upTo(ofMillis(2)).until(isNotNull);
+                        String everyStable = await(source).every(ofMillis(1))
+                                .stableFor(ofMillis(1)).until(isNotNull);
+                        String upToStable = await(source).upTo(ofMillis(2))
+                                .stableFor(ofMillis(1)).until(isNotNull);
+                        String all = await(source).every(ofMillis(1)).upTo(ofMillis(2))
+                                .stableFor(ofMillis(1)).until(isNotNull);
+
+                        String explained = await(Contract::object)
+                                .until(isNotNull.because("required"));
+                        Integer selected = await(Contract::object).until(condition(
+                                "length", (String value) -> satisfied(value.length())));
+                        Integer selectedExplained = await(Contract::object).until(
+                                condition("length",
+                                        (String value) -> satisfied(value.length()))
+                                        .because("needed"));
+                        Void nil = await((AwaitSources.Source<String>) () -> null)
+                                .until(isNull);
+                        String presentValue = await(Contract::optional).until(present);
+                        String explainedPresent = await(Contract::optional)
+                                .until(present.because("required"));
+                        Void absentValue = await(Contract::optional).until(absent);
+
+                        Collection<String> collectionValue = await(Contract::collection)
+                                .until(structural);
+                        ArrayList<String> sequencedValue = await(Contract::sequenced)
+                                .until(explainedStructural);
+                        HashMap<String, Integer> mapValue = await(Contract::map)
+                                .until(structural);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void excludedDirectAndJdkSourceTypesDoNotCompile() throws IOException {
+        for (String declaration : new String[] {
+                "String source = \"value\";",
+                "java.util.function.Supplier<String> source = () -> \"value\";",
+                "java.util.concurrent.Callable<String> source = () -> \"value\";",
+                "java.util.concurrent.Future<String> source = null;",
+                "java.lang.Iterable<String> source = java.util.List.of();"
+        }) {
+            assertFalse(compiles("""
+                    import static io.github.gromoff97.awium.Awium.await;
+                    final class Contract {
+                        void check() {
+                            %s
+                            await(source);
+                        }
+                    }
+                    """.formatted(declaration)), declaration);
+        }
+    }
+
+    @Test
+    void ambiguousNullSourcesAndConditionsDoNotCompile() throws IOException {
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.Awium.await;
+                final class Contract { void check() { await(() -> null); } }
+                """));
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.Awium.await;
+                final class Contract { void check() { await(null); } }
+                """));
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.Awium.await;
+                import io.github.gromoff97.awium.AwaitSources;
+                final class Contract {
+                    void check(AwaitSources.Source<String> source) {
+                        await(source).until(null);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void duplicateAndBackwardConfigurationDoNotCompile() throws IOException {
+        for (String chain : new String[] {
+                "every(d).every(d)",
+                "upTo(d).every(d)",
+                "upTo(d).upTo(d)",
+                "stableFor(d).upTo(d)",
+                "stableFor(d).stableFor(d)"
+        }) {
+            assertFalse(compiles("""
+                    import static io.github.gromoff97.awium.Awium.await;
+                    import io.github.gromoff97.awium.AwaitSources;
+                    import java.time.Duration;
+                    final class Contract {
+                        void check(AwaitSources.Source<String> source) {
+                            Duration d = Duration.ofSeconds(1);
+                            await(source).%s;
+                        }
+                    }
+                    """.formatted(chain)), chain);
+        }
+    }
+
+    @Test
+    void categorySpecificTerminalsRejectWrongConditions() throws IOException {
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.Awium.await;
+                import io.github.gromoff97.awium.*;
+                final class Contract {
+                    void check(AwaitSources.Source<String> source, Present condition) {
+                        await(source).until(condition);
+                    }
+                }
+                """));
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.Awium.await;
+                import io.github.gromoff97.awium.*;
+                final class Contract {
+                    void check(AwaitSources.Source<String> source,
+                            StructuralCondition condition) {
+                        await(source).until(condition);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void collectionExactFactoriesRespectOrderedSourceTyping()
+            throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.Awium.await;
+                import static io.github.gromoff97.awium.AwaitConditions.*;
+                import io.github.gromoff97.awium.*;
+                import java.util.*;
+
+                final class Contract {
+                    void check(
+                            AwaitSources.SequencedCollectionSource<String,
+                                    ArrayList<String>> sequenced,
+                            AwaitSources.CollectionSource<String,
+                                    Collection<String>> collection,
+                            Collection<String> expected) {
+                        ArrayList<String> ordered = await(sequenced)
+                                .until(containsExactly("a", "b"));
+                        await(sequenced).until(doesNotContainExactly("b", "a")
+                                .because("ordered"));
+                        await(sequenced).until(containsExactlyElementsOf(expected));
+                        await(sequenced).until(doesNotContainExactlyElementsOf(
+                                expected).because("ordered"));
+
+                        Collection<String> anyOrder = await(collection)
+                                .until(containsExactlyInAnyOrder("a", "b"));
+                        await(collection).until(doesNotContainExactlyInAnyOrder(
+                                "a", "b").because("any order"));
+                        await(collection).until(
+                                containsExactlyInAnyOrderElementsOf(expected));
+                        await(collection).until(
+                                doesNotContainExactlyInAnyOrderElementsOf(expected)
+                                        .because("any order"));
+
+                        await(sequenced).until(containsExactlyInAnyOrder("a"));
+                        await(sequenced).until(
+                                containsExactlyInAnyOrderElementsOf(expected));
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void orderedExactFactoriesRejectCollectionOnlySources() throws IOException {
+        for (String condition : new String[] {
+                "containsExactly(\"a\")",
+                "doesNotContainExactly(\"a\")",
+                "containsExactlyElementsOf(expected)",
+                "doesNotContainExactlyElementsOf(expected)"
+        }) {
+            assertFalse(compiles("""
+                    import static io.github.gromoff97.awium.Awium.await;
+                    import static io.github.gromoff97.awium.AwaitConditions.*;
+                    import io.github.gromoff97.awium.*;
+                    import java.util.*;
+
+                    final class Contract {
+                        void check(AwaitSources.CollectionSource<String,
+                                Collection<String>> source,
+                                Collection<String> expected) {
+                            await(source).until(%s);
+                        }
+                    }
+                    """.formatted(condition)), condition);
+        }
+    }
+
+    @Test
+    void allFluentInterfacesRejectExternalImplementations() throws IOException {
+        for (String type : new String[] {
+                "ObjectUntil<String>", "ObjectAwait<String>",
+                "ObjectAwait.AfterEvery<String>", "ObjectAwait.AfterUpTo<String>",
+                "OptionalUntil<String>", "OptionalAwait<String>",
+                "OptionalAwait.AfterEvery<String>", "OptionalAwait.AfterUpTo<String>",
+                "CollectionUntil<String, java.util.Collection<String>>",
+                "CollectionAwait<String, java.util.Collection<String>>",
+                "CollectionAwait.AfterEvery<String, java.util.Collection<String>>",
+                "CollectionAwait.AfterUpTo<String, java.util.Collection<String>>",
+                "SequencedCollectionUntil<String, java.util.SequencedCollection<String>>",
+                "SequencedCollectionAwait<String, java.util.SequencedCollection<String>>",
+                "SequencedCollectionAwait.AfterEvery<String, java.util.SequencedCollection<String>>",
+                "SequencedCollectionAwait.AfterUpTo<String, java.util.SequencedCollection<String>>",
+                "MapUntil<String, Integer, java.util.Map<String, Integer>>",
+                "MapAwait<String, Integer, java.util.Map<String, Integer>>",
+                "MapAwait.AfterEvery<String, Integer, java.util.Map<String, Integer>>",
+                "MapAwait.AfterUpTo<String, Integer, java.util.Map<String, Integer>>"
+        }) {
+            assertFalse(compiles("""
+                    import io.github.gromoff97.awium.*;
+                    final class Contract {
+                        abstract class Broken implements %s {}
+                    }
+                    """.formatted(type)), type);
+        }
+    }
+
+    @Test
+    void disjointGrammarStagesCannotBeCastToRecoverMethods() throws IOException {
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.Awium.await;
+                import io.github.gromoff97.awium.*;
+                final class Contract {
+                    void check(AwaitSources.Source<String> source) {
+                        ObjectAwait<String> initial = await(source);
+                        ObjectAwait.AfterEvery<String> impossible =
+                                (ObjectAwait.AfterEvery<String>) initial;
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void assertionAdaptersMayBeDecoratedOnce() throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.AwaitConditions.*;
+
+                final class Contract {
+                    record Payment(long id) {}
+
+                    void check() {
+                        asserted((Payment value) -> {}).because("first");
+                        passed((Payment value) -> value).because("first");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void explainedAssertionAdapterCannotBeDecoratedAgain() throws IOException {
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.AwaitConditions.asserted;
+
+                final class Contract {
+                    record Payment(long id) {}
+
+                    void check() {
+                        asserted((Payment value) -> {}).because("first")
+                                .because("second");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void conditionIsNotDirectlyLambdaAssignable() throws IOException {
+        assertFalse(compiles("""
+                import io.github.gromoff97.awium.Condition;
+                import io.github.gromoff97.awium.Evaluation;
+
+                final class Contract {
+                    record Payment(long id) {}
+
+                    Condition<Payment, Payment> condition =
+                            value -> Evaluation.satisfied(value);
+                }
+                """));
+    }
+
+    @Test
+    void literalBecauseCannotBeOverridden() throws IOException {
+        assertFalse(compiles("""
+                import io.github.gromoff97.awium.Condition;
+                import io.github.gromoff97.awium.Evaluation;
+                import io.github.gromoff97.awium.ExplainedCondition;
+
+                final class Contract extends Condition<Contract.Payment, Contract.Payment> {
+                    record Payment(long id) {}
+
+                    @Override
+                    public Evaluation<Payment> evaluate(Payment actual) {
+                        return Evaluation.satisfied(actual);
+                    }
+
+                    @Override
+                    public ExplainedCondition<Payment, Payment> because(String value) {
+                        return null;
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void formattedBecauseCannotBeOverridden() throws IOException {
+        assertFalse(compiles("""
+                import io.github.gromoff97.awium.Condition;
+                import io.github.gromoff97.awium.Evaluation;
+                import io.github.gromoff97.awium.ExplainedCondition;
+
+                final class Contract extends Condition<Contract.Payment, Contract.Payment> {
+                    record Payment(long id) {}
+
+                    @Override
+                    public Evaluation<Payment> evaluate(Payment actual) {
+                        return Evaluation.satisfied(actual);
+                    }
+
+                    @Override
+                    public ExplainedCondition<Payment, Payment> because(
+                            String format, Object... arguments) {
+                        return null;
+                    }
+                }
+                """));
+    }
+
+    private boolean compiles(String source) throws IOException {
+        return CompilationSupport.compiles(temporaryDirectory, source);
+    }
+}
