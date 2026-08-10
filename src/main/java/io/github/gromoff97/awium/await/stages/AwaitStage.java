@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium.await.stages;
 
 import io.github.gromoff97.awium.await.Await;
+import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
-import io.github.gromoff97.awium.internal.diagnostic.FailureFactory;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.time.Duration;

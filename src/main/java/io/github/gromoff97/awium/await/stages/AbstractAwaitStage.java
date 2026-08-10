@@ -3,9 +3,9 @@ package io.github.gromoff97.awium.await.stages;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
+import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
-import io.github.gromoff97.awium.internal.diagnostic.FailureFactory;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.util.Objects;
@@ -76,7 +76,6 @@ public abstract class AbstractAwaitStage<S> {
         configuration.validatePair();
         WaitEngine engine = new WaitEngine(configuration, clock, parker);
         return failureFactory.complete(
-                engine.waitFor(source, condition),
-                condition.description(), condition.explanation(), configuration);
+                engine.waitFor(source, condition), condition, configuration);
     }
 }

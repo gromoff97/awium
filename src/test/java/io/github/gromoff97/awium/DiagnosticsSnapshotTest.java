@@ -6,10 +6,10 @@ import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
-import io.github.gromoff97.awium.internal.diagnostic.*;
+import io.github.gromoff97.awium.diagnostics.FailureFactory;
+import io.github.gromoff97.awium.diagnostics.FailureMessage;
 
 import io.github.gromoff97.awium.engine.*;
-import io.github.gromoff97.awium.internal.engine.DurationFormatter;
 
 import io.github.gromoff97.awium.exceptions.*;
 
@@ -551,7 +551,7 @@ class DiagnosticsSnapshotTest {
         var actual = new NullStringValue();
         var formatterFailure = new IllegalStateException("formatter broke");
         var formatterCalls = new int[1];
-        Function<FailureContext<?>, String> formatter = context -> {
+        Function<FailureMessage.Context, String> formatter = context -> {
             formatterCalls[0]++;
             context.actualValue();
             throw formatterFailure;
@@ -560,15 +560,15 @@ class DiagnosticsSnapshotTest {
                 unsatisfied(actual, "not ready", null, 1));
 
         NullPointerException failure = assertThrows(NullPointerException.class,
-                () -> complete(new FailureFactory(formatter), outcome,
+                () -> complete(new FailureFactory(new FailureMessage(formatter)),
+                        outcome,
                         runtime("condition", null), config(1, 2, 0)));
 
         assertNull(failure.getCause());
         assertEquals(0, failure.getSuppressed().length);
         assertEquals(1, formatterCalls[0]);
         assertEquals(1, actual.calls);
-        assertNull(ValueRenderer.render(new NullStringValue()));
-        assertEquals(" \t", ValueRenderer.render(new CountingValue(" \t")));
+        assertEquals(" \t", renderedActual(new CountingValue(" \t")));
     }
 
     @Test
@@ -577,7 +577,7 @@ class DiagnosticsSnapshotTest {
         var formatterCalls = new int[1];
         var descriptions = new int[1];
         var actual = new CountingValue("actual");
-        Function<FailureContext<?>, String> formatter = context -> {
+        Function<FailureMessage.Context, String> formatter = context -> {
             formatterCalls[0]++;
             throw formatterFailure;
         };
@@ -590,7 +590,7 @@ class DiagnosticsSnapshotTest {
                 unsatisfied(actual, "not ready", null, 7));
 
         AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
-                () -> complete(new FailureFactory(formatter),
+                () -> complete(new FailureFactory(new FailureMessage(formatter)),
                         outcome, runtime, config(1, 2, 0)));
 
         assertSame(formatterFailure, failure.getCause());
@@ -611,7 +611,7 @@ class DiagnosticsSnapshotTest {
     void emergencyFormattingReusesAlreadyMaterializedFragments() {
         var formatterFailure = new IllegalStateException("formatter broke");
         var actual = new CountingValue("rendered actual");
-        Function<FailureContext<?>, String> formatter = context -> {
+        Function<FailureMessage.Context, String> formatter = context -> {
             context.conditionDescription();
             context.actualValue();
             throw formatterFailure;
@@ -620,7 +620,8 @@ class DiagnosticsSnapshotTest {
                 unsatisfied(actual, "not ready", null, 3));
 
         AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
-                () -> complete(new FailureFactory(formatter), outcome,
+                () -> complete(new FailureFactory(new FailureMessage(formatter)),
+                        outcome,
                         runtime("rendered condition", null), config(1, 2, 0)));
 
         assertEquals(1, actual.calls);
@@ -657,21 +658,24 @@ class DiagnosticsSnapshotTest {
                 () -> complete(assertionFailure, "condition", null,
                         config(1, 2, 0))));
         assertSame(formatterFatal, assertThrows(ThrowableFixtures.Fatal.class,
-                () -> complete(new FailureFactory(context -> {
+                () -> complete(new FailureFactory(new FailureMessage(context -> {
                     throw formatterFatal;
-                }), sourceFailure, runtime("condition", null),
+                })), sourceFailure, runtime("condition", null),
                         config(1, 2, 0))));
     }
 
     @Test
     void normalizesNestedMultilineFieldsWithoutTrailingSpaces() {
-        StringBuilder out = new StringBuilder();
+        WaitOutcome<Object> outcome = WaitOutcome.uncontrolled(
+                uncontrolled(Attempt.Origin.SOURCE,
+                        new IllegalStateException("failure"), 1));
 
-        Diagnostics.field(out, 0, "Label", "first\r\n second\rthird\n");
+        String message = sourceFailure(outcome,
+                "first\r\n second\rthird\n").getMessage();
 
-        assertEquals("Label:\n    first\n     second\n    third\n\n",
-                out.toString());
-        assertFalse(List.of(out.toString().split("\n", -1)).stream()
+        assertTrue(message.contains(
+                "Condition:\n    first\n     second\n    third\n\nCause:"));
+        assertFalse(List.of(message.split("\n", -1)).stream()
                 .anyMatch(line -> line.endsWith(" ")));
     }
 
@@ -684,21 +688,27 @@ class DiagnosticsSnapshotTest {
         assertEquals(List.of("[true, false]", "[1, 2]", "[1, 2]", "[1, 2]",
                         "[1, 2]", "[a, b]", "[1.0, 2.0]", "[1.0, 2.0]",
                         "[[1, 2], [3, 4]]", "[[...]]", "null"),
-                List.of(ValueRenderer.render(new boolean[] {true, false}),
-                        ValueRenderer.render(new byte[] {1, 2}),
-                        ValueRenderer.render(new short[] {1, 2}),
-                        ValueRenderer.render(new int[] {1, 2}),
-                        ValueRenderer.render(new long[] {1, 2}),
-                        ValueRenderer.render(new char[] {'a', 'b'}),
-                        ValueRenderer.render(new float[] {1, 2}),
-                        ValueRenderer.render(new double[] {1, 2}),
-                        ValueRenderer.render(nested), ValueRenderer.render(recursive),
-                        ValueRenderer.render(null)));
-        assertEquals("0 nanoseconds", DurationFormatter.format(0));
-        assertEquals("1 minute 30 seconds",
-                DurationFormatter.format(90 * SECOND));
-        assertEquals("1 second 1 millisecond 1 microsecond 1 nanosecond",
-                DurationFormatter.format(SECOND + MILLISECOND + 1_001));
+                List.of(renderedActual(new boolean[] {true, false}),
+                        renderedActual(new byte[] {1, 2}),
+                        renderedActual(new short[] {1, 2}),
+                        renderedActual(new int[] {1, 2}),
+                        renderedActual(new long[] {1, 2}),
+                        renderedActual(new char[] {'a', 'b'}),
+                        renderedActual(new float[] {1, 2}),
+                        renderedActual(new double[] {1, 2}),
+                        renderedActual(nested), renderedActual(recursive),
+                        renderedActual(null)));
+
+        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
+                () -> complete(WaitOutcome.lateUnsatisfied(0,
+                                SECOND + MILLISECOND + 1_001,
+                                unsatisfied("actual", "not ready", null, 1)),
+                        "condition", null, config(0, 90 * SECOND, 0)));
+        assertTrue(failure.getMessage().contains(
+                "Waited up to: 1 minute 30 seconds"));
+        assertTrue(failure.getMessage().contains(
+                "Elapsed: 1 second 1 millisecond 1 microsecond 1 nanosecond"));
+        assertTrue(failure.getMessage().contains("Interval: 0 nanoseconds"));
     }
 
     private static AwaitTimeoutException assertionTimeout(
@@ -718,16 +728,32 @@ class DiagnosticsSnapshotTest {
                 () -> complete(outcome, "condition", null, config(1, 2, 0)));
     }
 
+    private static AwaitSourceRetrievalException sourceFailure(
+            WaitOutcome<Object> outcome, String description) {
+        return assertThrows(AwaitSourceRetrievalException.class,
+                () -> complete(outcome, description, null, config(1, 2, 0)));
+    }
+
+    private static String renderedActual(Object actual) {
+        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
+                () -> complete(WaitOutcome.lateUnsatisfied(0, 2,
+                                unsatisfied(actual, "not ready", null, 1)),
+                        "condition", null, config(1, 2, 0)));
+        String prefix = "Observed: ";
+        int start = failure.getMessage().indexOf(prefix) + prefix.length();
+        return failure.getMessage().substring(start,
+                failure.getMessage().indexOf('\n', start));
+    }
+
     private static <R> R complete(WaitOutcome<R> outcome, String description,
             String explanation, WaitConfiguration config) {
         return new FailureFactory().complete(
-                outcome, () -> description, explanation, config);
+                outcome, runtime(description, explanation), config);
     }
 
     private static <R> R complete(FailureFactory factory, WaitOutcome<R> outcome,
             RuntimeCondition<?, R> runtime, WaitConfiguration config) {
-        return factory.complete(outcome, runtime.description(),
-                runtime.explanation(), config);
+        return factory.complete(outcome, runtime, config);
     }
 
     private static <R> RuntimeCondition<Object, R> runtime(

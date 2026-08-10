@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.await.OptionalAwait;
 import io.github.gromoff97.awium.conditioning.conditions.PresentCondition;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
-import io.github.gromoff97.awium.internal.diagnostic.FailureFactory;
+import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.sources.OptionalSource;
 
 import java.time.Duration;

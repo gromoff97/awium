@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.await.StructuralAwait;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.conditioning.conditions.StructuralCondition;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
-import io.github.gromoff97.awium.internal.diagnostic.FailureFactory;
+import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.sources.CollectionSource;
 import io.github.gromoff97.awium.sources.MapSource;
 

@@ -6,7 +6,7 @@ import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
-import io.github.gromoff97.awium.internal.diagnostic.*;
+import io.github.gromoff97.awium.diagnostics.FailureFactory;
 
 import io.github.gromoff97.awium.engine.*;
 import io.github.gromoff97.awium.await.Await;

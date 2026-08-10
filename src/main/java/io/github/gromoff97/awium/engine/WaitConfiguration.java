@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.engine;
 
+import io.github.gromoff97.awium.diagnostics.FailureMessage;
 import io.github.gromoff97.awium.exceptions.AwaitConfigurationConflictException;
-import io.github.gromoff97.awium.internal.engine.DurationFormatter;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -39,9 +39,8 @@ public record WaitConfiguration(
     public void validatePair() {
         if (everyNanos >= upToNanos) {
             throw new AwaitConfigurationConflictException(
-                    "poll interval (" + DurationFormatter.format(everyNanos)
-                            + ") must be shorter than acquisition timeout ("
-                            + DurationFormatter.format(upToNanos) + ")");
+                    FailureMessage.configurationConflict(
+                            everyNanos, upToNanos));
         }
     }
 

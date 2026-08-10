@@ -6,8 +6,6 @@ import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
-import io.github.gromoff97.awium.internal.diagnostic.*;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -48,7 +46,7 @@ class ArchitectureContractTest {
             assertDoesNotThrow(() -> Class.forName(
                     "io.github.gromoff97.awium.engine." + type), type);
         }
-        assertDoesNotThrow(() -> Class.forName(
+        assertThrows(ClassNotFoundException.class, () -> Class.forName(
                 "io.github.gromoff97.awium.internal.engine.DurationFormatter"));
         for (String type : List.of("AttemptEvaluator", "AttemptResult",
                 "Interrupts", "WaitConfiguration", "WaitEngine",
@@ -59,10 +57,15 @@ class ArchitectureContractTest {
     }
 
     @Test
-    void failureRenderingLivesBehindTheInternalDiagnosticBoundary() {
+    void failureRenderingLivesInTheDedicatedDiagnosticsPackage() {
+        for (String type : List.of("FailureFactory", "FailureMessage")) {
+            assertDoesNotThrow(() -> Class.forName(
+                    "io.github.gromoff97.awium.diagnostics." + type),
+                    type);
+        }
         for (String type : List.of("FailureFactory", "FailureContext",
                 "Diagnostics", "ValueRenderer")) {
-            assertDoesNotThrow(() -> Class.forName(
+            assertThrows(ClassNotFoundException.class, () -> Class.forName(
                     "io.github.gromoff97.awium.internal.diagnostic." + type),
                     type);
         }

@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.engine.*;
-import io.github.gromoff97.awium.internal.engine.DurationFormatter;
 
 import io.github.gromoff97.awium.exceptions.*;
 
@@ -170,12 +169,19 @@ class WaitConfigTest {
 
     @Test
     void durationFormattingUsesReadableExactUnits() {
-        assertEquals("1 nanosecond", DurationFormatter.format(1));
-        assertEquals("100 milliseconds", DurationFormatter.format(100_000_000));
-        assertEquals("1 minute 30 seconds",
-                DurationFormatter.format(Duration.ofSeconds(90).toNanos()));
-        assertEquals("1 second 1 millisecond 1 microsecond 1 nanosecond",
-                DurationFormatter.format(1_001_001_001));
+        assertTrue(conflictMessage(1).contains("(1 nanosecond)"));
+        assertTrue(conflictMessage(100_000_000)
+                .contains("(100 milliseconds)"));
+        assertTrue(conflictMessage(Duration.ofSeconds(90).toNanos())
+                .contains("(1 minute 30 seconds)"));
+        assertTrue(conflictMessage(1_001_001_001).contains(
+                "(1 second 1 millisecond 1 microsecond 1 nanosecond)"));
+    }
+
+    private static String conflictMessage(long nanos) {
+        return assertThrows(AwaitConfigurationConflictException.class,
+                () -> new WaitConfiguration(nanos, nanos, 0).validatePair())
+                .getMessage();
     }
 
 }
