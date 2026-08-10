@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import io.github.gromoff97.awium.internal.diagnostic.*;
 
 import io.github.gromoff97.awium.internal.engine.*;
@@ -62,13 +68,17 @@ class ArchitectureContractTest {
 
     @Test
     void fluentImplementationUsesNestedApiTypesAndMinimalAdapters() {
-        for (String type : List.of("ObjectAwait$Until",
-                "OptionalAwait$Until", "CollectionAwait$Until",
-                "SequencedCollectionAwait$Until", "MapAwait$Until",
-                "Condition$Explained", "PreservingCondition$Explained",
-                "Present$Explained", "StructuralCondition$Explained")) {
-            assertDoesNotThrow(() -> Class.forName(
-                    "io.github.gromoff97.awium." + type), type);
+        for (String type : List.of(
+                "io.github.gromoff97.awium.ObjectAwait$Until",
+                "io.github.gromoff97.awium.OptionalAwait$Until",
+                "io.github.gromoff97.awium.CollectionAwait$Until",
+                "io.github.gromoff97.awium.SequencedCollectionAwait$Until",
+                "io.github.gromoff97.awium.MapAwait$Until",
+                "io.github.gromoff97.awium.conditioning.conditions.Condition$ExplainedCondition",
+                "io.github.gromoff97.awium.conditioning.conditions.PreservingCondition$ExplainedCondition",
+                "io.github.gromoff97.awium.conditioning.conditions.PresentCondition$ExplainedCondition",
+                "io.github.gromoff97.awium.conditioning.conditions.StructuralCondition$ExplainedCondition")) {
+            assertDoesNotThrow(() -> Class.forName(type), type);
         }
         for (String type : List.of("ObjectUntil", "OptionalUntil",
                 "CollectionUntil", "SequencedCollectionUntil", "MapUntil",
@@ -585,7 +595,9 @@ class ArchitectureContractTest {
                 .resolve("internal/engine/Interrupts.java").normalize();
         private static final Set<Path> NAMESPACE_HOLDERS = Set.of(
                 MAIN_PACKAGE.resolve("Awium.java").normalize(),
-                MAIN_PACKAGE.resolve("AwaitConditions.java").normalize(),
+                MAIN_PACKAGE.resolve(
+                        "conditioning/providers/ConditionProvider.java")
+                        .normalize(),
                 MAIN_PACKAGE.resolve("AwaitSources.java").normalize());
         private static final String THREAD = "java.lang.Thread";
         private static final String LOCK_SUPPORT =

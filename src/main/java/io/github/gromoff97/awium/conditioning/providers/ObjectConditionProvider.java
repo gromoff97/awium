@@ -1,8 +1,14 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.conditioning.providers;
 
-final class ObjectConditions {
+import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.ValueEquality;
+import io.github.gromoff97.awium.conditioning.conditions.Condition;
+import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 
-    private ObjectConditions() {
+final class ObjectConditionProvider {
+
+    private ObjectConditionProvider() {
     }
 
     static Condition<Object, Void> isNull() {
@@ -21,14 +27,14 @@ final class ObjectConditions {
     }
 
     static PreservingCondition<Object> isNotNull() {
-        return new PreservingCondition<>(new ConditionRuntime<>(actual ->
+        return PreservingCondition.of(new RuntimeCondition<>(actual ->
                 actual != null ? Evaluation.satisfied(actual)
                         : Evaluation.unsatisfied("value was null"),
                 () -> "value to be non-null", null));
     }
 
     static PreservingCondition<Object> equalTo(Object expected) {
-        return new PreservingCondition<>(new ConditionRuntime<>(actual ->
+        return PreservingCondition.of(new RuntimeCondition<>(actual ->
                 ValueEquality.equal(actual, expected)
                         ? Evaluation.satisfied(actual)
                         : Evaluation.unsatisfied("value was not equal"),
@@ -36,7 +42,7 @@ final class ObjectConditions {
     }
 
     static PreservingCondition<Object> notEqualTo(Object unexpected) {
-        return new PreservingCondition<>(new ConditionRuntime<>(actual ->
+        return PreservingCondition.of(new RuntimeCondition<>(actual ->
                 !ValueEquality.equal(actual, unexpected)
                         ? Evaluation.satisfied(actual)
                         : Evaluation.unsatisfied("value was equal"),

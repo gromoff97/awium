@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import io.github.gromoff97.awium.internal.diagnostic.*;
 
 import io.github.gromoff97.awium.internal.engine.*;
@@ -34,36 +40,36 @@ import org.junit.jupiter.api.io.TempDir;
 class MapConditionsTest {
 
     private static final List<Pair> PAIRS = List.of(
-            new Pair("containsKey", AwaitConditions.containsKey("b"),
-                    AwaitConditions.doesNotContainKey("b"),
+            new Pair("containsKey", ConditionProvider.containsKey("b"),
+                    ConditionProvider.doesNotContainKey("b"),
                     map("a", "1", "b", "2"),
                     map("a", "1", "c", "2")),
-            new Pair("containsValue", AwaitConditions.containsValue("2"),
-                    AwaitConditions.doesNotContainValue("2"),
+            new Pair("containsValue", ConditionProvider.containsValue("2"),
+                    ConditionProvider.doesNotContainValue("2"),
                     map("a", "1", "b", "2"),
                     map("a", "1", "b", "3")),
-            new Pair("containsEntry", AwaitConditions.containsEntry("b", "2"),
-                    AwaitConditions.doesNotContainEntry("b", "2"),
+            new Pair("containsEntry", ConditionProvider.containsEntry("b", "2"),
+                    ConditionProvider.doesNotContainEntry("b", "2"),
                     map("a", "1", "b", "2"),
                     map("a", "1", "b", "3")),
             new Pair("containsAllEntriesOf",
-                    AwaitConditions.containsAllEntriesOf(
+                    ConditionProvider.containsAllEntriesOf(
                             map("a", "1", "b", "2")),
-                    AwaitConditions.doesNotContainAllEntriesOf(
+                    ConditionProvider.doesNotContainAllEntriesOf(
                             map("a", "1", "b", "2")),
                     map("a", "1", "b", "2", "c", "3"),
                     map("a", "1", "b", "3")),
             new Pair("containsAnyEntriesOf",
-                    AwaitConditions.containsAnyEntriesOf(
+                    ConditionProvider.containsAnyEntriesOf(
                             map("x", "9", "b", "2")),
-                    AwaitConditions.containsNoEntriesOf(
+                    ConditionProvider.containsNoEntriesOf(
                             map("x", "9", "b", "2")),
                     map("a", "1", "b", "2"),
                     map("a", "1", "c", "3")),
             new Pair("containsExactlyEntriesOf",
-                    AwaitConditions.containsExactlyEntriesOf(
+                    ConditionProvider.containsExactlyEntriesOf(
                             map("a", "1", "b", "2")),
-                    AwaitConditions.doesNotContainExactlyEntriesOf(
+                    ConditionProvider.doesNotContainExactlyEntriesOf(
                             map("a", "1", "b", "2")),
                     map("b", "2", "a", "1"),
                     map("a", "1", "b", "3")));
@@ -89,22 +95,22 @@ class MapConditionsTest {
         var expected = entryMap(entry("a", "1"));
         List<PreservingCondition<? super ProbeContainers.EntryMap<String,
                 String>>> conditions = List.of(
-                        AwaitConditions.containsKey("a"),
-                        AwaitConditions.doesNotContainKey("a"),
-                        AwaitConditions.containsValue("1"),
-                        AwaitConditions.doesNotContainValue("1"),
-                        AwaitConditions.containsEntry("a", "1"),
-                        AwaitConditions.doesNotContainEntry("a", "1"),
-                        AwaitConditions.containsAllEntriesOf(expected),
-                        AwaitConditions.doesNotContainAllEntriesOf(expected),
-                        AwaitConditions.containsAnyEntriesOf(expected),
-                        AwaitConditions.containsNoEntriesOf(expected),
-                        AwaitConditions.containsExactlyEntriesOf(expected),
-                        AwaitConditions.doesNotContainExactlyEntriesOf(expected));
+                        ConditionProvider.containsKey("a"),
+                        ConditionProvider.doesNotContainKey("a"),
+                        ConditionProvider.containsValue("1"),
+                        ConditionProvider.doesNotContainValue("1"),
+                        ConditionProvider.containsEntry("a", "1"),
+                        ConditionProvider.doesNotContainEntry("a", "1"),
+                        ConditionProvider.containsAllEntriesOf(expected),
+                        ConditionProvider.doesNotContainAllEntriesOf(expected),
+                        ConditionProvider.containsAnyEntriesOf(expected),
+                        ConditionProvider.containsNoEntriesOf(expected),
+                        ConditionProvider.containsExactlyEntriesOf(expected),
+                        ConditionProvider.doesNotContainExactlyEntriesOf(expected));
 
         for (PreservingCondition<? super ProbeContainers.EntryMap<String,
                 String>> condition : conditions) {
-            Evaluation<?> evaluation = ConditionRuntime.<
+            Evaluation<?> evaluation = RuntimeCondition.<
                     ProbeContainers.EntryMap<String, String>>preserving(
                             condition).evaluate(null);
             assertEquals(Evaluation.Status.UNSATISFIED, evaluation.status());
@@ -160,7 +166,7 @@ class MapConditionsTest {
         var actual = entryMap(entry("a", "1"));
 
         assertSatisfied(evaluate(
-                AwaitConditions.containsAllEntriesOf(expected), actual, false),
+                ConditionProvider.containsAllEntriesOf(expected), actual, false),
                 actual);
         assertEquals(1, actual.nextCalls);
     }
@@ -196,7 +202,7 @@ class MapConditionsTest {
         var actual = entryMap(
                 entry((Object) first, "v"), entry((Object) second, "v"));
 
-        assertStatus(AwaitConditions.containsExactlyEntriesOf(
+        assertStatus(ConditionProvider.containsExactlyEntriesOf(
                         entryMap(entry((Object) x, "v"),
                                 entry((Object) y, "v"))),
                 actual, Evaluation.Status.UNSATISFIED);
@@ -205,7 +211,7 @@ class MapConditionsTest {
 
         first.equalsCalls = 0;
         second.equalsCalls = 0;
-        assertStatus(AwaitConditions.containsExactlyEntriesOf(
+        assertStatus(ConditionProvider.containsExactlyEntriesOf(
                         entryMap(entry((Object) y, "v"),
                                 entry((Object) x, "v"))),
                 actual, Evaluation.Status.SATISFIED);
@@ -222,11 +228,11 @@ class MapConditionsTest {
         Directional expectedValue = new Directional(false);
         var actual = entryMap(entry(actualKey, actualValue));
 
-        assertStatus(AwaitConditions.containsKey(expectedKey), actual,
+        assertStatus(ConditionProvider.containsKey(expectedKey), actual,
                 Evaluation.Status.SATISFIED);
-        assertStatus(AwaitConditions.containsValue(expectedValue), actual,
+        assertStatus(ConditionProvider.containsValue(expectedValue), actual,
                 Evaluation.Status.SATISFIED);
-        assertStatus(AwaitConditions.containsEntry(expectedKey, expectedValue),
+        assertStatus(ConditionProvider.containsEntry(expectedKey, expectedValue),
                 actual, Evaluation.Status.SATISFIED);
         assertEquals(2, actualKey.equalsCalls);
         assertEquals(2, actualValue.equalsCalls);
@@ -236,13 +242,13 @@ class MapConditionsTest {
         var mismatched = entry("actual", "value");
         mismatched.valueFailure = new IllegalStateException(
                 "value must not be read");
-        assertStatus(AwaitConditions.containsEntry("expected", "value"),
+        assertStatus(ConditionProvider.containsEntry("expected", "value"),
                 entryMap(mismatched), Evaluation.Status.UNSATISFIED);
         assertEquals(0, mismatched.valueCalls);
 
         Map<Object, Object> arrays = new LinkedHashMap<>();
         arrays.put(new int[] {1, 2}, new Object[] {new int[] {3, 4}});
-        assertStatus(AwaitConditions.containsEntry(new int[] {1, 2},
+        assertStatus(ConditionProvider.containsEntry(new int[] {1, 2},
                         new Object[] {new int[] {3, 4}}),
                 arrays, Evaluation.Status.SATISFIED);
     }
@@ -253,24 +259,24 @@ class MapConditionsTest {
         HashMap<String, String> nullable = new HashMap<>();
         nullable.put(null, null);
         nullable.put("present", null);
-        assertStatus(AwaitConditions.containsKey((String) null), nullable,
+        assertStatus(ConditionProvider.containsKey((String) null), nullable,
                 Evaluation.Status.SATISFIED);
-        assertStatus(AwaitConditions.containsValue((String) null), nullable,
+        assertStatus(ConditionProvider.containsValue((String) null), nullable,
                 Evaluation.Status.SATISFIED);
-        assertStatus(AwaitConditions.containsEntry("present", null), nullable,
+        assertStatus(ConditionProvider.containsEntry("present", null), nullable,
                 Evaluation.Status.SATISFIED);
-        assertStatus(AwaitConditions.containsEntry("absent", null), nullable,
+        assertStatus(ConditionProvider.containsEntry("absent", null), nullable,
                 Evaluation.Status.UNSATISFIED);
 
         TreeMap<String, String> tree = new TreeMap<>();
         tree.put("a", "1");
-        assertStatus(AwaitConditions.containsKey((String) null), tree,
+        assertStatus(ConditionProvider.containsKey((String) null), tree,
                 Evaluation.Status.UNSATISFIED);
-        assertStatus(AwaitConditions.containsEntry(null, null), tree,
+        assertStatus(ConditionProvider.containsEntry(null, null), tree,
                 Evaluation.Status.UNSATISFIED);
 
         var rejecting = entryMap(entry("a", "1"));
-        assertStatus(AwaitConditions.containsEntry("a", "1"), rejecting,
+        assertStatus(ConditionProvider.containsEntry("a", "1"), rejecting,
                 Evaluation.Status.SATISFIED);
         assertNoLookupCalls(rejecting);
     }
@@ -287,9 +293,9 @@ class MapConditionsTest {
         unequal.put(new int[] {1}, "a");
         unequal.put(new int[] {1}, "a");
 
-        assertStatus(AwaitConditions.containsExactlyEntriesOf(equal), actual,
+        assertStatus(ConditionProvider.containsExactlyEntriesOf(equal), actual,
                 Evaluation.Status.SATISFIED);
-        assertStatus(AwaitConditions.containsExactlyEntriesOf(unequal), actual,
+        assertStatus(ConditionProvider.containsExactlyEntriesOf(unequal), actual,
                 Evaluation.Status.UNSATISFIED);
     }
 
@@ -314,10 +320,10 @@ class MapConditionsTest {
     void aggregateFactoriesApplyExactValidationAndAccessContracts()
             throws Exception {
         List<Function<Map<String, String>, ?>> membershipFactories = List.of(
-                AwaitConditions::containsAllEntriesOf,
-                AwaitConditions::doesNotContainAllEntriesOf,
-                AwaitConditions::containsAnyEntriesOf,
-                AwaitConditions::containsNoEntriesOf);
+                ConditionProvider::containsAllEntriesOf,
+                ConditionProvider::doesNotContainAllEntriesOf,
+                ConditionProvider::containsAnyEntriesOf,
+                ConditionProvider::containsNoEntriesOf);
         for (Function<Map<String, String>, ?> factory : membershipFactories) {
             var expected = entryMap(entry("a", "1"));
             factory.apply(expected);
@@ -327,12 +333,12 @@ class MapConditionsTest {
         }
 
         List<Executable> nullFactories = List.of(
-                () -> AwaitConditions.containsAllEntriesOf(null),
-                () -> AwaitConditions.doesNotContainAllEntriesOf(null),
-                () -> AwaitConditions.containsAnyEntriesOf(null),
-                () -> AwaitConditions.containsNoEntriesOf(null),
-                () -> AwaitConditions.containsExactlyEntriesOf(null),
-                () -> AwaitConditions.doesNotContainExactlyEntriesOf(null));
+                () -> ConditionProvider.containsAllEntriesOf(null),
+                () -> ConditionProvider.doesNotContainAllEntriesOf(null),
+                () -> ConditionProvider.containsAnyEntriesOf(null),
+                () -> ConditionProvider.containsNoEntriesOf(null),
+                () -> ConditionProvider.containsExactlyEntriesOf(null),
+                () -> ConditionProvider.doesNotContainExactlyEntriesOf(null));
         nullFactories.forEach(factory -> assertEquals(
                 "expected entries must not be null",
                 assertThrows(NullPointerException.class, factory).getMessage()));
@@ -349,9 +355,9 @@ class MapConditionsTest {
         }
 
         var emptyActual = MapConditionsTest.<String, String>entryMap();
-        assertStatus(AwaitConditions.containsExactlyEntriesOf(Map.of()),
+        assertStatus(ConditionProvider.containsExactlyEntriesOf(Map.of()),
                 emptyActual, Evaluation.Status.SATISFIED);
-        assertStatus(AwaitConditions.doesNotContainExactlyEntriesOf(Map.of()),
+        assertStatus(ConditionProvider.doesNotContainExactlyEntriesOf(Map.of()),
                 emptyActual, Evaluation.Status.UNSATISFIED);
     }
 
@@ -375,7 +381,7 @@ class MapConditionsTest {
 
         assertThrows(AwaitTimeoutException.class,
                 () -> timed(actual).until(
-                        AwaitConditions.containsKey("missing")
+                        ConditionProvider.containsKey("missing")
                                 .because("required")));
 
         assertEquals(1, actual.entrySetCalls);
@@ -388,8 +394,9 @@ class MapConditionsTest {
             throws IOException {
         assertTrue(CompilationSupport.compiles(temporaryDirectory, """
                 import static io.github.gromoff97.awium.Awium.await;
-                import static io.github.gromoff97.awium.AwaitConditions.*;
+                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
                 import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;
 
                 final class Contract {
@@ -408,8 +415,9 @@ class MapConditionsTest {
                 """));
         assertFalse(CompilationSupport.compiles(temporaryDirectory, """
                 import static io.github.gromoff97.awium.Awium.await;
-                import static io.github.gromoff97.awium.AwaitConditions.*;
+                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
                 import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;
 
                 final class Contract {
@@ -439,9 +447,9 @@ class MapConditionsTest {
     private static <K, V, M extends Map<K, V>> Evaluation<?> evaluate(
             PreservingCondition<? super M> condition, M actual,
             boolean explained) throws Exception {
-        ConditionRuntime<M, M> runtime = explained
-                ? ConditionRuntime.preserving(condition.because("reason"))
-                : ConditionRuntime.preserving(condition);
+        RuntimeCondition<M, M> runtime = explained
+                ? RuntimeCondition.preserving(condition.because("reason"))
+                : RuntimeCondition.preserving(condition);
         assertEquals(explained ? "reason" : null, runtime.explanation());
         assertFalse(runtime.description().get().isBlank());
         return runtime.evaluate(actual);
@@ -541,14 +549,14 @@ class MapConditionsTest {
         CountingValue expectedValue = new CountingValue(expectedValueLabel);
         PreservingCondition<?> condition = switch (singular) {
             case KEY -> positive
-                    ? AwaitConditions.containsKey(expectedKey)
-                    : AwaitConditions.doesNotContainKey(expectedKey);
+                    ? ConditionProvider.containsKey(expectedKey)
+                    : ConditionProvider.doesNotContainKey(expectedKey);
             case VALUE -> positive
-                    ? AwaitConditions.containsValue(expectedValue)
-                    : AwaitConditions.doesNotContainValue(expectedValue);
+                    ? ConditionProvider.containsValue(expectedValue)
+                    : ConditionProvider.doesNotContainValue(expectedValue);
             case ENTRY -> positive
-                    ? AwaitConditions.containsEntry(expectedKey, expectedValue)
-                    : AwaitConditions.doesNotContainEntry(
+                    ? ConditionProvider.containsEntry(expectedKey, expectedValue)
+                    : ConditionProvider.doesNotContainEntry(
                             expectedKey, expectedValue);
         };
         return new MapRun(actual, null, condition, actualEntries, List.of(),
@@ -563,11 +571,11 @@ class MapConditionsTest {
         var expected = entryMap(expectedEntries);
         PreservingCondition<?> condition = all
                 ? positive
-                        ? AwaitConditions.containsAllEntriesOf(expected)
-                        : AwaitConditions.doesNotContainAllEntriesOf(expected)
+                        ? ConditionProvider.containsAllEntriesOf(expected)
+                        : ConditionProvider.doesNotContainAllEntriesOf(expected)
                 : positive
-                        ? AwaitConditions.containsAnyEntriesOf(expected)
-                        : AwaitConditions.containsNoEntriesOf(expected);
+                        ? ConditionProvider.containsAnyEntriesOf(expected)
+                        : ConditionProvider.containsNoEntriesOf(expected);
         return new MapRun(actual, expected, condition, actualEntries,
                 expectedEntries, List.of());
     }
@@ -587,8 +595,8 @@ class MapConditionsTest {
         var actual = entryMap(actualEntries);
         var expected = entryMap(expectedEntries);
         PreservingCondition<?> condition = positive
-                ? AwaitConditions.containsExactlyEntriesOf(expected)
-                : AwaitConditions.doesNotContainExactlyEntriesOf(expected);
+                ? ConditionProvider.containsExactlyEntriesOf(expected)
+                : ConditionProvider.doesNotContainExactlyEntriesOf(expected);
         return new MapRun(actual, expected, condition, actualEntries,
                 expectedEntries, List.of());
     }
@@ -628,12 +636,12 @@ class MapConditionsTest {
 
         PreservingCondition<?> condition = exact
                 ? positive
-                        ? AwaitConditions.containsExactlyEntriesOf(expected)
-                        : AwaitConditions.doesNotContainExactlyEntriesOf(
+                        ? ConditionProvider.containsExactlyEntriesOf(expected)
+                        : ConditionProvider.doesNotContainExactlyEntriesOf(
                                 expected)
                 : positive
-                        ? AwaitConditions.containsAnyEntriesOf(expected)
-                        : AwaitConditions.containsNoEntriesOf(expected);
+                        ? ConditionProvider.containsAnyEntriesOf(expected)
+                        : ConditionProvider.containsNoEntriesOf(expected);
         return new FailureRun(new MapRun(actual, expected, condition,
                 List.of(actualEntry), List.of(expectedEntry), List.of()), cause);
     }

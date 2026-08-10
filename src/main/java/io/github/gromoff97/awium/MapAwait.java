@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.conditioning.conditions.StructuralCondition;
 import java.time.Duration;
 import java.util.Map;
 
@@ -14,7 +15,7 @@ public sealed interface MapAwait<K, V, M extends Map<K, V>>
 
     M until(StructuralCondition condition);
 
-    M until(StructuralCondition.Explained condition);
+    M until(StructuralCondition.ExplainedCondition condition);
 
     sealed interface Until<K, V, M extends Map<K, V>>
             extends ObjectAwait.Until<M>
@@ -22,7 +23,7 @@ public sealed interface MapAwait<K, V, M extends Map<K, V>>
 
         M until(StructuralCondition condition);
 
-        M until(StructuralCondition.Explained condition);
+        M until(StructuralCondition.ExplainedCondition condition);
     }
 
     sealed interface AfterEvery<K, V, M extends Map<K, V>>

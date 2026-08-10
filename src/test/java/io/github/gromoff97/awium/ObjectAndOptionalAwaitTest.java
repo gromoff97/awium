@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import io.github.gromoff97.awium.internal.diagnostic.*;
 
 import io.github.gromoff97.awium.internal.engine.*;
@@ -28,10 +34,10 @@ class ObjectAndOptionalAwaitTest {
         Object actual = new Object();
         Object preserved = Awium.await(
                 (AwaitSources.Source<Object>) () -> actual)
-                .until(AwaitConditions.isNotNull);
+                .until(ConditionProvider.isNotNull);
         Integer selected = Awium.await(
                 (AwaitSources.Source<String>) () -> "value")
-                .until(AwaitConditions.<String, Integer>condition("length",
+                .until(ConditionProvider.<String, Integer>condition("length",
                         value -> Evaluation.satisfied(value.length())));
 
         assertSame(actual, preserved);
@@ -44,7 +50,7 @@ class ObjectAndOptionalAwaitTest {
 
         Object result = Awium.await(
                 (AwaitSources.OptionalSource<Object>) () -> Optional.of(value))
-                .until(AwaitConditions.present);
+                .until(ConditionProvider.present);
 
         assertSame(value, result);
     }
@@ -53,13 +59,13 @@ class ObjectAndOptionalAwaitTest {
     void voidAndNullableSelectingTerminalsReturnNullOnSuccess() {
         Void nullValue = Awium.await(
                 (AwaitSources.Source<Object>) () -> null)
-                .until(AwaitConditions.isNull);
+                .until(ConditionProvider.isNull);
         Void absentValue = Awium.await(
                 (AwaitSources.OptionalSource<Object>) Optional::empty)
-                .until(AwaitConditions.absent);
+                .until(ConditionProvider.absent);
         String selectedNull = Awium.await(
                 (AwaitSources.Source<String>) () -> "value")
-                .until(AwaitConditions.<String, String>passed(value -> null)
+                .until(ConditionProvider.<String, String>passed(value -> null)
                         .because("nullable property"));
 
         assertNull(nullValue);
@@ -75,11 +81,11 @@ class ObjectAndOptionalAwaitTest {
         Object equal = Awium.await(
                 (AwaitSources.OptionalSource<Object>)
                         () -> Optional.of(equalValue))
-                .until(AwaitConditions.hasValueEqualTo(equalValue));
+                .until(ConditionProvider.hasValueEqualTo(equalValue));
         Object different = Awium.await(
                 (AwaitSources.OptionalSource<Object>)
                         () -> Optional.of(differentValue))
-                .until(AwaitConditions.hasValueNotEqualTo(equalValue)
+                .until(ConditionProvider.hasValueNotEqualTo(equalValue)
                         .because("different value"));
 
         assertSame(equalValue, equal);
@@ -90,7 +96,7 @@ class ObjectAndOptionalAwaitTest {
     void collectionAndMapStructuralTerminalsPreserveConcreteSources() {
         ArrayList<String> list = new ArrayList<>(List.of("value"));
         HashMap<String, Integer> map = new HashMap<>(Map.of("value", 1));
-        StructuralCondition structural = AwaitConditions.nonEmpty;
+        StructuralCondition structural = ConditionProvider.nonEmpty;
 
         ArrayList<String> returnedList = Awium.await(
                 (AwaitSources.SequencedCollectionSource<String,
@@ -112,7 +118,7 @@ class ObjectAndOptionalAwaitTest {
                 time, time, new Interrupts(), new FailureFactory());
         ObjectAwait.Until<String> stage =
                 new ObjectStages.ObjectAfterUpToStage<>(chain);
-        Condition<String, String> evenObservation = AwaitConditions.condition(
+        Condition<String, String> evenObservation = ConditionProvider.condition(
                 "even observation", value -> Integer.parseInt(value.substring(1)) % 2 == 0
                         ? Evaluation.satisfied(value)
                         : Evaluation.unsatisfied("odd observation"));
@@ -131,10 +137,10 @@ class ObjectAndOptionalAwaitTest {
             sourceCalls.incrementAndGet();
             return "value";
         });
-        Condition<String, String> never = AwaitConditions.condition(
+        Condition<String, String> never = ConditionProvider.condition(
                 "never", value -> Evaluation.unsatisfied("not yet"));
         var failure = new IllegalStateException("condition failed");
-        Condition<String, String> broken = AwaitConditions.condition(
+        Condition<String, String> broken = ConditionProvider.condition(
                 "broken", value -> {
                     throw failure;
                 });
@@ -143,7 +149,7 @@ class ObjectAndOptionalAwaitTest {
         assertSame(failure, assertThrows(
                 AwaitConditionEvaluationException.class,
                 () -> stage.until(broken)).getCause());
-        String result = stage.until(AwaitConditions.condition(
+        String result = stage.until(ConditionProvider.condition(
                 "ready", Evaluation::satisfied));
 
         assertEquals("value", result);
@@ -156,7 +162,7 @@ class ObjectAndOptionalAwaitTest {
         AtomicInteger evaluations = new AtomicInteger();
         ObjectAwait.Until<String> stage = stage(time, () -> "value");
         Condition<String, String> secondEvaluationOnward =
-                AwaitConditions.condition("second evaluation onward", value ->
+                ConditionProvider.condition("second evaluation onward", value ->
                         evaluations.incrementAndGet() >= 2
                                 ? Evaluation.satisfied(value)
                                 : Evaluation.unsatisfied("first evaluation"));
@@ -168,7 +174,7 @@ class ObjectAndOptionalAwaitTest {
 
     @Test
     void collectionAndMapNullObservationsUseFacadeSpecificMismatch() {
-        StructuralCondition structural = AwaitConditions.nonEmpty;
+        StructuralCondition structural = ConditionProvider.nonEmpty;
 
         AwaitTimeoutException collectionFailure = assertThrows(
                 AwaitTimeoutException.class,

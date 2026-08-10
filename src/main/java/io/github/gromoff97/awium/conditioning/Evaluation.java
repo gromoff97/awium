@@ -1,10 +1,10 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.conditioning;
 
 import java.util.Objects;
 
 public final class Evaluation<R> {
 
-    enum Status { SATISFIED, UNSATISFIED, UNCONTROLLED }
+    public enum Status { SATISFIED, UNSATISFIED, UNCONTROLLED }
 
     private final Status status;
     private final R result;
@@ -27,42 +27,42 @@ public final class Evaluation<R> {
 
     public static <R> Evaluation<R> unsatisfied(String mismatch) {
         return new Evaluation<>(Status.UNSATISFIED, null,
-                Validation.nonBlank(mismatch, "mismatch"), null, null);
+                nonBlank(mismatch, "mismatch"), null, null);
     }
 
-    static <R> Evaluation<R> assertionUnsatisfied(
+    public static <R> Evaluation<R> assertionUnsatisfied(
             String mismatch, AssertionError cause) {
         return new Evaluation<>(Status.UNSATISFIED, null,
-                Validation.nonBlank(mismatch, "mismatch"),
+                nonBlank(mismatch, "mismatch"),
                 Objects.requireNonNull(cause), null);
     }
 
-    static <R> Evaluation<R> uncontrolled(Throwable cause) {
+    public static <R> Evaluation<R> uncontrolled(Throwable cause) {
         return new Evaluation<>(Status.UNCONTROLLED, null, null, null,
                 Objects.requireNonNull(cause));
     }
 
-    Status status() {
+    public Status status() {
         return status;
     }
 
-    R result() {
+    public R result() {
         return result;
     }
 
-    String mismatch() {
+    public String mismatch() {
         return mismatch;
     }
 
-    AssertionError assertionCause() {
+    public AssertionError assertionCause() {
         return assertionCause;
     }
 
-    Throwable uncontrolledCause() {
+    public Throwable uncontrolledCause() {
         return uncontrolledCause;
     }
 
-    static <R> Evaluation<R> narrow(Evaluation<? extends R> source) {
+    public static <R> Evaluation<R> narrow(Evaluation<? extends R> source) {
         if (source == null) {
             return null;
         }
@@ -74,5 +74,13 @@ public final class Evaluation<R> {
                             source.mismatch, source.assertionCause);
             case UNCONTROLLED -> Evaluation.uncontrolled(source.uncontrolledCause);
         };
+    }
+
+    private static String nonBlank(String value, String name) {
+        Objects.requireNonNull(value, name + " must not be null");
+        if (value.isBlank()) {
+            throw new IllegalArgumentException(name + " must not be blank");
+        }
+        return value;
     }
 }

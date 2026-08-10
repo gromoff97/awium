@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import io.github.gromoff97.awium.exceptions.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,7 +44,7 @@ class RealTimeIntegrationTest {
                 callbackValues.add(local.get());
                 return ++observations[0];
             }).every(interval).upTo(Duration.ofSeconds(2))
-                    .until(AwaitConditions.condition("third observation", value -> {
+                    .until(ConditionProvider.condition("third observation", value -> {
                         callbackThreads.add(Thread.currentThread());
                         callbackValues.add(local.get());
                         conditionStarts.add(System.nanoTime());
@@ -78,7 +84,7 @@ class RealTimeIntegrationTest {
                         Awium.await((AwaitSources.Source<Integer>) () -> 1)
                                 .every(Duration.ofSeconds(5))
                                 .upTo(Duration.ofSeconds(10))
-                                .until(AwaitConditions.condition(
+                                .until(ConditionProvider.condition(
                                         "never satisfied", value ->
                                                 Evaluation.unsatisfied("not ready")));
                     } catch (Throwable failure) {

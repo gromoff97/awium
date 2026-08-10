@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import io.github.gromoff97.awium.internal.engine.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -353,9 +359,9 @@ class ObservationEvaluatorTest {
 
     private static AttemptEvaluator<Object, Object> evaluator(
             AwaitSources.Source<Object> source,
-            ConditionRuntime.Evaluator<Object, Object> condition) {
+            CheckedFunction<Object, Evaluation<Object>> condition) {
         return new AttemptEvaluator<>(source,
-                new ConditionRuntime<>(condition, () -> "test condition", null),
+                new RuntimeCondition<>(condition, () -> "test condition", null),
                 new Interrupts());
     }
 

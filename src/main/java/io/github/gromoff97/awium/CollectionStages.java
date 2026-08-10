@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
+import io.github.gromoff97.awium.conditioning.conditions.StructuralCondition;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Objects;
@@ -16,14 +18,14 @@ final class CollectionStages {
         public final C until(StructuralCondition condition) {
             Objects.requireNonNull(condition, "condition must not be null");
             chain.config().validatePair();
-            return chain.execute(ConditionRuntime.structural(
+            return chain.execute(RuntimeCondition.structural(
                     condition, "collection", Collection::size));
         }
 
-        public final C until(StructuralCondition.Explained condition) {
+        public final C until(StructuralCondition.ExplainedCondition condition) {
             Objects.requireNonNull(condition, "condition must not be null");
             chain.config().validatePair();
-            return chain.execute(ConditionRuntime.structural(
+            return chain.execute(RuntimeCondition.structural(
                     condition, "collection", Collection::size));
         }
     }

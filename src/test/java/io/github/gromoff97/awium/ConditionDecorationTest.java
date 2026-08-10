@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -20,6 +26,11 @@ class ConditionDecorationTest {
             public Evaluation<Object> evaluate(Object value) {
                 return Evaluation.satisfied(value);
             }
+
+            @Override
+            public String description() {
+                return "custom condition";
+            }
         };
 
         var literal = condition.because("the value must be ready");
@@ -35,12 +46,12 @@ class ConditionDecorationTest {
 
     @Test
     void closedDescriptorsKeepTheirRuntimeAndCloseDecoration() throws Exception {
-        ConditionRuntime<Object, Object> preservingRuntime = runtime();
-        ConditionRuntime<Optional<?>, Object> presentRuntime = new ConditionRuntime<>(
+        RuntimeCondition<Object, Object> preservingRuntime = runtime();
+        RuntimeCondition<Optional<?>, Object> presentRuntime = new RuntimeCondition<>(
                 value -> Evaluation.satisfied(value.orElse(null)), () -> "present", null);
-        var preserving = new PreservingCondition<>(preservingRuntime);
-        var present = new Present(presentRuntime);
-        var structural = AwaitConditions.nonEmpty;
+        var preserving = PreservingCondition.of(preservingRuntime);
+        var present = PresentCondition.of(presentRuntime);
+        var structural = ConditionProvider.nonEmpty;
 
         var explainedPreserving = preserving.because("preserving");
         var explainedPresent = present.because("present %s", "value");
@@ -72,6 +83,11 @@ class ConditionDecorationTest {
                 evaluations[0]++;
                 return Evaluation.satisfied(actual);
             }
+
+            @Override
+            public String description() {
+                return "custom condition";
+            }
         };
 
         assertEquals("explanation must not be null",
@@ -100,7 +116,7 @@ class ConditionDecorationTest {
         Locale original = Locale.getDefault(Locale.Category.FORMAT);
         Locale.setDefault(Locale.Category.FORMAT, Locale.GERMANY);
         try {
-            assertEquals("1.5", new PreservingCondition<>(runtime())
+            assertEquals("1.5", PreservingCondition.of(runtime())
                     .because("%.1f", 1.5).explanation());
         } finally {
             Locale.setDefault(Locale.Category.FORMAT, original);
@@ -124,8 +140,8 @@ class ConditionDecorationTest {
             }
         };
 
-        ConditionRuntime<Object, String> raw = ConditionRuntime.open(condition);
-        ConditionRuntime<Object, String> explained = ConditionRuntime.open(
+        RuntimeCondition<Object, String> raw = RuntimeCondition.open(condition);
+        RuntimeCondition<Object, String> explained = RuntimeCondition.open(
                 condition.because("because value"));
 
         assertEquals("selected", raw.evaluate(this).result());
@@ -140,22 +156,27 @@ class ConditionDecorationTest {
             public Evaluation<Object> evaluate(Object actual) {
                 return null;
             }
+
+            @Override
+            public String description() {
+                return "custom condition";
+            }
         };
-        assertNull(ConditionRuntime.open(nullEvaluation).evaluate(this));
+        assertNull(RuntimeCondition.open(nullEvaluation).evaluate(this));
     }
 
     @Test
     void closedAdaptersRecoverTheirExactResultContractsAndExplanations()
             throws Exception {
-        var description = (ConditionRuntime.Description) () -> "descriptor";
+        var description = (java.util.function.Supplier<String>) () -> "descriptor";
         var actual = new StringBuilder("actual");
-        var preserving = new PreservingCondition<>(new ConditionRuntime<>(
+        var preserving = PreservingCondition.of(new RuntimeCondition<>(
                 value -> Evaluation.satisfied(new Object()), description, null));
 
-        ConditionRuntime<StringBuilder, StringBuilder> rawPreserving =
-                ConditionRuntime.preserving(preserving);
-        ConditionRuntime<StringBuilder, StringBuilder> explainedPreserving =
-                ConditionRuntime.preserving(preserving.because("preserving"));
+        RuntimeCondition<StringBuilder, StringBuilder> rawPreserving =
+                RuntimeCondition.preserving(preserving);
+        RuntimeCondition<StringBuilder, StringBuilder> explainedPreserving =
+                RuntimeCondition.preserving(preserving.because("preserving"));
 
         assertSame(actual, rawPreserving.evaluate(actual).result());
         assertSame(actual, explainedPreserving.evaluate(actual).result());
@@ -163,12 +184,12 @@ class ConditionDecorationTest {
         assertNull(rawPreserving.explanation());
         assertEquals("preserving", explainedPreserving.explanation());
 
-        var present = new Present(new ConditionRuntime<>(
+        var present = PresentCondition.of(new RuntimeCondition<>(
                 value -> Evaluation.satisfied(value.orElse(null)), description, null));
-        ConditionRuntime<Optional<String>, String> rawPresent =
-                ConditionRuntime.present(present);
-        ConditionRuntime<Optional<String>, String> explainedPresent =
-                ConditionRuntime.present(present.because("present"));
+        RuntimeCondition<Optional<String>, String> rawPresent =
+                RuntimeCondition.present(present);
+        RuntimeCondition<Optional<String>, String> explainedPresent =
+                RuntimeCondition.present(present.because("present"));
 
         assertEquals("value", rawPresent.evaluate(Optional.of("value")).result());
         assertEquals("value",
@@ -177,15 +198,15 @@ class ConditionDecorationTest {
         assertNull(rawPresent.explanation());
         assertEquals("present", explainedPresent.explanation());
 
-        var structural = AwaitConditions.nonEmpty;
+        var structural = ConditionProvider.nonEmpty;
         var actualCollection = new java.util.ArrayList<>(java.util.List.of("value"));
-        ConditionRuntime<java.util.ArrayList<String>,
+        RuntimeCondition<java.util.ArrayList<String>,
                 java.util.ArrayList<String>> rawStructural =
-                ConditionRuntime.structural(
+                RuntimeCondition.structural(
                         structural, "collection", java.util.Collection::size);
-        ConditionRuntime<java.util.ArrayList<String>,
+        RuntimeCondition<java.util.ArrayList<String>,
                 java.util.ArrayList<String>> explainedStructural =
-                ConditionRuntime.structural(
+                RuntimeCondition.structural(
                         structural.because("structural"), "collection",
                         java.util.Collection::size);
 
@@ -207,16 +228,16 @@ class ConditionDecorationTest {
     void closedAdaptersPreserveNonSatisfiedOutcomes() throws Exception {
         var assertion = new AssertionError("failed");
         var cause = new IllegalStateException("broken");
-        var description = (ConditionRuntime.Description) () -> "descriptor";
-        var preserving = new PreservingCondition<>(new ConditionRuntime<>(
+        var description = (java.util.function.Supplier<String>) () -> "descriptor";
+        var preserving = PreservingCondition.of(new RuntimeCondition<>(
                 value -> Evaluation.assertionUnsatisfied("failed", assertion),
                 description, null));
-        var present = new Present(new ConditionRuntime<>(
+        var present = PresentCondition.of(new RuntimeCondition<>(
                 value -> Evaluation.uncontrolled(cause), description, null));
 
         Evaluation<Object> preservingEvaluation =
-                ConditionRuntime.preserving(preserving).evaluate(this);
-        Evaluation<String> presentEvaluation = ConditionRuntime.<String>present(present)
+                RuntimeCondition.preserving(preserving).evaluate(this);
+        Evaluation<String> presentEvaluation = RuntimeCondition.<String>present(present)
                 .evaluate(Optional.of("value"));
 
         assertEquals("failed", preservingEvaluation.mismatch());
@@ -224,8 +245,8 @@ class ConditionDecorationTest {
         assertSame(cause, presentEvaluation.uncontrolledCause());
     }
 
-    private static ConditionRuntime<Object, Object> runtime() {
-        return new ConditionRuntime<>(Evaluation::satisfied, () -> "condition", null);
+    private static RuntimeCondition<Object, Object> runtime() {
+        return new RuntimeCondition<>(Evaluation::satisfied, () -> "condition", null);
     }
 
     private static final class ThrowingRenderer {

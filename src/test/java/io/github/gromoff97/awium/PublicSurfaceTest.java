@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import io.github.gromoff97.awium.exceptions.*;
 
 import static java.lang.reflect.Modifier.isAbstract;
@@ -52,6 +58,9 @@ class PublicSurfaceTest {
         assertEquals(Set.copyOf(publicTypes()), topLevel);
         for (Class<?> type : topLevel) {
             assertTrue(Set.of("io.github.gromoff97.awium",
+                    "io.github.gromoff97.awium.conditioning",
+                    "io.github.gromoff97.awium.conditioning.conditions",
+                    "io.github.gromoff97.awium.conditioning.providers",
                     "io.github.gromoff97.awium.exceptions")
                     .contains(type.getPackageName()), type.getName());
         }
@@ -105,8 +114,8 @@ class PublicSurfaceTest {
                 AwaitSources.CollectionSource.class,
                 AwaitSources.SequencedCollectionSource.class,
                 AwaitSources.MapSource.class);
-        Set<Class<?>> callbacks = Set.of(ThrowingConsumer.class,
-                ThrowingFunction.class);
+        Set<Class<?>> callbacks = Set.of(CheckedConsumer.class,
+                CheckedFunction.class);
 
         assertEquals(sources, Set.copyOf(Arrays.asList(
                 AwaitSources.class.getDeclaredClasses())));
@@ -116,12 +125,12 @@ class PublicSurfaceTest {
         sources.forEach(PublicSurfaceTest::assertCheckedSam);
         callbacks.forEach(PublicSurfaceTest::assertCheckedSam);
 
-        ThrowingConsumer<String> consumer = value -> {
+        CheckedConsumer<String> consumer = value -> {
             if (value.isEmpty()) {
                 throw new Exception("empty");
             }
         };
-        ThrowingFunction<String, Integer> function = String::length;
+        CheckedFunction<String, Integer> function = String::length;
         AwaitSources.Source<String> source = () -> "source";
         AwaitSources.OptionalSource<String> optionalSource =
                 () -> Optional.of("optional");
@@ -158,7 +167,7 @@ class PublicSurfaceTest {
     @Test
     void namespaceHoldersAndFailureHierarchiesAreClosedExactly()
             throws ReflectiveOperationException {
-        for (Class<?> holder : List.of(Awium.class, AwaitConditions.class,
+        for (Class<?> holder : List.of(Awium.class, ConditionProvider.class,
                 AwaitSources.class)) {
             assertTrue(isPublic(holder.getModifiers()), holder.getName());
             assertTrue(isFinal(holder.getModifiers()), holder.getName());
@@ -257,7 +266,9 @@ class PublicSurfaceTest {
                     if (!isApiMember(method.getModifiers())) {
                         continue;
                     }
-                    assertFalse(forbiddenNames.contains(method.getName()),
+                    assertFalse(forbiddenNames.contains(method.getName())
+                                    && !(inherited == Evaluation.class
+                                    && method.getName().equals("result")),
                             method.toGenericString());
                     assertAllowedType(method.getGenericReturnType());
                     Arrays.stream(method.getGenericParameterTypes())
@@ -382,7 +393,7 @@ class PublicSurfaceTest {
                 AwaitSources.OptionalSource.class,
                 AwaitSources.CollectionSource.class,
                 AwaitSources.SequencedCollectionSource.class,
-                AwaitSources.MapSource.class));
+                AwaitSources.MapSource.class, Evaluation.Status.class));
         return types;
     }
 
@@ -503,10 +514,10 @@ class PublicSurfaceTest {
     }
 
     private static List<Class<?>> closedConditionTypes() {
-        return List.of(PreservingCondition.class, Present.class,
-                StructuralCondition.class, Condition.Explained.class,
-                PreservingCondition.Explained.class, Present.Explained.class,
-                StructuralCondition.Explained.class);
+        return List.of(PreservingCondition.class, PresentCondition.class,
+                StructuralCondition.class, Condition.ExplainedCondition.class,
+                PreservingCondition.ExplainedCondition.class, PresentCondition.ExplainedCondition.class,
+                StructuralCondition.ExplainedCondition.class);
     }
 
     private static List<Class<?>> restrictedConstructionTypes() {
@@ -518,10 +529,11 @@ class PublicSurfaceTest {
     }
 
     private static List<Class<?>> publicTypes() {
-        return List.of(Awium.class, AwaitConditions.class,
+        return List.of(Awium.class, ConditionProvider.class,
                 AwaitSources.class, Condition.class, Evaluation.class,
-                ThrowingConsumer.class, ThrowingFunction.class,
-                PreservingCondition.class, Present.class, StructuralCondition.class,
+                ValueEquality.class, RuntimeCondition.class,
+                CheckedConsumer.class, CheckedFunction.class,
+                PreservingCondition.class, PresentCondition.class, StructuralCondition.class,
                 ObjectAwait.class, OptionalAwait.class, CollectionAwait.class,
                 SequencedCollectionAwait.class, MapAwait.class,
                 AwaitConfigurationConflictException.class, AwaitFailure.class,
@@ -533,8 +545,8 @@ class PublicSurfaceTest {
     }
 
     private static List<Class<?>> explainedTypes() {
-        return List.of(Condition.Explained.class, PreservingCondition.Explained.class,
-                Present.Explained.class, StructuralCondition.Explained.class);
+        return List.of(Condition.ExplainedCondition.class, PreservingCondition.ExplainedCondition.class,
+                PresentCondition.ExplainedCondition.class, StructuralCondition.ExplainedCondition.class);
     }
 
     private static void assertNoPublicOrProtectedConstructor(Class<?> type) {

@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import io.github.gromoff97.awium.exceptions.*;
 
 import static java.lang.reflect.Modifier.isFinal;
@@ -103,7 +109,7 @@ class FactoryGrammarTest {
         assertThrows(AwaitConfigurationConflictException.class,
                 () -> every.upTo(Duration.ofSeconds(10)));
         String value = every.upTo(Duration.ofSeconds(30))
-                .until(AwaitConditions.isNotNull);
+                .until(ConditionProvider.isNotNull);
 
         assertEquals("value", value);
         assertEquals(1, calls.get());
@@ -134,23 +140,23 @@ class FactoryGrammarTest {
                             sourceCalls.incrementAndGet();
                             return Map.of("key", "value");
                         }).every(Duration.ofSeconds(20));
-        Condition<String, String> selecting = AwaitConditions.condition(
+        Condition<String, String> selecting = ConditionProvider.condition(
                 "selecting", Evaluation::satisfied);
 
         List<Executable> terminals = List.of(
-                () -> object.until(AwaitConditions.isNotNull),
+                () -> object.until(ConditionProvider.isNotNull),
                 () -> object.until(
-                        AwaitConditions.isNotNull.because("preserving")),
+                        ConditionProvider.isNotNull.because("preserving")),
                 () -> object.until(selecting),
                 () -> object.until(selecting.because("selecting")),
-                () -> optional.until(AwaitConditions.present),
+                () -> optional.until(ConditionProvider.present),
                 () -> optional.until(
-                        AwaitConditions.present.because("present")),
-                () -> collection.until(AwaitConditions.nonEmpty),
+                        ConditionProvider.present.because("present")),
+                () -> collection.until(ConditionProvider.nonEmpty),
                 () -> collection.until(
-                        AwaitConditions.nonEmpty.because("collection")),
-                () -> map.until(AwaitConditions.nonEmpty),
-                () -> map.until(AwaitConditions.nonEmpty.because("map")));
+                        ConditionProvider.nonEmpty.because("collection")),
+                () -> map.until(ConditionProvider.nonEmpty),
+                () -> map.until(ConditionProvider.nonEmpty.because("map")));
 
         for (Executable terminal : terminals) {
             assertThrows(AwaitConfigurationConflictException.class, terminal);
@@ -165,23 +171,23 @@ class FactoryGrammarTest {
                 .every(Duration.ofSeconds(20));
         assertNullCondition(() -> object.until((PreservingCondition<String>) null));
         assertNullCondition(() -> object.until(
-                (PreservingCondition.Explained<String>) null));
+                (PreservingCondition.ExplainedCondition<String>) null));
         assertNullCondition(() -> object.until((Condition<String, String>) null));
         assertNullCondition(() -> object.until(
-                (Condition.Explained<String, String>) null));
+                (Condition.ExplainedCondition<String, String>) null));
 
         OptionalAwait.AfterEvery<String> optional = Awium
                 .await((AwaitSources.OptionalSource<String>) Optional::empty)
                 .every(Duration.ofSeconds(20));
-        assertNullCondition(() -> optional.until((Present) null));
-        assertNullCondition(() -> optional.until((Present.Explained) null));
+        assertNullCondition(() -> optional.until((PresentCondition) null));
+        assertNullCondition(() -> optional.until((PresentCondition.ExplainedCondition) null));
 
         CollectionAwait.AfterEvery<String, Collection<String>> collection =
                 Awium.await((AwaitSources.CollectionSource<String,
                         Collection<String>>) List::of).every(Duration.ofSeconds(20));
         assertNullCondition(() -> collection.until((StructuralCondition) null));
         assertNullCondition(() -> collection.until(
-                (StructuralCondition.Explained) null));
+                (StructuralCondition.ExplainedCondition) null));
 
         SequencedCollectionAwait.AfterEvery<String, SequencedCollection<String>>
                 sequenced = Awium.await(
@@ -190,13 +196,13 @@ class FactoryGrammarTest {
                         .every(Duration.ofSeconds(20));
         assertNullCondition(() -> sequenced.until((StructuralCondition) null));
         assertNullCondition(() -> sequenced.until(
-                (StructuralCondition.Explained) null));
+                (StructuralCondition.ExplainedCondition) null));
 
         MapAwait.AfterEvery<String, String, Map<String, String>> map =
                 Awium.await((AwaitSources.MapSource<String, String,
                         Map<String, String>>) Map::of).every(Duration.ofSeconds(20));
         assertNullCondition(() -> map.until((StructuralCondition) null));
-        assertNullCondition(() -> map.until((StructuralCondition.Explained) null));
+        assertNullCondition(() -> map.until((StructuralCondition.ExplainedCondition) null));
     }
 
     @Test
@@ -238,7 +244,7 @@ class FactoryGrammarTest {
 
     private static Condition<String, String> countingCondition(AtomicInteger calls) {
         calls.incrementAndGet();
-        return AwaitConditions.condition("value", Evaluation::satisfied);
+        return ConditionProvider.condition("value", Evaluation::satisfied);
     }
 
     private static Condition<String, String> throwingCondition(

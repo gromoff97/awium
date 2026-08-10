@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import io.github.gromoff97.awium.internal.diagnostic.*;
 
 import io.github.gromoff97.awium.internal.engine.*;
@@ -24,7 +30,7 @@ class AssertionAdapterTest {
     @Test
     void namedConditionDelegatesOnceAndSuppliesItsDescription() throws Exception {
         var invocations = new int[1];
-        var condition = AwaitConditions.<Payment, Long>condition(
+        var condition = ConditionProvider.<Payment, Long>condition(
                 "payment id", payment -> {
                     invocations[0]++;
                     return Evaluation.satisfied(payment.id());
@@ -43,20 +49,20 @@ class AssertionAdapterTest {
             throws Exception {
         assertEquals("description must not be null",
                 assertThrows(NullPointerException.class,
-                        () -> AwaitConditions.condition(null,
+                        () -> ConditionProvider.condition(null,
                                 payment -> Evaluation.satisfied(payment)))
                         .getMessage());
         assertEquals("description must not be blank",
                 assertThrows(IllegalArgumentException.class,
-                        () -> AwaitConditions.condition(" \n ",
+                        () -> ConditionProvider.condition(" \n ",
                                 payment -> Evaluation.satisfied(payment)))
                         .getMessage());
         assertEquals("evaluation must not be null",
                 assertThrows(NullPointerException.class,
-                        () -> AwaitConditions.condition("payment", null))
+                        () -> ConditionProvider.condition("payment", null))
                         .getMessage());
 
-        var condition = AwaitConditions.<Payment, Payment>condition(
+        var condition = ConditionProvider.<Payment, Payment>condition(
                 "nullable evaluation", payment -> null);
         assertNull(condition.evaluate(new Payment(42)));
     }
@@ -65,7 +71,7 @@ class AssertionAdapterTest {
     void assertedReturnsTheExactActualAndInvokesItsCallbackOnce() throws Exception {
         var invocations = new int[1];
         var actual = new Payment(42);
-        var condition = AwaitConditions.<Payment>asserted(payment -> invocations[0]++);
+        var condition = ConditionProvider.<Payment>asserted(payment -> invocations[0]++);
 
         Evaluation<Payment> evaluation = condition.runtime().evaluate(actual);
 
@@ -78,7 +84,7 @@ class AssertionAdapterTest {
     @Test
     void passedMaySatisfyWithNullAndInvokesItsCallbackOnce() throws Exception {
         var invocations = new int[1];
-        var condition = AwaitConditions.<Payment, String>passed(payment -> {
+        var condition = ConditionProvider.<Payment, String>passed(payment -> {
             invocations[0]++;
             return null;
         });
@@ -99,7 +105,7 @@ class AssertionAdapterTest {
         var invocations = new int[1];
 
         Payment result = stage(time, actual).until(
-                AwaitConditions.<Payment>asserted(payment -> {
+                ConditionProvider.<Payment>asserted(payment -> {
                     if (invocations[0]++ < 2) {
                         throw discarded;
                     }
@@ -119,7 +125,7 @@ class AssertionAdapterTest {
         var invocations = new int[1];
 
         Long result = stage(time, actual).until(
-                AwaitConditions.<Payment, Long>passed(payment -> {
+                ConditionProvider.<Payment, Long>passed(payment -> {
                     if (invocations[0]++ < 2) {
                         throw discarded;
                     }
@@ -136,14 +142,14 @@ class AssertionAdapterTest {
     void assertionAdaptersPreserveTheCaughtAssertionWithoutReadingItsMessage()
             throws Exception {
         var assertedFailure = new MessageReadingAssertion();
-        var asserted = AwaitConditions.<Payment>asserted(payment -> {
+        var asserted = ConditionProvider.<Payment>asserted(payment -> {
             throw assertedFailure;
         });
         Evaluation<Payment> assertedEvaluation = asserted.runtime()
                 .evaluate(new Payment(42));
 
         var passedFailure = new MessageReadingAssertion();
-        var passed = AwaitConditions.<Payment, Long>passed(payment -> {
+        var passed = ConditionProvider.<Payment, Long>passed(payment -> {
             throw passedFailure;
         });
         Evaluation<Long> passedEvaluation = passed.evaluate(new Payment(42));
@@ -160,10 +166,10 @@ class AssertionAdapterTest {
     void checkedExceptionsEscapeAssertionAdaptersUnchanged() {
         var failure = new Exception("checked");
 
-        var asserted = AwaitConditions.<Payment>asserted(payment -> {
+        var asserted = ConditionProvider.<Payment>asserted(payment -> {
             throw failure;
         });
-        var passed = AwaitConditions.<Payment, Long>passed(payment -> {
+        var passed = ConditionProvider.<Payment, Long>passed(payment -> {
             throw failure;
         });
 
@@ -177,10 +183,10 @@ class AssertionAdapterTest {
     void runtimeExceptionsEscapeAssertionAdaptersUnchanged() {
         var failure = new IllegalStateException("runtime");
 
-        var asserted = AwaitConditions.<Payment>asserted(payment -> {
+        var asserted = ConditionProvider.<Payment>asserted(payment -> {
             throw failure;
         });
-        var passed = AwaitConditions.<Payment, Long>passed(payment -> {
+        var passed = ConditionProvider.<Payment, Long>passed(payment -> {
             throw failure;
         });
 
@@ -194,10 +200,10 @@ class AssertionAdapterTest {
     void nonAssertionErrorsEscapeAssertionAdaptersUnchanged() {
         var failure = new LinkageError("error");
 
-        var asserted = AwaitConditions.<Payment>asserted(payment -> {
+        var asserted = ConditionProvider.<Payment>asserted(payment -> {
             throw failure;
         });
-        var passed = AwaitConditions.<Payment, Long>passed(payment -> {
+        var passed = ConditionProvider.<Payment, Long>passed(payment -> {
             throw failure;
         });
 
@@ -211,22 +217,22 @@ class AssertionAdapterTest {
     void assertionFactoriesRejectNullCallbacks() {
         assertEquals("assertion must not be null",
                 assertThrows(NullPointerException.class,
-                        () -> AwaitConditions.asserted(null)).getMessage());
+                        () -> ConditionProvider.asserted(null)).getMessage());
         assertEquals("assertion must not be null",
                 assertThrows(NullPointerException.class,
-                        () -> AwaitConditions.passed(null)).getMessage());
+                        () -> ConditionProvider.passed(null)).getMessage());
     }
 
     @Test
-    void awaitConditionsIsAnUninstantiableStaticNamespace()
+    void conditionProviderIsAnUninstantiableStaticNamespace()
             throws ReflectiveOperationException {
-        assertTrue(isPublic(AwaitConditions.class.getModifiers()));
-        assertTrue(isFinal(AwaitConditions.class.getModifiers()));
-        Constructor<AwaitConditions> constructor =
-                AwaitConditions.class.getDeclaredConstructor();
+        assertTrue(isPublic(ConditionProvider.class.getModifiers()));
+        assertTrue(isFinal(ConditionProvider.class.getModifiers()));
+        Constructor<ConditionProvider> constructor =
+                ConditionProvider.class.getDeclaredConstructor();
         assertTrue(isPrivate(constructor.getModifiers()));
-        assertEquals(1, AwaitConditions.class.getDeclaredConstructors().length);
-        assertTrue(Arrays.stream(AwaitConditions.class.getDeclaredMethods())
+        assertEquals(1, ConditionProvider.class.getDeclaredConstructors().length);
+        assertTrue(Arrays.stream(ConditionProvider.class.getDeclaredMethods())
                 .filter(method -> !method.isSynthetic())
                 .allMatch(method -> isPublic(method.getModifiers())
                         && isStatic(method.getModifiers())));

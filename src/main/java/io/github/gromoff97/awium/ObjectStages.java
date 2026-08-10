@@ -1,5 +1,8 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.conditioning.conditions.Condition;
+import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import java.time.Duration;
 import java.util.Objects;
 
@@ -16,26 +19,26 @@ final class ObjectStages {
         public final T until(PreservingCondition<? super T> condition) {
             Objects.requireNonNull(condition, "condition must not be null");
             chain.config().validatePair();
-            return chain.execute(ConditionRuntime.preserving(condition));
+            return chain.execute(RuntimeCondition.preserving(condition));
         }
 
-        public final T until(PreservingCondition.Explained<? super T> condition) {
+        public final T until(PreservingCondition.ExplainedCondition<? super T> condition) {
             Objects.requireNonNull(condition, "condition must not be null");
             chain.config().validatePair();
-            return chain.execute(ConditionRuntime.preserving(condition));
+            return chain.execute(RuntimeCondition.preserving(condition));
         }
 
         public final <R> R until(Condition<? super T, ? extends R> condition) {
             Objects.requireNonNull(condition, "condition must not be null");
             chain.config().validatePair();
-            return chain.execute(ConditionRuntime.<T, R>open(condition));
+            return chain.execute(RuntimeCondition.<T, R>open(condition));
         }
 
         public final <R> R until(
-                Condition.Explained<? super T, ? extends R> condition) {
+                Condition.ExplainedCondition<? super T, ? extends R> condition) {
             Objects.requireNonNull(condition, "condition must not be null");
             chain.config().validatePair();
-            return chain.execute(ConditionRuntime.<T, R>open(condition));
+            return chain.execute(RuntimeCondition.<T, R>open(condition));
         }
     }
 

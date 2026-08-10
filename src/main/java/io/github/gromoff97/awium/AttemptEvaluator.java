@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.internal.engine.AttemptResult;
 import io.github.gromoff97.awium.internal.engine.Interrupts;
 
@@ -10,12 +12,12 @@ final class AttemptEvaluator<S, R>
         implements LongFunction<AttemptResult<R>> {
 
     private final AwaitSources.Source<S> source;
-    private final ConditionRuntime<S, R> condition;
+    private final RuntimeCondition<S, R> condition;
     private final Interrupts interrupts;
 
     AttemptEvaluator(
             AwaitSources.Source<S> source,
-            ConditionRuntime<S, R> condition,
+            RuntimeCondition<S, R> condition,
             Interrupts interrupts) {
         this.source = Objects.requireNonNull(source);
         this.condition = Objects.requireNonNull(condition);

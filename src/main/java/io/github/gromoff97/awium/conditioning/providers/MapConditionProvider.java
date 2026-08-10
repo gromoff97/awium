@@ -1,4 +1,9 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.conditioning.providers;
+
+import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.ValueEquality;
+import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,9 +11,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
 
-final class MapConditions {
+final class MapConditionProvider {
 
-    private MapConditions() {
+    private MapConditionProvider() {
     }
 
     static <K> PreservingCondition<Map<? super K, ?>> containsKey(K expected) {
@@ -106,7 +111,7 @@ final class MapConditions {
     private static <M extends Map<?, ?>> PreservingCondition<M> condition(
             Predicate<? super M> matches, boolean positive,
             String description, String mismatch) {
-        ConditionRuntime<M, M> runtime = new ConditionRuntime<>(actual -> {
+        RuntimeCondition<M, M> runtime = new RuntimeCondition<>(actual -> {
             if (actual == null) {
                 return Evaluation.unsatisfied("map was null");
             }
@@ -114,7 +119,7 @@ final class MapConditions {
                     ? Evaluation.satisfied(actual)
                     : Evaluation.unsatisfied(mismatch);
         }, () -> description, null);
-        return new PreservingCondition<>(runtime);
+        return PreservingCondition.of(runtime);
     }
 
     private static <K, V> PreservingCondition<Map<? super K, ? super V>>

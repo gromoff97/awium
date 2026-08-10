@@ -1,10 +1,16 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import static io.github.gromoff97.awium.Awium.await;
-import static io.github.gromoff97.awium.AwaitConditions.condition;
-import static io.github.gromoff97.awium.AwaitConditions.isNotNull;
-import static io.github.gromoff97.awium.AwaitConditions.nonEmpty;
-import static io.github.gromoff97.awium.AwaitConditions.present;
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.isNotNull;
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.nonEmpty;
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.present;
 import static java.time.Duration.ZERO;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;

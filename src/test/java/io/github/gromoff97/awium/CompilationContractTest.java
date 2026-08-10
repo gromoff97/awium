@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -17,10 +23,12 @@ class CompilationContractTest {
     void allFacadesTimingSubsetsAndTerminalResultsCompile() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.Awium.await;
-                import static io.github.gromoff97.awium.AwaitConditions.*;
-                import static io.github.gromoff97.awium.Evaluation.satisfied;
+                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
                 import static java.time.Duration.ofMillis;
-                import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.AwaitSources;
+                import io.github.gromoff97.awium.conditioning.Evaluation;
+                import io.github.gromoff97.awium.conditioning.conditions.Condition;
+                import io.github.gromoff97.awium.conditioning.conditions.StructuralCondition;
                 import java.util.*;
 
                 final class Contract {
@@ -35,7 +43,7 @@ class CompilationContractTest {
                     }
 
                     void check(StructuralCondition structural,
-                            StructuralCondition.Explained explainedStructural) {
+                            StructuralCondition.ExplainedCondition explainedStructural) {
                         AwaitSources.Source<String> source = Contract::object;
                         String immediate = await(source).until(isNotNull);
                         String every = await(source).every(ofMillis(1)).until(isNotNull);
@@ -51,12 +59,12 @@ class CompilationContractTest {
                                 .stableFor(ofMillis(1)).until(isNotNull);
 
                         String explained = await(Contract::object)
-                                .until(isNotNull.because("required"));
+                                .until(isNotNull.because("value is required"));
                         Integer selected = await(Contract::object).until(condition(
-                                "length", (String value) -> satisfied(value.length())));
+                                "length", (String value) -> Evaluation.satisfied(value.length())));
                         Integer selectedExplained = await(Contract::object).until(
                                 condition("length",
-                                        (String value) -> satisfied(value.length()))
+                                        (String value) -> Evaluation.satisfied(value.length()))
                                         .because("needed"));
                         Void nil = await((AwaitSources.Source<String>) () -> null)
                                 .until(isNull);
@@ -146,8 +154,9 @@ class CompilationContractTest {
         assertFalse(compiles("""
                 import static io.github.gromoff97.awium.Awium.await;
                 import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.conditioning.conditions.*;
                 final class Contract {
-                    void check(AwaitSources.Source<String> source, Present condition) {
+                    void check(AwaitSources.Source<String> source, PresentCondition condition) {
                         await(source).until(condition);
                     }
                 }
@@ -155,6 +164,7 @@ class CompilationContractTest {
         assertFalse(compiles("""
                 import static io.github.gromoff97.awium.Awium.await;
                 import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.conditioning.conditions.*;
                 final class Contract {
                     void check(AwaitSources.Source<String> source,
                             StructuralCondition condition) {
@@ -169,8 +179,9 @@ class CompilationContractTest {
             throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.Awium.await;
-                import static io.github.gromoff97.awium.AwaitConditions.*;
+                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
                 import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;
 
                 final class Contract {
@@ -216,8 +227,9 @@ class CompilationContractTest {
         }) {
             assertFalse(compiles("""
                     import static io.github.gromoff97.awium.Awium.await;
-                    import static io.github.gromoff97.awium.AwaitConditions.*;
+                    import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
                     import io.github.gromoff97.awium.*;
+                    import io.github.gromoff97.awium.conditioning.conditions.*;
                     import java.util.*;
 
                     final class Contract {
@@ -253,6 +265,7 @@ class CompilationContractTest {
         }) {
             assertFalse(compiles("""
                     import io.github.gromoff97.awium.*;
+                    import io.github.gromoff97.awium.conditioning.conditions.*;
                     final class Contract {
                         abstract class Broken implements %s {}
                     }
@@ -265,6 +278,7 @@ class CompilationContractTest {
         assertFalse(compiles("""
                 import static io.github.gromoff97.awium.Awium.await;
                 import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.conditioning.conditions.*;
                 final class Contract {
                     void check(AwaitSources.Source<String> source) {
                         ObjectAwait<String> initial = await(source);
@@ -278,7 +292,7 @@ class CompilationContractTest {
     @Test
     void assertionAdaptersMayBeDecoratedOnce() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.AwaitConditions.*;
+                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 
                 final class Contract {
                     record Payment(long id) {}
@@ -294,7 +308,7 @@ class CompilationContractTest {
     @Test
     void explainedAssertionAdapterCannotBeDecoratedAgain() throws IOException {
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.AwaitConditions.asserted;
+                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.asserted;
 
                 final class Contract {
                     record Payment(long id) {}
@@ -310,8 +324,8 @@ class CompilationContractTest {
     @Test
     void conditionIsNotDirectlyLambdaAssignable() throws IOException {
         assertFalse(compiles("""
-                import io.github.gromoff97.awium.Condition;
-                import io.github.gromoff97.awium.Evaluation;
+                import io.github.gromoff97.awium.conditioning.conditions.Condition;
+                import io.github.gromoff97.awium.conditioning.Evaluation;
 
                 final class Contract {
                     record Payment(long id) {}
@@ -325,9 +339,9 @@ class CompilationContractTest {
     @Test
     void literalBecauseCannotBeOverridden() throws IOException {
         assertFalse(compiles("""
-                import io.github.gromoff97.awium.Condition;
-                import io.github.gromoff97.awium.Evaluation;
-                import io.github.gromoff97.awium.Condition.Explained;
+                import io.github.gromoff97.awium.conditioning.conditions.Condition;
+                import io.github.gromoff97.awium.conditioning.Evaluation;
+                import io.github.gromoff97.awium.conditioning.conditions.Condition.ExplainedCondition;
 
                 final class Contract extends Condition<Contract.Payment, Contract.Payment> {
                     record Payment(long id) {}
@@ -338,7 +352,7 @@ class CompilationContractTest {
                     }
 
                     @Override
-                    public Condition.Explained<Payment, Payment> because(String value) {
+                    public Condition.ExplainedCondition<Payment, Payment> because(String value) {
                         return null;
                     }
                 }
@@ -348,9 +362,9 @@ class CompilationContractTest {
     @Test
     void formattedBecauseCannotBeOverridden() throws IOException {
         assertFalse(compiles("""
-                import io.github.gromoff97.awium.Condition;
-                import io.github.gromoff97.awium.Evaluation;
-                import io.github.gromoff97.awium.Condition.Explained;
+                import io.github.gromoff97.awium.conditioning.conditions.Condition;
+                import io.github.gromoff97.awium.conditioning.Evaluation;
+                import io.github.gromoff97.awium.conditioning.conditions.Condition.ExplainedCondition;
 
                 final class Contract extends Condition<Contract.Payment, Contract.Payment> {
                     record Payment(long id) {}
@@ -361,7 +375,7 @@ class CompilationContractTest {
                     }
 
                     @Override
-                    public Condition.Explained<Payment, Payment> because(
+                    public Condition.ExplainedCondition<Payment, Payment> because(
                             String format, Object... arguments) {
                         return null;
                     }

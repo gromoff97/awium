@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.conditioning.conditions.PresentCondition;
+import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
@@ -13,16 +15,16 @@ final class OptionalStages {
             super(chain);
         }
 
-        public final T until(Present condition) {
+        public final T until(PresentCondition condition) {
             Objects.requireNonNull(condition, "condition must not be null");
             chain.config().validatePair();
-            return chain.execute(ConditionRuntime.present(condition));
+            return chain.execute(RuntimeCondition.present(condition));
         }
 
-        public final T until(Present.Explained condition) {
+        public final T until(PresentCondition.ExplainedCondition condition) {
             Objects.requireNonNull(condition, "condition must not be null");
             chain.config().validatePair();
-            return chain.execute(ConditionRuntime.present(condition));
+            return chain.execute(RuntimeCondition.present(condition));
         }
     }
 

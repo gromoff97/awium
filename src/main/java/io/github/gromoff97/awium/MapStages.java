@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
+import io.github.gromoff97.awium.conditioning.conditions.StructuralCondition;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
@@ -16,14 +18,14 @@ final class MapStages {
         public final M until(StructuralCondition condition) {
             Objects.requireNonNull(condition, "condition must not be null");
             chain.config().validatePair();
-            return chain.execute(ConditionRuntime.structural(
+            return chain.execute(RuntimeCondition.structural(
                     condition, "map", Map::size));
         }
 
-        public final M until(StructuralCondition.Explained condition) {
+        public final M until(StructuralCondition.ExplainedCondition condition) {
             Objects.requireNonNull(condition, "condition must not be null");
             chain.config().validatePair();
-            return chain.execute(ConditionRuntime.structural(
+            return chain.execute(RuntimeCondition.structural(
                     condition, "map", Map::size));
         }
     }

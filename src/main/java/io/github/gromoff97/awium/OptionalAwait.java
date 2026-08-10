@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.conditioning.conditions.PresentCondition;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -12,16 +13,16 @@ public sealed interface OptionalAwait<T> extends ObjectAwait.Until<Optional<T>>
 
     Until<T> stableFor(Duration stability);
 
-    T until(Present condition);
+    T until(PresentCondition condition);
 
-    T until(Present.Explained condition);
+    T until(PresentCondition.ExplainedCondition condition);
 
     sealed interface Until<T> extends ObjectAwait.Until<Optional<T>>
             permits AfterUpTo, OptionalStages.OptionalTerminalStage {
 
-        T until(Present condition);
+        T until(PresentCondition condition);
 
-        T until(Present.Explained condition);
+        T until(PresentCondition.ExplainedCondition condition);
     }
 
     sealed interface AfterEvery<T> extends AfterUpTo<T>

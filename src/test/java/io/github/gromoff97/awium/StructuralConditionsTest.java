@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import io.github.gromoff97.awium.internal.diagnostic.*;
 
 import io.github.gromoff97.awium.internal.engine.*;
@@ -8,7 +14,6 @@ import io.github.gromoff97.awium.exceptions.*;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -23,19 +28,19 @@ import org.junit.jupiter.api.Test;
 class StructuralConditionsTest {
 
     private static final List<Case> CASES = List.of(
-            new Case(AwaitConditions.empty, 0, 1, "to be empty"),
-            new Case(AwaitConditions.nonEmpty, 1, 0, "to be non-empty"),
-            new Case(AwaitConditions.sizeExactly(2), 2, 1,
+            new Case(ConditionProvider.empty, 0, 1, "to be empty"),
+            new Case(ConditionProvider.nonEmpty, 1, 0, "to be non-empty"),
+            new Case(ConditionProvider.sizeExactly(2), 2, 1,
                     "size to be exactly 2"),
-            new Case(AwaitConditions.sizeNotExactly(2), 1, 2,
+            new Case(ConditionProvider.sizeNotExactly(2), 1, 2,
                     "size not to be exactly 2"),
-            new Case(AwaitConditions.sizeGreaterThan(2), 3, 2,
+            new Case(ConditionProvider.sizeGreaterThan(2), 3, 2,
                     "size to be greater than 2"),
-            new Case(AwaitConditions.sizeAtLeast(2), 2, 1,
+            new Case(ConditionProvider.sizeAtLeast(2), 2, 1,
                     "size to be at least 2"),
-            new Case(AwaitConditions.sizeLessThan(2), 1, 2,
+            new Case(ConditionProvider.sizeLessThan(2), 1, 2,
                     "size to be less than 2"),
-            new Case(AwaitConditions.sizeAtMost(2), 2, 3,
+            new Case(ConditionProvider.sizeAtMost(2), 2, 3,
                     "size to be at most 2"));
 
     @Test
@@ -73,12 +78,12 @@ class StructuralConditionsTest {
     @Test
     void namedRelationPairsAreExactComplements() throws Exception {
         List<Pair> pairs = List.of(
-                new Pair(AwaitConditions.sizeExactly(2),
-                        AwaitConditions.sizeNotExactly(2)),
-                new Pair(AwaitConditions.sizeGreaterThan(2),
-                        AwaitConditions.sizeAtMost(2)),
-                new Pair(AwaitConditions.sizeAtLeast(2),
-                        AwaitConditions.sizeLessThan(2)));
+                new Pair(ConditionProvider.sizeExactly(2),
+                        ConditionProvider.sizeNotExactly(2)),
+                new Pair(ConditionProvider.sizeGreaterThan(2),
+                        ConditionProvider.sizeAtMost(2)),
+                new Pair(ConditionProvider.sizeAtLeast(2),
+                        ConditionProvider.sizeLessThan(2)));
 
         for (Pair pair : pairs) {
             for (int size = 0; size <= 4; size++) {
@@ -100,11 +105,11 @@ class StructuralConditionsTest {
         ProbeContainers.ProbeCollection<Object> returnedCollection =
                 Awium.await((AwaitSources.CollectionSource<Object,
                         ProbeContainers.ProbeCollection<Object>>) () -> collection)
-                        .until(AwaitConditions.nonEmpty);
+                        .until(ConditionProvider.nonEmpty);
         ProbeContainers.ProbeMap<Object, Object> returnedMap =
                 Awium.await((AwaitSources.MapSource<Object, Object,
                         ProbeContainers.ProbeMap<Object, Object>>) () -> map)
-                        .until(AwaitConditions.nonEmpty.because("required"));
+                        .until(ConditionProvider.nonEmpty.because("required"));
 
         assertSame(collection, returnedCollection);
         assertSame(map, returnedMap);
@@ -121,15 +126,15 @@ class StructuralConditionsTest {
 
         assertThrows(AwaitTimeoutException.class,
                 () -> timedCollection(rawCollection)
-                        .until(AwaitConditions.empty));
+                        .until(ConditionProvider.empty));
         assertThrows(AwaitTimeoutException.class,
                 () -> timedCollection(explainedCollection)
-                        .until(AwaitConditions.empty.because("required")));
+                        .until(ConditionProvider.empty.because("required")));
         assertThrows(AwaitTimeoutException.class,
-                () -> timedMap(rawMap).until(AwaitConditions.empty));
+                () -> timedMap(rawMap).until(ConditionProvider.empty));
         assertThrows(AwaitTimeoutException.class,
                 () -> timedMap(explainedMap)
-                        .until(AwaitConditions.empty.because("required")));
+                        .until(ConditionProvider.empty.because("required")));
 
         assertNoFallback(rawCollection);
         assertNoFallback(explainedCollection);
@@ -157,23 +162,23 @@ class StructuralConditionsTest {
                 AwaitConditionEvaluationException.class,
                 () -> Awium.await((AwaitSources.CollectionSource<Object,
                         ProbeContainers.ProbeCollection<Object>>) () -> collection)
-                        .until(AwaitConditions.nonEmpty)).getCause());
+                        .until(ConditionProvider.nonEmpty)).getCause());
         assertSame(explainedCollectionCause, assertThrows(
                 AwaitConditionEvaluationException.class,
                 () -> Awium.await((AwaitSources.CollectionSource<Object,
                         ProbeContainers.ProbeCollection<Object>>)
                         () -> explainedCollection)
-                        .until(AwaitConditions.nonEmpty.because("required")))
+                        .until(ConditionProvider.nonEmpty.because("required")))
                 .getCause());
         assertSame(mapCause, assertThrows(AwaitConditionEvaluationException.class,
                 () -> Awium.await((AwaitSources.MapSource<Object, Object,
                         ProbeContainers.ProbeMap<Object, Object>>) () -> map)
-                        .until(AwaitConditions.nonEmpty)).getCause());
+                        .until(ConditionProvider.nonEmpty)).getCause());
         assertSame(explainedMapCause, assertThrows(
                 AwaitConditionEvaluationException.class,
                 () -> Awium.await((AwaitSources.MapSource<Object, Object,
                         ProbeContainers.ProbeMap<Object, Object>>) () -> explainedMap)
-                        .until(AwaitConditions.nonEmpty.because("required")))
+                        .until(ConditionProvider.nonEmpty.because("required")))
                 .getCause());
 
         assertNoFallback(collection);
@@ -185,23 +190,17 @@ class StructuralConditionsTest {
     @Test
     void sizeFactoriesRejectNegativeBoundsAndAllowZero() {
         List<java.util.function.IntFunction<StructuralCondition>> factories = List.of(
-                AwaitConditions::sizeExactly,
-                AwaitConditions::sizeNotExactly,
-                AwaitConditions::sizeGreaterThan,
-                AwaitConditions::sizeAtLeast,
-                AwaitConditions::sizeLessThan,
-                AwaitConditions::sizeAtMost);
+                ConditionProvider::sizeExactly,
+                ConditionProvider::sizeNotExactly,
+                ConditionProvider::sizeGreaterThan,
+                ConditionProvider::sizeAtLeast,
+                ConditionProvider::sizeLessThan,
+                ConditionProvider::sizeAtMost);
 
         for (var factory : factories) {
             assertThrows(IllegalArgumentException.class, () -> factory.apply(-1));
             assertDoesNotThrow(() -> factory.apply(0));
         }
-    }
-
-    @Test
-    void stateFactoriesAlwaysCreateThePublishedFieldDescriptors() {
-        assertNotNull(StructuralConditions.empty());
-        assertNotNull(StructuralConditions.nonEmpty());
     }
 
     private static void assertCollectionEvaluation(Case testCase,
@@ -210,7 +209,7 @@ class StructuralConditionsTest {
                 testCase.matchingSize());
         var mismatching = new ProbeContainers.ProbeCollection<Object>(
                 testCase.mismatchingSize());
-        ConditionRuntime<ProbeContainers.ProbeCollection<Object>,
+        RuntimeCondition<ProbeContainers.ProbeCollection<Object>,
                 ProbeContainers.ProbeCollection<Object>> runtime = explained
                         ? collection(testCase.condition().because("reason"))
                         : collection(testCase.condition());
@@ -231,7 +230,7 @@ class StructuralConditionsTest {
                 testCase.matchingSize());
         var mismatching = new ProbeContainers.ProbeMap<Object, Object>(
                 testCase.mismatchingSize());
-        ConditionRuntime<ProbeContainers.ProbeMap<Object, Object>,
+        RuntimeCondition<ProbeContainers.ProbeMap<Object, Object>,
                 ProbeContainers.ProbeMap<Object, Object>> runtime = explained
                         ? map(testCase.condition().because("reason"))
                         : map(testCase.condition());
@@ -246,35 +245,35 @@ class StructuralConditionsTest {
     }
 
     private static String mismatch(String subject, Case testCase, int size) {
-        if (testCase.condition() == AwaitConditions.empty) {
+        if (testCase.condition() == ConditionProvider.empty) {
             return subject + " was non-empty";
         }
-        if (testCase.condition() == AwaitConditions.nonEmpty) {
+        if (testCase.condition() == ConditionProvider.nonEmpty) {
             return subject + " was empty";
         }
         return subject + " size was " + size;
     }
 
-    private static <C extends Collection<?>> ConditionRuntime<C, C> collection(
+    private static <C extends Collection<?>> RuntimeCondition<C, C> collection(
             StructuralCondition condition) {
-        return ConditionRuntime.structural(
+        return RuntimeCondition.structural(
                 condition, "collection", Collection::size);
     }
 
-    private static <C extends Collection<?>> ConditionRuntime<C, C> collection(
-            StructuralCondition.Explained condition) {
-        return ConditionRuntime.structural(
+    private static <C extends Collection<?>> RuntimeCondition<C, C> collection(
+            StructuralCondition.ExplainedCondition condition) {
+        return RuntimeCondition.structural(
                 condition, "collection", Collection::size);
     }
 
-    private static <M extends Map<?, ?>> ConditionRuntime<M, M> map(
+    private static <M extends Map<?, ?>> RuntimeCondition<M, M> map(
             StructuralCondition condition) {
-        return ConditionRuntime.structural(condition, "map", Map::size);
+        return RuntimeCondition.structural(condition, "map", Map::size);
     }
 
-    private static <M extends Map<?, ?>> ConditionRuntime<M, M> map(
-            StructuralCondition.Explained condition) {
-        return ConditionRuntime.structural(condition, "map", Map::size);
+    private static <M extends Map<?, ?>> RuntimeCondition<M, M> map(
+            StructuralCondition.ExplainedCondition condition) {
+        return RuntimeCondition.structural(condition, "map", Map::size);
     }
 
     private static CollectionAwait.Until<Object,

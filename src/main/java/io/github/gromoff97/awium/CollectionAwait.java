@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.conditioning.conditions.StructuralCondition;
 import java.time.Duration;
 import java.util.Collection;
 
@@ -15,7 +16,7 @@ public sealed interface CollectionAwait<E, C extends Collection<E>>
 
     C until(StructuralCondition condition);
 
-    C until(StructuralCondition.Explained condition);
+    C until(StructuralCondition.ExplainedCondition condition);
 
     sealed interface Until<E, C extends Collection<E>>
             extends ObjectAwait.Until<C>
@@ -25,7 +26,7 @@ public sealed interface CollectionAwait<E, C extends Collection<E>>
 
         C until(StructuralCondition condition);
 
-        C until(StructuralCondition.Explained condition);
+        C until(StructuralCondition.ExplainedCondition condition);
     }
 
     sealed interface AfterEvery<E, C extends Collection<E>>

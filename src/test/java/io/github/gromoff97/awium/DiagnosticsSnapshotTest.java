@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import io.github.gromoff97.awium.internal.diagnostic.*;
 
 import io.github.gromoff97.awium.internal.engine.*;
@@ -294,7 +300,7 @@ class DiagnosticsSnapshotTest {
         var result = new Object();
         var actual = new CountingValue("actual");
         var descriptions = new int[1];
-        ConditionRuntime<Object, Object> runtime = new ConditionRuntime<>(
+        RuntimeCondition<Object, Object> runtime = new RuntimeCondition<>(
                 value -> Evaluation.satisfied(result), () -> {
                     descriptions[0]++;
                     return "condition";
@@ -313,7 +319,7 @@ class DiagnosticsSnapshotTest {
         var actual = new ThrowingValue(new IllegalStateException("bad value"));
         var cause = new IllegalArgumentException("condition broke");
         var descriptions = new int[1];
-        ConditionRuntime<Object, Object> runtime = new ConditionRuntime<>(
+        RuntimeCondition<Object, Object> runtime = new RuntimeCondition<>(
                 value -> Evaluation.satisfied(value),
                 () -> {
                     descriptions[0]++;
@@ -353,7 +359,7 @@ class DiagnosticsSnapshotTest {
             AwaitSourceRetrievalException failure = assertThrows(
                     AwaitSourceRetrievalException.class,
                     () -> complete(new FailureFactory(), outcome,
-                            new ConditionRuntime<>(
+                            new RuntimeCondition<>(
                                     value -> Evaluation.satisfied(value), () -> {
                                         calls[0]++;
                                         return description;
@@ -428,7 +434,7 @@ class DiagnosticsSnapshotTest {
         var actual = new CountingValue("actual one\ractual two");
         var cause = new CountingCause("cause one\r\n cause two\rcause three");
         var descriptions = new int[1];
-        ConditionRuntime<Object, Object> runtime = new ConditionRuntime<>(
+        RuntimeCondition<Object, Object> runtime = new RuntimeCondition<>(
                 value -> Evaluation.satisfied(value), () -> {
                     descriptions[0]++;
                     return "condition one\r\n condition two\rcondition three";
@@ -513,7 +519,7 @@ class DiagnosticsSnapshotTest {
             AwaitSourceRetrievalException sourceFailure = assertThrows(
                     AwaitSourceRetrievalException.class,
                     () -> complete(new FailureFactory(), sourceOutcome,
-                            new ConditionRuntime<>(
+                            new RuntimeCondition<>(
                                     value -> Evaluation.satisfied(value), () -> {
                                         Thread.currentThread().interrupt();
                                         return "condition";
@@ -574,7 +580,7 @@ class DiagnosticsSnapshotTest {
             formatterCalls[0]++;
             throw formatterFailure;
         };
-        ConditionRuntime<Object, Object> runtime = new ConditionRuntime<>(
+        RuntimeCondition<Object, Object> runtime = new RuntimeCondition<>(
                 value -> Evaluation.satisfied(value), () -> {
                     descriptions[0]++;
                     return "condition";
@@ -640,7 +646,7 @@ class DiagnosticsSnapshotTest {
 
         assertSame(descriptionFatal, assertThrows(ThrowableFixtures.Fatal.class,
                 () -> complete(new FailureFactory(), sourceFailure,
-                        new ConditionRuntime<>(value -> Evaluation.satisfied(value),
+                        new RuntimeCondition<>(value -> Evaluation.satisfied(value),
                                 () -> {
                                     throw descriptionFatal;
                                 }, null), config(1, 2, 0))));
@@ -718,14 +724,14 @@ class DiagnosticsSnapshotTest {
     }
 
     private static <R> R complete(FailureFactory factory, WaitResult<R> outcome,
-            ConditionRuntime<?, R> runtime, WaitConfiguration config) {
+            RuntimeCondition<?, R> runtime, WaitConfiguration config) {
         return factory.complete(outcome, runtime.description(),
                 runtime.explanation(), config);
     }
 
-    private static <R> ConditionRuntime<Object, R> runtime(
+    private static <R> RuntimeCondition<Object, R> runtime(
             String description, String explanation) {
-        return new ConditionRuntime<>(value -> Evaluation.satisfied(null),
+        return new RuntimeCondition<>(value -> Evaluation.satisfied(null),
                 () -> description, explanation);
     }
 

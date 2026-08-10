@@ -1,4 +1,9 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.conditioning.providers;
+
+import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.ValueEquality;
+import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,9 +14,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.SequencedCollection;
 
-final class CollectionConditions {
+final class CollectionConditionProvider {
 
-    private CollectionConditions() {
+    private CollectionConditionProvider() {
     }
 
     static <E> PreservingCondition<Collection<? super E>> contains(E expected) {
@@ -161,8 +166,8 @@ final class CollectionConditions {
     private static <E> PreservingCondition<Collection<? super E>> membership(
             Iterable<? extends E> expected, boolean all, boolean positive,
             String description, String mismatch) {
-        ConditionRuntime<Collection<? super E>, Collection<? super E>> runtime =
-                new ConditionRuntime<>(actual -> {
+        RuntimeCondition<Collection<? super E>, Collection<? super E>> runtime =
+                new RuntimeCondition<>(actual -> {
                     if (actual == null) {
                         return Evaluation.unsatisfied("collection was null");
                     }
@@ -173,7 +178,7 @@ final class CollectionConditions {
                             ? Evaluation.satisfied(actual)
                             : Evaluation.unsatisfied(mismatch);
                 }, () -> description, null);
-        return new PreservingCondition<>(runtime);
+        return PreservingCondition.of(runtime);
     }
 
     private static boolean anyMatch(Collection<?> actual,
@@ -213,7 +218,7 @@ final class CollectionConditions {
     private static <C extends Collection<?>> PreservingCondition<C> exact(
             Collection<?> expected, boolean ordered, boolean positive,
             String description, String mismatch) {
-        ConditionRuntime<C, C> runtime = new ConditionRuntime<>(actual -> {
+        RuntimeCondition<C, C> runtime = new RuntimeCondition<>(actual -> {
             if (actual == null) {
                 return Evaluation.unsatisfied("collection was null");
             }
@@ -222,7 +227,7 @@ final class CollectionConditions {
                     ? Evaluation.satisfied(actual)
                     : Evaluation.unsatisfied(mismatch);
         }, () -> description, null);
-        return new PreservingCondition<>(runtime);
+        return PreservingCondition.of(runtime);
     }
 
     private static boolean exactContent(Collection<?> actual,

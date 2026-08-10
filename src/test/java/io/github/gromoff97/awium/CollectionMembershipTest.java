@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import io.github.gromoff97.awium.internal.diagnostic.*;
 
 import io.github.gromoff97.awium.internal.engine.*;
@@ -31,23 +37,23 @@ import org.junit.jupiter.api.io.TempDir;
 class CollectionMembershipTest {
 
     private static final List<Pair> PAIRS = List.of(
-            new Pair("contains", AwaitConditions.contains("b"),
-                    AwaitConditions.doesNotContain("b"),
+            new Pair("contains", ConditionProvider.contains("b"),
+                    ConditionProvider.doesNotContain("b"),
                     List.of("a", "b", "c"), List.of("a", "c"), 2, 2),
-            new Pair("containsAll", AwaitConditions.containsAll("a", "b"),
-                    AwaitConditions.doesNotContainAll("a", "b"),
+            new Pair("containsAll", ConditionProvider.containsAll("a", "b"),
+                    ConditionProvider.doesNotContainAll("a", "b"),
                     List.of("a", "b", "c"), List.of("a", "c"), 2, 2),
             new Pair("containsAllElementsOf",
-                    AwaitConditions.containsAllElementsOf(List.of("a", "b")),
-                    AwaitConditions.doesNotContainAllElementsOf(
+                    ConditionProvider.containsAllElementsOf(List.of("a", "b")),
+                    ConditionProvider.doesNotContainAllElementsOf(
                             List.of("a", "b")),
                     List.of("a", "b", "c"), List.of("a", "c"), 2, 2),
-            new Pair("containsAnyOf", AwaitConditions.containsAnyOf("x", "b"),
-                    AwaitConditions.containsNoneOf("x", "b"),
+            new Pair("containsAnyOf", ConditionProvider.containsAnyOf("x", "b"),
+                    ConditionProvider.containsNoneOf("x", "b"),
                     List.of("a", "b", "c"), List.of("a", "c"), 2, 2),
             new Pair("containsAnyElementsOf",
-                    AwaitConditions.containsAnyElementsOf(List.of("x", "b")),
-                    AwaitConditions.containsNoElementsOf(List.of("x", "b")),
+                    ConditionProvider.containsAnyElementsOf(List.of("x", "b")),
+                    ConditionProvider.containsNoElementsOf(List.of("x", "b")),
                     List.of("a", "b", "c"), List.of("a", "c"), 2, 2));
 
     @TempDir
@@ -68,8 +74,8 @@ class CollectionMembershipTest {
 
     @Test
     void aggregateAnyFactoriesReturnUsablePublicConditions() {
-        assertNotNull(AwaitConditions.containsAnyElementsOf(List.of("a")));
-        assertNotNull(AwaitConditions.containsNoElementsOf(List.of("a")));
+        assertNotNull(ConditionProvider.containsAnyElementsOf(List.of("a")));
+        assertNotNull(ConditionProvider.containsNoElementsOf(List.of("a")));
     }
 
     @Test
@@ -86,12 +92,12 @@ class CollectionMembershipTest {
     void repeatedExpectedPositionsAreSetLikeForBothAllForms()
             throws Exception {
         List<Pair> repeated = List.of(
-                new Pair("containsAll", AwaitConditions.containsAll("a", "a"),
-                        AwaitConditions.doesNotContainAll("a", "a"),
+                new Pair("containsAll", ConditionProvider.containsAll("a", "a"),
+                        ConditionProvider.doesNotContainAll("a", "a"),
                         List.of("a"), List.of("b"), 1, 1),
                 new Pair("containsAllElementsOf",
-                        AwaitConditions.containsAllElementsOf(List.of("a", "a")),
-                        AwaitConditions.doesNotContainAllElementsOf(
+                        ConditionProvider.containsAllElementsOf(List.of("a", "a")),
+                        ConditionProvider.doesNotContainAllElementsOf(
                                 List.of("a", "a")),
                         List.of("a"), List.of("b"), 1, 1));
 
@@ -110,13 +116,13 @@ class CollectionMembershipTest {
         var arrays = new ProbeContainers.MembershipCollection<Object>(
                 List.of(new int[] {1, 2}));
 
-        assertSatisfied(ConditionRuntime.<
+        assertSatisfied(RuntimeCondition.<
                 ProbeContainers.MembershipCollection<Directional>>preserving(
-                        AwaitConditions.contains(expected)).evaluate(directional),
+                        ConditionProvider.contains(expected)).evaluate(directional),
                 directional);
-        assertSatisfied(ConditionRuntime.<
+        assertSatisfied(RuntimeCondition.<
                 ProbeContainers.MembershipCollection<Object>>preserving(
-                        AwaitConditions.contains(new int[] {1, 2})).evaluate(arrays),
+                        ConditionProvider.contains(new int[] {1, 2})).evaluate(arrays),
                 arrays);
 
         assertEquals(1, actual.equalsCalls);
@@ -137,13 +143,13 @@ class CollectionMembershipTest {
         var negativeActual = new ProbeContainers.MembershipCollection<>(
                 List.of(negativeFirst, negativeSecond));
 
-        Evaluation<?> positive = ConditionRuntime.<
+        Evaluation<?> positive = RuntimeCondition.<
                 ProbeContainers.MembershipCollection<CountingValue>>preserving(
-                        AwaitConditions.containsAnyOf(expected)).evaluate(
+                        ConditionProvider.containsAnyOf(expected)).evaluate(
                                 positiveActual);
-        Evaluation<?> negative = ConditionRuntime.<
+        Evaluation<?> negative = RuntimeCondition.<
                 ProbeContainers.MembershipCollection<CountingValue>>preserving(
-                        AwaitConditions.containsNoneOf(expected)).evaluate(
+                        ConditionProvider.containsNoneOf(expected)).evaluate(
                                 negativeActual);
 
         assertNotEquals(positive.status(), negative.status());
@@ -164,10 +170,10 @@ class CollectionMembershipTest {
 
         assertThrows(AwaitTimeoutException.class,
                 () -> timedCollection(raw).until(
-                        AwaitConditions.contains("missing")));
+                        ConditionProvider.contains("missing")));
         assertThrows(AwaitTimeoutException.class,
                 () -> timedCollection(explained).until(
-                        AwaitConditions.doesNotContain("a").because("required")));
+                        ConditionProvider.doesNotContain("a").because("required")));
 
         assertOnlyIterator(raw, 2);
         assertOnlyIterator(explained, 1);
@@ -191,44 +197,44 @@ class CollectionMembershipTest {
         assertSame(acquisitionCause, assertThrows(
                 AwaitConditionEvaluationException.class,
                 () -> await(acquisition,
-                        AwaitConditions.doesNotContain("a"))).getCause());
+                        ConditionProvider.doesNotContain("a"))).getCause());
         assertSame(advancementCause, assertThrows(
                 AwaitConditionEvaluationException.class,
                 () -> await(advancement,
-                        AwaitConditions.containsNoneOf("a"))).getCause());
+                        ConditionProvider.containsNoneOf("a"))).getCause());
         assertSame(equalityCause, assertThrows(
                 AwaitConditionEvaluationException.class,
                 () -> await(equality,
-                        AwaitConditions.doesNotContain(
+                        ConditionProvider.doesNotContain(
                                 new ThrowingEquals(null)))).getCause());
     }
 
     @Test
     void aggregateFactoriesRejectNullAndEmptyInputsWithExactMessages() {
         List<Executable> nullVarargs = List.of(
-                () -> AwaitConditions.containsAll((Object[]) null),
-                () -> AwaitConditions.doesNotContainAll((Object[]) null),
-                () -> AwaitConditions.containsAnyOf((Object[]) null),
-                () -> AwaitConditions.containsNoneOf((Object[]) null));
+                () -> ConditionProvider.containsAll((Object[]) null),
+                () -> ConditionProvider.doesNotContainAll((Object[]) null),
+                () -> ConditionProvider.containsAnyOf((Object[]) null),
+                () -> ConditionProvider.containsNoneOf((Object[]) null));
         List<Executable> nullCollections = List.of(
-                () -> AwaitConditions.containsAllElementsOf(
+                () -> ConditionProvider.containsAllElementsOf(
                         (Collection<Object>) null),
-                () -> AwaitConditions.doesNotContainAllElementsOf(
+                () -> ConditionProvider.doesNotContainAllElementsOf(
                         (Collection<Object>) null),
-                () -> AwaitConditions.containsAnyElementsOf(
+                () -> ConditionProvider.containsAnyElementsOf(
                         (Collection<Object>) null),
-                () -> AwaitConditions.containsNoElementsOf(
+                () -> ConditionProvider.containsNoElementsOf(
                         (Collection<Object>) null));
         List<Executable> emptyVarargs = List.of(
-                () -> AwaitConditions.containsAll(new Object[0]),
-                () -> AwaitConditions.doesNotContainAll(new Object[0]),
-                () -> AwaitConditions.containsAnyOf(new Object[0]),
-                () -> AwaitConditions.containsNoneOf(new Object[0]));
+                () -> ConditionProvider.containsAll(new Object[0]),
+                () -> ConditionProvider.doesNotContainAll(new Object[0]),
+                () -> ConditionProvider.containsAnyOf(new Object[0]),
+                () -> ConditionProvider.containsNoneOf(new Object[0]));
         List<Executable> emptyCollections = List.of(
-                () -> AwaitConditions.containsAllElementsOf(List.of()),
-                () -> AwaitConditions.doesNotContainAllElementsOf(List.of()),
-                () -> AwaitConditions.containsAnyElementsOf(List.of()),
-                () -> AwaitConditions.containsNoElementsOf(List.of()));
+                () -> ConditionProvider.containsAllElementsOf(List.of()),
+                () -> ConditionProvider.doesNotContainAllElementsOf(List.of()),
+                () -> ConditionProvider.containsAnyElementsOf(List.of()),
+                () -> ConditionProvider.containsNoElementsOf(List.of()));
 
         nullVarargs.forEach(factory -> assertFailure(factory,
                 NullPointerException.class,
@@ -250,7 +256,7 @@ class CollectionMembershipTest {
         var actual = new ProbeContainers.MembershipCollection<String>(
                 Arrays.asList((String) null));
 
-        assertSatisfied(runtime(AwaitConditions.containsAll(expected), false)
+        assertSatisfied(runtime(ConditionProvider.containsAll(expected), false)
                 .evaluate(actual), actual);
         assertOnlyIterator(actual, 1);
     }
@@ -258,10 +264,10 @@ class CollectionMembershipTest {
     @Test
     void elementsOfFactoriesCallOnlyIsEmptyOnceAtConstruction() {
         List<Function<Collection<String>, ?>> factories = List.of(
-                AwaitConditions::containsAllElementsOf,
-                AwaitConditions::doesNotContainAllElementsOf,
-                AwaitConditions::containsAnyElementsOf,
-                AwaitConditions::containsNoElementsOf);
+                ConditionProvider::containsAllElementsOf,
+                ConditionProvider::doesNotContainAllElementsOf,
+                ConditionProvider::containsAnyElementsOf,
+                ConditionProvider::containsNoElementsOf);
 
         for (Function<Collection<String>, ?> factory : factories) {
             var expected = new ProbeContainers.ExpectedCollection<>(List.of("a"));
@@ -275,10 +281,10 @@ class CollectionMembershipTest {
     @Test
     void throwingExpectedIsEmptyEscapesRawFromEveryElementsOfFactory() {
         List<Function<Collection<String>, ?>> factories = List.of(
-                AwaitConditions::containsAllElementsOf,
-                AwaitConditions::doesNotContainAllElementsOf,
-                AwaitConditions::containsAnyElementsOf,
-                AwaitConditions::containsNoElementsOf);
+                ConditionProvider::containsAllElementsOf,
+                ConditionProvider::doesNotContainAllElementsOf,
+                ConditionProvider::containsAnyElementsOf,
+                ConditionProvider::containsNoElementsOf);
 
         for (Function<Collection<String>, ?> factory : factories) {
             RuntimeException cause = new IllegalStateException("isEmpty failed");
@@ -297,7 +303,7 @@ class CollectionMembershipTest {
                 "containsAll", "doesNotContainAll",
                 "containsAnyOf", "containsNoneOf");
         Set<String> discovered = Arrays.stream(
-                        AwaitConditions.class.getDeclaredMethods())
+                        ConditionProvider.class.getDeclaredMethods())
                 .filter(method -> method.isVarArgs()
                         && method.getTypeParameters().length > 0)
                 .peek(method -> {
@@ -315,9 +321,10 @@ class CollectionMembershipTest {
     void ordinaryConsumerCallsAreWarningFreeAndBareNullWarningRemains()
             throws IOException {
         assertTrue(CompilationSupport.compiles(temporaryDirectory, """
-                import static io.github.gromoff97.awium.AwaitConditions.*;
+                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
                 import static io.github.gromoff97.awium.Awium.await;
                 import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;
 
                 final class Contract {
@@ -346,13 +353,14 @@ class CollectionMembershipTest {
                 }
                 """));
         assertFalse(CompilationSupport.compiles(temporaryDirectory, """
-                import static io.github.gromoff97.awium.AwaitConditions.*;
+                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
                 final class Contract { void check() { containsAll(null); } }
                 """));
         assertFalse(CompilationSupport.compiles(temporaryDirectory, """
                 import static io.github.gromoff97.awium.Awium.await;
-                import static io.github.gromoff97.awium.AwaitConditions.*;
+                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
                 import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;
                 final class Contract {
                     void check(Collection<Object> broad,
@@ -369,10 +377,10 @@ class CollectionMembershipTest {
             throws Exception {
         var positiveActual = new ProbeContainers.MembershipCollection<>(values);
         var negativeActual = new ProbeContainers.MembershipCollection<>(values);
-        ConditionRuntime<ProbeContainers.MembershipCollection<String>,
+        RuntimeCondition<ProbeContainers.MembershipCollection<String>,
                 ProbeContainers.MembershipCollection<String>> positive =
                         runtime(pair.positive(), explained);
-        ConditionRuntime<ProbeContainers.MembershipCollection<String>,
+        RuntimeCondition<ProbeContainers.MembershipCollection<String>,
                 ProbeContainers.MembershipCollection<String>> negative =
                         runtime(pair.negative(), explained);
 
@@ -392,18 +400,18 @@ class CollectionMembershipTest {
         assertOnlyIterator(negativeActual, nextCalls);
     }
 
-    private static ConditionRuntime<ProbeContainers.MembershipCollection<String>,
+    private static RuntimeCondition<ProbeContainers.MembershipCollection<String>,
             ProbeContainers.MembershipCollection<String>> runtime(
                     PreservingCondition<? super ProbeContainers.
                             MembershipCollection<String>> condition,
                     boolean explained) {
         return explained
-                ? ConditionRuntime.preserving(condition.because("reason"))
-                : ConditionRuntime.preserving(condition);
+                ? RuntimeCondition.preserving(condition.because("reason"))
+                : RuntimeCondition.preserving(condition);
     }
 
     private static void assertNullActual(
-            ConditionRuntime<ProbeContainers.MembershipCollection<String>,
+            RuntimeCondition<ProbeContainers.MembershipCollection<String>,
                     ProbeContainers.MembershipCollection<String>> runtime)
             throws Exception {
         Evaluation<?> evaluation = runtime.evaluate(null);

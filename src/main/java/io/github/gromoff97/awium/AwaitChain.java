@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.internal.diagnostic.FailureFactory;
 import io.github.gromoff97.awium.internal.engine.Interrupts;
 import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
@@ -57,7 +58,7 @@ final class AwaitChain<S> {
         return withConfig(config.withStableFor(stability));
     }
 
-    <R> R execute(ConditionRuntime<S, R> condition) {
+    <R> R execute(RuntimeCondition<S, R> condition) {
         WaitEngine engine = new WaitEngine(config, clock, parker, interrupts);
         AttemptEvaluator<S, R> evaluator = new AttemptEvaluator<>(
                 source, condition, interrupts);

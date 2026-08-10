@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -32,7 +38,7 @@ class VirtualThreadIntegrationTest {
                     callbackValues.add(local.get());
                     return ++observations[0];
                 }).every(Duration.ofMillis(20)).upTo(Duration.ofSeconds(2))
-                        .until(AwaitConditions.condition("third observation", value -> {
+                        .until(ConditionProvider.condition("third observation", value -> {
                             callbackThreads.add(Thread.currentThread());
                             callbackValues.add(local.get());
                             return value == 3 ? Evaluation.satisfied(value)

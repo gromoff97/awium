@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.conditioning;
 
 import java.util.ArrayDeque;
 import java.util.Arrays;
@@ -7,12 +7,12 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-final class ValueEquality {
+public final class ValueEquality {
 
     private ValueEquality() {
     }
 
-    static boolean equal(Object actual, Object expected) {
+    public static boolean equal(Object actual, Object expected) {
         Deque<ValuePair> pending = new ArrayDeque<>();
         Set<IdentityArrayPair> visited = new HashSet<>();
         pending.addLast(new ValuePair(actual, expected));

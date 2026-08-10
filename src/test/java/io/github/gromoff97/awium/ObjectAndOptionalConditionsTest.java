@@ -1,7 +1,12 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -16,11 +21,11 @@ class ObjectAndOptionalConditionsTest {
             throws Exception {
         var actual = new Object();
 
-        assertSatisfied(AwaitConditions.isNull.evaluate(null), null);
-        assertUnsatisfied(AwaitConditions.isNull.evaluate(actual),
+        assertSatisfied(ConditionProvider.isNull.evaluate(null), null);
+        assertUnsatisfied(ConditionProvider.isNull.evaluate(actual),
                 "value was not null");
-        assertSatisfied(evaluate(AwaitConditions.isNotNull, actual), actual);
-        assertUnsatisfied(evaluate(AwaitConditions.isNotNull, null),
+        assertSatisfied(evaluate(ConditionProvider.isNotNull, actual), actual);
+        assertUnsatisfied(evaluate(ConditionProvider.isNotNull, null),
                 "value was null");
     }
 
@@ -31,17 +36,17 @@ class ObjectAndOptionalConditionsTest {
         var equalActual = new EqualValue(1);
         var differentActual = new EqualValue(2);
 
-        assertSatisfied(evaluate(AwaitConditions.equalTo(expected), equalActual),
+        assertSatisfied(evaluate(ConditionProvider.equalTo(expected), equalActual),
                 equalActual);
-        assertUnsatisfied(evaluate(AwaitConditions.notEqualTo(expected), equalActual),
+        assertUnsatisfied(evaluate(ConditionProvider.notEqualTo(expected), equalActual),
                 "value was equal");
-        assertUnsatisfied(evaluate(AwaitConditions.equalTo(expected), differentActual),
+        assertUnsatisfied(evaluate(ConditionProvider.equalTo(expected), differentActual),
                 "value was not equal");
-        assertSatisfied(evaluate(AwaitConditions.notEqualTo(expected), differentActual),
+        assertSatisfied(evaluate(ConditionProvider.notEqualTo(expected), differentActual),
                 differentActual);
-        assertSatisfied(evaluate(AwaitConditions.equalTo(null), null), null);
-        assertSatisfied(evaluate(AwaitConditions.notEqualTo(expected), null), null);
-        assertSatisfiedType(evaluate(AwaitConditions.equalTo(
+        assertSatisfied(evaluate(ConditionProvider.equalTo(null), null), null);
+        assertSatisfied(evaluate(ConditionProvider.notEqualTo(expected), null), null);
+        assertSatisfiedType(evaluate(ConditionProvider.equalTo(
                 new int[]{1, 2}), new int[]{1, 2}), int[].class);
     }
 
@@ -52,14 +57,14 @@ class ObjectAndOptionalConditionsTest {
         Optional<String> present = Optional.of("value");
 
         assertEquals("optional to remain present",
-                ConditionRuntime.<String>present(AwaitConditions.present)
+                RuntimeCondition.<String>present(ConditionProvider.present)
                         .description().get());
         assertUnsatisfied(evaluatePresent(null), "optional was null");
-        assertUnsatisfied(AwaitConditions.absent.evaluate(null), "optional was null");
+        assertUnsatisfied(ConditionProvider.absent.evaluate(null), "optional was null");
         assertUnsatisfied(evaluatePresent(empty), "optional was empty");
-        assertSatisfied(AwaitConditions.absent.evaluate(empty), null);
+        assertSatisfied(ConditionProvider.absent.evaluate(empty), null);
         assertSatisfied(evaluatePresent(present), "value");
-        assertUnsatisfied(AwaitConditions.absent.evaluate(present),
+        assertUnsatisfied(ConditionProvider.absent.evaluate(present),
                 "optional was present");
     }
 
@@ -69,8 +74,8 @@ class ObjectAndOptionalConditionsTest {
         var expected = new EqualValue(1);
         var equalActual = new EqualValue(1);
         var differentActual = new EqualValue(2);
-        var equal = AwaitConditions.hasValueEqualTo(expected);
-        var notEqual = AwaitConditions.hasValueNotEqualTo(expected);
+        var equal = ConditionProvider.hasValueEqualTo(expected);
+        var notEqual = ConditionProvider.hasValueNotEqualTo(expected);
 
         assertUnsatisfied(equal.evaluate(null), "optional was null");
         assertUnsatisfied(notEqual.evaluate(null), "optional was null");
@@ -90,13 +95,13 @@ class ObjectAndOptionalConditionsTest {
         var expected = new RightOperand();
         var actual = new LeftOperand(expected);
 
-        assertSatisfied(AwaitConditions.hasValueEqualTo((Object) expected)
+        assertSatisfied(ConditionProvider.hasValueEqualTo((Object) expected)
                 .evaluate(Optional.of(actual)), actual);
         assertEquals(1, actual.comparisons);
         assertEquals(0, expected.comparisons);
 
         int[] actualArray = {1, 2};
-        assertSame(actualArray, AwaitConditions.hasValueEqualTo(
+        assertSame(actualArray, ConditionProvider.hasValueEqualTo(
                 new int[]{1, 2}).evaluate(Optional.of(actualArray)).result());
     }
 
@@ -104,49 +109,41 @@ class ObjectAndOptionalConditionsTest {
     void optionalValueFactoriesRejectNullOperandsImmediately() {
         assertEquals("expected must not be null", assertThrows(
                 NullPointerException.class,
-                () -> AwaitConditions.hasValueEqualTo(null)).getMessage());
+                () -> ConditionProvider.hasValueEqualTo(null)).getMessage());
         assertEquals("unexpected must not be null", assertThrows(
                 NullPointerException.class,
-                () -> AwaitConditions.hasValueNotEqualTo(null)).getMessage());
+                () -> ConditionProvider.hasValueNotEqualTo(null)).getMessage());
     }
 
     @Test
     void builtInObjectAndOptionalConditionsExposeExactDescriptions() {
-        assertEquals("value to be null", AwaitConditions.isNull.description());
+        assertEquals("value to be null", ConditionProvider.isNull.description());
         assertEquals("value to be non-null",
-                ConditionRuntime.preserving(AwaitConditions.isNotNull)
+                RuntimeCondition.preserving(ConditionProvider.isNotNull)
                         .description().get());
         assertEquals("value equal to expected",
-                ConditionRuntime.preserving(AwaitConditions.equalTo("expected"))
+                RuntimeCondition.preserving(ConditionProvider.equalTo("expected"))
                         .description().get());
         assertEquals("value not equal to unexpected",
-                ConditionRuntime.preserving(
-                        AwaitConditions.notEqualTo("unexpected"))
+                RuntimeCondition.preserving(
+                        ConditionProvider.notEqualTo("unexpected"))
                         .description().get());
         assertEquals("optional to be absent",
-                AwaitConditions.absent.description());
+                ConditionProvider.absent.description());
         assertEquals("optional value equal to expected",
-                AwaitConditions.hasValueEqualTo("expected").description());
+                ConditionProvider.hasValueEqualTo("expected").description());
         assertEquals("optional value not equal to unexpected",
-                AwaitConditions.hasValueNotEqualTo("unexpected").description());
-    }
-
-    @Test
-    void internalFactoriesAlwaysCreateThePublishedFieldDescriptors() {
-        assertNotNull(ObjectConditions.isNull());
-        assertNotNull(ObjectConditions.isNotNull());
-        assertNotNull(OptionalConditions.present());
-        assertNotNull(OptionalConditions.absent());
+                ConditionProvider.hasValueNotEqualTo("unexpected").description());
     }
 
     private static Evaluation<Object> evaluate(
             PreservingCondition<Object> condition, Object actual) throws Exception {
-        return ConditionRuntime.preserving(condition).evaluate(actual);
+        return RuntimeCondition.preserving(condition).evaluate(actual);
     }
 
     private static <T> Evaluation<T> evaluatePresent(Optional<T> actual)
             throws Exception {
-        return ConditionRuntime.<T>present(AwaitConditions.present).evaluate(actual);
+        return RuntimeCondition.<T>present(ConditionProvider.present).evaluate(actual);
     }
 
     private static void assertSatisfied(Evaluation<?> evaluation, Object result) {

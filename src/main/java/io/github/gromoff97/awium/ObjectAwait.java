@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.conditioning.conditions.Condition;
+import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
 import java.time.Duration;
 
 public sealed interface ObjectAwait<T>
@@ -13,11 +15,11 @@ public sealed interface ObjectAwait<T>
 
     T until(PreservingCondition<? super T> condition);
 
-    T until(PreservingCondition.Explained<? super T> condition);
+    T until(PreservingCondition.ExplainedCondition<? super T> condition);
 
     <R> R until(Condition<? super T, ? extends R> condition);
 
-    <R> R until(Condition.Explained<? super T, ? extends R> condition);
+    <R> R until(Condition.ExplainedCondition<? super T, ? extends R> condition);
 
     sealed interface Until<T>
             permits AfterUpTo, OptionalAwait, OptionalAwait.Until,
@@ -27,11 +29,11 @@ public sealed interface ObjectAwait<T>
 
         T until(PreservingCondition<? super T> condition);
 
-        T until(PreservingCondition.Explained<? super T> condition);
+        T until(PreservingCondition.ExplainedCondition<? super T> condition);
 
         <R> R until(Condition<? super T, ? extends R> condition);
 
-        <R> R until(Condition.Explained<? super T, ? extends R> condition);
+        <R> R until(Condition.ExplainedCondition<? super T, ? extends R> condition);
     }
 
     sealed interface AfterEvery<T> extends AfterUpTo<T>

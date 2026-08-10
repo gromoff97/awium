@@ -1,15 +1,21 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.conditioning.providers;
+
+import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.ValueEquality;
+import io.github.gromoff97.awium.conditioning.conditions.Condition;
+import io.github.gromoff97.awium.conditioning.conditions.PresentCondition;
+import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 
 import java.util.Objects;
 import java.util.Optional;
 
-final class OptionalConditions {
+final class OptionalConditionProvider {
 
-    private OptionalConditions() {
+    private OptionalConditionProvider() {
     }
 
-    static Present present() {
-        return new Present(new ConditionRuntime<>(actual -> {
+    static PresentCondition present() {
+        return PresentCondition.of(new RuntimeCondition<>(actual -> {
             if (actual == null) {
                 return Evaluation.unsatisfied("optional was null");
             }

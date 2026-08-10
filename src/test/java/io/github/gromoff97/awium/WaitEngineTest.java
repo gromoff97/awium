@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import io.github.gromoff97.awium.internal.engine.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -599,20 +605,20 @@ class WaitEngineTest {
             FakeTime time,
             WaitConfiguration config,
             AwaitSources.Source<S> source,
-            ConditionRuntime.Evaluator<S, R> condition) {
+            CheckedFunction<S, Evaluation<R>> condition) {
         var guard = new Interrupts();
         return new WaitEngine(config, time, time, guard)
                 .waitFor(new AttemptEvaluator<>(source,
-                        new ConditionRuntime<>(condition,
+                        new RuntimeCondition<>(condition,
                                 () -> "test condition", null), guard));
     }
 
     private static <S, R> AttemptEvaluator<S, R> evaluator(
             AwaitSources.Source<S> source,
-            ConditionRuntime.Evaluator<S, R> condition) {
+            CheckedFunction<S, Evaluation<R>> condition) {
         var guard = new Interrupts();
         return new AttemptEvaluator<>(source,
-                new ConditionRuntime<>(condition, () -> "test condition", null),
+                new RuntimeCondition<>(condition, () -> "test condition", null),
                 guard);
     }
 }

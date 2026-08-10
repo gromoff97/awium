@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+
+import io.github.gromoff97.awium.conditioning.*;
+import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+
 import static java.lang.reflect.Modifier.isProtected;
 import static java.lang.reflect.Modifier.isPublic;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -7,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
@@ -70,15 +77,15 @@ class EvaluationContractTest {
     }
 
     @Test
-    void constructionAndStateInspectionAreNotPublic() {
+    void constructionIsClosedAndStateInspectionIsPublic() throws Exception {
         assertFalse(Arrays.stream(Evaluation.class.getDeclaredConstructors())
                 .anyMatch(constructor -> isPublic(constructor.getModifiers())
                         || isProtected(constructor.getModifiers())));
-        assertFalse(isPublic(Evaluation.Status.class.getModifiers()));
-        assertFalse(Arrays.stream(Evaluation.class.getDeclaredMethods())
-                .filter(method -> !method.getName().equals("satisfied")
-                        && !method.getName().equals("unsatisfied"))
-                .anyMatch(method -> isPublic(method.getModifiers())
-                        || isProtected(method.getModifiers())));
+        assertTrue(isPublic(Evaluation.Status.class.getModifiers()));
+        for (String accessor : new String[] {"status", "result", "mismatch",
+                "assertionCause", "uncontrolledCause"}) {
+            assertTrue(isPublic(Evaluation.class.getDeclaredMethod(accessor)
+                    .getModifiers()), accessor);
+        }
     }
 }
