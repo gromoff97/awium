@@ -177,12 +177,14 @@ final class MapConditionProvider {
         }
 
         List<Map.Entry<?, ?>> remaining = entries(expected);
+        int matched = 0;
         for (Map.Entry<?, ?> actualEntry : actual.entrySet()) {
             boolean found = false;
             var candidates = remaining.iterator();
             while (candidates.hasNext()) {
                 if (entryMatches(actualEntry, candidates.next())) {
                     candidates.remove();
+                    matched++;
                     found = true;
                     break;
                 }
@@ -191,7 +193,7 @@ final class MapConditionProvider {
                 return false;
             }
         }
-        return true;
+        return matched == expectedSize && remaining.isEmpty();
     }
 
     private static List<Map.Entry<?, ?>> entries(Map<?, ?> map) {

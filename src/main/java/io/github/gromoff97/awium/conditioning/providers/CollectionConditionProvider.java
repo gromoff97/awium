@@ -233,6 +233,7 @@ final class CollectionConditionProvider {
             int expectedSize) {
         List<Object> remaining = new ArrayList<>(expectedSize);
         expected.forEachRemaining(remaining::add);
+        int matched = 0;
         while (actual.hasNext()) {
             Object actualElement = actual.next();
             boolean found = false;
@@ -240,6 +241,7 @@ final class CollectionConditionProvider {
             while (candidates.hasNext()) {
                 if (equal(actualElement, candidates.next())) {
                     candidates.remove();
+                    matched++;
                     found = true;
                     break;
                 }
@@ -248,7 +250,7 @@ final class CollectionConditionProvider {
                 return false;
             }
         }
-        return true;
+        return matched == expectedSize;
     }
 
     private static <E> E[] validate(E[] expected) {

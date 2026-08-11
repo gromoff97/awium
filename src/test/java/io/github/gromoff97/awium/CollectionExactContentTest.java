@@ -67,6 +67,31 @@ class CollectionExactContentTest {
     }
 
     @Test
+    void exactAnyOrderRejectsIterationShorterThanReportedSize()
+            throws Exception {
+        Collection<String> actual = new AbstractCollection<>() {
+            @Override
+            public Iterator<String> iterator() {
+                return List.<String>of().iterator();
+            }
+
+            @Override
+            public int size() {
+                return 1;
+            }
+        };
+
+        assertEquals(Evaluation.Status.UNSATISFIED,
+                RuntimeCondition.<Collection<String>>preserving(
+                                containsExactlyInAnyOrder("a"))
+                        .evaluate(actual).status());
+        assertEquals(Evaluation.Status.SATISFIED,
+                RuntimeCondition.<Collection<String>>preserving(
+                                doesNotContainExactlyInAnyOrder("a"))
+                        .evaluate(actual).status());
+    }
+
+    @Test
     void orderedFormsAreOrderSensitiveAndAnyOrderFormsAreNot()
             throws Exception {
         assertStatus(containsExactly("a", "b"),

@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("overrides")
 class ObjectAndOptionalConditionsTest {
 
     @Test
@@ -167,6 +166,7 @@ class ObjectAndOptionalConditionsTest {
     private record EqualValue(int value) {
     }
 
+    @SuppressWarnings("overrides")
     private static final class LeftOperand {
         private final Object expected;
         private int comparisons;
@@ -182,6 +182,7 @@ class ObjectAndOptionalConditionsTest {
         }
     }
 
+    @SuppressWarnings("overrides")
     private static final class RightOperand {
         private int comparisons;
 

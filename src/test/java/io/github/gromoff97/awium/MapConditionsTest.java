@@ -92,6 +92,22 @@ class MapConditionsTest {
     }
 
     @Test
+    void exactEntriesRejectIterationShorterThanReportedSize()
+            throws Exception {
+        Map<String, String> actual = new HashMap<>() {
+            @Override
+            public int size() {
+                return 1;
+            }
+        };
+
+        assertStatus(containsExactlyEntriesOf(Map.of("a", "1")), actual,
+                Evaluation.Status.UNSATISFIED);
+        assertStatus(doesNotContainExactlyEntriesOf(Map.of("a", "1")),
+                actual, Evaluation.Status.SATISFIED);
+    }
+
+    @Test
     void nullActualIsUnsatisfiedForEverySignWithoutExpectedAccess()
             throws Exception {
         var expected = entryMap(entry("a", "1"));

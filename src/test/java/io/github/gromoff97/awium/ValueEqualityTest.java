@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("overrides")
 class ValueEqualityTest {
 
     @Test
@@ -114,6 +113,7 @@ class ValueEqualityTest {
         assertTrue(equal(left, right));
     }
 
+    @SuppressWarnings("overrides")
     private static final class LeftOperand {
         private final Object expected;
         private boolean compared;
@@ -129,6 +129,7 @@ class ValueEqualityTest {
         }
     }
 
+    @SuppressWarnings("overrides")
     private static final class RightOperand {
         private boolean compared;
 
@@ -139,6 +140,7 @@ class ValueEqualityTest {
         }
     }
 
+    @SuppressWarnings("overrides")
     private static final class FailIfCompared {
         @Override
         public boolean equals(Object other) {
