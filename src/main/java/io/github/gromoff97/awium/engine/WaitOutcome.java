@@ -6,11 +6,15 @@ public sealed interface WaitOutcome<R> permits WaitOutcome.Success, WaitOutcome.
 
     Attempt<R> attempt();
 
+    default long completedNanos() {
+        return attempt().completedNanos();
+    }
+
     default long completedAttempts() {
         return attempt().number();
     }
 
-    record Success<R>(long startedNanos, long acquiredNanos, long completedNanos,
+    record Success<R>(long startedNanos, long acquiredNanos,
             Attempt.Satisfied<R> attempt) implements WaitOutcome<R> {
         public Success {
             requireNonNull(attempt);
@@ -24,21 +28,21 @@ public sealed interface WaitOutcome<R> permits WaitOutcome.Success, WaitOutcome.
         }
     }
 
-    record LateUnsatisfiedTimeout<R>(long startedNanos, long completedNanos,
+    record LateUnsatisfiedTimeout<R>(long startedNanos,
             Attempt.Unsatisfied<R> attempt) implements WaitOutcome<R> {
         public LateUnsatisfiedTimeout {
             requireNonNull(attempt);
         }
     }
 
-    record LateSatisfiedTimeout<R>(long startedNanos, long completedNanos,
+    record LateSatisfiedTimeout<R>(long startedNanos,
             Attempt.Satisfied<R> attempt) implements WaitOutcome<R> {
         public LateSatisfiedTimeout {
             requireNonNull(attempt);
         }
     }
 
-    record StabilityLoss<R>(long startedNanos, long acquiredNanos, long completedNanos,
+    record StabilityLoss<R>(long startedNanos, long acquiredNanos,
             Attempt.Unsatisfied<R> attempt) implements WaitOutcome<R> {
         public StabilityLoss {
             requireNonNull(attempt);

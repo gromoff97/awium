@@ -56,14 +56,14 @@ public final class WaitEngine {
                 case Attempt.Satisfied<R> satisfied -> {
                     if (reached(completed, acquisitionDeadline)) {
                         return new WaitOutcome.LateSatisfiedTimeout<>(
-                                started, completed, satisfied);
+                                started, satisfied);
                     }
                     return stabilize(source, condition, started, satisfied);
                 }
                 case Attempt.Unsatisfied<R> unsatisfied -> {
                     if (reached(completed, acquisitionDeadline)) {
                         return new WaitOutcome.LateUnsatisfiedTimeout<>(
-                                started, completed, unsatisfied);
+                                started, unsatisfied);
                     }
                     lastUnsatisfied = unsatisfied;
                 }
@@ -86,7 +86,7 @@ public final class WaitEngine {
         long acquiredAt = acquired.completedNanos();
         if (config.stableForNanos() == 0) {
             return new WaitOutcome.Success<>(
-                    started, acquiredAt, acquiredAt, acquired);
+                    started, acquiredAt, acquired);
         }
 
         long stabilityDeadline = after(acquiredAt, config.stableForNanos());
@@ -116,11 +116,11 @@ public final class WaitEngine {
                         { return new WaitOutcome.Uncontrolled<>(failure); }
                 case Attempt.Unsatisfied<R> unsatisfied ->
                         { return new WaitOutcome.StabilityLoss<>(
-                                started, acquiredAt, completed, unsatisfied); }
+                                started, acquiredAt, unsatisfied); }
                 case Attempt.Satisfied<R> satisfied -> {
                     if (reached(completed, stabilityDeadline)) {
                         return new WaitOutcome.Success<>(
-                                started, acquiredAt, completed, satisfied);
+                                started, acquiredAt, satisfied);
                     }
                 }
             }

@@ -60,10 +60,10 @@ class DiagnosticsSnapshotTest {
     @Test
     void formatsALateUnsatisfiedTimeoutWithTheTerminalAttempt() {
         WaitOutcome<Object> outcome = new WaitOutcome.LateUnsatisfiedTimeout<>(0,
-                10 * SECOND + 200 * MILLISECOND,
                 new Attempt.Unsatisfied<>(
                         "Payment[id=42, status=PENDING]",
-                        "payment status was PENDING", null, 100, 0));
+                        "payment status was PENDING", null, 100,
+                        10 * SECOND + 200 * MILLISECOND));
 
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
                 () -> complete(outcome, "payment status equals COMPLETED",
@@ -88,10 +88,10 @@ class DiagnosticsSnapshotTest {
     @Test
     void formatsALateSatisfiedTimeoutWithTheTerminalAttempt() {
         WaitOutcome<Object> outcome = new WaitOutcome.LateSatisfiedTimeout<>(0,
-                10 * SECOND + 200 * MILLISECOND,
                 new Attempt.Satisfied<>(
                         "Optional[Payment[id=42, status=COMPLETED]]",
-                        new Object(), 100, 0));
+                        new Object(), 100,
+                        10 * SECOND + 200 * MILLISECOND));
 
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
                 () -> complete(outcome,
@@ -118,9 +118,9 @@ class DiagnosticsSnapshotTest {
     void formatsAStabilityLossVerbatim() {
         WaitOutcome<Object> outcome = new WaitOutcome.StabilityLoss<>(
                 0, 7 * SECOND,
-                9 * SECOND + 100 * MILLISECOND,
                 new Attempt.Unsatisfied<>(
-                        "Optional.empty", "optional was empty", null, 71, 0));
+                        "Optional.empty", "optional was empty", null, 71,
+                        9 * SECOND + 100 * MILLISECOND));
 
         AwaitStabilizationException failure = assertThrows(
                 AwaitStabilizationException.class,
@@ -154,14 +154,15 @@ class DiagnosticsSnapshotTest {
                 new Attempt.Unsatisfied<>(null, "not yet", null,
                         2, started + 9 * SECOND));
         WaitOutcome<Object> late = new WaitOutcome.LateUnsatisfiedTimeout<>(
-                started, started + 10 * SECOND + 200 * MILLISECOND,
+                started,
                 new Attempt.Unsatisfied<>(
-                        "actual", "not yet", null, 3, 0));
+                        "actual", "not yet", null, 3,
+                        started + 10 * SECOND + 200 * MILLISECOND));
         WaitOutcome<Object> stability = new WaitOutcome.StabilityLoss<>(
                 started, started + 7 * SECOND,
-                started + 9 * SECOND + 100 * MILLISECOND,
                 new Attempt.Unsatisfied<>(
-                        "actual", "lost", null, 4, 0));
+                        "actual", "lost", null, 4,
+                        started + 9 * SECOND + 100 * MILLISECOND));
 
         String betweenMessage = assertThrows(AwaitTimeoutException.class,
                 () -> complete(between, "condition", null,
@@ -193,8 +194,8 @@ class DiagnosticsSnapshotTest {
                                 "assertion did not pass",
                                 betweenAssertion, 2, 9));
         WaitOutcome<Object> stability = new WaitOutcome.StabilityLoss<>(
-                0, 2, 3, new Attempt.Unsatisfied<>("actual",
-                        "assertion did not pass", stabilityAssertion, 2, 0));
+                0, 2, new Attempt.Unsatisfied<>("actual",
+                        "assertion did not pass", stabilityAssertion, 2, 3));
 
         AwaitTimeoutException betweenFailure = assertThrows(
                 AwaitTimeoutException.class,
@@ -310,7 +311,7 @@ class DiagnosticsSnapshotTest {
                     descriptions[0]++;
                     return "condition";
                 }, null);
-        WaitOutcome<Object> outcome = new WaitOutcome.Success<>(0, 0, 0,
+        WaitOutcome<Object> outcome = new WaitOutcome.Success<>(0, 0,
                 new Attempt.Satisfied<>(actual, result, 1, 0));
 
         assertSame(result, complete(new FailureFactory(),
@@ -380,8 +381,8 @@ class DiagnosticsSnapshotTest {
     void readsATerminalAssertionMessageOnceAndReusesIt() {
         var assertion = new CountingAssertion("expected\r\nbut was");
         WaitOutcome<Object> outcome = new WaitOutcome.LateUnsatisfiedTimeout<>(
-                0, 2, new Attempt.Unsatisfied<>("actual",
-                        "assertion did not pass", assertion, 1, 0));
+                0, new Attempt.Unsatisfied<>("actual",
+                        "assertion did not pass", assertion, 1, 2));
 
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
                 () -> complete(outcome, "condition", null, config(1, 2, 0)));
@@ -514,9 +515,9 @@ class DiagnosticsSnapshotTest {
                         Attempt.Origin.SOURCE, sourceCause, 1, 0));
         var interruptingActual = new InterruptingValue();
         WaitOutcome<Object> timeoutOutcome =
-                new WaitOutcome.LateUnsatisfiedTimeout<>(0, 2,
+                new WaitOutcome.LateUnsatisfiedTimeout<>(0,
                         new Attempt.Unsatisfied<>(
-                                interruptingActual, "not ready", null, 1, 0));
+                                interruptingActual, "not ready", null, 1, 2));
 
         interrupted();
         try {
@@ -560,8 +561,8 @@ class DiagnosticsSnapshotTest {
             throw formatterFailure;
         };
         WaitOutcome<Object> outcome = new WaitOutcome.LateUnsatisfiedTimeout<>(
-                0, 2, new Attempt.Unsatisfied<>(
-                        actual, "not ready", null, 1, 0));
+                0, new Attempt.Unsatisfied<>(
+                        actual, "not ready", null, 1, 2));
 
         NullPointerException failure = assertThrows(NullPointerException.class,
                 () -> complete(new FailureFactory(new FailureMessage(formatter)),
@@ -591,8 +592,8 @@ class DiagnosticsSnapshotTest {
                     return "condition";
                 }, "payment must complete");
         WaitOutcome<Object> outcome = new WaitOutcome.LateUnsatisfiedTimeout<>(
-                0, 2, new Attempt.Unsatisfied<>(
-                        actual, "not ready", null, 7, 0));
+                0, new Attempt.Unsatisfied<>(
+                        actual, "not ready", null, 7, 2));
 
         AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
                 () -> complete(new FailureFactory(new FailureMessage(formatter)),
@@ -622,8 +623,8 @@ class DiagnosticsSnapshotTest {
             throw formatterFailure;
         };
         WaitOutcome<Object> outcome = new WaitOutcome.LateUnsatisfiedTimeout<>(
-                0, 2, new Attempt.Unsatisfied<>(
-                        actual, "not ready", null, 3, 0));
+                0, new Attempt.Unsatisfied<>(
+                        actual, "not ready", null, 3, 2));
 
         AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
                 () -> complete(new FailureFactory(new FailureMessage(formatter)),
@@ -646,14 +647,14 @@ class DiagnosticsSnapshotTest {
                         Attempt.Origin.SOURCE,
                         new IllegalStateException("source"), 1, 0));
         WaitOutcome<Object> valueFailure =
-                new WaitOutcome.LateUnsatisfiedTimeout<>(0, 2,
+                new WaitOutcome.LateUnsatisfiedTimeout<>(0,
                         new Attempt.Unsatisfied<>(new ThrowingValue(valueFatal),
-                                "not ready", null, 1, 0));
+                                "not ready", null, 1, 2));
         var assertion = new CountingAssertion(messageFatal);
         WaitOutcome<Object> assertionFailure =
-                new WaitOutcome.LateUnsatisfiedTimeout<>(0, 2,
+                new WaitOutcome.LateUnsatisfiedTimeout<>(0,
                         new Attempt.Unsatisfied<>("actual",
-                                "assertion did not pass", assertion, 1, 0));
+                                "assertion did not pass", assertion, 1, 2));
 
         assertSame(descriptionFatal, assertThrows(InternalError.class,
                 () -> complete(new FailureFactory(), sourceFailure,
@@ -719,8 +720,8 @@ class DiagnosticsSnapshotTest {
     private static AwaitTimeoutException assertionTimeout(
             CountingAssertion assertion) {
         WaitOutcome<Object> outcome = new WaitOutcome.LateUnsatisfiedTimeout<>(
-                0, 2, new Attempt.Unsatisfied<>("actual",
-                        "assertion did not pass", assertion, 1, 0));
+                0, new Attempt.Unsatisfied<>("actual",
+                        "assertion did not pass", assertion, 1, 2));
         return assertThrows(AwaitTimeoutException.class,
                 () -> complete(outcome, "condition", null, config(1, 2, 0)));
     }
@@ -741,9 +742,9 @@ class DiagnosticsSnapshotTest {
 
     private static String renderedActual(Object actual) {
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
-                () -> complete(new WaitOutcome.LateUnsatisfiedTimeout<>(0, 2,
+                () -> complete(new WaitOutcome.LateUnsatisfiedTimeout<>(0,
                                 new Attempt.Unsatisfied<>(
-                                        actual, "not ready", null, 1, 0)),
+                                        actual, "not ready", null, 1, 2)),
                         "condition", null, config(1, 2, 0)));
         String prefix = "Observed: ";
         int start = failure.getMessage().indexOf(prefix) + prefix.length();

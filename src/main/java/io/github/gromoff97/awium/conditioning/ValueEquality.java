@@ -14,7 +14,7 @@ public final class ValueEquality {
 
     public static boolean equal(Object actual, Object expected) {
         Deque<ValuePair> pending = new ArrayDeque<>();
-        Set<IdentityArrayPair> visited = new HashSet<>();
+        Set<ValuePair> visited = new HashSet<>();
         pending.addLast(new ValuePair(actual, expected));
 
         while (!pending.isEmpty()) {
@@ -30,13 +30,7 @@ public final class ValueEquality {
 
             boolean leftArray = left.getClass().isArray();
             boolean rightArray = right.getClass().isArray();
-            if (!leftArray && !rightArray) {
-                if (!Objects.equals(left, right)) {
-                    return false;
-                }
-                continue;
-            }
-            if (!leftArray || !rightArray) {
+            if (leftArray != rightArray) {
                 return false;
             }
 
@@ -44,7 +38,7 @@ public final class ValueEquality {
                 if (!(right instanceof Object[] rightObjects)) {
                     return false;
                 }
-                if (!visited.add(new IdentityArrayPair(leftObjects, rightObjects))) {
+                if (!visited.add(pair)) {
                     continue;
                 }
                 if (leftObjects.length != rightObjects.length) {
@@ -64,8 +58,5 @@ public final class ValueEquality {
     }
 
     private record ValuePair(Object actual, Object expected) {
-    }
-
-    private record IdentityArrayPair(Object[] actual, Object[] expected) {
     }
 }
