@@ -382,4 +382,66 @@ final class ProbeContainers {
             throw new AssertionError("entry hashCode must not be called");
         }
     }
+
+    static final class Directional {
+        final boolean equalsResult;
+        int equalsCalls;
+
+        Directional(boolean equalsResult) {
+            this.equalsResult = equalsResult;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            equalsCalls++;
+            return other instanceof Directional && equalsResult;
+        }
+
+        @Override
+        public int hashCode() {
+            throw new AssertionError("hashCode must not be called");
+        }
+    }
+
+    static final class ExpectedValue {
+        final String value;
+        int equalsCalls;
+
+        ExpectedValue(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            equalsCalls++;
+            return other instanceof ExpectedValue expected
+                    && value.equals(expected.value);
+        }
+
+        @Override
+        public int hashCode() {
+            throw new AssertionError("hashCode must not be called");
+        }
+    }
+
+    static final class ThrowingEquals {
+        final RuntimeException failure;
+
+        ThrowingEquals(RuntimeException failure) {
+            this.failure = failure;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (failure != null) {
+                throw failure;
+            }
+            return other instanceof ThrowingEquals;
+        }
+
+        @Override
+        public int hashCode() {
+            throw new AssertionError("hashCode must not be called");
+        }
+    }
 }

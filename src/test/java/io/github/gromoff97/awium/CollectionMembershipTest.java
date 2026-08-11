@@ -1,6 +1,8 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.CompilationSupport.compiles;
+import static io.github.gromoff97.awium.ProbeContainers.Directional;
+import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
@@ -456,26 +458,6 @@ class CollectionMembershipTest {
             int matchingNextCalls, int mismatchingNextCalls) {
     }
 
-    private static final class Directional {
-        private final boolean equalsResult;
-        private int equalsCalls;
-
-        private Directional(boolean equalsResult) {
-            this.equalsResult = equalsResult;
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            equalsCalls++;
-            return other instanceof Directional && equalsResult;
-        }
-
-        @Override
-        public int hashCode() {
-            throw new AssertionError("hashCode must not be called");
-        }
-    }
-
     private static final class CountingValue {
         private final String value;
         private int equalsCalls;
@@ -497,24 +479,4 @@ class CollectionMembershipTest {
         }
     }
 
-    private static final class ThrowingEquals {
-        private final RuntimeException failure;
-
-        private ThrowingEquals(RuntimeException failure) {
-            this.failure = failure;
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            if (failure != null) {
-                throw failure;
-            }
-            return other instanceof ThrowingEquals;
-        }
-
-        @Override
-        public int hashCode() {
-            throw new AssertionError("hashCode must not be called");
-        }
-    }
 }

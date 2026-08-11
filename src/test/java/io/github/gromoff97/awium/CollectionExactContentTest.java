@@ -1,6 +1,9 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.Awium.await;
+import static io.github.gromoff97.awium.ProbeContainers.Directional;
+import static io.github.gromoff97.awium.ProbeContainers.ExpectedValue;
+import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
@@ -104,41 +107,39 @@ class CollectionExactContentTest {
     void cardinalityPrecheckReadsSizesOnceAndTraversesOnlyWhenNeeded()
             throws Exception {
         ExactList<String> differentActual = new ExactList<>(List.of("a"));
-        ExpectedCollection<String> differentExpected =
-                new ExpectedCollection<>(List.of("a", "b"));
+        ExactList<String> differentExpected =
+                new ExactList<>(List.of("a", "b"));
         Evaluation<?> different = evaluate(
                 containsExactlyElementsOf(differentExpected),
                 differentActual, false);
         assertEquals(Evaluation.Status.UNSATISFIED, different.status());
         assertAccess(differentActual, 1, 0, 0);
-        assertExpectedAccess(differentExpected, 1, 0, 0);
+        assertAccess(differentExpected, 1, 0, 0);
 
         ExactList<String> emptyActual = new ExactList<>(List.of());
-        ExpectedCollection<String> emptyExpected =
-                new ExpectedCollection<>(List.of());
+        ExactList<String> emptyExpected = new ExactList<>(List.of());
         Evaluation<?> empty = evaluate(
                 containsExactlyElementsOf(emptyExpected),
                 emptyActual, false);
         assertEquals(Evaluation.Status.SATISFIED, empty.status());
         assertAccess(emptyActual, 1, 0, 0);
-        assertExpectedAccess(emptyExpected, 1, 0, 0);
+        assertAccess(emptyExpected, 1, 0, 0);
 
         ExactList<String> equalActual = new ExactList<>(List.of("a", "b"));
-        ExpectedCollection<String> equalExpected =
-                new ExpectedCollection<>(List.of("a", "b"));
+        ExactList<String> equalExpected =
+                new ExactList<>(List.of("a", "b"));
         Evaluation<?> equal = evaluate(
                 containsExactlyElementsOf(equalExpected),
                 equalActual, false);
         assertEquals(Evaluation.Status.SATISFIED, equal.status());
         assertAccess(equalActual, 1, 1, 2);
-        assertExpectedAccess(equalExpected, 1, 1, 2);
+        assertAccess(equalExpected, 1, 1, 2);
     }
 
     @Test
     void diagnosticsDoNotReadCardinalityOrContentAgain() {
         ExactList<String> actual = new ExactList<>(List.of("a"));
-        ExpectedCollection<String> expected =
-                new ExpectedCollection<>(List.of("b"));
+        ExactList<String> expected = new ExactList<>(List.of("b"));
 
         assertThrows(AwaitTimeoutException.class,
                 () -> timed(actual).until(
@@ -146,7 +147,7 @@ class CollectionExactContentTest {
                                 .because("required")));
 
         assertAccess(actual, 1, 1, 1);
-        assertExpectedAccess(expected, 1, 1, 1);
+        assertAccess(expected, 1, 1, 1);
     }
 
     @Test
@@ -254,8 +255,7 @@ class CollectionExactContentTest {
         assertFailFast(actualSize, doesNotContainExactlyInAnyOrder("a"),
                 actualSize.sizeFailure);
 
-        ExpectedCollection<String> expectedSize =
-                new ExpectedCollection<>(List.of("a"));
+        ExactList<String> expectedSize = new ExactList<>(List.of("a"));
         expectedSize.sizeFailure = new IllegalStateException("expected size");
         assertFailFast(new ExactList<>(List.of("a")),
                 doesNotContainExactlyElementsOf(expectedSize),
@@ -274,16 +274,14 @@ class CollectionExactContentTest {
                 doesNotContainExactly("a"),
                 actualNext.nextFailure);
 
-        ExpectedCollection<String> expectedIterator =
-                new ExpectedCollection<>(List.of("a"));
+        ExactList<String> expectedIterator = new ExactList<>(List.of("a"));
         expectedIterator.iteratorFailure = new IllegalStateException(
                 "expected iterator");
         assertFailFast(new ExactList<>(List.of("a")),
                 doesNotContainExactlyElementsOf(
                         expectedIterator), expectedIterator.iteratorFailure);
 
-        ExpectedCollection<String> expectedNext =
-                new ExpectedCollection<>(List.of("a"));
+        ExactList<String> expectedNext = new ExactList<>(List.of("a"));
         expectedNext.nextFailure = new IllegalStateException("expected next");
         assertFailFast(new ExactList<>(List.of("a")),
                 doesNotContainExactlyElementsOf(expectedNext),
@@ -299,8 +297,7 @@ class CollectionExactContentTest {
     @Test
     void nullActualIsUnsatisfiedForBothSignsWithoutExpectedAccess()
             throws Exception {
-        ExpectedCollection<String> expected =
-                new ExpectedCollection<>(List.of("a"));
+        ExactList<String> expected = new ExactList<>(List.of("a"));
         assertEquals(Evaluation.Status.UNSATISFIED,
                 RuntimeCondition.<ExactList<String>>preserving(
                         containsExactlyElementsOf(expected))
@@ -309,7 +306,7 @@ class CollectionExactContentTest {
                 RuntimeCondition.<ExactList<String>>preserving(
                         doesNotContainExactlyElementsOf(expected))
                         .evaluate(null).status());
-        assertExpectedAccess(expected, 0, 0, 0);
+        assertAccess(expected, 0, 0, 0);
     }
 
     private static void assertPair(Pair pair, List<String> elements,
@@ -363,13 +360,6 @@ class CollectionExactContentTest {
         assertEquals(size, actual.sizeCalls);
         assertEquals(iterators, actual.iteratorCalls);
         assertEquals(next, actual.nextCalls);
-    }
-
-    private static void assertExpectedAccess(ExpectedCollection<?> expected,
-            int size, int iterators, int next) {
-        assertEquals(size, expected.sizeCalls);
-        assertEquals(iterators, expected.iteratorCalls);
-        assertEquals(next, expected.nextCalls);
     }
 
     private static StructuralAwait<ExactList<String>> timed(
@@ -462,94 +452,6 @@ class CollectionExactContentTest {
         }
     }
 
-    private static final class ExpectedCollection<E> extends AbstractCollection<E> {
-        private final List<? extends E> elements;
-        private RuntimeException sizeFailure;
-        private RuntimeException iteratorFailure;
-        private RuntimeException nextFailure;
-        private int sizeCalls;
-        private int iteratorCalls;
-        private int nextCalls;
-
-        private ExpectedCollection(List<? extends E> elements) {
-            this.elements = elements;
-        }
-
-        @Override
-        public int size() {
-            sizeCalls++;
-            if (sizeFailure != null) {
-                throw sizeFailure;
-            }
-            return elements.size();
-        }
-
-        @Override
-        public Iterator<E> iterator() {
-            iteratorCalls++;
-            if (iteratorFailure != null) {
-                throw iteratorFailure;
-            }
-            Iterator<? extends E> delegate = elements.iterator();
-            return new Iterator<>() {
-                @Override
-                public boolean hasNext() {
-                    return delegate.hasNext();
-                }
-
-                @Override
-                public E next() {
-                    nextCalls++;
-                    if (nextFailure != null) {
-                        throw nextFailure;
-                    }
-                    return delegate.next();
-                }
-            };
-        }
-    }
-
-    private static final class Directional {
-        private final boolean equalsResult;
-        private int equalsCalls;
-
-        private Directional(boolean equalsResult) {
-            this.equalsResult = equalsResult;
-        }
-
-        @Override
-        public boolean equals(Object value) {
-            equalsCalls++;
-            return value instanceof Directional && equalsResult;
-        }
-
-        @Override
-        public int hashCode() {
-            throw new AssertionError("hashCode must not be called");
-        }
-    }
-
-    private static final class ExpectedValue {
-        private final String value;
-        private int equalsCalls;
-
-        private ExpectedValue(String value) {
-            this.value = value;
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            equalsCalls++;
-            return other instanceof ExpectedValue expected
-                    && value.equals(expected.value);
-        }
-
-        @Override
-        public int hashCode() {
-            throw new AssertionError("hashCode must not be called");
-        }
-    }
-
     private static final class GreedyValue {
         private final String name;
         private final Set<String> matches;
@@ -578,24 +480,4 @@ class CollectionExactContentTest {
         }
     }
 
-    private static final class ThrowingEquals {
-        private final RuntimeException failure;
-
-        private ThrowingEquals(RuntimeException failure) {
-            this.failure = failure;
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            if (failure != null) {
-                throw failure;
-            }
-            return other instanceof ThrowingEquals;
-        }
-
-        @Override
-        public int hashCode() {
-            throw new AssertionError("hashCode must not be called");
-        }
-    }
 }

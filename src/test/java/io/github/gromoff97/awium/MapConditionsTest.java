@@ -2,6 +2,8 @@ package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.Awium.await;
 import static io.github.gromoff97.awium.CompilationSupport.compiles;
+import static io.github.gromoff97.awium.ProbeContainers.Directional;
+import static io.github.gromoff97.awium.ProbeContainers.ExpectedValue;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
@@ -821,47 +823,6 @@ class MapConditionsTest {
 
         private static List<FailurePoint> exactBoundaries() {
             return List.of(values());
-        }
-    }
-
-    private static final class Directional {
-        private final boolean result;
-        private int equalsCalls;
-
-        private Directional(boolean result) {
-            this.result = result;
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            equalsCalls++;
-            return other instanceof Directional && result;
-        }
-
-        @Override
-        public int hashCode() {
-            throw new AssertionError("hashCode must not be called");
-        }
-    }
-
-    private static final class ExpectedValue {
-        private final String value;
-        private int equalsCalls;
-
-        private ExpectedValue(String value) {
-            this.value = value;
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            equalsCalls++;
-            return other instanceof ExpectedValue expected
-                    && value.equals(expected.value);
-        }
-
-        @Override
-        public int hashCode() {
-            throw new AssertionError("hashCode must not be called");
         }
     }
 
