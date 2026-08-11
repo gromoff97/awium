@@ -13,6 +13,7 @@ import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -36,7 +37,8 @@ class ObservationEvaluatorTest {
 
     @Test
     void attemptVariantsExposeOnlyApplicableState() {
-        var satisfied = new Attempt.Satisfied<>(null, null, 1, 10);
+        var satisfied = new Attempt.Satisfied<>(
+                null, null, 1, Long.MIN_VALUE);
         var unsatisfied = new Attempt.Unsatisfied<>(
                 null, "not ready", null, 2, 20);
         var before = new Attempt.Uncontrolled.BeforeObservation<String>(
@@ -48,6 +50,9 @@ class ObservationEvaluatorTest {
         assertAll(
                 () -> assertNull(satisfied.actual()),
                 () -> assertNull(satisfied.result()),
+                () -> assertEquals(Long.MIN_VALUE,
+                        satisfied.completedNanos()),
+                () -> assertNull(unsatisfied.actual()),
                 () -> assertEquals("not ready", unsatisfied.mismatch()),
                 () -> assertEquals(Attempt.Origin.SOURCE, before.origin()),
                 () -> assertEquals(Attempt.Origin.CONDITION, after.origin()),
@@ -72,26 +77,6 @@ class ObservationEvaluatorTest {
                                 Attempt.Origin.CONDITION, "actual", null, 1, 1)));
     }
 
-    @Test
-    void acceptsValidNullPayloadsAndWrappedAttemptCompletionTime() {
-        var satisfied = new Attempt.Satisfied<Object>(null, null, 1, 1);
-        var unsatisfied = new Attempt.Unsatisfied<Object>(
-                null, "mismatch", new AssertionError(), 1, 1);
-        var before = new Attempt.Uncontrolled.BeforeObservation<Object>(
-                Attempt.Origin.SOURCE, new RuntimeException(), 1, 1);
-        var after = new Attempt.Uncontrolled.AfterObservation<Object>(
-                Attempt.Origin.CONDITION, null, new RuntimeException(), 1, 1);
-
-        assertAll(
-                () -> assertNull(satisfied.actual()),
-                () -> assertNull(satisfied.result()),
-                () -> assertNull(unsatisfied.actual()),
-                () -> assertNull(after.actual()),
-                () -> assertEquals(Attempt.Origin.SOURCE, before.origin()));
-        assertEquals(Long.MIN_VALUE, new Attempt.Satisfied<>(
-                "actual", "result", 1, Long.MIN_VALUE).completedNanos());
-    }
-
     @ParameterizedTest
     @MethodSource("actualValues")
     void classifiesSatisfiedEvaluationsAndRetainsTheCurrentActual(Object actual) {
@@ -114,6 +99,7 @@ class ObservationEvaluatorTest {
         assertEquals(2, satisfied.completedNanos());
         assertEquals(1, calls[0]);
         assertEquals(1, calls[1]);
+        assertFalse(currentThread().isInterrupted());
     }
 
     @Test
@@ -276,9 +262,9 @@ class ObservationEvaluatorTest {
                 })));
     }
 
-    @Test
-    void sourceFlagAfterNormalReturnWinsAndSkipsCondition() {
-        var actual = new Object();
+    @ParameterizedTest
+    @MethodSource("actualValues")
+    void sourceFlagAfterNormalReturnWinsAndSkipsCondition(Object actual) {
         var conditionCalls = new int[1];
 
         Attempt<Object> outcome = attempt(() -> {
