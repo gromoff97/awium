@@ -18,7 +18,10 @@ class CompilationContractTest {
     void allFacadesTimingSubsetsAndTerminalResultsCompile() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.Awium.await;
+                import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
                 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+                import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
+                import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
                 import static java.time.Duration.ofMillis;
                 import io.github.gromoff97.awium.await.Await;
                 import io.github.gromoff97.awium.sources.Source;
@@ -133,7 +136,7 @@ class CompilationContractTest {
         }) {
             assertTrue(compiles("""
                     import static io.github.gromoff97.awium.Awium.await;
-                    import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.isNotNull;
+                    import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.isNotNull;
                     import io.github.gromoff97.awium.sources.Source;
                     import java.time.Duration;
                     final class Contract {
@@ -167,7 +170,7 @@ class CompilationContractTest {
             throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.Awium.await;
-                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+                import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
                 import io.github.gromoff97.awium.sources.*;
                 import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;
@@ -213,7 +216,7 @@ class CompilationContractTest {
         }) {
             assertFalse(compiles("""
                     import static io.github.gromoff97.awium.Awium.await;
-                    import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+                    import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
                     import io.github.gromoff97.awium.sources.CollectionSource;
                     import io.github.gromoff97.awium.conditioning.conditions.*;
                     import java.util.*;

@@ -2,12 +2,11 @@ package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.Awium.await;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.structural;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.StructuralAwait;
@@ -198,12 +197,12 @@ class StructuralConditionsTest {
     @Test
     void sizeFactoriesRejectNegativeBoundsAndAllowZero() {
         List<java.util.function.IntFunction<StructuralCondition>> factories = List.of(
-                ConditionProvider::sizeExactly,
-                ConditionProvider::sizeNotExactly,
-                ConditionProvider::sizeGreaterThan,
-                ConditionProvider::sizeAtLeast,
-                ConditionProvider::sizeLessThan,
-                ConditionProvider::sizeAtMost);
+                StructuralCondition::sizeExactly,
+                StructuralCondition::sizeNotExactly,
+                StructuralCondition::sizeGreaterThan,
+                StructuralCondition::sizeAtLeast,
+                StructuralCondition::sizeLessThan,
+                StructuralCondition::sizeAtMost);
 
         for (var factory : factories) {
             assertThrows(IllegalArgumentException.class, () -> factory.apply(-1));

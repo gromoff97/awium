@@ -4,14 +4,14 @@ import static io.github.gromoff97.awium.CompilationSupport.compiles;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.lang.reflect.Modifier.isStatic;
 import static java.util.stream.Collectors.toSet;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+import io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.StructuralAwait;
@@ -61,10 +61,10 @@ class CollectionMembershipTest {
                     List.of("a", "b", "c"), List.of("a", "c"), 2, 2));
     private static final List<Function<Collection<String>, ?>>
             ELEMENTS_OF_FACTORIES = List.of(
-                    ConditionProvider::containsAllElementsOf,
-                    ConditionProvider::doesNotContainAllElementsOf,
-                    ConditionProvider::containsAnyElementsOf,
-                    ConditionProvider::containsNoElementsOf);
+                    CollectionConditionProvider::containsAllElementsOf,
+                    CollectionConditionProvider::doesNotContainAllElementsOf,
+                    CollectionConditionProvider::containsAnyElementsOf,
+                    CollectionConditionProvider::containsNoElementsOf);
 
     @TempDir
     Path temporaryDirectory;
@@ -294,7 +294,7 @@ class CollectionMembershipTest {
                 "containsExactlyInAnyOrder",
                 "doesNotContainExactlyInAnyOrder");
         Set<String> discovered = Arrays.stream(
-                        ConditionProvider.class.getDeclaredMethods())
+                        CollectionConditionProvider.class.getDeclaredMethods())
                 .filter(method -> method.isVarArgs()
                         && method.getTypeParameters().length > 0)
                 .peek(method -> {
@@ -305,14 +305,14 @@ class CollectionMembershipTest {
                 .map(java.lang.reflect.Method::getName)
                 .collect(toSet());
 
-        assertTrue(discovered.containsAll(genericVarargs));
+        assertEquals(genericVarargs, discovered);
     }
 
     @Test
     void ordinaryConsumerCallsAreWarningFreeAndBareNullWarningRemains()
             throws IOException {
         assertTrue(compiles(temporaryDirectory, """
-                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+                import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
                 import static io.github.gromoff97.awium.Awium.await;
                 import io.github.gromoff97.awium.*;
                 import io.github.gromoff97.awium.sources.CollectionSource;
@@ -345,12 +345,12 @@ class CollectionMembershipTest {
                 }
                 """));
         assertFalse(compiles(temporaryDirectory, """
-                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+                import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
                 final class Contract { void check() { containsAll(null); } }
                 """));
         assertFalse(compiles(temporaryDirectory, """
                 import static io.github.gromoff97.awium.Awium.await;
-                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+                import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
                 import io.github.gromoff97.awium.sources.CollectionSource;
                 import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;

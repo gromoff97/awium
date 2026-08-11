@@ -12,10 +12,10 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.ValueEquality.equal;
 import static java.util.Objects.requireNonNull;
 
-final class OptionalConditionProvider {
+public final class OptionalConditionProvider {
 
-    static PresentCondition present() {
-        return PresentCondition.of(new RuntimeCondition<>(actual -> {
+    public static final PresentCondition present =
+            PresentCondition.of(new RuntimeCondition<>(actual -> {
             if (actual == null) {
                 return unsatisfied("optional was null");
             }
@@ -23,14 +23,27 @@ final class OptionalConditionProvider {
                     ? satisfied(actual.orElseThrow())
                     : unsatisfied("optional was empty");
         }, () -> "optional to remain present", null));
+
+    public static final Condition<Optional<?>, Void> absent =
+            ConditionProvider.condition("optional to be absent", actual -> {
+                if (actual == null) {
+                    return unsatisfied("optional was null");
+                }
+                return actual.isEmpty()
+                        ? satisfied(null)
+                        : unsatisfied("optional was present");
+            });
+
+    private OptionalConditionProvider() {
+        throw new AssertionError("Utility class");
     }
 
-    static <T> Condition<Optional<T>, T> hasValueEqualTo(T expected) {
+    public static <T> Condition<Optional<T>, T> hasValueEqualTo(T expected) {
         requireNonNull(expected, "expected must not be null");
         return valueCondition(expected, true);
     }
 
-    static <T> Condition<Optional<T>, T> hasValueNotEqualTo(T unexpected) {
+    public static <T> Condition<Optional<T>, T> hasValueNotEqualTo(T unexpected) {
         requireNonNull(unexpected, "unexpected must not be null");
         return valueCondition(unexpected, false);
     }

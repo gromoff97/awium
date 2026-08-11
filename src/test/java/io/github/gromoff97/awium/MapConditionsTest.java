@@ -5,12 +5,12 @@ import static io.github.gromoff97.awium.CompilationSupport.compiles;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ExpectedValue;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.providers.MapConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+import io.github.gromoff97.awium.conditioning.providers.MapConditionProvider;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.StructuralAwait;
@@ -341,10 +341,10 @@ class MapConditionsTest {
     void aggregateFactoriesApplyExactValidationAndAccessContracts()
             throws Exception {
         List<Function<Map<String, String>, ?>> membershipFactories = List.of(
-                ConditionProvider::containsAllEntriesOf,
-                ConditionProvider::doesNotContainAllEntriesOf,
-                ConditionProvider::containsAnyEntriesOf,
-                ConditionProvider::containsNoEntriesOf);
+                MapConditionProvider::containsAllEntriesOf,
+                MapConditionProvider::doesNotContainAllEntriesOf,
+                MapConditionProvider::containsAnyEntriesOf,
+                MapConditionProvider::containsNoEntriesOf);
         for (Function<Map<String, String>, ?> factory : membershipFactories) {
             var expected = entryMap(entry("a", "1"));
             factory.apply(expected);
@@ -415,7 +415,7 @@ class MapConditionsTest {
             throws IOException {
         assertTrue(compiles(temporaryDirectory, """
                 import static io.github.gromoff97.awium.Awium.await;
-                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+                import static io.github.gromoff97.awium.conditioning.providers.MapConditionProvider.*;
                 import io.github.gromoff97.awium.sources.MapSource;
                 import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;
@@ -435,7 +435,7 @@ class MapConditionsTest {
                 """));
         assertFalse(compiles(temporaryDirectory, """
                 import static io.github.gromoff97.awium.Awium.await;
-                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+                import static io.github.gromoff97.awium.conditioning.providers.MapConditionProvider.*;
                 import io.github.gromoff97.awium.sources.MapSource;
                 import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;

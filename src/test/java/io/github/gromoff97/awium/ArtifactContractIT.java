@@ -46,7 +46,9 @@ class ArtifactContractIT {
             throws Exception {
         assertTrue(compiles(directory, """
                 import static io.github.gromoff97.awium.Awium.await;
-                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
+                import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
+                import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
 
                 import java.util.List;
                 import java.util.Map;

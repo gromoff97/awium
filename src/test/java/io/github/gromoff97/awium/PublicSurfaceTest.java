@@ -3,7 +3,7 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+import io.github.gromoff97.awium.conditioning.providers.*;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.Await;
@@ -162,7 +162,9 @@ class PublicSurfaceTest {
     @Test
     void namespaceHoldersAndFailureHierarchiesAreClosedExactly()
             throws ReflectiveOperationException {
-        for (Class<?> holder : List.of(Awium.class, ConditionProvider.class)) {
+        for (Class<?> holder : List.of(Awium.class, ConditionProvider.class,
+                ObjectConditionProvider.class, OptionalConditionProvider.class,
+                CollectionConditionProvider.class, MapConditionProvider.class)) {
             assertTrue(isPublic(holder.getModifiers()), holder.getName());
             assertTrue(isFinal(holder.getModifiers()), holder.getName());
             Constructor<?> constructor = holder.getDeclaredConstructor();
@@ -182,6 +184,13 @@ class PublicSurfaceTest {
 
         assertEquals(4, Arrays.stream(Awium.class.getDeclaredMethods())
                 .filter(method -> isPublic(method.getModifiers())).count());
+        assertEquals(Set.of("condition", "asserted", "passed"),
+                Set.copyOf(Arrays.stream(ConditionProvider.class
+                                .getDeclaredMethods())
+                        .filter(method -> isPublic(method.getModifiers()))
+                        .map(Method::getName).toList()));
+        assertFalse(Arrays.stream(ConditionProvider.class.getDeclaredFields())
+                .anyMatch(field -> isPublic(field.getModifiers())));
         assertEquals(Set.of(AwaitTimeoutException.class,
                         AwaitStabilizationException.class),
                 directPublicChildren(AwaitFailure.class));
@@ -436,6 +445,8 @@ class PublicSurfaceTest {
 
     private static List<Class<?>> publicTypes() {
         return List.of(Awium.class, ConditionProvider.class,
+                ObjectConditionProvider.class, OptionalConditionProvider.class,
+                CollectionConditionProvider.class, MapConditionProvider.class,
                 Source.class, OptionalSource.class, CollectionSource.class,
                 MapSource.class, Condition.class, Evaluation.class,
                 ValueEquality.class, RuntimeCondition.class,

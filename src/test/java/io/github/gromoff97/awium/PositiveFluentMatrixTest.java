@@ -1,6 +1,9 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;

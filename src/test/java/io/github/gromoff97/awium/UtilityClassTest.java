@@ -16,7 +16,11 @@ class UtilityClassTest {
         for (String name : List.of(
                 "io.github.gromoff97.awium.Awium",
                 "io.github.gromoff97.awium.conditioning.ValueEquality",
-                "io.github.gromoff97.awium.conditioning.providers.ConditionProvider")) {
+                "io.github.gromoff97.awium.conditioning.providers.ConditionProvider",
+                "io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider",
+                "io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider",
+                "io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider",
+                "io.github.gromoff97.awium.conditioning.providers.MapConditionProvider")) {
             Class<?> type = Class.forName(name);
             Constructor<?> constructor = type.getDeclaredConstructor();
             constructor.setAccessible(true);

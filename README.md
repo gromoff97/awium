@@ -6,7 +6,7 @@ natural result from the same successful observation.
 
 ```java
 import static io.github.gromoff97.awium.Awium.await;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.present;
+import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.present;
 
 import java.time.Duration;
 
@@ -32,7 +32,12 @@ Examples below assume:
 
 ```java
 import static io.github.gromoff97.awium.Awium.await;
+import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
+import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.providers.MapConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.sources.OptionalSource;

@@ -4,6 +4,8 @@ import static io.github.gromoff97.awium.Awium.await;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 
 import io.github.gromoff97.awium.conditioning.*;

@@ -1,11 +1,12 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+import io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -61,7 +62,7 @@ class ObjectAndOptionalConditionsTest {
         Optional<String> present = Optional.of("value");
 
         assertEquals("optional to remain present",
-                RuntimeCondition.<String>present(ConditionProvider.present)
+                RuntimeCondition.<String>present(OptionalConditionProvider.present)
                         .description().get());
         assertUnsatisfied(evaluatePresent(null), "optional was null");
         assertUnsatisfied(absent.evaluate(null), "optional was null");

@@ -13,16 +13,21 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.ValueEquality.equal;
 import static java.util.Objects.requireNonNull;
 
-final class MapConditionProvider {
+public final class MapConditionProvider {
 
-    static <K> PreservingCondition<Map<? super K, ?>> containsKey(K expected) {
+    private MapConditionProvider() {
+        throw new AssertionError("Utility class");
+    }
+
+    public static <K> PreservingCondition<Map<? super K, ?>> containsKey(
+            K expected) {
         return condition(actual -> anyMatch(actual, entry ->
                         equal(entry.getKey(), expected)), true,
                 "map to contain expected key",
                 "map did not contain expected key");
     }
 
-    static <K> PreservingCondition<Map<? super K, ?>> doesNotContainKey(
+    public static <K> PreservingCondition<Map<? super K, ?>> doesNotContainKey(
             K expected) {
         return condition(actual -> anyMatch(actual, entry ->
                         equal(entry.getKey(), expected)), false,
@@ -30,7 +35,7 @@ final class MapConditionProvider {
                 "map contained expected key");
     }
 
-    static <V> PreservingCondition<Map<?, ? super V>> containsValue(
+    public static <V> PreservingCondition<Map<?, ? super V>> containsValue(
             V expected) {
         return condition(actual -> anyMatch(actual, entry ->
                         equal(entry.getValue(), expected)), true,
@@ -38,7 +43,7 @@ final class MapConditionProvider {
                 "map did not contain expected value");
     }
 
-    static <V> PreservingCondition<Map<?, ? super V>> doesNotContainValue(
+    public static <V> PreservingCondition<Map<?, ? super V>> doesNotContainValue(
             V expected) {
         return condition(actual -> anyMatch(actual, entry ->
                         equal(entry.getValue(), expected)), false,
@@ -46,7 +51,7 @@ final class MapConditionProvider {
                 "map contained expected value");
     }
 
-    static <K, V> PreservingCondition<Map<? super K, ? super V>> containsEntry(
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsEntry(
             K key, V value) {
         return condition(actual -> anyMatch(actual,
                         entry -> entryMatches(entry, key, value)), true,
@@ -54,7 +59,7 @@ final class MapConditionProvider {
                 "map did not contain expected entry");
     }
 
-    static <K, V> PreservingCondition<Map<? super K, ? super V>>
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>>
             doesNotContainEntry(K key, V value) {
         return condition(actual -> anyMatch(actual,
                         entry -> entryMatches(entry, key, value)), false,
@@ -62,14 +67,14 @@ final class MapConditionProvider {
                 "map contained expected entry");
     }
 
-    static <K, V> PreservingCondition<Map<? super K, ? super V>>
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>>
             containsAllEntriesOf(Map<? extends K, ? extends V> expected) {
         return membership(validate(expected), true, true,
                 "map to contain all expected entries",
                 "map did not contain all expected entries");
     }
 
-    static <K, V> PreservingCondition<Map<? super K, ? super V>>
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>>
             doesNotContainAllEntriesOf(
                     Map<? extends K, ? extends V> expected) {
         return membership(validate(expected), true, false,
@@ -77,21 +82,21 @@ final class MapConditionProvider {
                 "map contained all expected entries");
     }
 
-    static <K, V> PreservingCondition<Map<? super K, ? super V>>
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>>
             containsAnyEntriesOf(Map<? extends K, ? extends V> expected) {
         return membership(validate(expected), false, true,
                 "map to contain any expected entry",
                 "map did not contain any expected entry");
     }
 
-    static <K, V> PreservingCondition<Map<? super K, ? super V>>
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>>
             containsNoEntriesOf(Map<? extends K, ? extends V> expected) {
         return membership(validate(expected), false, false,
                 "map to contain none of the expected entries",
                 "map contained an expected entry");
     }
 
-    static <K, V> PreservingCondition<Map<? super K, ? super V>>
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>>
             containsExactlyEntriesOf(
                     Map<? extends K, ? extends V> expected) {
         return exact(validateExact(expected), true,
@@ -99,7 +104,7 @@ final class MapConditionProvider {
                 "map did not contain exactly the expected entries");
     }
 
-    static <K, V> PreservingCondition<Map<? super K, ? super V>>
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>>
             doesNotContainExactlyEntriesOf(
                     Map<? extends K, ? extends V> expected) {
         return exact(validateExact(expected), false,

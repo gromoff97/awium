@@ -5,12 +5,12 @@ import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ExpectedValue;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+import io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.StructuralAwait;
@@ -205,7 +205,8 @@ class CollectionExactContentTest {
         String expectedNull = null;
         assertStatus(containsExactly(expectedNull),
                 Arrays.asList((String) null), Evaluation.Status.SATISFIED);
-        assertStatus(ConditionProvider.<Object>containsExactlyInAnyOrder(1, null),
+        assertStatus(CollectionConditionProvider.<Object>
+                        containsExactlyInAnyOrder(1, null),
                 Arrays.asList(null, "not an integer"),
                 Evaluation.Status.UNSATISFIED);
 

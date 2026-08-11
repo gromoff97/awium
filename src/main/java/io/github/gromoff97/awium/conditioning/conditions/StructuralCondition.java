@@ -10,6 +10,11 @@ import static java.util.Objects.requireNonNull;
 
 public final class StructuralCondition {
 
+    public static final StructuralCondition empty =
+            new StructuralCondition(Relation.EMPTY, 0);
+    public static final StructuralCondition nonEmpty =
+            new StructuralCondition(Relation.NON_EMPTY, 0);
+
     private final Relation relation;
     private final int bound;
 
