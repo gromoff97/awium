@@ -138,7 +138,7 @@ class ObservationEvaluatorTest {
         var conditionCalls = new int[1];
 
         Attempt<Object> outcome = attempt(
-                () -> throwFromSource(failure), value -> {
+                () -> throwFailure(failure), value -> {
                     conditionCalls[0]++;
                     return satisfied(value);
                 });
@@ -158,7 +158,7 @@ class ObservationEvaluatorTest {
         var actual = new Object();
 
         Attempt<Object> outcome = attempt(
-                () -> actual, value -> throwFromCondition(failure));
+                () -> actual, value -> throwFailure(failure));
 
         var uncontrolled = assertInstanceOf(
                 Attempt.Uncontrolled.AfterObservation.class, outcome);
@@ -241,11 +241,11 @@ class ObservationEvaluatorTest {
     @Test
     void fatalSignalsFromSourceEscapeRawAndSkipCondition() {
         var conditionCalls = new int[1];
-        var virtualMachineError = new ThrowableFixtures.Fatal("fatal");
+        var virtualMachineError = new InternalError("fatal");
         var threadDeath = new ThreadDeath();
 
         assertSame(virtualMachineError, assertThrows(
-                ThrowableFixtures.Fatal.class,
+                InternalError.class,
                 () -> attempt(() -> {
                     throw virtualMachineError;
                 }, value -> {
@@ -262,11 +262,11 @@ class ObservationEvaluatorTest {
     @Test
     void fatalSignalsFromConditionEscapeRaw() {
         var actual = new Object();
-        var virtualMachineError = new ThrowableFixtures.Fatal("fatal");
+        var virtualMachineError = new InternalError("fatal");
         var threadDeath = new ThreadDeath();
 
         assertSame(virtualMachineError, assertThrows(
-                ThrowableFixtures.Fatal.class,
+                InternalError.class,
                 () -> attempt(() -> actual, value -> {
                     throw virtualMachineError;
                 })));
@@ -308,11 +308,11 @@ class ObservationEvaluatorTest {
     }
 
     @ParameterizedTest
-    @MethodSource("abruptNonInterruptions")
+    @MethodSource("nonFatalThrowables")
     void abruptSourceThrowableWinsOverCallbackSetFlag(Throwable failure) {
         Attempt<Object> outcome = attempt(() -> {
             currentThread().interrupt();
-            return throwFromSource(failure);
+            return throwFailure(failure);
         }, Evaluation::satisfied);
 
         var uncontrolled = assertInstanceOf(
@@ -323,13 +323,13 @@ class ObservationEvaluatorTest {
     }
 
     @ParameterizedTest
-    @MethodSource("abruptNonInterruptions")
+    @MethodSource("nonFatalThrowables")
     void abruptConditionThrowableWinsOverCallbackSetFlag(Throwable failure) {
         var actual = new Object();
 
         Attempt<Object> outcome = attempt(() -> actual, value -> {
             currentThread().interrupt();
-            return throwFromCondition(failure);
+            return throwFailure(failure);
         });
 
         var uncontrolled = assertInstanceOf(
@@ -342,8 +342,8 @@ class ObservationEvaluatorTest {
 
     @Test
     void abruptFatalThrowableWinsOverCallbackSetFlag() {
-        var sourceFatal = new ThrowableFixtures.Fatal("source fatal");
-        assertSame(sourceFatal, assertThrows(ThrowableFixtures.Fatal.class,
+        var sourceFatal = new InternalError("source fatal");
+        assertSame(sourceFatal, assertThrows(InternalError.class,
                 () -> attempt(() -> {
                     currentThread().interrupt();
                     throw sourceFatal;
@@ -351,8 +351,8 @@ class ObservationEvaluatorTest {
         assertTrue(currentThread().isInterrupted());
         interrupted();
 
-        var conditionFatal = new ThrowableFixtures.Fatal("condition fatal");
-        assertSame(conditionFatal, assertThrows(ThrowableFixtures.Fatal.class,
+        var conditionFatal = new InternalError("condition fatal");
+        assertSame(conditionFatal, assertThrows(InternalError.class,
                 () -> attempt(Object::new, actual -> {
                     currentThread().interrupt();
                     throw conditionFatal;
@@ -366,14 +366,10 @@ class ObservationEvaluatorTest {
 
     private static Stream<Throwable> nonFatalThrowables() {
         return Stream.of(
-                new ThrowableFixtures.Checked("checked"),
+                new Exception("checked"),
                 new IllegalStateException("runtime"),
                 new AssertionError("assertion"),
                 new LinkageError("error"));
-    }
-
-    private static Stream<Throwable> abruptNonInterruptions() {
-        return nonFatalThrowables();
     }
 
     private static Stream<Arguments> normalConditionReturns() {
@@ -383,7 +379,7 @@ class ObservationEvaluatorTest {
                 Arguments.of((Object) null));
     }
 
-    private static Object throwFromSource(Throwable failure) throws Exception {
+    private static <T> T throwFailure(Throwable failure) throws Exception {
         if (failure instanceof Exception exception) {
             throw exception;
         }
@@ -391,12 +387,6 @@ class ObservationEvaluatorTest {
             throw error;
         }
         throw new AssertionError(failure);
-    }
-
-    private static Evaluation<Object> throwFromCondition(Throwable failure)
-            throws Exception {
-        throwFromSource(failure);
-        throw new AssertionError("unreachable");
     }
 
     private static <R> Attempt<R> attempt(Source<Object> source,

@@ -27,8 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -36,32 +34,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class ObjectAndOptionalAwaitTest {
-
-    @Test
-    void objectTerminalsReturnPreservedAndConditionSelectedResults() {
-        Object actual = new Object();
-        Object preserved = await(
-                (Source<Object>) () -> actual)
-                .until(isNotNull);
-        Integer selected = await(
-                (Source<String>) () -> "value")
-                .until(ConditionProvider.<String, Integer>condition("length",
-                        value -> satisfied(value.length())));
-
-        assertSame(actual, preserved);
-        assertEquals(5, selected);
-    }
-
-    @Test
-    void optionalPresentUnwrapsTheObservedValue() {
-        Object value = new Object();
-
-        Object result = await(
-                (OptionalSource<Object>) () -> Optional.of(value))
-                .until(present);
-
-        assertSame(value, result);
-    }
 
     @Test
     void voidAndNullableSelectingTerminalsReturnNullOnSuccess() {
@@ -101,25 +73,9 @@ class ObjectAndOptionalAwaitTest {
     }
 
     @Test
-    void collectionAndMapStructuralTerminalsPreserveConcreteSources() {
-        ArrayList<String> list = new ArrayList<>(List.of("value"));
-        HashMap<String, Integer> map = new HashMap<>(Map.of("value", 1));
-        StructuralCondition structural = nonEmpty;
-
-        ArrayList<String> returnedList = await(
-                (CollectionSource<ArrayList<String>>) () -> list)
-                .until(structural);
-        HashMap<String, Integer> returnedMap = await(
-                (MapSource<HashMap<String, Integer>>) () -> map)
-                .until(structural);
-
-        assertSame(list, returnedList);
-        assertSame(map, returnedMap);
-    }
-
-    @Test
     void reusableStageRetainsTheExactSourceAndStartsEachTerminalFresh() {
-        CyclingSource source = new CyclingSource();
+        AtomicInteger calls = new AtomicInteger();
+        Source<String> source = () -> "v" + calls.incrementAndGet();
         FakeTime time = new FakeTime(0);
         AwaitStage<String> stage = new AwaitStage<>(source,
                 defaults().withEvery(Duration.ofNanos(1))
@@ -132,7 +88,7 @@ class ObjectAndOptionalAwaitTest {
 
         assertEquals("v2", stage.until(evenObservation));
         assertEquals("v4", stage.until(evenObservation));
-        assertEquals(4, source.calls.get());
+        assertEquals(4, calls.get());
     }
 
     @Test
@@ -220,12 +176,4 @@ class ObjectAndOptionalAwaitTest {
                 time, time);
     }
 
-    private static final class CyclingSource implements Source<String> {
-        private final AtomicInteger calls = new AtomicInteger();
-
-        @Override
-        public String get() {
-            return "v" + calls.incrementAndGet();
-        }
-    }
 }

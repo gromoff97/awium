@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("overrides")
 class ObjectAndOptionalConditionsTest {
 
     @Test
@@ -47,8 +48,11 @@ class ObjectAndOptionalConditionsTest {
                 differentActual);
         assertSatisfied(evaluate(equalTo(null), null), null);
         assertSatisfied(evaluate(notEqualTo(expected), null), null);
-        assertSatisfiedType(evaluate(equalTo(
-                new int[]{1, 2}), new int[]{1, 2}), int[].class);
+        Evaluation<?> arrays = evaluate(equalTo(
+                new int[]{1, 2}), new int[]{1, 2});
+        assertEquals(Evaluation.Status.SATISFIED, arrays.status());
+        assertEquals(int[].class, arrays.result().getClass());
+        assertNull(arrays.mismatch());
     }
 
     @Test
@@ -153,13 +157,6 @@ class ObjectAndOptionalConditionsTest {
         assertNull(evaluation.mismatch());
     }
 
-    private static void assertSatisfiedType(Evaluation<?> evaluation,
-            Class<?> resultType) {
-        assertEquals(Evaluation.Status.SATISFIED, evaluation.status());
-        assertEquals(resultType, evaluation.result().getClass());
-        assertNull(evaluation.mismatch());
-    }
-
     private static void assertUnsatisfied(
             Evaluation<?> evaluation, String mismatch) {
         assertEquals(Evaluation.Status.UNSATISFIED, evaluation.status());
@@ -183,11 +180,6 @@ class ObjectAndOptionalConditionsTest {
             comparisons++;
             return other == expected;
         }
-
-        @Override
-        public int hashCode() {
-            return 1;
-        }
     }
 
     private static final class RightOperand {
@@ -197,11 +189,6 @@ class ObjectAndOptionalConditionsTest {
         public boolean equals(Object other) {
             comparisons++;
             return false;
-        }
-
-        @Override
-        public int hashCode() {
-            return 1;
         }
     }
 }

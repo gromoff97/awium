@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium.conditioning.providers;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 
@@ -19,10 +18,6 @@ import static java.util.Objects.requireNonNull;
 
 final class CollectionConditionProvider {
 
-    private CollectionConditionProvider() {
-        throw new AssertionError("Utility class");
-    }
-
     static <E> PreservingCondition<Collection<? super E>> contains(E expected) {
         return membership(singletonList(expected), false, true,
                 "collection to contain expected element",
@@ -36,19 +31,15 @@ final class CollectionConditionProvider {
                 "collection contained expected element");
     }
 
-    @SafeVarargs
-    @SuppressWarnings("varargs")
     static <E> PreservingCondition<Collection<? super E>> containsAll(
-            E... expected) {
+            E[] expected) {
         return membership(Arrays.asList(validate(expected)), true, true,
                 "collection to contain all expected elements",
                 "collection did not contain all expected elements");
     }
 
-    @SafeVarargs
-    @SuppressWarnings("varargs")
     static <E> PreservingCondition<Collection<? super E>> doesNotContainAll(
-            E... expected) {
+            E[] expected) {
         return membership(Arrays.asList(validate(expected)), true, false,
                 "collection not to contain all expected elements",
                 "collection contained all expected elements");
@@ -68,19 +59,15 @@ final class CollectionConditionProvider {
                 "collection contained all expected elements");
     }
 
-    @SafeVarargs
-    @SuppressWarnings("varargs")
     static <E> PreservingCondition<Collection<? super E>> containsAnyOf(
-            E... expected) {
+            E[] expected) {
         return membership(Arrays.asList(validate(expected)), false, true,
                 "collection to contain any expected element",
                 "collection did not contain any expected element");
     }
 
-    @SafeVarargs
-    @SuppressWarnings("varargs")
     static <E> PreservingCondition<Collection<? super E>> containsNoneOf(
-            E... expected) {
+            E[] expected) {
         return membership(Arrays.asList(validate(expected)), false, false,
                 "collection to contain none of the expected elements",
                 "collection contained an expected element");
@@ -100,19 +87,15 @@ final class CollectionConditionProvider {
                 "collection contained an expected element");
     }
 
-    @SafeVarargs
-    @SuppressWarnings("varargs")
     static <E> PreservingCondition<SequencedCollection<? super E>>
-            containsExactly(E... expected) {
+            containsExactly(E[] expected) {
         return exact(Arrays.asList(validateExact(expected)), true, true,
                 "collection to contain exactly the expected elements",
                 "collection did not contain exactly the expected elements");
     }
 
-    @SafeVarargs
-    @SuppressWarnings("varargs")
     static <E> PreservingCondition<SequencedCollection<? super E>>
-            doesNotContainExactly(E... expected) {
+            doesNotContainExactly(E[] expected) {
         return exact(Arrays.asList(validateExact(expected)), true, false,
                 "collection not to contain exactly the expected elements",
                 "collection contained exactly the expected elements");
@@ -133,19 +116,15 @@ final class CollectionConditionProvider {
                 "collection contained exactly the expected elements");
     }
 
-    @SafeVarargs
-    @SuppressWarnings("varargs")
     static <E> PreservingCondition<Collection<? super E>>
-            containsExactlyInAnyOrder(E... expected) {
+            containsExactlyInAnyOrder(E[] expected) {
         return exact(Arrays.asList(validateExact(expected)), false, true,
                 "collection to contain exactly the expected elements in any order",
                 "collection did not contain exactly the expected elements in any order");
     }
 
-    @SafeVarargs
-    @SuppressWarnings("varargs")
     static <E> PreservingCondition<Collection<? super E>>
-            doesNotContainExactlyInAnyOrder(E... expected) {
+            doesNotContainExactlyInAnyOrder(E[] expected) {
         return exact(Arrays.asList(validateExact(expected)), false, false,
                 "collection not to contain exactly the expected elements in any order",
                 "collection contained exactly the expected elements in any order");
@@ -170,19 +149,17 @@ final class CollectionConditionProvider {
     private static <E> PreservingCondition<Collection<? super E>> membership(
             Iterable<? extends E> expected, boolean all, boolean positive,
             String description, String mismatch) {
-        RuntimeCondition<Collection<? super E>, Collection<? super E>> runtime =
-                new RuntimeCondition<>(actual -> {
-                    if (actual == null) {
-                        return unsatisfied("collection was null");
-                    }
-                    boolean matches = all
-                            ? allFound(actual, expected)
-                            : anyMatch(actual, expected);
-                    return matches == positive
-                            ? satisfied(actual)
-                            : unsatisfied(mismatch);
-                }, () -> description, null);
-        return PreservingCondition.of(runtime);
+        return PreservingCondition.of(new RuntimeCondition<>(actual -> {
+            if (actual == null) {
+                return unsatisfied("collection was null");
+            }
+            boolean matches = all
+                    ? allFound(actual, expected)
+                    : anyMatch(actual, expected);
+            return matches == positive
+                    ? satisfied(actual)
+                    : unsatisfied(mismatch);
+        }, () -> description, null));
     }
 
     private static boolean anyMatch(Collection<?> actual,
@@ -199,21 +176,15 @@ final class CollectionConditionProvider {
 
     private static boolean allFound(Collection<?> actual,
             Iterable<?> expected) {
-        List<Object> positions = new ArrayList<>();
+        List<Object> remaining = new ArrayList<>();
         for (Object element : expected) {
-            positions.add(element);
+            remaining.add(element);
         }
-        boolean[] found = new boolean[positions.size()];
-        int remaining = found.length;
         for (Object actualElement : actual) {
-            for (int index = 0; index < positions.size(); index++) {
-                if (!found[index] && equal(
-                        actualElement, positions.get(index))) {
-                    found[index] = true;
-                    if (--remaining == 0) {
-                        return true;
-                    }
-                }
+            remaining.removeIf(expectedElement ->
+                    equal(actualElement, expectedElement));
+            if (remaining.isEmpty()) {
+                return true;
             }
         }
         return false;
@@ -222,7 +193,7 @@ final class CollectionConditionProvider {
     private static <C extends Collection<?>> PreservingCondition<C> exact(
             Collection<?> expected, boolean ordered, boolean positive,
             String description, String mismatch) {
-        RuntimeCondition<C, C> runtime = new RuntimeCondition<>(actual -> {
+        return PreservingCondition.of(new RuntimeCondition<>(actual -> {
             if (actual == null) {
                 return unsatisfied("collection was null");
             }
@@ -230,8 +201,7 @@ final class CollectionConditionProvider {
             return matches == positive
                     ? satisfied(actual)
                     : unsatisfied(mismatch);
-        }, () -> description, null);
-        return PreservingCondition.of(runtime);
+        }, () -> description, null));
     }
 
     private static boolean exactContent(Collection<?> actual,
@@ -261,18 +231,15 @@ final class CollectionConditionProvider {
 
     private static boolean anyOrder(Iterator<?> actual, Iterator<?> expected,
             int expectedSize) {
-        List<Object> positions = new ArrayList<>(expectedSize);
-        expected.forEachRemaining(positions::add);
-        boolean[] consumed = new boolean[positions.size()];
-        int matched = 0;
+        List<Object> remaining = new ArrayList<>(expectedSize);
+        expected.forEachRemaining(remaining::add);
         while (actual.hasNext()) {
             Object actualElement = actual.next();
             boolean found = false;
-            for (int index = 0; index < positions.size(); index++) {
-                if (!consumed[index] && equal(
-                        actualElement, positions.get(index))) {
-                    consumed[index] = true;
-                    matched++;
+            Iterator<Object> candidates = remaining.iterator();
+            while (candidates.hasNext()) {
+                if (equal(actualElement, candidates.next())) {
+                    candidates.remove();
                     found = true;
                     break;
                 }
@@ -281,7 +248,7 @@ final class CollectionConditionProvider {
                 return false;
             }
         }
-        return matched == expectedSize;
+        return true;
     }
 
     private static <E> E[] validate(E[] expected) {
@@ -303,13 +270,7 @@ final class CollectionConditionProvider {
         return expected;
     }
 
-    private static <E> E[] validateExact(E[] expected) {
-        return requireNonNull(
-                expected, "expected elements must not be null");
-    }
-
-    private static <E> Collection<? extends E> validateExact(
-            Collection<? extends E> expected) {
+    private static <T> T validateExact(T expected) {
         return requireNonNull(
                 expected, "expected elements must not be null");
     }

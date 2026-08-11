@@ -1,7 +1,5 @@
 package io.github.gromoff97.awium.conditioning;
 
-import static java.lang.System.identityHashCode;
-
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashSet;
@@ -69,16 +67,5 @@ public final class ValueEquality {
     }
 
     private record IdentityArrayPair(Object[] actual, Object[] expected) {
-
-        @Override
-        public boolean equals(Object other) {
-            return other instanceof IdentityArrayPair pair
-                    && actual == pair.actual && expected == pair.expected;
-        }
-
-        @Override
-        public int hashCode() {
-            return 31 * identityHashCode(actual) + identityHashCode(expected);
-        }
     }
 }

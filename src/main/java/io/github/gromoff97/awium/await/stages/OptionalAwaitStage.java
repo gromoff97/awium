@@ -5,24 +5,15 @@ import io.github.gromoff97.awium.conditioning.conditions.PresentCondition;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.OptionalSource;
 
-import java.time.Duration;
 import java.util.Optional;
-import java.util.function.LongConsumer;
-import java.util.function.LongSupplier;
 
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.present;
 import static java.util.Objects.requireNonNull;
 
-public final class OptionalAwaitStage<T> extends AbstractAwaitStage<Optional<T>> implements OptionalAwait<T> {
+public final class OptionalAwaitStage<T> extends AbstractAwaitStage<Optional<T>, OptionalAwait<T>> implements OptionalAwait<T> {
 
     public OptionalAwaitStage(OptionalSource<T> source) {
         super(source);
-    }
-
-    public OptionalAwaitStage(OptionalSource<T> source,
-            WaitConfiguration configuration, LongSupplier clock,
-            LongConsumer parker) {
-        super(source, configuration, clock, parker);
     }
 
     private OptionalAwaitStage(OptionalAwaitStage<T> stage,
@@ -31,21 +22,8 @@ public final class OptionalAwaitStage<T> extends AbstractAwaitStage<Optional<T>>
     }
 
     @Override
-    public OptionalAwait<T> every(Duration interval) {
-        return new OptionalAwaitStage<>(
-                this, configuration().withEvery(interval));
-    }
-
-    @Override
-    public OptionalAwait<T> upTo(Duration timeout) {
-        return new OptionalAwaitStage<>(
-                this, configuration().withUpTo(timeout));
-    }
-
-    @Override
-    public OptionalAwait<T> stableFor(Duration stability) {
-        return new OptionalAwaitStage<>(
-                this, configuration().withStableFor(stability));
+    protected OptionalAwait<T> reconfigured(WaitConfiguration configuration) {
+        return new OptionalAwaitStage<>(this, configuration);
     }
 
     @Override

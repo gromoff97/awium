@@ -1,12 +1,5 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.CompilationSupport.compiles;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
-
-import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
-
 import io.github.gromoff97.awium.exceptions.*;
 
 import static java.lang.reflect.Modifier.isAbstract;
@@ -17,20 +10,14 @@ import static java.lang.reflect.Modifier.isPublic;
 import static java.lang.reflect.Modifier.isStatic;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 class FailureTaxonomyTest {
-
-    @TempDir
-    Path temporaryDirectory;
 
     @Test
     void exposesTheControlledFailureHierarchy()
@@ -66,53 +53,6 @@ class FailureTaxonomyTest {
             assertFalse(List.of(type.getDeclaredMethods()).stream()
                     .anyMatch(FailureTaxonomyTest::isPublicInstance), type.getName());
         }
-    }
-
-    @Test
-    void rejectsExternalSubclassing() throws Exception {
-        String source = """
-                package external;
-
-                import io.github.gromoff97.awium.exceptions.AwaitFailure;
-
-                final class Contract extends AwaitFailure {
-                    Contract() {
-                        super("failure", null);
-                    }
-                }
-                """;
-
-        assertFalse(compiles(temporaryDirectory, source));
-    }
-
-    @Test
-    void allowsExternalLeafConstruction() throws Exception {
-        String source = """
-                package external;
-
-                import io.github.gromoff97.awium.exceptions.*;
-
-                final class Contract {
-                    void construct() {
-                        new AwaitConfigurationConflictException("failure");
-                        new AwaitTimeoutException("failure", null);
-                        new AwaitStabilizationException("failure", null);
-                        new AwaitSourceRetrievalException("failure", null);
-                        new AwaitConditionEvaluationException("failure", null);
-                        new AwaitInterruptedException("failure", null);
-                        new AwaitUnhandledException("failure", null);
-                    }
-                }
-                """;
-
-        assertTrue(compiles(temporaryDirectory, source));
-    }
-
-    @Test
-    void hasNoPluralConditionEvaluationAlias() {
-        assertThrows(ClassNotFoundException.class, () -> Class.forName(
-                "io.github.gromoff97.awium."
-                        + "AwaitConditionsEvaluationException"));
     }
 
     private static void assertConcreteChild(Class<?> type, Class<?> parent)

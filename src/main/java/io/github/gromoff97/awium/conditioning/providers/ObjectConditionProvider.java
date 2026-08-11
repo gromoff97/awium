@@ -1,7 +1,5 @@
 package io.github.gromoff97.awium.conditioning.providers;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 
@@ -10,25 +8,6 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.ValueEquality.equal;
 
 final class ObjectConditionProvider {
-
-    private ObjectConditionProvider() {
-        throw new AssertionError("Utility class");
-    }
-
-    static Condition<Object, Void> isNull() {
-        return new Condition<>() {
-            @Override
-            public Evaluation<Void> evaluate(Object actual) {
-                return actual == null ? satisfied(null)
-                        : unsatisfied("value was not null");
-            }
-
-            @Override
-            public String description() {
-                return "value to be null";
-            }
-        };
-    }
 
     static PreservingCondition<Object> isNotNull() {
         return PreservingCondition.of(new RuntimeCondition<>(actual ->

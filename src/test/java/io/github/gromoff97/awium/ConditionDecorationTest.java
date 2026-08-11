@@ -6,8 +6,6 @@ import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -79,18 +77,11 @@ class ConditionDecorationTest {
     @Test
     void explanationValidationHappensBeforeEvaluation() {
         var evaluations = new int[1];
-        var condition = new Condition<Object, Object>() {
-            @Override
-            public Evaluation<Object> evaluate(Object actual) {
-                evaluations[0]++;
-                return satisfied(actual);
-            }
-
-            @Override
-            public String description() {
-                return "custom condition";
-            }
-        };
+        Condition<Object, Object> condition = condition("custom condition",
+                actual -> {
+                    evaluations[0]++;
+                    return satisfied(actual);
+                });
 
         assertEquals("explanation must not be null",
                 assertThrows(NullPointerException.class,
@@ -108,7 +99,7 @@ class ConditionDecorationTest {
                 assertThrows(IllegalArgumentException.class,
                         () -> condition.because("%s", " ")).getMessage());
         assertThrows(IllegalFormatException.class, () -> condition.because("%q", 1));
-        assertThrows(RenderFailure.class,
+        assertThrows(IllegalStateException.class,
                 () -> condition.because("%s", new ThrowingRenderer()));
         assertEquals(0, evaluations[0]);
     }
@@ -129,18 +120,11 @@ class ConditionDecorationTest {
     void openAdaptersKeepTheDelegateSemanticsAndOptionalExplanation()
             throws Exception {
         var evaluations = new int[1];
-        var condition = new Condition<Object, String>() {
-            @Override
-            public Evaluation<String> evaluate(Object actual) {
-                evaluations[0]++;
-                return satisfied("selected");
-            }
-
-            @Override
-            public String description() {
-                return "named condition";
-            }
-        };
+        Condition<Object, String> condition = condition("named condition",
+                actual -> {
+                    evaluations[0]++;
+                    return satisfied("selected");
+                });
 
         RuntimeCondition<Object, String> raw = open(condition);
         RuntimeCondition<Object, String> explained = open(
@@ -153,17 +137,8 @@ class ConditionDecorationTest {
         assertNull(raw.explanation());
         assertEquals("because value", explained.explanation());
 
-        var nullEvaluation = new Condition<Object, Object>() {
-            @Override
-            public Evaluation<Object> evaluate(Object actual) {
-                return null;
-            }
-
-            @Override
-            public String description() {
-                return "custom condition";
-            }
-        };
+        Condition<Object, Object> nullEvaluation = condition(
+                "custom condition", actual -> null);
         assertNull(open(nullEvaluation).evaluate(this));
     }
 
@@ -254,10 +229,7 @@ class ConditionDecorationTest {
     private static final class ThrowingRenderer {
         @Override
         public String toString() {
-            throw new RenderFailure();
+            throw new IllegalStateException();
         }
-    }
-
-    private static final class RenderFailure extends RuntimeException {
     }
 }

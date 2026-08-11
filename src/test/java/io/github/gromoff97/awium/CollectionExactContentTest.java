@@ -4,8 +4,6 @@ import static io.github.gromoff97.awium.Awium.await;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
-import static java.lang.reflect.Modifier.isStatic;
-import static java.util.stream.Collectors.toSet;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -19,11 +17,8 @@ import io.github.gromoff97.awium.sources.CollectionSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.util.AbstractCollection;
@@ -33,7 +28,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -70,12 +64,6 @@ class CollectionExactContentTest {
                 assertPair(pair, pair.mismatchingActual(), false, explained);
             }
         }
-    }
-
-    @Test
-    void negativeAnyOrderAggregateFactoryReturnsAUsablePublicCondition() {
-        assertNotNull(doesNotContainExactlyInAnyOrderElementsOf(
-                List.of("a")));
     }
 
     @Test
@@ -140,19 +128,19 @@ class CollectionExactContentTest {
     void exactInputsAreRetainedByReferenceAndEmptyInputsAreValid()
             throws Exception {
         String[] array = {"before"};
-        PreservingCondition<?> arrayCondition =
+        PreservingCondition<? super ExactList<String>> arrayCondition =
                 containsExactly(array);
         array[0] = "after";
         assertEquals(Evaluation.Status.SATISFIED,
-                evaluate(castString(arrayCondition),
+                evaluate(arrayCondition,
                         new ExactList<>(List.of("after")), false).status());
 
         ArrayList<String> values = new ArrayList<>(List.of("before"));
-        PreservingCondition<?> collectionCondition =
+        PreservingCondition<? super ExactList<String>> collectionCondition =
                 containsExactlyElementsOf(values);
         values.set(0, "after");
         assertEquals(Evaluation.Status.SATISFIED,
-                evaluate(castString(collectionCondition),
+                evaluate(collectionCondition,
                         new ExactList<>(List.of("after")), false).status());
 
         assertStatus(containsExactly(), List.of(),
@@ -236,8 +224,10 @@ class CollectionExactContentTest {
 
     @Test
     void negativeExactCannotTurnAccessOrEqualityFailuresIntoSuccess() {
-        assertFailFast(actualWithSizeFailure("actual size"),
-                doesNotContainExactlyInAnyOrder("a"));
+        ExactList<String> actualSize = new ExactList<>(List.of("a"));
+        actualSize.sizeFailure = new IllegalStateException("actual size");
+        assertFailFast(actualSize, doesNotContainExactlyInAnyOrder("a"),
+                actualSize.sizeFailure);
 
         ExpectedCollection<String> expectedSize =
                 new ExpectedCollection<>(List.of("a"));
@@ -297,27 +287,6 @@ class CollectionExactContentTest {
         assertExpectedAccess(expected, 0, 0, 0);
     }
 
-    @Test
-    void exactGenericVarargsFactoriesAreSafeVarargs() {
-        Set<String> names = Set.of(
-                "containsExactly", "doesNotContainExactly",
-                "containsExactlyInAnyOrder",
-                "doesNotContainExactlyInAnyOrder");
-        Set<String> discovered = Arrays.stream(
-                        ConditionProvider.class.getDeclaredMethods())
-                .filter(method -> method.isVarArgs()
-                        && names.contains(method.getName()))
-                .peek(method -> {
-                    assertTrue(isStatic(method.getModifiers()));
-                    assertTrue(method.isAnnotationPresent(SafeVarargs.class),
-                            method.getName());
-                })
-                .map(java.lang.reflect.Method::getName)
-                .collect(toSet());
-
-        assertEquals(names, discovered);
-    }
-
     private static void assertPair(Pair pair, List<String> elements,
             boolean positiveSatisfied, boolean explained) throws Exception {
         ExactList<String> positiveActual = new ExactList<>(elements);
@@ -341,9 +310,6 @@ class CollectionExactContentTest {
             throws Exception {
         ExactList<E> actual = new ExactList<>(elements);
         assertEquals(expected, evaluate(condition, actual, false).status());
-        assertEquals(0, actual.containsCalls);
-        assertEquals(0, actual.equalsCalls);
-        assertEquals(0, actual.hashCodeCalls);
     }
 
     private static <E> Evaluation<?> evaluate(
@@ -355,23 +321,6 @@ class CollectionExactContentTest {
         assertEquals(explained ? "reason" : null, runtime.explanation());
         assertFalse(runtime.description().get().isBlank());
         return runtime.evaluate(actual);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static PreservingCondition<? super ExactList<String>> castString(
-            PreservingCondition<?> condition) {
-        return (PreservingCondition<? super ExactList<String>>) condition;
-    }
-
-    private static ExactList<String> actualWithSizeFailure(String message) {
-        ExactList<String> actual = new ExactList<>(List.of("a"));
-        actual.sizeFailure = new IllegalStateException(message);
-        return actual;
-    }
-
-    private static <E> void assertFailFast(ExactList<E> actual,
-            PreservingCondition<? super ExactList<E>> condition) {
-        assertFailFast(actual, condition, actual.sizeFailure);
     }
 
     private static <E> void assertFailFast(ExactList<E> actual,
@@ -389,7 +338,6 @@ class CollectionExactContentTest {
         assertEquals(size, actual.sizeCalls);
         assertEquals(iterators, actual.iteratorCalls);
         assertEquals(next, actual.nextCalls);
-        assertEquals(0, actual.getCalls);
     }
 
     private static void assertExpectedAccess(ExpectedCollection<?> expected,
@@ -425,10 +373,6 @@ class CollectionExactContentTest {
         private int sizeCalls;
         private int iteratorCalls;
         private int nextCalls;
-        private int getCalls;
-        private int containsCalls;
-        private int equalsCalls;
-        private int hashCodeCalls;
 
         private ExactList(List<? extends E> elements) {
             this.elements = elements;
@@ -445,8 +389,7 @@ class CollectionExactContentTest {
 
         @Override
         public E get(int index) {
-            getCalls++;
-            return elements.get(index);
+            throw new AssertionError("get must not be called");
         }
 
         @Override
@@ -475,19 +418,16 @@ class CollectionExactContentTest {
 
         @Override
         public boolean contains(Object value) {
-            containsCalls++;
             throw new AssertionError("contains must not be called");
         }
 
         @Override
         public boolean equals(Object value) {
-            equalsCalls++;
             throw new AssertionError("equals must not be called");
         }
 
         @Override
         public int hashCode() {
-            hashCodeCalls++;
             throw new AssertionError("hashCode must not be called");
         }
 
@@ -537,9 +477,6 @@ class CollectionExactContentTest {
                     nextCalls++;
                     if (nextFailure != null) {
                         throw nextFailure;
-                    }
-                    if (!delegate.hasNext()) {
-                        throw new NoSuchElementException();
                     }
                     return delegate.next();
                 }

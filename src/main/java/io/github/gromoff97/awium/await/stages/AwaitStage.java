@@ -4,11 +4,10 @@ import io.github.gromoff97.awium.await.Await;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;
 
-import java.time.Duration;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
-public final class AwaitStage<S> extends AbstractAwaitStage<S> implements Await<S> {
+public final class AwaitStage<S> extends AbstractAwaitStage<S, Await<S>> implements Await<S> {
 
     public AwaitStage(Source<S> source) {
         super(source);
@@ -25,18 +24,7 @@ public final class AwaitStage<S> extends AbstractAwaitStage<S> implements Await<
     }
 
     @Override
-    public Await<S> every(Duration interval) {
-        return new AwaitStage<>(this, configuration().withEvery(interval));
-    }
-
-    @Override
-    public Await<S> upTo(Duration timeout) {
-        return new AwaitStage<>(this, configuration().withUpTo(timeout));
-    }
-
-    @Override
-    public Await<S> stableFor(Duration stability) {
-        return new AwaitStage<>(this,
-                configuration().withStableFor(stability));
+    protected Await<S> reconfigured(WaitConfiguration configuration) {
+        return new AwaitStage<>(this, configuration);
     }
 }

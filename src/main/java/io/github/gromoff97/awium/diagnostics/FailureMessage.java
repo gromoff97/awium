@@ -6,6 +6,7 @@ import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
@@ -55,13 +56,6 @@ public final class FailureMessage {
         }
     }
 
-    public String emergency(WaitOutcome<?> outcome,
-            RuntimeCondition<?, ?> condition, Throwable formattingFailure) {
-        requireNonNull(formattingFailure);
-        return emergency(new Context(outcome, condition, null),
-                formattingFailure);
-    }
-
     public static String configurationConflict(long everyNanos,
             long upToNanos) {
         return "poll interval (" + duration(everyNanos)
@@ -70,7 +64,20 @@ public final class FailureMessage {
     }
 
     String emergency(FormattingFailure failure) {
-        return emergency(failure.context, failure.getCause());
+        Context context = failure.context;
+        StringBuilder out = heading("Await execution was unhandled");
+        field(out, 0, "Attempt",
+                Long.toString(context.outcome.completedAttempts()));
+        field(out, 0, "Condition", context.descriptionMaterialized
+                ? context.description : DESCRIPTION_UNAVAILABLE);
+        if (!(context.outcome.attempt()
+                instanceof Attempt.Uncontrolled.BeforeObservation<?>)) {
+            field(out, 0, "Actual", context.actualMaterialized
+                    ? context.actual : ACTUAL_DIAGNOSTICS_FAILED);
+        }
+        optionalField(out, "Because", context.condition.explanation());
+        field(out, 0, "Cause", typeName(failure.getCause()));
+        return finish(out);
     }
 
     private static String format(Context context) {
@@ -94,7 +101,7 @@ public final class FailureMessage {
             WaitOutcome.TimeoutBetweenObservations<?> outcome) {
         Attempt.Unsatisfied<?> last = outcome.attempt();
         AssertionDiagnostic assertion = last.assertionCause() == null
-                ? null : context.assertionDiagnostic("assertion did not pass");
+                ? null : context.assertionDiagnostic();
         StringBuilder out = heading("Await timed out");
         field(out, 0, "Condition", context.conditionDescription());
         field(out, 0, "Reason",
@@ -119,7 +126,7 @@ public final class FailureMessage {
             WaitOutcome.LateUnsatisfiedTimeout<?> outcome) {
         Attempt.Unsatisfied<?> attempt = outcome.attempt();
         AssertionDiagnostic assertion = attempt.assertionCause() == null
-                ? null : context.assertionDiagnostic("assertion did not pass");
+                ? null : context.assertionDiagnostic();
         StringBuilder out = heading("Await timed out");
         field(out, 0, "Condition", context.conditionDescription());
         field(out, 0, "Observed", context.actualValue());
@@ -152,7 +159,7 @@ public final class FailureMessage {
             WaitOutcome.StabilityLoss<?> outcome) {
         Attempt.Unsatisfied<?> attempt = outcome.attempt();
         AssertionDiagnostic assertion = attempt.assertionCause() == null
-                ? null : context.assertionDiagnostic("assertion did not pass");
+                ? null : context.assertionDiagnostic();
         StringBuilder out = heading("Await lost stability");
         field(out, 0, "Expected", context.conditionDescription());
         optionalField(out, "Because", context.condition.explanation());
@@ -212,21 +219,6 @@ public final class FailureMessage {
                 context.configuration.everyNanos()));
     }
 
-    private static String emergency(Context context, Throwable failure) {
-        StringBuilder out = heading("Await execution was unhandled");
-        field(out, 0, "Attempt",
-                Long.toString(context.outcome.completedAttempts()));
-        field(out, 0, "Condition",
-                context.materializedConditionDescription());
-        if (!(context.outcome.attempt()
-                instanceof Attempt.Uncontrolled.BeforeObservation<?>)) {
-            field(out, 0, "Actual", context.materializedActualValue());
-        }
-        optionalField(out, "Because", context.condition.explanation());
-        field(out, 0, "Cause", typeName(failure));
-        return finish(out);
-    }
-
     private static void optionalField(StringBuilder out, String label,
             String value) {
         if (value != null) {
@@ -236,7 +228,7 @@ public final class FailureMessage {
 
     private static void field(StringBuilder out, int indent, String label,
             String value) {
-        String normalized = normalizeNewlines(value);
+        String normalized = value.replace("\r\n", "\n").replace('\r', '\n');
         String prefix = " ".repeat(indent);
         if (!normalized.contains("\n")) {
             out.append(prefix).append(label).append(": ")
@@ -251,10 +243,6 @@ public final class FailureMessage {
             }
             out.append('\n');
         }
-    }
-
-    private static String normalizeNewlines(String value) {
-        return value.replace("\r\n", "\n").replace('\r', '\n');
     }
 
     private static StringBuilder heading(String value) {
@@ -307,11 +295,7 @@ public final class FailureMessage {
     }
 
     private static String origin(Attempt.Origin origin) {
-        return switch (origin) {
-            case WAITING -> "waiting";
-            case SOURCE -> "source";
-            case CONDITION -> "condition";
-        };
+        return origin.name().toLowerCase(Locale.ROOT);
     }
 
     private static Object actual(Attempt<?> attempt) {
@@ -326,16 +310,10 @@ public final class FailureMessage {
     }
 
     static Throwable terminalCause(WaitOutcome<?> outcome) {
-        return switch (outcome) {
-            case WaitOutcome.TimeoutBetweenObservations<?> value ->
-                    value.attempt().assertionCause();
-            case WaitOutcome.LateUnsatisfiedTimeout<?> value ->
-                    value.attempt().assertionCause();
-            case WaitOutcome.StabilityLoss<?> value ->
-                    value.attempt().assertionCause();
-            case WaitOutcome.Uncontrolled<?> value -> value.attempt().cause();
-            case WaitOutcome.Success<?> ignored -> null;
-            case WaitOutcome.LateSatisfiedTimeout<?> ignored -> null;
+        return switch (outcome.attempt()) {
+            case Attempt.Satisfied<?> ignored -> null;
+            case Attempt.Unsatisfied<?> attempt -> attempt.assertionCause();
+            case Attempt.Uncontrolled<?> attempt -> attempt.cause();
         };
     }
 
@@ -349,10 +327,6 @@ public final class FailureMessage {
         private String description;
         private boolean actualMaterialized;
         private String actual;
-        private boolean assertionMaterialized;
-        private AssertionDiagnostic assertion;
-        private boolean causeMaterialized;
-        private String cause;
 
         private Context(WaitOutcome<?> outcome,
                 RuntimeCondition<?, ?> condition,
@@ -387,57 +361,40 @@ public final class FailureMessage {
             return actual;
         }
 
-        private String materializedConditionDescription() {
-            return descriptionMaterialized ? description : DESCRIPTION_UNAVAILABLE;
-        }
-
-        private String materializedActualValue() {
-            return actualMaterialized ? actual : ACTUAL_DIAGNOSTICS_FAILED;
-        }
-
         @SuppressWarnings("removal")
-        private AssertionDiagnostic assertionDiagnostic(
-                String fallbackMismatch) {
-            if (!assertionMaterialized) {
-                assertionMaterialized = true;
-                AssertionError assertionCause =
-                        (AssertionError) terminalCause(outcome);
-                String type = typeName(assertionCause);
-                try {
-                    String message = assertionCause.getMessage();
-                    assertion = message == null || message.isBlank()
-                            ? new AssertionDiagnostic(fallbackMismatch, type)
-                            : new AssertionDiagnostic(message,
-                                    type + ": " + message);
-                } catch (VirtualMachineError | ThreadDeath fatal) {
-                    throw fatal;
-                } catch (Throwable failure) {
-                    assertion = new AssertionDiagnostic(fallbackMismatch,
-                            type + ": <message unavailable: getMessage() threw "
-                                    + typeName(failure) + ">");
-                }
+        private AssertionDiagnostic assertionDiagnostic() {
+            AssertionError assertionCause =
+                    (AssertionError) terminalCause(outcome);
+            String type = typeName(assertionCause);
+            try {
+                String message = assertionCause.getMessage();
+                return message == null || message.isBlank()
+                        ? new AssertionDiagnostic("assertion did not pass", type)
+                        : new AssertionDiagnostic(message,
+                                type + ": " + message);
+            } catch (VirtualMachineError | ThreadDeath fatal) {
+                throw fatal;
+            } catch (Throwable failure) {
+                return new AssertionDiagnostic("assertion did not pass",
+                        type + ": <message unavailable: getMessage() threw "
+                                + typeName(failure) + ">");
             }
-            return assertion;
         }
 
         @SuppressWarnings("removal")
         private String causeDiagnostic() {
-            if (!causeMaterialized) {
-                causeMaterialized = true;
-                Throwable terminalCause = terminalCause(outcome);
-                String type = typeName(terminalCause);
-                try {
-                    String message = terminalCause.getMessage();
-                    cause = message == null || message.isBlank()
-                            ? type : type + ": " + message;
-                } catch (VirtualMachineError | ThreadDeath fatal) {
-                    throw fatal;
-                } catch (Throwable failure) {
-                    cause = type + ": <message unavailable: getMessage() threw "
-                            + typeName(failure) + ">";
-                }
+            Throwable terminalCause = terminalCause(outcome);
+            String type = typeName(terminalCause);
+            try {
+                String message = terminalCause.getMessage();
+                return message == null || message.isBlank()
+                        ? type : type + ": " + message;
+            } catch (VirtualMachineError | ThreadDeath fatal) {
+                throw fatal;
+            } catch (Throwable failure) {
+                return type + ": <message unavailable: getMessage() threw "
+                        + typeName(failure) + ">";
             }
-            return cause;
         }
     }
 

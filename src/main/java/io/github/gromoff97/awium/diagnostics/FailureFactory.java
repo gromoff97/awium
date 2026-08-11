@@ -43,9 +43,6 @@ public final class FailureFactory {
             Throwable cause = formattingFailure.getCause();
             throw new AwaitUnhandledException(
                     failureMessage.emergency(formattingFailure), cause);
-        } catch (Throwable formattingFailure) {
-            throw new AwaitUnhandledException(failureMessage.emergency(
-                    outcome, condition, formattingFailure), formattingFailure);
         }
 
         Throwable cause = FailureMessage.terminalCause(outcome);

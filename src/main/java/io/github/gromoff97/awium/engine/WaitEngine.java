@@ -7,15 +7,13 @@ import io.github.gromoff97.awium.sources.Source;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Thread.currentThread;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("removal")
 public final class WaitEngine {
-
-    private static final String FLAG_MESSAGE =
-            "caller thread interrupt flag was set";
 
     private final WaitConfiguration config;
     private final LongSupplier clock;
@@ -218,7 +216,8 @@ public final class WaitEngine {
         if (!currentThread().isInterrupted()) {
             return null;
         }
-        return interrupted(origin, new InterruptedException(FLAG_MESSAGE),
+        return interrupted(origin, new InterruptedException(
+                        "caller thread interrupt flag was set"),
                 number, hasActual, actual);
     }
 
@@ -229,9 +228,9 @@ public final class WaitEngine {
         long completed = clock.getAsLong();
         return hasActual
                 ? new Attempt.Uncontrolled.AfterObservation<>(origin, actual,
-                        requireNonNull(interrupted), number, completed)
+                        interrupted, number, completed)
                 : new Attempt.Uncontrolled.BeforeObservation<>(origin,
-                        requireNonNull(interrupted), number, completed);
+                        interrupted, number, completed);
     }
 
     private static long after(long now, long durationNanos) {
@@ -243,7 +242,6 @@ public final class WaitEngine {
     }
 
     private static long remaining(long now, long deadline) {
-        long value = deadline - now;
-        return value <= 0 ? 0 : value;
+        return max(deadline - now, 0);
     }
 }

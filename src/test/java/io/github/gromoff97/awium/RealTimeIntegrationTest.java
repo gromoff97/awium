@@ -12,7 +12,6 @@ import static java.lang.Thread.ofPlatform;
 import static java.util.concurrent.locks.LockSupport.parkNanos;
 
 import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.*;
 
 import io.github.gromoff97.awium.exceptions.*;
 

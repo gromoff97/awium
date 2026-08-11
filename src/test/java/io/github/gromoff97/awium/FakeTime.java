@@ -35,10 +35,6 @@ final class FakeTime implements LongSupplier, LongConsumer {
         return getAsLong();
     }
 
-    void parkNanos(long nanos) {
-        accept(nanos);
-    }
-
     void advanceNanos(long nanos) {
         nowNanos += nanos;
     }

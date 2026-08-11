@@ -5,7 +5,6 @@ import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 import io.github.gromoff97.awium.await.Await;
 import io.github.gromoff97.awium.await.OptionalAwait;
 import io.github.gromoff97.awium.await.StructuralAwait;
@@ -17,16 +16,10 @@ import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.exceptions.*;
 
 import static java.lang.reflect.Modifier.isFinal;
-import static java.lang.reflect.Modifier.isPrivate;
-import static java.lang.reflect.Modifier.isPublic;
-import static java.lang.reflect.Modifier.isStatic;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
@@ -37,27 +30,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 class FactoryGrammarTest {
-
-    private static final Duration SECOND = Duration.ofSeconds(1);
-
-    @Test
-    void awiumOwnsExactlyFourStaticAwaitOverloads() {
-        assertTrue(isPublic(Awium.class.getModifiers()));
-        assertTrue(isFinal(Awium.class.getModifiers()));
-        Constructor<?>[] constructors = Awium.class.getDeclaredConstructors();
-        assertEquals(1, constructors.length);
-        assertTrue(isPrivate(constructors[0].getModifiers()));
-        assertEquals(0, constructors[0].getParameterCount());
-
-        List<Method> methods = List.of(Awium.class.getDeclaredMethods())
-                .stream()
-                .filter(method -> !method.isSynthetic())
-                .toList();
-        assertEquals(4, methods.size());
-        assertTrue(methods.stream().allMatch(method -> method.getName().equals("await")));
-        assertTrue(methods.stream().allMatch(method -> isPublic(method.getModifiers())
-                && isStatic(method.getModifiers())));
-    }
 
     @Test
     void everyFluentInterfaceIsSealedAndClosedByFinalAdapters() {
@@ -96,7 +68,7 @@ class FactoryGrammarTest {
         Await<String> repaired = slow
                 .upTo(Duration.ofSeconds(10))
                 .every(Duration.ofMillis(1))
-                .upTo(SECOND)
+                .upTo(Duration.ofSeconds(1))
                 .stableFor(Duration.ofSeconds(2))
                 .stableFor(Duration.ZERO);
 

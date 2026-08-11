@@ -1,13 +1,10 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
-
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.diagnostics.FailureMessage;
 
@@ -26,7 +23,6 @@ import java.util.List;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("removal")
 class DiagnosticsSnapshotTest {
 
     private static final long SECOND = 1_000_000_000L;
@@ -555,7 +551,7 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void callbackFreeEmergencyBranchFailureEscapesWithoutAnotherWrapper() {
-        var actual = new NullStringValue();
+        var actual = new CountingValue(null);
         var formatterFailure = new IllegalStateException("formatter broke");
         var formatterCalls = new int[1];
         Function<FailureMessage.Context, String> formatter = context -> {
@@ -641,10 +637,10 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void fatalDiagnosticSignalsEscapeUnchanged() {
-        var descriptionFatal = new ThrowableFixtures.Fatal("description fatal");
-        var valueFatal = new ThrowableFixtures.Fatal("value fatal");
-        var messageFatal = new ThrowableFixtures.Fatal("message fatal");
-        var formatterFatal = new ThrowableFixtures.Fatal("formatter fatal");
+        var descriptionFatal = new InternalError("description fatal");
+        var valueFatal = new InternalError("value fatal");
+        var messageFatal = new InternalError("message fatal");
+        var formatterFatal = new InternalError("formatter fatal");
         WaitOutcome<Object> sourceFailure = new WaitOutcome.Uncontrolled<>(
                 new Attempt.Uncontrolled.BeforeObservation<>(
                         Attempt.Origin.SOURCE,
@@ -659,18 +655,18 @@ class DiagnosticsSnapshotTest {
                         new Attempt.Unsatisfied<>("actual",
                                 "assertion did not pass", assertion, 1, 0));
 
-        assertSame(descriptionFatal, assertThrows(ThrowableFixtures.Fatal.class,
+        assertSame(descriptionFatal, assertThrows(InternalError.class,
                 () -> complete(new FailureFactory(), sourceFailure,
                         new RuntimeCondition<>(value -> Evaluation.satisfied(value),
                                 () -> {
                                     throw descriptionFatal;
                                 }, null), config(1, 2, 0))));
-        assertSame(valueFatal, assertThrows(ThrowableFixtures.Fatal.class,
+        assertSame(valueFatal, assertThrows(InternalError.class,
                 () -> complete(valueFailure, "condition", null, config(1, 2, 0))));
-        assertSame(messageFatal, assertThrows(ThrowableFixtures.Fatal.class,
+        assertSame(messageFatal, assertThrows(InternalError.class,
                 () -> complete(assertionFailure, "condition", null,
                         config(1, 2, 0))));
-        assertSame(formatterFatal, assertThrows(ThrowableFixtures.Fatal.class,
+        assertSame(formatterFatal, assertThrows(InternalError.class,
                 () -> complete(new FailureFactory(new FailureMessage(context -> {
                     throw formatterFatal;
                 })), sourceFailure, runtime("condition", null),
@@ -901,16 +897,6 @@ class DiagnosticsSnapshotTest {
             calls++;
             currentThread().interrupt();
             return "actual";
-        }
-    }
-
-    private static final class NullStringValue {
-        private int calls;
-
-        @Override
-        public String toString() {
-            calls++;
-            return null;
         }
     }
 

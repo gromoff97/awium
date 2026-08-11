@@ -5,7 +5,6 @@ import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 
 import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
 import io.github.gromoff97.awium.engine.*;
@@ -13,20 +12,16 @@ import io.github.gromoff97.awium.await.Await;
 import io.github.gromoff97.awium.await.stages.AwaitStage;
 import io.github.gromoff97.awium.sources.Source;
 
-import static java.lang.reflect.Modifier.isFinal;
-import static java.lang.reflect.Modifier.isPrivate;
-import static java.lang.reflect.Modifier.isPublic;
-import static java.lang.reflect.Modifier.isStatic;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.lang.reflect.Constructor;
 import java.time.Duration;
-import java.util.Arrays;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class AssertionAdapterTest {
 
@@ -165,10 +160,9 @@ class AssertionAdapterTest {
         assertEquals(0, passedFailure.messageReads);
     }
 
-    @Test
-    void checkedExceptionsEscapeAssertionAdaptersUnchanged() {
-        var failure = new Exception("checked");
-
+    @ParameterizedTest
+    @MethodSource("exceptions")
+    void exceptionsEscapeAssertionAdaptersUnchanged(Exception failure) {
         var asserted = ConditionProvider.<Payment>asserted(payment -> {
             throw failure;
         });
@@ -176,26 +170,9 @@ class AssertionAdapterTest {
             throw failure;
         });
 
-        assertSame(failure, assertThrows(Exception.class,
+        assertSame(failure, assertThrows(failure.getClass(),
                 () -> asserted.runtime().evaluate(new Payment(42))));
-        assertSame(failure, assertThrows(Exception.class,
-                () -> passed.evaluate(new Payment(42))));
-    }
-
-    @Test
-    void runtimeExceptionsEscapeAssertionAdaptersUnchanged() {
-        var failure = new IllegalStateException("runtime");
-
-        var asserted = ConditionProvider.<Payment>asserted(payment -> {
-            throw failure;
-        });
-        var passed = ConditionProvider.<Payment, Long>passed(payment -> {
-            throw failure;
-        });
-
-        assertSame(failure, assertThrows(IllegalStateException.class,
-                () -> asserted.runtime().evaluate(new Payment(42))));
-        assertSame(failure, assertThrows(IllegalStateException.class,
+        assertSame(failure, assertThrows(failure.getClass(),
                 () -> passed.evaluate(new Payment(42))));
     }
 
@@ -226,19 +203,9 @@ class AssertionAdapterTest {
                         () -> passed(null)).getMessage());
     }
 
-    @Test
-    void conditionProviderIsAnUninstantiableStaticNamespace()
-            throws ReflectiveOperationException {
-        assertTrue(isPublic(ConditionProvider.class.getModifiers()));
-        assertTrue(isFinal(ConditionProvider.class.getModifiers()));
-        Constructor<ConditionProvider> constructor =
-                ConditionProvider.class.getDeclaredConstructor();
-        assertTrue(isPrivate(constructor.getModifiers()));
-        assertEquals(1, ConditionProvider.class.getDeclaredConstructors().length);
-        assertTrue(Arrays.stream(ConditionProvider.class.getDeclaredMethods())
-                .filter(method -> !method.isSynthetic())
-                .allMatch(method -> isPublic(method.getModifiers())
-                        && isStatic(method.getModifiers())));
+    private static Stream<Exception> exceptions() {
+        return Stream.of(new Exception("checked"),
+                new IllegalStateException("runtime"));
     }
 
     private static Await<Payment> stage(FakeTime time, Payment actual) {

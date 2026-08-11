@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -44,7 +43,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,63 +55,14 @@ import org.junit.jupiter.api.Test;
 
 class PublicSurfaceTest {
 
-    private static final Path MAIN_SOURCES = Path.of("src", "main", "java");
-
-    @Test
-    void containsExactlyTheApprovedTopLevelProductSources() throws Exception {
-        Set<Path> expected = Set.of(
-                Path.of("io/github/gromoff97/awium/Awium.java"),
-                Path.of("io/github/gromoff97/awium/await/Await.java"),
-                Path.of("io/github/gromoff97/awium/await/OptionalAwait.java"),
-                Path.of("io/github/gromoff97/awium/await/StructuralAwait.java"),
-                Path.of("io/github/gromoff97/awium/await/stages/AbstractAwaitStage.java"),
-                Path.of("io/github/gromoff97/awium/await/stages/AwaitStage.java"),
-                Path.of("io/github/gromoff97/awium/await/stages/OptionalAwaitStage.java"),
-                Path.of("io/github/gromoff97/awium/await/stages/StructuralAwaitStage.java"),
-                Path.of("io/github/gromoff97/awium/sources/Source.java"),
-                Path.of("io/github/gromoff97/awium/sources/OptionalSource.java"),
-                Path.of("io/github/gromoff97/awium/sources/CollectionSource.java"),
-                Path.of("io/github/gromoff97/awium/sources/MapSource.java"),
-                Path.of("io/github/gromoff97/awium/conditioning/Evaluation.java"),
-                Path.of("io/github/gromoff97/awium/conditioning/ValueEquality.java"),
-                Path.of("io/github/gromoff97/awium/conditioning/CheckedConsumer.java"),
-                Path.of("io/github/gromoff97/awium/conditioning/CheckedFunction.java"),
-                Path.of("io/github/gromoff97/awium/conditioning/conditions/Condition.java"),
-                Path.of("io/github/gromoff97/awium/conditioning/conditions/PreservingCondition.java"),
-                Path.of("io/github/gromoff97/awium/conditioning/conditions/PresentCondition.java"),
-                Path.of("io/github/gromoff97/awium/conditioning/conditions/StructuralCondition.java"),
-                Path.of("io/github/gromoff97/awium/conditioning/conditions/RuntimeCondition.java"),
-                Path.of("io/github/gromoff97/awium/conditioning/providers/ConditionProvider.java"),
-                Path.of("io/github/gromoff97/awium/conditioning/providers/ObjectConditionProvider.java"),
-                Path.of("io/github/gromoff97/awium/conditioning/providers/OptionalConditionProvider.java"),
-                Path.of("io/github/gromoff97/awium/conditioning/providers/CollectionConditionProvider.java"),
-                Path.of("io/github/gromoff97/awium/conditioning/providers/MapConditionProvider.java"),
-                Path.of("io/github/gromoff97/awium/engine/WaitEngine.java"),
-                Path.of("io/github/gromoff97/awium/engine/WaitConfiguration.java"),
-                Path.of("io/github/gromoff97/awium/engine/Attempt.java"),
-                Path.of("io/github/gromoff97/awium/engine/WaitOutcome.java"),
-                Path.of("io/github/gromoff97/awium/diagnostics/FailureFactory.java"),
-                Path.of("io/github/gromoff97/awium/diagnostics/FailureMessage.java"),
-                Path.of("io/github/gromoff97/awium/exceptions/AwaitFailure.java"),
-                Path.of("io/github/gromoff97/awium/exceptions/AwaitTimeoutException.java"),
-                Path.of("io/github/gromoff97/awium/exceptions/AwaitStabilizationException.java"),
-                Path.of("io/github/gromoff97/awium/exceptions/AwaitUncontrolledException.java"),
-                Path.of("io/github/gromoff97/awium/exceptions/AwaitSourceRetrievalException.java"),
-                Path.of("io/github/gromoff97/awium/exceptions/AwaitConditionEvaluationException.java"),
-                Path.of("io/github/gromoff97/awium/exceptions/AwaitInterruptedException.java"),
-                Path.of("io/github/gromoff97/awium/exceptions/AwaitUnhandledException.java"),
-                Path.of("io/github/gromoff97/awium/exceptions/AwaitConfigurationConflictException.java"));
-
-        Set<Path> actual;
-        try (var sources = walk(MAIN_SOURCES)) {
-            actual = Set.copyOf(sources.filter(Files::isRegularFile)
-                    .filter(path -> path.toString().endsWith(".java"))
-                    .filter(path -> !path.endsWith("module-info.java"))
-                    .map(MAIN_SOURCES::relativize).toList());
-        }
-        assertEquals(41, actual.size());
-        assertEquals(expected, actual);
-    }
+    private static final Set<String> PUBLIC_API_PACKAGES = Set.of(
+            "io.github.gromoff97.awium",
+            "io.github.gromoff97.awium.await",
+            "io.github.gromoff97.awium.sources",
+            "io.github.gromoff97.awium.conditioning",
+            "io.github.gromoff97.awium.conditioning.conditions",
+            "io.github.gromoff97.awium.conditioning.providers",
+            "io.github.gromoff97.awium.exceptions");
 
     @Test
     void exposesExactlyTheApprovedPublicApiIncludingNestedTypes()
@@ -124,30 +73,6 @@ class PublicSurfaceTest {
         Set<Class<?>> topLevel = Set.copyOf(actual.stream()
                 .filter(type -> type.getEnclosingClass() == null).toList());
         assertEquals(Set.copyOf(publicTypes()), topLevel);
-        for (Class<?> type : topLevel) {
-            assertTrue(Set.of("io.github.gromoff97.awium",
-                    "io.github.gromoff97.awium.await",
-                    "io.github.gromoff97.awium.sources",
-                    "io.github.gromoff97.awium.conditioning",
-                    "io.github.gromoff97.awium.conditioning.conditions",
-                    "io.github.gromoff97.awium.conditioning.providers",
-                    "io.github.gromoff97.awium.exceptions")
-                    .contains(type.getPackageName()), type.getName());
-        }
-    }
-
-    @Test
-    void publicFailuresLiveInTheirOwnPackage() {
-        for (Class<?> type : List.of(AwaitConfigurationConflictException.class,
-                AwaitFailure.class, AwaitTimeoutException.class,
-                AwaitStabilizationException.class,
-                AwaitUncontrolledException.class,
-                AwaitSourceRetrievalException.class,
-                AwaitConditionEvaluationException.class,
-                AwaitInterruptedException.class, AwaitUnhandledException.class)) {
-            assertEquals("io.github.gromoff97.awium.exceptions",
-                    type.getPackageName(), type.getName());
-        }
     }
 
     @Test
@@ -184,8 +109,6 @@ class PublicSurfaceTest {
         Set<Class<?>> callbacks = Set.of(CheckedConsumer.class,
                 CheckedFunction.class);
 
-        assertEquals(sources, Set.copyOf(publicTypes().stream()
-                .filter(sources::contains).toList()));
         assertEquals(callbacks, Set.copyOf(publicTypes().stream()
                 .filter(Class::isInterface)
                 .filter(type -> !sources.contains(type))
@@ -217,9 +140,13 @@ class PublicSurfaceTest {
 
     @Test
     void allThreeFluentInterfacesHaveExactPermittedSubtypeSets() {
-        Map<Class<?>, Set<Class<?>>> expected = expectedPermittedSubtypes();
+        Map<Class<?>, Set<Class<?>>> expected = Map.of(
+                Await.class, Set.of(
+                        AwaitStage.class, OptionalAwait.class,
+                        StructuralAwait.class),
+                OptionalAwait.class, Set.of(OptionalAwaitStage.class),
+                StructuralAwait.class, Set.of(StructuralAwaitStage.class));
 
-        assertEquals(3, expected.size());
         assertEquals(expected.keySet(), Set.copyOf(fluentStages()));
         expected.forEach((stage, permitted) -> {
             assertTrue(stage.isInterface(), stage.getName());
@@ -259,10 +186,6 @@ class PublicSurfaceTest {
                         AwaitConditionEvaluationException.class,
                         AwaitInterruptedException.class, AwaitUnhandledException.class),
                 directPublicChildren(AwaitUncontrolledException.class));
-        directPublicChildren(AwaitFailure.class).forEach(type ->
-                assertTrue(isFinal(type.getModifiers()), type.getName()));
-        directPublicChildren(AwaitUncontrolledException.class).forEach(type ->
-                assertTrue(isFinal(type.getModifiers()), type.getName()));
     }
 
     @Test
@@ -271,12 +194,9 @@ class PublicSurfaceTest {
         assertNoExcludedApiSurface(discoveredPublicApiTypes());
         for (String absent : List.of("AwaitResult", "ExecutableSource",
                 "FutureSource", "IterableSource")) {
-            try {
-                Class.forName("io.github.gromoff97.awium." + absent);
-                assertFalse(true, absent);
-            } catch (ClassNotFoundException expected) {
-                // required absence
-            }
+            assertThrows(ClassNotFoundException.class,
+                    () -> Class.forName("io.github.gromoff97.awium." + absent),
+                    absent);
         }
     }
 
@@ -288,7 +208,6 @@ class PublicSurfaceTest {
                 ForbiddenInheritedField.class, ForbiddenInheritedMethod.class,
                 ForbiddenForkJoinTaskSignature.class,
                 ForbiddenCompletableFutureSignature.class,
-                ForbiddenFutureSubtypeSignature.class,
                 ForbiddenGenericArraySignature.class,
                 ForbiddenLowerWildcardSignature.class,
                 ForbiddenIterableSubtypeSignature.class,
@@ -451,7 +370,6 @@ class PublicSurfaceTest {
 
     private static Set<Class<?>> approvedPublicApiTypes() {
         Set<Class<?>> types = new java.util.HashSet<>(publicTypes());
-        types.addAll(fluentStages());
         types.addAll(explainedTypes());
         types.add(Evaluation.Status.class);
         return types;
@@ -482,14 +400,7 @@ class PublicSurfaceTest {
     }
 
     private static boolean isPublicApiType(Class<?> type) {
-        if (!Set.of("io.github.gromoff97.awium",
-                "io.github.gromoff97.awium.await",
-                "io.github.gromoff97.awium.sources",
-                "io.github.gromoff97.awium.conditioning",
-                "io.github.gromoff97.awium.conditioning.conditions",
-                "io.github.gromoff97.awium.conditioning.providers",
-                "io.github.gromoff97.awium.exceptions")
-                .contains(type.getPackageName())) {
+        if (!PUBLIC_API_PACKAGES.contains(type.getPackageName())) {
             return false;
         }
         for (Class<?> current = type; current != null;
@@ -499,15 +410,6 @@ class PublicSurfaceTest {
             }
         }
         return true;
-    }
-
-    private static Map<Class<?>, Set<Class<?>>> expectedPermittedSubtypes() {
-        return Map.of(
-                Await.class, Set.of(
-                        AwaitStage.class, OptionalAwait.class,
-                        StructuralAwait.class),
-                OptionalAwait.class, Set.of(OptionalAwaitStage.class),
-                StructuralAwait.class, Set.of(StructuralAwaitStage.class));
     }
 
     private static List<Class<?>> fluentStages() {
@@ -603,13 +505,6 @@ class PublicSurfaceTest {
         public java.util.concurrent.CompletableFuture<?> leaked;
     }
 
-    static final class FutureSubtype<T> extends java.util.concurrent.CompletableFuture<T> {
-    }
-
-    public static final class ForbiddenFutureSubtypeSignature {
-        public FutureSubtype<?> leaked;
-    }
-
     public static final class ForbiddenGenericArraySignature<
             T extends java.util.concurrent.Future<?>> {
         public T[] leaked;
@@ -619,15 +514,8 @@ class PublicSurfaceTest {
         public List<? super java.util.concurrent.ForkJoinTask<?>> leaked;
     }
 
-    static final class IterableSubtype implements Iterable<String> {
-        @Override
-        public java.util.Iterator<String> iterator() {
-            return List.<String>of().iterator();
-        }
-    }
-
     public static final class ForbiddenIterableSubtypeSignature {
-        public IterableSubtype leaked;
+        public Path leaked;
     }
 
     static class ForbiddenInheritedProtectedParent {

@@ -6,7 +6,6 @@ import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.CollectionSource;
 import io.github.gromoff97.awium.sources.MapSource;
 
-import java.time.Duration;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 import java.util.function.ToIntFunction;
@@ -14,21 +13,21 @@ import java.util.function.ToIntFunction;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.structural;
 import static java.util.Objects.requireNonNull;
 
-public final class StructuralAwaitStage<S> extends AbstractAwaitStage<S> implements StructuralAwait<S> {
+public final class StructuralAwaitStage<S> extends AbstractAwaitStage<S, StructuralAwait<S>> implements StructuralAwait<S> {
 
     private final String subject;
     private final ToIntFunction<? super S> size;
 
     public StructuralAwaitStage(CollectionSource<? extends S> source,
             ToIntFunction<? super S> size) {
-        super(source::get);
+        super(requireNonNull(source, "source must not be null")::get);
         this.subject = "collection";
         this.size = requireNonNull(size);
     }
 
     public StructuralAwaitStage(MapSource<? extends S> source,
             ToIntFunction<? super S> size) {
-        super(source::get);
+        super(requireNonNull(source, "source must not be null")::get);
         this.subject = "map";
         this.size = requireNonNull(size);
     }
@@ -36,7 +35,8 @@ public final class StructuralAwaitStage<S> extends AbstractAwaitStage<S> impleme
     public StructuralAwaitStage(CollectionSource<? extends S> source,
             ToIntFunction<? super S> size, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
-        super(source::get, configuration, clock, parker);
+        super(requireNonNull(source, "source must not be null")::get,
+                configuration, clock, parker);
         this.subject = "collection";
         this.size = requireNonNull(size);
     }
@@ -44,7 +44,8 @@ public final class StructuralAwaitStage<S> extends AbstractAwaitStage<S> impleme
     public StructuralAwaitStage(MapSource<? extends S> source,
             ToIntFunction<? super S> size, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
-        super(source::get, configuration, clock, parker);
+        super(requireNonNull(source, "source must not be null")::get,
+                configuration, clock, parker);
         this.subject = "map";
         this.size = requireNonNull(size);
     }
@@ -57,21 +58,9 @@ public final class StructuralAwaitStage<S> extends AbstractAwaitStage<S> impleme
     }
 
     @Override
-    public StructuralAwait<S> every(Duration interval) {
-        return new StructuralAwaitStage<>(
-                this, configuration().withEvery(interval));
-    }
-
-    @Override
-    public StructuralAwait<S> upTo(Duration timeout) {
-        return new StructuralAwaitStage<>(
-                this, configuration().withUpTo(timeout));
-    }
-
-    @Override
-    public StructuralAwait<S> stableFor(Duration stability) {
-        return new StructuralAwaitStage<>(
-                this, configuration().withStableFor(stability));
+    protected StructuralAwait<S> reconfigured(
+            WaitConfiguration configuration) {
+        return new StructuralAwaitStage<>(this, configuration);
     }
 
     @Override

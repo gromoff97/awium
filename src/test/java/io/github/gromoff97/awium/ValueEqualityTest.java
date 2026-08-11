@@ -1,16 +1,12 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.conditioning.ValueEquality.equal;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
-
-import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("overrides")
 class ValueEqualityTest {
 
     @Test
@@ -131,11 +127,6 @@ class ValueEqualityTest {
             compared = true;
             return other == expected;
         }
-
-        @Override
-        public int hashCode() {
-            return 1;
-        }
     }
 
     private static final class RightOperand {
@@ -146,22 +137,12 @@ class ValueEqualityTest {
             compared = true;
             return false;
         }
-
-        @Override
-        public int hashCode() {
-            return 1;
-        }
     }
 
     private static final class FailIfCompared {
         @Override
         public boolean equals(Object other) {
             throw new AssertionError("comparison continued after a mismatch");
-        }
-
-        @Override
-        public int hashCode() {
-            return 1;
         }
     }
 }

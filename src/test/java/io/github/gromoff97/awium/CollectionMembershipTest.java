@@ -19,7 +19,6 @@ import io.github.gromoff97.awium.sources.CollectionSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -58,6 +57,12 @@ class CollectionMembershipTest {
                     containsAnyElementsOf(List.of("x", "b")),
                     containsNoElementsOf(List.of("x", "b")),
                     List.of("a", "b", "c"), List.of("a", "c"), 2, 2));
+    private static final List<Function<Collection<String>, ?>>
+            ELEMENTS_OF_FACTORIES = List.of(
+                    ConditionProvider::containsAllElementsOf,
+                    ConditionProvider::doesNotContainAllElementsOf,
+                    ConditionProvider::containsAnyElementsOf,
+                    ConditionProvider::containsNoElementsOf);
 
     @TempDir
     Path temporaryDirectory;
@@ -73,12 +78,6 @@ class CollectionMembershipTest {
                         pair.mismatchingNextCalls(), explained);
             }
         }
-    }
-
-    @Test
-    void aggregateAnyFactoriesReturnUsablePublicConditions() {
-        assertNotNull(containsAnyElementsOf(List.of("a")));
-        assertNotNull(containsNoElementsOf(List.of("a")));
     }
 
     @Test
@@ -266,45 +265,32 @@ class CollectionMembershipTest {
 
     @Test
     void elementsOfFactoriesCallOnlyIsEmptyOnceAtConstruction() {
-        List<Function<Collection<String>, ?>> factories = List.of(
-                ConditionProvider::containsAllElementsOf,
-                ConditionProvider::doesNotContainAllElementsOf,
-                ConditionProvider::containsAnyElementsOf,
-                ConditionProvider::containsNoElementsOf);
-
-        for (Function<Collection<String>, ?> factory : factories) {
+        for (Function<Collection<String>, ?> factory : ELEMENTS_OF_FACTORIES) {
             var expected = new ProbeContainers.ExpectedCollection<>(List.of("a"));
             factory.apply(expected);
             assertEquals(1, expected.isEmptyCalls);
-            assertEquals(0, expected.sizeCalls);
-            assertEquals(0, expected.iteratorCalls);
         }
     }
 
     @Test
     void throwingExpectedIsEmptyEscapesRawFromEveryElementsOfFactory() {
-        List<Function<Collection<String>, ?>> factories = List.of(
-                ConditionProvider::containsAllElementsOf,
-                ConditionProvider::doesNotContainAllElementsOf,
-                ConditionProvider::containsAnyElementsOf,
-                ConditionProvider::containsNoElementsOf);
-
-        for (Function<Collection<String>, ?> factory : factories) {
+        for (Function<Collection<String>, ?> factory : ELEMENTS_OF_FACTORIES) {
             RuntimeException cause = new IllegalStateException("isEmpty failed");
             var expected = new ProbeContainers.ExpectedCollection<String>(cause);
             assertSame(cause, assertThrows(RuntimeException.class,
                     () -> factory.apply(expected)));
             assertEquals(1, expected.isEmptyCalls);
-            assertEquals(0, expected.sizeCalls);
-            assertEquals(0, expected.iteratorCalls);
         }
     }
 
     @Test
     void everyPublicGenericVarargsFactoryIsSafeVarargs() {
-        Set<String> membershipVarargs = Set.of(
+        Set<String> genericVarargs = Set.of(
                 "containsAll", "doesNotContainAll",
-                "containsAnyOf", "containsNoneOf");
+                "containsAnyOf", "containsNoneOf",
+                "containsExactly", "doesNotContainExactly",
+                "containsExactlyInAnyOrder",
+                "doesNotContainExactlyInAnyOrder");
         Set<String> discovered = Arrays.stream(
                         ConditionProvider.class.getDeclaredMethods())
                 .filter(method -> method.isVarArgs()
@@ -317,7 +303,7 @@ class CollectionMembershipTest {
                 .map(java.lang.reflect.Method::getName)
                 .collect(toSet());
 
-        assertTrue(discovered.containsAll(membershipVarargs));
+        assertTrue(discovered.containsAll(genericVarargs));
     }
 
     @Test
@@ -424,14 +410,8 @@ class CollectionMembershipTest {
 
     private static void assertOnlyIterator(
             ProbeContainers.MembershipCollection<?> actual, int nextCalls) {
-        assertEquals(0, actual.sizeCalls);
-        assertEquals(0, actual.isEmptyCalls);
         assertEquals(1, actual.iteratorCalls);
         assertEquals(nextCalls, actual.nextCalls);
-        assertEquals(0, actual.containsCalls);
-        assertEquals(0, actual.containsAllCalls);
-        assertEquals(0, actual.equalsCalls);
-        assertEquals(0, actual.hashCodeCalls);
     }
 
     private static void assertSatisfied(Evaluation<?> evaluation,

@@ -1,7 +1,5 @@
 package io.github.gromoff97.awium;
 
-import static java.util.Collections.emptyIterator;
-
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -13,16 +11,10 @@ import java.util.Set;
 
 final class ProbeContainers {
 
-    private ProbeContainers() {
-        throw new AssertionError("Utility class");
-    }
-
     static final class ProbeCollection<E> extends AbstractCollection<E> {
         private final int size;
         private final RuntimeException sizeFailure;
         int sizeCalls;
-        int isEmptyCalls;
-        int iteratorCalls;
 
         ProbeCollection(int size) {
             this(size, null);
@@ -48,14 +40,12 @@ final class ProbeContainers {
 
         @Override
         public boolean isEmpty() {
-            isEmptyCalls++;
-            return false;
+            throw new AssertionError("isEmpty must not be called");
         }
 
         @Override
         public Iterator<E> iterator() {
-            iteratorCalls++;
-            return emptyIterator();
+            throw new AssertionError("iterator must not be called");
         }
 
         @Override
@@ -68,8 +58,6 @@ final class ProbeContainers {
         private final int size;
         private final RuntimeException sizeFailure;
         int sizeCalls;
-        int isEmptyCalls;
-        int entrySetCalls;
 
         ProbeMap(int size) {
             this(size, null);
@@ -95,14 +83,12 @@ final class ProbeContainers {
 
         @Override
         public boolean isEmpty() {
-            isEmptyCalls++;
-            return false;
+            throw new AssertionError("isEmpty must not be called");
         }
 
         @Override
         public Set<Entry<K, V>> entrySet() {
-            entrySetCalls++;
-            return Set.of();
+            throw new AssertionError("entrySet must not be called");
         }
 
         @Override
@@ -116,15 +102,9 @@ final class ProbeContainers {
         private final RuntimeException iteratorFailure;
         private final int failingNext;
         private final RuntimeException nextFailure;
-        int sizeCalls;
-        int isEmptyCalls;
         int iteratorCalls;
         int hasNextCalls;
         int nextCalls;
-        int containsCalls;
-        int containsAllCalls;
-        int equalsCalls;
-        int hashCodeCalls;
 
         MembershipCollection(Collection<? extends E> elements) {
             this(elements, null, 0, null);
@@ -150,14 +130,12 @@ final class ProbeContainers {
 
         @Override
         public int size() {
-            sizeCalls++;
-            return elements.size();
+            throw new AssertionError("size must not be called");
         }
 
         @Override
         public boolean isEmpty() {
-            isEmptyCalls++;
-            return elements.isEmpty();
+            throw new AssertionError("isEmpty must not be called");
         }
 
         @Override
@@ -187,25 +165,21 @@ final class ProbeContainers {
 
         @Override
         public boolean contains(Object value) {
-            containsCalls++;
             throw new AssertionError("contains must not be called");
         }
 
         @Override
         public boolean containsAll(Collection<?> values) {
-            containsAllCalls++;
             throw new AssertionError("containsAll must not be called");
         }
 
         @Override
         public boolean equals(Object other) {
-            equalsCalls++;
             throw new AssertionError("equals must not be called");
         }
 
         @Override
         public int hashCode() {
-            hashCodeCalls++;
             throw new AssertionError("hashCode must not be called");
         }
 
@@ -216,13 +190,11 @@ final class ProbeContainers {
     }
 
     static final class ExpectedCollection<E> extends AbstractCollection<E> {
-        private final Collection<? extends E> elements;
+        private final Collection<E> elements;
         private final RuntimeException isEmptyFailure;
-        int sizeCalls;
         int isEmptyCalls;
-        int iteratorCalls;
 
-        ExpectedCollection(Collection<? extends E> elements) {
+        ExpectedCollection(Collection<E> elements) {
             this(elements, null);
         }
 
@@ -230,7 +202,7 @@ final class ProbeContainers {
             this(List.of(), isEmptyFailure);
         }
 
-        private ExpectedCollection(Collection<? extends E> elements,
+        private ExpectedCollection(Collection<E> elements,
                 RuntimeException isEmptyFailure) {
             this.elements = elements;
             this.isEmptyFailure = isEmptyFailure;
@@ -238,8 +210,7 @@ final class ProbeContainers {
 
         @Override
         public int size() {
-            sizeCalls++;
-            return elements.size();
+            throw new AssertionError("size must not be called");
         }
 
         @Override
@@ -253,19 +224,7 @@ final class ProbeContainers {
 
         @Override
         public Iterator<E> iterator() {
-            iteratorCalls++;
-            Iterator<? extends E> delegate = elements.iterator();
-            return new Iterator<>() {
-                @Override
-                public boolean hasNext() {
-                    return delegate.hasNext();
-                }
-
-                @Override
-                public E next() {
-                    return delegate.next();
-                }
-            };
+            throw new AssertionError("iterator must not be called");
         }
     }
 
@@ -283,11 +242,6 @@ final class ProbeContainers {
         int iteratorCalls;
         int hasNextCalls;
         int nextCalls;
-        int containsKeyCalls;
-        int getCalls;
-        int containsValueCalls;
-        int equalsCalls;
-        int hashCodeCalls;
 
         EntryMap(List<Entry<K, V>> entries) {
             this.entries = entries;
@@ -353,31 +307,26 @@ final class ProbeContainers {
 
         @Override
         public boolean containsKey(Object key) {
-            containsKeyCalls++;
             throw new AssertionError("containsKey must not be called");
         }
 
         @Override
         public V get(Object key) {
-            getCalls++;
             throw new AssertionError("get must not be called");
         }
 
         @Override
         public boolean containsValue(Object value) {
-            containsValueCalls++;
             throw new AssertionError("containsValue must not be called");
         }
 
         @Override
         public boolean equals(Object other) {
-            equalsCalls++;
             throw new AssertionError("equals must not be called");
         }
 
         @Override
         public int hashCode() {
-            hashCodeCalls++;
             throw new AssertionError("hashCode must not be called");
         }
 

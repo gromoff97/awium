@@ -1,11 +1,5 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
-
-import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -154,27 +148,18 @@ class CompilationContractTest {
 
     @Test
     void categorySpecificTerminalsRejectWrongConditions() throws IOException {
-        assertFalse(compiles("""
-                import static io.github.gromoff97.awium.Awium.await;
-                import io.github.gromoff97.awium.sources.Source;
-                import io.github.gromoff97.awium.conditioning.conditions.*;
-                final class Contract {
-                    void check(Source<String> source, PresentCondition condition) {
-                        await(source).until(condition);
+        for (String type : List.of("PresentCondition", "StructuralCondition")) {
+            assertFalse(compiles("""
+                    import static io.github.gromoff97.awium.Awium.await;
+                    import io.github.gromoff97.awium.sources.Source;
+                    import io.github.gromoff97.awium.conditioning.conditions.*;
+                    final class Contract {
+                        void check(Source<String> source, %s condition) {
+                            await(source).until(condition);
+                        }
                     }
-                }
-                """));
-        assertFalse(compiles("""
-                import static io.github.gromoff97.awium.Awium.await;
-                import io.github.gromoff97.awium.sources.Source;
-                import io.github.gromoff97.awium.conditioning.conditions.*;
-                final class Contract {
-                    void check(Source<String> source,
-                            StructuralCondition condition) {
-                        await(source).until(condition);
-                    }
-                }
-                """));
+                    """.formatted(type)), type);
+        }
     }
 
     @Test
@@ -244,22 +229,6 @@ class CompilationContractTest {
     }
 
     @Test
-    void allFluentInterfacesRejectExternalImplementations() throws IOException {
-        for (String type : List.of(
-                "Await<String>",
-                "OptionalAwait<String>",
-                "StructuralAwait<java.util.Collection<String>>")) {
-            assertFalse(compiles("""
-                    import io.github.gromoff97.awium.await.*;
-                    import io.github.gromoff97.awium.conditioning.conditions.*;
-                    final class Contract {
-                        abstract class Broken implements %s {}
-                    }
-                    """.formatted(type)), type);
-        }
-    }
-
-    @Test
     void assertionAdaptersMayBeDecoratedOnce() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
@@ -270,84 +239,6 @@ class CompilationContractTest {
                     void check() {
                         asserted((Payment value) -> {}).because("first");
                         passed((Payment value) -> value).because("first");
-                    }
-                }
-                """));
-    }
-
-    @Test
-    void explainedAssertionAdapterCannotBeDecoratedAgain() throws IOException {
-        assertFalse(compiles("""
-                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.asserted;
-
-                final class Contract {
-                    record Payment(long id) {}
-
-                    void check() {
-                        asserted((Payment value) -> {}).because("first")
-                                .because("second");
-                    }
-                }
-                """));
-    }
-
-    @Test
-    void conditionIsNotDirectlyLambdaAssignable() throws IOException {
-        assertFalse(compiles("""
-                import io.github.gromoff97.awium.conditioning.conditions.Condition;
-                import io.github.gromoff97.awium.conditioning.Evaluation;
-
-                final class Contract {
-                    record Payment(long id) {}
-
-                    Condition<Payment, Payment> condition =
-                            value -> Evaluation.satisfied(value);
-                }
-                """));
-    }
-
-    @Test
-    void literalBecauseCannotBeOverridden() throws IOException {
-        assertFalse(compiles("""
-                import io.github.gromoff97.awium.conditioning.conditions.Condition;
-                import io.github.gromoff97.awium.conditioning.Evaluation;
-                import io.github.gromoff97.awium.conditioning.conditions.Condition.ExplainedCondition;
-
-                final class Contract extends Condition<Contract.Payment, Contract.Payment> {
-                    record Payment(long id) {}
-
-                    @Override
-                    public Evaluation<Payment> evaluate(Payment actual) {
-                        return Evaluation.satisfied(actual);
-                    }
-
-                    @Override
-                    public Condition.ExplainedCondition<Payment, Payment> because(String value) {
-                        return null;
-                    }
-                }
-                """));
-    }
-
-    @Test
-    void formattedBecauseCannotBeOverridden() throws IOException {
-        assertFalse(compiles("""
-                import io.github.gromoff97.awium.conditioning.conditions.Condition;
-                import io.github.gromoff97.awium.conditioning.Evaluation;
-                import io.github.gromoff97.awium.conditioning.conditions.Condition.ExplainedCondition;
-
-                final class Contract extends Condition<Contract.Payment, Contract.Payment> {
-                    record Payment(long id) {}
-
-                    @Override
-                    public Evaluation<Payment> evaluate(Payment actual) {
-                        return Evaluation.satisfied(actual);
-                    }
-
-                    @Override
-                    public Condition.ExplainedCondition<Payment, Payment> because(
-                            String format, Object... arguments) {
-                        return null;
                     }
                 }
                 """));

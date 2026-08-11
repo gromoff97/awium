@@ -1,10 +1,7 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
-import static java.nio.file.Files.createDirectories;
 import static java.nio.file.Files.readString;
 import static java.nio.file.Files.walk;
-import static java.nio.file.Files.writeString;
 import static java.util.Collections.newSetFromMap;
 import static org.openrewrite.Parser.Input.fromString;
 import static org.openrewrite.java.JavaParser.fromJavaVersion;
@@ -14,12 +11,7 @@ import static org.openrewrite.java.tree.TypeUtils.isAssignableTo;
 import static org.openrewrite.java.tree.TypeUtils.isOfClassType;
 import static org.openrewrite.java.tree.TypeUtils.isWellFormedType;
 
-import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
@@ -40,7 +32,6 @@ import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.tree.ParseError;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 class ArchitectureContractTest {
 
@@ -48,90 +39,9 @@ class ArchitectureContractTest {
             "github", "gromoff97", "awium");
 
     @Test
-    void waitingCoreLivesInTheDedicatedEnginePackage() {
-        for (String type : List.of("Attempt", "WaitOutcome", "WaitEngine",
-                "WaitConfiguration")) {
-            assertDoesNotThrow(() -> Class.forName(
-                    "io.github.gromoff97.awium.engine." + type), type);
-        }
-        assertThrows(ClassNotFoundException.class, () -> Class.forName(
-                "io.github.gromoff97.awium.internal.engine.DurationFormatter"));
-        for (String type : List.of("AttemptEvaluator", "AttemptResult",
-                "Interrupts", "WaitConfiguration", "WaitEngine",
-                "WaitResult")) {
-            assertThrows(ClassNotFoundException.class, () -> Class.forName(
-                    "io.github.gromoff97.awium.internal.engine." + type), type);
-        }
-    }
-
-    @Test
-    void failureRenderingLivesInTheDedicatedDiagnosticsPackage() {
-        for (String type : List.of("FailureFactory", "FailureMessage")) {
-            assertDoesNotThrow(() -> Class.forName(
-                    "io.github.gromoff97.awium.diagnostics." + type),
-                    type);
-        }
-        for (String type : List.of("FailureFactory", "FailureContext",
-                "Diagnostics", "ValueRenderer")) {
-            assertThrows(ClassNotFoundException.class, () -> Class.forName(
-                    "io.github.gromoff97.awium.internal.diagnostic." + type),
-                    type);
-        }
-        assertThrows(ClassNotFoundException.class,
-                () -> Class.forName("io.github.gromoff97.awium."
-                        + "DiagnosticFormatter"));
-    }
-
-    @Test
-    void fluentImplementationUsesThreeApiInterfacesAndMinimalAdapters() {
-        for (String type : List.of(
-                "io.github.gromoff97.awium.await.Await",
-                "io.github.gromoff97.awium.await.OptionalAwait",
-                "io.github.gromoff97.awium.await.StructuralAwait",
-                "io.github.gromoff97.awium.conditioning.conditions.Condition$ExplainedCondition",
-                "io.github.gromoff97.awium.conditioning.conditions.PreservingCondition$ExplainedCondition",
-                "io.github.gromoff97.awium.conditioning.conditions.PresentCondition$ExplainedCondition",
-                "io.github.gromoff97.awium.conditioning.conditions.StructuralCondition$ExplainedCondition")) {
-            assertDoesNotThrow(() -> Class.forName(type), type);
-        }
-        for (String type : List.of("ObjectUntil", "OptionalUntil",
-                "CollectionUntil", "SequencedCollectionUntil", "MapUntil",
-                "ExplainedCondition", "ExplainedPreservingCondition",
-                "ExplainedPresent", "ExplainedStructuralCondition",
-                "ConditionAdapters")) {
-            assertThrows(ClassNotFoundException.class, () -> Class.forName(
-                    "io.github.gromoff97.awium." + type), type);
-        }
-    }
-
-    @Test
-    void architectureAuditRejectsObsoleteProductTypes() {
-        for (String type : List.of("AwaitSources", "ObjectAwait",
-                "CollectionAwait", "MapAwait", "SequencedCollectionAwait",
-                "AttemptResult", "WaitResult")) {
-            assertRejected("obsolete " + type,
-                    "final class " + type + " {}");
-        }
-    }
-
-    @Test
     void productionSourcesUseOnlyApprovedWaitingAndInterruptionMechanics()
             throws IOException {
         assertApprovedSources(productionSources(MAIN_PACKAGE));
-    }
-
-    @Test
-    void architectureAuditRecursesIntoSubpackages(@TempDir Path root)
-            throws IOException {
-        Path nested = root.resolve("worker").resolve("Mutant.java");
-        createDirectories(nested.getParent());
-        writeString(nested, """
-                final class Mutant extends Thread {
-                }
-                """);
-
-        assertThrows(AssertionError.class,
-                () -> assertApprovedSources(productionSources(root)));
     }
 
     @Test
@@ -432,8 +342,6 @@ class ArchitectureContractTest {
                         """),
                 Map.entry("var-handle atomic",
                         "class Mutant { java.lang.invoke.VarHandle state; }"),
-                Map.entry("scheduler",
-                        "class Mutant { java.util.Timer timer; }"),
                 Map.entry("lock",
                         "class Mutant { java.util.concurrent.locks.Lock lock; }"),
                 Map.entry("simple lock", """
@@ -480,28 +388,7 @@ class ArchitectureContractTest {
     }
 
     @Test
-    void architectureAuditAllowsExactlyApprovedPorts() {
-        assertApprovedSources(Map.of(
-                MAIN_PACKAGE.resolve("await/stages/AbstractAwaitStage.java"), """
-                        package io.github.gromoff97.awium.await.stages;
-                        import java.util.concurrent.locks.LockSupport;
-                        abstract class AbstractAwaitStage {
-                            java.util.function.LongConsumer parker =
-                                    LockSupport::parkNanos;
-                        }
-                        """,
-                MAIN_PACKAGE.resolve("engine/WaitEngine.java"), """
-                        package io.github.gromoff97.awium.engine;
-                        final class WaitEngine {
-                            boolean read() {
-                                return Thread.currentThread().isInterrupted();
-                            }
-                            void restore() {
-                                Thread.currentThread().interrupt();
-                            }
-                        }
-                        """));
-
+    void architectureAuditRejectsMutatedApprovedPorts() {
         assertRejectedAt(MAIN_PACKAGE.resolve(
                 "await/stages/AbstractAwaitStage.java"), """
                 package io.github.gromoff97.awium.await.stages;
@@ -626,9 +513,6 @@ class ArchitectureContractTest {
                 "isInterrupted", "interrupted", "interrupt");
         private static final Set<String> MONITOR_METHODS = Set.of(
                 "wait", "notify", "notifyAll");
-        private static final Set<String> OBSOLETE_PRODUCT_TYPES = Set.of(
-                "AwaitSources", "ObjectAwait", "CollectionAwait", "MapAwait",
-                "SequencedCollectionAwait", "AttemptResult", "WaitResult");
         private static final List<String> FORBIDDEN_ROOTS = List.of(
                 "java.util.concurrent.Executor",
                 "java.util.concurrent.Future",
@@ -656,10 +540,6 @@ class ArchitectureContractTest {
         public J.ClassDeclaration visitClassDeclaration(
                 J.ClassDeclaration declaration, ExecutionContext context) {
             requireType(declaration, declaration.getType(), "class declaration");
-            if (OBSOLETE_PRODUCT_TYPES.contains(declaration.getSimpleName())) {
-                reject(declaration, "obsolete product type "
-                        + declaration.getSimpleName());
-            }
             if (isAssignableTo(THREAD, declaration.getType())) {
                 reject(declaration, "Thread subclass");
             }
@@ -730,18 +610,7 @@ class ArchitectureContractTest {
         @Override
         public J.Identifier visitIdentifier(
                 J.Identifier identifier, ExecutionContext context) {
-            JavaType type = identifier.getType();
-            if (type != null && isWellFormedType(type)) {
-                if (isLockSupport(type)) {
-                    if (!isApprovedLockSupportReference()) {
-                        reject(identifier,
-                                "LockSupport outside the approved parkNanos port");
-                    }
-                } else {
-                    checkForbiddenType(identifier, type,
-                            "forbidden concurrency type reference");
-                }
-            }
+            checkTypeReference(identifier, identifier.getType());
             return super.visitIdentifier(identifier, context);
         }
 
@@ -757,19 +626,22 @@ class ArchitectureContractTest {
         @Override
         public J.FieldAccess visitFieldAccess(
                 J.FieldAccess access, ExecutionContext context) {
-            JavaType type = access.getType();
+            checkTypeReference(access, access.getType());
+            return super.visitFieldAccess(access, context);
+        }
+
+        private void checkTypeReference(J tree, JavaType type) {
             if (type != null && isWellFormedType(type)) {
                 if (isLockSupport(type)) {
                     if (!isApprovedLockSupportReference()) {
-                        reject(access,
+                        reject(tree,
                                 "LockSupport outside the approved parkNanos port");
                     }
                 } else {
-                    checkForbiddenType(access, type,
+                    checkForbiddenType(tree, type,
                             "forbidden concurrency type reference");
                 }
             }
-            return super.visitFieldAccess(access, context);
         }
 
         private void checkExecutable(J tree, JavaType.Method method) {

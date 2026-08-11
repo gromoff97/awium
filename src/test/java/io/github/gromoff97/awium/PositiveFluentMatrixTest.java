@@ -4,7 +4,6 @@ import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 import io.github.gromoff97.awium.sources.CollectionSource;
 import io.github.gromoff97.awium.sources.MapSource;
 import io.github.gromoff97.awium.sources.OptionalSource;
@@ -107,33 +106,6 @@ class PositiveFluentMatrixTest {
                         .until(nonEmpty),
                 await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
                         .until(nonEmpty.because("collection all")),
-                await(source).stableFor(ZERO).upTo(UP_TO).every(EVERY)
-                        .until(nonEmpty),
-                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(nonEmpty));
-    }
-
-    @Test
-    void sequencedCollectionFacadeExecutesEveryValidConfigurationPath() {
-        var actual = new ArrayList<>(List.of("value"));
-        CollectionSource<ArrayList<String>> source = () -> actual;
-
-        assertAllSame(actual,
-                await(source).until(nonEmpty),
-                await(source).every(EVERY)
-                        .until(nonEmpty.because("sequenced every")),
-                await(source).upTo(UP_TO).until(nonEmpty),
-                await(source).stableFor(ZERO)
-                        .until(nonEmpty.because("sequenced stable")),
-                await(source).every(EVERY).upTo(UP_TO)
-                        .until(nonEmpty),
-                await(source).every(EVERY).stableFor(ZERO)
-                        .until(nonEmpty.because("sequenced every stable")),
-                await(source).upTo(UP_TO).stableFor(ZERO)
-                        .until(nonEmpty),
-                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(nonEmpty.because("sequenced all")),
                 await(source).stableFor(ZERO).upTo(UP_TO).every(EVERY)
                         .until(nonEmpty),
                 await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)

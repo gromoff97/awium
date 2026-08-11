@@ -16,6 +16,7 @@ import java.util.SequencedCollection;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static java.util.Objects.requireNonNull;
 
 public final class ConditionProvider {
@@ -25,8 +26,18 @@ public final class ConditionProvider {
     public static final StructuralCondition nonEmpty =
             StructuralCondition.nonEmpty();
     public static final Condition<Optional<?>, Void> absent =
-            OptionalConditionProvider.absent();
-    public static final Condition<Object, Void> isNull = ObjectConditionProvider.isNull();
+            condition("optional to be absent", actual -> {
+                if (actual == null) {
+                    return unsatisfied("optional was null");
+                }
+                return actual.isEmpty()
+                        ? satisfied(null)
+                        : unsatisfied("optional was present");
+            });
+    public static final Condition<Object, Void> isNull =
+            condition("value to be null", actual -> actual == null
+                    ? satisfied(null)
+                    : unsatisfied("value was not null"));
     public static final PreservingCondition<Object> isNotNull =
             ObjectConditionProvider.isNotNull();
 

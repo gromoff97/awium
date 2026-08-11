@@ -6,8 +6,10 @@ import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
+import io.github.gromoff97.awium.await.Await;
 import io.github.gromoff97.awium.sources.Source;
 
+import java.time.Duration;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
@@ -16,7 +18,7 @@ import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.util.Objects.requireNonNull;
 
-public abstract class AbstractAwaitStage<S> {
+public abstract class AbstractAwaitStage<S, A extends Await<S>> {
 
     private static final FailureFactory FAILURE_FACTORY = new FailureFactory();
 
@@ -33,15 +35,27 @@ public abstract class AbstractAwaitStage<S> {
     protected AbstractAwaitStage(Source<S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {
-        this.source = requireNonNull(source);
+        this.source = requireNonNull(source, "source must not be null");
         this.configuration = requireNonNull(configuration);
         this.clock = requireNonNull(clock);
         this.parker = requireNonNull(parker);
     }
 
-    protected AbstractAwaitStage(AbstractAwaitStage<S> stage,
+    protected AbstractAwaitStage(AbstractAwaitStage<S, ?> stage,
             WaitConfiguration configuration) {
         this(stage.source, configuration, stage.clock, stage.parker);
+    }
+
+    public final A every(Duration interval) {
+        return reconfigured(configuration.withEvery(interval));
+    }
+
+    public final A upTo(Duration timeout) {
+        return reconfigured(configuration.withUpTo(timeout));
+    }
+
+    public final A stableFor(Duration stability) {
+        return reconfigured(configuration.withStableFor(stability));
     }
 
     public final S until(PreservingCondition<? super S> condition) {
@@ -66,13 +80,7 @@ public abstract class AbstractAwaitStage<S> {
                 requireNonNull(condition, "condition must not be null")));
     }
 
-    protected final Source<S> source() {
-        return source;
-    }
-
-    protected final WaitConfiguration configuration() {
-        return configuration;
-    }
+    protected abstract A reconfigured(WaitConfiguration configuration);
 
     protected final <R> R complete(RuntimeCondition<S, R> condition) {
         configuration.validatePair();

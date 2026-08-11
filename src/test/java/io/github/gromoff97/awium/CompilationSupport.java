@@ -12,10 +12,6 @@ import javax.tools.JavaCompiler;
 
 final class CompilationSupport {
 
-    private CompilationSupport() {
-        throw new AssertionError("Utility class");
-    }
-
     static boolean compiles(Path parent, String source) throws IOException {
         return compiles(parent, source,
                 Path.of(System.getProperty("java.class.path")));

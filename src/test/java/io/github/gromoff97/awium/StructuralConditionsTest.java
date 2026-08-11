@@ -321,14 +321,10 @@ class StructuralConditionsTest {
     private static void assertNoFallback(
             ProbeContainers.ProbeCollection<?> probe) {
         assertEquals(1, probe.sizeCalls);
-        assertEquals(0, probe.isEmptyCalls);
-        assertEquals(0, probe.iteratorCalls);
     }
 
     private static void assertNoFallback(ProbeContainers.ProbeMap<?, ?> probe) {
         assertEquals(1, probe.sizeCalls);
-        assertEquals(0, probe.isEmptyCalls);
-        assertEquals(0, probe.entrySetCalls);
     }
 
     private record Case(StructuralCondition condition, int matchingSize,

@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium.conditioning.providers;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 
@@ -15,10 +14,6 @@ import static io.github.gromoff97.awium.conditioning.ValueEquality.equal;
 import static java.util.Objects.requireNonNull;
 
 final class MapConditionProvider {
-
-    private MapConditionProvider() {
-        throw new AssertionError("Utility class");
-    }
 
     static <K> PreservingCondition<Map<? super K, ?>> containsKey(K expected) {
         return condition(actual -> anyMatch(actual, entry ->
@@ -115,15 +110,14 @@ final class MapConditionProvider {
     private static <M extends Map<?, ?>> PreservingCondition<M> condition(
             Predicate<? super M> matches, boolean positive,
             String description, String mismatch) {
-        RuntimeCondition<M, M> runtime = new RuntimeCondition<>(actual -> {
+        return PreservingCondition.of(new RuntimeCondition<>(actual -> {
             if (actual == null) {
                 return unsatisfied("map was null");
             }
             return matches.test(actual) == positive
                     ? satisfied(actual)
                     : unsatisfied(mismatch);
-        }, () -> description, null);
-        return PreservingCondition.of(runtime);
+        }, () -> description, null));
     }
 
     private static <K, V> PreservingCondition<Map<? super K, ? super V>>
@@ -149,30 +143,16 @@ final class MapConditionProvider {
 
     private static boolean matchesAny(Map.Entry<?, ?> actual,
             List<Map.Entry<?, ?>> expected) {
-        for (Map.Entry<?, ?> entry : expected) {
-            if (entryMatches(actual, entry)) {
-                return true;
-            }
-        }
-        return false;
+        return expected.stream().anyMatch(entry -> entryMatches(actual, entry));
     }
 
     private static boolean allFound(Map<?, ?> actual,
             List<Map.Entry<?, ?>> expected) {
-        boolean[] found = new boolean[expected.size()];
-        int remaining = found.length;
-        if (remaining == 0) {
-            return true;
-        }
+        List<Map.Entry<?, ?>> remaining = new ArrayList<>(expected);
         for (Map.Entry<?, ?> actualEntry : actual.entrySet()) {
-            for (int index = 0; index < expected.size(); index++) {
-                if (!found[index]
-                        && entryMatches(actualEntry, expected.get(index))) {
-                    found[index] = true;
-                    remaining--;
-                }
-            }
-            if (remaining == 0) {
+            remaining.removeIf(expectedEntry ->
+                    entryMatches(actualEntry, expectedEntry));
+            if (remaining.isEmpty()) {
                 return true;
             }
         }
@@ -196,16 +176,13 @@ final class MapConditionProvider {
             return true;
         }
 
-        List<Map.Entry<?, ?>> positions = entries(expected);
-        boolean[] consumed = new boolean[positions.size()];
-        int matched = 0;
+        List<Map.Entry<?, ?>> remaining = entries(expected);
         for (Map.Entry<?, ?> actualEntry : actual.entrySet()) {
             boolean found = false;
-            for (int index = 0; index < positions.size(); index++) {
-                if (!consumed[index]
-                        && entryMatches(actualEntry, positions.get(index))) {
-                    consumed[index] = true;
-                    matched++;
+            var candidates = remaining.iterator();
+            while (candidates.hasNext()) {
+                if (entryMatches(actualEntry, candidates.next())) {
+                    candidates.remove();
                     found = true;
                     break;
                 }
@@ -214,7 +191,7 @@ final class MapConditionProvider {
                 return false;
             }
         }
-        return matched == expectedSize && matched == positions.size();
+        return true;
     }
 
     private static List<Map.Entry<?, ?>> entries(Map<?, ?> map) {

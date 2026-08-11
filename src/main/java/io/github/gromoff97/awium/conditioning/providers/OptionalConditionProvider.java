@@ -14,10 +14,6 @@ import static java.util.Objects.requireNonNull;
 
 final class OptionalConditionProvider {
 
-    private OptionalConditionProvider() {
-        throw new AssertionError("Utility class");
-    }
-
     static PresentCondition present() {
         return PresentCondition.of(new RuntimeCondition<>(actual -> {
             if (actual == null) {
@@ -27,25 +23,6 @@ final class OptionalConditionProvider {
                     ? satisfied(actual.orElseThrow())
                     : unsatisfied("optional was empty");
         }, () -> "optional to remain present", null));
-    }
-
-    static Condition<Optional<?>, Void> absent() {
-        return new Condition<>() {
-            @Override
-            public Evaluation<Void> evaluate(Optional<?> actual) {
-                if (actual == null) {
-                    return unsatisfied("optional was null");
-                }
-                return actual.isEmpty()
-                        ? satisfied(null)
-                        : unsatisfied("optional was present");
-            }
-
-            @Override
-            public String description() {
-                return "optional to be absent";
-            }
-        };
     }
 
     static <T> Condition<Optional<T>, T> hasValueEqualTo(T expected) {

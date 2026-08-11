@@ -22,12 +22,10 @@ java {
 
 dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.2")
-    testImplementation("org.openrewrite:rewrite-java:8.88.3")
     testImplementation("org.openrewrite:rewrite-java-21:8.88.3")
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    options.release = 21
     options.encoding = "UTF-8"
     options.compilerArgs.addAll(listOf("-Xlint:all,-serial", "-parameters"))
 }

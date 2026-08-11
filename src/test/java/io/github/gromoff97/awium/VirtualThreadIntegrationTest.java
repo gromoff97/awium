@@ -9,8 +9,6 @@ import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.ofVirtual;
 
-import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

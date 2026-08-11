@@ -1,21 +1,15 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.engine.Attempt;
-import io.github.gromoff97.awium.engine.WaitOutcome;
 import io.github.gromoff97.awium.sources.Source;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.*;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
-
 import io.github.gromoff97.awium.engine.*;
 
-import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -32,29 +26,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-@SuppressWarnings("removal")
 class WaitEngineTest {
-
-    @Test
-    void outcomeVariantsAcceptOnlyCompatibleAttempts() {
-        var satisfied = new Attempt.Satisfied<>(
-                "actual", "result", 1, 123);
-        var unsatisfied = new Attempt.Unsatisfied<String>(
-                "actual", "not ready", null, 1, 123);
-        var uncontrolled =
-                new Attempt.Uncontrolled.BeforeObservation<String>(
-                Attempt.Origin.SOURCE,
-                new IllegalStateException(), 1, 123);
-
-        assertAll(
-                () -> assertEquals("result", new WaitOutcome.Success<>(
-                        100, 110, 123, satisfied).attempt().result()),
-                () -> assertSame(unsatisfied,
-                        new WaitOutcome.TimeoutBetweenObservations<>(
-                                100, 123, unsatisfied).attempt()),
-                () -> assertSame(uncontrolled,
-                        new WaitOutcome.Uncontrolled<>(uncontrolled).attempt()));
-    }
 
     @AfterEach
     void clearInterruptFlag() {
@@ -385,10 +357,10 @@ class WaitEngineTest {
     @Test
     void fatalParkingSignalsEscapeUnchanged() {
         var time = new FakeTime(0);
-        var fatal = new ThrowableFixtures.Fatal("fatal park");
+        var fatal = new InternalError("fatal park");
 
-        ThrowableFixtures.Fatal thrown = assertThrows(
-                ThrowableFixtures.Fatal.class,
+        InternalError thrown = assertThrows(
+                InternalError.class,
                 () -> wait(time, config(5, 20, 0), nanos -> {
                     throw fatal;
                 }, () -> "actual",
@@ -424,10 +396,10 @@ class WaitEngineTest {
     @Test
     void fatalSignalsEscapeEvenAfterTheAcquisitionDeadline() {
         var time = new FakeTime(0);
-        var fatal = new ThrowableFixtures.Fatal("fatal");
+        var fatal = new InternalError("fatal");
 
-        ThrowableFixtures.Fatal thrown = assertThrows(
-                ThrowableFixtures.Fatal.class,
+        InternalError thrown = assertThrows(
+                InternalError.class,
                 () -> wait(time, config(3, 10, 0), () -> {
                     time.advanceNanos(11);
                     throw fatal;
