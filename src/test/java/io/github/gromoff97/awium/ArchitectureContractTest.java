@@ -569,20 +569,6 @@ class ArchitectureContractTest {
         }
 
         @Override
-        public J.VariableDeclarations visitVariableDeclarations(
-                J.VariableDeclarations declarations, ExecutionContext context) {
-            JavaType type = declarations.getType();
-            if (getCursor().firstEnclosing(J.Lambda.Parameters.class) == null) {
-                requireType(declarations, type, "variable declaration");
-            }
-            if (type != null && isWellFormedType(type)) {
-                checkForbiddenType(declarations, type,
-                        "forbidden concurrency type in declaration");
-            }
-            return super.visitVariableDeclarations(declarations, context);
-        }
-
-        @Override
         public J.NewClass visitNewClass(
                 J.NewClass construction, ExecutionContext context) {
             JavaType.Method constructor = construction.getConstructorType();
@@ -621,13 +607,6 @@ class ArchitectureContractTest {
                     : imported.getQualid().getType();
             requireType(imported, type, "import");
             return super.visitImport(imported, context);
-        }
-
-        @Override
-        public J.FieldAccess visitFieldAccess(
-                J.FieldAccess access, ExecutionContext context) {
-            checkTypeReference(access, access.getType());
-            return super.visitFieldAccess(access, context);
         }
 
         private void checkTypeReference(J tree, JavaType type) {
