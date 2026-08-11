@@ -3,7 +3,6 @@ package io.github.gromoff97.awium.conditioning;
 import static java.lang.System.identityHashCode;
 
 import java.util.ArrayDeque;
-import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.Objects;
@@ -59,39 +58,11 @@ public final class ValueEquality {
                 }
                 continue;
             }
-            if (!primitiveArraysEqual(left, right)) {
+            if (!Objects.deepEquals(left, right)) {
                 return false;
             }
         }
         return true;
-    }
-
-    private static boolean primitiveArraysEqual(Object actual, Object expected) {
-        if (actual instanceof boolean[] left) {
-            return expected instanceof boolean[] right && Arrays.equals(left, right);
-        }
-        if (actual instanceof byte[] left) {
-            return expected instanceof byte[] right && Arrays.equals(left, right);
-        }
-        if (actual instanceof short[] left) {
-            return expected instanceof short[] right && Arrays.equals(left, right);
-        }
-        if (actual instanceof int[] left) {
-            return expected instanceof int[] right && Arrays.equals(left, right);
-        }
-        if (actual instanceof long[] left) {
-            return expected instanceof long[] right && Arrays.equals(left, right);
-        }
-        if (actual instanceof char[] left) {
-            return expected instanceof char[] right && Arrays.equals(left, right);
-        }
-        if (actual instanceof float[] left) {
-            return expected instanceof float[] right && Arrays.equals(left, right);
-        }
-        if (actual instanceof double[] left) {
-            return expected instanceof double[] right && Arrays.equals(left, right);
-        }
-        return false;
     }
 
     private record ValuePair(Object actual, Object expected) {

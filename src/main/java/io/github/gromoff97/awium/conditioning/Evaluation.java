@@ -63,17 +63,9 @@ public final class Evaluation<R> {
     }
 
     public static <R> Evaluation<R> narrow(Evaluation<? extends R> source) {
-        if (source == null) {
-            return null;
-        }
-        return switch (source.status) {
-            case SATISFIED -> satisfied(source.result);
-            case UNSATISFIED -> source.assertionCause == null
-                    ? unsatisfied(source.mismatch)
-                    : assertionUnsatisfied(
-                            source.mismatch, source.assertionCause);
-            case UNCONTROLLED -> uncontrolled(source.uncontrolledCause);
-        };
+        return source == null ? null : new Evaluation<>(source.status,
+                source.result, source.mismatch, source.assertionCause,
+                source.uncontrolledCause);
     }
 
     private static String nonBlank(String value, String name) {

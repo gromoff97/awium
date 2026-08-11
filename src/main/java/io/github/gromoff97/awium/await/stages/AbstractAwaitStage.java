@@ -18,31 +18,30 @@ import static java.util.Objects.requireNonNull;
 
 public abstract class AbstractAwaitStage<S> {
 
+    private static final FailureFactory FAILURE_FACTORY = new FailureFactory();
+
     private final Source<S> source;
     private final WaitConfiguration configuration;
     private final LongSupplier clock;
     private final LongConsumer parker;
-    private final FailureFactory failureFactory;
 
     protected AbstractAwaitStage(Source<S> source) {
         this(source, defaults(), System::nanoTime,
-                LockSupport::parkNanos, new FailureFactory());
+                LockSupport::parkNanos);
     }
 
     protected AbstractAwaitStage(Source<S> source,
             WaitConfiguration configuration, LongSupplier clock,
-            LongConsumer parker, FailureFactory failureFactory) {
+            LongConsumer parker) {
         this.source = requireNonNull(source);
         this.configuration = requireNonNull(configuration);
         this.clock = requireNonNull(clock);
         this.parker = requireNonNull(parker);
-        this.failureFactory = requireNonNull(failureFactory);
     }
 
     protected AbstractAwaitStage(AbstractAwaitStage<S> stage,
             WaitConfiguration configuration) {
-        this(stage.source, configuration, stage.clock, stage.parker,
-                stage.failureFactory);
+        this(stage.source, configuration, stage.clock, stage.parker);
     }
 
     public final S until(PreservingCondition<? super S> condition) {
@@ -78,7 +77,7 @@ public abstract class AbstractAwaitStage<S> {
     protected final <R> R complete(RuntimeCondition<S, R> condition) {
         configuration.validatePair();
         WaitEngine engine = new WaitEngine(configuration, clock, parker);
-        return failureFactory.complete(
+        return FAILURE_FACTORY.complete(
                 engine.waitFor(source, condition), condition, configuration);
     }
 }

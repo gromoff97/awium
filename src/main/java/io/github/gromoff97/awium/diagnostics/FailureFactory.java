@@ -30,11 +30,8 @@ public final class FailureFactory {
     public <R> R complete(WaitOutcome<R> outcome,
             RuntimeCondition<?, R> condition,
             WaitConfiguration configuration) {
-        if (outcome instanceof WaitOutcome.Success<R>(
-                long started, long acquired, long completed,
-                Attempt.Satisfied<R>(Object actual, R result,
-                        long number, long attemptCompleted))) {
-            return result;
+        if (outcome instanceof WaitOutcome.Success<R> success) {
+            return success.attempt().result();
         }
 
         String message;
@@ -51,7 +48,7 @@ public final class FailureFactory {
                     outcome, condition, formattingFailure), formattingFailure);
         }
 
-        Throwable cause = terminalCause(outcome);
+        Throwable cause = FailureMessage.terminalCause(outcome);
         switch (outcome) {
             case WaitOutcome.TimeoutBetweenObservations<R> ignored ->
                     throw new AwaitTimeoutException(message, cause);
@@ -66,20 +63,6 @@ public final class FailureFactory {
             case WaitOutcome.Success<R> ignored ->
                     throw new AssertionError("unreachable");
         }
-    }
-
-    private static Throwable terminalCause(WaitOutcome<?> outcome) {
-        return switch (outcome) {
-            case WaitOutcome.TimeoutBetweenObservations<?> value ->
-                    value.attempt().assertionCause();
-            case WaitOutcome.LateUnsatisfiedTimeout<?> value ->
-                    value.attempt().assertionCause();
-            case WaitOutcome.StabilityLoss<?> value ->
-                    value.attempt().assertionCause();
-            case WaitOutcome.Uncontrolled<?> value -> value.attempt().cause();
-            case WaitOutcome.Success<?> ignored -> null;
-            case WaitOutcome.LateSatisfiedTimeout<?> ignored -> null;
-        };
     }
 
     private static AwaitUncontrolledException uncontrolled(

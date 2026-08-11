@@ -11,8 +11,6 @@ import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
-import io.github.gromoff97.awium.diagnostics.FailureFactory;
-
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.StructuralAwait;
 import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
@@ -410,8 +408,7 @@ class CollectionExactContentTest {
                     return actual;
                 }, Collection::size,
                 defaults().withEvery(Duration.ofNanos(1))
-                .withUpTo(Duration.ofNanos(2)), time, time,
-                new FailureFactory());
+                .withUpTo(Duration.ofNanos(2)), time, time);
     }
 
     private record Pair(String name,

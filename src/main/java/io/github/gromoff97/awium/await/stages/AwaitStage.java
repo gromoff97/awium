@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.await.stages;
 
 import io.github.gromoff97.awium.await.Await;
-import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;
 
@@ -16,9 +15,8 @@ public final class AwaitStage<S> extends AbstractAwaitStage<S> implements Await<
     }
 
     public AwaitStage(Source<S> source, WaitConfiguration configuration,
-            LongSupplier clock, LongConsumer parker,
-            FailureFactory failureFactory) {
-        super(source, configuration, clock, parker, failureFactory);
+            LongSupplier clock, LongConsumer parker) {
+        super(source, configuration, clock, parker);
     }
 
     private AwaitStage(AwaitStage<S> stage,

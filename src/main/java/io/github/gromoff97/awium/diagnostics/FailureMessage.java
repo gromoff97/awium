@@ -288,32 +288,9 @@ public final class FailureMessage {
     @SuppressWarnings("removal")
     private static String render(Object value) {
         try {
-            if (value instanceof boolean[] array) {
-                return Arrays.toString(array);
-            }
-            if (value instanceof byte[] array) {
-                return Arrays.toString(array);
-            }
-            if (value instanceof short[] array) {
-                return Arrays.toString(array);
-            }
-            if (value instanceof int[] array) {
-                return Arrays.toString(array);
-            }
-            if (value instanceof long[] array) {
-                return Arrays.toString(array);
-            }
-            if (value instanceof char[] array) {
-                return Arrays.toString(array);
-            }
-            if (value instanceof float[] array) {
-                return Arrays.toString(array);
-            }
-            if (value instanceof double[] array) {
-                return Arrays.toString(array);
-            }
-            if (value instanceof Object[] array) {
-                return Arrays.deepToString(array);
+            if (value != null && value.getClass().isArray()) {
+                String array = Arrays.deepToString(new Object[] {value});
+                return array.substring(1, array.length() - 1);
             }
             return String.valueOf(value);
         } catch (VirtualMachineError | ThreadDeath fatal) {
@@ -345,6 +322,20 @@ public final class FailureMessage {
             case Attempt.Uncontrolled.BeforeObservation<?> ignored ->
                     throw new IllegalArgumentException(
                             "attempt has no observed actual");
+        };
+    }
+
+    static Throwable terminalCause(WaitOutcome<?> outcome) {
+        return switch (outcome) {
+            case WaitOutcome.TimeoutBetweenObservations<?> value ->
+                    value.attempt().assertionCause();
+            case WaitOutcome.LateUnsatisfiedTimeout<?> value ->
+                    value.attempt().assertionCause();
+            case WaitOutcome.StabilityLoss<?> value ->
+                    value.attempt().assertionCause();
+            case WaitOutcome.Uncontrolled<?> value -> value.attempt().cause();
+            case WaitOutcome.Success<?> ignored -> null;
+            case WaitOutcome.LateSatisfiedTimeout<?> ignored -> null;
         };
     }
 
@@ -404,28 +395,13 @@ public final class FailureMessage {
             return actualMaterialized ? actual : ACTUAL_DIAGNOSTICS_FAILED;
         }
 
-        private Throwable terminalCause() {
-            return switch (outcome) {
-                case WaitOutcome.TimeoutBetweenObservations<?> value ->
-                        value.attempt().assertionCause();
-                case WaitOutcome.LateUnsatisfiedTimeout<?> value ->
-                        value.attempt().assertionCause();
-                case WaitOutcome.StabilityLoss<?> value ->
-                        value.attempt().assertionCause();
-                case WaitOutcome.Uncontrolled<?> value ->
-                        value.attempt().cause();
-                case WaitOutcome.Success<?> ignored -> null;
-                case WaitOutcome.LateSatisfiedTimeout<?> ignored -> null;
-            };
-        }
-
         @SuppressWarnings("removal")
         private AssertionDiagnostic assertionDiagnostic(
                 String fallbackMismatch) {
             if (!assertionMaterialized) {
                 assertionMaterialized = true;
                 AssertionError assertionCause =
-                        (AssertionError) terminalCause();
+                        (AssertionError) terminalCause(outcome);
                 String type = typeName(assertionCause);
                 try {
                     String message = assertionCause.getMessage();
@@ -448,7 +424,7 @@ public final class FailureMessage {
         private String causeDiagnostic() {
             if (!causeMaterialized) {
                 causeMaterialized = true;
-                Throwable terminalCause = terminalCause();
+                Throwable terminalCause = terminalCause(outcome);
                 String type = typeName(terminalCause);
                 try {
                     String message = terminalCause.getMessage();

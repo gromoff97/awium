@@ -3,7 +3,6 @@ package io.github.gromoff97.awium.await.stages;
 import io.github.gromoff97.awium.await.StructuralAwait;
 import io.github.gromoff97.awium.conditioning.conditions.StructuralCondition;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
-import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.sources.CollectionSource;
 import io.github.gromoff97.awium.sources.MapSource;
 
@@ -36,18 +35,16 @@ public final class StructuralAwaitStage<S> extends AbstractAwaitStage<S> impleme
 
     public StructuralAwaitStage(CollectionSource<? extends S> source,
             ToIntFunction<? super S> size, WaitConfiguration configuration,
-            LongSupplier clock, LongConsumer parker,
-            FailureFactory failureFactory) {
-        super(source::get, configuration, clock, parker, failureFactory);
+            LongSupplier clock, LongConsumer parker) {
+        super(source::get, configuration, clock, parker);
         this.subject = "collection";
         this.size = requireNonNull(size);
     }
 
     public StructuralAwaitStage(MapSource<? extends S> source,
             ToIntFunction<? super S> size, WaitConfiguration configuration,
-            LongSupplier clock, LongConsumer parker,
-            FailureFactory failureFactory) {
-        super(source::get, configuration, clock, parker, failureFactory);
+            LongSupplier clock, LongConsumer parker) {
+        super(source::get, configuration, clock, parker);
         this.subject = "map";
         this.size = requireNonNull(size);
     }

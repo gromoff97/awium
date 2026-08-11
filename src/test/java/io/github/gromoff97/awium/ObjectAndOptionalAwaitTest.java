@@ -10,8 +10,6 @@ import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
-import io.github.gromoff97.awium.diagnostics.FailureFactory;
-
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.Await;
 import io.github.gromoff97.awium.await.StructuralAwait;
@@ -126,7 +124,7 @@ class ObjectAndOptionalAwaitTest {
         AwaitStage<String> stage = new AwaitStage<>(source,
                 defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(10)),
-                time, time, new FailureFactory());
+                time, time);
         Condition<String, String> evenObservation = condition(
                 "even observation", value -> Integer.parseInt(value.substring(1)) % 2 == 0
                         ? satisfied(value)
@@ -201,7 +199,7 @@ class ObjectAndOptionalAwaitTest {
                 java.util.Collection::size,
                 defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)),
-                time, time, new FailureFactory());
+                time, time);
     }
 
     private static StructuralAwait<Map<String, String>> nullMapStage() {
@@ -211,7 +209,7 @@ class ObjectAndOptionalAwaitTest {
                 Map::size,
                 defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)),
-                time, time, new FailureFactory());
+                time, time);
     }
 
     private static <T> Await<T> stage(
@@ -219,7 +217,7 @@ class ObjectAndOptionalAwaitTest {
         return new AwaitStage<>(source,
                 defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(3)),
-                time, time, new FailureFactory());
+                time, time);
     }
 
     private static final class CyclingSource implements Source<String> {
