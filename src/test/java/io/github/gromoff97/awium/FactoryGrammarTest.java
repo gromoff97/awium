@@ -15,10 +15,8 @@ import io.github.gromoff97.awium.sources.Source;
 
 import io.github.gromoff97.awium.exceptions.*;
 
-import static java.lang.reflect.Modifier.isFinal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.util.Collection;
@@ -30,21 +28,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 class FactoryGrammarTest {
-
-    @Test
-    void everyFluentInterfaceIsSealedAndClosedByFinalAdapters() {
-        List<Class<?>> stages = List.of(
-                Await.class, OptionalAwait.class, StructuralAwait.class);
-
-        assertTrue(stages.stream().allMatch(Class::isSealed));
-        for (Class<?> stage : stages) {
-            for (Class<?> permitted : stage.getPermittedSubclasses()) {
-                assertTrue(permitted.isSealed()
-                        || isFinal(permitted.getModifiers()),
-                        () -> stage + " permits open subtype " + permitted);
-            }
-        }
-    }
 
     @Test
     void everyTypedNullSourceUsesTheExactValidationMessage() {
@@ -156,20 +139,6 @@ class FactoryGrammarTest {
     }
 
     @Test
-    void javaEvaluationOrderPrecedesFinalConfigurationValidation() {
-        AtomicInteger conditionExpressions = new AtomicInteger();
-        Await<String> stage = await((Source<String>) () -> "value")
-                .every(Duration.ofSeconds(20));
-        RuntimeException expected = new RuntimeException("factory failed");
-
-        RuntimeException actual = assertThrows(RuntimeException.class,
-                () -> stage.until(throwingCondition(conditionExpressions, expected)));
-
-        assertEquals(expected, actual);
-        assertEquals(1, conditionExpressions.get());
-    }
-
-    @Test
     void conditionExpressionPrecedesDeferredConfigurationValidation() {
         AtomicInteger conditionExpressions = new AtomicInteger();
 
@@ -184,12 +153,6 @@ class FactoryGrammarTest {
     private static Condition<String, String> countingCondition(AtomicInteger calls) {
         calls.incrementAndGet();
         return condition("value", Evaluation::satisfied);
-    }
-
-    private static Condition<String, String> throwingCondition(
-            AtomicInteger calls, RuntimeException failure) {
-        calls.incrementAndGet();
-        throw failure;
     }
 
     private static void assertNullSource(Executable action) {

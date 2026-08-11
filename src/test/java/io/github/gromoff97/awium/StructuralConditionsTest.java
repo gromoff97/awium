@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.util.Collection;
@@ -127,18 +128,22 @@ class StructuralConditionsTest {
         var rawMap = new ProbeContainers.ProbeMap<Object, Object>(1);
         var explainedMap = new ProbeContainers.ProbeMap<Object, Object>(1);
 
-        assertThrows(AwaitTimeoutException.class,
+        AwaitTimeoutException collectionFailure = assertThrows(
+                AwaitTimeoutException.class,
                 () -> timedCollection(rawCollection)
                         .until(empty));
         assertThrows(AwaitTimeoutException.class,
                 () -> timedCollection(explainedCollection)
                         .until(empty.because("required")));
-        assertThrows(AwaitTimeoutException.class,
+        AwaitTimeoutException mapFailure = assertThrows(AwaitTimeoutException.class,
                 () -> timedMap(rawMap).until(empty));
         assertThrows(AwaitTimeoutException.class,
                 () -> timedMap(explainedMap)
                         .until(empty.because("required")));
 
+        assertTrue(collectionFailure.getMessage()
+                .contains("collection was non-empty"));
+        assertTrue(mapFailure.getMessage().contains("map was non-empty"));
         assertNoFallback(rawCollection);
         assertNoFallback(explainedCollection);
         assertNoFallback(rawMap);

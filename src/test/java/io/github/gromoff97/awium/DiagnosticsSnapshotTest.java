@@ -696,7 +696,7 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void rendersArraysAndDurationsWithoutDependencies() {
+    void rendersArraysWithoutDependencies() {
         Object[] nested = {new int[] {1, 2}, new Object[] {3, 4}};
         Object[] recursive = new Object[1];
         recursive[0] = recursive;
@@ -714,25 +714,6 @@ class DiagnosticsSnapshotTest {
                         renderedActual(new double[] {1, 2}),
                         renderedActual(nested), renderedActual(recursive),
                         renderedActual(null)));
-
-        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
-                () -> complete(new WaitOutcome.LateUnsatisfiedTimeout<>(0,
-                                SECOND + MILLISECOND + 1_001,
-                                new Attempt.Unsatisfied<>(
-                                        "actual", "not ready", null, 1, 0)),
-                        "condition", null, config(0, 90 * SECOND, 0)));
-        assertEquals("""
-                Await timed out
-
-                Condition: condition
-                Observed: actual
-                Mismatch: not ready
-
-                Timing:
-                    Waited up to: 1 minute 30 seconds
-                    Elapsed: 1 second 1 millisecond 1 microsecond 1 nanosecond
-                    Attempts: 1
-                    Interval: 0 nanoseconds""", failure.getMessage());
     }
 
     private static AwaitTimeoutException assertionTimeout(

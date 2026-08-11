@@ -153,6 +153,9 @@ class PublicSurfaceTest {
             assertTrue(stage.isSealed(), stage.getName());
             assertEquals(permitted, Set.copyOf(Arrays.asList(
                     stage.getPermittedSubclasses())), stage.getName());
+            permitted.forEach(type -> assertTrue(type.isSealed()
+                    || isFinal(type.getModifiers()),
+                    () -> stage + " permits open subtype " + type));
         });
     }
 

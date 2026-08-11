@@ -12,11 +12,7 @@ import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.Await;
-import io.github.gromoff97.awium.await.StructuralAwait;
 import io.github.gromoff97.awium.await.stages.AwaitStage;
-import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
-import io.github.gromoff97.awium.sources.CollectionSource;
-import io.github.gromoff97.awium.sources.MapSource;
 import io.github.gromoff97.awium.sources.OptionalSource;
 import io.github.gromoff97.awium.sources.Source;
 
@@ -24,11 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
@@ -132,40 +125,6 @@ class ObjectAndOptionalAwaitTest {
         assertEquals("value", stage.until(secondEvaluationOnward));
         assertEquals("value", stage.until(secondEvaluationOnward));
         assertEquals(3, evaluations.get());
-    }
-
-    @Test
-    void collectionAndMapNullObservationsUseFacadeSpecificMismatch() {
-        StructuralCondition structural = nonEmpty;
-
-        AwaitTimeoutException collectionFailure = assertThrows(
-                AwaitTimeoutException.class,
-                () -> nullCollectionStage().until(structural));
-        AwaitTimeoutException mapFailure = assertThrows(AwaitTimeoutException.class,
-                () -> nullMapStage().until(structural));
-
-        assertTrue(collectionFailure.getMessage().contains("collection was null"));
-        assertTrue(mapFailure.getMessage().contains("map was null"));
-    }
-
-    private static StructuralAwait<List<String>> nullCollectionStage() {
-        FakeTime time = new FakeTime(0);
-        return new StructuralAwaitStage<>(
-                (CollectionSource<List<String>>) () -> null,
-                java.util.Collection::size,
-                defaults().withEvery(Duration.ofNanos(1))
-                        .withUpTo(Duration.ofNanos(2)),
-                time, time);
-    }
-
-    private static StructuralAwait<Map<String, String>> nullMapStage() {
-        FakeTime time = new FakeTime(0);
-        return new StructuralAwaitStage<>(
-                (MapSource<Map<String, String>>) () -> null,
-                Map::size,
-                defaults().withEvery(Duration.ofNanos(1))
-                        .withUpTo(Duration.ofNanos(2)),
-                time, time);
     }
 
     private static <T> Await<T> stage(

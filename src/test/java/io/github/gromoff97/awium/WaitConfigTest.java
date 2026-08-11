@@ -172,6 +172,9 @@ class WaitConfigTest {
     @Test
     void durationFormattingUsesReadableExactUnits() {
         assertEquals(
+                "poll interval (0 nanoseconds) must be shorter than acquisition timeout (0 nanoseconds)",
+                conflictMessage(0));
+        assertEquals(
                 "poll interval (1 nanosecond) must be shorter than acquisition timeout (1 nanosecond)",
                 conflictMessage(1));
         assertEquals(
