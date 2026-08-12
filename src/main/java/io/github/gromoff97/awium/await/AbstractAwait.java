@@ -31,7 +31,7 @@ abstract class AbstractAwait<S, A> {
                 LockSupport::parkNanos);
     }
 
-    protected AbstractAwait(Source<? extends S> source,
+    AbstractAwait(Source<? extends S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {
         this.source = requireNonNull(source, "source must not be null")::get;
@@ -40,7 +40,7 @@ abstract class AbstractAwait<S, A> {
         this.parker = requireNonNull(parker);
     }
 
-    protected AbstractAwait(AbstractAwait<S, ?> await,
+    AbstractAwait(AbstractAwait<S, ?> await,
             WaitConfiguration configuration) {
         this.source = await.source;
         this.configuration = requireNonNull(configuration);

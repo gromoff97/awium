@@ -9,6 +9,7 @@ import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.Await;
 import io.github.gromoff97.awium.await.OptionalAwait;
 import io.github.gromoff97.awium.await.StructuralAwait;
+import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.CollectionSource;
 import io.github.gromoff97.awium.sources.MapSource;
 import io.github.gromoff97.awium.sources.OptionalSource;
@@ -113,6 +114,21 @@ class PublicSurfaceTest {
             assertTrue(isFinal(type.getModifiers()), type.getName());
             assertFalse(isAbstract(type.getModifiers()), type.getName());
             assertFalse(type.isInterface(), type.getName());
+            Class<?> base = type.getSuperclass();
+            assertFalse(isPublic(base.getModifiers()), base.getName());
+            List<Constructor<?>> internalConstructors = Arrays.stream(
+                            base.getDeclaredConstructors())
+                    .filter(constructor -> Arrays.asList(
+                                    constructor.getParameterTypes())
+                            .contains(WaitConfiguration.class))
+                    .toList();
+            assertEquals(2, internalConstructors.size(), base.getName());
+            internalConstructors.forEach(constructor -> {
+                assertFalse(isPublic(constructor.getModifiers()),
+                        constructor.toGenericString());
+                assertFalse(isProtected(constructor.getModifiers()),
+                        constructor.toGenericString());
+            });
             Arrays.stream(type.getDeclaredConstructors())
                     .filter(constructor -> isApiMember(
                             constructor.getModifiers()))
