@@ -8,9 +8,14 @@ public sealed interface Attempt<R> permits Attempt.Satisfied, Attempt.Unsatisfie
 
     long completedNanos();
 
-    record Satisfied<R>(Object actual, R result, long number, long completedNanos) implements Attempt<R> {
+    record Satisfied<R>(Object actual, R result, long number, long completedNanos) implements Attempt<R>, WaitOutcome<R> {
         public Satisfied {
             validateNumber(number);
+        }
+
+        @Override
+        public Satisfied<R> attempt() {
+            return this;
         }
     }
 
@@ -22,11 +27,16 @@ public sealed interface Attempt<R> permits Attempt.Satisfied, Attempt.Unsatisfie
         }
     }
 
-    sealed interface Uncontrolled<R> extends Attempt<R> permits Uncontrolled.BeforeObservation, Uncontrolled.AfterObservation {
+    sealed interface Uncontrolled<R> extends Attempt<R>, WaitOutcome<R> permits Uncontrolled.BeforeObservation, Uncontrolled.AfterObservation {
 
         Origin origin();
 
         Throwable cause();
+
+        @Override
+        default Uncontrolled<R> attempt() {
+            return this;
+        }
 
         record BeforeObservation<R>(Origin origin, Throwable cause, long number,
                 long completedNanos) implements Uncontrolled<R> {

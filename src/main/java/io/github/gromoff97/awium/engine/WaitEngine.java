@@ -39,7 +39,7 @@ public final class WaitEngine {
             Attempt.Uncontrolled<R> interrupted = interrupted(
                     Attempt.Origin.WAITING, number, false, null);
             if (interrupted != null) {
-                return new WaitOutcome.Uncontrolled<>(interrupted);
+                return interrupted;
             }
 
             long before = clock.getAsLong();
@@ -52,7 +52,7 @@ public final class WaitEngine {
             long completed = observed.completedNanos();
             switch (observed) {
                 case Attempt.Uncontrolled<R> failure ->
-                        { return new WaitOutcome.Uncontrolled<>(failure); }
+                        { return failure; }
                 case Attempt.Satisfied<R> satisfied -> {
                     if (reached(completed, acquisitionDeadline)) {
                         return new WaitOutcome.LateSatisfiedTimeout<>(
@@ -74,7 +74,7 @@ public final class WaitEngine {
             Attempt.Uncontrolled<R> parked =
                     parkUntil(after(completed, delay), number + 1);
             if (parked != null) {
-                return new WaitOutcome.Uncontrolled<>(parked);
+                return parked;
             }
             number++;
         }
@@ -85,8 +85,7 @@ public final class WaitEngine {
             Attempt.Satisfied<R> acquired) {
         long acquiredAt = acquired.completedNanos();
         if (config.stableForNanos() == 0) {
-            return new WaitOutcome.Success<>(
-                    started, acquiredAt, acquired);
+            return acquired;
         }
 
         long stabilityDeadline = after(acquiredAt, config.stableForNanos());
@@ -99,28 +98,27 @@ public final class WaitEngine {
             Attempt.Uncontrolled<R> parked =
                     parkUntil(after(completed, delay), number + 1);
             if (parked != null) {
-                return new WaitOutcome.Uncontrolled<>(parked);
+                return parked;
             }
             number++;
 
             Attempt.Uncontrolled<R> interrupted = interrupted(
                     Attempt.Origin.WAITING, number, false, null);
             if (interrupted != null) {
-                return new WaitOutcome.Uncontrolled<>(interrupted);
+                return interrupted;
             }
 
             Attempt<R> observed = evaluate(source, condition, number);
             completed = observed.completedNanos();
             switch (observed) {
                 case Attempt.Uncontrolled<R> failure ->
-                        { return new WaitOutcome.Uncontrolled<>(failure); }
+                        { return failure; }
                 case Attempt.Unsatisfied<R> unsatisfied ->
                         { return new WaitOutcome.StabilityLoss<>(
                                 started, acquiredAt, unsatisfied); }
                 case Attempt.Satisfied<R> satisfied -> {
                     if (reached(completed, stabilityDeadline)) {
-                        return new WaitOutcome.Success<>(
-                                started, acquiredAt, satisfied);
+                        return satisfied;
                     }
                 }
             }

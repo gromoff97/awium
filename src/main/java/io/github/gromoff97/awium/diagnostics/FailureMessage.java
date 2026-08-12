@@ -90,9 +90,9 @@ public final class FailureMessage {
                     lateSatisfied(context, outcome);
             case WaitOutcome.StabilityLoss<?> outcome ->
                     stabilityLoss(context, outcome);
-            case WaitOutcome.Uncontrolled<?> outcome ->
+            case Attempt.Uncontrolled<?> outcome ->
                     uncontrolled(context, outcome);
-            case WaitOutcome.Success<?> ignored -> throw new IllegalArgumentException(
+            case Attempt.Satisfied<?> ignored -> throw new IllegalArgumentException(
                     "successful outcomes have no failure diagnostics");
         };
     }
@@ -138,7 +138,7 @@ public final class FailureMessage {
         }
         out.append('\n').append("Timing:\n");
         timeoutTiming(out, context, outcome.startedNanos(),
-                outcome.completedNanos(), true);
+                outcome.attempt().completedNanos(), true);
         return finish(out);
     }
 
@@ -151,7 +151,7 @@ public final class FailureMessage {
         optionalField(out, "Because", context.condition.explanation());
         out.append('\n').append("Timing:\n");
         timeoutTiming(out, context, outcome.startedNanos(),
-                outcome.completedNanos(), true);
+                outcome.attempt().completedNanos(), true);
         return finish(out);
     }
 
@@ -165,7 +165,7 @@ public final class FailureMessage {
         optionalField(out, "Because", context.condition.explanation());
         field(out, 0, "Required", duration(context.configuration.stableForNanos()));
         field(out, 0, "Failure detected after", duration(
-                outcome.completedNanos() - outcome.acquiredNanos()));
+                attempt.completedNanos() - outcome.acquiredNanos()));
         out.append('\n').append("Observed:\n");
         field(out, 4, "Actual", context.actualValue());
         field(out, 4, "Mismatch", assertion == null
@@ -182,8 +182,7 @@ public final class FailureMessage {
     }
 
     private static String uncontrolled(Context context,
-            WaitOutcome.Uncontrolled<?> outcome) {
-        Attempt.Uncontrolled<?> attempt = outcome.attempt();
+            Attempt.Uncontrolled<?> attempt) {
         boolean interrupted = attempt.cause() instanceof InterruptedException;
         String title = interrupted ? "Await was interrupted" : switch (
                 attempt.origin()) {

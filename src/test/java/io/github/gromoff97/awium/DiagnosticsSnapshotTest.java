@@ -217,10 +217,10 @@ class DiagnosticsSnapshotTest {
     @Test
     void formatsAConditionFailureInGlobalFieldOrder() {
         var cause = new IllegalStateException("connection is closed");
-        WaitOutcome<Object> outcome = new WaitOutcome.Uncontrolled<>(
+        WaitOutcome<Object> outcome =
                 new Attempt.Uncontrolled.AfterObservation<>(
                         Attempt.Origin.CONDITION,
-                        "Payment[id=42, status=PENDING]", cause, 7, 0));
+                        "Payment[id=42, status=PENDING]", cause, 7, 0);
 
         AwaitConditionEvaluationException failure = assertThrows(
                 AwaitConditionEvaluationException.class,
@@ -243,10 +243,10 @@ class DiagnosticsSnapshotTest {
     void formatsAnInterruptionVerbatim() {
         var cause = new InterruptedException(
                 "caller thread interrupt flag was set");
-        WaitOutcome<Object> outcome = new WaitOutcome.Uncontrolled<>(
+        WaitOutcome<Object> outcome =
                 new Attempt.Uncontrolled.AfterObservation<>(
                         Attempt.Origin.CONDITION,
-                        "Payment[id=42, status=PENDING]", cause, 12, 0));
+                        "Payment[id=42, status=PENDING]", cause, 12, 0);
 
         AwaitInterruptedException failure = assertThrows(
                 AwaitInterruptedException.class,
@@ -270,12 +270,12 @@ class DiagnosticsSnapshotTest {
     void mapsSourceAndWaitingFailuresWithoutBorrowingAnActual() {
         var sourceCause = new AssertionError("source broke");
         var waitingCause = new IllegalStateException("parker broke");
-        WaitOutcome<Object> source = new WaitOutcome.Uncontrolled<>(
+        WaitOutcome<Object> source =
                 new Attempt.Uncontrolled.BeforeObservation<>(
-                        Attempt.Origin.SOURCE, sourceCause, 3, 0));
-        WaitOutcome<Object> waiting = new WaitOutcome.Uncontrolled<>(
+                        Attempt.Origin.SOURCE, sourceCause, 3, 0);
+        WaitOutcome<Object> waiting =
                 new Attempt.Uncontrolled.BeforeObservation<>(
-                        Attempt.Origin.WAITING, waitingCause, 4, 0));
+                        Attempt.Origin.WAITING, waitingCause, 4, 0);
 
         AwaitSourceRetrievalException sourceFailure = assertThrows(
                 AwaitSourceRetrievalException.class,
@@ -311,8 +311,8 @@ class DiagnosticsSnapshotTest {
                     descriptions[0]++;
                     return "condition";
                 }, null);
-        WaitOutcome<Object> outcome = new WaitOutcome.Success<>(0, 0,
-                new Attempt.Satisfied<>(actual, result, 1, 0));
+        WaitOutcome<Object> outcome =
+                new Attempt.Satisfied<>(actual, result, 1, 0);
 
         assertSame(result, complete(new FailureFactory(),
                 outcome, runtime, config(1, 2, 0)));
@@ -331,9 +331,9 @@ class DiagnosticsSnapshotTest {
                     descriptions[0]++;
                     throw new IllegalStateException("bad description");
                 }, null);
-        WaitOutcome<Object> outcome = new WaitOutcome.Uncontrolled<>(
+        WaitOutcome<Object> outcome =
                 new Attempt.Uncontrolled.AfterObservation<>(
-                        Attempt.Origin.CONDITION, actual, cause, 1, 0));
+                        Attempt.Origin.CONDITION, actual, cause, 1, 0);
 
         AwaitConditionEvaluationException failure = assertThrows(
                 AwaitConditionEvaluationException.class,
@@ -357,10 +357,10 @@ class DiagnosticsSnapshotTest {
     void usesDescriptionFallbackForNullAndBlankValues() {
         for (String description : new String[] {null, "", " \t\n"}) {
             var calls = new int[1];
-            WaitOutcome<Object> outcome = new WaitOutcome.Uncontrolled<>(
+            WaitOutcome<Object> outcome =
                     new Attempt.Uncontrolled.BeforeObservation<>(
                             Attempt.Origin.SOURCE,
-                            new IllegalStateException(), 1, 0));
+                            new IllegalStateException(), 1, 0);
 
             AwaitSourceRetrievalException failure = assertThrows(
                     AwaitSourceRetrievalException.class,
@@ -422,9 +422,9 @@ class DiagnosticsSnapshotTest {
     @Test
     void readsAnUncontrolledCauseMessageOnce() {
         var cause = new CountingCause("broken");
-        WaitOutcome<Object> outcome = new WaitOutcome.Uncontrolled<>(
+        WaitOutcome<Object> outcome =
                 new Attempt.Uncontrolled.BeforeObservation<>(
-                        Attempt.Origin.SOURCE, cause, 1, 0));
+                        Attempt.Origin.SOURCE, cause, 1, 0);
 
         AwaitSourceRetrievalException failure = assertThrows(
                 AwaitSourceRetrievalException.class,
@@ -445,9 +445,9 @@ class DiagnosticsSnapshotTest {
                     descriptions[0]++;
                     return "condition one\r\n condition two\rcondition three";
                 }, "because one\r\nbecause two");
-        WaitOutcome<Object> outcome = new WaitOutcome.Uncontrolled<>(
+        WaitOutcome<Object> outcome =
                 new Attempt.Uncontrolled.AfterObservation<>(
-                        Attempt.Origin.CONDITION, actual, cause, 2, 0));
+                        Attempt.Origin.CONDITION, actual, cause, 2, 0);
 
         AwaitConditionEvaluationException failure = assertThrows(
                 AwaitConditionEvaluationException.class,
@@ -510,9 +510,9 @@ class DiagnosticsSnapshotTest {
     @Test
     void diagnosticCallbacksMaySetTheInterruptFlagWithoutChangingTheOutcome() {
         var sourceCause = new IllegalStateException("source broke");
-        WaitOutcome<Object> sourceOutcome = new WaitOutcome.Uncontrolled<>(
+        WaitOutcome<Object> sourceOutcome =
                 new Attempt.Uncontrolled.BeforeObservation<>(
-                        Attempt.Origin.SOURCE, sourceCause, 1, 0));
+                        Attempt.Origin.SOURCE, sourceCause, 1, 0);
         var interruptingActual = new InterruptingValue();
         WaitOutcome<Object> timeoutOutcome =
                 new WaitOutcome.LateUnsatisfiedTimeout<>(0,
@@ -642,10 +642,10 @@ class DiagnosticsSnapshotTest {
         var valueFatal = new InternalError("value fatal");
         var messageFatal = new InternalError("message fatal");
         var formatterFatal = new InternalError("formatter fatal");
-        WaitOutcome<Object> sourceFailure = new WaitOutcome.Uncontrolled<>(
+        WaitOutcome<Object> sourceFailure =
                 new Attempt.Uncontrolled.BeforeObservation<>(
                         Attempt.Origin.SOURCE,
-                        new IllegalStateException("source"), 1, 0));
+                        new IllegalStateException("source"), 1, 0);
         WaitOutcome<Object> valueFailure =
                 new WaitOutcome.LateUnsatisfiedTimeout<>(0,
                         new Attempt.Unsatisfied<>(new ThrowingValue(valueFatal),
@@ -676,10 +676,10 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void normalizesNestedMultilineFieldsWithoutTrailingSpaces() {
-        WaitOutcome<Object> outcome = new WaitOutcome.Uncontrolled<>(
+        WaitOutcome<Object> outcome =
                 new Attempt.Uncontrolled.BeforeObservation<>(
                         Attempt.Origin.SOURCE,
-                        new IllegalStateException("failure"), 1, 0));
+                        new IllegalStateException("failure"), 1, 0);
 
         String message = sourceFailure(outcome,
                 "first\r\n second\rthird\n").getMessage();
@@ -727,9 +727,9 @@ class DiagnosticsSnapshotTest {
     }
 
     private static AwaitSourceRetrievalException sourceFailure(Throwable cause) {
-        WaitOutcome<Object> outcome = new WaitOutcome.Uncontrolled<>(
+        WaitOutcome<Object> outcome =
                 new Attempt.Uncontrolled.BeforeObservation<>(
-                        Attempt.Origin.SOURCE, cause, 1, 0));
+                        Attempt.Origin.SOURCE, cause, 1, 0);
         return assertThrows(AwaitSourceRetrievalException.class,
                 () -> complete(outcome, "condition", null, config(1, 2, 0)));
     }

@@ -30,8 +30,8 @@ public final class FailureFactory {
     public <R> R complete(WaitOutcome<R> outcome,
             RuntimeCondition<?, R> condition,
             WaitConfiguration configuration) {
-        if (outcome instanceof WaitOutcome.Success<R> success) {
-            return success.attempt().result();
+        if (outcome instanceof Attempt.Satisfied<R> success) {
+            return success.result();
         }
 
         String message;
@@ -55,9 +55,9 @@ public final class FailureFactory {
                     throw new AwaitTimeoutException(message, cause);
             case WaitOutcome.StabilityLoss<R> ignored ->
                     throw new AwaitStabilizationException(message, cause);
-            case WaitOutcome.Uncontrolled<R> uncontrolled ->
-                    throw uncontrolled(uncontrolled.attempt(), message);
-            case WaitOutcome.Success<R> ignored ->
+            case Attempt.Uncontrolled<R> uncontrolled ->
+                    throw uncontrolled(uncontrolled, message);
+            case Attempt.Satisfied<R> ignored ->
                     throw new AssertionError("unreachable");
         }
     }

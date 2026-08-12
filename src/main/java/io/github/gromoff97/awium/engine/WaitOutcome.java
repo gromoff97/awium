@@ -1,57 +1,26 @@
 package io.github.gromoff97.awium.engine;
 
-import static java.util.Objects.requireNonNull;
-
-public sealed interface WaitOutcome<R> permits WaitOutcome.Success, WaitOutcome.TimeoutBetweenObservations, WaitOutcome.LateUnsatisfiedTimeout, WaitOutcome.LateSatisfiedTimeout, WaitOutcome.StabilityLoss, WaitOutcome.Uncontrolled {
+public sealed interface WaitOutcome<R> permits Attempt.Satisfied, Attempt.Uncontrolled, WaitOutcome.TimeoutBetweenObservations, WaitOutcome.LateUnsatisfiedTimeout, WaitOutcome.LateSatisfiedTimeout, WaitOutcome.StabilityLoss {
 
     Attempt<R> attempt();
-
-    default long completedNanos() {
-        return attempt().completedNanos();
-    }
 
     default long completedAttempts() {
         return attempt().number();
     }
 
-    record Success<R>(long startedNanos, long acquiredNanos,
-            Attempt.Satisfied<R> attempt) implements WaitOutcome<R> {
-        public Success {
-            requireNonNull(attempt);
-        }
-    }
-
     record TimeoutBetweenObservations<R>(long startedNanos, long completedNanos,
             Attempt.Unsatisfied<R> attempt) implements WaitOutcome<R> {
-        public TimeoutBetweenObservations {
-            requireNonNull(attempt);
-        }
     }
 
     record LateUnsatisfiedTimeout<R>(long startedNanos,
             Attempt.Unsatisfied<R> attempt) implements WaitOutcome<R> {
-        public LateUnsatisfiedTimeout {
-            requireNonNull(attempt);
-        }
     }
 
     record LateSatisfiedTimeout<R>(long startedNanos,
             Attempt.Satisfied<R> attempt) implements WaitOutcome<R> {
-        public LateSatisfiedTimeout {
-            requireNonNull(attempt);
-        }
     }
 
     record StabilityLoss<R>(long startedNanos, long acquiredNanos,
             Attempt.Unsatisfied<R> attempt) implements WaitOutcome<R> {
-        public StabilityLoss {
-            requireNonNull(attempt);
-        }
-    }
-
-    record Uncontrolled<R>(Attempt.Uncontrolled<R> attempt) implements WaitOutcome<R> {
-        public Uncontrolled {
-            requireNonNull(attempt);
-        }
     }
 }
