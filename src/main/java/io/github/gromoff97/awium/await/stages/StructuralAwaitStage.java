@@ -3,8 +3,7 @@ package io.github.gromoff97.awium.await.stages;
 import io.github.gromoff97.awium.await.StructuralAwait;
 import io.github.gromoff97.awium.conditioning.conditions.StructuralCondition;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
-import io.github.gromoff97.awium.sources.CollectionSource;
-import io.github.gromoff97.awium.sources.MapSource;
+import io.github.gromoff97.awium.sources.Source;
 
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
@@ -18,35 +17,19 @@ public final class StructuralAwaitStage<S> extends AbstractAwaitStage<S, Structu
     private final String subject;
     private final ToIntFunction<? super S> size;
 
-    public StructuralAwaitStage(CollectionSource<? extends S> source,
+    public StructuralAwaitStage(Source<? extends S> source, String subject,
             ToIntFunction<? super S> size) {
         super(requireNonNull(source, "source must not be null")::get);
-        this.subject = "collection";
+        this.subject = requireNonNull(subject);
         this.size = requireNonNull(size);
     }
 
-    public StructuralAwaitStage(MapSource<? extends S> source,
-            ToIntFunction<? super S> size) {
-        super(requireNonNull(source, "source must not be null")::get);
-        this.subject = "map";
-        this.size = requireNonNull(size);
-    }
-
-    public StructuralAwaitStage(CollectionSource<? extends S> source,
+    public StructuralAwaitStage(Source<? extends S> source, String subject,
             ToIntFunction<? super S> size, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         super(requireNonNull(source, "source must not be null")::get,
                 configuration, clock, parker);
-        this.subject = "collection";
-        this.size = requireNonNull(size);
-    }
-
-    public StructuralAwaitStage(MapSource<? extends S> source,
-            ToIntFunction<? super S> size, WaitConfiguration configuration,
-            LongSupplier clock, LongConsumer parker) {
-        super(requireNonNull(source, "source must not be null")::get,
-                configuration, clock, parker);
-        this.subject = "map";
+        this.subject = requireNonNull(subject);
         this.size = requireNonNull(size);
     }
 

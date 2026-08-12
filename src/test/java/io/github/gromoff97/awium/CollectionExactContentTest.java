@@ -10,11 +10,13 @@ import static io.github.gromoff97.awium.conditioning.providers.CollectionConditi
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 
 import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
 import io.github.gromoff97.awium.sources.CollectionSource;
+import io.github.gromoff97.awium.sources.Source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -140,10 +142,10 @@ class CollectionExactContentTest {
 
         assertThrows(AwaitTimeoutException.class,
                 () -> new StructuralAwaitStage<>(
-                        (CollectionSource<ExactList<String>>) () -> {
+                        (Source<ExactList<String>>) () -> {
                             time.advanceNanos(2);
                             return actual;
-                        }, Collection::size,
+                        }, "collection", Collection::size,
                         defaults().withEvery(Duration.ofNanos(1))
                                 .withUpTo(Duration.ofNanos(2)), time, time)
                         .until(containsExactlyElementsOf(expected)

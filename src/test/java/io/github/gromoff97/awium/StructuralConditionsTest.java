@@ -12,9 +12,11 @@ import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
 import io.github.gromoff97.awium.sources.CollectionSource;
 import io.github.gromoff97.awium.sources.MapSource;
+import io.github.gromoff97.awium.sources.Source;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -63,52 +65,47 @@ class StructuralConditionsTest {
     }
 
     @Test
-    void successfulFacadesReturnTheExactConcreteContainers() {
-        var collection = new ProbeContainers.ProbeCollection<Object>(1);
-        var map = new ProbeContainers.ProbeMap<Object, Object>(1);
-
-        ProbeContainers.ProbeCollection<Object> returnedCollection =
-                await((CollectionSource<
-                        ProbeContainers.ProbeCollection<Object>>) () -> collection)
-                        .until(nonEmpty);
-        ProbeContainers.ProbeMap<Object, Object> returnedMap =
-                await((MapSource<
-                        ProbeContainers.ProbeMap<Object, Object>>) () -> map)
-                        .until(nonEmpty.because("required"));
-
-        assertSame(collection, returnedCollection);
-        assertSame(map, returnedMap);
-        assertEquals(1, collection.sizeCalls);
-        assertEquals(1, map.sizeCalls);
+    void publicFacadesKeepCollectionAndMapDiagnosticsDistinct() {
+        assertSubjectFailure(() -> await(
+                        (CollectionSource<List<String>>) () -> List.of("value"))
+                        .every(Duration.ofNanos(1))
+                        .upTo(Duration.ofNanos(2)).until(empty()),
+                "collection", "map");
+        assertSubjectFailure(() -> await(
+                        (MapSource<Map<String, String>>)
+                                () -> Map.of("key", "value"))
+                        .every(Duration.ofNanos(1))
+                        .upTo(Duration.ofNanos(2)).until(empty()),
+                "map", "collection");
     }
 
     @Test
     void terminalDiagnosticsReuseTheCapturedSize() {
         var rawCollection = new ProbeContainers.ProbeCollection<Object>(1);
-        var rawMap = new ProbeContainers.ProbeMap<Object, Object>(1);
+        var rawMap = new ProbeContainers.ProbeMap<Object, Object>();
         FakeTime collectionTime = new FakeTime(0);
         FakeTime mapTime = new FakeTime(0);
 
         AwaitTimeoutException collectionFailure = assertThrows(
                 AwaitTimeoutException.class,
                 () -> new StructuralAwaitStage<>(
-                        (CollectionSource<ProbeContainers.ProbeCollection<Object>>)
+                        (Source<ProbeContainers.ProbeCollection<Object>>)
                                 () -> {
                                     collectionTime.advanceNanos(2);
                                     return rawCollection;
                                 },
-                        Collection::size,
+                        "collection", Collection::size,
                         defaults().withEvery(Duration.ofNanos(1))
                                 .withUpTo(Duration.ofNanos(2)),
                         collectionTime, collectionTime).until(empty));
         AwaitTimeoutException mapFailure = assertThrows(AwaitTimeoutException.class,
                 () -> new StructuralAwaitStage<>(
-                        (MapSource<ProbeContainers.ProbeMap<Object, Object>>)
+                        (Source<ProbeContainers.ProbeMap<Object, Object>>)
                                 () -> {
                                     mapTime.advanceNanos(2);
                                     return rawMap;
                                 },
-                        Map::size,
+                        "map", Map::size,
                         defaults().withEvery(Duration.ofNanos(1))
                                 .withUpTo(Duration.ofNanos(2)),
                         mapTime, mapTime).until(empty));
@@ -187,6 +184,18 @@ class StructuralConditionsTest {
         assertEquals(Evaluation.Status.UNSATISFIED, evaluation.status());
         assertNull(evaluation.result());
         assertEquals(mismatch, evaluation.mismatch());
+    }
+
+    private static void assertSubjectFailure(
+            org.junit.jupiter.api.function.Executable terminal,
+            String subject, String otherSubject) {
+        String message = assertThrows(
+                AwaitTimeoutException.class, terminal).getMessage();
+        assertTrue(message.contains(
+                "Condition: " + subject + " to be empty\n"));
+        assertTrue(message.contains(
+                "Mismatch: " + subject + " was non-empty\n"));
+        assertFalse(message.contains(otherSubject));
     }
 
     private record Case(StructuralCondition condition, int matchingSize,

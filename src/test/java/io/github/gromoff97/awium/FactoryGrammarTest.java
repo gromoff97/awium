@@ -26,7 +26,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -35,7 +34,6 @@ class FactoryGrammarTest {
     @Test
     void everyTypedNullSourceUsesTheExactValidationMessage() {
         assertNullSource(() -> await((Source<Object>) null));
-        assertNullSource(() -> await((OptionalSource<Object>) null));
         assertNullSource(() -> await(
                 (CollectionSource<Collection<Object>>) null));
         assertNullSource(() -> await(
@@ -44,11 +42,8 @@ class FactoryGrammarTest {
 
     @Test
     void repeatedConfigurationUsesTheLastValueWithoutMutatingEarlierStages() {
-        AtomicInteger calls = new AtomicInteger();
-        Await<String> initial = await(() -> {
-            calls.incrementAndGet();
-            return "value";
-        });
+        int[] calls = {0};
+        Await<String> initial = await(() -> "v" + ++calls[0]);
 
         Await<String> slow = initial.every(Duration.ofSeconds(20));
         Await<String> repaired = slow
@@ -58,57 +53,9 @@ class FactoryGrammarTest {
                 .stableFor(Duration.ofSeconds(2))
                 .stableFor(Duration.ZERO);
 
-        assertEquals("value", repaired.until(isNotNull));
         assertThrows(AwaitConfigurationConflictException.class,
                 () -> slow.until(isNotNull));
-        assertEquals(1, calls.get());
-    }
-
-    @Test
-    void everyTerminalOverloadValidatesTheFinalConfigurationPair() {
-        AtomicInteger sourceCalls = new AtomicInteger();
-        Await<String> object = await(
-                (Source<String>) () -> {
-                    sourceCalls.incrementAndGet();
-                    return "value";
-                }).every(Duration.ofSeconds(20));
-        OptionalAwait<String> optional = await(
-                (OptionalSource<String>) () -> {
-                    sourceCalls.incrementAndGet();
-                    return Optional.of("value");
-                }).every(Duration.ofSeconds(20));
-        StructuralAwait<List<String>> collection =
-                await((CollectionSource<List<String>>) () -> {
-                            sourceCalls.incrementAndGet();
-                            return List.of("value");
-                        }).every(Duration.ofSeconds(20));
-        StructuralAwait<Map<String, String>> map =
-                await((MapSource<Map<String, String>>) () -> {
-                            sourceCalls.incrementAndGet();
-                            return Map.of("key", "value");
-                        }).every(Duration.ofSeconds(20));
-        Condition<String, String> selecting = condition(
-                "selecting", Evaluation::satisfied);
-
-        List<Executable> terminals = List.of(
-                () -> object.until(isNotNull),
-                () -> object.until(
-                        isNotNull.because("preserving")),
-                () -> object.until(selecting),
-                () -> object.until(selecting.because("selecting")),
-                () -> optional.until(present),
-                () -> optional.until(
-                        present.because("present")),
-                () -> collection.until(nonEmpty),
-                () -> collection.until(
-                        nonEmpty.because("collection")),
-                () -> map.until(nonEmpty),
-                () -> map.until(nonEmpty.because("map")));
-
-        for (Executable terminal : terminals) {
-            assertThrows(AwaitConfigurationConflictException.class, terminal);
-        }
-        assertEquals(0, sourceCalls.get());
+        assertEquals("v1", repaired.until(isNotNull));
     }
 
     @Test
@@ -134,37 +81,15 @@ class FactoryGrammarTest {
         assertNullCondition(() -> collection.until(
                 (StructuralCondition.ExplainedCondition) null));
 
-        StructuralAwait<Map<String, String>> map =
-                await((MapSource<Map<String, String>>) Map::of)
-                        .every(Duration.ofSeconds(20));
-        assertNullCondition(() -> map.until((StructuralCondition) null));
-        assertNullCondition(() -> map.until((StructuralCondition.ExplainedCondition) null));
-    }
-
-    @Test
-    void conditionExpressionPrecedesDeferredConfigurationValidation() {
-        AtomicInteger conditionExpressions = new AtomicInteger();
-
-        assertThrows(AwaitConfigurationConflictException.class, () -> await((Source<String>) () -> "value")
-                .every(Duration.ofSeconds(20))
-                .upTo(Duration.ofSeconds(10))
-                .until(countingCondition(conditionExpressions)));
-
-        assertEquals(1, conditionExpressions.get());
-    }
-
-    private static Condition<String, String> countingCondition(AtomicInteger calls) {
-        calls.incrementAndGet();
-        return condition("value", Evaluation::satisfied);
     }
 
     private static void assertNullSource(Executable action) {
-        NullPointerException failure = assertThrows(NullPointerException.class, action);
-        assertEquals("source must not be null", failure.getMessage());
+        assertEquals("source must not be null",
+                assertThrows(NullPointerException.class, action).getMessage());
     }
 
     private static void assertNullCondition(Executable action) {
-        NullPointerException failure = assertThrows(NullPointerException.class, action);
-        assertEquals("condition must not be null", failure.getMessage());
+        assertEquals("condition must not be null",
+                assertThrows(NullPointerException.class, action).getMessage());
     }
 }

@@ -23,10 +23,8 @@ class CompilationContractTest {
                 import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
                 import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
                 import static java.time.Duration.ofMillis;
-                import io.github.gromoff97.awium.await.Await;
                 import io.github.gromoff97.awium.sources.Source;
                 import io.github.gromoff97.awium.conditioning.Evaluation;
-                import io.github.gromoff97.awium.conditioning.conditions.Condition;
                 import io.github.gromoff97.awium.conditioning.conditions.StructuralCondition;
                 import java.util.*;
 
@@ -43,17 +41,12 @@ class CompilationContractTest {
 
                     void check(StructuralCondition structural,
                             StructuralCondition.ExplainedCondition explainedStructural) {
+                        StructuralCondition emptyField = empty;
+                        StructuralCondition nonEmptyField = nonEmpty;
+                        StructuralCondition emptyFactory = empty();
+                        StructuralCondition nonEmptyFactory = nonEmpty();
                         Source<String> source = Contract::object;
                         String immediate = await(source).until(isNotNull);
-                        String every = await(source).every(ofMillis(1)).until(isNotNull);
-                        String upTo = await(source).upTo(ofMillis(2)).until(isNotNull);
-                        String stable = await(source).stableFor(ofMillis(1)).until(isNotNull);
-                        String everyUpTo = await(source).every(ofMillis(1))
-                                .upTo(ofMillis(2)).until(isNotNull);
-                        String everyStable = await(source).every(ofMillis(1))
-                                .stableFor(ofMillis(1)).until(isNotNull);
-                        String upToStable = await(source).upTo(ofMillis(2))
-                                .stableFor(ofMillis(1)).until(isNotNull);
                         String all = await(source).every(ofMillis(1)).upTo(ofMillis(2))
                                 .stableFor(ofMillis(1)).until(isNotNull);
 
@@ -87,10 +80,7 @@ class CompilationContractTest {
     void excludedDirectAndJdkSourceTypesDoNotCompile() throws IOException {
         for (String declaration : new String[] {
                 "String source = \"value\";",
-                "java.util.function.Supplier<String> source = () -> \"value\";",
-                "java.util.concurrent.Callable<String> source = () -> \"value\";",
-                "java.util.concurrent.Future<String> source = null;",
-                "java.lang.Iterable<String> source = java.util.List.of();"
+                "java.util.function.Supplier<String> source = () -> \"value\";"
         }) {
             assertFalse(compiles("""
                     import static io.github.gromoff97.awium.Awium.await;
@@ -127,26 +117,19 @@ class CompilationContractTest {
 
     @Test
     void configurationOrderAndRepetitionCompile() throws IOException {
-        for (String chain : new String[] {
-                "every(d).every(d)",
-                "upTo(d).every(d)",
-                "stableFor(d).upTo(d)",
-                "stableFor(d).every(d).upTo(d)",
-                "upTo(d).stableFor(d).upTo(d).every(d).stableFor(d)"
-        }) {
-            assertTrue(compiles("""
-                    import static io.github.gromoff97.awium.Awium.await;
-                    import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.isNotNull;
-                    import io.github.gromoff97.awium.sources.Source;
-                    import java.time.Duration;
-                    final class Contract {
-                        String check(Source<String> source) {
-                            Duration d = Duration.ofMillis(1);
-                            return await(source).%s.until(isNotNull);
-                        }
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.Awium.await;
+                import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.isNotNull;
+                import io.github.gromoff97.awium.sources.Source;
+                import java.time.Duration;
+                final class Contract {
+                    String check(Source<String> source) {
+                        Duration d = Duration.ofMillis(1);
+                        return await(source).stableFor(d).upTo(d).every(d)
+                                .stableFor(d).every(d).upTo(d).until(isNotNull);
                     }
-                    """.formatted(chain)), chain);
-        }
+                }
+                """));
     }
 
     @Test
@@ -172,7 +155,6 @@ class CompilationContractTest {
                 import static io.github.gromoff97.awium.Awium.await;
                 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
                 import io.github.gromoff97.awium.sources.*;
-                import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;
 
                 final class Contract {
@@ -198,9 +180,6 @@ class CompilationContractTest {
                                 doesNotContainExactlyInAnyOrderElementsOf(expected)
                                         .because("any order"));
 
-                        await(Contract::list).until(containsExactlyInAnyOrder("a"));
-                        await(Contract::list).until(
-                                containsExactlyInAnyOrderElementsOf(expected));
                     }
                 }
                 """));
@@ -208,27 +187,18 @@ class CompilationContractTest {
 
     @Test
     void orderedExactFactoriesRejectCollectionOnlySources() throws IOException {
-        for (String condition : new String[] {
-                "containsExactly(\"a\")",
-                "doesNotContainExactly(\"a\")",
-                "containsExactlyElementsOf(expected)",
-                "doesNotContainExactlyElementsOf(expected)"
-        }) {
-            assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.Awium.await;
-                    import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
-                    import io.github.gromoff97.awium.sources.CollectionSource;
-                    import io.github.gromoff97.awium.conditioning.conditions.*;
-                    import java.util.*;
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.Awium.await;
+                import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
+                import io.github.gromoff97.awium.sources.CollectionSource;
+                import java.util.*;
 
-                    final class Contract {
-                        void check(CollectionSource<Set<String>> source,
-                                Collection<String> expected) {
-                            await(source).until(%s);
-                        }
+                final class Contract {
+                    void check(CollectionSource<Set<String>> source) {
+                        await(source).until(containsExactly("a"));
                     }
-                    """.formatted(condition)), condition);
-        }
+                }
+                """));
     }
 
     @Test

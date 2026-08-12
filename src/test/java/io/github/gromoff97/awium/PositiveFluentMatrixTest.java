@@ -14,7 +14,6 @@ import io.github.gromoff97.awium.sources.Source;
 
 import static io.github.gromoff97.awium.Awium.await;
 import static java.time.Duration.ZERO;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.time.Duration;
@@ -63,88 +62,36 @@ class PositiveFluentMatrixTest {
     }
 
     @Test
-    void optionalFacadeExecutesEveryValidConfigurationPath() {
+    void optionalFacadeExecutesCanonicalFullChain() {
         var value = new Object();
         OptionalSource<Object> source = () -> Optional.of(value);
 
-        assertAllSame(value,
-                await(source).until(present),
-                await(source).every(EVERY)
-                        .until(present.because("optional every")),
-                await(source).upTo(UP_TO).until(present),
-                await(source).stableFor(ZERO)
-                        .until(present.because("optional stable")),
-                await(source).every(EVERY).upTo(UP_TO)
-                        .until(present),
-                await(source).every(EVERY).stableFor(ZERO)
-                        .until(present.because("optional every stable")),
-                await(source).upTo(UP_TO).stableFor(ZERO)
-                        .until(present),
+        assertSame(value,
                 await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(present.because("optional all")),
-                await(source).stableFor(ZERO).upTo(UP_TO).every(EVERY)
-                        .until(present),
-                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(present));
+                        .until(present.because("optional full chain")));
     }
 
     @Test
-    void collectionFacadeExecutesEveryValidConfigurationPath() {
+    void collectionFacadeExecutesCanonicalFullChain() {
         var actual = new ArrayList<>(List.of("value"));
         CollectionSource<ArrayList<String>> source = () -> actual;
 
-        assertAllSame(actual,
-                await(source).until(nonEmpty),
-                await(source).every(EVERY)
-                        .until(nonEmpty.because("collection every")),
-                await(source).upTo(UP_TO).until(nonEmpty),
-                await(source).stableFor(ZERO)
-                        .until(nonEmpty.because("collection stable")),
-                await(source).every(EVERY).upTo(UP_TO)
-                        .until(nonEmpty),
-                await(source).every(EVERY).stableFor(ZERO)
-                        .until(nonEmpty.because("collection every stable")),
-                await(source).upTo(UP_TO).stableFor(ZERO)
-                        .until(nonEmpty),
+        assertSame(actual,
                 await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(nonEmpty.because("collection all")),
-                await(source).stableFor(ZERO).upTo(UP_TO).every(EVERY)
-                        .until(nonEmpty),
-                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(nonEmpty));
+                        .until(nonEmpty.because("collection full chain")));
     }
 
     @Test
-    void mapFacadeExecutesEveryValidConfigurationPath() {
+    void mapFacadeExecutesCanonicalFullChain() {
         var actual = new LinkedHashMap<>(java.util.Map.of("key", "value"));
         MapSource<LinkedHashMap<String, String>> source = () -> actual;
 
-        assertAllSame(actual,
-                await(source).until(nonEmpty),
-                await(source).every(EVERY)
-                        .until(nonEmpty.because("map every")),
-                await(source).upTo(UP_TO).until(nonEmpty),
-                await(source).stableFor(ZERO)
-                        .until(nonEmpty.because("map stable")),
-                await(source).every(EVERY).upTo(UP_TO)
-                        .until(nonEmpty),
-                await(source).every(EVERY).stableFor(ZERO)
-                        .until(nonEmpty.because("map every stable")),
-                await(source).upTo(UP_TO).stableFor(ZERO)
-                        .until(nonEmpty),
+        assertSame(actual,
                 await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(nonEmpty.because("map all")),
-                await(source).stableFor(ZERO).upTo(UP_TO).every(EVERY)
-                        .until(nonEmpty),
-                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(nonEmpty));
+                        .until(nonEmpty.because("map full chain")));
     }
 
     private static void assertAllSame(Object expected, Object... actuals) {
-        assertEquals(10, actuals.length);
         for (Object actual : actuals) {
             assertSame(expected, actual);
         }

@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class ObjectAndOptionalAwaitTest {
@@ -53,9 +52,9 @@ class ObjectAndOptionalAwaitTest {
 
     @Test
     void reusableStageRetainsTheExactSourceAndStartsEachTerminalFresh() {
-        AtomicInteger calls = new AtomicInteger();
+        int[] calls = {0};
         FakeTime time = new FakeTime(0);
-        Await<Integer> stage = stage(time, calls::incrementAndGet);
+        Await<Integer> stage = stage(time, () -> ++calls[0]);
         Condition<Integer, Integer> evenObservation = condition(
                 "even observation", value -> value % 2 == 0
                         ? satisfied(value)
@@ -63,15 +62,15 @@ class ObjectAndOptionalAwaitTest {
 
         assertEquals(2, stage.until(evenObservation));
         assertEquals(4, stage.until(evenObservation));
-        assertEquals(4, calls.get());
+        assertEquals(4, calls[0]);
     }
 
     @Test
     void reusableStageStartsFreshAfterControlledAndUncontrolledFailures() {
         FakeTime time = new FakeTime(0);
-        AtomicInteger sourceCalls = new AtomicInteger();
+        int[] sourceCalls = {0};
         Await<String> stage = stage(time, () -> {
-            sourceCalls.incrementAndGet();
+            sourceCalls[0]++;
             return "value";
         });
         Condition<String, String> never = condition(
@@ -89,7 +88,7 @@ class ObjectAndOptionalAwaitTest {
 
         assertEquals("value", stage.until(condition(
                 "ready", Evaluation::satisfied)));
-        assertEquals(5, sourceCalls.get());
+        assertEquals(5, sourceCalls[0]);
     }
 
     private static <T> Await<T> stage(

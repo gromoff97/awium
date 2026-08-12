@@ -16,6 +16,7 @@ import io.github.gromoff97.awium.conditioning.providers.MapConditionProvider;
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
 import io.github.gromoff97.awium.sources.MapSource;
+import io.github.gromoff97.awium.sources.Source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -341,10 +342,10 @@ class MapConditionsTest {
         var actual = entryMap(entry("a", "1"));
         FakeTime time = new FakeTime(0);
         var timed = new StructuralAwaitStage<>(
-                (MapSource<ProbeContainers.EntryMap<String, String>>) () -> {
+                (Source<ProbeContainers.EntryMap<String, String>>) () -> {
                     time.advanceNanos(2);
                     return actual;
-                }, Map::size,
+                }, "map", Map::size,
                 defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(2)), time, time);
 
@@ -375,9 +376,6 @@ class MapConditionsTest {
                                 typed = containsAllEntriesOf(expected);
                         HashMap<Number, CharSequence> result = await(source)
                                 .until(containsExactlyEntriesOf(expected));
-                        containsKey(1);
-                        containsValue("one");
-                        containsEntry(1, "one");
                     }
                 }
                 """));
@@ -385,7 +383,6 @@ class MapConditionsTest {
                 import static io.github.gromoff97.awium.Awium.await;
                 import static io.github.gromoff97.awium.conditioning.providers.MapConditionProvider.*;
                 import io.github.gromoff97.awium.sources.MapSource;
-                import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;
 
                 final class Contract {

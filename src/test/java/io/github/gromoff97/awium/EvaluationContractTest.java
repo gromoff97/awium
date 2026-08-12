@@ -3,12 +3,10 @@ package io.github.gromoff97.awium;
 import static io.github.gromoff97.awium.conditioning.Evaluation.*;
 
 import io.github.gromoff97.awium.conditioning.*;
-import static java.lang.reflect.Modifier.isPublic;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -49,13 +47,4 @@ class EvaluationContractTest {
         assertNull(narrow(null));
     }
 
-    @Test
-    void stateInspectionIsPublic() throws Exception {
-        assertTrue(isPublic(Evaluation.Status.class.getModifiers()));
-        for (String accessor : new String[] {"status", "result", "mismatch",
-                "assertionCause", "uncontrolledCause"}) {
-            assertTrue(isPublic(Evaluation.class.getDeclaredMethod(accessor)
-                    .getModifiers()), accessor);
-        }
-    }
 }

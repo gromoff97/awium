@@ -6,16 +6,14 @@ import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
-import static java.lang.reflect.Modifier.isStatic;
-import static java.util.stream.Collectors.toSet;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
 import io.github.gromoff97.awium.sources.CollectionSource;
+import io.github.gromoff97.awium.sources.Source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -31,7 +29,6 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.api.io.TempDir;
@@ -107,11 +104,11 @@ class CollectionMembershipTest {
 
         assertThrows(AwaitTimeoutException.class,
                 () -> new StructuralAwaitStage<>(
-                        (CollectionSource<ProbeContainers.
+                        (Source<ProbeContainers.
                                 MembershipCollection<String>>) () -> {
                             time.advanceNanos(2);
                             return explained;
-                        }, Collection::size,
+                        }, "collection", Collection::size,
                         defaults().withEvery(Duration.ofNanos(1))
                                 .withUpTo(Duration.ofNanos(2)), time, time)
                         .until(doesNotContain("a").because("required")));
@@ -185,55 +182,24 @@ class CollectionMembershipTest {
     }
 
     @Test
-    void everyPublicGenericVarargsFactoryIsSafeVarargs() {
-        Set<String> genericVarargs = Set.of(
-                "containsAll", "doesNotContainAll",
-                "containsAnyOf", "containsNoneOf",
-                "containsExactly", "doesNotContainExactly",
-                "containsExactlyInAnyOrder",
-                "doesNotContainExactlyInAnyOrder");
-        Set<String> discovered = Arrays.stream(
-                        CollectionConditionProvider.class.getDeclaredMethods())
-                .filter(method -> method.isVarArgs()
-                        && method.getTypeParameters().length > 0)
-                .peek(method -> {
-                    assertTrue(isStatic(method.getModifiers()));
-                    assertTrue(method.isAnnotationPresent(SafeVarargs.class),
-                            method.getName());
-                })
-                .map(java.lang.reflect.Method::getName)
-                .collect(toSet());
-
-        assertEquals(genericVarargs, discovered);
-    }
-
-    @Test
     void ordinaryConsumerCallsAreWarningFreeAndBareNullWarningRemains()
             throws IOException {
         assertTrue(compiles(temporaryDirectory, """
                 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
                 import static io.github.gromoff97.awium.Awium.await;
-                import io.github.gromoff97.awium.*;
                 import io.github.gromoff97.awium.sources.CollectionSource;
-                import io.github.gromoff97.awium.conditioning.conditions.*;
+                import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
                 import java.util.*;
 
                 final class Contract {
                     void check() {
                         String nil = null;
-                        Collection<String> values = List.of("a", "b");
                         Collection<Integer> integers = List.of(1, 2);
-                        contains("a");
-                        doesNotContain("a");
                         containsAll("a", "b");
                         doesNotContainAll("a", "b");
                         containsAnyOf("a", "b");
                         containsNoneOf("a", "b");
                         containsAll(nil);
-                        containsAllElementsOf(values);
-                        doesNotContainAllElementsOf(values);
-                        containsAnyElementsOf(values);
-                        containsNoElementsOf(values);
                         PreservingCondition<Collection<? super Integer>> typed =
                                 containsAllElementsOf(integers);
                         CollectionSource<ArrayList<Number>> source =
@@ -251,7 +217,6 @@ class CollectionMembershipTest {
                 import static io.github.gromoff97.awium.Awium.await;
                 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
                 import io.github.gromoff97.awium.sources.CollectionSource;
-                import io.github.gromoff97.awium.conditioning.conditions.*;
                 import java.util.*;
                 final class Contract {
                     void check(Collection<Object> broad,

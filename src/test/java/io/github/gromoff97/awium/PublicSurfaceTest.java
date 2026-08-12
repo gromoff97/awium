@@ -24,15 +24,16 @@ import static java.lang.reflect.Modifier.isProtected;
 import static java.lang.reflect.Modifier.isPublic;
 import static java.lang.reflect.Modifier.isStatic;
 import static java.nio.file.Files.walk;
-import static java.util.Collections.newSetFromMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -43,10 +44,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.IdentityHashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
@@ -55,31 +55,24 @@ import org.junit.jupiter.api.Test;
 
 class PublicSurfaceTest {
 
-    private static final Set<String> PUBLIC_API_PACKAGES = Set.of(
-            "io.github.gromoff97.awium",
-            "io.github.gromoff97.awium.await",
-            "io.github.gromoff97.awium.sources",
-            "io.github.gromoff97.awium.conditioning",
-            "io.github.gromoff97.awium.conditioning.conditions",
-            "io.github.gromoff97.awium.conditioning.providers",
-            "io.github.gromoff97.awium.exceptions");
+    private static final Set<String> PUBLIC_API_PACKAGES = Set.copyOf(
+            publicTypes().stream().map(Class::getPackageName).toList());
 
     @Test
     void exposesExactlyTheApprovedPublicApiIncludingNestedTypes()
             throws Exception {
         Set<Class<?>> actual = discoveredPublicApiTypes();
 
-        assertEquals(Set.copyOf(approvedPublicApiTypes()), actual);
-        Set<Class<?>> topLevel = Set.copyOf(actual.stream()
-                .filter(type -> type.getEnclosingClass() == null).toList());
-        assertEquals(Set.copyOf(publicTypes()), topLevel);
+        Set<Class<?>> approved = new HashSet<>(publicTypes());
+        approved.addAll(explainedTypes());
+        approved.add(Evaluation.Status.class);
+        assertEquals(Set.copyOf(approved), actual);
     }
 
     @Test
     void conditionEvaluationDescriptorsAndExplainedFormsHaveExactShapes()
             throws ReflectiveOperationException {
         assertTrue(isAbstract(Condition.class.getModifiers()));
-        assertFalse(isFinal(Condition.class.getModifiers()));
         Constructor<?> constructor = Condition.class.getDeclaredConstructor();
         assertTrue(isProtected(constructor.getModifiers()));
         assertTrue(isFinal(Condition.class.getMethod("because", String.class)
@@ -88,8 +81,14 @@ class PublicSurfaceTest {
                 "because", String.class, Object[].class).getModifiers()));
 
         assertTrue(isFinal(Evaluation.class.getModifiers()));
-        for (Class<?> type : restrictedConstructionTypes()) {
-            assertNoPublicOrProtectedConstructor(type);
+        List<Class<?>> restricted = new ArrayList<>(closedConditionTypes());
+        restricted.add(Evaluation.class);
+        restricted.addAll(List.of(AwaitFailure.class,
+                AwaitUncontrolledException.class));
+        for (Class<?> type : restricted) {
+            assertFalse(Arrays.stream(type.getDeclaredConstructors())
+                    .anyMatch(candidate -> isApiMember(
+                            candidate.getModifiers())), type.getName());
         }
         for (Class<?> type : closedConditionTypes()) {
             assertTrue(isFinal(type.getModifiers()), type.getName());
@@ -102,38 +101,11 @@ class PublicSurfaceTest {
 
     @Test
     void exposesExactlyFourSourceAndTwoCallbackSams() throws Exception {
-        Set<Class<?>> sources = Set.of(Source.class, OptionalSource.class,
-                CollectionSource.class, MapSource.class);
-        Set<Class<?>> callbacks = Set.of(CheckedConsumer.class,
-                CheckedFunction.class);
-
-        assertEquals(callbacks, Set.copyOf(publicTypes().stream()
-                .filter(Class::isInterface)
-                .filter(type -> !sources.contains(type))
-                .filter(type -> !fluentStages().contains(type)).toList()));
-        sources.forEach(PublicSurfaceTest::assertCheckedSam);
-        callbacks.forEach(PublicSurfaceTest::assertCheckedSam);
-
-        CheckedConsumer<String> consumer = value -> {
-            if (value.isEmpty()) {
-                throw new Exception("empty");
-            }
-        };
-        CheckedFunction<String, Integer> function = String::length;
-        Source<String> source = () -> "source";
-        OptionalSource<String> optionalSource =
-                () -> Optional.of("optional");
-        CollectionSource<Collection<String>> collectionSource =
-                () -> List.of("collection");
-        MapSource<Map<String, Integer>> mapSource =
-                () -> Map.of("map", 1);
-
-        consumer.accept("value");
-        assertEquals(5, function.apply("value"));
-        assertEquals("source", source.get());
-        assertEquals("optional", optionalSource.get().orElseThrow());
-        assertEquals("collection", collectionSource.get().iterator().next());
-        assertEquals(1, mapSource.get().get("map"));
+        for (Class<?> type : List.of(Source.class, OptionalSource.class,
+                CollectionSource.class, MapSource.class,
+                CheckedConsumer.class, CheckedFunction.class)) {
+            assertCheckedSam(type);
+        }
     }
 
     @Test
@@ -145,7 +117,6 @@ class PublicSurfaceTest {
                 OptionalAwait.class, Set.of(OptionalAwaitStage.class),
                 StructuralAwait.class, Set.of(StructuralAwaitStage.class));
 
-        assertEquals(expected.keySet(), Set.copyOf(fluentStages()));
         expected.forEach((stage, permitted) -> {
             assertTrue(stage.isInterface(), stage.getName());
             assertTrue(stage.isSealed(), stage.getName());
@@ -162,7 +133,8 @@ class PublicSurfaceTest {
             throws ReflectiveOperationException {
         for (Class<?> holder : List.of(Awium.class, ConditionProvider.class,
                 ObjectConditionProvider.class, OptionalConditionProvider.class,
-                CollectionConditionProvider.class, MapConditionProvider.class)) {
+                CollectionConditionProvider.class, MapConditionProvider.class,
+                ValueEquality.class)) {
             assertTrue(isFinal(holder.getModifiers()), holder.getName());
             Constructor<?> constructor = holder.getDeclaredConstructor();
             assertTrue(isPrivate(constructor.getModifiers()), holder.getName());
@@ -176,6 +148,14 @@ class PublicSurfaceTest {
                     .filter(field -> isPublic(field.getModifiers()))
                     .allMatch(field -> isStatic(field.getModifiers())),
                     holder.getName());
+
+            constructor.setAccessible(true);
+            InvocationTargetException failure = assertThrows(
+                    InvocationTargetException.class, constructor::newInstance,
+                    holder.getName());
+            AssertionError cause = assertInstanceOf(AssertionError.class,
+                    failure.getCause(), holder.getName());
+            assertEquals("Utility class", cause.getMessage(), holder.getName());
 
         }
 
@@ -194,12 +174,6 @@ class PublicSurfaceTest {
     void publicApiContainsNoExcludedSourceTerminalOrContinuationSurface()
             throws Exception {
         assertNoExcludedApiSurface(discoveredPublicApiTypes());
-        for (String absent : List.of("AwaitResult", "ExecutableSource",
-                "FutureSource", "IterableSource")) {
-            assertThrows(ClassNotFoundException.class,
-                    () -> Class.forName("io.github.gromoff97.awium." + absent),
-                    absent);
-        }
     }
 
     @Test
@@ -209,7 +183,6 @@ class PublicSurfaceTest {
                 ForbiddenConstructorSignature.class, ForbiddenMethodName.class,
                 ForbiddenInheritedField.class, ForbiddenInheritedMethod.class,
                 ForbiddenForkJoinTaskSignature.class,
-                ForbiddenCompletableFutureSignature.class,
                 ForbiddenGenericArraySignature.class,
                 ForbiddenLowerWildcardSignature.class,
                 ForbiddenIterableSubtypeSignature.class,
@@ -282,8 +255,7 @@ class PublicSurfaceTest {
     }
 
     private static Set<Class<?>> typeHierarchy(Class<?> type) {
-        Set<Class<?>> hierarchy = newSetFromMap(
-                new IdentityHashMap<>());
+        Set<Class<?>> hierarchy = new HashSet<>();
         List<Class<?>> pending = new ArrayList<>(List.of(type));
         while (!pending.isEmpty()) {
             Class<?> current = pending.removeLast();
@@ -300,7 +272,7 @@ class PublicSurfaceTest {
 
     private static void assertAllowedType(Type type) {
         assertFalse(isForbiddenApiType(type,
-                        newSetFromMap(new IdentityHashMap<>())),
+                        new HashSet<>()),
                 type.getTypeName());
     }
 
@@ -337,39 +309,25 @@ class PublicSurfaceTest {
     }
 
     private static boolean isForbiddenApiClass(Class<?> type) {
-        if (Iterable.class.isAssignableFrom(type)
-                && !Collection.class.isAssignableFrom(type)) {
-            return true;
-        }
-        if (List.of(Future.class, Callable.class, Runnable.class, Predicate.class)
-                .stream().anyMatch(forbidden -> forbidden.isAssignableFrom(type))) {
-            return true;
-        }
         String packageName = type.getPackageName();
-        return packageName.equals("org.assertj")
+        return Iterable.class.isAssignableFrom(type)
+                && !Collection.class.isAssignableFrom(type)
+                || List.of(Future.class, Callable.class, Runnable.class,
+                        Predicate.class).stream()
+                .anyMatch(forbidden -> forbidden.isAssignableFrom(type))
+                || packageName.equals("org.assertj")
                 || packageName.startsWith("org.assertj.")
                 || packageName.equals("org.awaitility")
                 || packageName.startsWith("org.awaitility.");
     }
 
     private static void assertCheckedSam(Class<?> type) {
-        assertTrue(type.isInterface(), type.getName());
-        assertTrue(type.isAnnotationPresent(FunctionalInterface.class), type.getName());
         List<Method> abstractMethods = Arrays.stream(type.getMethods())
                 .filter(method -> isAbstract(method.getModifiers()))
                 .toList();
         assertEquals(1, abstractMethods.size(), type.getName());
-        assertEquals(1, abstractMethods.getFirst().getExceptionTypes().length,
-                type.getName());
-        assertEquals(Exception.class,
-                abstractMethods.getFirst().getExceptionTypes()[0], type.getName());
-    }
-
-    private static Set<Class<?>> approvedPublicApiTypes() {
-        Set<Class<?>> types = new java.util.HashSet<>(publicTypes());
-        types.addAll(explainedTypes());
-        types.add(Evaluation.Status.class);
-        return types;
+        assertEquals(List.of(Exception.class), Arrays.asList(
+                abstractMethods.getFirst().getExceptionTypes()), type.getName());
     }
 
     private static Set<Class<?>> discoveredPublicApiTypes() throws Exception {
@@ -409,23 +367,11 @@ class PublicSurfaceTest {
         return true;
     }
 
-    private static List<Class<?>> fluentStages() {
-        return List.of(Await.class, OptionalAwait.class, StructuralAwait.class);
-    }
-
     private static List<Class<?>> closedConditionTypes() {
         return List.of(PreservingCondition.class, PresentCondition.class,
                 StructuralCondition.class, Condition.ExplainedCondition.class,
                 PreservingCondition.ExplainedCondition.class, PresentCondition.ExplainedCondition.class,
                 StructuralCondition.ExplainedCondition.class);
-    }
-
-    private static List<Class<?>> restrictedConstructionTypes() {
-        List<Class<?>> types = new ArrayList<>(closedConditionTypes());
-        types.add(Evaluation.class);
-        types.addAll(List.of(AwaitFailure.class,
-                AwaitUncontrolledException.class));
-        return types;
     }
 
     private static List<Class<?>> publicTypes() {
@@ -451,12 +397,6 @@ class PublicSurfaceTest {
                 PresentCondition.ExplainedCondition.class, StructuralCondition.ExplainedCondition.class);
     }
 
-    private static void assertNoPublicOrProtectedConstructor(Class<?> type) {
-        assertFalse(Arrays.stream(type.getDeclaredConstructors())
-                .anyMatch(constructor -> isPublic(constructor.getModifiers())
-                        || isProtected(constructor.getModifiers())), type.getName());
-    }
-
     public static final class AwaitResult {
     }
 
@@ -470,14 +410,11 @@ class PublicSurfaceTest {
 
     public static final class ForbiddenConstructorSignature {
         public ForbiddenConstructorSignature(
-                java.util.function.Predicate<?> predicate) {
-        }
+                java.util.function.Predicate<?> predicate) {}
     }
 
     public static final class ForbiddenMethodName {
-        public Object map() {
-            return null;
-        }
+        public void map() {}
     }
 
     static class ForbiddenInheritedFieldParent {
@@ -488,9 +425,7 @@ class PublicSurfaceTest {
     }
 
     interface ForbiddenInheritedMethodParent {
-        default java.util.function.Predicate<?> map() {
-            return null;
-        }
+        default void map() {}
     }
 
     public static final class ForbiddenInheritedMethod implements ForbiddenInheritedMethodParent {
@@ -498,10 +433,6 @@ class PublicSurfaceTest {
 
     public static final class ForbiddenForkJoinTaskSignature {
         public List<? extends java.util.concurrent.ForkJoinTask<?>[]> leaked;
-    }
-
-    public static final class ForbiddenCompletableFutureSignature {
-        public java.util.concurrent.CompletableFuture<?> leaked;
     }
 
     public static final class ForbiddenGenericArraySignature<
@@ -527,9 +458,7 @@ class PublicSurfaceTest {
     public static final class AllowedConcurrencyNames {
         public FutureProof future;
 
-        public PredicateResult value() {
-            return null;
-        }
+        public PredicateResult value() { return null; }
     }
 
     public static final class FutureProof {

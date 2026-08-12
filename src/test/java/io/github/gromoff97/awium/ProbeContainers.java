@@ -50,20 +50,14 @@ final class ProbeContainers {
     }
 
     static final class ProbeMap<K, V> extends AbstractMap<K, V> {
-        private final int size;
         private final RuntimeException sizeFailure;
         int sizeCalls;
 
-        ProbeMap(int size) {
-            this(size, null);
+        ProbeMap() {
+            this(null);
         }
 
         ProbeMap(RuntimeException sizeFailure) {
-            this(0, sizeFailure);
-        }
-
-        private ProbeMap(int size, RuntimeException sizeFailure) {
-            this.size = size;
             this.sizeFailure = sizeFailure;
         }
 
@@ -73,7 +67,7 @@ final class ProbeContainers {
             if (sizeFailure != null) {
                 throw sizeFailure;
             }
-            return size;
+            return 1;
         }
 
         @Override

@@ -31,11 +31,13 @@ public final class Awium {
 
     public static <C extends Collection<?>> StructuralAwait<C> await(
             CollectionSource<C> source) {
-        return new StructuralAwaitStage<>(source, Collection::size);
+        return new StructuralAwaitStage<>(source == null ? null : source::get,
+                "collection", Collection::size);
     }
 
     public static <M extends Map<?, ?>> StructuralAwait<M> await(
             MapSource<M> source) {
-        return new StructuralAwaitStage<>(source, Map::size);
+        return new StructuralAwaitStage<>(source == null ? null : source::get,
+                "map", Map::size);
     }
 }
