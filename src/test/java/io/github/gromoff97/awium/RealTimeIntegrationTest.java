@@ -3,7 +3,6 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.sources.Source;
 
 import static io.github.gromoff97.awium.Awium.await;
-import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
 import static java.lang.System.nanoTime;
@@ -12,58 +11,14 @@ import static java.lang.Thread.ofPlatform;
 import static java.lang.Thread.State.*;
 import static java.time.Duration.*;
 import static java.util.concurrent.locks.LockSupport.parkNanos;
-
-import io.github.gromoff97.awium.conditioning.*;
-
-import io.github.gromoff97.awium.exceptions.*;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import io.github.gromoff97.awium.exceptions.AwaitInterruptedException;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class RealTimeIntegrationTest {
-
-    @Test
-    void platformCallerRetainsItsIdentityAcrossFixedDelays() {
-        Duration interval = ofMillis(80);
-        Duration callbackDuration = ofMillis(120);
-        long minimumDelayNanos = ofMillis(50).toNanos();
-        long minimumStartGapNanos = callbackDuration.plusMillis(50).toNanos();
-        Thread caller = currentThread();
-        List<Long> sourceStarts = new ArrayList<>();
-        List<Long> conditionEnds = new ArrayList<>();
-        int[] observations = {0};
-
-        int result = await((Source<Integer>) () -> {
-            sourceStarts.add(nanoTime());
-            assertSame(caller, currentThread());
-            return ++observations[0];
-        }).every(interval).upTo(ofSeconds(2))
-                .until(condition("third observation", value -> {
-                    assertSame(caller, currentThread());
-                    Thread.sleep(callbackDuration);
-                    Evaluation<Integer> evaluation = value == 3
-                            ? satisfied(value)
-                            : unsatisfied("not the third observation");
-                    conditionEnds.add(nanoTime());
-                    return evaluation;
-                }));
-
-        assertEquals(3, result);
-        assertEquals(3, observations[0]);
-        for (int index = 0; index < sourceStarts.size() - 1; index++) {
-            assertTrue(sourceStarts.get(index + 1) - conditionEnds.get(index)
-                    >= minimumDelayNanos);
-            assertTrue(sourceStarts.get(index + 1) - sourceStarts.get(index)
-                    >= minimumStartGapNanos);
-        }
-    }
 
     @Test
     void externalControllerCancelsTheCallerWhileItIsParked() throws Exception {

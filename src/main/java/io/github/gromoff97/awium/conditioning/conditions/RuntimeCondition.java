@@ -10,7 +10,6 @@ import java.util.function.ToIntFunction;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.narrow;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.uncontrolled;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
@@ -36,8 +35,12 @@ public record RuntimeCondition<S, R>(
 
     public static <S, R> RuntimeCondition<S, R> open(
             Condition<? super S, ? extends R> condition) {
-        return new RuntimeCondition<>(
-                actual -> narrow(condition.evaluate(actual)),
+        return new RuntimeCondition<>(actual -> {
+            @SuppressWarnings("unchecked")
+            Evaluation<R> evaluation =
+                    (Evaluation<R>) condition.evaluate(actual);
+            return evaluation;
+        },
                 condition::description, null);
     }
 

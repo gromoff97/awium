@@ -38,5 +38,4 @@ final class FakeTime implements LongSupplier, LongConsumer {
     void wakeAfter(long nanos) {
         parkAdvances.addLast(nanos);
     }
-
 }

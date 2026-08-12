@@ -26,23 +26,12 @@ public abstract class Condition<S, R> {
                 formattedExplanation(format, arguments));
     }
 
-    public static final class ExplainedCondition<S, R> {
+    public record ExplainedCondition<S, R>(Condition<S, R> delegate,
+            String explanation) {
 
-        private final Condition<S, R> delegate;
-        private final String explanation;
-
-        private ExplainedCondition(Condition<S, R> delegate,
-                String explanation) {
-            this.delegate = requireNonNull(delegate);
-            this.explanation = requireNonNull(explanation);
-        }
-
-        public Condition<S, R> delegate() {
-            return delegate;
-        }
-
-        public String explanation() {
-            return explanation;
+        public ExplainedCondition {
+            requireNonNull(delegate);
+            explanation = literalExplanation(explanation);
         }
     }
 }

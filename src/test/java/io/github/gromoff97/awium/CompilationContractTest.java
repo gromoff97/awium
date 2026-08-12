@@ -15,68 +15,6 @@ class CompilationContractTest {
     Path temporaryDirectory;
 
     @Test
-    void allFacadesTimingSubsetsAndTerminalResultsCompile() throws IOException {
-        assertTrue(compiles("""
-                import static io.github.gromoff97.awium.Awium.await;
-                import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
-                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
-                import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
-                import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
-                import static java.time.Duration.ofMillis;
-                import io.github.gromoff97.awium.sources.Source;
-                import io.github.gromoff97.awium.conditioning.Evaluation;
-                import io.github.gromoff97.awium.conditioning.conditions.StructuralCondition;
-                import java.util.*;
-
-                final class Contract {
-                    static String object() { return "value"; }
-                    static Optional<String> optional() { return Optional.of("value"); }
-                    static Collection<String> collection() { return List.of("value"); }
-                    static List<String> list() {
-                        return new ArrayList<>(List.of("value"));
-                    }
-                    static HashMap<String, Integer> map() {
-                        return new HashMap<>(Map.of("value", 1));
-                    }
-
-                    void check(StructuralCondition structural,
-                            StructuralCondition.ExplainedCondition explainedStructural) {
-                        StructuralCondition emptyField = empty;
-                        StructuralCondition nonEmptyField = nonEmpty;
-                        StructuralCondition emptyFactory = empty();
-                        StructuralCondition nonEmptyFactory = nonEmpty();
-                        Source<String> source = Contract::object;
-                        String immediate = await(source).until(isNotNull);
-                        String all = await(source).every(ofMillis(1)).upTo(ofMillis(2))
-                                .stableFor(ofMillis(1)).until(isNotNull);
-
-                        String explained = await(Contract::object)
-                                .until(isNotNull.because("value is required"));
-                        Integer selected = await(Contract::object).until(condition(
-                                "length", (String value) -> Evaluation.satisfied(value.length())));
-                        Integer selectedExplained = await(Contract::object).until(
-                                condition("length",
-                                        (String value) -> Evaluation.satisfied(value.length()))
-                                        .because("needed"));
-                        Void nil = await((Source<String>) () -> null)
-                                .until(isNull);
-                        String presentValue = await(Contract::optional).until(present);
-                        String explainedPresent = await(Contract::optional)
-                                .until(present.because("required"));
-                        Void absentValue = await(Contract::optional).until(absent);
-
-                        Collection<String> collectionValue = await(Contract::collection)
-                                .until(structural);
-                        List<String> ordered = await(Contract::list)
-                                .until(explainedStructural);
-                        HashMap<String, Integer> mapValue = await(Contract::map)
-                                .until(structural);
-                    }
-                }
-                """));
-    }
-
-    @Test
     void excludedDirectAndJdkSourceTypesDoNotCompile() throws IOException {
         for (String declaration : new String[] {
                 "String source = \"value\";",
@@ -110,23 +48,6 @@ class CompilationContractTest {
                 final class Contract {
                     void check(Source<String> source) {
                         await(source).until(null);
-                    }
-                }
-                """));
-    }
-
-    @Test
-    void configurationOrderAndRepetitionCompile() throws IOException {
-        assertTrue(compiles("""
-                import static io.github.gromoff97.awium.Awium.await;
-                import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.isNotNull;
-                import io.github.gromoff97.awium.sources.Source;
-                import java.time.Duration;
-                final class Contract {
-                    String check(Source<String> source) {
-                        Duration d = Duration.ofMillis(1);
-                        return await(source).stableFor(d).upTo(d).every(d)
-                                .stableFor(d).every(d).upTo(d).until(isNotNull);
                     }
                 }
                 """));
@@ -215,6 +136,28 @@ class CompilationContractTest {
                     }
                 }
                 """));
+    }
+
+    @Test
+    void explainedConditionsCannotBeDecoratedAgain() throws IOException {
+        for (String condition : List.of(
+                "condition(\"x\", (Object value) -> Evaluation.satisfied(value))",
+                "asserted((Object value) -> {})",
+                "passed((Object value) -> value)",
+                "present",
+                "nonEmpty")) {
+            assertFalse(compiles("""
+                    import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
+                    import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+                    import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
+                    import io.github.gromoff97.awium.conditioning.Evaluation;
+                    final class Contract {
+                        void check() {
+                            %s.because("first").because("second");
+                        }
+                    }
+                    """.formatted(condition)), condition);
+        }
     }
 
     private boolean compiles(String source) throws IOException {

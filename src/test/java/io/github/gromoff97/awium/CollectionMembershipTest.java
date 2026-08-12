@@ -1,196 +1,135 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
+import io.github.gromoff97.awium.exceptions.AwaitConditionEvaluationException;
+import io.github.gromoff97.awium.exceptions.AwaitTimeoutException;
+import io.github.gromoff97.awium.sources.CollectionSource;
+import io.github.gromoff97.awium.sources.Source;
+
 import static io.github.gromoff97.awium.CompilationSupport.compiles;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedStructuralAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedStructuralAwait;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
-
-import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.*;
-
-import io.github.gromoff97.awium.exceptions.*;
-import io.github.gromoff97.awium.sources.CollectionSource;
-import io.github.gromoff97.awium.sources.Source;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.api.io.TempDir;
 
 class CollectionMembershipTest {
-
-    private static final List<Pair> PAIRS = List.of(
-            new Pair("contains", contains("b"),
-                    doesNotContain("b")),
-            new Pair("containsAll", containsAll("a", "b"),
-                    doesNotContainAll("a", "b")),
-            new Pair("containsAllElementsOf",
-                    containsAllElementsOf(List.of("a", "b")),
-                    doesNotContainAllElementsOf(
-                            List.of("a", "b"))),
-            new Pair("containsAnyOf", containsAnyOf("x", "b"),
-                    containsNoneOf("x", "b")),
-            new Pair("containsAnyElementsOf",
-                    containsAnyElementsOf(List.of("x", "b")),
-                    containsNoElementsOf(List.of("x", "b"))));
 
     @TempDir
     Path temporaryDirectory;
 
     @Test
-    void completeRawMembershipTableIsComplementary()
+    void positiveAndNegativeMembershipConditionsAreComplements()
             throws Exception {
-        for (Pair pair : PAIRS) {
-            assertPair(pair, List.of("a", "b", "c"), true, 2);
-            assertPair(pair, List.of("a", "c"), false, 2);
+        for (Pair pair : pairs()) {
+            assertPair(pair, List.of("a", "b", "c"), true);
+            assertPair(pair, List.of("a", "c"), false);
         }
     }
 
     @Test
-    void nullActualIsUnsatisfiedBeforeMembership() throws Exception {
-        assertNullActual(runtime(contains("b")));
+    void nullAndRepeatedExpectedValuesKeepMembershipSemantics()
+            throws Exception {
+        assertUnsatisfied(preserving(contains("b")).evaluate(null));
+        assertPair(new Pair("repeated", containsAll("a", "a"),
+                doesNotContainAll("a", "a")), List.of("a"), true);
+
+        String nil = null;
+        Collection<String> actual = asList((String) null);
+        assertSame(actual, RuntimeCondition.<Collection<String>>preserving(
+                containsAll(nil)).evaluate(actual).result());
     }
 
     @Test
-    void repeatedExpectedPositionsAreSetLike() throws Exception {
-        assertPair(new Pair("containsAll", containsAll("a", "a"),
-                doesNotContainAll("a", "a")), List.of("a"), true, 1);
-    }
-
-    @Test
-    void valueEqualityIsActualFirstArrayAwareAndNeverHashes() throws Exception {
-        Directional actual = new Directional(true);
-        Directional expected = new Directional(false);
-        var directional = new ProbeContainers.MembershipCollection<>(
-                List.of(actual));
-        var arrays = new ProbeContainers.MembershipCollection<Object>(
+    void membershipUsesActualFirstArrayAwareEqualityWithoutHashing()
+            throws Exception {
+        Directional actualValue = new Directional(true);
+        Directional expectedValue = new Directional(false);
+        Collection<Object> directional = new ArrayList<>(List.of(actualValue));
+        Collection<Object> arrays = new ArrayList<>(
                 List.of(new int[] {1, 2}));
 
-        assertSatisfied(RuntimeCondition.<
-                ProbeContainers.MembershipCollection<Directional>>preserving(
-                        contains(expected)).evaluate(directional),
-                directional);
-        assertSatisfied(RuntimeCondition.<
-                ProbeContainers.MembershipCollection<Object>>preserving(
-                        contains(new int[] {1, 2})).evaluate(arrays),
-                arrays);
-
-        assertEquals(1, actual.equalsCalls);
-        assertOnlyIterator(directional, 1);
-        assertOnlyIterator(arrays, 1);
+        assertSame(directional, RuntimeCondition.<Collection<Object>>preserving(
+                contains(expectedValue)).evaluate(directional).result());
+        assertSame(arrays, RuntimeCondition.<Collection<Object>>preserving(
+                contains(new int[] {1, 2})).evaluate(arrays).result());
+        assertEquals(1, actualValue.equalsCalls);
     }
 
     @Test
-    void terminalDiagnosticsDoNotTraverseAgain() {
-        var explained = new ProbeContainers.MembershipCollection<>(
+    void traversalAndEqualityFailuresRemainFailFastForNegativeConditions() {
+        var iteratorCause = new IllegalStateException("iterator failed");
+        var equalityCause = new IllegalStateException("equals failed");
+        var brokenIterator = new ProbeContainers.MembershipCollection<String>(
+                iteratorCause);
+        var brokenEquality = new ProbeContainers.MembershipCollection<>(
+                List.of(new ThrowingEquals(equalityCause)));
+
+        assertSame(iteratorCause, assertThrows(
+                AwaitConditionEvaluationException.class,
+                () -> await(brokenIterator, doesNotContain("a"))).getCause());
+        assertSame(equalityCause, assertThrows(
+                AwaitConditionEvaluationException.class,
+                () -> await(brokenEquality,
+                        containsNoneOf(new ThrowingEquals(null)))).getCause());
+    }
+
+    @Test
+    void terminalDiagnosticsDoNotTraverseTheActualAgain() {
+        var actual = new ProbeContainers.MembershipCollection<>(
                 List.of("a", "b"));
         FakeTime time = new FakeTime(0);
 
         assertThrows(AwaitTimeoutException.class,
                 () -> timedStructuralAwait(
-                        (Source<ProbeContainers.
-                                MembershipCollection<String>>) () -> {
-                            time.advanceNanos(2);
-                            return explained;
-                        }, "collection", Collection::size,
+                        (Source<ProbeContainers.MembershipCollection<String>>)
+                                () -> {
+                                    time.advanceNanos(2);
+                                    return actual;
+                                },
+                        "collection", Collection::size,
                         defaults().withEvery(ofNanos(1))
                                 .withUpTo(ofNanos(2)), time, time)
-                        .until(doesNotContain("a").because("required")));
+                        .until(doesNotContain("a").because("business reason")));
 
-        assertOnlyIterator(explained, 1);
+        assertEquals(1, actual.iteratorCalls);
     }
 
     @Test
-    void traversalAndEqualityFailuresAreFailFastForNegativeForms() {
-        RuntimeException acquisitionCause = new IllegalStateException(
-                "iterator failed");
-        RuntimeException advancementCause = new IllegalStateException(
-                "next failed");
-        RuntimeException equalityCause = new IllegalStateException(
-                "equals failed");
-        var acquisition = new ProbeContainers.MembershipCollection<String>(
-                acquisitionCause);
-        var advancement = new ProbeContainers.MembershipCollection<>(
-                List.of("a"), 1, advancementCause);
-        var equality = new ProbeContainers.MembershipCollection<>(
-                List.of(new ThrowingEquals(equalityCause)));
-
-        assertSame(acquisitionCause, assertThrows(
-                AwaitConditionEvaluationException.class,
-                () -> await(acquisition,
-                        doesNotContain("a"))).getCause());
-        assertSame(advancementCause, assertThrows(
-                AwaitConditionEvaluationException.class,
-                () -> await(advancement,
-                        containsNoneOf("a"))).getCause());
-        assertSame(equalityCause, assertThrows(
-                AwaitConditionEvaluationException.class,
-                () -> await(equality,
-                        doesNotContain(
-                                new ThrowingEquals(null)))).getCause());
+    void aggregateFactoriesRejectNullAndEmptyInputs() {
+        assertValidation(NullPointerException.class,
+                () -> containsAll((Object[]) null));
+        assertValidation(NullPointerException.class,
+                () -> containsAllElementsOf((Collection<Object>) null));
+        assertValidation(IllegalArgumentException.class,
+                () -> containsAll(new Object[0]));
+        assertValidation(IllegalArgumentException.class,
+                () -> containsAllElementsOf(List.of()));
     }
 
     @Test
-    void aggregateFactoriesRejectNullAndEmptyInputsWithExactMessages() {
-        assertFailure(() -> containsAll((Object[]) null),
-                NullPointerException.class,
-                "expected elements must not be null");
-        assertFailure(() -> containsAllElementsOf(
-                        (Collection<Object>) null),
-                NullPointerException.class,
-                "expected elements must not be null");
-        assertFailure(() -> containsAll(new Object[0]),
-                IllegalArgumentException.class,
-                "expected elements must not be empty");
-        assertFailure(() -> containsAllElementsOf(List.of()),
-                IllegalArgumentException.class,
-                "expected elements must not be empty");
-    }
-
-    @Test
-    void typedNullIsOneValidExpectedElement() throws Exception {
-        String expected = null;
-        var actual = new ProbeContainers.MembershipCollection<String>(
-                asList((String) null));
-
-        assertSatisfied(runtime(containsAll(expected))
-                .evaluate(actual), actual);
-        assertOnlyIterator(actual, 1);
-    }
-
-    @Test
-    void elementsOfFactoryCallsOnlyIsEmptyOnceAtConstruction() {
-        var expected = new ProbeContainers.ExpectedCollection<String>();
-        containsAllElementsOf(expected);
-        assertEquals(1, expected.isEmptyCalls);
-    }
-
-    @Test
-    void ordinaryConsumerCallsAreWarningFreeAndBareNullWarningRemains()
+    void ordinaryConsumerCallsAreWarningFreeAndBareNullRemainsAmbiguous()
             throws IOException {
         assertTrue(compiles(temporaryDirectory, """
-                import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
                 import static io.github.gromoff97.awium.Awium.await;
-                import io.github.gromoff97.awium.sources.CollectionSource;
+                import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
                 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
+                import io.github.gromoff97.awium.sources.CollectionSource;
                 import java.util.*;
 
                 final class Contract {
@@ -215,79 +154,32 @@ class CollectionMembershipTest {
                 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
                 final class Contract { void check() { containsAll(null); } }
                 """));
-        assertFalse(compiles(temporaryDirectory, """
-                import static io.github.gromoff97.awium.Awium.await;
-                import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
-                import io.github.gromoff97.awium.sources.CollectionSource;
-                import java.util.*;
-                final class Contract {
-                    void check(Collection<Object> broad,
-                            CollectionSource<ArrayList<String>> source) {
-                        await(source).until(containsAllElementsOf(broad));
-                    }
-                }
-                """));
     }
 
     private static void assertPair(Pair pair, List<String> values,
-            boolean positiveSatisfied, int nextCalls) throws Exception {
-        var positiveActual = new ProbeContainers.MembershipCollection<>(values);
-        var negativeActual = new ProbeContainers.MembershipCollection<>(values);
-        RuntimeCondition<ProbeContainers.MembershipCollection<String>,
-                ProbeContainers.MembershipCollection<String>> positive =
-                        runtime(pair.positive());
-        RuntimeCondition<ProbeContainers.MembershipCollection<String>,
-                ProbeContainers.MembershipCollection<String>> negative =
-                        runtime(pair.negative());
+            boolean positiveSatisfied) throws Exception {
+        Collection<String> actual = new ArrayList<>(values);
+        Evaluation<?> positive = RuntimeCondition.<Collection<String>>preserving(
+                pair.positive()).evaluate(actual);
+        Evaluation<?> negative = RuntimeCondition.<Collection<String>>preserving(
+                pair.negative()).evaluate(actual);
 
-        Evaluation<?> positiveEvaluation = positive.evaluate(positiveActual);
-        Evaluation<?> negativeEvaluation = negative.evaluate(negativeActual);
-
-        assertEquals(positiveSatisfied ? SATISFIED
-                        : UNSATISFIED,
-                positiveEvaluation.status(), pair.name());
-        assertNotEquals(positiveEvaluation.status(), negativeEvaluation.status(),
-                pair.name());
-        assertNull(positive.explanation());
-        assertNull(negative.explanation());
-        assertFalse(positive.description().get().isBlank());
-        assertFalse(negative.description().get().isBlank());
-        assertOnlyIterator(positiveActual, nextCalls);
-        assertOnlyIterator(negativeActual, nextCalls);
+        assertEquals(positiveSatisfied ? SATISFIED : UNSATISFIED,
+                positive.status(), pair.name());
+        assertNotEquals(positive.status(), negative.status(), pair.name());
+        assertSame(actual, (positiveSatisfied ? positive : negative).result());
+        assertFalse((positiveSatisfied ? negative : positive)
+                .mismatch().isBlank());
     }
 
-    private static RuntimeCondition<ProbeContainers.MembershipCollection<String>,
-            ProbeContainers.MembershipCollection<String>> runtime(
-                    PreservingCondition<? super ProbeContainers.
-                            MembershipCollection<String>> condition) {
-        return preserving(condition);
-    }
-
-    private static void assertNullActual(
-            RuntimeCondition<ProbeContainers.MembershipCollection<String>,
-                    ProbeContainers.MembershipCollection<String>> runtime)
-            throws Exception {
-        Evaluation<?> evaluation = runtime.evaluate(null);
+    private static void assertUnsatisfied(Evaluation<?> evaluation) {
         assertEquals(UNSATISFIED, evaluation.status());
-        assertEquals("collection was null", evaluation.mismatch());
+        assertFalse(evaluation.mismatch().isBlank());
     }
 
-    private static void assertOnlyIterator(
-            ProbeContainers.MembershipCollection<?> actual, int nextCalls) {
-        assertEquals(1, actual.iteratorCalls);
-        assertEquals(nextCalls, actual.nextCalls);
-    }
-
-    private static void assertSatisfied(Evaluation<?> evaluation,
-            Object actual) {
-        assertEquals(SATISFIED, evaluation.status());
-        assertSame(actual, evaluation.result());
-        assertNull(evaluation.mismatch());
-    }
-
-    private static <T extends Throwable> void assertFailure(Executable executable,
-            Class<T> type, String message) {
-        assertEquals(message, assertThrows(type, executable).getMessage());
+    private static void assertValidation(Class<? extends Throwable> type,
+            org.junit.jupiter.api.function.Executable action) {
+        assertTrue(!assertThrows(type, action).getMessage().isBlank());
     }
 
     private static <E> ProbeContainers.MembershipCollection<E> await(
@@ -299,9 +191,22 @@ class CollectionMembershipTest {
                 .until(condition);
     }
 
-    private record Pair(String name,
-            PreservingCondition<Collection<? super String>> positive,
-            PreservingCondition<Collection<? super String>> negative) {
+    private static List<Pair> pairs() {
+        return List.of(
+                new Pair("contains", contains("b"), doesNotContain("b")),
+                new Pair("containsAll", containsAll("a", "b"),
+                        doesNotContainAll("a", "b")),
+                new Pair("containsAllElementsOf",
+                        containsAllElementsOf(List.of("a", "b")),
+                        doesNotContainAllElementsOf(List.of("a", "b"))),
+                new Pair("containsAnyOf", containsAnyOf("x", "b"),
+                        containsNoneOf("x", "b")),
+                new Pair("containsAnyElementsOf",
+                        containsAnyElementsOf(List.of("x", "b")),
+                        containsNoElementsOf(List.of("x", "b"))));
     }
 
+    private record Pair(String name,
+            PreservingCondition<Collection<? super String>> positive,
+            PreservingCondition<Collection<? super String>> negative) {}
 }

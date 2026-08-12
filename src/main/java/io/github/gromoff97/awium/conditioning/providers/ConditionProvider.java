@@ -7,6 +7,8 @@ import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 
+import java.util.function.Supplier;
+
 import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static java.util.Objects.requireNonNull;
@@ -23,6 +25,13 @@ public final class ConditionProvider {
         if (requireNonNull(description, "description must not be null").isBlank()) {
             throw new IllegalArgumentException("description must not be blank");
         }
+        return condition(() -> description, evaluation);
+    }
+
+    static <S, R> Condition<S, R> condition(
+            Supplier<String> description,
+            CheckedFunction<? super S, Evaluation<R>> evaluation) {
+        requireNonNull(description);
         requireNonNull(evaluation, "evaluation must not be null");
         return new Condition<>() {
             @Override
@@ -32,7 +41,7 @@ public final class ConditionProvider {
 
             @Override
             public String description() {
-                return description;
+                return description.get();
             }
         };
     }

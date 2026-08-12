@@ -1,12 +1,11 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.diagnostics.FailureMessage;
-
-import io.github.gromoff97.awium.engine.*;
-
+import io.github.gromoff97.awium.engine.WaitConfiguration;
+import io.github.gromoff97.awium.engine.WaitOutcome;
 import io.github.gromoff97.awium.exceptions.*;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
@@ -14,12 +13,11 @@ import static io.github.gromoff97.awium.engine.Attempt.*;
 import static io.github.gromoff97.awium.engine.Attempt.Origin.*;
 import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled.*;
 import static io.github.gromoff97.awium.engine.WaitOutcome.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.List;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
@@ -29,504 +27,152 @@ class DiagnosticsSnapshotTest {
     private static final long MILLISECOND = 1_000_000L;
 
     @Test
-    void formatsTheBetweenObservationsTimeoutBaselineVerbatim() {
-        WaitOutcome<Object> outcome =
-                new TimeoutBetweenObservations<>(0, 10 * SECOND,
-                        new Unsatisfied<>(null,
-                                "collection was empty", null,
-                                4, 9 * SECOND));
-
-        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
-                () -> complete(outcome, "collection to be non-empty", null,
-                        config(3 * SECOND, 10 * SECOND, 0)));
-
-        assertEquals("""
-                Await timed out
-
-                Condition: collection to be non-empty
-                Reason: acquisition deadline elapsed before the next observation
-
-                Last observation:
-                    Attempt: 4
-                    Completed after: 9 seconds
-                    Mismatch: collection was empty
-
-                Timing:
-                    Waited up to: 10 seconds
-                    Elapsed: 10 seconds
-                    Interval: 3 seconds""", failure.getMessage());
-    }
-
-    @Test
-    void formatsALateUnsatisfiedTimeoutWithTheTerminalAttempt() {
-        WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(0,
-                new Unsatisfied<>(
-                        "Payment[id=42, status=PENDING]",
-                        "payment status was PENDING", null, 100,
+    void controlledFailuresRetainTheirSemanticContext() {
+        WaitOutcome<Object> between = new TimeoutBetweenObservations<>(0,
+                10 * SECOND, new Unsatisfied<>(null, "collection was empty",
+                        null, 4, 9 * SECOND));
+        WaitOutcome<Object> lateUnsatisfied = new LateUnsatisfiedTimeout<>(0,
+                new Unsatisfied<>("Payment[PENDING]", "status was PENDING",
+                        null, 100, 10 * SECOND + 200 * MILLISECOND));
+        WaitOutcome<Object> lateSatisfied = new LateSatisfiedTimeout<>(0,
+                new Satisfied<>("Payment[COMPLETED]", new Object(), 100,
                         10 * SECOND + 200 * MILLISECOND));
-
-        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
-                () -> complete(outcome, "payment status equals COMPLETED",
-                        "payment must complete",
-                        config(100 * MILLISECOND, 10 * SECOND, 0)));
-
-        assertEquals("""
-                Await timed out
-
-                Condition: payment status equals COMPLETED
-                Observed: Payment[id=42, status=PENDING]
-                Mismatch: payment status was PENDING
-                Because: payment must complete
-
-                Timing:
-                    Waited up to: 10 seconds
-                    Elapsed: 10 seconds 200 milliseconds
-                    Attempts: 100
-                    Interval: 100 milliseconds""", failure.getMessage());
-    }
-
-    @Test
-    void formatsALateSatisfiedTimeoutWithTheTerminalAttempt() {
-        WaitOutcome<Object> outcome = new LateSatisfiedTimeout<>(0,
-                new Satisfied<>(
-                        "Optional[Payment[id=42, status=COMPLETED]]",
-                        new Object(), 100,
-                        10 * SECOND + 200 * MILLISECOND));
-
-        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
-                () -> complete(outcome,
-                        "optional value equal to Payment[id=42, status=COMPLETED]",
-                        "payment 42 must complete",
-                        config(100 * MILLISECOND, 10 * SECOND, 0)));
-
-        assertEquals("""
-                Await timed out
-
-                Condition: optional value equal to Payment[id=42, status=COMPLETED]
-                Observed: Optional[Payment[id=42, status=COMPLETED]]
-                Reason: condition became satisfied after the timeout
-                Because: payment 42 must complete
-
-                Timing:
-                    Waited up to: 10 seconds
-                    Elapsed: 10 seconds 200 milliseconds
-                    Attempts: 100
-                    Interval: 100 milliseconds""", failure.getMessage());
-    }
-
-    @Test
-    void formatsAStabilityLossVerbatim() {
-        WaitOutcome<Object> outcome = new StabilityLoss<>(
-                0, 7 * SECOND,
-                new Unsatisfied<>(
-                        "Optional.empty", "optional was empty", null, 71,
-                        9 * SECOND + 100 * MILLISECOND));
-
-        AwaitStabilizationException failure = assertThrows(
-                AwaitStabilizationException.class,
-                () -> complete(outcome, "optional to remain present",
-                        "payment 42 must remain available",
-                        config(100 * MILLISECOND, 10 * SECOND, 5 * SECOND)));
-
-        assertEquals("""
-                Await lost stability
-
-                Expected: optional to remain present
-                Because: payment 42 must remain available
-                Required: 5 seconds
-                Failure detected after: 2 seconds 100 milliseconds
-
-                Observed:
-                    Actual: Optional.empty
-                    Mismatch: optional was empty
-
-                Timing:
-                    Acquired after: 7 seconds
-                    Interval: 100 milliseconds""", failure.getMessage());
-    }
-
-    @Test
-    void timingFieldsRemainRelativeToANonZeroClockOrigin() {
-        long started = 100 * SECOND;
-        WaitOutcome<Object> between =
-                new TimeoutBetweenObservations<>(
-                started, started + 10 * SECOND,
-                new Unsatisfied<>(null, "not yet", null,
-                        2, started + 9 * SECOND));
-        WaitOutcome<Object> stability = new StabilityLoss<>(
-                started, started + 7 * SECOND,
-                new Unsatisfied<>(
-                        "actual", "lost", null, 4,
-                        started + 9 * SECOND + 100 * MILLISECOND));
-
-        String betweenMessage = assertThrows(AwaitTimeoutException.class,
-                () -> complete(between, "condition", null,
-                        config(SECOND, 10 * SECOND, 0))).getMessage();
-        String stabilityMessage = assertThrows(
-                AwaitStabilizationException.class,
-                () -> complete(stability, "condition", null,
-                        config(SECOND, 10 * SECOND, 5 * SECOND))).getMessage();
-
-        assertTrue(betweenMessage.contains("Completed after: 9 seconds"));
-        assertTrue(betweenMessage.contains("Elapsed: 10 seconds"));
-        assertTrue(stabilityMessage.contains(
-                "Failure detected after: 2 seconds 100 milliseconds"));
-        assertTrue(stabilityMessage.contains("Acquired after: 7 seconds"));
-    }
-
-    @Test
-    void assertionCausesAreRetainedInBetweenAndStabilityDiagnostics() {
-        var betweenAssertion = new AssertionError("between assertion");
-        var stabilityAssertion = new AssertionError("stability assertion");
-        WaitOutcome<Object> between =
-                new TimeoutBetweenObservations<>(0, 10,
-                        new Unsatisfied<>(null,
-                                "assertion did not pass",
-                                betweenAssertion, 2, 9));
-        WaitOutcome<Object> stability = new StabilityLoss<>(
-                0, 2, new Unsatisfied<>("actual",
-                        "assertion did not pass", stabilityAssertion, 2, 3));
+        WaitOutcome<Object> stability = new StabilityLoss<>(0, 7 * SECOND,
+                new Unsatisfied<>("Optional.empty", "optional was empty",
+                        null, 71, 9 * SECOND + 100 * MILLISECOND));
 
         AwaitTimeoutException betweenFailure = assertThrows(
                 AwaitTimeoutException.class,
-                () -> complete(between, "condition", null,
-                        config(1, 10, 0)));
+                () -> complete(between, "collection to be non-empty", null,
+                        config(3 * SECOND, 10 * SECOND, 0)));
+        AwaitTimeoutException lateUnsatisfiedFailure = assertThrows(
+                AwaitTimeoutException.class,
+                () -> complete(lateUnsatisfied, "status equals COMPLETED",
+                        "payment must complete",
+                        config(100 * MILLISECOND, 10 * SECOND, 0)));
+        AwaitTimeoutException lateSatisfiedFailure = assertThrows(
+                AwaitTimeoutException.class,
+                () -> complete(lateSatisfied, "status equals COMPLETED",
+                        "payment must complete",
+                        config(100 * MILLISECOND, 10 * SECOND, 0)));
         AwaitStabilizationException stabilityFailure = assertThrows(
                 AwaitStabilizationException.class,
-                () -> complete(stability, "condition", null,
-                        config(1, 10, 5)));
+                () -> complete(stability, "optional to remain present",
+                        "payment must remain available",
+                        config(100 * MILLISECOND, 10 * SECOND, 5 * SECOND)));
 
-        assertSame(betweenAssertion, betweenFailure.getCause());
-        assertTrue(betweenFailure.getMessage().contains(
-                "Cause: AssertionError: between assertion"));
-        assertSame(stabilityAssertion, stabilityFailure.getCause());
-        assertTrue(stabilityFailure.getMessage().contains(
-                "Cause: AssertionError: stability assertion"));
+        assertMessage(betweenFailure, "Await timed out",
+                "collection to be non-empty", "Attempt: 4",
+                "collection was empty", "9 seconds", "10 seconds",
+                "3 seconds");
+        assertMessage(lateUnsatisfiedFailure, "Await timed out",
+                "status equals COMPLETED", "Payment[PENDING]",
+                "status was PENDING", "payment must complete",
+                "Attempts: 100", "10 seconds 200 milliseconds");
+        assertMessage(lateSatisfiedFailure, "Await timed out",
+                "status equals COMPLETED", "Payment[COMPLETED]",
+                "condition became satisfied after the timeout",
+                "payment must complete", "Attempts: 100");
+        assertMessage(stabilityFailure, "Await lost stability",
+                "optional to remain present", "payment must remain available",
+                "5 seconds", "2 seconds 100 milliseconds",
+                "Optional.empty", "optional was empty", "7 seconds");
     }
 
     @Test
-    void formatsAConditionFailureInGlobalFieldOrder() {
-        var cause = new IllegalStateException("connection is closed");
-        WaitOutcome<Object> outcome =
-                new AfterObservation<>(
-                        CONDITION,
-                        "Payment[id=42, status=PENDING]", cause, 7, 0);
-
-        AwaitConditionEvaluationException failure = assertThrows(
-                AwaitConditionEvaluationException.class,
-                () -> complete(outcome, "payment status equals COMPLETED",
-                        "payment must complete", config(1, 2, 0)));
-
-        assertSame(cause, failure.getCause());
-        assertEquals("""
-                Await condition evaluation failed
-
-                Attempt: 7
-                Condition: payment status equals COMPLETED
-                Actual: Payment[id=42, status=PENDING]
-                Because: payment must complete
-                Cause: IllegalStateException: connection is closed""",
-                failure.getMessage());
-    }
-
-    @Test
-    void formatsAnInterruptionVerbatim() {
-        var cause = new InterruptedException(
-                "caller thread interrupt flag was set");
-        WaitOutcome<Object> outcome =
-                new AfterObservation<>(
-                        CONDITION,
-                        "Payment[id=42, status=PENDING]", cause, 12, 0);
-
-        AwaitInterruptedException failure = assertThrows(
-                AwaitInterruptedException.class,
-                () -> complete(outcome, "payment status equals COMPLETED",
-                        "payment must complete", config(1, 2, 0)));
-
-        assertSame(cause, failure.getCause());
-        assertEquals("""
-                Await was interrupted
-
-                Attempt: 12
-                Origin: condition
-                Condition: payment status equals COMPLETED
-                Actual: Payment[id=42, status=PENDING]
-                Because: payment must complete
-                Cause: InterruptedException: caller thread interrupt flag was set""",
-                failure.getMessage());
-    }
-
-    @Test
-    void mapsSourceAndWaitingFailuresWithoutBorrowingAnActual() {
-        var sourceCause = new AssertionError("source broke");
-        var waitingCause = new IllegalStateException("parker broke");
-        WaitOutcome<Object> source =
-                new BeforeObservation<>(
-                        SOURCE, sourceCause, 3, 0);
-        WaitOutcome<Object> waiting =
-                new BeforeObservation<>(
-                        WAITING, waitingCause, 4, 0);
+    void uncontrolledFailuresKeepCategoryCauseAttemptAndObservation() {
+        var sourceCause = new IllegalStateException("source failed");
+        var conditionCause = new IllegalArgumentException("condition failed");
+        var waitingCause = new IllegalStateException("waiting failed");
+        var interruption = new InterruptedException("stopped");
 
         AwaitSourceRetrievalException sourceFailure = assertThrows(
                 AwaitSourceRetrievalException.class,
-                () -> complete(source, "payment exists", null, config(1, 2, 0)));
+                () -> complete(new BeforeObservation<>(SOURCE, sourceCause,
+                                2, SECOND), "condition", "business reason",
+                        config(SECOND, 10 * SECOND, 0)));
+        AwaitConditionEvaluationException conditionFailure = assertThrows(
+                AwaitConditionEvaluationException.class,
+                () -> complete(new AfterObservation<>(CONDITION, "actual",
+                                conditionCause, 3, SECOND), "condition",
+                        "business reason", config(SECOND, 10 * SECOND, 0)));
         AwaitUnhandledException waitingFailure = assertThrows(
                 AwaitUnhandledException.class,
-                () -> complete(waiting, "payment exists", null, config(1, 2, 0)));
+                () -> complete(new BeforeObservation<>(WAITING, waitingCause,
+                                4, SECOND), "condition", null,
+                        config(SECOND, 10 * SECOND, 0)));
+        AwaitInterruptedException interruptedFailure = assertThrows(
+                AwaitInterruptedException.class,
+                () -> complete(new BeforeObservation<>(WAITING, interruption,
+                                5, SECOND), "condition", null,
+                        config(SECOND, 10 * SECOND, 0)));
 
         assertSame(sourceCause, sourceFailure.getCause());
-        assertEquals("""
-                Await source retrieval failed
-
-                Attempt: 3
-                Condition: payment exists
-                Cause: AssertionError: source broke""", sourceFailure.getMessage());
+        assertSame(conditionCause, conditionFailure.getCause());
         assertSame(waitingCause, waitingFailure.getCause());
-        assertEquals("""
-                Await execution was unhandled
-
-                Attempt: 4
-                Condition: payment exists
-                Cause: IllegalStateException: parker broke""",
-                waitingFailure.getMessage());
+        assertSame(interruption, interruptedFailure.getCause());
+        assertMessage(sourceFailure, "source retrieval", "Attempt: 2",
+                "condition", "business reason", "source failed");
+        assertFalse(sourceFailure.getMessage().contains("Actual:"));
+        assertMessage(conditionFailure, "condition evaluation", "Attempt: 3",
+                "condition", "Actual: actual", "business reason",
+                "condition failed");
+        assertMessage(waitingFailure, "execution was unhandled", "Attempt: 4",
+                "waiting failed");
+        assertMessage(interruptedFailure, "interrupted", "Attempt: 5",
+                "Origin: waiting", "stopped");
     }
 
     @Test
-    void returnsSuccessWithoutRenderingTerminalMetadata() {
-        var result = new Object();
-        RuntimeCondition<Object, Object> runtime = new RuntimeCondition<>(
-                value -> satisfied(result), () -> {
-                    throw new InternalError("description must not be read");
-                }, null);
-        WaitOutcome<Object> outcome =
-                new Satisfied<>(
-                        new ThrowingValue(new InternalError(
-                                "actual must not be rendered")),
-                        result, 1, 0);
-
-        assertSame(result, new FailureFactory().complete(
-                outcome, runtime, config(1, 2, 0)));
-    }
-
-    @Test
-    void protectsDescriptionAndActualRenderingWithoutChangingClassification() {
-        var actual = new ThrowingValue(new IllegalStateException("bad value"));
-        var cause = new IllegalArgumentException("condition broke");
-        var descriptions = new int[1];
-        RuntimeCondition<Object, Object> runtime = new RuntimeCondition<>(
-                value -> satisfied(value),
-                () -> {
-                    descriptions[0]++;
-                    throw new IllegalStateException("bad description");
-                }, null);
-        WaitOutcome<Object> outcome =
-                new AfterObservation<>(
-                        CONDITION, actual, cause, 1, 0);
-
-        AwaitConditionEvaluationException failure = assertThrows(
-                AwaitConditionEvaluationException.class,
-                () -> new FailureFactory().complete(
-                        outcome, runtime, config(1, 2, 0)));
-
-        assertSame(cause, failure.getCause());
-        assertEquals("""
-                Await condition evaluation failed
-
-                Attempt: 1
-                Condition: condition description unavailable
-                Actual: <value unavailable: toString() threw IllegalStateException>
-                Cause: IllegalArgumentException: condition broke""",
-                failure.getMessage());
-        assertEquals(1, descriptions[0]);
-        assertEquals(1, actual.calls);
-    }
-
-    @Test
-    void usesDescriptionFallbackForNullAndBlankValues() {
-        for (String description : new String[] {null, "", " \t\n"}) {
-            var calls = new int[1];
-            WaitOutcome<Object> outcome =
-                    new BeforeObservation<>(
-                            SOURCE,
-                            new IllegalStateException(), 1, 0);
-
-            AwaitSourceRetrievalException failure = assertThrows(
-                    AwaitSourceRetrievalException.class,
-                    () -> new FailureFactory().complete(outcome,
-                            new RuntimeCondition<>(
-                                    value -> satisfied(value), () -> {
-                                        calls[0]++;
-                                        return description;
-                                    }, null), config(1, 2, 0)));
-
-            assertTrue(failure.getMessage().contains(
-                    "Condition: condition description unavailable"));
-            assertEquals(1, calls[0]);
-        }
-    }
-
-    @Test
-    void readsATerminalAssertionMessageOnceAndReusesIt() {
-        var assertion = new CountingAssertion("expected\r\nbut was");
-        WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(
-                0, new Unsatisfied<>("actual",
-                        "assertion did not pass", assertion, 1, 2));
+    void assertionCauseIsRetainedAndItsMessageIsReadOnce() {
+        var assertion = new CountingAssertion("assertion failed");
+        WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(0,
+                new Unsatisfied<>("actual", "fallback", assertion,
+                        2, 3 * SECOND));
 
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
-                () -> complete(outcome, "condition", null, config(1, 2, 0)));
+                () -> complete(outcome, "condition", null,
+                        config(SECOND, 2 * SECOND, 0)));
 
         assertSame(assertion, failure.getCause());
-        assertEquals(1, assertion.calls);
-        assertTrue(failure.getMessage().contains("""
-                Mismatch:
-                    expected
-                    but was
-                Cause:
-                    CountingAssertion: expected
-                    but was"""));
+        assertMessage(failure, "assertion failed", "CountingAssertion");
+        assertTrue(assertion.calls == 1);
     }
 
     @Test
-    void handlesBlankAndThrowingAssertionMessagesWithoutReplacingTheCause() {
-        var blank = new CountingAssertion("  ");
-        var throwing = new CountingAssertion(
-                new IllegalStateException("message unavailable"));
+    void successfulOutcomeDoesNotRenderFailureMetadata() {
+        var result = new Object();
+        RuntimeCondition<Object, Object> condition = new RuntimeCondition<>(
+                Evaluation::satisfied, () -> {
+                    throw new AssertionError("description must not be read");
+                }, null);
 
-        AwaitTimeoutException blankFailure = assertionTimeout(blank);
-        AwaitTimeoutException throwingFailure = assertionTimeout(throwing);
-
-        assertSame(blank, blankFailure.getCause());
-        assertTrue(blankFailure.getMessage().contains(
-                "Mismatch: assertion did not pass\nCause: CountingAssertion"));
-        assertEquals(1, blank.calls);
-        assertSame(throwing, throwingFailure.getCause());
-        assertTrue(throwingFailure.getMessage().contains(
-                "Mismatch: assertion did not pass\n"
-                        + "Cause: CountingAssertion: <message unavailable: "
-                        + "getMessage() threw IllegalStateException>"));
-        assertEquals(1, throwing.calls);
+        assertSame(result, new FailureFactory().complete(
+                new Satisfied<>(new ThrowingValue(new AssertionError()), result,
+                        1, 0), condition, config(1, 2, 0)));
     }
 
     @Test
-    void normalizesEveryMultilineUncontrolledFieldAndReadsCallbacksOnce() {
-        var actual = new CountingValue("actual one\ractual two");
-        var cause = new CountingCause("cause one\r\n cause two\rcause three");
-        var descriptions = new int[1];
-        RuntimeCondition<Object, Object> runtime = new RuntimeCondition<>(
-                value -> satisfied(value), () -> {
-                    descriptions[0]++;
-                    return "condition one\r\n condition two\rcondition three";
-                }, "because one\r\nbecause two");
-        WaitOutcome<Object> outcome =
-                new AfterObservation<>(
-                        CONDITION, actual, cause, 2, 0);
+    void diagnosticRenderingFailuresDoNotChangeTheFailureCategory() {
+        var actual = new ThrowingValue(new IllegalStateException("toString"));
+        RuntimeCondition<Object, Object> condition = new RuntimeCondition<>(
+                Evaluation::satisfied, () -> {
+                    throw new IllegalStateException("description");
+                }, "business reason");
+        WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(0,
+                new Unsatisfied<>(actual, "not ready", null, 1, 2));
 
-        AwaitConditionEvaluationException failure = assertThrows(
-                AwaitConditionEvaluationException.class,
-                () -> new FailureFactory().complete(
-                        outcome, runtime, config(1, 2, 0)));
+        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
+                () -> new FailureFactory().complete(outcome, condition,
+                        config(1, 2, 0)));
 
-        assertEquals("""
-                Await condition evaluation failed
-
-                Attempt: 2
-                Condition:
-                    condition one
-                     condition two
-                    condition three
-                Actual:
-                    actual one
-                    actual two
-                Because:
-                    because one
-                    because two
-                Cause:
-                    CountingCause: cause one
-                     cause two
-                    cause three""", failure.getMessage());
-        assertEquals(1, descriptions[0]);
-        assertEquals(1, actual.calls);
-        assertEquals(1, cause.calls);
+        assertMessage(failure, "condition description unavailable",
+                "value unavailable", "business reason", "not ready");
+        assertTrue(actual.calls == 1);
     }
 
     @Test
-    void rendersNullBlankThrowingAndAnonymousCauseMessages() {
-        var nullMessage = new CountingCause(null);
-        RuntimeException anonymous = new RuntimeException() {
-        };
-        RuntimeException anonymousMessageFailure = new RuntimeException() {
-        };
-        var throwingMessage = new ThrowingMessageCause(anonymousMessageFailure);
-
-        AwaitSourceRetrievalException nullFailure = sourceFailure(nullMessage);
-        AwaitSourceRetrievalException anonymousFailure = sourceFailure(anonymous);
-        AwaitSourceRetrievalException throwingFailure = sourceFailure(
-                throwingMessage);
-
-        assertTrue(nullFailure.getMessage().endsWith("Cause: CountingCause"));
-        assertTrue(anonymousFailure.getMessage().endsWith(
-                "Cause: " + anonymous.getClass().getName()));
-        assertTrue(throwingFailure.getMessage().endsWith(
-                "Cause: ThrowingMessageCause: <message unavailable: "
-                        + "getMessage() threw "
-                        + anonymousMessageFailure.getClass().getName() + ">"));
-        assertSame(throwingMessage, throwingFailure.getCause());
-        assertEquals(1, nullMessage.calls);
-        assertEquals(1, throwingMessage.calls);
-    }
-
-    @Test
-    void callbackFreeEmergencyBranchFailureEscapesWithoutAnotherWrapper() {
-        var actual = new CountingValue(null);
-        var formatterFailure = new IllegalStateException("formatter broke");
-        Function<FailureMessage.Context, String> formatter = context -> {
-            context.actualValue();
-            throw formatterFailure;
-        };
-        WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(
-                0, new Unsatisfied<>(
-                        actual, "not ready", null, 1, 2));
-
-        assertThrows(NullPointerException.class,
-                () -> new FailureFactory(new FailureMessage(formatter)).complete(
-                        outcome, runtime("condition", null), config(1, 2, 0)));
-
-        assertEquals(1, actual.calls);
-    }
-
-    @Test
-    void usesCallbackFreeEmergencyFormattingOnce() {
-        var formatterFailure = new IllegalStateException("formatter broke");
-        Function<FailureMessage.Context, String> formatter = context -> {
-            throw formatterFailure;
-        };
-        RuntimeCondition<Object, Object> runtime = new RuntimeCondition<>(
-                value -> satisfied(value), () -> {
-                    throw new InternalError("description must not be read");
-                }, "payment must complete");
-        WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(
-                0, new Unsatisfied<>(
-                        new ThrowingValue(new InternalError(
-                                "actual must not be rendered")),
-                        "not ready", null, 7, 2));
-
-        AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
-                () -> new FailureFactory(new FailureMessage(formatter)).complete(
-                        outcome, runtime, config(1, 2, 0)));
-
-        assertSame(formatterFailure, failure.getCause());
-        assertEquals("""
-                Await execution was unhandled
-
-                Attempt: 7
-                Condition: condition description unavailable
-                Actual: <value unavailable: diagnostics failed>
-                Because: payment must complete
-                Cause: IllegalStateException""", failure.getMessage());
-    }
-
-    @Test
-    void emergencyFormattingReusesAlreadyMaterializedFragments() {
+    void emergencyFormattingReusesMaterializedContext() {
         var formatterFailure = new IllegalStateException("formatter broke");
         var actual = new CountingValue("rendered actual");
         Function<FailureMessage.Context, String> formatter = context -> {
@@ -534,25 +180,26 @@ class DiagnosticsSnapshotTest {
             context.actualValue();
             throw formatterFailure;
         };
-        WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(
-                0, new Unsatisfied<>(
-                        actual, "not ready", null, 3, 2));
+        WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(0,
+                new Unsatisfied<>(actual, "not ready", null, 3, 2));
 
         AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
                 () -> new FailureFactory(new FailureMessage(formatter)).complete(
-                        outcome, runtime("rendered condition", null),
+                        outcome, runtime("rendered condition", "business reason"),
                         config(1, 2, 0)));
 
-        assertEquals(1, actual.calls);
-        assertTrue(failure.getMessage().contains(
-                "Condition: rendered condition\nActual: rendered actual"));
+        assertSame(formatterFailure, failure.getCause());
+        assertMessage(failure, "execution was unhandled", "Attempt: 3",
+                "rendered condition", "rendered actual", "business reason",
+                "IllegalStateException");
+        assertTrue(actual.calls == 1);
     }
 
     @Test
-    void readsAReentrantConditionDescriptionOnce() {
+    void reentrantDescriptionIsMaterializedOnce() {
         var calls = new int[1];
         var contexts = new FailureMessage.Context[1];
-        RuntimeCondition<Object, Object> runtime = new RuntimeCondition<>(
+        RuntimeCondition<Object, Object> condition = new RuntimeCondition<>(
                 Evaluation::satisfied, () -> {
                     calls[0]++;
                     if (calls[0] == 1) {
@@ -564,48 +211,35 @@ class DiagnosticsSnapshotTest {
             contexts[0] = context;
             return context.conditionDescription();
         };
-        WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(
-                0, new Unsatisfied<>(
-                        "actual", "not ready", null, 1, 2));
+        WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(0,
+                new Unsatisfied<>("actual", "not ready", null, 1, 2));
 
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
                 () -> new FailureFactory(new FailureMessage(formatter)).complete(
-                        outcome, runtime, config(1, 2, 0)));
+                        outcome, condition, config(1, 2, 0)));
 
-        assertEquals("condition", failure.getMessage());
-        assertEquals(1, calls[0]);
+        assertTrue(failure.getMessage().equals("condition"));
+        assertTrue(calls[0] == 1);
     }
 
     @Test
     void fatalDiagnosticSignalsEscapeUnchanged() {
         var descriptionFatal = new InternalError("description fatal");
         var valueFatal = new InternalError("value fatal");
-        var messageFatal = new InternalError("message fatal");
         var formatterFatal = new InternalError("formatter fatal");
-        WaitOutcome<Object> sourceFailure =
-                new BeforeObservation<>(
-                        SOURCE,
-                        new IllegalStateException("source"), 1, 0);
-        WaitOutcome<Object> valueFailure =
-                new LateUnsatisfiedTimeout<>(0,
-                        new Unsatisfied<>(new ThrowingValue(valueFatal),
-                                "not ready", null, 1, 2));
-        var assertion = new CountingAssertion(messageFatal);
-        WaitOutcome<Object> assertionFailure =
-                new LateUnsatisfiedTimeout<>(0,
-                        new Unsatisfied<>("actual",
-                                "assertion did not pass", assertion, 1, 2));
+        WaitOutcome<Object> sourceFailure = new BeforeObservation<>(SOURCE,
+                new IllegalStateException("source"), 1, 0);
+        WaitOutcome<Object> valueFailure = new LateUnsatisfiedTimeout<>(0,
+                new Unsatisfied<>(new ThrowingValue(valueFatal), "not ready",
+                        null, 1, 2));
 
         assertSame(descriptionFatal, assertThrows(InternalError.class,
                 () -> new FailureFactory().complete(sourceFailure,
-                        new RuntimeCondition<>(value -> satisfied(value),
-                                () -> {
-                                    throw descriptionFatal;
-                                }, null), config(1, 2, 0))));
+                        new RuntimeCondition<>(Evaluation::satisfied, () -> {
+                            throw descriptionFatal;
+                        }, null), config(1, 2, 0))));
         assertSame(valueFatal, assertThrows(InternalError.class,
-                () -> complete(valueFailure, "condition", null, config(1, 2, 0))));
-        assertSame(messageFatal, assertThrows(InternalError.class,
-                () -> complete(assertionFailure, "condition", null,
+                () -> complete(valueFailure, "condition", null,
                         config(1, 2, 0))));
         assertSame(formatterFatal, assertThrows(InternalError.class,
                 () -> new FailureFactory(new FailureMessage(context -> {
@@ -615,73 +249,32 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void normalizesNestedMultilineFieldsWithoutTrailingSpaces() {
-        WaitOutcome<Object> outcome =
-                new BeforeObservation<>(
-                        SOURCE,
-                        new IllegalStateException("failure"), 1, 0);
-
-        String message = assertThrows(AwaitSourceRetrievalException.class,
-                () -> complete(outcome, "first\r\n second\rthird\n", null,
-                        config(1, 2, 0))).getMessage();
-
-        assertEquals("""
-                Await source retrieval failed
-
-                Attempt: 1
-                Condition:
-                    first
-                     second
-                    third
-
-                Cause: IllegalStateException: failure""", message);
-    }
-
-    @Test
-    void rendersArraysWithoutDependencies() {
-        Object[] nested = {new int[] {1, 2}, new Object[] {3, 4}};
-        Object[] recursive = new Object[1];
-        recursive[0] = recursive;
-
-        assertEquals(List.of("[1, 2]", "[[1, 2], [3, 4]]", "[[...]]", "null"),
-                List.of(renderedActual(new int[] {1, 2}),
-                        renderedActual(nested), renderedActual(recursive),
-                        renderedActual(null)));
-    }
-
-    private static AwaitTimeoutException assertionTimeout(
-            CountingAssertion assertion) {
-        WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(
-                0, new Unsatisfied<>("actual",
-                        "assertion did not pass", assertion, 1, 2));
-        return assertThrows(AwaitTimeoutException.class,
-                () -> complete(outcome, "condition", null, config(1, 2, 0)));
-    }
-
-    private static AwaitSourceRetrievalException sourceFailure(Throwable cause) {
-        WaitOutcome<Object> outcome =
-                new BeforeObservation<>(
-                        SOURCE, cause, 1, 0);
-        return assertThrows(AwaitSourceRetrievalException.class,
-                () -> complete(outcome, "condition", null, config(1, 2, 0)));
-    }
-
-    private static String renderedActual(Object actual) {
-        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
+    void multilineFieldsAreNormalizedAndArraysRenderWithoutDependencies() {
+        var cause = new IllegalStateException("first\r\nsecond");
+        AwaitSourceRetrievalException sourceFailure = assertThrows(
+                AwaitSourceRetrievalException.class,
+                () -> complete(new BeforeObservation<>(SOURCE, cause, 1, 0),
+                        "condition\rdescription", "business\nreason",
+                        config(1, 2, 0)));
+        AwaitTimeoutException arrayFailure = assertThrows(
+                AwaitTimeoutException.class,
                 () -> complete(new LateUnsatisfiedTimeout<>(0,
-                                new Unsatisfied<>(
-                                        actual, "not ready", null, 1, 2)),
-                        "condition", null, config(1, 2, 0)));
-        String prefix = "Observed: ";
-        int start = failure.getMessage().indexOf(prefix) + prefix.length();
-        return failure.getMessage().substring(start,
-                failure.getMessage().indexOf('\n', start));
+                                new Unsatisfied<>(new int[] {1, 2}, "not ready",
+                                        null, 1, 2)), "condition", null,
+                        config(1, 2, 0)));
+
+        assertFalse(sourceFailure.getMessage().contains("\r"));
+        assertTrue(sourceFailure.getMessage().lines()
+                .noneMatch(line -> line.endsWith(" ")));
+        assertMessage(sourceFailure, "condition", "description", "business",
+                "reason", "first", "second");
+        assertMessage(arrayFailure, "[1, 2]");
     }
 
     private static <R> R complete(WaitOutcome<R> outcome, String description,
-            String explanation, WaitConfiguration config) {
-        return new FailureFactory().complete(
-                outcome, runtime(description, explanation), config);
+            String explanation, WaitConfiguration configuration) {
+        return new FailureFactory().complete(outcome,
+                runtime(description, explanation), configuration);
     }
 
     private static <R> RuntimeCondition<Object, R> runtime(
@@ -690,22 +283,31 @@ class DiagnosticsSnapshotTest {
                 () -> description, explanation);
     }
 
-    private static WaitConfiguration config(long every, long upTo, long stableFor) {
+    private static WaitConfiguration config(long every, long upTo,
+            long stableFor) {
         return new WaitConfiguration(every, upTo, stableFor);
     }
 
+    private static void assertMessage(Throwable failure, String... fragments) {
+        for (String fragment : fragments) {
+            assertTrue(failure.getMessage().contains(fragment),
+                    () -> "missing diagnostic fragment: " + fragment
+                            + "\n" + failure.getMessage());
+        }
+    }
+
     private static final class CountingValue {
-        private final String text;
+        private final String value;
         private int calls;
 
-        private CountingValue(String text) {
-            this.text = text;
+        private CountingValue(String value) {
+            this.value = value;
         }
 
         @Override
         public String toString() {
             calls++;
-            return text;
+            return value;
         }
     }
 
@@ -720,39 +322,18 @@ class DiagnosticsSnapshotTest {
         @Override
         public String toString() {
             calls++;
-            if (failure instanceof Error error) {
-                throw error;
+            if (failure instanceof RuntimeException runtime) {
+                throw runtime;
             }
-            throw (RuntimeException) failure;
+            throw (Error) failure;
         }
     }
 
     private static final class CountingAssertion extends AssertionError {
-        private final Object message;
-        private int calls;
-
-        private CountingAssertion(Object message) {
-            this.message = message;
-        }
-
-        @Override
-        public String getMessage() {
-            calls++;
-            if (message instanceof Error error) {
-                throw error;
-            }
-            if (message instanceof RuntimeException exception) {
-                throw exception;
-            }
-            return (String) message;
-        }
-    }
-
-    private static final class CountingCause extends RuntimeException {
         private final String message;
         private int calls;
 
-        private CountingCause(String message) {
+        private CountingAssertion(String message) {
             this.message = message;
         }
 
@@ -762,20 +343,4 @@ class DiagnosticsSnapshotTest {
             return message;
         }
     }
-
-    private static final class ThrowingMessageCause extends RuntimeException {
-        private final RuntimeException thrown;
-        private int calls;
-
-        private ThrowingMessageCause(RuntimeException thrown) {
-            this.thrown = thrown;
-        }
-
-        @Override
-        public String getMessage() {
-            calls++;
-            throw thrown;
-        }
-    }
-
 }

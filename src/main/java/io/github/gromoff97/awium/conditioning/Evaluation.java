@@ -62,12 +62,6 @@ public final class Evaluation<R> {
         return uncontrolledCause;
     }
 
-    public static <R> Evaluation<R> narrow(Evaluation<? extends R> source) {
-        return source == null ? null : new Evaluation<>(source.status,
-                source.result, source.mismatch, source.assertionCause,
-                source.uncontrolledCause);
-    }
-
     private static String nonBlank(String value, String name) {
         if (requireNonNull(value, name + " must not be null").isBlank()) {
             throw new IllegalArgumentException(name + " must not be blank");

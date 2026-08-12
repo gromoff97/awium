@@ -1,7 +1,5 @@
 package io.github.gromoff97.awium.engine;
 
-import static java.util.Objects.requireNonNull;
-
 public sealed interface Attempt<R> permits Attempt.Satisfied, Attempt.Unsatisfied, Attempt.Uncontrolled {
 
     long number();
@@ -9,10 +7,6 @@ public sealed interface Attempt<R> permits Attempt.Satisfied, Attempt.Unsatisfie
     long completedNanos();
 
     record Satisfied<R>(Object actual, R result, long number, long completedNanos) implements Attempt<R>, WaitOutcome<R> {
-        public Satisfied {
-            validateNumber(number);
-        }
-
         @Override
         public Satisfied<R> attempt() {
             return this;
@@ -20,12 +14,7 @@ public sealed interface Attempt<R> permits Attempt.Satisfied, Attempt.Unsatisfie
     }
 
     record Unsatisfied<R>(Object actual, String mismatch, AssertionError assertionCause,
-            long number, long completedNanos) implements Attempt<R> {
-        public Unsatisfied {
-            requireNonNull(mismatch);
-            validateNumber(number);
-        }
-    }
+            long number, long completedNanos) implements Attempt<R> {}
 
     sealed interface Uncontrolled<R> extends Attempt<R>, WaitOutcome<R> permits Uncontrolled.BeforeObservation, Uncontrolled.AfterObservation {
 
@@ -39,30 +28,11 @@ public sealed interface Attempt<R> permits Attempt.Satisfied, Attempt.Unsatisfie
         }
 
         record BeforeObservation<R>(Origin origin, Throwable cause, long number,
-                long completedNanos) implements Uncontrolled<R> {
-            public BeforeObservation {
-                requireNonNull(origin);
-                requireNonNull(cause);
-                validateNumber(number);
-            }
-        }
+                long completedNanos) implements Uncontrolled<R> {}
 
         record AfterObservation<R>(Origin origin, Object actual, Throwable cause,
-                long number, long completedNanos) implements Uncontrolled<R> {
-            public AfterObservation {
-                requireNonNull(origin);
-                requireNonNull(cause);
-                validateNumber(number);
-            }
-        }
+                long number, long completedNanos) implements Uncontrolled<R> {}
     }
 
     enum Origin { WAITING, SOURCE, CONDITION }
-
-    private static void validateNumber(long number) {
-        if (number <= 0) {
-            throw new IllegalArgumentException(
-                    "attempt number must be greater than zero");
-        }
-    }
 }

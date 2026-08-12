@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium.conditioning.providers;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.PresentCondition;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
@@ -49,28 +48,21 @@ public final class OptionalConditionProvider {
 
     private static <T> Condition<Optional<T>, T> valueCondition(
             T operand, boolean equal) {
-        return new Condition<>() {
-            @Override
-            public Evaluation<T> evaluate(Optional<T> actual) {
-                if (actual == null) {
-                    return unsatisfied("optional was null");
-                }
-                if (actual.isEmpty()) {
-                    return unsatisfied("optional was empty");
-                }
-                T value = actual.orElseThrow();
-                return equal(value, operand) == equal
-                        ? satisfied(value)
-                        : unsatisfied(equal
-                                ? "optional value was not equal"
-                                : "optional value was equal");
-            }
-
-            @Override
-            public String description() {
-                return "optional value " + (equal ? "equal to " : "not equal to ")
-                        + operand;
-            }
-        };
+        return condition(() -> "optional value "
+                        + (equal ? "equal to " : "not equal to ") + operand,
+                actual -> {
+                    if (actual == null) {
+                        return unsatisfied("optional was null");
+                    }
+                    if (actual.isEmpty()) {
+                        return unsatisfied("optional was empty");
+                    }
+                    T value = actual.orElseThrow();
+                    return equal(value, operand) == equal
+                            ? satisfied(value)
+                            : unsatisfied(equal
+                                    ? "optional value was not equal"
+                                    : "optional value was equal");
+                });
     }
 }

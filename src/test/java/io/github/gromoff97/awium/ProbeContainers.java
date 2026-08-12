@@ -11,21 +11,26 @@ import java.util.Set;
 
 final class ProbeContainers {
 
+    private ProbeContainers() {
+        throw new AssertionError("Utility class");
+    }
+
     static final class ProbeCollection<E> extends AbstractCollection<E> {
-        private final int size;
+        private final int reportedSize;
         private final RuntimeException sizeFailure;
         int sizeCalls;
 
-        ProbeCollection(int size) {
-            this(size, null);
+        ProbeCollection(int reportedSize) {
+            this(reportedSize, null);
         }
 
         ProbeCollection(RuntimeException sizeFailure) {
             this(0, sizeFailure);
         }
 
-        private ProbeCollection(int size, RuntimeException sizeFailure) {
-            this.size = size;
+        private ProbeCollection(int reportedSize,
+                RuntimeException sizeFailure) {
+            this.reportedSize = reportedSize;
             this.sizeFailure = sizeFailure;
         }
 
@@ -35,7 +40,7 @@ final class ProbeContainers {
             if (sizeFailure != null) {
                 throw sizeFailure;
             }
-            return size;
+            return reportedSize;
         }
 
         @Override
@@ -82,33 +87,22 @@ final class ProbeContainers {
     }
 
     static final class MembershipCollection<E> extends AbstractCollection<E> {
-        private final Collection<? extends E> elements;
+        private final List<? extends E> elements;
         private final RuntimeException iteratorFailure;
-        private final int failingNext;
-        private final RuntimeException nextFailure;
         int iteratorCalls;
-        int nextCalls;
 
-        MembershipCollection(Collection<? extends E> elements) {
-            this(elements, null, 0, null);
+        MembershipCollection(List<? extends E> elements) {
+            this(elements, null);
         }
 
         MembershipCollection(RuntimeException iteratorFailure) {
-            this(List.of(), iteratorFailure, 0, null);
+            this(List.of(), iteratorFailure);
         }
 
-        MembershipCollection(Collection<? extends E> elements, int failingNext,
-                RuntimeException nextFailure) {
-            this(elements, null, failingNext, nextFailure);
-        }
-
-        private MembershipCollection(Collection<? extends E> elements,
-                RuntimeException iteratorFailure, int failingNext,
-                RuntimeException nextFailure) {
+        private MembershipCollection(List<? extends E> elements,
+                RuntimeException iteratorFailure) {
             this.elements = elements;
             this.iteratorFailure = iteratorFailure;
-            this.failingNext = failingNext;
-            this.nextFailure = nextFailure;
         }
 
         @Override
@@ -122,27 +116,9 @@ final class ProbeContainers {
             if (iteratorFailure != null) {
                 throw iteratorFailure;
             }
-            Iterator<? extends E> delegate = elements.iterator();
-            return new Iterator<>() {
-                @Override
-                public boolean hasNext() {
-                    return delegate.hasNext();
-                }
-
-                @Override
-                public E next() {
-                    nextCalls++;
-                    if (nextFailure != null && nextCalls == failingNext) {
-                        throw nextFailure;
-                    }
-                    return delegate.next();
-                }
-            };
-        }
-
-        @Override
-        public boolean contains(Object value) {
-            throw new AssertionError("contains must not be called");
+            @SuppressWarnings("unchecked")
+            Iterator<E> iterator = (Iterator<E>) elements.iterator();
+            return iterator;
         }
 
         @Override
@@ -151,60 +127,17 @@ final class ProbeContainers {
         }
     }
 
-    static final class ExpectedCollection<E> extends AbstractCollection<E> {
-        int isEmptyCalls;
-
-        @Override
-        public int size() {
-            throw new AssertionError("size must not be called");
-        }
-
-        @Override
-        public boolean isEmpty() {
-            isEmptyCalls++;
-            return false;
-        }
-
-        @Override
-        public Iterator<E> iterator() {
-            throw new AssertionError("iterator must not be called");
-        }
-    }
-
     static final class EntryMap<K, V> extends AbstractMap<K, V> {
         private final List<Entry<K, V>> entries;
-        RuntimeException sizeFailure;
-        RuntimeException isEmptyFailure;
         RuntimeException entrySetFailure;
-        RuntimeException iteratorFailure;
-        RuntimeException nextFailure;
-        int failingNext;
-        int sizeCalls;
-        int isEmptyCalls;
         int entrySetCalls;
-        int iteratorCalls;
-        int hasNextCalls;
-        int nextCalls;
 
         EntryMap(List<Entry<K, V>> entries) {
             this.entries = entries;
         }
 
         @Override
-        public int size() {
-            sizeCalls++;
-            if (sizeFailure != null) {
-                throw sizeFailure;
-            }
-            return entries.size();
-        }
-
-        @Override
         public boolean isEmpty() {
-            isEmptyCalls++;
-            if (isEmptyFailure != null) {
-                throw isEmptyFailure;
-            }
             return entries.isEmpty();
         }
 
@@ -217,28 +150,7 @@ final class ProbeContainers {
             return new AbstractSet<>() {
                 @Override
                 public Iterator<Entry<K, V>> iterator() {
-                    iteratorCalls++;
-                    if (iteratorFailure != null) {
-                        throw iteratorFailure;
-                    }
-                    Iterator<Entry<K, V>> delegate = entries.iterator();
-                    return new Iterator<>() {
-                        @Override
-                        public boolean hasNext() {
-                            hasNextCalls++;
-                            return delegate.hasNext();
-                        }
-
-                        @Override
-                        public Entry<K, V> next() {
-                            nextCalls++;
-                            if (nextFailure != null
-                                    && nextCalls == failingNext) {
-                                throw nextFailure;
-                            }
-                            return delegate.next();
-                        }
-                    };
+                    return entries.iterator();
                 }
 
                 @Override
@@ -257,10 +169,6 @@ final class ProbeContainers {
     static final class ProbeEntry<K, V> implements Map.Entry<K, V> {
         private final K key;
         private final V value;
-        RuntimeException keyFailure;
-        RuntimeException valueFailure;
-        int keyCalls;
-        int valueCalls;
 
         ProbeEntry(K key, V value) {
             this.key = key;
@@ -269,19 +177,11 @@ final class ProbeContainers {
 
         @Override
         public K getKey() {
-            keyCalls++;
-            if (keyFailure != null) {
-                throw keyFailure;
-            }
             return key;
         }
 
         @Override
         public V getValue() {
-            valueCalls++;
-            if (valueFailure != null) {
-                throw valueFailure;
-            }
             return value;
         }
 
@@ -302,17 +202,17 @@ final class ProbeContainers {
     }
 
     static final class Directional {
-        final boolean equalsResult;
+        private final boolean result;
         int equalsCalls;
 
-        Directional(boolean equalsResult) {
-            this.equalsResult = equalsResult;
+        Directional(boolean result) {
+            this.result = result;
         }
 
         @Override
         public boolean equals(Object other) {
             equalsCalls++;
-            return other instanceof Directional && equalsResult;
+            return result;
         }
 
         @Override
@@ -322,7 +222,7 @@ final class ProbeContainers {
     }
 
     static final class GreedyValue {
-        final Set<String> matches;
+        private final Set<String> matches;
         int equalsCalls;
 
         GreedyValue(Set<String> matches) {
@@ -342,11 +242,10 @@ final class ProbeContainers {
         }
     }
 
-    record ExpectedValue(String value) {
-    }
+    record ExpectedValue(String value) {}
 
     static final class ThrowingEquals {
-        final RuntimeException failure;
+        private final RuntimeException failure;
 
         ThrowingEquals(RuntimeException failure) {
             this.failure = failure;

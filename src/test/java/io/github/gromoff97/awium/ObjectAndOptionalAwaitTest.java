@@ -99,5 +99,4 @@ class ObjectAndOptionalAwaitTest {
                         .withUpTo(ofNanos(3)),
                 time, time);
     }
-
 }

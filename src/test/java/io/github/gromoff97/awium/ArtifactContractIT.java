@@ -3,6 +3,7 @@ package io.github.gromoff97.awium;
 import static io.github.gromoff97.awium.CompilationSupport.compiles;
 import static java.nio.file.Files.isRegularFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.module.ModuleFinder;
@@ -17,21 +18,17 @@ class ArtifactContractIT {
     private static final Path JAR = Path.of(
             "build", "libs", "awium-0.1.0-SNAPSHOT.jar");
     @Test
-    void currentBuildJarIsAnExplicitModuleWithOnlySupportedExports()
+    void currentBuildJarIsAnExplicitJavaBaseOnlyModule()
             throws Exception {
         assertTrue(isRegularFile(JAR), JAR.toString());
 
         ModuleReference module = ModuleFinder.of(JAR)
                 .find("io.github.gromoff97.awium").orElseThrow();
-        assertEquals(Set.of("io.github.gromoff97.awium",
-                        "io.github.gromoff97.awium.await",
-                        "io.github.gromoff97.awium.sources",
-                        "io.github.gromoff97.awium.conditioning",
-                        "io.github.gromoff97.awium.conditioning.conditions",
-                        "io.github.gromoff97.awium.conditioning.providers",
-                        "io.github.gromoff97.awium.exceptions"),
-                Set.copyOf(module.descriptor().exports().stream()
-                        .map(export -> export.source()).toList()));
+        assertFalse(module.descriptor().isAutomatic());
+        assertFalse(module.descriptor().exports().isEmpty());
+        assertEquals(Set.of("java.base"),
+                Set.copyOf(module.descriptor().requires().stream()
+                        .map(require -> require.name()).toList()));
     }
 
     @Test

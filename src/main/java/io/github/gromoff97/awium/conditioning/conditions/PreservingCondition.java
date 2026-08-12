@@ -32,23 +32,12 @@ public final class PreservingCondition<S> {
         return runtime;
     }
 
-    public static final class ExplainedCondition<S> {
+    public record ExplainedCondition<S>(PreservingCondition<S> delegate,
+            String explanation) {
 
-        private final PreservingCondition<S> delegate;
-        private final String explanation;
-
-        private ExplainedCondition(PreservingCondition<S> delegate,
-                String explanation) {
-            this.delegate = requireNonNull(delegate);
-            this.explanation = requireNonNull(explanation);
-        }
-
-        public PreservingCondition<S> delegate() {
-            return delegate;
-        }
-
-        public String explanation() {
-            return explanation;
+        public ExplainedCondition {
+            requireNonNull(delegate);
+            explanation = literalExplanation(explanation);
         }
     }
 }

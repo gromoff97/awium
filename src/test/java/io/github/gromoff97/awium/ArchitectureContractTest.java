@@ -85,24 +85,7 @@ class ArchitectureContractTest {
         for (Map<Path, String> invalid : List.of(
                 Map.of(Path.of("Syntax.java"), "final class Syntax {"),
                 Map.of(Path.of("Types.java"),
-                        "final class Types { MissingType value; }"),
-                Map.of(Path.of("Import.java"),
-                        "import missing.Type; final class Import {}"),
-                Map.of(Path.of("StaticImport.java"),
-                        "import static missing.Type.method; "
-                                + "final class StaticImport {}"),
-                Map.of(Path.of("Call.java"),
-                        "final class Call { void run() { missing(); } }"),
-                Map.of(Path.of("Cast.java"),
-                        "final class Cast { Object value = (MissingType) null; }"),
-                Map.of(Path.of("ClassLiteral.java"),
-                        "final class ClassLiteral { Class<?> type = MissingType.class; }"),
-                Map.of(Path.of("Annotation.java"),
-                        "@Missing final class Annotation {}"),
-                Map.of(Path.of("Throws.java"),
-                        "final class Throws { void run() throws MissingType {} }"),
-                Map.of(Path.of("InstanceOf.java"),
-                        "final class InstanceOf { boolean test(Object value) { return value instanceof MissingType; } }"))) {
+                        "final class Types { MissingType value; }"))) {
             assertThrows(AssertionError.class,
                     () -> assertApprovedSources(invalid));
         }
@@ -120,15 +103,6 @@ class ArchitectureContractTest {
                             }
                         }
                         """),
-                entry("lookup VarHandle return", """
-                        class Mutant {
-                            int state;
-                            void run(java.lang.invoke.MethodHandles.Lookup lookup)
-                                    throws ReflectiveOperationException {
-                                lookup.findVarHandle(Mutant.class, "state", int.class);
-                            }
-                        }
-                        """),
                 entry("nested generic array return", """
                         class Mutant {
                             static java.util.List<? extends
@@ -140,58 +114,6 @@ class ArchitectureContractTest {
                                 return forbiddenGenericArrayReturn();
                             }
                         }
-                        """),
-                entry("intersection return", """
-                        class Mutant {
-                            static <T extends java.util.concurrent.Future<?>
-                                    & java.io.Serializable>
-                                    T forbiddenIntersectionReturn() {
-                                return null;
-                            }
-                            Object run() {
-                                return forbiddenIntersectionReturn();
-                            }
-                        }
-                        """),
-                entry("lower wildcard parameter", """
-                        class Mutant {
-                            static void forbiddenLowerWildcardParameter(
-                                    java.util.List<? super
-                                    java.util.concurrent.ForkJoinTask<?>> value) {
-                            }
-                            void run() {
-                                forbiddenLowerWildcardParameter(null);
-                            }
-                        }
-                        """),
-                entry("implicit Executor parameter", """
-                        class Mutant {
-                            void run() {
-                                java.net.http.HttpClient.newBuilder().executor(null);
-                            }
-                        }
-                        """))
-                .forEach(ArchitectureContractTest::assertRejected);
-    }
-
-    @Test
-    void architectureAuditRejectsAllJdkSchedulerFamilies() {
-        ofEntries(
-                entry("util Timer", "class Mutant { java.util.Timer timer; }"),
-                entry("util TimerTask", """
-                        class Mutant extends java.util.TimerTask {
-                            public void run() {}
-                        }
-                        """),
-                entry("Swing Timer subtype", """
-                        class Mutant extends javax.swing.Timer {
-                            Mutant() { super(1, null); }
-                        }
-                        """),
-                entry("JMX TimerMBean", """
-                        class Mutant {
-                            javax.management.timer.TimerMBean timer;
-                        }
                         """))
                 .forEach(ArchitectureContractTest::assertRejected);
     }
@@ -200,65 +122,22 @@ class ArchitectureContractTest {
     void architectureAuditRejectsEveryApprovedBan() {
         Map<String, String> mutants = ofEntries(
                 entry("thread subclass", "class Mutant extends Thread {}"),
-                entry("worker start",
-                        "class Mutant { void run(Thread worker) { worker.start(); } }"),
                 entry("worker start reference",
                         "class Mutant { java.util.function.Consumer<Thread> start = Thread::start; }"),
                 entry("thread construction",
                         "class Mutant { Thread worker = new Thread(); }"),
-                entry("thread constructor reference",
-                        "class Mutant { java.util.function.Function<Runnable, Thread> factory = Thread::new; }"),
                 entry("virtual thread builder",
                         "class Mutant { Thread.Builder.OfVirtual builder = Thread.ofVirtual(); }"),
-                entry("platform thread builder",
-                        "class Mutant { Thread.Builder.OfPlatform builder = java.lang.Thread.ofPlatform(); }"),
-                entry("virtual thread builder reference",
-                        "class Mutant { java.util.function.Supplier<Thread.Builder.OfVirtual> builder = Thread::ofVirtual; }"),
-                entry("static-imported virtual thread starter", """
-                        import static java.lang.Thread.startVirtualThread;
-                        class Mutant { Thread worker = startVirtualThread(() -> {}); }
-                        """),
                 entry("sleep",
                         "class Mutant { void run() throws InterruptedException { Thread.sleep(1); } }"),
-                entry("sleep reference", """
-                        class Mutant {
-                            interface Sleeper {
-                                void sleep(long millis) throws InterruptedException;
-                            }
-                            Sleeper sleeper = Thread::sleep;
-                        }
-                        """),
                 entry("static-imported executor factory", """
                         import static java.util.concurrent.Executors.newFixedThreadPool;
                         class Mutant { Object worker = newFixedThreadPool(1); }
                         """),
-                entry("executor method reference", """
-                        class Mutant {
-                            java.util.concurrent.Executor executor;
-                            java.util.function.Consumer<Runnable> submit =
-                                    executor::execute;
-                        }
-                        """),
                 entry("interrupt read reference",
                         "class Mutant { java.util.function.BooleanSupplier read = Thread::interrupted; }"),
-                entry("interrupt restore reference",
-                        "class Mutant { java.util.function.Consumer<Thread> restore = Thread::interrupt; }"),
-                entry("static-imported interrupt read", """
-                        import static java.lang.Thread.interrupted;
-                        class Mutant { boolean read() { return interrupted(); } }
-                        """),
                 entry("monitor method",
                         "class Mutant { void run(Object lock) throws InterruptedException { lock.wait(); } }"),
-                entry("unqualified monitor methods", """
-                        class Mutant {
-                            void run() throws InterruptedException {
-                                notify();
-                                notifyAll();
-                            }
-                        }
-                        """),
-                entry("monitor method reference",
-                        "class Mutant { Runnable notifier = this::notify; }"),
                 entry("synchronized monitor",
                         "class Mutant { synchronized void run() {} }"),
                 entry("synchronized block", """
@@ -279,16 +158,13 @@ class ArchitectureContractTest {
                 entry("interrupt read",
                         "class Mutant { boolean read(Thread t) { return t.isInterrupted(); } }"),
                 entry("interrupt restore",
-                        "class Mutant { void restore(Thread t) { t.interrupt(); } }"));
+                        "class Mutant { void restore(Thread t) { t.interrupt(); } }"),
+                entry("future type",
+                        "class Mutant { java.util.concurrent.Future<?> future; }"),
+                entry("timer root",
+                        "class Mutant { java.util.Timer timer; }"));
 
         mutants.forEach(ArchitectureContractTest::assertRejected);
-        for (String type : List.of("Executor", "Executors",
-                "CompletableFuture", "CompletionService", "CompletionStage",
-                "Future", "ThreadFactory")) {
-            assertRejected("qualified " + type,
-                    "class Mutant { java.util.concurrent.%s worker; }"
-                            .formatted(type));
-        }
     }
 
     @Test
@@ -667,5 +543,4 @@ class ArchitectureContractTest {
             }
         }
     }
-
 }

@@ -196,11 +196,7 @@ public final class MapConditionProvider {
     }
 
     private static List<Map.Entry<?, ?>> entries(Map<?, ?> map) {
-        List<Map.Entry<?, ?>> entries = new ArrayList<>();
-        for (Map.Entry<?, ?> entry : map.entrySet()) {
-            entries.add(entry);
-        }
-        return entries;
+        return new ArrayList<>(map.entrySet());
     }
 
     private static boolean entryMatches(Map.Entry<?, ?> actual,

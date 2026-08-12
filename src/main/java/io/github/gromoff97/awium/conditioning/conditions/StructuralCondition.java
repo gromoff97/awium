@@ -45,11 +45,11 @@ public final class StructuralCondition {
     }
 
     public static StructuralCondition empty() {
-        return new StructuralCondition(Relation.EMPTY, 0);
+        return empty;
     }
 
     public static StructuralCondition nonEmpty() {
-        return new StructuralCondition(Relation.NON_EMPTY, 0);
+        return nonEmpty;
     }
 
     public static StructuralCondition sizeExactly(int expected) {
@@ -83,23 +83,12 @@ public final class StructuralCondition {
         return new StructuralCondition(relation, bound);
     }
 
-    public static final class ExplainedCondition {
+    public record ExplainedCondition(StructuralCondition delegate,
+            String explanation) {
 
-        private final StructuralCondition delegate;
-        private final String explanation;
-
-        private ExplainedCondition(StructuralCondition delegate,
-                String explanation) {
-            this.delegate = requireNonNull(delegate);
-            this.explanation = requireNonNull(explanation);
-        }
-
-        public StructuralCondition delegate() {
-            return delegate;
-        }
-
-        public String explanation() {
-            return explanation;
+        public ExplainedCondition {
+            requireNonNull(delegate);
+            explanation = literalExplanation(explanation);
         }
     }
 

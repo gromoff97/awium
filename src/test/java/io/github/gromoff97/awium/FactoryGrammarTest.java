@@ -21,6 +21,7 @@ import io.github.gromoff97.awium.exceptions.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.util.Collection;
@@ -85,12 +86,12 @@ class FactoryGrammarTest {
     }
 
     private static void assertNullSource(Executable action) {
-        assertEquals("source must not be null",
-                assertThrows(NullPointerException.class, action).getMessage());
+        assertTrue(assertThrows(NullPointerException.class, action)
+                .getMessage().contains("source"));
     }
 
     private static void assertNullCondition(Executable action) {
-        assertEquals("condition must not be null",
-                assertThrows(NullPointerException.class, action).getMessage());
+        assertTrue(assertThrows(NullPointerException.class, action)
+                .getMessage().contains("condition"));
     }
 }

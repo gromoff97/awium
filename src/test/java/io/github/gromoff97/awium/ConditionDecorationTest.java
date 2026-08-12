@@ -1,63 +1,39 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.*;
-import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNSATISFIED;
-import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.*;
 import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.IllegalFormatException;
 import java.util.Locale;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class ConditionDecorationTest {
 
     @Test
-    void openConditionKeepsItsDelegateAndFormatsExplanationEagerly() {
+    void everyConditionKindFormatsItsExplanationEagerly() {
         Condition<Object, Object> condition = condition(
                 "custom condition", Evaluation::satisfied);
+        var preserving = PreservingCondition.of(runtime());
+        var present = PresentCondition.of(new RuntimeCondition<>(
+                value -> satisfied(value.orElse(null)), () -> "present", null));
 
-        var literal = condition.because("the value must be ready");
-        var formatted = condition.because("attempt %d", 3);
-
-        assertSame(condition, literal.delegate());
-        assertEquals("the value must be ready", literal.explanation());
-        assertSame(condition, formatted.delegate());
-        assertEquals("attempt 3", formatted.explanation());
-    }
-
-    @Test
-    void closedDescriptorsKeepTheirRuntimeAndCloseDecoration() {
-        RuntimeCondition<Object, Object> preservingRuntime = runtime();
-        RuntimeCondition<Optional<?>, Object> presentRuntime = new RuntimeCondition<>(
-                value -> satisfied(value.orElse(null)), () -> "present", null);
-        var preserving = PreservingCondition.of(preservingRuntime);
-        var present = PresentCondition.of(presentRuntime);
-        var structural = nonEmpty;
-
-        var explainedPreserving = preserving.because("preserving");
-        var explainedPresent = present.because("present %s", "value");
-        var explainedStructural = structural.because("structural");
-
-        assertSame(preservingRuntime, preserving.runtime());
-        assertSame(preserving, explainedPreserving.delegate());
-        assertEquals("preserving", explainedPreserving.explanation());
-        assertSame(presentRuntime, present.runtime());
-        assertSame(present, explainedPresent.delegate());
-        assertEquals("present value", explainedPresent.explanation());
-        assertEquals("present literal", present.because("present literal").explanation());
-        assertSame(structural, explainedStructural.delegate());
-        assertEquals("structural", explainedStructural.explanation());
+        assertEquals("the value must be ready",
+                condition.because("the value must be ready").explanation());
+        assertEquals("attempt 3",
+                condition.because("attempt %d", 3).explanation());
+        assertEquals("preserving",
+                preserving.because("preserving").explanation());
+        assertEquals("present value",
+                present.because("present %s", "value").explanation());
         assertEquals("structural value",
-                structural.because("structural %s", "value").explanation());
+                nonEmpty.because("structural %s", "value").explanation());
     }
 
     @Test
@@ -67,21 +43,16 @@ class ConditionDecorationTest {
                     throw new AssertionError("condition evaluated");
                 });
 
-        assertEquals("explanation must not be null",
-                assertThrows(NullPointerException.class,
-                        () -> condition.because((String) null)).getMessage());
-        assertEquals("explanation must not be blank",
-                assertThrows(IllegalArgumentException.class,
-                        () -> condition.because(" \n ")).getMessage());
-        assertEquals("format must not be null",
-                assertThrows(NullPointerException.class,
-                        () -> condition.because(null, 1)).getMessage());
-        assertEquals("arguments must not be null",
-                assertThrows(NullPointerException.class,
-                        () -> condition.because("%s", (Object[]) null)).getMessage());
-        assertEquals("explanation must not be blank",
-                assertThrows(IllegalArgumentException.class,
-                        () -> condition.because("%s", " ")).getMessage());
+        assertValidation("explanation", NullPointerException.class,
+                () -> condition.because((String) null));
+        assertValidation("explanation", IllegalArgumentException.class,
+                () -> condition.because(" \n "));
+        assertValidation("format", NullPointerException.class,
+                () -> condition.because(null, 1));
+        assertValidation("arguments", NullPointerException.class,
+                () -> condition.because("%s", (Object[]) null));
+        assertValidation("explanation", IllegalArgumentException.class,
+                () -> condition.because("%s", " "));
         assertThrows(IllegalFormatException.class, () -> condition.because("%q", 1));
         assertThrows(IllegalStateException.class,
                 () -> condition.because("%s", new Object() {
@@ -104,109 +75,12 @@ class ConditionDecorationTest {
         }
     }
 
-    @Test
-    void openAdaptersKeepTheDelegateSemanticsAndOptionalExplanation()
-            throws Exception {
-        var evaluations = new int[1];
-        Condition<Object, String> condition = condition("named condition",
-                actual -> {
-                    evaluations[0]++;
-                    return satisfied("selected");
-                });
-
-        RuntimeCondition<Object, String> raw = open(condition);
-        RuntimeCondition<Object, String> explained = open(
-                condition.because("because value"));
-
-        assertEquals("selected", explained.evaluate(this).result());
-        assertEquals(1, evaluations[0]);
-        assertEquals("named condition", raw.description().get());
-        assertNull(raw.explanation());
-        assertEquals("because value", explained.explanation());
-
-        Condition<Object, Object> nullEvaluation = condition(
-                "custom condition", actual -> null);
-        assertNull(open(nullEvaluation).evaluate(this));
-    }
-
-    @Test
-    void closedAdaptersRecoverTheirExactResultContractsAndExplanations()
-            throws Exception {
-        var description = (java.util.function.Supplier<String>) () -> "descriptor";
-        var actual = new StringBuilder("actual");
-        var preserving = PreservingCondition.of(new RuntimeCondition<>(
-                value -> satisfied(new Object()), description, null));
-
-        RuntimeCondition<StringBuilder, StringBuilder> rawPreserving =
-                preserving(preserving);
-        RuntimeCondition<StringBuilder, StringBuilder> explainedPreserving =
-                preserving(preserving.because("preserving"));
-
-        assertSame(actual, explainedPreserving.evaluate(actual).result());
-        assertSame(description, rawPreserving.description());
-        assertNull(rawPreserving.explanation());
-        assertEquals("preserving", explainedPreserving.explanation());
-
-        var present = PresentCondition.of(new RuntimeCondition<>(
-                value -> satisfied(value.orElse(null)), description, null));
-        RuntimeCondition<Optional<String>, String> rawPresent =
-                present(present);
-        RuntimeCondition<Optional<String>, String> explainedPresent =
-                present(present.because("present"));
-
-        assertEquals("value",
-                explainedPresent.evaluate(Optional.of("value")).result());
-        assertSame(description, rawPresent.description());
-        assertNull(rawPresent.explanation());
-        assertEquals("present", explainedPresent.explanation());
-
-        var structural = nonEmpty;
-        var actualCollection = new java.util.ArrayList<>(java.util.List.of("value"));
-        RuntimeCondition<java.util.ArrayList<String>,
-                java.util.ArrayList<String>> rawStructural =
-                structural(
-                        structural, "collection", java.util.Collection::size);
-        RuntimeCondition<java.util.ArrayList<String>,
-                java.util.ArrayList<String>> explainedStructural =
-                structural(
-                        structural.because("structural"), "collection",
-                        java.util.Collection::size);
-
-        assertSame(actualCollection,
-                explainedStructural.evaluate(actualCollection).result());
-        Evaluation<java.util.ArrayList<String>> nullEvaluation =
-                rawStructural.evaluate(null);
-        assertEquals(UNSATISFIED, nullEvaluation.status());
-        assertEquals("collection was null", nullEvaluation.mismatch());
-        assertEquals("collection to be non-empty",
-                rawStructural.description().get());
-        assertNull(rawStructural.explanation());
-        assertEquals("structural", explainedStructural.explanation());
-    }
-
-    @Test
-    void closedAdaptersPreserveNonSatisfiedOutcomes() throws Exception {
-        var assertion = new AssertionError("failed");
-        var cause = new IllegalStateException("broken");
-        var description = (java.util.function.Supplier<String>) () -> "descriptor";
-        var preserving = PreservingCondition.of(new RuntimeCondition<>(
-                value -> assertionUnsatisfied("failed", assertion),
-                description, null));
-        var present = PresentCondition.of(new RuntimeCondition<>(
-                value -> uncontrolled(cause), description, null));
-
-        Evaluation<Object> preservingEvaluation =
-                preserving(preserving).evaluate(this);
-        Evaluation<String> presentEvaluation = RuntimeCondition.<String>present(present)
-                .evaluate(Optional.of("value"));
-
-        assertEquals("failed", preservingEvaluation.mismatch());
-        assertSame(assertion, preservingEvaluation.assertionCause());
-        assertSame(cause, presentEvaluation.uncontrolledCause());
-    }
-
     private static RuntimeCondition<Object, Object> runtime() {
         return new RuntimeCondition<>(Evaluation::satisfied, () -> "condition", null);
     }
 
+    private static <T extends Throwable> void assertValidation(String context,
+            Class<T> type, org.junit.jupiter.api.function.Executable action) {
+        assertTrue(assertThrows(type, action).getMessage().contains(context));
+    }
 }

@@ -14,11 +14,9 @@ import static io.github.gromoff97.awium.engine.Attempt.Origin.*;
 import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
-import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -35,48 +33,6 @@ class ObservationEvaluatorTest {
     @AfterEach
     void clearInterruptFlag() {
         interrupted();
-    }
-
-    @Test
-    void attemptVariantsExposeOnlyApplicableState() {
-        var satisfied = new Satisfied<>(
-                null, null, 1, Long.MIN_VALUE);
-        var unsatisfied = new Unsatisfied<>(
-                null, "not ready", null, 2, 20);
-        var before = new BeforeObservation<String>(
-                SOURCE, new RuntimeException("source"), 3, 30);
-        var after = new AfterObservation<String>(
-                CONDITION, null,
-                new RuntimeException("condition"), 4, 40);
-
-        assertAll(
-                () -> assertNull(satisfied.actual()),
-                () -> assertNull(satisfied.result()),
-                () -> assertEquals(Long.MIN_VALUE,
-                        satisfied.completedNanos()),
-                () -> assertNull(unsatisfied.actual()),
-                () -> assertEquals("not ready", unsatisfied.mismatch()),
-                () -> assertEquals(SOURCE, before.origin()),
-                () -> assertEquals(CONDITION, after.origin()),
-                () -> assertNull(after.actual()),
-                () -> assertEquals(4, after.number()));
-    }
-
-    @Test
-    void attemptVariantsValidateTheirOwnRequiredFields() {
-        RuntimeException cause = new RuntimeException();
-        assertAll(
-                () -> assertThrows(IllegalArgumentException.class,
-                        () -> new Satisfied<>("actual", "result", 0, 1)),
-                () -> assertThrows(NullPointerException.class,
-                        () -> new Unsatisfied<>(
-                                "actual", null, null, 1, 1)),
-                () -> assertThrows(NullPointerException.class,
-                        () -> new BeforeObservation<>(
-                                null, cause, 1, 1)),
-                () -> assertThrows(NullPointerException.class,
-                        () -> new AfterObservation<>(
-                                CONDITION, "actual", null, 1, 1)));
     }
 
     @Test

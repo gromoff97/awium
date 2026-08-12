@@ -152,7 +152,7 @@ public final class CollectionConditionProvider {
     }
 
     private static <E> PreservingCondition<Collection<? super E>> membership(
-            Iterable<? extends E> expected, boolean all, boolean positive,
+            Collection<? extends E> expected, boolean all, boolean positive,
             String description, String mismatch) {
         return PreservingCondition.of(new RuntimeCondition<>(actual -> {
             if (actual == null) {
@@ -166,7 +166,7 @@ public final class CollectionConditionProvider {
     }
 
     private static boolean anyMatch(Collection<?> actual,
-            Iterable<?> expected) {
+            Collection<?> expected) {
         for (Object actualElement : actual) {
             for (Object expectedElement : expected) {
                 if (equal(actualElement, expectedElement)) {
@@ -178,11 +178,8 @@ public final class CollectionConditionProvider {
     }
 
     private static boolean allFound(Collection<?> actual,
-            Iterable<?> expected) {
-        List<Object> remaining = new ArrayList<>();
-        for (Object element : expected) {
-            remaining.add(element);
-        }
+            Collection<?> expected) {
+        List<Object> remaining = new ArrayList<>(expected);
         for (Object actualElement : actual) {
             remaining.removeIf(expectedElement ->
                     equal(actualElement, expectedElement));

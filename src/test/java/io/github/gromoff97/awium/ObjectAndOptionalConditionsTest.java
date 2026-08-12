@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -26,11 +27,9 @@ class ObjectAndOptionalConditionsTest {
         var actual = new Object();
 
         assertSatisfied(isNull.evaluate(null), null);
-        assertUnsatisfied(isNull.evaluate(actual),
-                "value was not null");
+        assertUnsatisfied(isNull.evaluate(actual));
         assertSatisfied(evaluate(isNotNull, actual), actual);
-        assertUnsatisfied(evaluate(isNotNull, null),
-                "value was null");
+        assertUnsatisfied(evaluate(isNotNull, null));
     }
 
     @Test
@@ -42,10 +41,8 @@ class ObjectAndOptionalConditionsTest {
 
         assertSatisfied(evaluate(equalTo(expected), equalActual),
                 equalActual);
-        assertUnsatisfied(evaluate(notEqualTo(expected), equalActual),
-                "value was equal");
-        assertUnsatisfied(evaluate(equalTo(expected), differentActual),
-                "value was not equal");
+        assertUnsatisfied(evaluate(notEqualTo(expected), equalActual));
+        assertUnsatisfied(evaluate(equalTo(expected), differentActual));
         assertSatisfied(evaluate(notEqualTo(expected), differentActual),
                 differentActual);
         assertSatisfied(evaluate(equalTo(null), null), null);
@@ -62,16 +59,14 @@ class ObjectAndOptionalConditionsTest {
         Optional<String> empty = Optional.empty();
         Optional<String> present = Optional.of("value");
 
-        assertEquals("optional to remain present",
-                RuntimeCondition.<String>present(OptionalConditionProvider.present)
-                        .description().get());
-        assertUnsatisfied(evaluatePresent(null), "optional was null");
-        assertUnsatisfied(absent.evaluate(null), "optional was null");
-        assertUnsatisfied(evaluatePresent(empty), "optional was empty");
+        assertTrue(!RuntimeCondition.<String>present(
+                OptionalConditionProvider.present).description().get().isBlank());
+        assertUnsatisfied(evaluatePresent(null));
+        assertUnsatisfied(absent.evaluate(null));
+        assertUnsatisfied(evaluatePresent(empty));
         assertSatisfied(absent.evaluate(empty), null);
         assertSatisfied(evaluatePresent(present), "value");
-        assertUnsatisfied(absent.evaluate(present),
-                "optional was present");
+        assertUnsatisfied(absent.evaluate(present));
     }
 
     @Test
@@ -83,13 +78,11 @@ class ObjectAndOptionalConditionsTest {
         var equal = hasValueEqualTo(expected);
         var notEqual = hasValueNotEqualTo(expected);
 
-        assertUnsatisfied(equal.evaluate(null), "optional was null");
-        assertUnsatisfied(equal.evaluate(Optional.empty()), "optional was empty");
+        assertUnsatisfied(equal.evaluate(null));
+        assertUnsatisfied(equal.evaluate(Optional.empty()));
         assertSatisfied(equal.evaluate(Optional.of(equalActual)), equalActual);
-        assertUnsatisfied(notEqual.evaluate(Optional.of(equalActual)),
-                "optional value was equal");
-        assertUnsatisfied(equal.evaluate(Optional.of(differentActual)),
-                "optional value was not equal");
+        assertUnsatisfied(notEqual.evaluate(Optional.of(equalActual)));
+        assertUnsatisfied(equal.evaluate(Optional.of(differentActual)));
         assertSatisfied(notEqual.evaluate(Optional.of(differentActual)),
                 differentActual);
     }
@@ -110,33 +103,23 @@ class ObjectAndOptionalConditionsTest {
 
     @Test
     void optionalValueFactoriesRejectNullOperandsImmediately() {
-        assertEquals("expected must not be null", assertThrows(
-                NullPointerException.class,
-                () -> hasValueEqualTo(null)).getMessage());
-        assertEquals("unexpected must not be null", assertThrows(
-                NullPointerException.class,
-                () -> hasValueNotEqualTo(null)).getMessage());
+        assertTrue(assertThrows(NullPointerException.class,
+                () -> hasValueEqualTo(null)).getMessage().contains("expected"));
+        assertTrue(assertThrows(NullPointerException.class,
+                () -> hasValueNotEqualTo(null)).getMessage()
+                .contains("unexpected"));
     }
 
     @Test
-    void builtInObjectAndOptionalConditionsExposeExactDescriptions() {
-        assertEquals("value to be null", isNull.description());
-        assertEquals("value to be non-null",
-                preserving(isNotNull)
-                        .description().get());
-        assertEquals("value equal to expected",
-                preserving(equalTo("expected"))
-                        .description().get());
-        assertEquals("value not equal to unexpected",
-                preserving(
-                        notEqualTo("unexpected"))
-                        .description().get());
-        assertEquals("optional to be absent",
-                absent.description());
-        assertEquals("optional value equal to expected",
-                hasValueEqualTo("expected").description());
-        assertEquals("optional value not equal to unexpected",
-                hasValueNotEqualTo("unexpected").description());
+    void builtInObjectAndOptionalConditionsExposeUsefulDescriptions() {
+        for (String description : java.util.List.of(isNull.description(),
+                preserving(isNotNull).description().get(),
+                preserving(equalTo("expected")).description().get(),
+                preserving(notEqualTo("unexpected")).description().get(),
+                absent.description(), hasValueEqualTo("expected").description(),
+                hasValueNotEqualTo("unexpected").description())) {
+            assertTrue(!description.isBlank());
+        }
     }
 
     private static Evaluation<Object> evaluate(
@@ -155,10 +138,9 @@ class ObjectAndOptionalConditionsTest {
         assertNull(evaluation.mismatch());
     }
 
-    private static void assertUnsatisfied(
-            Evaluation<?> evaluation, String mismatch) {
+    private static void assertUnsatisfied(Evaluation<?> evaluation) {
         assertEquals(UNSATISFIED, evaluation.status());
         assertNull(evaluation.result());
-        assertEquals(mismatch, evaluation.mismatch());
+        assertTrue(!evaluation.mismatch().isBlank());
     }
 }

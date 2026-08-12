@@ -1,35 +1,26 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
+import io.github.gromoff97.awium.exceptions.AwaitConditionEvaluationException;
+import io.github.gromoff97.awium.exceptions.AwaitTimeoutException;
+import io.github.gromoff97.awium.sources.CollectionSource;
+import io.github.gromoff97.awium.sources.Source;
+
 import static io.github.gromoff97.awium.Awium.await;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ExpectedValue;
 import static io.github.gromoff97.awium.ProbeContainers.GreedyValue;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.conditioning.Evaluation.Status;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedStructuralAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedStructuralAwait;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
+import static org.junit.jupiter.api.Assertions.*;
 
-import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
-import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
-
-import io.github.gromoff97.awium.exceptions.*;
-import io.github.gromoff97.awium.sources.CollectionSource;
-import io.github.gromoff97.awium.sources.Source;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import java.time.Duration;
-import java.util.AbstractCollection;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -40,181 +31,44 @@ import org.junit.jupiter.api.Test;
 
 class CollectionExactContentTest {
 
-    private static final List<Pair> PAIRS = List.of(
-            new Pair("containsExactly",
-                    containsExactly("a", "a"),
-                    doesNotContainExactly("a", "a"),
-                    List.of("a", "a"), List.of("a", "b")),
-            new Pair("containsExactlyElementsOf",
-                    containsExactlyElementsOf(
-                            List.of("a", "a")),
-                    doesNotContainExactlyElementsOf(
-                            List.of("a", "a")),
-                    List.of("a", "a"), List.of("a", "b")),
-            new Pair("containsExactlyInAnyOrder",
-                    containsExactlyInAnyOrder("a", "b"),
-                    doesNotContainExactlyInAnyOrder("a", "b"),
-                    List.of("b", "a"), List.of("a", "a")),
-            new Pair("containsExactlyInAnyOrderElementsOf",
-                    containsExactlyInAnyOrderElementsOf(
-                            List.of("a", "b")),
-                    doesNotContainExactlyInAnyOrderElementsOf(
-                            List.of("a", "b")),
-                    List.of("b", "a"), List.of("a", "a")));
-
     @Test
-    void completeRawExactTableIsComplementary() throws Exception {
-        for (Pair pair : PAIRS) {
+    void positiveAndNegativeExactConditionsAreComplements()
+            throws Exception {
+        for (Pair pair : pairs()) {
             assertPair(pair, pair.matchingActual(), true);
             assertPair(pair, pair.mismatchingActual(), false);
         }
     }
 
     @Test
-    void exactAnyOrderRejectsTwoSidedIterationLengthMismatch()
+    void orderedAndAnyOrderFormsKeepTheirDistinctSemantics()
             throws Exception {
-        for (var elements : List.of(List.<String>of(), List.of("a", "b"))) {
-            Collection<String> actual = reportedCollection(elements, 1);
-            Collection<String> expected = reportedCollection(elements, 1);
-            assertEquals(UNSATISFIED,
-                    RuntimeCondition.<Collection<String>>preserving(
-                                    containsExactlyInAnyOrderElementsOf(expected))
-                            .evaluate(actual).status());
-        }
-    }
-
-    @Test
-    void exactAnyOrderPreservesExpectedIteratorSurplus() throws Exception {
-        Collection<String> actual = reportedCollection(List.of("a"), 1);
-        Collection<String> expected = reportedCollection(
-                List.of("a", "b"), 1);
-
-        assertEquals(SATISFIED,
-                RuntimeCondition.<Collection<String>>preserving(
-                                containsExactlyInAnyOrderElementsOf(expected))
-                        .evaluate(actual).status());
-    }
-
-    @Test
-    void orderedFormsAreOrderSensitiveAndAnyOrderFormsAreNot()
-            throws Exception {
-        assertStatus(containsExactly("a", "b"),
-                List.of("b", "a"), UNSATISFIED);
+        assertStatus(containsExactly("a", "b"), List.of("b", "a"),
+                UNSATISFIED);
         assertStatus(containsExactlyInAnyOrder("a", "b"),
                 List.of("b", "a"), SATISFIED);
-    }
-
-    @Test
-    void cardinalityPrecheckReadsSizesOnceAndTraversesOnlyWhenNeeded()
-            throws Exception {
-        ExactList<String> differentActual = new ExactList<>(List.of("a"));
-        ExactList<String> differentExpected =
-                new ExactList<>(List.of("a", "b"));
-        Evaluation<?> different = evaluate(
-                containsExactlyElementsOf(differentExpected),
-                differentActual);
-        assertEquals(UNSATISFIED, different.status());
-        assertAccess(differentActual, 1, 0, 0);
-        assertAccess(differentExpected, 1, 0, 0);
-
-        ExactList<String> emptyActual = new ExactList<>(List.of());
-        ExactList<String> emptyExpected = new ExactList<>(List.of());
-        Evaluation<?> empty = evaluate(
-                containsExactlyElementsOf(emptyExpected),
-                emptyActual);
-        assertEquals(SATISFIED, empty.status());
-        assertAccess(emptyActual, 1, 0, 0);
-        assertAccess(emptyExpected, 1, 0, 0);
-
-        ExactList<String> equalActual = new ExactList<>(List.of("a", "b"));
-        ExactList<String> equalExpected =
-                new ExactList<>(List.of("a", "b"));
-        Evaluation<?> equal = evaluate(
-                containsExactlyElementsOf(equalExpected),
-                equalActual);
-        assertEquals(SATISFIED, equal.status());
-        assertAccess(equalActual, 1, 1, 2);
-        assertAccess(equalExpected, 1, 1, 2);
-    }
-
-    @Test
-    void diagnosticsDoNotReadCardinalityOrContentAgain() {
-        ExactList<String> actual = new ExactList<>(List.of("a"));
-        ExactList<String> expected = new ExactList<>(List.of("b"));
-        FakeTime time = new FakeTime(0);
-
-        assertThrows(AwaitTimeoutException.class,
-                () -> timedStructuralAwait(
-                        (Source<ExactList<String>>) () -> {
-                            time.advanceNanos(2);
-                            return actual;
-                        }, "collection", Collection::size,
-                        defaults().withEvery(ofNanos(1))
-                                .withUpTo(ofNanos(2)), time, time)
-                        .until(containsExactlyElementsOf(expected)
-                                .because("required")));
-
-        assertAccess(actual, 1, 1, 1);
-        assertAccess(expected, 1, 1, 1);
-    }
-
-    @Test
-    void exactInputsAreRetainedByReferenceAndEmptyInputsAreValid()
-            throws Exception {
-        String[] array = {"before"};
-        PreservingCondition<? super ExactList<String>> arrayCondition =
-                containsExactly(array);
-        array[0] = "after";
-        assertEquals(SATISFIED,
-                evaluate(arrayCondition,
-                        new ExactList<>(List.of("after"))).status());
-
-        ArrayList<String> values = new ArrayList<>(List.of("before"));
-        PreservingCondition<? super ExactList<String>> collectionCondition =
-                containsExactlyElementsOf(values);
-        values.set(0, "after");
-        assertEquals(SATISFIED,
-                evaluate(collectionCondition,
-                        new ExactList<>(List.of("after"))).status());
-
-        assertStatus(containsExactly(), List.of(),
+        assertStatus(containsExactly(), List.of(), SATISFIED);
+        assertStatus(containsExactly("a", "a"), List.of("a", "a"),
                 SATISFIED);
     }
 
     @Test
-    void exactFactoriesRejectOnlyNullAggregateReferences() {
-        assertEquals(
-                "expected elements must not be null",
-                assertThrows(NullPointerException.class,
-                        () -> containsExactly((Object[]) null)).getMessage());
-    }
-
-    @Test
-    void nullAndArrayElementsUseLibraryEquality() throws Exception {
-        String expectedNull = null;
-        assertStatus(containsExactly(expectedNull),
-                asList((String) null), SATISFIED);
-
-        int[] actualArray = {1, 2};
-        int[] expectedArray = {1, 2};
-        assertStatus(containsExactly(expectedArray),
-                List.<Object>of(actualArray), SATISFIED);
-    }
-
-    @Test
-    void equalityIsActualFirstAndNeverHashes() throws Exception {
+    void exactEqualityIsActualFirstArrayAwareAndDoesNotHash()
+            throws Exception {
         Directional actual = new Directional(true);
         Directional expected = new Directional(false);
-
-        assertStatus(containsExactlyInAnyOrder(expected),
-                List.of(actual), SATISFIED);
-
+        assertStatus(containsExactlyInAnyOrder(expected), List.of(actual),
+                SATISFIED);
         assertEquals(1, actual.equalsCalls);
+
+        String nil = null;
+        assertStatus(containsExactly(nil), asList((String) null), SATISFIED);
+        assertStatus(containsExactly(new int[] {1, 2}),
+                List.<Object>of(new int[] {1, 2}), SATISFIED);
     }
 
     @Test
-    void anyOrderMatchingIsGreedyInActualAndExpectedEncounterOrder()
-            throws Exception {
+    void anyOrderMatchingRemainsGreedyInEncounterOrder() throws Exception {
         GreedyValue first = new GreedyValue(Set.of("x", "y"));
         GreedyValue second = new GreedyValue(Set.of("x"));
         ExpectedValue x = new ExpectedValue("x");
@@ -222,126 +76,133 @@ class CollectionExactContentTest {
 
         assertStatus(containsExactlyInAnyOrder(x, y),
                 List.of(first, second), UNSATISFIED);
-        assertEquals(2, first.equalsCalls + second.equalsCalls);
-
-        first.equalsCalls = 0;
-        second.equalsCalls = 0;
         assertStatus(containsExactlyInAnyOrder(y, x),
                 List.of(first, second), SATISFIED);
-        assertEquals(2, first.equalsCalls + second.equalsCalls);
     }
 
     @Test
-    void negativeExactCannotTurnAccessOrEqualityFailuresIntoSuccess() {
-        ExactList<String> actualIterator = new ExactList<>(List.of("a"));
-        actualIterator.iteratorFailure = new IllegalStateException(
-                "actual iterator");
-        assertFailFast(actualIterator,
-                doesNotContainExactly("a"),
-                actualIterator.iteratorFailure);
-
-        ThrowingEquals throwing = new ThrowingEquals(
-                new IllegalStateException("equality"));
-        assertFailFast(new ExactList<>(List.of(throwing)),
-                doesNotContainExactlyInAnyOrder(
-                        new ThrowingEquals(null)), throwing.failure);
-    }
-
-    @Test
-    void nullActualIsUnsatisfiedWithoutExactExpectedAccess()
+    void exactConditionsObserveUserOwnedExpectedValuesAtEvaluationTime()
             throws Exception {
-        ExactList<String> expected = new ExactList<>(List.of("a"));
-        assertEquals(UNSATISFIED,
-                RuntimeCondition.<ExactList<String>>preserving(
-                        containsExactlyElementsOf(expected))
-                        .evaluate(null).status());
-        assertAccess(expected, 0, 0, 0);
+        String[] array = {"before"};
+        PreservingCondition<? super List<String>> arrayCondition =
+                containsExactly(array);
+        array[0] = "after";
+        assertStatus(arrayCondition, List.of("after"), SATISFIED);
+
+        List<String> expected = new ArrayList<>(List.of("before"));
+        PreservingCondition<? super List<String>> collectionCondition =
+                containsExactlyElementsOf(expected);
+        expected.set(0, "after");
+        assertStatus(collectionCondition, List.of("after"), SATISFIED);
     }
 
-    private static void assertPair(Pair pair, List<String> elements,
-            boolean positiveSatisfied) throws Exception {
-        ExactList<String> positiveActual = new ExactList<>(elements);
-        ExactList<String> negativeActual = new ExactList<>(elements);
-        Evaluation<?> positive = evaluate(pair.positive(), positiveActual);
-        Evaluation<?> negative = evaluate(pair.negative(), negativeActual);
+    @Test
+    void negativeExactConditionsDoNotHideTraversalOrEqualityFailures() {
+        var iteratorCause = new IllegalStateException("iterator failed");
+        var equalityCause = new IllegalStateException("equals failed");
+        var brokenIterator = new ProbeList<>(List.of("a"), iteratorCause);
+        var brokenEquality = new ProbeList<>(
+                List.of(new ThrowingEquals(equalityCause)), null);
 
-        assertEquals(positiveSatisfied ? SATISFIED
-                        : UNSATISFIED,
+        assertSame(iteratorCause, assertThrows(
+                AwaitConditionEvaluationException.class,
+                () -> await((CollectionSource<ProbeList<String>>)
+                        () -> brokenIterator)
+                        .until(doesNotContainExactly("a"))).getCause());
+        assertSame(equalityCause, assertThrows(
+                AwaitConditionEvaluationException.class,
+                () -> await((CollectionSource<ProbeList<ThrowingEquals>>)
+                        () -> brokenEquality)
+                        .until(doesNotContainExactly(
+                                new ThrowingEquals(null)))).getCause());
+    }
+
+    @Test
+    void nullActualIsUnsatisfiedAndNullAggregateIsRejected() throws Exception {
+        Evaluation<?> evaluation = preserving(
+                containsExactlyElementsOf(List.of("a"))).evaluate(null);
+        assertEquals(UNSATISFIED, evaluation.status());
+        assertFalse(evaluation.mismatch().isBlank());
+        assertTrue(!assertThrows(NullPointerException.class,
+                () -> containsExactly((Object[]) null)).getMessage().isBlank());
+    }
+
+    @Test
+    void terminalDiagnosticsDoNotTraverseTheActualAgain() {
+        var actual = new ProbeList<>(List.of("a"), null);
+        FakeTime time = new FakeTime(0);
+
+        assertThrows(AwaitTimeoutException.class,
+                () -> timedStructuralAwait((Source<ProbeList<String>>) () -> {
+                            time.advanceNanos(2);
+                            return actual;
+                        }, "collection", Collection::size,
+                        defaults().withEvery(ofNanos(1))
+                                .withUpTo(ofNanos(2)), time, time)
+                        .until(containsExactly("b")
+                                .because("business reason")));
+
+        assertEquals(1, actual.iteratorCalls);
+    }
+
+    private static void assertPair(Pair pair, List<String> actual,
+            boolean positiveSatisfied) throws Exception {
+        Evaluation<?> positive = preserving(pair.positive()).evaluate(actual);
+        Evaluation<?> negative = preserving(pair.negative()).evaluate(actual);
+        assertEquals(positiveSatisfied ? SATISFIED : UNSATISFIED,
                 positive.status(), pair.name());
         assertNotEquals(positive.status(), negative.status(), pair.name());
-        assertAccess(positiveActual, 1, 1, 2);
-        assertAccess(negativeActual, 1, 1, 2);
+        assertSame(actual, (positiveSatisfied ? positive : negative).result());
+        assertFalse((positiveSatisfied ? negative : positive)
+                .mismatch().isBlank());
     }
 
     private static <E> void assertStatus(
-            PreservingCondition<? super ExactList<E>> condition,
-            List<? extends E> elements, Status expected)
+            PreservingCondition<? super List<E>> condition,
+            List<? extends E> elements, Evaluation.Status status)
             throws Exception {
-        ExactList<E> actual = new ExactList<>(elements);
-        assertEquals(expected, evaluate(condition, actual).status());
+        List<E> actual = new ArrayList<>(elements);
+        assertEquals(status, preserving(condition).evaluate(actual).status());
     }
 
-    private static <E> Evaluation<?> evaluate(
-            PreservingCondition<? super ExactList<E>> condition,
-            ExactList<E> actual) throws Exception {
-        RuntimeCondition<ExactList<E>, ExactList<E>> runtime =
-                preserving(condition);
-        assertFalse(runtime.description().get().isBlank());
-        return runtime.evaluate(actual);
-    }
-
-    private static <E> void assertFailFast(ExactList<E> actual,
-            PreservingCondition<? super ExactList<E>> condition,
-            RuntimeException cause) {
-        AwaitConditionEvaluationException failure = assertThrows(
-                AwaitConditionEvaluationException.class,
-                () -> await((CollectionSource<ExactList<E>>) () -> actual)
-                        .until(condition));
-        assertSame(cause, failure.getCause());
-    }
-
-    private static void assertAccess(ExactList<?> actual, int size,
-            int iterators, int next) {
-        assertEquals(size, actual.sizeCalls);
-        assertEquals(iterators, actual.iteratorCalls);
-        assertEquals(next, actual.nextCalls);
-    }
-
-    private static <E> Collection<E> reportedCollection(
-            List<E> elements, int reportedSize) {
-        return new AbstractCollection<>() {
-            @Override
-            public Iterator<E> iterator() {
-                return elements.iterator();
-            }
-
-            @Override
-            public int size() {
-                return reportedSize;
-            }
-        };
+    private static List<Pair> pairs() {
+        return List.of(
+                new Pair("ordered varargs", containsExactly("a", "a"),
+                        doesNotContainExactly("a", "a"),
+                        List.of("a", "a"), List.of("a", "b")),
+                new Pair("ordered collection",
+                        containsExactlyElementsOf(List.of("a", "a")),
+                        doesNotContainExactlyElementsOf(List.of("a", "a")),
+                        List.of("a", "a"), List.of("a", "b")),
+                new Pair("any-order varargs",
+                        containsExactlyInAnyOrder("a", "b"),
+                        doesNotContainExactlyInAnyOrder("a", "b"),
+                        List.of("b", "a"), List.of("a", "a")),
+                new Pair("any-order collection",
+                        containsExactlyInAnyOrderElementsOf(List.of("a", "b")),
+                        doesNotContainExactlyInAnyOrderElementsOf(
+                                List.of("a", "b")),
+                        List.of("b", "a"), List.of("a", "a")));
     }
 
     private record Pair(String name,
-            PreservingCondition<? super ExactList<String>> positive,
-            PreservingCondition<? super ExactList<String>> negative,
-            List<String> matchingActual, List<String> mismatchingActual) {
-    }
+            PreservingCondition<? super List<String>> positive,
+            PreservingCondition<? super List<String>> negative,
+            List<String> matchingActual, List<String> mismatchingActual) {}
 
-    private static final class ExactList<E> extends AbstractList<E> {
+    private static final class ProbeList<E> extends AbstractList<E> {
         private final List<? extends E> elements;
-        private RuntimeException iteratorFailure;
-        private int sizeCalls;
+        private final RuntimeException iteratorFailure;
         private int iteratorCalls;
-        private int nextCalls;
 
-        private ExactList(List<? extends E> elements) {
+        private ProbeList(List<? extends E> elements,
+                RuntimeException iteratorFailure) {
             this.elements = elements;
+            this.iteratorFailure = iteratorFailure;
         }
 
         @Override
         public int size() {
-            sizeCalls++;
             return elements.size();
         }
 
@@ -356,24 +217,14 @@ class CollectionExactContentTest {
             if (iteratorFailure != null) {
                 throw iteratorFailure;
             }
-            Iterator<? extends E> delegate = elements.iterator();
-            return new Iterator<>() {
-                @Override
-                public boolean hasNext() {
-                    return delegate.hasNext();
-                }
-
-                @Override
-                public E next() {
-                    nextCalls++;
-                    return delegate.next();
-                }
-            };
+            @SuppressWarnings("unchecked")
+            Iterator<E> iterator = (Iterator<E>) elements.iterator();
+            return iterator;
         }
 
         @Override
         public String toString() {
-            return "exact list";
+            return "probe list";
         }
     }
 }

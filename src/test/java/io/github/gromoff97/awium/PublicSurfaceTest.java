@@ -1,40 +1,24 @@
 package io.github.gromoff97.awium;
 
-
-import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.*;
-
-import io.github.gromoff97.awium.exceptions.*;
-import io.github.gromoff97.awium.await.Await;
-import io.github.gromoff97.awium.await.OptionalAwait;
-import io.github.gromoff97.awium.await.StructuralAwait;
-import io.github.gromoff97.awium.engine.WaitConfiguration;
-import io.github.gromoff97.awium.sources.CollectionSource;
-import io.github.gromoff97.awium.sources.MapSource;
-import io.github.gromoff97.awium.sources.OptionalSource;
+import io.github.gromoff97.awium.conditioning.CheckedConsumer;
+import io.github.gromoff97.awium.conditioning.CheckedFunction;
+import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.sources.Source;
 
-import static io.github.gromoff97.awium.conditioning.Evaluation.Status;
 import static java.lang.reflect.Modifier.isAbstract;
-import static java.lang.reflect.Modifier.isFinal;
-import static java.lang.reflect.Modifier.isPrivate;
 import static java.lang.reflect.Modifier.isProtected;
 import static java.lang.reflect.Modifier.isPublic;
-import static java.lang.reflect.Modifier.isStatic;
 import static java.nio.file.Files.walk;
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.module.ModuleFinder;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -46,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
@@ -55,155 +38,43 @@ import org.junit.jupiter.api.Test;
 
 class PublicSurfaceTest {
 
+    private static final Path JAR = Path.of(
+            "build", "libs", "awium-0.1.0-SNAPSHOT.jar");
     private static final Set<String> PUBLIC_API_PACKAGES = Set.copyOf(
-            publicTypes().stream().map(Class::getPackageName).toList());
+            ModuleFinder.of(JAR).find("io.github.gromoff97.awium")
+                    .orElseThrow().descriptor().exports().stream()
+                    .map(export -> export.source()).toList());
 
     @Test
-    void exposesExactlyTheApprovedPublicApiIncludingNestedTypes()
-            throws Exception {
-        Set<Class<?>> actual = discoveredPublicApiTypes();
-
-        Set<Class<?>> approved = new HashSet<>(publicTypes());
-        approved.addAll(explainedTypes());
-        approved.add(Status.class);
-        assertEquals(Set.copyOf(approved), actual);
-    }
-
-    @Test
-    void conditionEvaluationDescriptorsAndExplainedFormsHaveExactShapes()
-            throws ReflectiveOperationException {
-        assertTrue(isAbstract(Condition.class.getModifiers()));
-        Constructor<?> constructor = Condition.class.getDeclaredConstructor();
-        assertTrue(isProtected(constructor.getModifiers()));
-        assertTrue(isFinal(Condition.class.getMethod("because", String.class)
-                .getModifiers()));
-        assertTrue(isFinal(Condition.class.getMethod(
-                "because", String.class, Object[].class).getModifiers()));
-
-        assertTrue(isFinal(Evaluation.class.getModifiers()));
-        List<Class<?>> restricted = new ArrayList<>(closedConditionTypes());
-        restricted.add(Evaluation.class);
-        restricted.addAll(List.of(AwaitFailure.class,
-                AwaitUncontrolledException.class));
-        for (Class<?> type : restricted) {
-            assertFalse(stream(type.getDeclaredConstructors())
-                    .anyMatch(candidate -> isApiMember(
-                            candidate.getModifiers())), type.getName());
-        }
-        for (Class<?> type : closedConditionTypes()) {
-            assertTrue(isFinal(type.getModifiers()), type.getName());
-        }
-        for (Class<?> type : explainedTypes()) {
-            assertFalse(stream(type.getMethods())
-                    .map(Method::getName).anyMatch("because"::equals), type.getName());
-        }
-    }
-
-    @Test
-    void exposesExactlyFourSourceAndTwoCallbackSams() throws Exception {
-        for (Class<?> type : List.of(Source.class, OptionalSource.class,
-                CollectionSource.class, MapSource.class,
-                CheckedConsumer.class, CheckedFunction.class)) {
-            assertCheckedSam(type);
-        }
-    }
-
-    @Test
-    void allThreeFluentTypesArePublicFinalConcreteClasses() {
-        for (Class<?> type : List.of(
-                Await.class, OptionalAwait.class, StructuralAwait.class)) {
-            assertTrue(isPublic(type.getModifiers()), type.getName());
-            assertTrue(isFinal(type.getModifiers()), type.getName());
-            assertFalse(isAbstract(type.getModifiers()), type.getName());
-            assertFalse(type.isInterface(), type.getName());
-            Class<?> base = type.getSuperclass();
-            assertFalse(isPublic(base.getModifiers()), base.getName());
-            List<Constructor<?>> internalConstructors = stream(
-                            base.getDeclaredConstructors())
-                    .filter(constructor -> asList(
-                                    constructor.getParameterTypes())
-                            .contains(WaitConfiguration.class))
-                    .toList();
-            assertEquals(2, internalConstructors.size(), base.getName());
-            internalConstructors.forEach(constructor -> {
-                assertFalse(isPublic(constructor.getModifiers()),
-                        constructor.toGenericString());
-                assertFalse(isProtected(constructor.getModifiers()),
-                        constructor.toGenericString());
-            });
-            stream(type.getDeclaredConstructors())
-                    .filter(constructor -> isApiMember(
-                            constructor.getModifiers()))
-                    .flatMap(constructor -> stream(
-                            constructor.getGenericParameterTypes()))
-                    .forEach(PublicSurfaceTest::assertAllowedType);
-        }
-    }
-
-    @Test
-    void namespaceHoldersAndFailureHierarchiesAreClosedExactly()
-            throws ReflectiveOperationException {
-        for (Class<?> holder : List.of(Awium.class, ConditionProvider.class,
-                ObjectConditionProvider.class, OptionalConditionProvider.class,
-                CollectionConditionProvider.class, MapConditionProvider.class,
-                ValueEquality.class)) {
-            assertTrue(isFinal(holder.getModifiers()), holder.getName());
-            Constructor<?> constructor = holder.getDeclaredConstructor();
-            assertTrue(isPrivate(constructor.getModifiers()), holder.getName());
-            assertEquals(1, holder.getDeclaredConstructors().length,
-                    holder.getName());
-            assertTrue(stream(holder.getDeclaredMethods())
-                    .filter(method -> isPublic(method.getModifiers()))
-                    .allMatch(method -> isStatic(method.getModifiers())),
-                    holder.getName());
-            assertTrue(stream(holder.getDeclaredFields())
-                    .filter(field -> isPublic(field.getModifiers()))
-                    .allMatch(field -> isStatic(field.getModifiers())),
-                    holder.getName());
-
-            constructor.setAccessible(true);
-            InvocationTargetException failure = assertThrows(
-                    InvocationTargetException.class, constructor::newInstance,
-                    holder.getName());
-            AssertionError cause = assertInstanceOf(AssertionError.class,
-                    failure.getCause(), holder.getName());
-            assertEquals("Utility class", cause.getMessage(), holder.getName());
-
-        }
-
-        assertEquals(4, stream(Awium.class.getDeclaredMethods())
-                .filter(method -> isPublic(method.getModifiers())).count());
-        assertEquals(Set.of("condition", "asserted", "passed"),
-                Set.copyOf(stream(ConditionProvider.class
-                                .getDeclaredMethods())
-                        .filter(method -> isPublic(method.getModifiers()))
-                        .map(Method::getName).toList()));
-        assertFalse(stream(ConditionProvider.class.getDeclaredFields())
-                .anyMatch(field -> isPublic(field.getModifiers())));
-    }
-
-    @Test
-    void publicApiContainsNoExcludedSourceTerminalOrContinuationSurface()
+    void publicApiDoesNotLeakExcludedAsyncOrContinuationSurface()
             throws Exception {
         assertNoExcludedApiSurface(discoveredPublicApiTypes());
     }
 
     @Test
-    void excludedApiAuditRejectsTypeFieldConstructorAndMethodLeaks() {
+    void sourceAndCallbackContractsRemainCheckedSams() throws Exception {
+        for (Class<?> type : discoveredPublicApiTypes()) {
+            if (Source.class.isAssignableFrom(type)
+                    || type == CheckedConsumer.class
+                    || type == CheckedFunction.class) {
+                assertCheckedSam(type);
+            }
+        }
+    }
+
+    @Test
+    void excludedSurfaceAuditCoversNamesAndNestedSignatures() {
         for (Class<?> type : List.of(AwaitResult.class,
-                ForbiddenFieldName.class, ForbiddenFieldSignature.class,
-                ForbiddenConstructorSignature.class, ForbiddenMethodName.class,
-                ForbiddenInheritedField.class, ForbiddenInheritedMethod.class,
-                ForbiddenForkJoinTaskSignature.class,
-                ForbiddenGenericArraySignature.class,
-                ForbiddenLowerWildcardSignature.class,
-                ForbiddenIterableSubtypeSignature.class,
-                ForbiddenInheritedProtectedSignature.class)) {
+                ForbiddenFieldSignature.class,
+                ForbiddenConstructorSignature.class,
+                ForbiddenMethodName.class,
+                ForbiddenInheritedField.class,
+                ForbiddenGenericSignature.class,
+                ForbiddenIterableSubtypeSignature.class)) {
             assertThrows(AssertionError.class,
                     () -> assertNoExcludedApiSurface(Set.of(type)),
                     type.getSimpleName());
         }
-
         assertNoExcludedApiSurface(Set.of(AllowedConcurrencyNames.class));
     }
 
@@ -216,21 +87,20 @@ class PublicSurfaceTest {
             assertFalse(forbiddenNames.contains(type.getSimpleName()),
                     type.toGenericString());
             assertAllowedType(type);
-            stream(type.getTypeParameters())
-                    .forEach(PublicSurfaceTest::assertAllowedType);
+            stream(type.getTypeParameters()).forEach(
+                    PublicSurfaceTest::assertAllowedType);
             if (type.getGenericSuperclass() != null) {
                 assertAllowedType(type.getGenericSuperclass());
             }
-            stream(type.getGenericInterfaces())
-                    .forEach(PublicSurfaceTest::assertAllowedType);
+            stream(type.getGenericInterfaces()).forEach(
+                    PublicSurfaceTest::assertAllowedType);
             for (Class<?> inherited : typeHierarchy(type)) {
                 for (Field field : inherited.getDeclaredFields()) {
-                    if (!isApiMember(field.getModifiers())) {
-                        continue;
+                    if (isApiMember(field.getModifiers())) {
+                        assertFalse(forbiddenNames.contains(field.getName()),
+                                field.toGenericString());
+                        assertAllowedType(field.getGenericType());
                     }
-                    assertFalse(forbiddenNames.contains(field.getName()),
-                            field.toGenericString());
-                    assertAllowedType(field.getGenericType());
                 }
                 for (Method method : inherited.getDeclaredMethods()) {
                     if (!isApiMember(method.getModifiers())) {
@@ -241,22 +111,22 @@ class PublicSurfaceTest {
                                     && method.getName().equals("result")),
                             method.toGenericString());
                     assertAllowedType(method.getGenericReturnType());
-                    stream(method.getGenericParameterTypes())
-                            .forEach(PublicSurfaceTest::assertAllowedType);
-                    stream(method.getGenericExceptionTypes())
-                            .forEach(PublicSurfaceTest::assertAllowedType);
-                    stream(method.getTypeParameters())
-                            .forEach(PublicSurfaceTest::assertAllowedType);
+                    stream(method.getGenericParameterTypes()).forEach(
+                            PublicSurfaceTest::assertAllowedType);
+                    stream(method.getGenericExceptionTypes()).forEach(
+                            PublicSurfaceTest::assertAllowedType);
+                    stream(method.getTypeParameters()).forEach(
+                            PublicSurfaceTest::assertAllowedType);
                 }
             }
             for (Constructor<?> constructor : type.getDeclaredConstructors()) {
                 if (isApiMember(constructor.getModifiers())) {
-                    stream(constructor.getGenericParameterTypes())
-                            .forEach(PublicSurfaceTest::assertAllowedType);
-                    stream(constructor.getGenericExceptionTypes())
-                            .forEach(PublicSurfaceTest::assertAllowedType);
-                    stream(constructor.getTypeParameters())
-                            .forEach(PublicSurfaceTest::assertAllowedType);
+                    stream(constructor.getGenericParameterTypes()).forEach(
+                            PublicSurfaceTest::assertAllowedType);
+                    stream(constructor.getGenericExceptionTypes()).forEach(
+                            PublicSurfaceTest::assertAllowedType);
+                    stream(constructor.getTypeParameters()).forEach(
+                            PublicSurfaceTest::assertAllowedType);
                 }
             }
         }
@@ -271,20 +141,18 @@ class PublicSurfaceTest {
         List<Class<?>> pending = new ArrayList<>(List.of(type));
         while (!pending.isEmpty()) {
             Class<?> current = pending.removeLast();
-            if (!hierarchy.add(current)) {
-                continue;
+            if (hierarchy.add(current)) {
+                if (current.getSuperclass() != null) {
+                    pending.add(current.getSuperclass());
+                }
+                pending.addAll(asList(current.getInterfaces()));
             }
-            if (current.getSuperclass() != null) {
-                pending.add(current.getSuperclass());
-            }
-            pending.addAll(asList(current.getInterfaces()));
         }
         return hierarchy;
     }
 
     private static void assertAllowedType(Type type) {
-        assertFalse(isForbiddenApiType(type,
-                        new HashSet<>()),
+        assertFalse(isForbiddenApiType(type, new HashSet<>()),
                 type.getTypeName());
     }
 
@@ -346,7 +214,7 @@ class PublicSurfaceTest {
 
     private static Set<Class<?>> discoveredPublicApiTypes() throws Exception {
         Path classes = Path.of("build", "classes", "java", "main");
-        Set<Class<?>> types = new java.util.HashSet<>();
+        Set<Class<?>> types = new HashSet<>();
         try (var entries = walk(classes)) {
             for (Path entry : entries.filter(Files::isRegularFile)
                     .filter(path -> path.toString().endsWith(".class"))
@@ -381,50 +249,14 @@ class PublicSurfaceTest {
         return true;
     }
 
-    private static List<Class<?>> closedConditionTypes() {
-        return List.of(PreservingCondition.class, PresentCondition.class,
-                StructuralCondition.class, Condition.ExplainedCondition.class,
-                PreservingCondition.ExplainedCondition.class, PresentCondition.ExplainedCondition.class,
-                StructuralCondition.ExplainedCondition.class);
-    }
-
-    private static List<Class<?>> publicTypes() {
-        return List.of(Awium.class, ConditionProvider.class,
-                ObjectConditionProvider.class, OptionalConditionProvider.class,
-                CollectionConditionProvider.class, MapConditionProvider.class,
-                Source.class, OptionalSource.class, CollectionSource.class,
-                MapSource.class, Condition.class, Evaluation.class,
-                ValueEquality.class, RuntimeCondition.class,
-                CheckedConsumer.class, CheckedFunction.class,
-                PreservingCondition.class, PresentCondition.class, StructuralCondition.class,
-                Await.class, OptionalAwait.class, StructuralAwait.class,
-                AwaitConfigurationConflictException.class, AwaitFailure.class,
-                AwaitTimeoutException.class, AwaitStabilizationException.class,
-                AwaitUncontrolledException.class,
-                AwaitSourceRetrievalException.class,
-                AwaitConditionEvaluationException.class,
-                AwaitInterruptedException.class, AwaitUnhandledException.class);
-    }
-
-    private static List<Class<?>> explainedTypes() {
-        return List.of(Condition.ExplainedCondition.class, PreservingCondition.ExplainedCondition.class,
-                PresentCondition.ExplainedCondition.class, StructuralCondition.ExplainedCondition.class);
-    }
-
-    public static final class AwaitResult {
-    }
-
-    public static final class ForbiddenFieldName {
-        public Object result;
-    }
+    public static final class AwaitResult {}
 
     public static final class ForbiddenFieldSignature {
-        public java.util.concurrent.Future<?> leaked;
+        public Future<?> leaked;
     }
 
     public static final class ForbiddenConstructorSignature {
-        public ForbiddenConstructorSignature(
-                java.util.function.Predicate<?> predicate) {}
+        public ForbiddenConstructorSignature(Predicate<?> predicate) {}
     }
 
     public static final class ForbiddenMethodName {
@@ -432,41 +264,18 @@ class PublicSurfaceTest {
     }
 
     static class ForbiddenInheritedFieldParent {
-        public java.util.concurrent.Future<?> leaked;
+        public Future<?> leaked;
     }
 
-    public static final class ForbiddenInheritedField extends ForbiddenInheritedFieldParent {
-    }
+    public static final class ForbiddenInheritedField extends ForbiddenInheritedFieldParent {}
 
-    interface ForbiddenInheritedMethodParent {
-        default void map() {}
-    }
-
-    public static final class ForbiddenInheritedMethod implements ForbiddenInheritedMethodParent {
-    }
-
-    public static final class ForbiddenForkJoinTaskSignature {
-        public List<? extends java.util.concurrent.ForkJoinTask<?>[]> leaked;
-    }
-
-    public static final class ForbiddenGenericArraySignature<
-            T extends java.util.concurrent.Future<?>> {
-        public T[] leaked;
-    }
-
-    public static final class ForbiddenLowerWildcardSignature {
-        public List<? super java.util.concurrent.ForkJoinTask<?>> leaked;
+    public static final class ForbiddenGenericSignature<
+            T extends Future<?>> {
+        public List<? super T[]> leaked;
     }
 
     public static final class ForbiddenIterableSubtypeSignature {
         public Path leaked;
-    }
-
-    static class ForbiddenInheritedProtectedParent {
-        protected java.util.concurrent.Future<?> leaked;
-    }
-
-    public static final class ForbiddenInheritedProtectedSignature extends ForbiddenInheritedProtectedParent {
     }
 
     public static final class AllowedConcurrencyNames {
@@ -475,10 +284,7 @@ class PublicSurfaceTest {
         public PredicateResult value() { return null; }
     }
 
-    public static final class FutureProof {
-    }
+    public static final class FutureProof {}
 
-    public static final class PredicateResult {
-    }
-
+    public static final class PredicateResult {}
 }

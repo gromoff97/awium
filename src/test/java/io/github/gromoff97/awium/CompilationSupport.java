@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium;
 
 import static java.io.OutputStream.nullOutputStream;
-import static java.nio.file.Files.createTempDirectory;
 import static java.nio.file.Files.writeString;
 import static java.util.Objects.requireNonNull;
 import static javax.tools.ToolProvider.getSystemJavaCompiler;
@@ -11,14 +10,13 @@ import java.nio.file.Path;
 
 final class CompilationSupport {
 
-    static boolean compiles(Path parent, String source) throws IOException {
-        return compiles(parent, source,
+    static boolean compiles(Path directory, String source) throws IOException {
+        return compiles(directory, source,
                 Path.of(System.getProperty("java.class.path")));
     }
 
-    static boolean compiles(Path parent, String source, Path classpath)
+    static boolean compiles(Path directory, String source, Path classpath)
             throws IOException {
-        Path directory = createTempDirectory(parent, "javac-");
         Path sourceFile = directory.resolve("Contract.java");
         writeString(sourceFile, source);
         return requireNonNull(getSystemJavaCompiler(),

@@ -27,7 +27,7 @@ dependencies {
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
-    options.compilerArgs.addAll(listOf("-Xlint:all,-serial", "-parameters"))
+    options.compilerArgs.add("-Xlint:all,-serial")
 }
 
 tasks.withType<Test>().configureEach {
@@ -35,18 +35,8 @@ tasks.withType<Test>().configureEach {
 }
 
 tasks.test {
-    exclude("**/*IT.class")
-}
-
-val artifactTest = tasks.register<Test>("artifactTest") {
-    description = "Verifies the packaged Awium artifact"
-    group = "verification"
-    testClassesDirs = sourceSets.test.get().output.classesDirs
-    classpath = sourceSets.test.get().runtimeClasspath
-    include("**/*IT.class")
-    dependsOn(tasks.testClasses, tasks.jar)
-    outputs.upToDateWhen { false }
-    outputs.cacheIf { false }
+    dependsOn(tasks.jar)
+    inputs.file(tasks.jar.flatMap { it.archiveFile })
 }
 
 val verifyNoRuntimeDependencies = tasks.register("verifyNoRuntimeDependencies") {
@@ -60,7 +50,7 @@ val verifyNoRuntimeDependencies = tasks.register("verifyNoRuntimeDependencies") 
 }
 
 tasks.check {
-    dependsOn(artifactTest, verifyNoRuntimeDependencies)
+    dependsOn(verifyNoRuntimeDependencies)
 }
 
 pitest {
@@ -76,6 +66,6 @@ pitest {
     pitestVersion = "1.25.9"
     junit5PluginVersion = "1.2.3"
     threads = 4
-    outputFormats = setOf("HTML", "XML", "CSV")
+    outputFormats = setOf("HTML")
     timestampedReports = false
 }

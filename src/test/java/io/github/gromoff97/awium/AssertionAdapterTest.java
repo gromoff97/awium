@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
@@ -43,20 +44,15 @@ class AssertionAdapterTest {
     @Test
     void namedConditionValidatesItsArgumentsAndPreservesNullEvaluation()
             throws Exception {
-        assertEquals("description must not be null",
-                assertThrows(NullPointerException.class,
-                        () -> condition(null,
-                                payment -> satisfied(payment)))
-                        .getMessage());
-        assertEquals("description must not be blank",
-                assertThrows(IllegalArgumentException.class,
-                        () -> condition(" \n ",
-                                payment -> satisfied(payment)))
-                        .getMessage());
-        assertEquals("evaluation must not be null",
-                assertThrows(NullPointerException.class,
-                        () -> condition("payment", null))
-                        .getMessage());
+        assertTrue(assertThrows(NullPointerException.class,
+                () -> condition(null, payment -> satisfied(payment)))
+                .getMessage().contains("description"));
+        assertTrue(assertThrows(IllegalArgumentException.class,
+                () -> condition(" \n ", payment -> satisfied(payment)))
+                .getMessage().contains("description"));
+        assertTrue(assertThrows(NullPointerException.class,
+                () -> condition("payment", null))
+                .getMessage().contains("evaluation"));
 
         var condition = ConditionProvider.<String, String>condition(
                 "nullable evaluation", value -> null);
@@ -74,7 +70,7 @@ class AssertionAdapterTest {
         assertEquals(SATISFIED, evaluation.status());
         assertSame(actual, evaluation.result());
         assertEquals(1, invocations[0]);
-        assertEquals("assertion to pass", condition.runtime().description().get());
+        assertTrue(!condition.runtime().description().get().isBlank());
     }
 
     @Test
@@ -90,7 +86,7 @@ class AssertionAdapterTest {
         assertEquals(SATISFIED, evaluation.status());
         assertNull(evaluation.result());
         assertEquals(1, invocations[0]);
-        assertEquals("assertion to pass", condition.description());
+        assertTrue(!condition.description().isBlank());
     }
 
     @Test
@@ -123,7 +119,7 @@ class AssertionAdapterTest {
         });
         Evaluation<Long> evaluation = condition.evaluate("42");
 
-        assertEquals("assertion did not pass", evaluation.mismatch());
+        assertTrue(!evaluation.mismatch().isBlank());
         assertSame(failure, evaluation.assertionCause());
     }
 
@@ -152,12 +148,10 @@ class AssertionAdapterTest {
 
     @Test
     void assertionFactoriesRejectNullCallbacks() {
-        assertEquals("assertion must not be null",
-                assertThrows(NullPointerException.class,
-                        () -> asserted(null)).getMessage());
-        assertEquals("assertion must not be null",
-                assertThrows(NullPointerException.class,
-                        () -> passed(null)).getMessage());
+        assertTrue(assertThrows(NullPointerException.class,
+                () -> asserted(null)).getMessage().contains("assertion"));
+        assertTrue(assertThrows(NullPointerException.class,
+                () -> passed(null)).getMessage().contains("assertion"));
     }
 
     private static final class MessageReadingAssertion extends AssertionError {

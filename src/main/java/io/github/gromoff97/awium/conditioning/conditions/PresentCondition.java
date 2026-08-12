@@ -33,23 +33,12 @@ public final class PresentCondition {
         return runtime;
     }
 
-    public static final class ExplainedCondition {
+    public record ExplainedCondition(PresentCondition delegate,
+            String explanation) {
 
-        private final PresentCondition delegate;
-        private final String explanation;
-
-        private ExplainedCondition(PresentCondition delegate,
-                String explanation) {
-            this.delegate = requireNonNull(delegate);
-            this.explanation = requireNonNull(explanation);
-        }
-
-        public PresentCondition delegate() {
-            return delegate;
-        }
-
-        public String explanation() {
-            return explanation;
+        public ExplainedCondition {
+            requireNonNull(delegate);
+            explanation = literalExplanation(explanation);
         }
     }
 }

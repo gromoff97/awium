@@ -59,16 +59,23 @@ class PositiveFluentMatrixTest {
         assertSame(actual, await(source).until(selecting));
         assertSame(actual, await(source)
                 .until(selecting.because("selected object")));
+        Void nil = await((Source<Object>) () -> null).until(isNull);
+        assertSame(null, nil);
     }
 
     @Test
     void optionalFacadeExecutesCanonicalFullChain() {
-        var value = new Object();
-        OptionalSource<Object> source = () -> Optional.of(value);
+        var value = new String("value");
+        OptionalSource<String> source = () -> Optional.of(value);
 
-        assertSame(value,
-                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(present.because("optional full chain")));
+        String selected = await(source).every(EVERY).upTo(UP_TO)
+                .stableFor(ZERO)
+                .until(present.because("optional full chain"));
+        Void absentValue = await((OptionalSource<String>) Optional::empty)
+                .until(absent);
+
+        assertSame(value, selected);
+        assertSame(null, absentValue);
     }
 
     @Test
@@ -76,9 +83,15 @@ class PositiveFluentMatrixTest {
         var actual = new ArrayList<>(List.of("value"));
         CollectionSource<ArrayList<String>> source = () -> actual;
 
-        assertSame(actual,
-                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(nonEmpty.because("collection full chain")));
+        StructuralCondition structural = nonEmpty();
+        StructuralCondition.ExplainedCondition explained =
+                structural.because("collection full chain");
+        ArrayList<String> raw = await(source).until(structural);
+        ArrayList<String> selected = await(source).every(EVERY).upTo(UP_TO)
+                .stableFor(ZERO).until(explained);
+
+        assertSame(actual, raw);
+        assertSame(actual, selected);
     }
 
     @Test
@@ -86,9 +99,11 @@ class PositiveFluentMatrixTest {
         var actual = new LinkedHashMap<>(java.util.Map.of("key", "value"));
         MapSource<LinkedHashMap<String, String>> source = () -> actual;
 
-        assertSame(actual,
-                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(nonEmpty.because("map full chain")));
+        LinkedHashMap<String, String> selected = await(source).every(EVERY)
+                .upTo(UP_TO).stableFor(ZERO)
+                .until(nonEmpty.because("map full chain"));
+
+        assertSame(actual, selected);
     }
 
     private static void assertAllSame(Object expected, Object... actuals) {
