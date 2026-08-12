@@ -13,7 +13,7 @@ import io.github.gromoff97.awium.sources.OptionalSource;
 import io.github.gromoff97.awium.sources.Source;
 
 import static io.github.gromoff97.awium.Awium.await;
-import static java.time.Duration.ZERO;
+import static java.time.Duration.*;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.time.Duration;
@@ -25,8 +25,8 @@ import org.junit.jupiter.api.Test;
 
 class PositiveFluentMatrixTest {
 
-    private static final Duration EVERY = Duration.ofMillis(1);
-    private static final Duration UP_TO = Duration.ofSeconds(1);
+    private static final Duration EVERY = ofMillis(1);
+    private static final Duration UP_TO = ofSeconds(1);
 
     @Test
     void objectFacadeExecutesEveryValidConfigurationPath() {

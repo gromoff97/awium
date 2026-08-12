@@ -7,6 +7,7 @@ import io.github.gromoff97.awium.exceptions.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.lang.reflect.Modifier.isFinal;
 import static java.lang.reflect.Modifier.isPublic;
+import static java.time.Duration.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -22,16 +23,16 @@ class WaitConfigTest {
     void defaultsUseTheSpecifiedEffectiveDurations() {
         WaitConfiguration config = defaults();
 
-        assertEquals(Duration.ofMillis(100).toNanos(), config.everyNanos());
-        assertEquals(Duration.ofSeconds(10).toNanos(), config.upToNanos());
+        assertEquals(ofMillis(100).toNanos(), config.everyNanos());
+        assertEquals(ofSeconds(10).toNanos(), config.upToNanos());
         assertEquals(0L, config.stableForNanos());
     }
 
     @Test
     void acceptsTheSmallestStrictlyValidDurationPair() {
         WaitConfiguration config = defaults()
-                .withEvery(Duration.ofNanos(1))
-                .withUpTo(Duration.ofNanos(2));
+                .withEvery(ofNanos(1))
+                .withUpTo(ofNanos(2));
 
         assertEquals(1, config.everyNanos());
         assertEquals(2, config.upToNanos());
@@ -41,24 +42,24 @@ class WaitConfigTest {
     @Test
     void configurationCreatesIndependentCandidates() {
         WaitConfiguration defaults = defaults();
-        WaitConfiguration interval = defaults.withEvery(Duration.ofSeconds(20));
-        WaitConfiguration stable = defaults.withStableFor(Duration.ofSeconds(2));
+        WaitConfiguration interval = defaults.withEvery(ofSeconds(20));
+        WaitConfiguration stable = defaults.withStableFor(ofSeconds(2));
 
-        assertEquals(Duration.ofSeconds(20).toNanos(), interval.everyNanos());
-        assertEquals(Duration.ofSeconds(2).toNanos(), stable.stableForNanos());
+        assertEquals(ofSeconds(20).toNanos(), interval.everyNanos());
+        assertEquals(ofSeconds(2).toNanos(), stable.stableForNanos());
 
         WaitConfiguration invalidBranch = interval.withUpTo(
-                Duration.ofSeconds(10));
+                ofSeconds(10));
         assertThrows(AwaitConfigurationConflictException.class,
                 invalidBranch::validatePair);
-        WaitConfiguration validBranch = interval.withUpTo(Duration.ofSeconds(30));
-        assertEquals(Duration.ofSeconds(30).toNanos(), validBranch.upToNanos());
-        assertEquals(Duration.ofSeconds(10).toNanos(), interval.upToNanos());
+        WaitConfiguration validBranch = interval.withUpTo(ofSeconds(30));
+        assertEquals(ofSeconds(30).toNanos(), validBranch.upToNanos());
+        assertEquals(ofSeconds(10).toNanos(), interval.upToNanos());
     }
 
     @Test
     void eachDurationRejectsNullBeforeOtherValidation() {
-        WaitConfiguration invalidPair = defaults().withEvery(Duration.ofSeconds(20));
+        WaitConfiguration invalidPair = defaults().withEvery(ofSeconds(20));
 
         assertEquals("duration must not be null",
                 assertThrows(NullPointerException.class,
@@ -67,7 +68,7 @@ class WaitConfigTest {
 
     @Test
     void intervalAndTimeoutMustBePositive() {
-        for (Duration invalid : List.of(Duration.ZERO, Duration.ofNanos(-1))) {
+        for (Duration invalid : List.of(ZERO, ofNanos(-1))) {
             assertEquals("poll interval must be greater than zero",
                     assertThrows(IllegalArgumentException.class,
                             () -> defaults().withEvery(invalid)).getMessage());
@@ -75,7 +76,7 @@ class WaitConfigTest {
             assertEquals("acquisition timeout must be greater than zero",
                     assertThrows(IllegalArgumentException.class,
                             () -> defaults()
-                                    .withEvery(Duration.ofSeconds(20))
+                                    .withEvery(ofSeconds(20))
                                     .withUpTo(invalid)).getMessage());
         }
     }
@@ -83,22 +84,22 @@ class WaitConfigTest {
     @Test
     void stabilityMayBeZeroButNotNegative() {
         assertEquals(0L, defaults()
-                .withStableFor(Duration.ZERO)
+                .withStableFor(ZERO)
                 .stableForNanos());
 
         assertEquals("stability duration must not be negative",
                 assertThrows(IllegalArgumentException.class,
-                        () -> defaults().withStableFor(Duration.ofNanos(-1)))
+                        () -> defaults().withStableFor(ofNanos(-1)))
                         .getMessage());
     }
 
     @Test
     void durationsMustFitInSignedLongNanoseconds() {
-        Duration maximum = Duration.ofNanos(Long.MAX_VALUE);
+        Duration maximum = ofNanos(Long.MAX_VALUE);
         assertEquals(Long.MAX_VALUE,
                 defaults().withEvery(maximum).everyNanos());
 
-        Duration overflow = Duration.ofSeconds(Long.MAX_VALUE);
+        Duration overflow = ofSeconds(Long.MAX_VALUE);
         var failure = assertThrows(IllegalArgumentException.class,
                 () -> defaults().withEvery(overflow));
         assertEquals("duration exceeds the supported nanosecond range",
@@ -109,7 +110,7 @@ class WaitConfigTest {
     @Test
     void equalIntervalAndTimeoutConflictOnlyWhenValidated() {
         WaitConfiguration equal = defaults()
-                .withUpTo(Duration.ofMillis(100));
+                .withUpTo(ofMillis(100));
 
         assertEquals(
                 "poll interval (100 milliseconds) must be shorter than acquisition timeout (100 milliseconds)",
@@ -140,7 +141,7 @@ class WaitConfigTest {
                 conflictMessage(1));
         assertEquals(
                 "poll interval (1 minute 30 seconds) must be shorter than acquisition timeout (1 minute 30 seconds)",
-                conflictMessage(Duration.ofSeconds(90).toNanos()));
+                conflictMessage(ofSeconds(90).toNanos()));
         assertEquals(
                 "poll interval (1 second 1 millisecond 1 microsecond 1 nanosecond) must be shorter than acquisition timeout (1 second 1 millisecond 1 microsecond 1 nanosecond)",
                 conflictMessage(1_001_001_001));

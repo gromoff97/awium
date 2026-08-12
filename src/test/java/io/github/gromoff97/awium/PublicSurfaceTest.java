@@ -23,6 +23,8 @@ import static java.lang.reflect.Modifier.isProtected;
 import static java.lang.reflect.Modifier.isPublic;
 import static java.lang.reflect.Modifier.isStatic;
 import static java.nio.file.Files.walk;
+import static java.util.Arrays.asList;
+import static java.util.Arrays.stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -41,7 +43,6 @@ import java.lang.reflect.WildcardType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -85,7 +86,7 @@ class PublicSurfaceTest {
         restricted.addAll(List.of(AwaitFailure.class,
                 AwaitUncontrolledException.class));
         for (Class<?> type : restricted) {
-            assertFalse(Arrays.stream(type.getDeclaredConstructors())
+            assertFalse(stream(type.getDeclaredConstructors())
                     .anyMatch(candidate -> isApiMember(
                             candidate.getModifiers())), type.getName());
         }
@@ -93,7 +94,7 @@ class PublicSurfaceTest {
             assertTrue(isFinal(type.getModifiers()), type.getName());
         }
         for (Class<?> type : explainedTypes()) {
-            assertFalse(Arrays.stream(type.getMethods())
+            assertFalse(stream(type.getMethods())
                     .map(Method::getName).anyMatch("because"::equals), type.getName());
         }
     }
@@ -117,9 +118,9 @@ class PublicSurfaceTest {
             assertFalse(type.isInterface(), type.getName());
             Class<?> base = type.getSuperclass();
             assertFalse(isPublic(base.getModifiers()), base.getName());
-            List<Constructor<?>> internalConstructors = Arrays.stream(
+            List<Constructor<?>> internalConstructors = stream(
                             base.getDeclaredConstructors())
-                    .filter(constructor -> Arrays.asList(
+                    .filter(constructor -> asList(
                                     constructor.getParameterTypes())
                             .contains(WaitConfiguration.class))
                     .toList();
@@ -130,10 +131,10 @@ class PublicSurfaceTest {
                 assertFalse(isProtected(constructor.getModifiers()),
                         constructor.toGenericString());
             });
-            Arrays.stream(type.getDeclaredConstructors())
+            stream(type.getDeclaredConstructors())
                     .filter(constructor -> isApiMember(
                             constructor.getModifiers()))
-                    .flatMap(constructor -> Arrays.stream(
+                    .flatMap(constructor -> stream(
                             constructor.getGenericParameterTypes()))
                     .forEach(PublicSurfaceTest::assertAllowedType);
         }
@@ -151,11 +152,11 @@ class PublicSurfaceTest {
             assertTrue(isPrivate(constructor.getModifiers()), holder.getName());
             assertEquals(1, holder.getDeclaredConstructors().length,
                     holder.getName());
-            assertTrue(Arrays.stream(holder.getDeclaredMethods())
+            assertTrue(stream(holder.getDeclaredMethods())
                     .filter(method -> isPublic(method.getModifiers()))
                     .allMatch(method -> isStatic(method.getModifiers())),
                     holder.getName());
-            assertTrue(Arrays.stream(holder.getDeclaredFields())
+            assertTrue(stream(holder.getDeclaredFields())
                     .filter(field -> isPublic(field.getModifiers()))
                     .allMatch(field -> isStatic(field.getModifiers())),
                     holder.getName());
@@ -170,14 +171,14 @@ class PublicSurfaceTest {
 
         }
 
-        assertEquals(4, Arrays.stream(Awium.class.getDeclaredMethods())
+        assertEquals(4, stream(Awium.class.getDeclaredMethods())
                 .filter(method -> isPublic(method.getModifiers())).count());
         assertEquals(Set.of("condition", "asserted", "passed"),
-                Set.copyOf(Arrays.stream(ConditionProvider.class
+                Set.copyOf(stream(ConditionProvider.class
                                 .getDeclaredMethods())
                         .filter(method -> isPublic(method.getModifiers()))
                         .map(Method::getName).toList()));
-        assertFalse(Arrays.stream(ConditionProvider.class.getDeclaredFields())
+        assertFalse(stream(ConditionProvider.class.getDeclaredFields())
                 .anyMatch(field -> isPublic(field.getModifiers())));
     }
 
@@ -215,12 +216,12 @@ class PublicSurfaceTest {
             assertFalse(forbiddenNames.contains(type.getSimpleName()),
                     type.toGenericString());
             assertAllowedType(type);
-            Arrays.stream(type.getTypeParameters())
+            stream(type.getTypeParameters())
                     .forEach(PublicSurfaceTest::assertAllowedType);
             if (type.getGenericSuperclass() != null) {
                 assertAllowedType(type.getGenericSuperclass());
             }
-            Arrays.stream(type.getGenericInterfaces())
+            stream(type.getGenericInterfaces())
                     .forEach(PublicSurfaceTest::assertAllowedType);
             for (Class<?> inherited : typeHierarchy(type)) {
                 for (Field field : inherited.getDeclaredFields()) {
@@ -240,21 +241,21 @@ class PublicSurfaceTest {
                                     && method.getName().equals("result")),
                             method.toGenericString());
                     assertAllowedType(method.getGenericReturnType());
-                    Arrays.stream(method.getGenericParameterTypes())
+                    stream(method.getGenericParameterTypes())
                             .forEach(PublicSurfaceTest::assertAllowedType);
-                    Arrays.stream(method.getGenericExceptionTypes())
+                    stream(method.getGenericExceptionTypes())
                             .forEach(PublicSurfaceTest::assertAllowedType);
-                    Arrays.stream(method.getTypeParameters())
+                    stream(method.getTypeParameters())
                             .forEach(PublicSurfaceTest::assertAllowedType);
                 }
             }
             for (Constructor<?> constructor : type.getDeclaredConstructors()) {
                 if (isApiMember(constructor.getModifiers())) {
-                    Arrays.stream(constructor.getGenericParameterTypes())
+                    stream(constructor.getGenericParameterTypes())
                             .forEach(PublicSurfaceTest::assertAllowedType);
-                    Arrays.stream(constructor.getGenericExceptionTypes())
+                    stream(constructor.getGenericExceptionTypes())
                             .forEach(PublicSurfaceTest::assertAllowedType);
-                    Arrays.stream(constructor.getTypeParameters())
+                    stream(constructor.getTypeParameters())
                             .forEach(PublicSurfaceTest::assertAllowedType);
                 }
             }
@@ -276,7 +277,7 @@ class PublicSurfaceTest {
             if (current.getSuperclass() != null) {
                 pending.add(current.getSuperclass());
             }
-            pending.addAll(Arrays.asList(current.getInterfaces()));
+            pending.addAll(asList(current.getInterfaces()));
         }
         return hierarchy;
     }
@@ -300,20 +301,20 @@ class PublicSurfaceTest {
             return isForbiddenApiType(parameterized.getRawType(), visited)
                     || parameterized.getOwnerType() != null
                     && isForbiddenApiType(parameterized.getOwnerType(), visited)
-                    || Arrays.stream(parameterized.getActualTypeArguments())
+                    || stream(parameterized.getActualTypeArguments())
                     .anyMatch(argument -> isForbiddenApiType(argument, visited));
         }
         if (type instanceof GenericArrayType array) {
             return isForbiddenApiType(array.getGenericComponentType(), visited);
         }
         if (type instanceof TypeVariable<?> variable) {
-            return Arrays.stream(variable.getBounds())
+            return stream(variable.getBounds())
                     .anyMatch(bound -> isForbiddenApiType(bound, visited));
         }
         if (type instanceof WildcardType wildcard) {
-            return Arrays.stream(wildcard.getUpperBounds())
+            return stream(wildcard.getUpperBounds())
                     .anyMatch(bound -> isForbiddenApiType(bound, visited))
-                    || Arrays.stream(wildcard.getLowerBounds())
+                    || stream(wildcard.getLowerBounds())
                     .anyMatch(bound -> isForbiddenApiType(bound, visited));
         }
         throw new AssertionError("unsupported reflection type: " + type);
@@ -335,11 +336,11 @@ class PublicSurfaceTest {
     }
 
     private static void assertCheckedSam(Class<?> type) {
-        List<Method> abstractMethods = Arrays.stream(type.getMethods())
+        List<Method> abstractMethods = stream(type.getMethods())
                 .filter(method -> isAbstract(method.getModifiers()))
                 .toList();
         assertEquals(1, abstractMethods.size(), type.getName());
-        assertEquals(List.of(Exception.class), Arrays.asList(
+        assertEquals(List.of(Exception.class), asList(
                 abstractMethods.getFirst().getExceptionTypes()), type.getName());
     }
 

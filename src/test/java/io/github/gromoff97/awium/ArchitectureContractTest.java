@@ -3,6 +3,8 @@ package io.github.gromoff97.awium;
 import static java.nio.file.Files.readString;
 import static java.nio.file.Files.walk;
 import static java.util.Collections.newSetFromMap;
+import static java.util.Map.entry;
+import static java.util.Map.ofEntries;
 import static org.openrewrite.Parser.Input.fromString;
 import static org.openrewrite.java.JavaParser.fromJavaVersion;
 import static org.openrewrite.java.search.FindMissingTypes.findMissingTypes;
@@ -108,8 +110,8 @@ class ArchitectureContractTest {
 
     @Test
     void architectureAuditRejectsForbiddenResolvedExecutableTypes() {
-        Map.ofEntries(
-                Map.entry("implicit future return", """
+        ofEntries(
+                entry("implicit future return", """
                         class Mutant {
                             void run(java.net.http.HttpClient client,
                                     java.net.http.HttpRequest request) {
@@ -118,7 +120,7 @@ class ArchitectureContractTest {
                             }
                         }
                         """),
-                Map.entry("lookup VarHandle return", """
+                entry("lookup VarHandle return", """
                         class Mutant {
                             int state;
                             void run(java.lang.invoke.MethodHandles.Lookup lookup)
@@ -127,7 +129,7 @@ class ArchitectureContractTest {
                             }
                         }
                         """),
-                Map.entry("nested generic array return", """
+                entry("nested generic array return", """
                         class Mutant {
                             static java.util.List<? extends
                                     java.util.concurrent.Future<?>[]>
@@ -139,7 +141,7 @@ class ArchitectureContractTest {
                             }
                         }
                         """),
-                Map.entry("intersection return", """
+                entry("intersection return", """
                         class Mutant {
                             static <T extends java.util.concurrent.Future<?>
                                     & java.io.Serializable>
@@ -151,7 +153,7 @@ class ArchitectureContractTest {
                             }
                         }
                         """),
-                Map.entry("lower wildcard parameter", """
+                entry("lower wildcard parameter", """
                         class Mutant {
                             static void forbiddenLowerWildcardParameter(
                                     java.util.List<? super
@@ -162,7 +164,7 @@ class ArchitectureContractTest {
                             }
                         }
                         """),
-                Map.entry("implicit Executor parameter", """
+                entry("implicit Executor parameter", """
                         class Mutant {
                             void run() {
                                 java.net.http.HttpClient.newBuilder().executor(null);
@@ -174,19 +176,19 @@ class ArchitectureContractTest {
 
     @Test
     void architectureAuditRejectsAllJdkSchedulerFamilies() {
-        Map.ofEntries(
-                Map.entry("util Timer", "class Mutant { java.util.Timer timer; }"),
-                Map.entry("util TimerTask", """
+        ofEntries(
+                entry("util Timer", "class Mutant { java.util.Timer timer; }"),
+                entry("util TimerTask", """
                         class Mutant extends java.util.TimerTask {
                             public void run() {}
                         }
                         """),
-                Map.entry("Swing Timer subtype", """
+                entry("Swing Timer subtype", """
                         class Mutant extends javax.swing.Timer {
                             Mutant() { super(1, null); }
                         }
                         """),
-                Map.entry("JMX TimerMBean", """
+                entry("JMX TimerMBean", """
                         class Mutant {
                             javax.management.timer.TimerMBean timer;
                         }
@@ -196,29 +198,29 @@ class ArchitectureContractTest {
 
     @Test
     void architectureAuditRejectsEveryApprovedBan() {
-        Map<String, String> mutants = Map.ofEntries(
-                Map.entry("thread subclass", "class Mutant extends Thread {}"),
-                Map.entry("worker start",
+        Map<String, String> mutants = ofEntries(
+                entry("thread subclass", "class Mutant extends Thread {}"),
+                entry("worker start",
                         "class Mutant { void run(Thread worker) { worker.start(); } }"),
-                Map.entry("worker start reference",
+                entry("worker start reference",
                         "class Mutant { java.util.function.Consumer<Thread> start = Thread::start; }"),
-                Map.entry("thread construction",
+                entry("thread construction",
                         "class Mutant { Thread worker = new Thread(); }"),
-                Map.entry("thread constructor reference",
+                entry("thread constructor reference",
                         "class Mutant { java.util.function.Function<Runnable, Thread> factory = Thread::new; }"),
-                Map.entry("virtual thread builder",
+                entry("virtual thread builder",
                         "class Mutant { Thread.Builder.OfVirtual builder = Thread.ofVirtual(); }"),
-                Map.entry("platform thread builder",
+                entry("platform thread builder",
                         "class Mutant { Thread.Builder.OfPlatform builder = java.lang.Thread.ofPlatform(); }"),
-                Map.entry("virtual thread builder reference",
+                entry("virtual thread builder reference",
                         "class Mutant { java.util.function.Supplier<Thread.Builder.OfVirtual> builder = Thread::ofVirtual; }"),
-                Map.entry("static-imported virtual thread starter", """
+                entry("static-imported virtual thread starter", """
                         import static java.lang.Thread.startVirtualThread;
                         class Mutant { Thread worker = startVirtualThread(() -> {}); }
                         """),
-                Map.entry("sleep",
+                entry("sleep",
                         "class Mutant { void run() throws InterruptedException { Thread.sleep(1); } }"),
-                Map.entry("sleep reference", """
+                entry("sleep reference", """
                         class Mutant {
                             interface Sleeper {
                                 void sleep(long millis) throws InterruptedException;
@@ -226,28 +228,28 @@ class ArchitectureContractTest {
                             Sleeper sleeper = Thread::sleep;
                         }
                         """),
-                Map.entry("static-imported executor factory", """
+                entry("static-imported executor factory", """
                         import static java.util.concurrent.Executors.newFixedThreadPool;
                         class Mutant { Object worker = newFixedThreadPool(1); }
                         """),
-                Map.entry("executor method reference", """
+                entry("executor method reference", """
                         class Mutant {
                             java.util.concurrent.Executor executor;
                             java.util.function.Consumer<Runnable> submit =
                                     executor::execute;
                         }
                         """),
-                Map.entry("interrupt read reference",
+                entry("interrupt read reference",
                         "class Mutant { java.util.function.BooleanSupplier read = Thread::interrupted; }"),
-                Map.entry("interrupt restore reference",
+                entry("interrupt restore reference",
                         "class Mutant { java.util.function.Consumer<Thread> restore = Thread::interrupt; }"),
-                Map.entry("static-imported interrupt read", """
+                entry("static-imported interrupt read", """
                         import static java.lang.Thread.interrupted;
                         class Mutant { boolean read() { return interrupted(); } }
                         """),
-                Map.entry("monitor method",
+                entry("monitor method",
                         "class Mutant { void run(Object lock) throws InterruptedException { lock.wait(); } }"),
-                Map.entry("unqualified monitor methods", """
+                entry("unqualified monitor methods", """
                         class Mutant {
                             void run() throws InterruptedException {
                                 notify();
@@ -255,28 +257,28 @@ class ArchitectureContractTest {
                             }
                         }
                         """),
-                Map.entry("monitor method reference",
+                entry("monitor method reference",
                         "class Mutant { Runnable notifier = this::notify; }"),
-                Map.entry("synchronized monitor",
+                entry("synchronized monitor",
                         "class Mutant { synchronized void run() {} }"),
-                Map.entry("synchronized block", """
+                entry("synchronized block", """
                         class Mutant {
                             void run(Object monitor) {
                                 synchronized (monitor) {}
                             }
                         }
                         """),
-                Map.entry("atomic",
+                entry("atomic",
                         "class Mutant { java.util.concurrent.atomic.AtomicInteger state; }"),
-                Map.entry("var-handle atomic",
+                entry("var-handle atomic",
                         "class Mutant { java.lang.invoke.VarHandle state; }"),
-                Map.entry("lock",
+                entry("lock",
                         "class Mutant { java.util.concurrent.locks.Lock lock; }"),
-                Map.entry("LockSupport outside the approved park port",
+                entry("LockSupport outside the approved park port",
                         "class Mutant { void run() { java.util.concurrent.locks.LockSupport.park(); } }"),
-                Map.entry("interrupt read",
+                entry("interrupt read",
                         "class Mutant { boolean read(Thread t) { return t.isInterrupted(); } }"),
-                Map.entry("interrupt restore",
+                entry("interrupt restore",
                         "class Mutant { void restore(Thread t) { t.interrupt(); } }"));
 
         mutants.forEach(ArchitectureContractTest::assertRejected);

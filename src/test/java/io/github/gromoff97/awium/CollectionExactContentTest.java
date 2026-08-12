@@ -11,6 +11,8 @@ import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition
 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedStructuralAwait;
+import static java.time.Duration.ofNanos;
+import static java.util.Arrays.asList;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
@@ -30,7 +32,6 @@ import java.time.Duration;
 import java.util.AbstractCollection;
 import java.util.AbstractList;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -148,8 +149,8 @@ class CollectionExactContentTest {
                             time.advanceNanos(2);
                             return actual;
                         }, "collection", Collection::size,
-                        defaults().withEvery(Duration.ofNanos(1))
-                                .withUpTo(Duration.ofNanos(2)), time, time)
+                        defaults().withEvery(ofNanos(1))
+                                .withUpTo(ofNanos(2)), time, time)
                         .until(containsExactlyElementsOf(expected)
                                 .because("required")));
 
@@ -192,7 +193,7 @@ class CollectionExactContentTest {
     void nullAndArrayElementsUseLibraryEquality() throws Exception {
         String expectedNull = null;
         assertStatus(containsExactly(expectedNull),
-                Arrays.asList((String) null), SATISFIED);
+                asList((String) null), SATISFIED);
 
         int[] actualArray = {1, 2};
         int[] expectedArray = {1, 2};

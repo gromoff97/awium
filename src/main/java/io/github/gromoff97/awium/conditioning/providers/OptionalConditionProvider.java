@@ -10,6 +10,7 @@ import java.util.Optional;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.ValueEquality.equal;
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
 import static java.util.Objects.requireNonNull;
 
 public final class OptionalConditionProvider {
@@ -25,7 +26,7 @@ public final class OptionalConditionProvider {
         }, () -> "optional to remain present", null));
 
     public static final Condition<Optional<?>, Void> absent =
-            ConditionProvider.condition("optional to be absent", actual -> {
+            condition("optional to be absent", actual -> {
                 if (actual == null) {
                     return unsatisfied("optional was null");
                 }

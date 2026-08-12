@@ -5,14 +5,16 @@ import io.github.gromoff97.awium.exceptions.AwaitConfigurationConflictException;
 
 import java.time.Duration;
 
+import static java.time.Duration.ofMillis;
+import static java.time.Duration.ofSeconds;
 import static java.util.Objects.requireNonNull;
 
 public record WaitConfiguration(
         long everyNanos, long upToNanos, long stableForNanos) {
 
     public static WaitConfiguration defaults() {
-        return new WaitConfiguration(Duration.ofMillis(100).toNanos(),
-                Duration.ofSeconds(10).toNanos(), 0L);
+        return new WaitConfiguration(ofMillis(100).toNanos(),
+                ofSeconds(10).toNanos(), 0L);
     }
 
     public WaitConfiguration withEvery(Duration value) {

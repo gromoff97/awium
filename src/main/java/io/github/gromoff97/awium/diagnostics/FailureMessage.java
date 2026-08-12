@@ -4,7 +4,6 @@ import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
 
-import java.util.Arrays;
 import java.util.Locale;
 import java.util.function.Function;
 
@@ -17,6 +16,7 @@ import static io.github.gromoff97.awium.engine.WaitOutcome.LateSatisfiedTimeout;
 import static io.github.gromoff97.awium.engine.WaitOutcome.LateUnsatisfiedTimeout;
 import static io.github.gromoff97.awium.engine.WaitOutcome.StabilityLoss;
 import static io.github.gromoff97.awium.engine.WaitOutcome.TimeoutBetweenObservations;
+import static java.util.Arrays.deepToString;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("removal")
@@ -282,7 +282,7 @@ public final class FailureMessage {
     private static String render(Object value) {
         try {
             if (value != null && value.getClass().isArray()) {
-                String array = Arrays.deepToString(new Object[] {value});
+                String array = deepToString(new Object[] {value});
                 return array.substring(1, array.length() - 1);
             }
             return String.valueOf(value);

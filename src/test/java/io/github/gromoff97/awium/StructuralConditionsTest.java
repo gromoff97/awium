@@ -6,6 +6,7 @@ import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition
 import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedStructuralAwait;
+import static java.time.Duration.ofNanos;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -69,14 +70,14 @@ class StructuralConditionsTest {
     void publicFacadesKeepCollectionAndMapDiagnosticsDistinct() {
         assertSubjectFailure(() -> await(
                         (CollectionSource<List<String>>) () -> List.of("value"))
-                        .every(Duration.ofNanos(1))
-                        .upTo(Duration.ofNanos(2)).until(empty()),
+                        .every(ofNanos(1))
+                        .upTo(ofNanos(2)).until(empty()),
                 "collection", "map");
         assertSubjectFailure(() -> await(
                         (MapSource<Map<String, String>>)
                                 () -> Map.of("key", "value"))
-                        .every(Duration.ofNanos(1))
-                        .upTo(Duration.ofNanos(2)).until(empty()),
+                        .every(ofNanos(1))
+                        .upTo(ofNanos(2)).until(empty()),
                 "map", "collection");
     }
 
@@ -96,8 +97,8 @@ class StructuralConditionsTest {
                                     return rawCollection;
                                 },
                         "collection", Collection::size,
-                        defaults().withEvery(Duration.ofNanos(1))
-                                .withUpTo(Duration.ofNanos(2)),
+                        defaults().withEvery(ofNanos(1))
+                                .withUpTo(ofNanos(2)),
                         collectionTime, collectionTime).until(empty));
         AwaitTimeoutException mapFailure = assertThrows(AwaitTimeoutException.class,
                 () -> timedStructuralAwait(
@@ -107,8 +108,8 @@ class StructuralConditionsTest {
                                     return rawMap;
                                 },
                         "map", Map::size,
-                        defaults().withEvery(Duration.ofNanos(1))
-                                .withUpTo(Duration.ofNanos(2)),
+                        defaults().withEvery(ofNanos(1))
+                                .withUpTo(ofNanos(2)),
                         mapTime, mapTime).until(empty));
 
         assertTrue(collectionFailure.getMessage()

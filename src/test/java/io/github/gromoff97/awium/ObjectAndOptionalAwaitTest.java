@@ -8,6 +8,7 @@ import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionPr
 import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
+import static java.time.Duration.ofNanos;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -94,8 +95,8 @@ class ObjectAndOptionalAwaitTest {
     private static <T> Await<T> stage(
             FakeTime time, Source<T> source) {
         return timedAwait(source,
-                defaults().withEvery(Duration.ofNanos(1))
-                        .withUpTo(Duration.ofNanos(3)),
+                defaults().withEvery(ofNanos(1))
+                        .withUpTo(ofNanos(3)),
                 time, time);
     }
 

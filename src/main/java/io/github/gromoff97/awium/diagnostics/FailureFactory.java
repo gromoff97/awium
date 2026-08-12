@@ -10,6 +10,7 @@ import io.github.gromoff97.awium.exceptions.AwaitStabilizationException;
 import io.github.gromoff97.awium.exceptions.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUnhandledException;
 
+import static io.github.gromoff97.awium.diagnostics.FailureMessage.terminalCause;
 import static io.github.gromoff97.awium.engine.Attempt.Satisfied;
 import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled;
 import static io.github.gromoff97.awium.engine.WaitOutcome.StabilityLoss;
@@ -46,7 +47,7 @@ public final class FailureFactory {
                     failureMessage.emergency(formattingFailure), cause);
         }
 
-        Throwable cause = FailureMessage.terminalCause(outcome);
+        Throwable cause = terminalCause(outcome);
         if (outcome instanceof StabilityLoss<R>) {
             throw new AwaitStabilizationException(message, cause);
         }

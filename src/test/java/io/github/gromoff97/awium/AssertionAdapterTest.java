@@ -5,6 +5,8 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
+import static java.lang.Long.parseLong;
+import static java.time.Duration.ofNanos;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
@@ -27,7 +29,7 @@ class AssertionAdapterTest {
         var condition = ConditionProvider.<String, Long>condition(
                 "payment id", value -> {
                     invocations[0]++;
-                    return satisfied(Long.parseLong(value));
+                    return satisfied(parseLong(value));
                 });
 
         Evaluation<Long> evaluation = condition.evaluate("42");
@@ -98,13 +100,13 @@ class AssertionAdapterTest {
         var invocations = new int[1];
 
         Long result = timedAwait((Source<String>) () -> "42",
-                defaults().withEvery(Duration.ofNanos(1))
-                        .withUpTo(Duration.ofNanos(10)), time, time).until(
+                defaults().withEvery(ofNanos(1))
+                        .withUpTo(ofNanos(10)), time, time).until(
                 ConditionProvider.<String, Long>passed(value -> {
                     if (invocations[0]++ < 2) {
                         throw discarded;
                     }
-                    return Long.parseLong(value);
+                    return parseLong(value);
                 }).because("payment selection"));
 
         assertEquals(42L, result);

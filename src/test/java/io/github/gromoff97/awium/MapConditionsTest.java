@@ -11,6 +11,7 @@ import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition
 import static io.github.gromoff97.awium.conditioning.providers.MapConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedStructuralAwait;
+import static java.time.Duration.ofNanos;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -348,8 +349,8 @@ class MapConditionsTest {
                     time.advanceNanos(2);
                     return actual;
                 }, "map", Map::size,
-                defaults().withEvery(Duration.ofNanos(1))
-                        .withUpTo(Duration.ofNanos(2)), time, time);
+                defaults().withEvery(ofNanos(1))
+                        .withUpTo(ofNanos(2)), time, time);
 
         assertThrows(AwaitTimeoutException.class,
                 () -> timed.until(

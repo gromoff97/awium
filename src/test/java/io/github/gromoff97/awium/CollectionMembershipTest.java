@@ -8,6 +8,8 @@ import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition
 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedStructuralAwait;
+import static java.time.Duration.ofNanos;
+import static java.util.Arrays.asList;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -27,7 +29,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -110,8 +111,8 @@ class CollectionMembershipTest {
                             time.advanceNanos(2);
                             return explained;
                         }, "collection", Collection::size,
-                        defaults().withEvery(Duration.ofNanos(1))
-                                .withUpTo(Duration.ofNanos(2)), time, time)
+                        defaults().withEvery(ofNanos(1))
+                                .withUpTo(ofNanos(2)), time, time)
                         .until(doesNotContain("a").because("required")));
 
         assertOnlyIterator(explained, 1);
@@ -168,7 +169,7 @@ class CollectionMembershipTest {
     void typedNullIsOneValidExpectedElement() throws Exception {
         String expected = null;
         var actual = new ProbeContainers.MembershipCollection<String>(
-                Arrays.asList((String) null));
+                asList((String) null));
 
         assertSatisfied(runtime(containsAll(expected))
                 .evaluate(actual), actual);

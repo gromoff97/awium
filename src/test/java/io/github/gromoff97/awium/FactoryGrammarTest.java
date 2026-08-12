@@ -5,6 +5,7 @@ import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondit
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
 import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
+import static java.time.Duration.*;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -45,13 +46,13 @@ class FactoryGrammarTest {
         int[] calls = {0};
         Await<String> initial = await(() -> "v" + ++calls[0]);
 
-        Await<String> slow = initial.every(Duration.ofSeconds(20));
+        Await<String> slow = initial.every(ofSeconds(20));
         Await<String> repaired = slow
-                .upTo(Duration.ofSeconds(10))
-                .every(Duration.ofMillis(1))
-                .upTo(Duration.ofSeconds(1))
-                .stableFor(Duration.ofSeconds(2))
-                .stableFor(Duration.ZERO);
+                .upTo(ofSeconds(10))
+                .every(ofMillis(1))
+                .upTo(ofSeconds(1))
+                .stableFor(ofSeconds(2))
+                .stableFor(ZERO);
 
         assertThrows(AwaitConfigurationConflictException.class,
                 () -> slow.until(isNotNull));
@@ -61,7 +62,7 @@ class FactoryGrammarTest {
     @Test
     void nullConditionWinsOverFinalConfigurationConflictForEveryOverload() {
         Await<String> object = await((Source<String>) () -> "value")
-                .every(Duration.ofSeconds(20));
+                .every(ofSeconds(20));
         assertNullCondition(() -> object.until((PreservingCondition<String>) null));
         assertNullCondition(() -> object.until(
                 (PreservingCondition.ExplainedCondition<String>) null));
@@ -70,13 +71,13 @@ class FactoryGrammarTest {
                 (Condition.ExplainedCondition<String, String>) null));
 
         OptionalAwait<String> optional = await((OptionalSource<String>) Optional::empty)
-                .every(Duration.ofSeconds(20));
+                .every(ofSeconds(20));
         assertNullCondition(() -> optional.until((PresentCondition) null));
         assertNullCondition(() -> optional.until((PresentCondition.ExplainedCondition) null));
 
         StructuralAwait<Collection<String>> collection =
                 await((CollectionSource<Collection<String>>) List::of)
-                        .every(Duration.ofSeconds(20));
+                        .every(ofSeconds(20));
         assertNullCondition(() -> collection.until((StructuralCondition) null));
         assertNullCondition(() -> collection.until(
                 (StructuralCondition.ExplainedCondition) null));

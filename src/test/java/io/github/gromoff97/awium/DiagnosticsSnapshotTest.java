@@ -9,6 +9,7 @@ import io.github.gromoff97.awium.engine.*;
 
 import io.github.gromoff97.awium.exceptions.*;
 
+import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.engine.Attempt.*;
 import static io.github.gromoff97.awium.engine.Attempt.Origin.*;
 import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled.*;
@@ -294,7 +295,7 @@ class DiagnosticsSnapshotTest {
     void returnsSuccessWithoutRenderingTerminalMetadata() {
         var result = new Object();
         RuntimeCondition<Object, Object> runtime = new RuntimeCondition<>(
-                value -> Evaluation.satisfied(result), () -> {
+                value -> satisfied(result), () -> {
                     throw new InternalError("description must not be read");
                 }, null);
         WaitOutcome<Object> outcome =
@@ -313,7 +314,7 @@ class DiagnosticsSnapshotTest {
         var cause = new IllegalArgumentException("condition broke");
         var descriptions = new int[1];
         RuntimeCondition<Object, Object> runtime = new RuntimeCondition<>(
-                value -> Evaluation.satisfied(value),
+                value -> satisfied(value),
                 () -> {
                     descriptions[0]++;
                     throw new IllegalStateException("bad description");
@@ -353,7 +354,7 @@ class DiagnosticsSnapshotTest {
                     AwaitSourceRetrievalException.class,
                     () -> new FailureFactory().complete(outcome,
                             new RuntimeCondition<>(
-                                    value -> Evaluation.satisfied(value), () -> {
+                                    value -> satisfied(value), () -> {
                                         calls[0]++;
                                         return description;
                                     }, null), config(1, 2, 0)));
@@ -412,7 +413,7 @@ class DiagnosticsSnapshotTest {
         var cause = new CountingCause("cause one\r\n cause two\rcause three");
         var descriptions = new int[1];
         RuntimeCondition<Object, Object> runtime = new RuntimeCondition<>(
-                value -> Evaluation.satisfied(value), () -> {
+                value -> satisfied(value), () -> {
                     descriptions[0]++;
                     return "condition one\r\n condition two\rcondition three";
                 }, "because one\r\nbecause two");
@@ -500,7 +501,7 @@ class DiagnosticsSnapshotTest {
             throw formatterFailure;
         };
         RuntimeCondition<Object, Object> runtime = new RuntimeCondition<>(
-                value -> Evaluation.satisfied(value), () -> {
+                value -> satisfied(value), () -> {
                     throw new InternalError("description must not be read");
                 }, "payment must complete");
         WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(
@@ -597,7 +598,7 @@ class DiagnosticsSnapshotTest {
 
         assertSame(descriptionFatal, assertThrows(InternalError.class,
                 () -> new FailureFactory().complete(sourceFailure,
-                        new RuntimeCondition<>(value -> Evaluation.satisfied(value),
+                        new RuntimeCondition<>(value -> satisfied(value),
                                 () -> {
                                     throw descriptionFatal;
                                 }, null), config(1, 2, 0))));
@@ -685,7 +686,7 @@ class DiagnosticsSnapshotTest {
 
     private static <R> RuntimeCondition<Object, R> runtime(
             String description, String explanation) {
-        return new RuntimeCondition<>(value -> Evaluation.satisfied(null),
+        return new RuntimeCondition<>(value -> satisfied(null),
                 () -> description, explanation);
     }
 

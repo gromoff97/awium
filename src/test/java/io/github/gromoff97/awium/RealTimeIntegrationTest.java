@@ -9,6 +9,8 @@ import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider
 import static java.lang.System.nanoTime;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.ofPlatform;
+import static java.lang.Thread.State.*;
+import static java.time.Duration.*;
 import static java.util.concurrent.locks.LockSupport.parkNanos;
 
 import io.github.gromoff97.awium.conditioning.*;
@@ -29,9 +31,9 @@ class RealTimeIntegrationTest {
 
     @Test
     void platformCallerRetainsItsIdentityAcrossFixedDelays() {
-        Duration interval = Duration.ofMillis(80);
-        Duration callbackDuration = Duration.ofMillis(120);
-        long minimumDelayNanos = Duration.ofMillis(50).toNanos();
+        Duration interval = ofMillis(80);
+        Duration callbackDuration = ofMillis(120);
+        long minimumDelayNanos = ofMillis(50).toNanos();
         long minimumStartGapNanos = callbackDuration.plusMillis(50).toNanos();
         Thread caller = currentThread();
         List<Long> sourceStarts = new ArrayList<>();
@@ -42,7 +44,7 @@ class RealTimeIntegrationTest {
             sourceStarts.add(nanoTime());
             assertSame(caller, currentThread());
             return ++observations[0];
-        }).every(interval).upTo(Duration.ofSeconds(2))
+        }).every(interval).upTo(ofSeconds(2))
                 .until(condition("third observation", value -> {
                     assertSame(caller, currentThread());
                     Thread.sleep(callbackDuration);
@@ -71,8 +73,8 @@ class RealTimeIntegrationTest {
                 .unstarted(() -> {
                     try {
                         await((Source<Integer>) () -> 1)
-                                .every(Duration.ofSeconds(5))
-                                .upTo(Duration.ofSeconds(10))
+                                .every(ofSeconds(5))
+                                .upTo(ofSeconds(10))
                                 .until(condition(
                                         "never satisfied", value ->
                                                 unsatisfied("not ready")));
@@ -87,7 +89,7 @@ class RealTimeIntegrationTest {
         caller.interrupt();
         caller.join(2_000);
 
-        assertSame(Thread.State.TERMINATED, caller.getState());
+        assertSame(TERMINATED, caller.getState());
         AwaitInterruptedException failure = assertInstanceOf(
                 AwaitInterruptedException.class, terminal[0]);
         assertInstanceOf(InterruptedException.class, failure.getCause());
@@ -96,11 +98,11 @@ class RealTimeIntegrationTest {
     }
 
     private static void awaitTimedWaiting(Thread caller) {
-        long deadline = nanoTime() + Duration.ofSeconds(2).toNanos();
-        while (caller.getState() != Thread.State.TIMED_WAITING
+        long deadline = nanoTime() + ofSeconds(2).toNanos();
+        while (caller.getState() != TIMED_WAITING
                 && nanoTime() < deadline) {
-            parkNanos(Duration.ofMillis(1).toNanos());
+            parkNanos(ofMillis(1).toNanos());
         }
-        assertSame(Thread.State.TIMED_WAITING, caller.getState());
+        assertSame(TIMED_WAITING, caller.getState());
     }
 }

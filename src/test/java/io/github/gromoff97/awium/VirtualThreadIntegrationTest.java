@@ -8,6 +8,7 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.ofVirtual;
+import static java.time.Duration.*;
 
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,7 +32,7 @@ class VirtualThreadIntegrationTest {
                 .start(() -> result[0] = await((Source<Integer>) () -> {
                     callbackThreads.add(currentThread());
                     return ++observations[0];
-                }).every(Duration.ofMillis(20)).upTo(Duration.ofSeconds(2))
+                }).every(ofMillis(20)).upTo(ofSeconds(2))
                         .until(condition("third observation", value -> {
                             callbackThreads.add(currentThread());
                             return value == 3 ? satisfied(value)

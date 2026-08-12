@@ -7,11 +7,12 @@ import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.ValueEquality.equal;
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
 
 public final class ObjectConditionProvider {
 
     public static final Condition<Object, Void> isNull =
-            ConditionProvider.condition("value to be null", actual ->
+            condition("value to be null", actual ->
                     actual == null
                             ? satisfied(null)
                             : unsatisfied("value was not null"));
