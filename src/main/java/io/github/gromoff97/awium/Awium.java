@@ -21,8 +21,7 @@ public final class Awium {
         return new Await<>(source);
     }
 
-    public static <T> OptionalAwait<T> await(
-            OptionalSource<T> source) {
+    public static <T> OptionalAwait<T> await(OptionalSource<T> source) {
         return new OptionalAwait<>(source);
     }
 

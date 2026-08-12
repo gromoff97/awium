@@ -5,18 +5,14 @@ public sealed interface WaitOutcome<R> permits Attempt.Satisfied, Attempt.Uncont
     Attempt<R> attempt();
 
     record TimeoutBetweenObservations<R>(long startedNanos, long completedNanos,
-            Attempt.Unsatisfied<R> attempt) implements WaitOutcome<R> {
-    }
+            Attempt.Unsatisfied<R> attempt) implements WaitOutcome<R> {}
 
     record LateUnsatisfiedTimeout<R>(long startedNanos,
-            Attempt.Unsatisfied<R> attempt) implements WaitOutcome<R> {
-    }
+            Attempt.Unsatisfied<R> attempt) implements WaitOutcome<R> {}
 
     record LateSatisfiedTimeout<R>(long startedNanos,
-            Attempt.Satisfied<R> attempt) implements WaitOutcome<R> {
-    }
+            Attempt.Satisfied<R> attempt) implements WaitOutcome<R> {}
 
     record StabilityLoss<R>(long startedNanos, long acquiredNanos,
-            Attempt.Unsatisfied<R> attempt) implements WaitOutcome<R> {
-    }
+            Attempt.Unsatisfied<R> attempt) implements WaitOutcome<R> {}
 }

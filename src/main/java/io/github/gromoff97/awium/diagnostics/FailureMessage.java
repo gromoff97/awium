@@ -377,8 +377,7 @@ public final class FailureMessage {
         }
     }
 
-    private record AssertionDiagnostic(String mismatch, String cause) {
-    }
+    private record AssertionDiagnostic(String mismatch, String cause) {}
 
     static final class FormattingFailure extends RuntimeException {
 

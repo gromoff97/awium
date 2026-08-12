@@ -19,12 +19,12 @@ public final class PresentCondition {
         return new PresentCondition(runtime);
     }
 
-    public final ExplainedCondition because(String explanation) {
+    public ExplainedCondition because(String explanation) {
         return new ExplainedCondition(this,
                 literalExplanation(explanation));
     }
 
-    public final ExplainedCondition because(String format, Object... arguments) {
+    public ExplainedCondition because(String format, Object... arguments) {
         return new ExplainedCondition(this,
                 formattedExplanation(format, arguments));
     }

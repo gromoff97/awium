@@ -11,6 +11,8 @@ public final class ValueEquality {
     }
 
     public static boolean equal(Object actual, Object expected) {
+        record ValuePair(Object actual, Object expected) {}
+
         var pending = new ArrayDeque<ValuePair>();
         var visited = new HashSet<ValuePair>();
         pending.addLast(new ValuePair(actual, expected));
@@ -51,8 +53,5 @@ public final class ValueEquality {
             }
         }
         return true;
-    }
-
-    private record ValuePair(Object actual, Object expected) {
     }
 }

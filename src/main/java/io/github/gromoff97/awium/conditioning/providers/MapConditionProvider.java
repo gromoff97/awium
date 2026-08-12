@@ -230,5 +230,4 @@ public final class MapConditionProvider {
         return requireNonNull(
                 expected, "expected entries must not be null");
     }
-
 }

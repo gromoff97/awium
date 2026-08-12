@@ -17,12 +17,12 @@ public final class PreservingCondition<S> {
         return new PreservingCondition<>(runtime);
     }
 
-    public final ExplainedCondition<S> because(String explanation) {
+    public ExplainedCondition<S> because(String explanation) {
         return new ExplainedCondition<>(this,
                 literalExplanation(explanation));
     }
 
-    public final ExplainedCondition<S> because(
+    public ExplainedCondition<S> because(
             String format, Object... arguments) {
         return new ExplainedCondition<>(this,
                 formattedExplanation(format, arguments));
