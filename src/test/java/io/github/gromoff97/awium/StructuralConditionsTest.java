@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.Awium.await;
+import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.structural;
 import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
@@ -156,7 +157,7 @@ class StructuralConditionsTest {
                         collection(testCase.condition());
 
         Evaluation<?> satisfied = runtime.evaluate(matching);
-        assertEquals(Evaluation.Status.SATISFIED, satisfied.status());
+        assertEquals(SATISFIED, satisfied.status());
         assertSame(matching, satisfied.result());
         assertNull(satisfied.mismatch());
         assertUnsatisfied(runtime.evaluate(mismatching),
@@ -181,7 +182,7 @@ class StructuralConditionsTest {
 
     private static void assertUnsatisfied(Evaluation<?> evaluation,
             String mismatch) {
-        assertEquals(Evaluation.Status.UNSATISFIED, evaluation.status());
+        assertEquals(UNSATISFIED, evaluation.status());
         assertNull(evaluation.result());
         assertEquals(mismatch, evaluation.mismatch());
     }

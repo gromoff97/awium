@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.diagnostics;
 
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
-import io.github.gromoff97.awium.engine.Attempt;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
 
@@ -9,6 +8,15 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.function.Function;
 
+import static io.github.gromoff97.awium.engine.Attempt.Satisfied;
+import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled;
+import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled.AfterObservation;
+import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled.BeforeObservation;
+import static io.github.gromoff97.awium.engine.Attempt.Unsatisfied;
+import static io.github.gromoff97.awium.engine.WaitOutcome.LateSatisfiedTimeout;
+import static io.github.gromoff97.awium.engine.WaitOutcome.LateUnsatisfiedTimeout;
+import static io.github.gromoff97.awium.engine.WaitOutcome.StabilityLoss;
+import static io.github.gromoff97.awium.engine.WaitOutcome.TimeoutBetweenObservations;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("removal")
@@ -69,7 +77,7 @@ public final class FailureMessage {
         field(out, 0, "Condition", context.descriptionMaterialized
                 ? context.description : DESCRIPTION_UNAVAILABLE);
         if (!(context.outcome.attempt()
-                instanceof Attempt.Uncontrolled.BeforeObservation<?>)) {
+                instanceof BeforeObservation<?>)) {
             field(out, 0, "Actual", context.actualMaterialized
                     ? context.actual
                     : "<value unavailable: diagnostics failed>");
@@ -81,24 +89,24 @@ public final class FailureMessage {
 
     private static String format(Context context) {
         return switch (context.outcome) {
-            case WaitOutcome.TimeoutBetweenObservations<?> outcome ->
+            case TimeoutBetweenObservations<?> outcome ->
                     timeoutBetween(context, outcome);
-            case WaitOutcome.LateUnsatisfiedTimeout<?> outcome ->
+            case LateUnsatisfiedTimeout<?> outcome ->
                     lateUnsatisfied(context, outcome);
-            case WaitOutcome.LateSatisfiedTimeout<?> outcome ->
+            case LateSatisfiedTimeout<?> outcome ->
                     lateSatisfied(context, outcome);
-            case WaitOutcome.StabilityLoss<?> outcome ->
+            case StabilityLoss<?> outcome ->
                     stabilityLoss(context, outcome);
-            case Attempt.Uncontrolled<?> outcome ->
+            case Uncontrolled<?> outcome ->
                     uncontrolled(context, outcome);
-            case Attempt.Satisfied<?> ignored -> throw new IllegalArgumentException(
+            case Satisfied<?> ignored -> throw new IllegalArgumentException(
                     "successful outcomes have no failure diagnostics");
         };
     }
 
     private static String timeoutBetween(Context context,
-            WaitOutcome.TimeoutBetweenObservations<?> outcome) {
-        Attempt.Unsatisfied<?> last = outcome.attempt();
+            TimeoutBetweenObservations<?> outcome) {
+        Unsatisfied<?> last = outcome.attempt();
         AssertionDiagnostic assertion = last.assertionCause() == null
                 ? null : context.assertionDiagnostic();
         StringBuilder out = heading("Await timed out");
@@ -122,8 +130,8 @@ public final class FailureMessage {
     }
 
     private static String lateUnsatisfied(Context context,
-            WaitOutcome.LateUnsatisfiedTimeout<?> outcome) {
-        Attempt.Unsatisfied<?> attempt = outcome.attempt();
+            LateUnsatisfiedTimeout<?> outcome) {
+        Unsatisfied<?> attempt = outcome.attempt();
         AssertionDiagnostic assertion = attempt.assertionCause() == null
                 ? null : context.assertionDiagnostic();
         StringBuilder out = heading("Await timed out");
@@ -142,7 +150,7 @@ public final class FailureMessage {
     }
 
     private static String lateSatisfied(Context context,
-            WaitOutcome.LateSatisfiedTimeout<?> outcome) {
+            LateSatisfiedTimeout<?> outcome) {
         StringBuilder out = heading("Await timed out");
         field(out, 0, "Condition", context.conditionDescription());
         field(out, 0, "Observed", context.actualValue());
@@ -155,8 +163,8 @@ public final class FailureMessage {
     }
 
     private static String stabilityLoss(Context context,
-            WaitOutcome.StabilityLoss<?> outcome) {
-        Attempt.Unsatisfied<?> attempt = outcome.attempt();
+            StabilityLoss<?> outcome) {
+        Unsatisfied<?> attempt = outcome.attempt();
         AssertionDiagnostic assertion = attempt.assertionCause() == null
                 ? null : context.assertionDiagnostic();
         StringBuilder out = heading("Await lost stability");
@@ -181,7 +189,7 @@ public final class FailureMessage {
     }
 
     private static String uncontrolled(Context context,
-            Attempt.Uncontrolled<?> attempt) {
+            Uncontrolled<?> attempt) {
         boolean interrupted = attempt.cause() instanceof InterruptedException;
         String title = interrupted ? "Await was interrupted" : switch (
                 attempt.origin()) {
@@ -196,7 +204,7 @@ public final class FailureMessage {
                     attempt.origin().name().toLowerCase(Locale.ROOT));
         }
         field(out, 0, "Condition", context.conditionDescription());
-        if (attempt instanceof Attempt.Uncontrolled.AfterObservation<?>) {
+        if (attempt instanceof AfterObservation<?>) {
             field(out, 0, "Actual", context.actualValue());
         }
         optionalField(out, "Because", context.condition.explanation());
@@ -293,9 +301,9 @@ public final class FailureMessage {
 
     static Throwable terminalCause(WaitOutcome<?> outcome) {
         return switch (outcome.attempt()) {
-            case Attempt.Satisfied<?> ignored -> null;
-            case Attempt.Unsatisfied<?> attempt -> attempt.assertionCause();
-            case Attempt.Uncontrolled<?> attempt -> attempt.cause();
+            case Satisfied<?> ignored -> null;
+            case Unsatisfied<?> attempt -> attempt.assertionCause();
+            case Uncontrolled<?> attempt -> attempt.cause();
         };
     }
 
@@ -338,11 +346,11 @@ public final class FailureMessage {
             if (!actualMaterialized) {
                 actualMaterialized = true;
                 actual = render(switch (outcome.attempt()) {
-                    case Attempt.Satisfied<?> value -> value.actual();
-                    case Attempt.Unsatisfied<?> value -> value.actual();
-                    case Attempt.Uncontrolled.AfterObservation<?> value ->
+                    case Satisfied<?> value -> value.actual();
+                    case Unsatisfied<?> value -> value.actual();
+                    case AfterObservation<?> value ->
                             value.actual();
-                    case Attempt.Uncontrolled.BeforeObservation<?> ignored ->
+                    case BeforeObservation<?> ignored ->
                             throw new IllegalArgumentException(
                                     "attempt has no observed actual");
                 });

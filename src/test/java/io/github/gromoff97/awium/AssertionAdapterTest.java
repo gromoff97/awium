@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
@@ -31,7 +32,7 @@ class AssertionAdapterTest {
 
         Evaluation<Long> evaluation = condition.evaluate("42");
 
-        assertEquals(Evaluation.Status.SATISFIED, evaluation.status());
+        assertEquals(SATISFIED, evaluation.status());
         assertEquals(42L, evaluation.result());
         assertEquals(1, invocations[0]);
         assertEquals("payment id", condition.description());
@@ -68,7 +69,7 @@ class AssertionAdapterTest {
 
         Evaluation<String> evaluation = condition.runtime().evaluate(actual);
 
-        assertEquals(Evaluation.Status.SATISFIED, evaluation.status());
+        assertEquals(SATISFIED, evaluation.status());
         assertSame(actual, evaluation.result());
         assertEquals(1, invocations[0]);
         assertEquals("assertion to pass", condition.runtime().description().get());
@@ -84,7 +85,7 @@ class AssertionAdapterTest {
 
         Evaluation<String> evaluation = condition.evaluate("42");
 
-        assertEquals(Evaluation.Status.SATISFIED, evaluation.status());
+        assertEquals(SATISFIED, evaluation.status());
         assertNull(evaluation.result());
         assertEquals(1, invocations[0]);
         assertEquals("assertion to pass", condition.description());

@@ -3,6 +3,7 @@ package io.github.gromoff97.awium;
 import static io.github.gromoff97.awium.CompilationSupport.compiles;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
+import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
@@ -241,8 +242,8 @@ class CollectionMembershipTest {
         Evaluation<?> positiveEvaluation = positive.evaluate(positiveActual);
         Evaluation<?> negativeEvaluation = negative.evaluate(negativeActual);
 
-        assertEquals(positiveSatisfied ? Evaluation.Status.SATISFIED
-                        : Evaluation.Status.UNSATISFIED,
+        assertEquals(positiveSatisfied ? SATISFIED
+                        : UNSATISFIED,
                 positiveEvaluation.status(), pair.name());
         assertNotEquals(positiveEvaluation.status(), negativeEvaluation.status(),
                 pair.name());
@@ -266,7 +267,7 @@ class CollectionMembershipTest {
                     ProbeContainers.MembershipCollection<String>> runtime)
             throws Exception {
         Evaluation<?> evaluation = runtime.evaluate(null);
-        assertEquals(Evaluation.Status.UNSATISFIED, evaluation.status());
+        assertEquals(UNSATISFIED, evaluation.status());
         assertEquals("collection was null", evaluation.mismatch());
     }
 
@@ -278,7 +279,7 @@ class CollectionMembershipTest {
 
     private static void assertSatisfied(Evaluation<?> evaluation,
             Object actual) {
-        assertEquals(Evaluation.Status.SATISFIED, evaluation.status());
+        assertEquals(SATISFIED, evaluation.status());
         assertSame(actual, evaluation.result());
         assertNull(evaluation.mismatch());
     }

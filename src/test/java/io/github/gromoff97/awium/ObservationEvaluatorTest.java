@@ -9,6 +9,9 @@ import io.github.gromoff97.awium.engine.WaitEngine;
 import io.github.gromoff97.awium.sources.Source;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.*;
+import static io.github.gromoff97.awium.engine.Attempt.*;
+import static io.github.gromoff97.awium.engine.Attempt.Origin.*;
+import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -36,14 +39,14 @@ class ObservationEvaluatorTest {
 
     @Test
     void attemptVariantsExposeOnlyApplicableState() {
-        var satisfied = new Attempt.Satisfied<>(
+        var satisfied = new Satisfied<>(
                 null, null, 1, Long.MIN_VALUE);
-        var unsatisfied = new Attempt.Unsatisfied<>(
+        var unsatisfied = new Unsatisfied<>(
                 null, "not ready", null, 2, 20);
-        var before = new Attempt.Uncontrolled.BeforeObservation<String>(
-                Attempt.Origin.SOURCE, new RuntimeException("source"), 3, 30);
-        var after = new Attempt.Uncontrolled.AfterObservation<String>(
-                Attempt.Origin.CONDITION, null,
+        var before = new BeforeObservation<String>(
+                SOURCE, new RuntimeException("source"), 3, 30);
+        var after = new AfterObservation<String>(
+                CONDITION, null,
                 new RuntimeException("condition"), 4, 40);
 
         assertAll(
@@ -53,8 +56,8 @@ class ObservationEvaluatorTest {
                         satisfied.completedNanos()),
                 () -> assertNull(unsatisfied.actual()),
                 () -> assertEquals("not ready", unsatisfied.mismatch()),
-                () -> assertEquals(Attempt.Origin.SOURCE, before.origin()),
-                () -> assertEquals(Attempt.Origin.CONDITION, after.origin()),
+                () -> assertEquals(SOURCE, before.origin()),
+                () -> assertEquals(CONDITION, after.origin()),
                 () -> assertNull(after.actual()),
                 () -> assertEquals(4, after.number()));
     }
@@ -64,16 +67,16 @@ class ObservationEvaluatorTest {
         RuntimeException cause = new RuntimeException();
         assertAll(
                 () -> assertThrows(IllegalArgumentException.class,
-                        () -> new Attempt.Satisfied<>("actual", "result", 0, 1)),
+                        () -> new Satisfied<>("actual", "result", 0, 1)),
                 () -> assertThrows(NullPointerException.class,
-                        () -> new Attempt.Unsatisfied<>(
+                        () -> new Unsatisfied<>(
                                 "actual", null, null, 1, 1)),
                 () -> assertThrows(NullPointerException.class,
-                        () -> new Attempt.Uncontrolled.BeforeObservation<>(
+                        () -> new BeforeObservation<>(
                                 null, cause, 1, 1)),
                 () -> assertThrows(NullPointerException.class,
-                        () -> new Attempt.Uncontrolled.AfterObservation<>(
-                                Attempt.Origin.CONDITION, "actual", null, 1, 1)));
+                        () -> new AfterObservation<>(
+                                CONDITION, "actual", null, 1, 1)));
     }
 
     @Test
@@ -91,7 +94,7 @@ class ObservationEvaluatorTest {
             return satisfied(result);
         });
 
-        var satisfied = assertInstanceOf(Attempt.Satisfied.class, outcome);
+        var satisfied = assertInstanceOf(Satisfied.class, outcome);
         assertSame(actual, satisfied.actual());
         assertSame(result, satisfied.result());
         assertEquals(1, satisfied.number());
@@ -110,7 +113,7 @@ class ObservationEvaluatorTest {
                 value -> assertionUnsatisfied(
                         "assertion did not pass", assertion));
 
-        var unsatisfied = assertInstanceOf(Attempt.Unsatisfied.class, outcome);
+        var unsatisfied = assertInstanceOf(Unsatisfied.class, outcome);
         assertSame(actual, unsatisfied.actual());
         assertEquals("assertion did not pass", unsatisfied.mismatch());
         assertSame(assertion, unsatisfied.assertionCause());
@@ -125,8 +128,8 @@ class ObservationEvaluatorTest {
                 ObservationEvaluatorTest::failIfCalled);
 
         var uncontrolled = assertInstanceOf(
-                Attempt.Uncontrolled.BeforeObservation.class, outcome);
-        assertEquals(Attempt.Origin.SOURCE, uncontrolled.origin());
+                BeforeObservation.class, outcome);
+        assertEquals(SOURCE, uncontrolled.origin());
         assertSame(failure, uncontrolled.cause());
         assertEquals(1, uncontrolled.number());
     }
@@ -141,8 +144,8 @@ class ObservationEvaluatorTest {
                 () -> actual, value -> throwFailure(failure));
 
         var uncontrolled = assertInstanceOf(
-                Attempt.Uncontrolled.AfterObservation.class, outcome);
-        assertEquals(Attempt.Origin.CONDITION, uncontrolled.origin());
+                AfterObservation.class, outcome);
+        assertEquals(CONDITION, uncontrolled.origin());
         assertSame(failure, uncontrolled.cause());
         assertSame(actual, uncontrolled.actual());
         assertEquals(1, uncontrolled.number());
@@ -157,8 +160,8 @@ class ObservationEvaluatorTest {
                 value -> uncontrolled(failure));
 
         var uncontrolled = assertInstanceOf(
-                Attempt.Uncontrolled.AfterObservation.class, outcome);
-        assertEquals(Attempt.Origin.CONDITION, uncontrolled.origin());
+                AfterObservation.class, outcome);
+        assertEquals(CONDITION, uncontrolled.origin());
         assertSame(failure, uncontrolled.cause());
         assertSame(actual, uncontrolled.actual());
     }
@@ -174,8 +177,8 @@ class ObservationEvaluatorTest {
         });
 
         var uncontrolled = assertInstanceOf(
-                Attempt.Uncontrolled.AfterObservation.class, outcome);
-        assertEquals(Attempt.Origin.CONDITION, uncontrolled.origin());
+                AfterObservation.class, outcome);
+        assertEquals(CONDITION, uncontrolled.origin());
         assertSame(actual, uncontrolled.actual());
         assertEquals(NullPointerException.class,
                 uncontrolled.cause().getClass());
@@ -193,8 +196,8 @@ class ObservationEvaluatorTest {
         }, ObservationEvaluatorTest::failIfCalled);
 
         var uncontrolled = assertInstanceOf(
-                Attempt.Uncontrolled.BeforeObservation.class, outcome);
-        assertEquals(Attempt.Origin.SOURCE, uncontrolled.origin());
+                BeforeObservation.class, outcome);
+        assertEquals(SOURCE, uncontrolled.origin());
         assertSame(interrupted, uncontrolled.cause());
         assertTrue(currentThread().isInterrupted());
     }
@@ -209,8 +212,8 @@ class ObservationEvaluatorTest {
         });
 
         var uncontrolled = assertInstanceOf(
-                Attempt.Uncontrolled.AfterObservation.class, outcome);
-        assertEquals(Attempt.Origin.CONDITION, uncontrolled.origin());
+                AfterObservation.class, outcome);
+        assertEquals(CONDITION, uncontrolled.origin());
         assertSame(interrupted, uncontrolled.cause());
         assertSame(actual, uncontrolled.actual());
         assertTrue(currentThread().isInterrupted());
@@ -241,7 +244,7 @@ class ObservationEvaluatorTest {
             return null;
         }, ObservationEvaluatorTest::failIfCalled);
 
-        assertFlagInterruption(outcome, Attempt.Origin.SOURCE, null);
+        assertFlagInterruption(outcome, SOURCE, null);
     }
 
     @Test
@@ -253,7 +256,7 @@ class ObservationEvaluatorTest {
             return satisfied(new Object());
         });
 
-        assertFlagInterruption(outcome, Attempt.Origin.CONDITION, actual);
+        assertFlagInterruption(outcome, CONDITION, actual);
     }
 
     @ParameterizedTest
@@ -265,8 +268,8 @@ class ObservationEvaluatorTest {
         }, ObservationEvaluatorTest::failIfCalled);
 
         var uncontrolled = assertInstanceOf(
-                Attempt.Uncontrolled.BeforeObservation.class, outcome);
-        assertEquals(Attempt.Origin.SOURCE, uncontrolled.origin());
+                BeforeObservation.class, outcome);
+        assertEquals(SOURCE, uncontrolled.origin());
         assertSame(failure, uncontrolled.cause());
         assertTrue(currentThread().isInterrupted());
     }
@@ -282,8 +285,8 @@ class ObservationEvaluatorTest {
         });
 
         var uncontrolled = assertInstanceOf(
-                Attempt.Uncontrolled.AfterObservation.class, outcome);
-        assertEquals(Attempt.Origin.CONDITION, uncontrolled.origin());
+                AfterObservation.class, outcome);
+        assertEquals(CONDITION, uncontrolled.origin());
         assertSame(failure, uncontrolled.cause());
         assertSame(actual, uncontrolled.actual());
         assertTrue(currentThread().isInterrupted());
@@ -344,9 +347,9 @@ class ObservationEvaluatorTest {
     }
 
     private static void assertFlagInterruption(Attempt<?> outcome,
-            Attempt.Origin origin, Object actual) {
+            Origin origin, Object actual) {
         var uncontrolled = assertInstanceOf(
-                Attempt.Uncontrolled.AfterObservation.class, outcome);
+                AfterObservation.class, outcome);
         assertEquals(origin, uncontrolled.origin());
         assertSame(actual, uncontrolled.actual());
         assertEquals(1, uncontrolled.number());

@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 
+import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.narrow;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
@@ -66,7 +67,7 @@ public record RuntimeCondition<S, R>(
         return new RuntimeCondition<>(actual -> {
             Evaluation<Object> evaluation = runtime.evaluate(actual);
             if (evaluation != null
-                    && evaluation.status() == Evaluation.Status.SATISFIED) {
+                    && evaluation.status() == SATISFIED) {
                 return satisfied(actual.orElse(null));
             }
             return withResult(evaluation, null);

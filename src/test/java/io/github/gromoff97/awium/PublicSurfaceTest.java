@@ -15,6 +15,7 @@ import io.github.gromoff97.awium.sources.MapSource;
 import io.github.gromoff97.awium.sources.OptionalSource;
 import io.github.gromoff97.awium.sources.Source;
 
+import static io.github.gromoff97.awium.conditioning.Evaluation.Status;
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isFinal;
 import static java.lang.reflect.Modifier.isPrivate;
@@ -63,7 +64,7 @@ class PublicSurfaceTest {
 
         Set<Class<?>> approved = new HashSet<>(publicTypes());
         approved.addAll(explainedTypes());
-        approved.add(Evaluation.Status.class);
+        approved.add(Status.class);
         assertEquals(Set.copyOf(approved), actual);
     }
 

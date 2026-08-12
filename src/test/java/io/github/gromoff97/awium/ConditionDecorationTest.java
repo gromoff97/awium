@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.*;
+import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNSATISFIED;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.*;
 import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
@@ -175,7 +176,7 @@ class ConditionDecorationTest {
                 explainedStructural.evaluate(actualCollection).result());
         Evaluation<java.util.ArrayList<String>> nullEvaluation =
                 rawStructural.evaluate(null);
-        assertEquals(Evaluation.Status.UNSATISFIED, nullEvaluation.status());
+        assertEquals(UNSATISFIED, nullEvaluation.status());
         assertEquals("collection was null", nullEvaluation.mismatch());
         assertEquals("collection to be non-empty",
                 rawStructural.description().get());

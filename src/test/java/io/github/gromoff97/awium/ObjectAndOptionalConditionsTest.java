@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
+import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
 import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
@@ -50,7 +51,7 @@ class ObjectAndOptionalConditionsTest {
         assertSatisfied(evaluate(equalTo(null), null), null);
         Evaluation<?> arrays = evaluate(equalTo(
                 new int[]{1, 2}), new int[]{1, 2});
-        assertEquals(Evaluation.Status.SATISFIED, arrays.status());
+        assertEquals(SATISFIED, arrays.status());
         assertEquals(int[].class, arrays.result().getClass());
         assertNull(arrays.mismatch());
     }
@@ -149,14 +150,14 @@ class ObjectAndOptionalConditionsTest {
     }
 
     private static void assertSatisfied(Evaluation<?> evaluation, Object result) {
-        assertEquals(Evaluation.Status.SATISFIED, evaluation.status());
+        assertEquals(SATISFIED, evaluation.status());
         assertSame(result, evaluation.result());
         assertNull(evaluation.mismatch());
     }
 
     private static void assertUnsatisfied(
             Evaluation<?> evaluation, String mismatch) {
-        assertEquals(Evaluation.Status.UNSATISFIED, evaluation.status());
+        assertEquals(UNSATISFIED, evaluation.status());
         assertNull(evaluation.result());
         assertEquals(mismatch, evaluation.mismatch());
     }

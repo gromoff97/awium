@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.diagnostics;
 
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
-import io.github.gromoff97.awium.engine.Attempt;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
 import io.github.gromoff97.awium.exceptions.AwaitConditionEvaluationException;
@@ -11,6 +10,9 @@ import io.github.gromoff97.awium.exceptions.AwaitStabilizationException;
 import io.github.gromoff97.awium.exceptions.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUnhandledException;
 
+import static io.github.gromoff97.awium.engine.Attempt.Satisfied;
+import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled;
+import static io.github.gromoff97.awium.engine.WaitOutcome.StabilityLoss;
 import static java.util.Objects.requireNonNull;
 
 public final class FailureFactory {
@@ -29,7 +31,7 @@ public final class FailureFactory {
     public <R> R complete(WaitOutcome<R> outcome,
             RuntimeCondition<?, R> condition,
             WaitConfiguration configuration) {
-        if (outcome instanceof Attempt.Satisfied<R> success) {
+        if (outcome instanceof Satisfied<R> success) {
             return success.result();
         }
 
@@ -45,10 +47,10 @@ public final class FailureFactory {
         }
 
         Throwable cause = FailureMessage.terminalCause(outcome);
-        if (outcome instanceof WaitOutcome.StabilityLoss<R>) {
+        if (outcome instanceof StabilityLoss<R>) {
             throw new AwaitStabilizationException(message, cause);
         }
-        if (outcome instanceof Attempt.Uncontrolled<R> uncontrolled) {
+        if (outcome instanceof Uncontrolled<R> uncontrolled) {
             if (cause instanceof InterruptedException) {
                 throw new AwaitInterruptedException(message, cause);
             }
