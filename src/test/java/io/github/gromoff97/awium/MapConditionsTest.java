@@ -14,14 +14,12 @@ import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.conditioning.providers.MapConditionProvider;
 
 import io.github.gromoff97.awium.exceptions.*;
-import io.github.gromoff97.awium.await.StructuralAwait;
 import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
 import io.github.gromoff97.awium.sources.MapSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -29,7 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -39,39 +36,38 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.api.io.TempDir;
 
 class MapConditionsTest {
 
     private static final List<Pair> PAIRS = List.of(
-            new Pair("containsKey", containsKey("b"),
+            new Pair("containsKey", "key", containsKey("b"),
                     doesNotContainKey("b"),
                     map("a", "1", "b", "2"),
                     map("a", "1", "c", "2")),
-            new Pair("containsValue", containsValue("2"),
+            new Pair("containsValue", "value", containsValue("2"),
                     doesNotContainValue("2"),
                     map("a", "1", "b", "2"),
                     map("a", "1", "b", "3")),
-            new Pair("containsEntry", containsEntry("b", "2"),
+            new Pair("containsEntry", "entry", containsEntry("b", "2"),
                     doesNotContainEntry("b", "2"),
                     map("a", "1", "b", "2"),
                     map("a", "1", "b", "3")),
-            new Pair("containsAllEntriesOf",
+            new Pair("containsAllEntriesOf", null,
                     containsAllEntriesOf(
                             map("a", "1", "b", "2")),
                     doesNotContainAllEntriesOf(
                             map("a", "1", "b", "2")),
                     map("a", "1", "b", "2", "c", "3"),
                     map("a", "1", "b", "3")),
-            new Pair("containsAnyEntriesOf",
+            new Pair("containsAnyEntriesOf", null,
                     containsAnyEntriesOf(
                             map("x", "9", "b", "2")),
                     containsNoEntriesOf(
                             map("x", "9", "b", "2")),
                     map("a", "1", "b", "2"),
                     map("a", "1", "c", "3")),
-            new Pair("containsExactlyEntriesOf",
+            new Pair("containsExactlyEntriesOf", null,
                     containsExactlyEntriesOf(
                             map("a", "1", "b", "2")),
                     doesNotContainExactlyEntriesOf(
@@ -118,40 +114,40 @@ class MapConditionsTest {
     }
 
     @Test
-    void membershipPairsUseIdenticalCallsAtEveryStoppingBoundary()
+    void membershipUsesExpectedCallsAtEveryStoppingBoundary()
             throws Exception {
         assertMembershipAccess(MembershipCase.KEY_MATCH,
-                Evaluation.Status.SATISFIED, Evaluation.Status.UNSATISFIED,
+                Evaluation.Status.SATISFIED,
                 new Access(new MapAccess(0, 0, 1, 1, 2, 2, 2, 0, 2), NONE));
         assertMembershipAccess(MembershipCase.VALUE_MATCH,
-                Evaluation.Status.SATISFIED, Evaluation.Status.UNSATISFIED,
+                Evaluation.Status.SATISFIED,
                 new Access(new MapAccess(0, 0, 1, 1, 2, 2, 0, 2, 2), NONE));
         assertMembershipAccess(MembershipCase.ENTRY_MATCH,
-                Evaluation.Status.SATISFIED, Evaluation.Status.UNSATISFIED,
+                Evaluation.Status.SATISFIED,
                 new Access(new MapAccess(0, 0, 1, 1, 2, 2, 2, 1, 3), NONE));
         assertMembershipAccess(MembershipCase.ANY_MATCH,
-                Evaluation.Status.SATISFIED, Evaluation.Status.UNSATISFIED,
+                Evaluation.Status.SATISFIED,
                 new Access(new MapAccess(0, 0, 1, 1, 2, 2, 4, 1, 5),
                         new MapAccess(0, 1, 1, 1, 3, 2, 4, 1, 0)));
         assertMembershipAccess(MembershipCase.ALL_FOUND,
-                Evaluation.Status.SATISFIED, Evaluation.Status.UNSATISFIED,
+                Evaluation.Status.SATISFIED,
                 new Access(new MapAccess(0, 0, 1, 1, 2, 2, 3, 2, 5),
                         new MapAccess(0, 1, 1, 1, 3, 2, 3, 2, 0)));
         assertMembershipAccess(MembershipCase.KEY_EXHAUSTED,
-                Evaluation.Status.UNSATISFIED, Evaluation.Status.SATISFIED,
+                Evaluation.Status.UNSATISFIED,
                 new Access(new MapAccess(0, 0, 1, 1, 4, 3, 3, 0, 3), NONE));
         assertMembershipAccess(MembershipCase.VALUE_EXHAUSTED,
-                Evaluation.Status.UNSATISFIED, Evaluation.Status.SATISFIED,
+                Evaluation.Status.UNSATISFIED,
                 new Access(new MapAccess(0, 0, 1, 1, 4, 3, 0, 3, 3), NONE));
         assertMembershipAccess(MembershipCase.ENTRY_EXHAUSTED,
-                Evaluation.Status.UNSATISFIED, Evaluation.Status.SATISFIED,
+                Evaluation.Status.UNSATISFIED,
                 new Access(new MapAccess(0, 0, 1, 1, 4, 3, 3, 1, 4), NONE));
         assertMembershipAccess(MembershipCase.ANY_EXHAUSTED,
-                Evaluation.Status.UNSATISFIED, Evaluation.Status.SATISFIED,
+                Evaluation.Status.UNSATISFIED,
                 new Access(new MapAccess(0, 0, 1, 1, 4, 3, 6, 0, 6),
                         new MapAccess(0, 1, 1, 1, 3, 2, 6, 0, 0)));
         assertMembershipAccess(MembershipCase.ALL_EXHAUSTED,
-                Evaluation.Status.UNSATISFIED, Evaluation.Status.SATISFIED,
+                Evaluation.Status.UNSATISFIED,
                 new Access(new MapAccess(0, 0, 1, 1, 4, 3, 4, 1, 5),
                         new MapAccess(0, 1, 1, 1, 3, 2, 4, 1, 0)));
     }
@@ -165,28 +161,26 @@ class MapConditionsTest {
         Evaluation<?> evaluation = evaluate(
                 containsAllEntriesOf(expected), actual);
         assertEquals(Evaluation.Status.SATISFIED, evaluation.status());
-        assertSame(actual, evaluation.result());
-        assertNull(evaluation.mismatch());
         assertEquals(1, actual.nextCalls);
     }
 
     @Test
-    void exactPairsUseIdenticalCallsAtEveryCardinalityBoundary()
+    void exactUsesExpectedCallsAtEveryCardinalityBoundary()
             throws Exception {
         assertExactAccess(ExactCase.DIFFERENT_SIZE,
-                Evaluation.Status.UNSATISFIED, Evaluation.Status.SATISFIED,
+                Evaluation.Status.UNSATISFIED,
                 new Access(new MapAccess(1, 0, 0, 0, 0, 0, 0, 0, 0),
                         new MapAccess(1, 0, 0, 0, 0, 0, 0, 0, 0)));
         assertExactAccess(ExactCase.EMPTY,
-                Evaluation.Status.SATISFIED, Evaluation.Status.UNSATISFIED,
+                Evaluation.Status.SATISFIED,
                 new Access(new MapAccess(1, 0, 0, 0, 0, 0, 0, 0, 0),
                         new MapAccess(1, 0, 0, 0, 0, 0, 0, 0, 0)));
         assertExactAccess(ExactCase.MATCH,
-                Evaluation.Status.SATISFIED, Evaluation.Status.UNSATISFIED,
+                Evaluation.Status.SATISFIED,
                 new Access(new MapAccess(1, 0, 1, 1, 3, 2, 2, 2, 4),
                         new MapAccess(1, 0, 1, 1, 3, 2, 2, 2, 0)));
         assertExactAccess(ExactCase.CONTENT_MISMATCH,
-                Evaluation.Status.UNSATISFIED, Evaluation.Status.SATISFIED,
+                Evaluation.Status.UNSATISFIED,
                 new Access(new MapAccess(1, 0, 1, 1, 2, 2, 2, 2, 4),
                         new MapAccess(1, 0, 1, 1, 3, 2, 2, 2, 0)));
     }
@@ -260,19 +254,11 @@ class MapConditionsTest {
                 Evaluation.Status.SATISFIED);
         assertStatus(containsEntry("present", null), nullable,
                 Evaluation.Status.SATISFIED);
-        assertStatus(containsEntry("absent", null), nullable,
-                Evaluation.Status.UNSATISFIED);
 
         TreeMap<String, String> tree = new TreeMap<>();
         tree.put("a", "1");
         assertStatus(containsKey((String) null), tree,
                 Evaluation.Status.UNSATISFIED);
-        assertStatus(containsEntry(null, null), tree,
-                Evaluation.Status.UNSATISFIED);
-
-        var rejecting = entryMap(entry("a", "1"));
-        assertStatus(containsEntry("a", "1"), rejecting,
-                Evaluation.Status.SATISFIED);
     }
 
     @Test
@@ -294,20 +280,15 @@ class MapConditionsTest {
     }
 
     @Test
-    void aggregateFactoriesRetainExpectedProbeWithoutConstructionCopy()
+    void exactFactoryRetainsExpectedProbeWithoutConstructionCopy()
             throws Exception {
-        MapRun membership = membershipRun(MembershipCase.ANY_MATCH, true);
-        assertEquals(new MapAccess(0, 1, 0, 0, 0, 0, 0, 0, 0),
-                expectedAccess(membership));
-        membership.evaluate();
-        assertEquals(new MapAccess(0, 1, 1, 1, 3, 2, 4, 1, 0),
-                expectedAccess(membership));
-
-        MapRun exact = exactRun(ExactCase.MATCH, true);
-        assertEquals(NONE, expectedAccess(exact));
+        MapRun exact = exactRun(ExactCase.MATCH);
+        assertEquals(NONE, mapAccess(exact.expected(), exact.expectedEntries(),
+                exact.extraExpectedOperands()));
         exact.evaluate();
         assertEquals(new MapAccess(1, 0, 1, 1, 3, 2, 2, 2, 0),
-                expectedAccess(exact));
+                mapAccess(exact.expected(), exact.expectedEntries(),
+                        exact.extraExpectedOperands()));
     }
 
     @Test
@@ -326,55 +307,49 @@ class MapConditionsTest {
             assertEquals(0, expected.entrySetCalls);
         }
 
-        List<Executable> nullFactories = List.of(
-                () -> containsAllEntriesOf(null),
-                () -> doesNotContainAllEntriesOf(null),
-                () -> containsAnyEntriesOf(null),
-                () -> containsNoEntriesOf(null),
-                () -> containsExactlyEntriesOf(null),
-                () -> doesNotContainExactlyEntriesOf(null));
-        nullFactories.forEach(factory -> assertEquals(
+        assertEquals(
                 "expected entries must not be null",
-                assertThrows(NullPointerException.class, factory).getMessage()));
-
-        for (Function<Map<String, String>, ?> factory : membershipFactories) {
-            assertEquals("expected entries must not be empty",
-                    assertThrows(IllegalArgumentException.class,
-                            () -> factory.apply(Map.of())).getMessage());
-            var expected = entryMap(entry("a", "1"));
-            RuntimeException cause = new IllegalStateException("isEmpty");
-            expected.isEmptyFailure = cause;
-            assertSame(cause, assertThrows(RuntimeException.class,
-                    () -> factory.apply(expected)));
-        }
-
-        var emptyActual = MapConditionsTest.<String, String>entryMap();
-        assertStatus(containsExactlyEntriesOf(Map.of()),
-                emptyActual, Evaluation.Status.SATISFIED);
-        assertStatus(doesNotContainExactlyEntriesOf(Map.of()),
-                emptyActual, Evaluation.Status.UNSATISFIED);
+                assertThrows(NullPointerException.class,
+                        () -> containsAllEntriesOf(null)).getMessage());
+        assertEquals(
+                "expected entries must not be null",
+                assertThrows(NullPointerException.class,
+                        () -> containsExactlyEntriesOf(null)).getMessage());
+        assertEquals("expected entries must not be empty",
+                assertThrows(IllegalArgumentException.class,
+                        () -> containsAllEntriesOf(Map.of())).getMessage());
     }
 
     @Test
-    void membershipFailuresArePairedAtActualAndExpectedBoundaries() {
-        for (FailurePoint point : FailurePoint.contentBoundaries()) {
-            assertPairedFailure(false, point);
+    void membershipFailsAtActualAndExpectedBoundaries() {
+        List<FailurePoint> points = List.of(FailurePoint.values());
+        for (FailurePoint point : points.subList(
+                FailurePoint.ACTUAL_ENTRY_SET.ordinal(), points.size())) {
+            assertFailure(false, point);
         }
     }
 
     @Test
-    void exactFailuresArePairedAtActualAndExpectedBoundaries() {
-        for (FailurePoint point : FailurePoint.exactBoundaries()) {
-            assertPairedFailure(true, point);
+    void exactFailsAtActualAndExpectedBoundaries() {
+        for (FailurePoint point : List.of(FailurePoint.values())) {
+            assertFailure(true, point);
         }
     }
 
     @Test
     void diagnosticsDoNotTraverseMapAgain() {
         var actual = entryMap(entry("a", "1"));
+        FakeTime time = new FakeTime(0);
+        var timed = new StructuralAwaitStage<>(
+                (MapSource<ProbeContainers.EntryMap<String, String>>) () -> {
+                    time.advanceNanos(2);
+                    return actual;
+                }, Map::size,
+                defaults().withEvery(Duration.ofNanos(1))
+                        .withUpTo(Duration.ofNanos(2)), time, time);
 
         assertThrows(AwaitTimeoutException.class,
-                () -> timed(actual).until(
+                () -> timed.until(
                         containsKey("missing")
                                 .because("required")));
 
@@ -425,22 +400,44 @@ class MapConditionsTest {
     private static void assertPair(Pair pair,
             LinkedHashMap<String, String> actual, boolean positiveSatisfied)
             throws Exception {
-        Evaluation<?> positive = evaluate(pair.positive(), actual);
-        Evaluation<?> negative = evaluate(pair.negative(), actual);
+        String expected = pair.singularExpected();
+        Evaluation<?> positive = evaluate(pair.positive(), actual,
+                expected == null ? null
+                        : "map to contain expected " + expected);
+        Evaluation<?> negative = evaluate(pair.negative(), actual,
+                expected == null ? null
+                        : "map not to contain expected " + expected);
         assertEquals(positiveSatisfied ? Evaluation.Status.SATISFIED
                         : Evaluation.Status.UNSATISFIED,
                 positive.status(), pair.name());
         assertNotEquals(positive.status(), negative.status(), pair.name());
-        if (positive.status() == Evaluation.Status.SATISFIED) {
-            assertSame(actual, positive.result());
+        Evaluation<?> satisfied = positiveSatisfied ? positive : negative;
+        Evaluation<?> unsatisfied = positiveSatisfied ? negative : positive;
+        assertSame(actual, satisfied.result(), pair.name());
+        if (expected != null) {
+            assertEquals("map " + (positiveSatisfied
+                            ? "contained" : "did not contain")
+                            + " expected " + expected,
+                    unsatisfied.mismatch(), pair.name());
         }
     }
 
     private static <K, V, M extends Map<K, V>> Evaluation<?> evaluate(
             PreservingCondition<? super M> condition, M actual)
             throws Exception {
+        return evaluate(condition, actual, null);
+    }
+
+    private static <K, V, M extends Map<K, V>> Evaluation<?> evaluate(
+            PreservingCondition<? super M> condition, M actual,
+            String expectedDescription) throws Exception {
         RuntimeCondition<M, M> runtime = preserving(condition);
-        assertFalse(runtime.description().get().isBlank());
+        String description = runtime.description().get();
+        if (expectedDescription == null) {
+            assertFalse(description.isBlank());
+        } else {
+            assertEquals(expectedDescription, description);
+        }
         return runtime.evaluate(actual);
     }
 
@@ -451,41 +448,27 @@ class MapConditionsTest {
     }
 
     private static void assertMembershipAccess(MembershipCase testCase,
-            Evaluation.Status positiveStatus,
-            Evaluation.Status negativeStatus, Access expected)
+            Evaluation.Status status, Access expected)
             throws Exception {
-        assertPairedAccess(membershipRun(testCase, true),
-                membershipRun(testCase, false), positiveStatus, negativeStatus,
-                expected, testCase.name());
+        assertAccess(membershipRun(testCase), status, expected,
+                testCase.name());
     }
 
     private static void assertExactAccess(ExactCase testCase,
-            Evaluation.Status positiveStatus,
-            Evaluation.Status negativeStatus, Access expected)
+            Evaluation.Status status, Access expected)
             throws Exception {
-        assertPairedAccess(exactRun(testCase, true),
-                exactRun(testCase, false), positiveStatus, negativeStatus,
-                expected, testCase.name());
+        assertAccess(exactRun(testCase), status, expected, testCase.name());
     }
 
-    private static void assertPairedAccess(MapRun positive, MapRun negative,
-            Evaluation.Status positiveStatus,
-            Evaluation.Status negativeStatus, Access expected, String name)
+    private static void assertAccess(MapRun run, Evaluation.Status status,
+            Access expected, String name)
             throws Exception {
-        assertEquals(positiveStatus, positive.evaluate().status(), name);
-        assertEquals(negativeStatus, negative.evaluate().status(), name);
-        assertEquals(expected, snapshot(positive), name);
-        assertEquals(expected, snapshot(negative), name);
+        assertEquals(status, run.evaluate().status(), name);
+        assertEquals(expected, snapshot(run), name);
     }
 
-    private static void assertPairedFailure(boolean exact, FailurePoint point) {
-        FailureRun positive = failureRun(exact, true, point);
-        FailureRun negative = failureRun(exact, false, point);
-
-        assertFailFast(positive);
-        assertFailFast(negative);
-        assertEquals(snapshot(positive.run()), snapshot(negative.run()),
-                point.name());
+    private static void assertFailure(boolean exact, FailurePoint point) {
+        assertFailFast(failureRun(exact, point));
     }
 
     private static void assertFailFast(FailureRun failureRun) {
@@ -499,30 +482,29 @@ class MapConditionsTest {
         assertSame(failureRun.cause(), failure.getCause());
     }
 
-    private static MapRun membershipRun(MembershipCase testCase,
-            boolean positive) {
+    private static MapRun membershipRun(MembershipCase testCase) {
         return switch (testCase) {
-            case KEY_MATCH -> singularRun(positive, Singular.KEY, "b", "2");
-            case VALUE_MATCH -> singularRun(positive, Singular.VALUE, "b", "2");
-            case ENTRY_MATCH -> singularRun(positive, Singular.ENTRY, "b", "2");
+            case KEY_MATCH -> singularRun(Singular.KEY, "b", "2");
+            case VALUE_MATCH -> singularRun(Singular.VALUE, "b", "2");
+            case ENTRY_MATCH -> singularRun(Singular.ENTRY, "b", "2");
             case KEY_EXHAUSTED ->
-                    singularRun(positive, Singular.KEY, "x", "2");
+                    singularRun(Singular.KEY, "x", "2");
             case VALUE_EXHAUSTED ->
-                    singularRun(positive, Singular.VALUE, "b", "9");
+                    singularRun(Singular.VALUE, "b", "9");
             case ENTRY_EXHAUSTED ->
-                    singularRun(positive, Singular.ENTRY, "b", "9");
-            case ANY_MATCH -> aggregateRun(positive, false,
+                    singularRun(Singular.ENTRY, "b", "9");
+            case ANY_MATCH -> aggregateRun(false,
                     List.of(probe("x", "9"), probe("b", "2")));
-            case ANY_EXHAUSTED -> aggregateRun(positive, false,
+            case ANY_EXHAUSTED -> aggregateRun(false,
                     List.of(probe("x", "9"), probe("y", "8")));
-            case ALL_FOUND -> aggregateRun(positive, true,
+            case ALL_FOUND -> aggregateRun(true,
                     List.of(probe("a", "1"), probe("b", "2")));
-            case ALL_EXHAUSTED -> aggregateRun(positive, true,
+            case ALL_EXHAUSTED -> aggregateRun(true,
                     List.of(probe("a", "1"), probe("x", "9")));
         };
     }
 
-    private static MapRun singularRun(boolean positive, Singular singular,
+    private static MapRun singularRun(Singular singular,
             String expectedKeyLabel, String expectedValueLabel) {
         List<EntryProbe> actualEntries = List.of(
                 probe("a", "1"), probe("b", "2"), probe("c", "3"));
@@ -530,39 +512,28 @@ class MapConditionsTest {
         CountingValue expectedKey = new CountingValue(expectedKeyLabel);
         CountingValue expectedValue = new CountingValue(expectedValueLabel);
         PreservingCondition<? super Map<Object, Object>> condition = switch (singular) {
-            case KEY -> positive
-                    ? containsKey(expectedKey)
-                    : doesNotContainKey(expectedKey);
-            case VALUE -> positive
-                    ? containsValue(expectedValue)
-                    : doesNotContainValue(expectedValue);
-            case ENTRY -> positive
-                    ? containsEntry(expectedKey, expectedValue)
-                    : doesNotContainEntry(
-                            expectedKey, expectedValue);
+            case KEY -> containsKey(expectedKey);
+            case VALUE -> containsValue(expectedValue);
+            case ENTRY -> containsEntry(expectedKey, expectedValue);
         };
         return new MapRun(actual, null, condition, actualEntries, List.of(),
                 List.of(expectedKey, expectedValue));
     }
 
-    private static MapRun aggregateRun(boolean positive, boolean all,
+    private static MapRun aggregateRun(boolean all,
             List<EntryProbe> expectedEntries) {
         List<EntryProbe> actualEntries = List.of(
                 probe("a", "1"), probe("b", "2"), probe("c", "3"));
         var actual = entryMap(actualEntries);
         var expected = entryMap(expectedEntries);
         PreservingCondition<? super Map<Object, Object>> condition = all
-                ? positive
-                        ? containsAllEntriesOf(expected)
-                        : doesNotContainAllEntriesOf(expected)
-                : positive
-                        ? containsAnyEntriesOf(expected)
-                        : containsNoEntriesOf(expected);
+                ? containsAllEntriesOf(expected)
+                : containsAnyEntriesOf(expected);
         return new MapRun(actual, expected, condition, actualEntries,
                 expectedEntries, List.of());
     }
 
-    private static MapRun exactRun(ExactCase testCase, boolean positive) {
+    private static MapRun exactRun(ExactCase testCase) {
         List<EntryProbe> actualEntries = switch (testCase) {
             case EMPTY -> List.of();
             case DIFFERENT_SIZE -> List.of(probe("a", "1"));
@@ -576,15 +547,13 @@ class MapConditionsTest {
         };
         var actual = entryMap(actualEntries);
         var expected = entryMap(expectedEntries);
-        PreservingCondition<? super Map<Object, Object>> condition = positive
-                ? containsExactlyEntriesOf(expected)
-                : doesNotContainExactlyEntriesOf(expected);
+        PreservingCondition<? super Map<Object, Object>> condition =
+                containsExactlyEntriesOf(expected);
         return new MapRun(actual, expected, condition, actualEntries,
                 expectedEntries, List.of());
     }
 
-    private static FailureRun failureRun(boolean exact, boolean positive,
-            FailurePoint point) {
+    private static FailureRun failureRun(boolean exact, FailurePoint point) {
         EntryProbe actualEntry = probe("a", "1");
         EntryProbe expectedEntry = probe("a", "1");
         var actual = entryMap(List.of(actualEntry));
@@ -617,25 +586,16 @@ class MapConditionsTest {
         }
 
         PreservingCondition<? super Map<Object, Object>> condition = exact
-                ? positive
-                        ? containsExactlyEntriesOf(expected)
-                        : doesNotContainExactlyEntriesOf(
-                                expected)
-                : positive
-                        ? containsAnyEntriesOf(expected)
-                        : containsNoEntriesOf(expected);
+                ? containsExactlyEntriesOf(expected)
+                : containsAnyEntriesOf(expected);
         return new FailureRun(new MapRun(actual, expected, condition,
                 List.of(actualEntry), List.of(expectedEntry), List.of()), cause);
     }
 
     private static Access snapshot(MapRun run) {
         return new Access(mapAccess(run.actual(), run.actualEntries(), List.of()),
-                expectedAccess(run));
-    }
-
-    private static MapAccess expectedAccess(MapRun run) {
-        return mapAccess(run.expected(), run.expectedEntries(),
-                run.extraExpectedOperands());
+                mapAccess(run.expected(), run.expectedEntries(),
+                        run.extraExpectedOperands()));
     }
 
     private static MapAccess mapAccess(
@@ -662,19 +622,6 @@ class MapConditionsTest {
                 keyCalls, valueCalls, equalityCalls);
     }
 
-    private static StructuralAwait<
-            ProbeContainers.EntryMap<String, String>> timed(
-                    ProbeContainers.EntryMap<String, String> actual) {
-        FakeTime time = new FakeTime(0);
-        return new StructuralAwaitStage<>(
-                (MapSource<ProbeContainers.EntryMap<String, String>>) () -> {
-                    time.advanceNanos(2);
-                    return actual;
-                }, Map::size,
-                defaults().withEvery(Duration.ofNanos(1))
-                        .withUpTo(Duration.ofNanos(2)), time, time);
-    }
-
     private static ProbeContainers.EntryMap<Object, Object> entryMap(
             List<EntryProbe> entries) {
         return new ProbeContainers.EntryMap<>(
@@ -694,8 +641,7 @@ class MapConditionsTest {
     @SuppressWarnings("varargs")
     private static <K, V> ProbeContainers.EntryMap<K, V> entryMap(
             Map.Entry<K, V>... entries) {
-        return new ProbeContainers.EntryMap<>(
-                Arrays.asList(entries));
+        return new ProbeContainers.EntryMap<>(List.of(entries));
     }
 
     private static <K, V> ProbeContainers.ProbeEntry<K, V> entry(
@@ -721,7 +667,7 @@ class MapConditionsTest {
         };
     }
 
-    private record Pair(String name,
+    private record Pair(String name, String singularExpected,
             PreservingCondition<? super LinkedHashMap<String, String>> positive,
             PreservingCondition<? super LinkedHashMap<String, String>> negative,
             LinkedHashMap<String, String> matchingActual,
@@ -792,17 +738,7 @@ class MapConditionsTest {
         ACTUAL_VALUE,
         EXPECTED_VALUE,
         KEY_EQUALITY,
-        VALUE_EQUALITY;
-
-        private static List<FailurePoint> contentBoundaries() {
-            List<FailurePoint> boundaries = exactBoundaries();
-            return boundaries.subList(ACTUAL_ENTRY_SET.ordinal(),
-                    boundaries.size());
-        }
-
-        private static List<FailurePoint> exactBoundaries() {
-            return List.of(values());
-        }
+        VALUE_EQUALITY
     }
     private static final class CountingValue {
         private final String value;

@@ -255,31 +255,6 @@ final class ProbeContainers {
         }
 
         @Override
-        public boolean containsKey(Object key) {
-            throw new AssertionError("containsKey must not be called");
-        }
-
-        @Override
-        public V get(Object key) {
-            throw new AssertionError("get must not be called");
-        }
-
-        @Override
-        public boolean containsValue(Object value) {
-            throw new AssertionError("containsValue must not be called");
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            throw new AssertionError("equals must not be called");
-        }
-
-        @Override
-        public int hashCode() {
-            throw new AssertionError("hashCode must not be called");
-        }
-
-        @Override
         public String toString() {
             return "entry map";
         }

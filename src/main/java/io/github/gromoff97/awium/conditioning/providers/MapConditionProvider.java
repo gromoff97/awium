@@ -21,50 +21,38 @@ public final class MapConditionProvider {
 
     public static <K> PreservingCondition<Map<? super K, ?>> containsKey(
             K expected) {
-        return condition(actual -> anyMatch(actual, entry ->
-                        equal(entry.getKey(), expected)), true,
-                "map to contain expected key",
-                "map did not contain expected key");
+        return entryCondition(entry -> equal(entry.getKey(), expected), true,
+                "key");
     }
 
     public static <K> PreservingCondition<Map<? super K, ?>> doesNotContainKey(
             K expected) {
-        return condition(actual -> anyMatch(actual, entry ->
-                        equal(entry.getKey(), expected)), false,
-                "map not to contain expected key",
-                "map contained expected key");
+        return entryCondition(entry -> equal(entry.getKey(), expected), false,
+                "key");
     }
 
     public static <V> PreservingCondition<Map<?, ? super V>> containsValue(
             V expected) {
-        return condition(actual -> anyMatch(actual, entry ->
-                        equal(entry.getValue(), expected)), true,
-                "map to contain expected value",
-                "map did not contain expected value");
+        return entryCondition(entry -> equal(entry.getValue(), expected), true,
+                "value");
     }
 
     public static <V> PreservingCondition<Map<?, ? super V>> doesNotContainValue(
             V expected) {
-        return condition(actual -> anyMatch(actual, entry ->
-                        equal(entry.getValue(), expected)), false,
-                "map not to contain expected value",
-                "map contained expected value");
+        return entryCondition(entry -> equal(entry.getValue(), expected), false,
+                "value");
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsEntry(
             K key, V value) {
-        return condition(actual -> anyMatch(actual,
-                        entry -> entryMatches(entry, key, value)), true,
-                "map to contain expected entry",
-                "map did not contain expected entry");
+        return entryCondition(entry -> entryMatches(entry, key, value), true,
+                "entry");
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>>
             doesNotContainEntry(K key, V value) {
-        return condition(actual -> anyMatch(actual,
-                        entry -> entryMatches(entry, key, value)), false,
-                "map not to contain expected entry",
-                "map contained expected entry");
+        return entryCondition(entry -> entryMatches(entry, key, value), false,
+                "entry");
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>>
@@ -112,6 +100,16 @@ public final class MapConditionProvider {
                 "map contained exactly the expected entries");
     }
 
+    private static <M extends Map<?, ?>> PreservingCondition<M> entryCondition(
+            Predicate<Map.Entry<?, ?>> matches, boolean positive,
+            String expected) {
+        return condition(actual -> anyMatch(actual, matches), positive,
+                "map " + (positive ? "" : "not ")
+                        + "to contain expected " + expected,
+                "map " + (positive ? "did not contain" : "contained")
+                        + " expected " + expected);
+    }
+
     private static <M extends Map<?, ?>> PreservingCondition<M> condition(
             Predicate<? super M> matches, boolean positive,
             String description, String mismatch) {
@@ -132,7 +130,9 @@ public final class MapConditionProvider {
             List<Map.Entry<?, ?>> positions = entries(expected);
             return all
                     ? allFound(actual, positions)
-                    : anyMatch(actual, entry -> matchesAny(entry, positions));
+                    : anyMatch(actual, actualEntry -> positions.stream()
+                            .anyMatch(expectedEntry -> entryMatches(
+                                    actualEntry, expectedEntry)));
         }, positive, description, mismatch);
     }
 
@@ -144,11 +144,6 @@ public final class MapConditionProvider {
             }
         }
         return false;
-    }
-
-    private static boolean matchesAny(Map.Entry<?, ?> actual,
-            List<Map.Entry<?, ?>> expected) {
-        return expected.stream().anyMatch(entry -> entryMatches(actual, entry));
     }
 
     private static boolean allFound(Map<?, ?> actual,
@@ -235,4 +230,5 @@ public final class MapConditionProvider {
         return requireNonNull(
                 expected, "expected entries must not be null");
     }
+
 }
