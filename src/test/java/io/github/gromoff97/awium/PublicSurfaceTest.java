@@ -9,9 +9,6 @@ import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.await.Await;
 import io.github.gromoff97.awium.await.OptionalAwait;
 import io.github.gromoff97.awium.await.StructuralAwait;
-import io.github.gromoff97.awium.await.stages.AwaitStage;
-import io.github.gromoff97.awium.await.stages.OptionalAwaitStage;
-import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
 import io.github.gromoff97.awium.sources.CollectionSource;
 import io.github.gromoff97.awium.sources.MapSource;
 import io.github.gromoff97.awium.sources.OptionalSource;
@@ -109,23 +106,20 @@ class PublicSurfaceTest {
     }
 
     @Test
-    void allThreeFluentInterfacesHaveExactPermittedSubtypeSets() {
-        Map<Class<?>, Set<Class<?>>> expected = Map.of(
-                Await.class, Set.of(
-                        AwaitStage.class, OptionalAwait.class,
-                        StructuralAwait.class),
-                OptionalAwait.class, Set.of(OptionalAwaitStage.class),
-                StructuralAwait.class, Set.of(StructuralAwaitStage.class));
-
-        expected.forEach((stage, permitted) -> {
-            assertTrue(stage.isInterface(), stage.getName());
-            assertTrue(stage.isSealed(), stage.getName());
-            assertEquals(permitted, Set.copyOf(Arrays.asList(
-                    stage.getPermittedSubclasses())), stage.getName());
-            permitted.forEach(type -> assertTrue(type.isSealed()
-                    || isFinal(type.getModifiers()),
-                    () -> stage + " permits open subtype " + type));
-        });
+    void allThreeFluentTypesArePublicFinalConcreteClasses() {
+        for (Class<?> type : List.of(
+                Await.class, OptionalAwait.class, StructuralAwait.class)) {
+            assertTrue(isPublic(type.getModifiers()), type.getName());
+            assertTrue(isFinal(type.getModifiers()), type.getName());
+            assertFalse(isAbstract(type.getModifiers()), type.getName());
+            assertFalse(type.isInterface(), type.getName());
+            Arrays.stream(type.getDeclaredConstructors())
+                    .filter(constructor -> isApiMember(
+                            constructor.getModifiers()))
+                    .flatMap(constructor -> Arrays.stream(
+                            constructor.getGenericParameterTypes()))
+                    .forEach(PublicSurfaceTest::assertAllowedType);
+        }
     }
 
     @Test
@@ -310,7 +304,9 @@ class PublicSurfaceTest {
 
     private static boolean isForbiddenApiClass(Class<?> type) {
         String packageName = type.getPackageName();
-        return Iterable.class.isAssignableFrom(type)
+        return packageName.startsWith("io.github.gromoff97.awium")
+                && !PUBLIC_API_PACKAGES.contains(packageName)
+                || Iterable.class.isAssignableFrom(type)
                 && !Collection.class.isAssignableFrom(type)
                 || List.of(Future.class, Callable.class, Runnable.class,
                         Predicate.class).stream()

@@ -3,11 +3,11 @@ package io.github.gromoff97.awium;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
-import io.github.gromoff97.awium.await.stages.AwaitStage;
 import io.github.gromoff97.awium.sources.Source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -96,7 +96,7 @@ class AssertionAdapterTest {
         var discarded = new MessageReadingAssertion();
         var invocations = new int[1];
 
-        Long result = new AwaitStage<>((Source<String>) () -> "42",
+        Long result = timedAwait((Source<String>) () -> "42",
                 defaults().withEvery(Duration.ofNanos(1))
                         .withUpTo(Duration.ofNanos(10)), time, time).until(
                 ConditionProvider.<String, Long>passed(value -> {

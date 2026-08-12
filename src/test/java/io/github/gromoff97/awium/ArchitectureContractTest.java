@@ -292,15 +292,15 @@ class ArchitectureContractTest {
     @Test
     void architectureAuditRejectsMutatedApprovedPorts() {
         assertRejectedAt(MAIN_PACKAGE.resolve(
-                "await/stages/AbstractAwaitStage.java"), """
-                package io.github.gromoff97.awium.await.stages;
-                abstract class AbstractAwaitStage {}
+                "await/AbstractAwait.java"), """
+                package io.github.gromoff97.awium.await;
+                abstract class AbstractAwait {}
                 """);
         assertRejectedAt(MAIN_PACKAGE.resolve(
-                "await/stages/AbstractAwaitStage.java"), """
-                package io.github.gromoff97.awium.await.stages;
+                "await/AbstractAwait.java"), """
+                package io.github.gromoff97.awium.await;
                 import java.util.concurrent.locks.LockSupport;
-                abstract class AbstractAwaitStage {
+                abstract class AbstractAwait {
                     interface BlockerParker {
                         void park(Object blocker, long nanos);
                     }
@@ -384,7 +384,7 @@ class ArchitectureContractTest {
 
         private static final Path PARK_PORT =
                 MAIN_PACKAGE.resolve(
-                        "await/stages/AbstractAwaitStage.java").normalize();
+                        "await/AbstractAwait.java").normalize();
         private static final Path INTERRUPT_PORT = MAIN_PACKAGE
                 .resolve("engine/WaitEngine.java").normalize();
         private static final String THREAD = "java.lang.Thread";

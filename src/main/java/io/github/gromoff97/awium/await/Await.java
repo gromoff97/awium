@@ -1,25 +1,28 @@
 package io.github.gromoff97.awium.await;
 
-import io.github.gromoff97.awium.await.stages.AwaitStage;
-import io.github.gromoff97.awium.conditioning.conditions.Condition;
-import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
+import io.github.gromoff97.awium.engine.WaitConfiguration;
+import io.github.gromoff97.awium.sources.Source;
 
-import java.time.Duration;
+import java.util.function.LongConsumer;
+import java.util.function.LongSupplier;
 
-public sealed interface Await<S> permits AwaitStage, OptionalAwait, StructuralAwait {
+public final class Await<S> extends AbstractAwait<S, Await<S>> {
 
-    Await<S> every(Duration interval);
+    public Await(Source<? extends S> source) {
+        super(source);
+    }
 
-    Await<S> upTo(Duration timeout);
+    Await(Source<? extends S> source, WaitConfiguration configuration,
+            LongSupplier clock, LongConsumer parker) {
+        super(source, configuration, clock, parker);
+    }
 
-    Await<S> stableFor(Duration stability);
+    private Await(Await<S> await, WaitConfiguration configuration) {
+        super(await, configuration);
+    }
 
-    S until(PreservingCondition<? super S> condition);
-
-    S until(PreservingCondition.ExplainedCondition<? super S> condition);
-
-    <R> R until(Condition<? super S, ? extends R> condition);
-
-    <R> R until(
-            Condition.ExplainedCondition<? super S, ? extends R> condition);
+    @Override
+    Await<S> reconfigured(WaitConfiguration configuration) {
+        return new Await<>(this, configuration);
+    }
 }

@@ -4,12 +4,12 @@ import static io.github.gromoff97.awium.Awium.await;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.structural;
 import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedStructuralAwait;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 
 import io.github.gromoff97.awium.exceptions.*;
-import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
 import io.github.gromoff97.awium.sources.CollectionSource;
 import io.github.gromoff97.awium.sources.MapSource;
 import io.github.gromoff97.awium.sources.Source;
@@ -88,7 +88,7 @@ class StructuralConditionsTest {
 
         AwaitTimeoutException collectionFailure = assertThrows(
                 AwaitTimeoutException.class,
-                () -> new StructuralAwaitStage<>(
+                () -> timedStructuralAwait(
                         (Source<ProbeContainers.ProbeCollection<Object>>)
                                 () -> {
                                     collectionTime.advanceNanos(2);
@@ -99,7 +99,7 @@ class StructuralConditionsTest {
                                 .withUpTo(Duration.ofNanos(2)),
                         collectionTime, collectionTime).until(empty));
         AwaitTimeoutException mapFailure = assertThrows(AwaitTimeoutException.class,
-                () -> new StructuralAwaitStage<>(
+                () -> timedStructuralAwait(
                         (Source<ProbeContainers.ProbeMap<Object, Object>>)
                                 () -> {
                                     mapTime.advanceNanos(2);

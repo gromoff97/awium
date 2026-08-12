@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.await.stages;
+package io.github.gromoff97.awium.await;
 
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
@@ -6,7 +6,6 @@ import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
-import io.github.gromoff97.awium.await.Await;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.time.Duration;
@@ -18,7 +17,7 @@ import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.util.Objects.requireNonNull;
 
-public abstract class AbstractAwaitStage<S, A extends Await<S>> {
+abstract class AbstractAwait<S, A> {
 
     private static final FailureFactory FAILURE_FACTORY = new FailureFactory();
 
@@ -27,23 +26,26 @@ public abstract class AbstractAwaitStage<S, A extends Await<S>> {
     private final LongSupplier clock;
     private final LongConsumer parker;
 
-    protected AbstractAwaitStage(Source<S> source) {
+    protected AbstractAwait(Source<? extends S> source) {
         this(source, defaults(), System::nanoTime,
                 LockSupport::parkNanos);
     }
 
-    protected AbstractAwaitStage(Source<S> source,
+    protected AbstractAwait(Source<? extends S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {
-        this.source = requireNonNull(source, "source must not be null");
+        this.source = requireNonNull(source, "source must not be null")::get;
         this.configuration = requireNonNull(configuration);
         this.clock = requireNonNull(clock);
         this.parker = requireNonNull(parker);
     }
 
-    protected AbstractAwaitStage(AbstractAwaitStage<S, ?> stage,
+    protected AbstractAwait(AbstractAwait<S, ?> await,
             WaitConfiguration configuration) {
-        this(stage.source, configuration, stage.clock, stage.parker);
+        this.source = await.source;
+        this.configuration = requireNonNull(configuration);
+        this.clock = await.clock;
+        this.parker = await.parker;
     }
 
     public final A every(Duration interval) {
@@ -80,7 +82,7 @@ public abstract class AbstractAwaitStage<S, A extends Await<S>> {
                 requireNonNull(condition, "condition must not be null")));
     }
 
-    protected abstract A reconfigured(WaitConfiguration configuration);
+    abstract A reconfigured(WaitConfiguration configuration);
 
     protected final <R> R complete(RuntimeCondition<S, R> condition) {
         configuration.validatePair();
