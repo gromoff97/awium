@@ -45,17 +45,15 @@ val artifactTest = tasks.register<Test>("artifactTest") {
     classpath = sourceSets.test.get().runtimeClasspath
     include("**/*IT.class")
     dependsOn(tasks.testClasses, tasks.jar)
-    shouldRunAfter(tasks.test)
     outputs.upToDateWhen { false }
     outputs.cacheIf { false }
 }
 
-val runtimeClasspath = configurations.runtimeClasspath
 val verifyNoRuntimeDependencies = tasks.register("verifyNoRuntimeDependencies") {
     description = "Verifies that Awium has no runtime dependencies"
     group = "verification"
     doLast {
-        check(runtimeClasspath.get().allDependencies.isEmpty()) {
+        check(configurations.runtimeClasspath.get().allDependencies.isEmpty()) {
             "Awium must not declare compile or runtime dependencies"
         }
     }

@@ -8,7 +8,6 @@ import static javax.tools.ToolProvider.getSystemJavaCompiler;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import javax.tools.JavaCompiler;
 
 final class CompilationSupport {
 
@@ -22,9 +21,8 @@ final class CompilationSupport {
         Path directory = createTempDirectory(parent, "javac-");
         Path sourceFile = directory.resolve("Contract.java");
         writeString(sourceFile, source);
-        JavaCompiler compiler = requireNonNull(
-                getSystemJavaCompiler(), "system compiler unavailable");
-        return compiler.run(null, nullOutputStream(),
+        return requireNonNull(getSystemJavaCompiler(),
+                "system compiler unavailable").run(null, nullOutputStream(),
                 nullOutputStream(), "--release", "21", "-Xlint:all",
                 "-Werror", "-proc:none", "-classpath",
                 classpath.toString(), "-d", directory.toString(),

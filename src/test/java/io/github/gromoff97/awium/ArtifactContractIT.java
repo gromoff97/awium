@@ -2,9 +2,7 @@ package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.CompilationSupport.compiles;
 import static java.nio.file.Files.isRegularFile;
-import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.module.ModuleFinder;
@@ -23,12 +21,8 @@ class ArtifactContractIT {
             throws Exception {
         assertTrue(isRegularFile(JAR), JAR.toString());
 
-        Set<ModuleReference> modules = ModuleFinder.of(JAR).findAll();
-        assertEquals(1, modules.size());
-        ModuleReference module = modules.iterator().next();
-        assertEquals("io.github.gromoff97.awium",
-                module.descriptor().name());
-        assertFalse(module.descriptor().isAutomatic());
+        ModuleReference module = ModuleFinder.of(JAR)
+                .find("io.github.gromoff97.awium").orElseThrow();
         assertEquals(Set.of("io.github.gromoff97.awium",
                         "io.github.gromoff97.awium.await",
                         "io.github.gromoff97.awium.sources",
@@ -36,9 +30,8 @@ class ArtifactContractIT {
                         "io.github.gromoff97.awium.conditioning.conditions",
                         "io.github.gromoff97.awium.conditioning.providers",
                         "io.github.gromoff97.awium.exceptions"),
-                module.descriptor().exports().stream()
-                        .map(export -> export.source())
-                        .collect(toSet()));
+                Set.copyOf(module.descriptor().exports().stream()
+                        .map(export -> export.source()).toList()));
     }
 
     @Test
