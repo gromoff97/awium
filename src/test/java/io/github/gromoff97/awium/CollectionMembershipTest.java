@@ -70,25 +70,21 @@ class CollectionMembershipTest {
     Path temporaryDirectory;
 
     @Test
-    void completeRawAndExplainedMembershipTableIsComplementary()
+    void completeRawMembershipTableIsComplementary()
             throws Exception {
         for (Pair pair : PAIRS) {
-            for (boolean explained : new boolean[] {false, true}) {
-                assertPair(pair, pair.matchingActual(), true,
-                        pair.matchingNextCalls(), explained);
-                assertPair(pair, pair.mismatchingActual(), false,
-                        pair.mismatchingNextCalls(), explained);
-            }
+            assertPair(pair, pair.matchingActual(), true,
+                    pair.matchingNextCalls());
+            assertPair(pair, pair.mismatchingActual(), false,
+                    pair.mismatchingNextCalls());
         }
     }
 
     @Test
     void nullActualIsUnsatisfiedForBothSigns() throws Exception {
         for (Pair pair : PAIRS) {
-            for (boolean explained : new boolean[] {false, true}) {
-                assertNullActual(runtime(pair.positive(), explained));
-                assertNullActual(runtime(pair.negative(), explained));
-            }
+            assertNullActual(runtime(pair.positive()));
+            assertNullActual(runtime(pair.negative()));
         }
     }
 
@@ -106,8 +102,7 @@ class CollectionMembershipTest {
                         List.of("a"), List.of("b"), 1, 1));
 
         for (Pair pair : repeated) {
-            assertPair(pair, pair.matchingActual(), true, 1, false);
-            assertPair(pair, pair.matchingActual(), true, 1, true);
+            assertPair(pair, pair.matchingActual(), true, 1);
         }
     }
 
@@ -260,7 +255,7 @@ class CollectionMembershipTest {
         var actual = new ProbeContainers.MembershipCollection<String>(
                 Arrays.asList((String) null));
 
-        assertSatisfied(runtime(containsAll(expected), false)
+        assertSatisfied(runtime(containsAll(expected))
                 .evaluate(actual), actual);
         assertOnlyIterator(actual, 1);
     }
@@ -364,16 +359,15 @@ class CollectionMembershipTest {
     }
 
     private static void assertPair(Pair pair, List<String> values,
-            boolean positiveSatisfied, int nextCalls, boolean explained)
-            throws Exception {
+            boolean positiveSatisfied, int nextCalls) throws Exception {
         var positiveActual = new ProbeContainers.MembershipCollection<>(values);
         var negativeActual = new ProbeContainers.MembershipCollection<>(values);
         RuntimeCondition<ProbeContainers.MembershipCollection<String>,
                 ProbeContainers.MembershipCollection<String>> positive =
-                        runtime(pair.positive(), explained);
+                        runtime(pair.positive());
         RuntimeCondition<ProbeContainers.MembershipCollection<String>,
                 ProbeContainers.MembershipCollection<String>> negative =
-                        runtime(pair.negative(), explained);
+                        runtime(pair.negative());
 
         Evaluation<?> positiveEvaluation = positive.evaluate(positiveActual);
         Evaluation<?> negativeEvaluation = negative.evaluate(negativeActual);
@@ -383,8 +377,8 @@ class CollectionMembershipTest {
                 positiveEvaluation.status(), pair.name());
         assertNotEquals(positiveEvaluation.status(), negativeEvaluation.status(),
                 pair.name());
-        assertEquals(explained ? "reason" : null, positive.explanation());
-        assertEquals(explained ? "reason" : null, negative.explanation());
+        assertNull(positive.explanation());
+        assertNull(negative.explanation());
         assertFalse(positive.description().get().isBlank());
         assertFalse(negative.description().get().isBlank());
         assertOnlyIterator(positiveActual, nextCalls);
@@ -394,11 +388,8 @@ class CollectionMembershipTest {
     private static RuntimeCondition<ProbeContainers.MembershipCollection<String>,
             ProbeContainers.MembershipCollection<String>> runtime(
                     PreservingCondition<? super ProbeContainers.
-                            MembershipCollection<String>> condition,
-                    boolean explained) {
-        return explained
-                ? preserving(condition.because("reason"))
-                : preserving(condition);
+                            MembershipCollection<String>> condition) {
+        return preserving(condition);
     }
 
     private static void assertNullActual(

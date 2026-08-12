@@ -69,8 +69,7 @@ public final class Evaluation<R> {
     }
 
     private static String nonBlank(String value, String name) {
-        requireNonNull(value, name + " must not be null");
-        if (value.isBlank()) {
+        if (requireNonNull(value, name + " must not be null").isBlank()) {
             throw new IllegalArgumentException(name + " must not be blank");
         }
         return value;

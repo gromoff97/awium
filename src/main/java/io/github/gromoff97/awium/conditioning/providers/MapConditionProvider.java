@@ -224,8 +224,7 @@ public final class MapConditionProvider {
 
     private static <K, V> Map<? extends K, ? extends V> validate(
             Map<? extends K, ? extends V> expected) {
-        requireNonNull(expected, "expected entries must not be null");
-        if (expected.isEmpty()) {
+        if (requireNonNull(expected, "expected entries must not be null").isEmpty()) {
             throw new IllegalArgumentException(
                     "expected entries must not be empty");
         }

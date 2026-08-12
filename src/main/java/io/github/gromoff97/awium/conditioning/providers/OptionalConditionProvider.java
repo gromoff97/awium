@@ -39,13 +39,11 @@ public final class OptionalConditionProvider {
     }
 
     public static <T> Condition<Optional<T>, T> hasValueEqualTo(T expected) {
-        requireNonNull(expected, "expected must not be null");
-        return valueCondition(expected, true);
+        return valueCondition(requireNonNull(expected, "expected must not be null"), true);
     }
 
     public static <T> Condition<Optional<T>, T> hasValueNotEqualTo(T unexpected) {
-        requireNonNull(unexpected, "unexpected must not be null");
-        return valueCondition(unexpected, false);
+        return valueCondition(requireNonNull(unexpected, "unexpected must not be null"), false);
     }
 
     private static <T> Condition<Optional<T>, T> valueCondition(

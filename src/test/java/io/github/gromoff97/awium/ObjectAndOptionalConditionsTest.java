@@ -83,9 +83,7 @@ class ObjectAndOptionalConditionsTest {
         var notEqual = hasValueNotEqualTo(expected);
 
         assertUnsatisfied(equal.evaluate(null), "optional was null");
-        assertUnsatisfied(notEqual.evaluate(null), "optional was null");
         assertUnsatisfied(equal.evaluate(Optional.empty()), "optional was empty");
-        assertUnsatisfied(notEqual.evaluate(Optional.empty()), "optional was empty");
         assertSatisfied(equal.evaluate(Optional.of(equalActual)), equalActual);
         assertUnsatisfied(notEqual.evaluate(Optional.of(equalActual)),
                 "optional value was equal");

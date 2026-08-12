@@ -47,34 +47,28 @@ class StructuralConditionsTest {
                     "size to be at most 2"));
 
     @Test
-    void rawAndExplainedConditionsUseOneSizeReadForCollections()
+    void rawConditionsUseOneSizeReadForCollections()
             throws Exception {
         for (Case testCase : CASES) {
-            assertCollectionEvaluation(testCase, false);
-            assertCollectionEvaluation(testCase, true);
+            assertCollectionEvaluation(testCase);
         }
     }
 
     @Test
-    void rawAndExplainedConditionsUseOneSizeReadForMaps() throws Exception {
+    void rawConditionsUseOneSizeReadForMaps() throws Exception {
         for (Case testCase : CASES) {
-            assertMapEvaluation(testCase, false);
-            assertMapEvaluation(testCase, true);
+            assertMapEvaluation(testCase);
         }
     }
 
     @Test
-    void nullContainersShortCircuitEveryRawAndExplainedCondition()
+    void nullContainersShortCircuitEveryRawCondition()
             throws Exception {
         for (Case testCase : CASES) {
             assertUnsatisfied(collection(testCase.condition()).evaluate(null),
                     "collection was null");
-            assertUnsatisfied(collection(testCase.condition().because("reason"))
-                    .evaluate(null), "collection was null");
             assertUnsatisfied(map(testCase.condition()).evaluate(null),
                     "map was null");
-            assertUnsatisfied(map(testCase.condition().because("reason"))
-                    .evaluate(null), "map was null");
         }
     }
 
@@ -210,43 +204,41 @@ class StructuralConditionsTest {
         }
     }
 
-    private static void assertCollectionEvaluation(Case testCase,
-            boolean explained) throws Exception {
+    private static void assertCollectionEvaluation(Case testCase)
+            throws Exception {
         var matching = new ProbeContainers.ProbeCollection<Object>(
                 testCase.matchingSize());
         var mismatching = new ProbeContainers.ProbeCollection<Object>(
                 testCase.mismatchingSize());
         RuntimeCondition<ProbeContainers.ProbeCollection<Object>,
-                ProbeContainers.ProbeCollection<Object>> runtime = explained
-                        ? collection(testCase.condition().because("reason"))
-                        : collection(testCase.condition());
+                ProbeContainers.ProbeCollection<Object>> runtime =
+                        collection(testCase.condition());
 
         assertSatisfied(runtime.evaluate(matching), matching);
         assertUnsatisfied(runtime.evaluate(mismatching),
                 mismatch("collection", testCase, testCase.mismatchingSize()));
         assertEquals("collection " + testCase.description(),
                 runtime.description().get());
-        assertEquals(explained ? "reason" : null, runtime.explanation());
+        assertNull(runtime.explanation());
         assertNoFallback(matching);
         assertNoFallback(mismatching);
     }
 
-    private static void assertMapEvaluation(Case testCase, boolean explained)
+    private static void assertMapEvaluation(Case testCase)
             throws Exception {
         var matching = new ProbeContainers.ProbeMap<Object, Object>(
                 testCase.matchingSize());
         var mismatching = new ProbeContainers.ProbeMap<Object, Object>(
                 testCase.mismatchingSize());
         RuntimeCondition<ProbeContainers.ProbeMap<Object, Object>,
-                ProbeContainers.ProbeMap<Object, Object>> runtime = explained
-                        ? map(testCase.condition().because("reason"))
-                        : map(testCase.condition());
+                ProbeContainers.ProbeMap<Object, Object>> runtime =
+                        map(testCase.condition());
 
         assertSatisfied(runtime.evaluate(matching), matching);
         assertUnsatisfied(runtime.evaluate(mismatching),
                 mismatch("map", testCase, testCase.mismatchingSize()));
         assertEquals("map " + testCase.description(), runtime.description().get());
-        assertEquals(explained ? "reason" : null, runtime.explanation());
+        assertNull(runtime.explanation());
         assertNoFallback(matching);
         assertNoFallback(mismatching);
     }

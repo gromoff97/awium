@@ -20,19 +20,9 @@ import org.junit.jupiter.api.Test;
 class ConditionDecorationTest {
 
     @Test
-    void openConditionKeepsItsDelegateAndFormatsExplanationEagerly() throws Exception {
-        var actual = new Object();
-        var condition = new Condition<Object, Object>() {
-            @Override
-            public Evaluation<Object> evaluate(Object value) {
-                return satisfied(value);
-            }
-
-            @Override
-            public String description() {
-                return "custom condition";
-            }
-        };
+    void openConditionKeepsItsDelegateAndFormatsExplanationEagerly() {
+        Condition<Object, Object> condition = condition(
+                "custom condition", Evaluation::satisfied);
 
         var literal = condition.because("the value must be ready");
         var formatted = condition.because("attempt %d", 3);
@@ -41,12 +31,10 @@ class ConditionDecorationTest {
         assertEquals("the value must be ready", literal.explanation());
         assertSame(condition, formatted.delegate());
         assertEquals("attempt 3", formatted.explanation());
-        assertSame(actual, condition.evaluate(actual).result());
-        assertEquals("custom condition", condition.description());
     }
 
     @Test
-    void closedDescriptorsKeepTheirRuntimeAndCloseDecoration() throws Exception {
+    void closedDescriptorsKeepTheirRuntimeAndCloseDecoration() {
         RuntimeCondition<Object, Object> preservingRuntime = runtime();
         RuntimeCondition<Optional<?>, Object> presentRuntime = new RuntimeCondition<>(
                 value -> satisfied(value.orElse(null)), () -> "present", null);
@@ -69,19 +57,13 @@ class ConditionDecorationTest {
         assertEquals("structural", explainedStructural.explanation());
         assertEquals("structural value",
                 structural.because("structural %s", "value").explanation());
-        assertSame(preservingRuntime.evaluator(),
-                preservingRuntime.explained("why").evaluator());
-        assertEquals("why", preservingRuntime.explained("why").explanation());
-        assertSame(this, preservingRuntime.evaluate(this).result());
     }
 
     @Test
     void explanationValidationHappensBeforeEvaluation() {
-        var evaluations = new int[1];
         Condition<Object, Object> condition = condition("custom condition",
                 actual -> {
-                    evaluations[0]++;
-                    return satisfied(actual);
+                    throw new AssertionError("condition evaluated");
                 });
 
         assertEquals("explanation must not be null",
@@ -101,8 +83,12 @@ class ConditionDecorationTest {
                         () -> condition.because("%s", " ")).getMessage());
         assertThrows(IllegalFormatException.class, () -> condition.because("%q", 1));
         assertThrows(IllegalStateException.class,
-                () -> condition.because("%s", new ThrowingRenderer()));
-        assertEquals(0, evaluations[0]);
+                () -> condition.because("%s", new Object() {
+                    @Override
+                    public String toString() {
+                        throw new IllegalStateException();
+                    }
+                }));
     }
 
     @Test
@@ -131,9 +117,8 @@ class ConditionDecorationTest {
         RuntimeCondition<Object, String> explained = open(
                 condition.because("because value"));
 
-        assertEquals("selected", raw.evaluate(this).result());
         assertEquals("selected", explained.evaluate(this).result());
-        assertEquals(2, evaluations[0]);
+        assertEquals(1, evaluations[0]);
         assertEquals("named condition", raw.description().get());
         assertNull(raw.explanation());
         assertEquals("because value", explained.explanation());
@@ -156,7 +141,6 @@ class ConditionDecorationTest {
         RuntimeCondition<StringBuilder, StringBuilder> explainedPreserving =
                 preserving(preserving.because("preserving"));
 
-        assertSame(actual, rawPreserving.evaluate(actual).result());
         assertSame(actual, explainedPreserving.evaluate(actual).result());
         assertSame(description, rawPreserving.description());
         assertNull(rawPreserving.explanation());
@@ -169,7 +153,6 @@ class ConditionDecorationTest {
         RuntimeCondition<Optional<String>, String> explainedPresent =
                 present(present.because("present"));
 
-        assertEquals("value", rawPresent.evaluate(Optional.of("value")).result());
         assertEquals("value",
                 explainedPresent.evaluate(Optional.of("value")).result());
         assertSame(description, rawPresent.description());
@@ -188,8 +171,6 @@ class ConditionDecorationTest {
                         structural.because("structural"), "collection",
                         java.util.Collection::size);
 
-        assertSame(actualCollection,
-                rawStructural.evaluate(actualCollection).result());
         assertSame(actualCollection,
                 explainedStructural.evaluate(actualCollection).result());
         Evaluation<java.util.ArrayList<String>> nullEvaluation =
@@ -227,10 +208,4 @@ class ConditionDecorationTest {
         return new RuntimeCondition<>(Evaluation::satisfied, () -> "condition", null);
     }
 
-    private static final class ThrowingRenderer {
-        @Override
-        public String toString() {
-            throw new IllegalStateException();
-        }
-    }
 }

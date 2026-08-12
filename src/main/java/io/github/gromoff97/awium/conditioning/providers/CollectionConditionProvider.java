@@ -275,8 +275,7 @@ public final class CollectionConditionProvider {
     }
 
     private static <E> E[] validate(E[] expected) {
-        requireNonNull(expected, "expected elements must not be null");
-        if (expected.length == 0) {
+        if (requireNonNull(expected, "expected elements must not be null").length == 0) {
             throw new IllegalArgumentException(
                     "expected elements must not be empty");
         }
@@ -285,8 +284,7 @@ public final class CollectionConditionProvider {
 
     private static <E> Collection<? extends E> validate(
             Collection<? extends E> expected) {
-        requireNonNull(expected, "expected elements must not be null");
-        if (expected.isEmpty()) {
+        if (requireNonNull(expected, "expected elements must not be null").isEmpty()) {
             throw new IllegalArgumentException(
                     "expected elements must not be empty");
         }

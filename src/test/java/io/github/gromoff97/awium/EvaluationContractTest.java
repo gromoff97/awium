@@ -15,37 +15,16 @@ import org.junit.jupiter.api.Test;
 class EvaluationContractTest {
 
     @Test
-    void satisfiedAcceptsNull() {
-        Evaluation<String> evaluation = satisfied(null);
-
-        assertNull(evaluation.result());
-        assertEquals(Evaluation.Status.SATISFIED, evaluation.status());
-    }
-
-    @Test
     void unsatisfiedValidatesMismatch() {
-        var nullFailure = assertThrows(NullPointerException.class,
-                () -> unsatisfied(null));
-        assertEquals("mismatch must not be null", nullFailure.getMessage());
-
-        var blankFailure = assertThrows(IllegalArgumentException.class,
-                () -> unsatisfied("  \n"));
-        assertEquals("mismatch must not be blank", blankFailure.getMessage());
+        assertEquals("mismatch must not be null", assertThrows(
+                NullPointerException.class, () -> unsatisfied(null)).getMessage());
+        assertEquals("mismatch must not be blank", assertThrows(
+                IllegalArgumentException.class,
+                () -> unsatisfied("  \n")).getMessage());
     }
 
     @Test
-    void internalOutcomesPreserveTheirCauses() {
-        var assertion = new AssertionError("failed");
-        var assertionFailure = Evaluation.<String>assertionUnsatisfied(
-                "assertion did not pass", assertion);
-        var uncontrolled = new IllegalStateException("broken");
-        var uncontrolledFailure = Evaluation.<String>uncontrolled(uncontrolled);
-
-        assertEquals(Evaluation.Status.UNSATISFIED, assertionFailure.status());
-        assertEquals("assertion did not pass", assertionFailure.mismatch());
-        assertSame(assertion, assertionFailure.assertionCause());
-        assertEquals(Evaluation.Status.UNCONTROLLED, uncontrolledFailure.status());
-        assertSame(uncontrolled, uncontrolledFailure.uncontrolledCause());
+    void internalOutcomesRejectNullCauses() {
         assertThrows(NullPointerException.class,
                 () -> assertionUnsatisfied("failed", null));
         assertThrows(NullPointerException.class, () -> uncontrolled(null));

@@ -61,9 +61,8 @@ public record WaitConfiguration(
     }
 
     private static long nanos(Duration value) {
-        requireNonNull(value, "duration must not be null");
         try {
-            return value.toNanos();
+            return requireNonNull(value, "duration must not be null").toNanos();
         } catch (ArithmeticException overflow) {
             throw new IllegalArgumentException(
                     "duration exceeds the supported nanosecond range", overflow);

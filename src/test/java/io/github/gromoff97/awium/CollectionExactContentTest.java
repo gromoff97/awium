@@ -60,12 +60,10 @@ class CollectionExactContentTest {
                     List.of("b", "a"), List.of("a", "a")));
 
     @Test
-    void completeRawAndExplainedExactTableIsComplementary() throws Exception {
+    void completeRawExactTableIsComplementary() throws Exception {
         for (Pair pair : PAIRS) {
-            for (boolean explained : new boolean[] {false, true}) {
-                assertPair(pair, pair.matchingActual(), true, explained);
-                assertPair(pair, pair.mismatchingActual(), false, explained);
-            }
+            assertPair(pair, pair.matchingActual(), true);
+            assertPair(pair, pair.mismatchingActual(), false);
         }
     }
 
@@ -111,7 +109,7 @@ class CollectionExactContentTest {
                 new ExactList<>(List.of("a", "b"));
         Evaluation<?> different = evaluate(
                 containsExactlyElementsOf(differentExpected),
-                differentActual, false);
+                differentActual);
         assertEquals(Evaluation.Status.UNSATISFIED, different.status());
         assertAccess(differentActual, 1, 0, 0);
         assertAccess(differentExpected, 1, 0, 0);
@@ -120,7 +118,7 @@ class CollectionExactContentTest {
         ExactList<String> emptyExpected = new ExactList<>(List.of());
         Evaluation<?> empty = evaluate(
                 containsExactlyElementsOf(emptyExpected),
-                emptyActual, false);
+                emptyActual);
         assertEquals(Evaluation.Status.SATISFIED, empty.status());
         assertAccess(emptyActual, 1, 0, 0);
         assertAccess(emptyExpected, 1, 0, 0);
@@ -130,7 +128,7 @@ class CollectionExactContentTest {
                 new ExactList<>(List.of("a", "b"));
         Evaluation<?> equal = evaluate(
                 containsExactlyElementsOf(equalExpected),
-                equalActual, false);
+                equalActual);
         assertEquals(Evaluation.Status.SATISFIED, equal.status());
         assertAccess(equalActual, 1, 1, 2);
         assertAccess(equalExpected, 1, 1, 2);
@@ -159,7 +157,7 @@ class CollectionExactContentTest {
         array[0] = "after";
         assertEquals(Evaluation.Status.SATISFIED,
                 evaluate(arrayCondition,
-                        new ExactList<>(List.of("after")), false).status());
+                        new ExactList<>(List.of("after"))).status());
 
         ArrayList<String> values = new ArrayList<>(List.of("before"));
         PreservingCondition<? super ExactList<String>> collectionCondition =
@@ -167,7 +165,7 @@ class CollectionExactContentTest {
         values.set(0, "after");
         assertEquals(Evaluation.Status.SATISFIED,
                 evaluate(collectionCondition,
-                        new ExactList<>(List.of("after")), false).status());
+                        new ExactList<>(List.of("after"))).status());
 
         assertStatus(containsExactly(), List.of(),
                 Evaluation.Status.SATISFIED);
@@ -311,13 +309,11 @@ class CollectionExactContentTest {
     }
 
     private static void assertPair(Pair pair, List<String> elements,
-            boolean positiveSatisfied, boolean explained) throws Exception {
+            boolean positiveSatisfied) throws Exception {
         ExactList<String> positiveActual = new ExactList<>(elements);
         ExactList<String> negativeActual = new ExactList<>(elements);
-        Evaluation<?> positive = evaluate(pair.positive(), positiveActual,
-                explained);
-        Evaluation<?> negative = evaluate(pair.negative(), negativeActual,
-                explained);
+        Evaluation<?> positive = evaluate(pair.positive(), positiveActual);
+        Evaluation<?> negative = evaluate(pair.negative(), negativeActual);
 
         assertEquals(positiveSatisfied ? Evaluation.Status.SATISFIED
                         : Evaluation.Status.UNSATISFIED,
@@ -332,16 +328,14 @@ class CollectionExactContentTest {
             List<? extends E> elements, Evaluation.Status expected)
             throws Exception {
         ExactList<E> actual = new ExactList<>(elements);
-        assertEquals(expected, evaluate(condition, actual, false).status());
+        assertEquals(expected, evaluate(condition, actual).status());
     }
 
     private static <E> Evaluation<?> evaluate(
             PreservingCondition<? super ExactList<E>> condition,
-            ExactList<E> actual, boolean explained) throws Exception {
-        RuntimeCondition<ExactList<E>, ExactList<E>> runtime = explained
-                ? preserving(condition.because("reason"))
-                : preserving(condition);
-        assertEquals(explained ? "reason" : null, runtime.explanation());
+            ExactList<E> actual) throws Exception {
+        RuntimeCondition<ExactList<E>, ExactList<E>> runtime =
+                preserving(condition);
         assertFalse(runtime.description().get().isBlank());
         return runtime.evaluate(actual);
     }

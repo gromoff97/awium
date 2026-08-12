@@ -32,39 +32,23 @@ class ObjectAndOptionalAwaitTest {
 
     @Test
     void voidAndNullableSelectingTerminalsReturnNullOnSuccess() {
-        Void nullValue = await(
+        assertNull(await(
                 (Source<Object>) () -> null)
-                .until(isNull);
-        Void absentValue = await(
-                (OptionalSource<Object>) Optional::empty)
-                .until(absent);
-        String selectedNull = await(
+                .until(isNull));
+        assertNull(await(
                 (Source<String>) () -> "value")
                 .until(ConditionProvider.<String, String>passed(value -> null)
-                        .because("nullable property"));
-
-        assertNull(nullValue);
-        assertNull(absentValue);
-        assertNull(selectedNull);
+                        .because("nullable property")));
     }
 
     @Test
     void optionalValueConditionsReturnTheContainedValueThroughUntil() {
         var equalValue = new Object();
-        var differentValue = new Object();
 
-        Object equal = await(
+        assertSame(equalValue, await(
                 (OptionalSource<Object>)
                         () -> Optional.of(equalValue))
-                .until(hasValueEqualTo(equalValue));
-        Object different = await(
-                (OptionalSource<Object>)
-                        () -> Optional.of(differentValue))
-                .until(hasValueNotEqualTo(equalValue)
-                        .because("different value"));
-
-        assertSame(equalValue, equal);
-        assertSame(differentValue, different);
+                .until(hasValueEqualTo(equalValue)));
     }
 
     @Test

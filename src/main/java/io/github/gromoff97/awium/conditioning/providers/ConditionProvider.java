@@ -20,8 +20,7 @@ public final class ConditionProvider {
     public static <S, R> Condition<S, R> condition(
             String description,
             CheckedFunction<? super S, Evaluation<R>> evaluation) {
-        requireNonNull(description, "description must not be null");
-        if (description.isBlank()) {
+        if (requireNonNull(description, "description must not be null").isBlank()) {
             throw new IllegalArgumentException("description must not be blank");
         }
         requireNonNull(evaluation, "evaluation must not be null");
@@ -41,15 +40,11 @@ public final class ConditionProvider {
     public static <S> PreservingCondition<S> asserted(
             CheckedConsumer<? super S> assertion) {
         requireNonNull(assertion, "assertion must not be null");
-        return PreservingCondition.of(new RuntimeCondition<>(actual -> {
-            try {
-                assertion.accept(actual);
-                return satisfied(actual);
-            } catch (AssertionError error) {
-                return assertionUnsatisfied(
-                        "assertion did not pass", error);
-            }
-        }, () -> "assertion to pass", null));
+        return PreservingCondition.of(RuntimeCondition.open(
+                ConditionProvider.<S, S>passed(actual -> {
+                    assertion.accept(actual);
+                    return actual;
+                })));
     }
 
     public static <S, R> Condition<S, R> passed(
@@ -57,8 +52,7 @@ public final class ConditionProvider {
         requireNonNull(assertion, "assertion must not be null");
         return condition("assertion to pass", actual -> {
             try {
-                R result = assertion.apply(actual);
-                return satisfied(result);
+                return satisfied(assertion.apply(actual));
             } catch (AssertionError error) {
                 return assertionUnsatisfied(
                         "assertion did not pass", error);

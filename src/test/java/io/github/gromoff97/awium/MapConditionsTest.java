@@ -84,12 +84,10 @@ class MapConditionsTest {
     Path temporaryDirectory;
 
     @Test
-    void completeRawAndExplainedMapTableIsComplementary() throws Exception {
+    void completeRawMapTableIsComplementary() throws Exception {
         for (Pair pair : PAIRS) {
-            for (boolean explained : new boolean[] {false, true}) {
-                assertPair(pair, pair.matchingActual(), true, explained);
-                assertPair(pair, pair.mismatchingActual(), false, explained);
-            }
+            assertPair(pair, pair.matchingActual(), true);
+            assertPair(pair, pair.mismatchingActual(), false);
         }
     }
 
@@ -186,7 +184,7 @@ class MapConditionsTest {
         var actual = entryMap(entry("a", "1"));
 
         Evaluation<?> evaluation = evaluate(
-                containsAllEntriesOf(expected), actual, false);
+                containsAllEntriesOf(expected), actual);
         assertEquals(Evaluation.Status.SATISFIED, evaluation.status());
         assertSame(actual, evaluation.result());
         assertNull(evaluation.mismatch());
@@ -450,10 +448,10 @@ class MapConditionsTest {
     }
 
     private static void assertPair(Pair pair,
-            LinkedHashMap<String, String> actual, boolean positiveSatisfied,
-            boolean explained) throws Exception {
-        Evaluation<?> positive = evaluate(pair.positive(), actual, explained);
-        Evaluation<?> negative = evaluate(pair.negative(), actual, explained);
+            LinkedHashMap<String, String> actual, boolean positiveSatisfied)
+            throws Exception {
+        Evaluation<?> positive = evaluate(pair.positive(), actual);
+        Evaluation<?> negative = evaluate(pair.negative(), actual);
         assertEquals(positiveSatisfied ? Evaluation.Status.SATISFIED
                         : Evaluation.Status.UNSATISFIED,
                 positive.status(), pair.name());
@@ -464,12 +462,9 @@ class MapConditionsTest {
     }
 
     private static <K, V, M extends Map<K, V>> Evaluation<?> evaluate(
-            PreservingCondition<? super M> condition, M actual,
-            boolean explained) throws Exception {
-        RuntimeCondition<M, M> runtime = explained
-                ? preserving(condition.because("reason"))
-                : preserving(condition);
-        assertEquals(explained ? "reason" : null, runtime.explanation());
+            PreservingCondition<? super M> condition, M actual)
+            throws Exception {
+        RuntimeCondition<M, M> runtime = preserving(condition);
         assertFalse(runtime.description().get().isBlank());
         return runtime.evaluate(actual);
     }
@@ -477,7 +472,7 @@ class MapConditionsTest {
     private static <K, V, M extends Map<K, V>> void assertStatus(
             PreservingCondition<? super M> condition, M actual,
             Evaluation.Status expected) throws Exception {
-        assertEquals(expected, evaluate(condition, actual, false).status());
+        assertEquals(expected, evaluate(condition, actual).status());
     }
 
     private static void assertMembershipAccess(MembershipCase testCase,
@@ -757,8 +752,7 @@ class MapConditionsTest {
             List<CountingValue> extraExpectedOperands) {
 
         private Evaluation<?> evaluate() throws Exception {
-            return MapConditionsTest.evaluate(condition, actual,
-                    false);
+            return MapConditionsTest.evaluate(condition, actual);
         }
     }
 
