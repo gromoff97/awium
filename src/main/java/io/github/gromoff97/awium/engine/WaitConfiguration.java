@@ -10,14 +10,9 @@ import static java.util.Objects.requireNonNull;
 public record WaitConfiguration(
         long everyNanos, long upToNanos, long stableForNanos) {
 
-    private static final long DEFAULT_EVERY_NANOS =
-            Duration.ofMillis(100).toNanos();
-    private static final long DEFAULT_UP_TO_NANOS =
-            Duration.ofSeconds(10).toNanos();
-
     public static WaitConfiguration defaults() {
-        return new WaitConfiguration(DEFAULT_EVERY_NANOS,
-                DEFAULT_UP_TO_NANOS, 0L);
+        return new WaitConfiguration(Duration.ofMillis(100).toNanos(),
+                Duration.ofSeconds(10).toNanos(), 0L);
     }
 
     public WaitConfiguration withEvery(Duration value) {
@@ -31,8 +26,12 @@ public record WaitConfiguration(
     }
 
     public WaitConfiguration withStableFor(Duration value) {
-        return new WaitConfiguration(everyNanos, upToNanos,
-                nonNegativeNanos(value, "stability duration"));
+        long nanos = nanos(value);
+        if (nanos < 0) {
+            throw new IllegalArgumentException(
+                    "stability duration must not be negative");
+        }
+        return new WaitConfiguration(everyNanos, upToNanos, nanos);
     }
 
     public void validatePair() {
@@ -48,14 +47,6 @@ public record WaitConfiguration(
         if (nanos <= 0) {
             throw new IllegalArgumentException(
                     label + " must be greater than zero");
-        }
-        return nanos;
-    }
-
-    private static long nonNegativeNanos(Duration value, String label) {
-        long nanos = nanos(value);
-        if (nanos < 0) {
-            throw new IllegalArgumentException(label + " must not be negative");
         }
         return nanos;
     }

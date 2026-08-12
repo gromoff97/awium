@@ -10,7 +10,6 @@ import java.util.function.LongSupplier;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Thread.currentThread;
-import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("removal")
 public final class WaitEngine {
@@ -21,15 +20,13 @@ public final class WaitEngine {
 
     public WaitEngine(WaitConfiguration config, LongSupplier clock,
             LongConsumer parker) {
-        this.config = requireNonNull(config);
-        this.clock = requireNonNull(clock);
-        this.parker = requireNonNull(parker);
+        this.config = config;
+        this.clock = clock;
+        this.parker = parker;
     }
 
     public <S, R> WaitOutcome<R> waitFor(
             Source<S> source, RuntimeCondition<S, R> condition) {
-        requireNonNull(source);
-        requireNonNull(condition);
         long started = clock.getAsLong();
         long acquisitionDeadline = after(started, config.upToNanos());
         Attempt.Unsatisfied<R> lastUnsatisfied = null;

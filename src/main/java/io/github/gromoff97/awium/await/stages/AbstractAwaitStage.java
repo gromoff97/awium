@@ -84,8 +84,7 @@ public abstract class AbstractAwaitStage<S, A extends Await<S>> {
 
     protected final <R> R complete(RuntimeCondition<S, R> condition) {
         configuration.validatePair();
-        WaitEngine engine = new WaitEngine(configuration, clock, parker);
-        return FAILURE_FACTORY.complete(
-                engine.waitFor(source, condition), condition, configuration);
+        return FAILURE_FACTORY.complete(new WaitEngine(configuration, clock,
+                parker).waitFor(source, condition), condition, configuration);
     }
 }
