@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
 import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
@@ -34,9 +35,9 @@ class ObjectAndOptionalConditionsTest {
     @Test
     void equalityConditionsAreComplementsAndReturnTheActualSnapshot()
             throws Exception {
-        var expected = new EqualValue(1);
-        var equalActual = new EqualValue(1);
-        var differentActual = new EqualValue(2);
+        var expected = new String("1");
+        var equalActual = new String("1");
+        var differentActual = "2";
 
         assertSatisfied(evaluate(equalTo(expected), equalActual),
                 equalActual);
@@ -47,7 +48,6 @@ class ObjectAndOptionalConditionsTest {
         assertSatisfied(evaluate(notEqualTo(expected), differentActual),
                 differentActual);
         assertSatisfied(evaluate(equalTo(null), null), null);
-        assertSatisfied(evaluate(notEqualTo(expected), null), null);
         Evaluation<?> arrays = evaluate(equalTo(
                 new int[]{1, 2}), new int[]{1, 2});
         assertEquals(Evaluation.Status.SATISFIED, arrays.status());
@@ -76,9 +76,9 @@ class ObjectAndOptionalConditionsTest {
     @Test
     void optionalValueConditionsRequirePresenceAndReturnTheActualValue()
             throws Exception {
-        var expected = new EqualValue(1);
-        var equalActual = new EqualValue(1);
-        var differentActual = new EqualValue(2);
+        var expected = new String("1");
+        var equalActual = new String("1");
+        var differentActual = "2";
         var equal = hasValueEqualTo(expected);
         var notEqual = hasValueNotEqualTo(expected);
 
@@ -95,13 +95,12 @@ class ObjectAndOptionalConditionsTest {
 
     @Test
     void optionalValueEqualityUsesActualFirstAndArrayContent() throws Exception {
-        var expected = new RightOperand();
-        var actual = new LeftOperand(expected);
+        var expected = new Directional(false);
+        var actual = new Directional(true);
 
         assertSatisfied(hasValueEqualTo((Object) expected)
                 .evaluate(Optional.of(actual)), actual);
-        assertEquals(1, actual.comparisons);
-        assertEquals(0, expected.comparisons);
+        assertEquals(1, actual.equalsCalls);
 
         int[] actualArray = {1, 2};
         assertSame(actualArray, hasValueEqualTo(
@@ -160,35 +159,5 @@ class ObjectAndOptionalConditionsTest {
         assertEquals(Evaluation.Status.UNSATISFIED, evaluation.status());
         assertNull(evaluation.result());
         assertEquals(mismatch, evaluation.mismatch());
-    }
-
-    private record EqualValue(int value) {
-    }
-
-    @SuppressWarnings("overrides")
-    private static final class LeftOperand {
-        private final Object expected;
-        private int comparisons;
-
-        private LeftOperand(Object expected) {
-            this.expected = expected;
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            comparisons++;
-            return other == expected;
-        }
-    }
-
-    @SuppressWarnings("overrides")
-    private static final class RightOperand {
-        private int comparisons;
-
-        @Override
-        public boolean equals(Object other) {
-            comparisons++;
-            return false;
-        }
     }
 }

@@ -173,8 +173,7 @@ public final class MapConditionProvider {
 
     private static boolean exactContent(Map<?, ?> actual, Map<?, ?> expected) {
         int actualSize = actual.size();
-        int expectedSize = expected.size();
-        if (actualSize != expectedSize) {
+        if (actualSize != expected.size()) {
             return false;
         }
         if (actualSize == 0) {
@@ -198,7 +197,7 @@ public final class MapConditionProvider {
                 return false;
             }
         }
-        return matched == expectedSize && remaining.isEmpty();
+        return matched == actualSize && remaining.isEmpty();
     }
 
     private static List<Map.Entry<?, ?>> entries(Map<?, ?> map) {

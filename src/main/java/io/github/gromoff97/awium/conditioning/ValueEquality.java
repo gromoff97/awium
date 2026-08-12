@@ -1,10 +1,8 @@
 package io.github.gromoff97.awium.conditioning;
 
 import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.Objects;
-import java.util.Set;
 
 public final class ValueEquality {
 
@@ -13,8 +11,8 @@ public final class ValueEquality {
     }
 
     public static boolean equal(Object actual, Object expected) {
-        Deque<ValuePair> pending = new ArrayDeque<>();
-        Set<ValuePair> visited = new HashSet<>();
+        var pending = new ArrayDeque<ValuePair>();
+        var visited = new HashSet<ValuePair>();
         pending.addLast(new ValuePair(actual, expected));
 
         while (!pending.isEmpty()) {
@@ -28,9 +26,7 @@ public final class ValueEquality {
                 return false;
             }
 
-            boolean leftArray = left.getClass().isArray();
-            boolean rightArray = right.getClass().isArray();
-            if (leftArray != rightArray) {
+            if (left.getClass().isArray() != right.getClass().isArray()) {
                 return false;
             }
 

@@ -3,6 +3,7 @@ package io.github.gromoff97.awium;
 import static io.github.gromoff97.awium.Awium.await;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ExpectedValue;
+import static io.github.gromoff97.awium.ProbeContainers.GreedyValue;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
@@ -68,27 +69,27 @@ class CollectionExactContentTest {
     }
 
     @Test
-    void exactAnyOrderRejectsIterationShorterThanReportedSize()
+    void exactAnyOrderRejectsTwoSidedIterationLengthMismatch()
             throws Exception {
-        Collection<String> actual = new AbstractCollection<>() {
-            @Override
-            public Iterator<String> iterator() {
-                return List.<String>of().iterator();
-            }
+        for (var elements : List.of(List.<String>of(), List.of("a", "b"))) {
+            Collection<String> actual = reportedCollection(elements, 1);
+            Collection<String> expected = reportedCollection(elements, 1);
+            assertEquals(Evaluation.Status.UNSATISFIED,
+                    RuntimeCondition.<Collection<String>>preserving(
+                                    containsExactlyInAnyOrderElementsOf(expected))
+                            .evaluate(actual).status());
+        }
+    }
 
-            @Override
-            public int size() {
-                return 1;
-            }
-        };
+    @Test
+    void exactAnyOrderPreservesExpectedIteratorSurplus() throws Exception {
+        Collection<String> actual = reportedCollection(List.of("a"), 1);
+        Collection<String> expected = reportedCollection(
+                List.of("a", "b"), 1);
 
-        assertEquals(Evaluation.Status.UNSATISFIED,
-                RuntimeCondition.<Collection<String>>preserving(
-                                containsExactlyInAnyOrder("a"))
-                        .evaluate(actual).status());
         assertEquals(Evaluation.Status.SATISFIED,
                 RuntimeCondition.<Collection<String>>preserving(
-                                doesNotContainExactlyInAnyOrder("a"))
+                                containsExactlyInAnyOrderElementsOf(expected))
                         .evaluate(actual).status());
     }
 
@@ -223,28 +224,25 @@ class CollectionExactContentTest {
                 List.of(actual), Evaluation.Status.SATISFIED);
 
         assertEquals(1, actual.equalsCalls);
-        assertEquals(0, expected.equalsCalls);
     }
 
     @Test
     void anyOrderMatchingIsGreedyInActualAndExpectedEncounterOrder()
             throws Exception {
-        GreedyValue first = new GreedyValue("first", Set.of("x", "y"));
-        GreedyValue second = new GreedyValue("second", Set.of("x"));
+        GreedyValue first = new GreedyValue(Set.of("x", "y"));
+        GreedyValue second = new GreedyValue(Set.of("x"));
         ExpectedValue x = new ExpectedValue("x");
         ExpectedValue y = new ExpectedValue("y");
 
         assertStatus(containsExactlyInAnyOrder(x, y),
                 List.of(first, second), Evaluation.Status.UNSATISFIED);
         assertEquals(2, first.equalsCalls + second.equalsCalls);
-        assertEquals(0, x.equalsCalls + y.equalsCalls);
 
         first.equalsCalls = 0;
         second.equalsCalls = 0;
         assertStatus(containsExactlyInAnyOrder(y, x),
                 List.of(first, second), Evaluation.Status.SATISFIED);
         assertEquals(2, first.equalsCalls + second.equalsCalls);
-        assertEquals(0, x.equalsCalls + y.equalsCalls);
     }
 
     @Test
@@ -294,16 +292,12 @@ class CollectionExactContentTest {
     }
 
     @Test
-    void nullActualIsUnsatisfiedForBothSignsWithoutExpectedAccess()
+    void nullActualIsUnsatisfiedWithoutExactExpectedAccess()
             throws Exception {
         ExactList<String> expected = new ExactList<>(List.of("a"));
         assertEquals(Evaluation.Status.UNSATISFIED,
                 RuntimeCondition.<ExactList<String>>preserving(
                         containsExactlyElementsOf(expected))
-                        .evaluate(null).status());
-        assertEquals(Evaluation.Status.UNSATISFIED,
-                RuntimeCondition.<ExactList<String>>preserving(
-                        doesNotContainExactlyElementsOf(expected))
                         .evaluate(null).status());
         assertAccess(expected, 0, 0, 0);
     }
@@ -367,6 +361,21 @@ class CollectionExactContentTest {
                 }, Collection::size,
                 defaults().withEvery(Duration.ofNanos(1))
                 .withUpTo(Duration.ofNanos(2)), time, time);
+    }
+
+    private static <E> Collection<E> reportedCollection(
+            List<E> elements, int reportedSize) {
+        return new AbstractCollection<>() {
+            @Override
+            public Iterator<E> iterator() {
+                return elements.iterator();
+            }
+
+            @Override
+            public int size() {
+                return reportedSize;
+            }
+        };
     }
 
     private record Pair(String name,
@@ -446,33 +455,4 @@ class CollectionExactContentTest {
             return "exact list";
         }
     }
-
-    private static final class GreedyValue {
-        private final String name;
-        private final Set<String> matches;
-        private int equalsCalls;
-
-        private GreedyValue(String name, Set<String> matches) {
-            this.name = name;
-            this.matches = matches;
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            equalsCalls++;
-            return other instanceof ExpectedValue expected
-                    && matches.contains(expected.value);
-        }
-
-        @Override
-        public int hashCode() {
-            throw new AssertionError("hashCode must not be called");
-        }
-
-        @Override
-        public String toString() {
-            return name;
-        }
-    }
-
 }

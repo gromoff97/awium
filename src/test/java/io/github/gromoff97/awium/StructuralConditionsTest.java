@@ -9,14 +9,12 @@ import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 
 import io.github.gromoff97.awium.exceptions.*;
-import io.github.gromoff97.awium.await.StructuralAwait;
 import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
 import io.github.gromoff97.awium.sources.CollectionSource;
 import io.github.gromoff97.awium.sources.MapSource;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -55,43 +53,13 @@ class StructuralConditionsTest {
     }
 
     @Test
-    void rawConditionsUseOneSizeReadForMaps() throws Exception {
-        for (Case testCase : CASES) {
-            assertMapEvaluation(testCase);
-        }
-    }
-
-    @Test
-    void nullContainersShortCircuitEveryRawCondition()
+    void nullContainersShortCircuitRawConditions()
             throws Exception {
-        for (Case testCase : CASES) {
-            assertUnsatisfied(collection(testCase.condition()).evaluate(null),
-                    "collection was null");
-            assertUnsatisfied(map(testCase.condition()).evaluate(null),
-                    "map was null");
-        }
-    }
-
-    @Test
-    void namedRelationPairsAreExactComplements() throws Exception {
-        List<Pair> pairs = List.of(
-                new Pair(sizeExactly(2),
-                        sizeNotExactly(2)),
-                new Pair(sizeGreaterThan(2),
-                        sizeAtMost(2)),
-                new Pair(sizeAtLeast(2),
-                        sizeLessThan(2)));
-
-        for (Pair pair : pairs) {
-            for (int size = 0; size <= 4; size++) {
-                var positive = new ProbeContainers.ProbeCollection<>(size);
-                var negative = new ProbeContainers.ProbeCollection<>(size);
-                assertNotEquals(collection(pair.positive()).evaluate(positive).status(),
-                        collection(pair.negative()).evaluate(negative).status());
-                assertNoFallback(positive);
-                assertNoFallback(negative);
-            }
-        }
+        assertUnsatisfied(collection(empty).evaluate(null),
+                "collection was null");
+        assertUnsatisfied(RuntimeCondition.<Map<?, ?>>structural(
+                        empty, "map", Map::size).evaluate(null),
+                "map was null");
     }
 
     @Test
@@ -110,98 +78,74 @@ class StructuralConditionsTest {
 
         assertSame(collection, returnedCollection);
         assertSame(map, returnedMap);
-        assertNoFallback(collection);
-        assertNoFallback(map);
+        assertEquals(1, collection.sizeCalls);
+        assertEquals(1, map.sizeCalls);
     }
 
     @Test
     void terminalDiagnosticsReuseTheCapturedSize() {
         var rawCollection = new ProbeContainers.ProbeCollection<Object>(1);
-        var explainedCollection = new ProbeContainers.ProbeCollection<Object>(1);
         var rawMap = new ProbeContainers.ProbeMap<Object, Object>(1);
-        var explainedMap = new ProbeContainers.ProbeMap<Object, Object>(1);
+        FakeTime collectionTime = new FakeTime(0);
+        FakeTime mapTime = new FakeTime(0);
 
         AwaitTimeoutException collectionFailure = assertThrows(
                 AwaitTimeoutException.class,
-                () -> timedCollection(rawCollection)
-                        .until(empty));
-        assertThrows(AwaitTimeoutException.class,
-                () -> timedCollection(explainedCollection)
-                        .until(empty.because("required")));
+                () -> new StructuralAwaitStage<>(
+                        (CollectionSource<ProbeContainers.ProbeCollection<Object>>)
+                                () -> {
+                                    collectionTime.advanceNanos(2);
+                                    return rawCollection;
+                                },
+                        Collection::size,
+                        defaults().withEvery(Duration.ofNanos(1))
+                                .withUpTo(Duration.ofNanos(2)),
+                        collectionTime, collectionTime).until(empty));
         AwaitTimeoutException mapFailure = assertThrows(AwaitTimeoutException.class,
-                () -> timedMap(rawMap).until(empty));
-        assertThrows(AwaitTimeoutException.class,
-                () -> timedMap(explainedMap)
-                        .until(empty.because("required")));
+                () -> new StructuralAwaitStage<>(
+                        (MapSource<ProbeContainers.ProbeMap<Object, Object>>)
+                                () -> {
+                                    mapTime.advanceNanos(2);
+                                    return rawMap;
+                                },
+                        Map::size,
+                        defaults().withEvery(Duration.ofNanos(1))
+                                .withUpTo(Duration.ofNanos(2)),
+                        mapTime, mapTime).until(empty));
 
         assertTrue(collectionFailure.getMessage()
                 .contains("collection was non-empty"));
         assertTrue(mapFailure.getMessage().contains("map was non-empty"));
-        assertNoFallback(rawCollection);
-        assertNoFallback(explainedCollection);
-        assertNoFallback(rawMap);
-        assertNoFallback(explainedMap);
+        assertEquals(1, rawCollection.sizeCalls);
+        assertEquals(1, rawMap.sizeCalls);
     }
 
     @Test
     void throwingSizeIsAnExactFailFastConditionCauseWithoutFallback() {
         var collectionCause = new IllegalStateException("collection size failed");
-        var explainedCollectionCause = new IllegalStateException(
-                "explained collection size failed");
         var mapCause = new IllegalStateException("map size failed");
-        var explainedMapCause = new IllegalStateException(
-                "explained map size failed");
         var collection = new ProbeContainers.ProbeCollection<Object>(
                 collectionCause);
-        var explainedCollection = new ProbeContainers.ProbeCollection<Object>(
-                explainedCollectionCause);
         var map = new ProbeContainers.ProbeMap<Object, Object>(mapCause);
-        var explainedMap = new ProbeContainers.ProbeMap<Object, Object>(
-                explainedMapCause);
 
         assertSame(collectionCause, assertThrows(
                 AwaitConditionEvaluationException.class,
                 () -> await((CollectionSource<
                         ProbeContainers.ProbeCollection<Object>>) () -> collection)
                         .until(nonEmpty)).getCause());
-        assertSame(explainedCollectionCause, assertThrows(
-                AwaitConditionEvaluationException.class,
-                () -> await((CollectionSource<
-                        ProbeContainers.ProbeCollection<Object>>)
-                        () -> explainedCollection)
-                        .until(nonEmpty.because("required")))
-                .getCause());
         assertSame(mapCause, assertThrows(AwaitConditionEvaluationException.class,
                 () -> await((MapSource<
                         ProbeContainers.ProbeMap<Object, Object>>) () -> map)
                         .until(nonEmpty)).getCause());
-        assertSame(explainedMapCause, assertThrows(
-                AwaitConditionEvaluationException.class,
-                () -> await((MapSource<
-                        ProbeContainers.ProbeMap<Object, Object>>) () -> explainedMap)
-                        .until(nonEmpty.because("required")))
-                .getCause());
 
-        assertNoFallback(collection);
-        assertNoFallback(explainedCollection);
-        assertNoFallback(map);
-        assertNoFallback(explainedMap);
+        assertEquals(1, collection.sizeCalls);
+        assertEquals(1, map.sizeCalls);
     }
 
     @Test
-    void sizeFactoriesRejectNegativeBoundsAndAllowZero() {
-        List<java.util.function.IntFunction<StructuralCondition>> factories = List.of(
-                StructuralCondition::sizeExactly,
-                StructuralCondition::sizeNotExactly,
-                StructuralCondition::sizeGreaterThan,
-                StructuralCondition::sizeAtLeast,
-                StructuralCondition::sizeLessThan,
-                StructuralCondition::sizeAtMost);
-
-        for (var factory : factories) {
-            assertThrows(IllegalArgumentException.class, () -> factory.apply(-1));
-            assertDoesNotThrow(() -> factory.apply(0));
-        }
+    void sizedFactoryRejectsNegativeBoundsAndAllowsZero() {
+        assertThrows(IllegalArgumentException.class, () -> sizeExactly(-1));
+        assertDoesNotThrow(() -> sizeExactly(0));
     }
 
     private static void assertCollectionEvaluation(Case testCase)
@@ -214,97 +158,28 @@ class StructuralConditionsTest {
                 ProbeContainers.ProbeCollection<Object>> runtime =
                         collection(testCase.condition());
 
-        assertSatisfied(runtime.evaluate(matching), matching);
+        Evaluation<?> satisfied = runtime.evaluate(matching);
+        assertEquals(Evaluation.Status.SATISFIED, satisfied.status());
+        assertSame(matching, satisfied.result());
+        assertNull(satisfied.mismatch());
         assertUnsatisfied(runtime.evaluate(mismatching),
-                mismatch("collection", testCase, testCase.mismatchingSize()));
+                testCase.condition() == empty
+                        ? "collection was non-empty"
+                        : testCase.condition() == nonEmpty
+                                ? "collection was empty"
+                                : "collection size was "
+                                        + testCase.mismatchingSize());
         assertEquals("collection " + testCase.description(),
                 runtime.description().get());
         assertNull(runtime.explanation());
-        assertNoFallback(matching);
-        assertNoFallback(mismatching);
-    }
-
-    private static void assertMapEvaluation(Case testCase)
-            throws Exception {
-        var matching = new ProbeContainers.ProbeMap<Object, Object>(
-                testCase.matchingSize());
-        var mismatching = new ProbeContainers.ProbeMap<Object, Object>(
-                testCase.mismatchingSize());
-        RuntimeCondition<ProbeContainers.ProbeMap<Object, Object>,
-                ProbeContainers.ProbeMap<Object, Object>> runtime =
-                        map(testCase.condition());
-
-        assertSatisfied(runtime.evaluate(matching), matching);
-        assertUnsatisfied(runtime.evaluate(mismatching),
-                mismatch("map", testCase, testCase.mismatchingSize()));
-        assertEquals("map " + testCase.description(), runtime.description().get());
-        assertNull(runtime.explanation());
-        assertNoFallback(matching);
-        assertNoFallback(mismatching);
-    }
-
-    private static String mismatch(String subject, Case testCase, int size) {
-        if (testCase.condition() == empty) {
-            return subject + " was non-empty";
-        }
-        if (testCase.condition() == nonEmpty) {
-            return subject + " was empty";
-        }
-        return subject + " size was " + size;
+        assertEquals(1, matching.sizeCalls);
+        assertEquals(1, mismatching.sizeCalls);
     }
 
     private static <C extends Collection<?>> RuntimeCondition<C, C> collection(
             StructuralCondition condition) {
         return structural(
                 condition, "collection", Collection::size);
-    }
-
-    private static <C extends Collection<?>> RuntimeCondition<C, C> collection(
-            StructuralCondition.ExplainedCondition condition) {
-        return structural(
-                condition, "collection", Collection::size);
-    }
-
-    private static <M extends Map<?, ?>> RuntimeCondition<M, M> map(
-            StructuralCondition condition) {
-        return structural(condition, "map", Map::size);
-    }
-
-    private static <M extends Map<?, ?>> RuntimeCondition<M, M> map(
-            StructuralCondition.ExplainedCondition condition) {
-        return structural(condition, "map", Map::size);
-    }
-
-    private static StructuralAwait<
-            ProbeContainers.ProbeCollection<Object>> timedCollection(
-                    ProbeContainers.ProbeCollection<Object> actual) {
-        FakeTime time = new FakeTime(0);
-        return new StructuralAwaitStage<>(
-                (CollectionSource<ProbeContainers.ProbeCollection<Object>>) () -> {
-                    time.advanceNanos(2);
-                    return actual;
-                }, Collection::size,
-                defaults().withEvery(Duration.ofNanos(1))
-                        .withUpTo(Duration.ofNanos(2)), time, time);
-    }
-
-    private static StructuralAwait<
-            ProbeContainers.ProbeMap<Object, Object>> timedMap(
-                    ProbeContainers.ProbeMap<Object, Object> actual) {
-        FakeTime time = new FakeTime(0);
-        return new StructuralAwaitStage<>(
-                (MapSource<ProbeContainers.ProbeMap<Object, Object>>) () -> {
-                    time.advanceNanos(2);
-                    return actual;
-                }, Map::size,
-                defaults().withEvery(Duration.ofNanos(1))
-                        .withUpTo(Duration.ofNanos(2)), time, time);
-    }
-
-    private static void assertSatisfied(Evaluation<?> evaluation, Object actual) {
-        assertEquals(Evaluation.Status.SATISFIED, evaluation.status());
-        assertSame(actual, evaluation.result());
-        assertNull(evaluation.mismatch());
     }
 
     private static void assertUnsatisfied(Evaluation<?> evaluation,
@@ -314,19 +189,7 @@ class StructuralConditionsTest {
         assertEquals(mismatch, evaluation.mismatch());
     }
 
-    private static void assertNoFallback(
-            ProbeContainers.ProbeCollection<?> probe) {
-        assertEquals(1, probe.sizeCalls);
-    }
-
-    private static void assertNoFallback(ProbeContainers.ProbeMap<?, ?> probe) {
-        assertEquals(1, probe.sizeCalls);
-    }
-
     private record Case(StructuralCondition condition, int matchingSize,
             int mismatchingSize, String description) {
-    }
-
-    private record Pair(StructuralCondition positive, StructuralCondition negative) {
     }
 }

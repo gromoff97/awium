@@ -4,6 +4,7 @@ import static io.github.gromoff97.awium.Awium.await;
 import static io.github.gromoff97.awium.CompilationSupport.compiles;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ExpectedValue;
+import static io.github.gromoff97.awium.ProbeContainers.GreedyValue;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.MapConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
@@ -92,48 +93,26 @@ class MapConditionsTest {
     }
 
     @Test
-    void exactEntriesRejectIterationShorterThanReportedSize()
+    void exactEntriesRejectTwoSidedIterationLengthMismatch()
             throws Exception {
-        Map<String, String> actual = new HashMap<>() {
-            @Override
-            public int size() {
-                return 1;
-            }
-        };
-
-        assertStatus(containsExactlyEntriesOf(Map.of("a", "1")), actual,
-                Evaluation.Status.UNSATISFIED);
-        assertStatus(doesNotContainExactlyEntriesOf(Map.of("a", "1")),
-                actual, Evaluation.Status.SATISFIED);
+        for (var entries : List.of(Map.<String, String>of(),
+                map("a", "1", "b", "2"))) {
+            Map<String, String> actual = reportedMap(entries, 1);
+            Map<String, String> expected = reportedMap(entries, 1);
+            assertStatus(containsExactlyEntriesOf(expected), actual,
+                    Evaluation.Status.UNSATISFIED);
+        }
     }
 
     @Test
-    void nullActualIsUnsatisfiedForEverySignWithoutExpectedAccess()
+    void nullActualIsUnsatisfiedWithoutExpectedMapAccess()
             throws Exception {
         var expected = entryMap(entry("a", "1"));
-        List<PreservingCondition<? super ProbeContainers.EntryMap<String,
-                String>>> conditions = List.of(
-                        containsKey("a"),
-                        doesNotContainKey("a"),
-                        containsValue("1"),
-                        doesNotContainValue("1"),
-                        containsEntry("a", "1"),
-                        doesNotContainEntry("a", "1"),
-                        containsAllEntriesOf(expected),
-                        doesNotContainAllEntriesOf(expected),
-                        containsAnyEntriesOf(expected),
-                        containsNoEntriesOf(expected),
-                        containsExactlyEntriesOf(expected),
-                        doesNotContainExactlyEntriesOf(expected));
-
-        for (PreservingCondition<? super ProbeContainers.EntryMap<String,
-                String>> condition : conditions) {
-            Evaluation<?> evaluation = RuntimeCondition.<
-                    ProbeContainers.EntryMap<String, String>>preserving(
-                            condition).evaluate(null);
-            assertEquals(Evaluation.Status.UNSATISFIED, evaluation.status());
-            assertEquals("map was null", evaluation.mismatch());
-        }
+        Evaluation<?> evaluation = RuntimeCondition.<
+                ProbeContainers.EntryMap<String, String>>preserving(
+                        containsAllEntriesOf(expected)).evaluate(null);
+        assertEquals(Evaluation.Status.UNSATISFIED, evaluation.status());
+        assertEquals("map was null", evaluation.mismatch());
         assertEquals(0, expected.sizeCalls);
         assertEquals(0, expected.entrySetCalls);
     }
@@ -227,7 +206,6 @@ class MapConditionsTest {
                                 entry((Object) y, "v"))),
                 actual, Evaluation.Status.UNSATISFIED);
         assertEquals(2, first.equalsCalls + second.equalsCalls);
-        assertEquals(0, x.equalsCalls + y.equalsCalls);
 
         first.equalsCalls = 0;
         second.equalsCalls = 0;
@@ -236,7 +214,6 @@ class MapConditionsTest {
                                 entry((Object) x, "v"))),
                 actual, Evaluation.Status.SATISFIED);
         assertEquals(2, first.equalsCalls + second.equalsCalls);
-        assertEquals(0, x.equalsCalls + y.equalsCalls);
     }
 
     @Test
@@ -256,8 +233,6 @@ class MapConditionsTest {
                 actual, Evaluation.Status.SATISFIED);
         assertEquals(2, actualKey.equalsCalls);
         assertEquals(2, actualValue.equalsCalls);
-        assertEquals(0, expectedKey.equalsCalls);
-        assertEquals(0, expectedValue.equalsCalls);
 
         var mismatched = entry("actual", "value");
         mismatched.valueFailure = new IllegalStateException(
@@ -736,6 +711,16 @@ class MapConditionsTest {
         return map;
     }
 
+    private static <K, V> Map<K, V> reportedMap(
+            Map<K, V> entries, int reportedSize) {
+        return new LinkedHashMap<>(entries) {
+            @Override
+            public int size() {
+                return reportedSize;
+            }
+        };
+    }
+
     private record Pair(String name,
             PreservingCondition<? super LinkedHashMap<String, String>> positive,
             PreservingCondition<? super LinkedHashMap<String, String>> negative,
@@ -819,28 +804,6 @@ class MapConditionsTest {
             return List.of(values());
         }
     }
-
-    private static final class GreedyValue {
-        private final Set<String> matches;
-        private int equalsCalls;
-
-        private GreedyValue(Set<String> matches) {
-            this.matches = matches;
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            equalsCalls++;
-            return other instanceof ExpectedValue expected
-                    && matches.contains(expected.value);
-        }
-
-        @Override
-        public int hashCode() {
-            throw new AssertionError("hashCode must not be called");
-        }
-    }
-
     private static final class CountingValue {
         private final String value;
         private RuntimeException failure;

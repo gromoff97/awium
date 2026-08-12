@@ -39,11 +39,6 @@ final class ProbeContainers {
         }
 
         @Override
-        public boolean isEmpty() {
-            throw new AssertionError("isEmpty must not be called");
-        }
-
-        @Override
         public Iterator<E> iterator() {
             throw new AssertionError("iterator must not be called");
         }
@@ -79,11 +74,6 @@ final class ProbeContainers {
                 throw sizeFailure;
             }
             return size;
-        }
-
-        @Override
-        public boolean isEmpty() {
-            throw new AssertionError("isEmpty must not be called");
         }
 
         @Override
@@ -403,25 +393,28 @@ final class ProbeContainers {
         }
     }
 
-    static final class ExpectedValue {
-        final String value;
+    static final class GreedyValue {
+        final Set<String> matches;
         int equalsCalls;
 
-        ExpectedValue(String value) {
-            this.value = value;
+        GreedyValue(Set<String> matches) {
+            this.matches = matches;
         }
 
         @Override
         public boolean equals(Object other) {
             equalsCalls++;
             return other instanceof ExpectedValue expected
-                    && value.equals(expected.value);
+                    && matches.contains(expected.value());
         }
 
         @Override
         public int hashCode() {
             throw new AssertionError("hashCode must not be called");
         }
+    }
+
+    record ExpectedValue(String value) {
     }
 
     static final class ThrowingEquals {

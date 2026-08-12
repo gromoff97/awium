@@ -228,8 +228,7 @@ public final class CollectionConditionProvider {
     private static boolean exactContent(Collection<?> actual,
             Collection<?> expected, boolean ordered) {
         int actualSize = actual.size();
-        int expectedSize = expected.size();
-        if (actualSize != expectedSize) {
+        if (actualSize != expected.size()) {
             return false;
         }
         if (actualSize == 0) {
@@ -238,7 +237,7 @@ public final class CollectionConditionProvider {
         Iterator<?> actualIterator = actual.iterator();
         return ordered
                 ? ordered(actualIterator, expected.iterator())
-                : anyOrder(actualIterator, expected.iterator(), expectedSize);
+                : anyOrder(actualIterator, expected.iterator(), actualSize);
     }
 
     private static boolean ordered(Iterator<?> actual, Iterator<?> expected) {
@@ -251,8 +250,8 @@ public final class CollectionConditionProvider {
     }
 
     private static boolean anyOrder(Iterator<?> actual, Iterator<?> expected,
-            int expectedSize) {
-        List<Object> remaining = new ArrayList<>(expectedSize);
+            int reportedSize) {
+        List<Object> remaining = new ArrayList<>(reportedSize);
         expected.forEachRemaining(remaining::add);
         int matched = 0;
         while (actual.hasNext()) {
@@ -271,7 +270,7 @@ public final class CollectionConditionProvider {
                 return false;
             }
         }
-        return matched == expectedSize;
+        return matched == reportedSize;
     }
 
     private static <E> E[] validate(E[] expected) {

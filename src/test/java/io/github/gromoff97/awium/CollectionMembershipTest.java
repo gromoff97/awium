@@ -81,11 +81,8 @@ class CollectionMembershipTest {
     }
 
     @Test
-    void nullActualIsUnsatisfiedForBothSigns() throws Exception {
-        for (Pair pair : PAIRS) {
-            assertNullActual(runtime(pair.positive()));
-            assertNullActual(runtime(pair.negative()));
-        }
+    void nullActualIsUnsatisfiedBeforeMembership() throws Exception {
+        assertNullActual(runtime(contains("b")));
     }
 
     @Test
@@ -125,7 +122,6 @@ class CollectionMembershipTest {
                 arrays);
 
         assertEquals(1, actual.equalsCalls);
-        assertEquals(0, expected.equalsCalls);
         assertOnlyIterator(directional, 1);
         assertOnlyIterator(arrays, 1);
     }

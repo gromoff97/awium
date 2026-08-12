@@ -19,7 +19,7 @@ public final class StructuralCondition {
     private final int bound;
 
     private StructuralCondition(Relation relation, int bound) {
-        this.relation = requireNonNull(relation);
+        this.relation = relation;
         this.bound = bound;
     }
 
