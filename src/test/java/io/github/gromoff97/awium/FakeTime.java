@@ -11,7 +11,7 @@ import java.util.function.LongSupplier;
 final class FakeTime implements LongSupplier, LongConsumer {
 
     private final ArrayDeque<Long> parkAdvances = new ArrayDeque<>();
-    private final List<Long> parkRequests = new ArrayList<>();
+    final List<Long> parkRequests = new ArrayList<>();
     private long nowNanos;
 
     FakeTime(long nowNanos) {
@@ -31,10 +31,6 @@ final class FakeTime implements LongSupplier, LongConsumer {
                 : min(nanos, parkAdvances.removeFirst());
     }
 
-    long nanoTime() {
-        return getAsLong();
-    }
-
     void advanceNanos(long nanos) {
         nowNanos += nanos;
     }
@@ -43,7 +39,4 @@ final class FakeTime implements LongSupplier, LongConsumer {
         parkAdvances.addLast(nanos);
     }
 
-    List<Long> parkRequests() {
-        return List.copyOf(parkRequests);
-    }
 }

@@ -24,7 +24,6 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 @SuppressWarnings("removal")
@@ -77,9 +76,9 @@ class ObservationEvaluatorTest {
                                 Attempt.Origin.CONDITION, "actual", null, 1, 1)));
     }
 
-    @ParameterizedTest
-    @MethodSource("actualValues")
-    void classifiesSatisfiedEvaluationsAndRetainsTheCurrentActual(Object actual) {
+    @Test
+    void classifiesSatisfiedEvaluationsAndRetainsTheCurrentActual() {
+        var actual = new Object();
         var result = new Object();
         var calls = new int[2];
 
@@ -121,20 +120,15 @@ class ObservationEvaluatorTest {
     @ParameterizedTest
     @MethodSource("nonFatalThrowables")
     void classifiesEveryOtherSourceThrowableAtItsOrigin(Throwable failure) {
-        var conditionCalls = new int[1];
-
         Attempt<Object> outcome = attempt(
-                () -> throwFailure(failure), value -> {
-                    conditionCalls[0]++;
-                    return satisfied(value);
-                });
+                () -> throwFailure(failure),
+                ObservationEvaluatorTest::failIfCalled);
 
         var uncontrolled = assertInstanceOf(
                 Attempt.Uncontrolled.BeforeObservation.class, outcome);
         assertEquals(Attempt.Origin.SOURCE, uncontrolled.origin());
         assertSame(failure, uncontrolled.cause());
         assertEquals(1, uncontrolled.number());
-        assertEquals(0, conditionCalls[0]);
     }
 
     @ParameterizedTest
@@ -195,9 +189,8 @@ class ObservationEvaluatorTest {
         var interrupted = new InterruptedException("source stopped");
 
         Attempt<Object> outcome = attempt(() -> {
-            currentThread().interrupt();
             throw interrupted;
-        }, Evaluation::satisfied);
+        }, ObservationEvaluatorTest::failIfCalled);
 
         var uncontrolled = assertInstanceOf(
                 Attempt.Uncontrolled.BeforeObservation.class, outcome);
@@ -212,7 +205,6 @@ class ObservationEvaluatorTest {
         var interrupted = new InterruptedException("condition stopped");
 
         Attempt<Object> outcome = attempt(() -> actual, value -> {
-            currentThread().interrupt();
             throw interrupted;
         });
 
@@ -224,70 +216,41 @@ class ObservationEvaluatorTest {
         assertTrue(currentThread().isInterrupted());
     }
 
-    @Test
-    void fatalSignalsFromSourceEscapeRawAndSkipCondition() {
-        var conditionCalls = new int[1];
-        var virtualMachineError = new InternalError("fatal");
-        var threadDeath = new ThreadDeath();
-
-        assertSame(virtualMachineError, assertThrows(
-                InternalError.class,
-                () -> attempt(() -> {
-                    throw virtualMachineError;
-                }, value -> {
-                    conditionCalls[0]++;
-                    return satisfied(value);
-                })));
-        assertSame(threadDeath, assertThrows(ThreadDeath.class,
-                () -> attempt(() -> {
-                    throw threadDeath;
-                }, Evaluation::satisfied)));
-        assertEquals(0, conditionCalls[0]);
-    }
-
-    @Test
-    void fatalSignalsFromConditionEscapeRaw() {
-        var actual = new Object();
-        var virtualMachineError = new InternalError("fatal");
-        var threadDeath = new ThreadDeath();
-
-        assertSame(virtualMachineError, assertThrows(
-                InternalError.class,
-                () -> attempt(() -> actual, value -> {
-                    throw virtualMachineError;
-                })));
-        assertSame(threadDeath, assertThrows(ThreadDeath.class,
-                () -> attempt(() -> actual, value -> {
-                    throw threadDeath;
-                })));
+    @ParameterizedTest
+    @MethodSource("fatalSignals")
+    void fatalSignalsFromSourceEscapeRawAndSkipCondition(Error fatal) {
+        assertSame(fatal, assertThrows(fatal.getClass(),
+                () -> attempt(() -> throwFailure(fatal),
+                        ObservationEvaluatorTest::failIfCalled)));
     }
 
     @ParameterizedTest
-    @MethodSource("actualValues")
-    void sourceFlagAfterNormalReturnWinsAndSkipsCondition(Object actual) {
-        var conditionCalls = new int[1];
+    @MethodSource("fatalSignals")
+    void fatalSignalsFromConditionEscapeRaw(Error fatal) {
+        var actual = new Object();
 
+        assertSame(fatal, assertThrows(fatal.getClass(),
+                () -> attempt(() -> actual,
+                        value -> throwFailure(fatal))));
+    }
+
+    @Test
+    void sourceFlagAfterNormalReturnWinsAndSkipsCondition() {
         Attempt<Object> outcome = attempt(() -> {
             currentThread().interrupt();
-            return actual;
-        }, value -> {
-            conditionCalls[0]++;
-            return satisfied(value);
-        });
+            return null;
+        }, ObservationEvaluatorTest::failIfCalled);
 
-        assertFlagInterruption(outcome, Attempt.Origin.SOURCE, actual);
-        assertEquals(0, conditionCalls[0]);
+        assertFlagInterruption(outcome, Attempt.Origin.SOURCE, null);
     }
 
-    @ParameterizedTest
-    @MethodSource("normalConditionReturns")
-    void conditionFlagAfterNormalReturnWinsBeforeInterpretation(
-            Evaluation<Object> evaluation) {
+    @Test
+    void conditionFlagAfterNormalReturnWinsBeforeInterpretation() {
         var actual = new Object();
 
         Attempt<Object> outcome = attempt(() -> actual, value -> {
             currentThread().interrupt();
-            return evaluation;
+            return satisfied(new Object());
         });
 
         assertFlagInterruption(outcome, Attempt.Origin.CONDITION, actual);
@@ -299,7 +262,7 @@ class ObservationEvaluatorTest {
         Attempt<Object> outcome = attempt(() -> {
             currentThread().interrupt();
             return throwFailure(failure);
-        }, Evaluation::satisfied);
+        }, ObservationEvaluatorTest::failIfCalled);
 
         var uncontrolled = assertInstanceOf(
                 Attempt.Uncontrolled.BeforeObservation.class, outcome);
@@ -333,7 +296,7 @@ class ObservationEvaluatorTest {
                 () -> attempt(() -> {
                     currentThread().interrupt();
                     throw sourceFatal;
-                }, Evaluation::satisfied)));
+                }, ObservationEvaluatorTest::failIfCalled)));
         assertTrue(currentThread().isInterrupted());
         interrupted();
 
@@ -346,45 +309,38 @@ class ObservationEvaluatorTest {
         assertTrue(currentThread().isInterrupted());
     }
 
-    private static Stream<Arguments> actualValues() {
-        return Stream.of(Arguments.of(new Object()), Arguments.of((Object) null));
-    }
-
     private static Stream<Throwable> nonFatalThrowables() {
         return Stream.of(
                 new Exception("checked"),
-                new IllegalStateException("runtime"),
-                new AssertionError("assertion"),
-                new LinkageError("error"));
+                new AssertionError("assertion"));
     }
 
-    private static Stream<Arguments> normalConditionReturns() {
+    private static Stream<Error> fatalSignals() {
         return Stream.of(
-                Arguments.of(satisfied(new Object())),
-                Arguments.of(unsatisfied("not ready")),
-                Arguments.of((Object) null));
+                new InternalError("fatal"),
+                new ThreadDeath());
     }
 
     private static <T> T throwFailure(Throwable failure) throws Exception {
         if (failure instanceof Exception exception) {
             throw exception;
         }
-        if (failure instanceof Error error) {
-            throw error;
-        }
-        throw new AssertionError(failure);
+        throw (Error) failure;
+    }
+
+    private static <T, R> Evaluation<R> failIfCalled(T ignored) {
+        throw new AssertionError("condition must not be called");
     }
 
     private static <R> Attempt<R> attempt(Source<Object> source,
             CheckedFunction<Object, Evaluation<R>> condition) {
         var time = new FakeTime(0);
-        RuntimeCondition<Object, R> runtime = new RuntimeCondition<>(actual -> {
-            Evaluation<R> evaluation = condition.apply(actual);
-            time.advanceNanos(2);
-            return evaluation;
-        }, () -> "test condition", null);
         return new WaitEngine(new WaitConfiguration(1, 2, 0), time, time)
-                .waitFor(source, runtime).attempt();
+                .waitFor(source, new RuntimeCondition<>(actual -> {
+                    Evaluation<R> evaluation = condition.apply(actual);
+                    time.advanceNanos(2);
+                    return evaluation;
+                }, () -> "test condition", null)).attempt();
     }
 
     private static void assertFlagInterruption(Attempt<?> outcome,

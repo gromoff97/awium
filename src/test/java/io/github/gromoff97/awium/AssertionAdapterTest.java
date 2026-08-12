@@ -108,7 +108,7 @@ class AssertionAdapterTest {
 
         assertEquals(42L, result);
         assertEquals(3, invocations[0]);
-        assertEquals(java.util.List.of(1L, 1L), time.parkRequests());
+        assertEquals(java.util.List.of(1L, 1L), time.parkRequests);
     }
 
     @Test
