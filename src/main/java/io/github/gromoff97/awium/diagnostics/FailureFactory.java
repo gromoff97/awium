@@ -9,7 +9,6 @@ import io.github.gromoff97.awium.exceptions.AwaitInterruptedException;
 import io.github.gromoff97.awium.exceptions.AwaitSourceRetrievalException;
 import io.github.gromoff97.awium.exceptions.AwaitStabilizationException;
 import io.github.gromoff97.awium.exceptions.AwaitTimeoutException;
-import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException;
 import io.github.gromoff97.awium.exceptions.AwaitUnhandledException;
 
 import static java.util.Objects.requireNonNull;
@@ -46,32 +45,20 @@ public final class FailureFactory {
         }
 
         Throwable cause = FailureMessage.terminalCause(outcome);
-        switch (outcome) {
-            case WaitOutcome.TimeoutBetweenObservations<R> ignored ->
-                    throw new AwaitTimeoutException(message, cause);
-            case WaitOutcome.LateUnsatisfiedTimeout<R> ignored ->
-                    throw new AwaitTimeoutException(message, cause);
-            case WaitOutcome.LateSatisfiedTimeout<R> ignored ->
-                    throw new AwaitTimeoutException(message, cause);
-            case WaitOutcome.StabilityLoss<R> ignored ->
-                    throw new AwaitStabilizationException(message, cause);
-            case Attempt.Uncontrolled<R> uncontrolled ->
-                    throw uncontrolled(uncontrolled, message);
-            case Attempt.Satisfied<R> ignored ->
-                    throw new AssertionError("unreachable");
+        if (outcome instanceof WaitOutcome.StabilityLoss<R>) {
+            throw new AwaitStabilizationException(message, cause);
         }
-    }
-
-    private static AwaitUncontrolledException uncontrolled(
-            Attempt.Uncontrolled<?> attempt, String message) {
-        Throwable cause = attempt.cause();
-        if (cause instanceof InterruptedException) {
-            return new AwaitInterruptedException(message, cause);
+        if (outcome instanceof Attempt.Uncontrolled<R> uncontrolled) {
+            if (cause instanceof InterruptedException) {
+                throw new AwaitInterruptedException(message, cause);
+            }
+            throw switch (uncontrolled.origin()) {
+                case SOURCE -> new AwaitSourceRetrievalException(message, cause);
+                case CONDITION -> new AwaitConditionEvaluationException(
+                        message, cause);
+                case WAITING -> new AwaitUnhandledException(message, cause);
+            };
         }
-        return switch (attempt.origin()) {
-            case SOURCE -> new AwaitSourceRetrievalException(message, cause);
-            case CONDITION -> new AwaitConditionEvaluationException(message, cause);
-            case WAITING -> new AwaitUnhandledException(message, cause);
-        };
+        throw new AwaitTimeoutException(message, cause);
     }
 }

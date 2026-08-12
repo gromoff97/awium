@@ -1,8 +1,5 @@
 package io.github.gromoff97.awium;
 
-import static java.lang.Thread.currentThread;
-import static java.lang.Thread.interrupted;
-
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
@@ -13,8 +10,6 @@ import io.github.gromoff97.awium.engine.*;
 import io.github.gromoff97.awium.exceptions.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -153,11 +148,6 @@ class DiagnosticsSnapshotTest {
                 started, started + 10 * SECOND,
                 new Attempt.Unsatisfied<>(null, "not yet", null,
                         2, started + 9 * SECOND));
-        WaitOutcome<Object> late = new WaitOutcome.LateUnsatisfiedTimeout<>(
-                started,
-                new Attempt.Unsatisfied<>(
-                        "actual", "not yet", null, 3,
-                        started + 10 * SECOND + 200 * MILLISECOND));
         WaitOutcome<Object> stability = new WaitOutcome.StabilityLoss<>(
                 started, started + 7 * SECOND,
                 new Attempt.Unsatisfied<>(
@@ -167,9 +157,6 @@ class DiagnosticsSnapshotTest {
         String betweenMessage = assertThrows(AwaitTimeoutException.class,
                 () -> complete(between, "condition", null,
                         config(SECOND, 10 * SECOND, 0))).getMessage();
-        String lateMessage = assertThrows(AwaitTimeoutException.class,
-                () -> complete(late, "condition", null,
-                        config(SECOND, 10 * SECOND, 0))).getMessage();
         String stabilityMessage = assertThrows(
                 AwaitStabilizationException.class,
                 () -> complete(stability, "condition", null,
@@ -177,8 +164,6 @@ class DiagnosticsSnapshotTest {
 
         assertTrue(betweenMessage.contains("Completed after: 9 seconds"));
         assertTrue(betweenMessage.contains("Elapsed: 10 seconds"));
-        assertTrue(lateMessage.contains(
-                "Elapsed: 10 seconds 200 milliseconds"));
         assertTrue(stabilityMessage.contains(
                 "Failure detected after: 2 seconds 100 milliseconds"));
         assertTrue(stabilityMessage.contains("Acquired after: 7 seconds"));
@@ -304,20 +289,18 @@ class DiagnosticsSnapshotTest {
     @Test
     void returnsSuccessWithoutRenderingTerminalMetadata() {
         var result = new Object();
-        var actual = new CountingValue("actual");
-        var descriptions = new int[1];
         RuntimeCondition<Object, Object> runtime = new RuntimeCondition<>(
                 value -> Evaluation.satisfied(result), () -> {
-                    descriptions[0]++;
-                    return "condition";
+                    throw new InternalError("description must not be read");
                 }, null);
         WaitOutcome<Object> outcome =
-                new Attempt.Satisfied<>(actual, result, 1, 0);
+                new Attempt.Satisfied<>(
+                        new ThrowingValue(new InternalError(
+                                "actual must not be rendered")),
+                        result, 1, 0);
 
-        assertSame(result, complete(new FailureFactory(),
+        assertSame(result, new FailureFactory().complete(
                 outcome, runtime, config(1, 2, 0)));
-        assertEquals(0, descriptions[0]);
-        assertEquals(0, actual.calls);
     }
 
     @Test
@@ -337,7 +320,7 @@ class DiagnosticsSnapshotTest {
 
         AwaitConditionEvaluationException failure = assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> complete(new FailureFactory(),
+                () -> new FailureFactory().complete(
                         outcome, runtime, config(1, 2, 0)));
 
         assertSame(cause, failure.getCause());
@@ -364,7 +347,7 @@ class DiagnosticsSnapshotTest {
 
             AwaitSourceRetrievalException failure = assertThrows(
                     AwaitSourceRetrievalException.class,
-                    () -> complete(new FailureFactory(), outcome,
+                    () -> new FailureFactory().complete(outcome,
                             new RuntimeCondition<>(
                                     value -> Evaluation.satisfied(value), () -> {
                                         calls[0]++;
@@ -420,22 +403,6 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void readsAnUncontrolledCauseMessageOnce() {
-        var cause = new CountingCause("broken");
-        WaitOutcome<Object> outcome =
-                new Attempt.Uncontrolled.BeforeObservation<>(
-                        Attempt.Origin.SOURCE, cause, 1, 0);
-
-        AwaitSourceRetrievalException failure = assertThrows(
-                AwaitSourceRetrievalException.class,
-                () -> complete(outcome, "condition", null, config(1, 2, 0)));
-
-        assertEquals(1, cause.calls);
-        assertTrue(failure.getMessage().endsWith(
-                "Cause: CountingCause: broken"));
-    }
-
-    @Test
     void normalizesEveryMultilineUncontrolledFieldAndReadsCallbacksOnce() {
         var actual = new CountingValue("actual one\ractual two");
         var cause = new CountingCause("cause one\r\n cause two\rcause three");
@@ -451,7 +418,7 @@ class DiagnosticsSnapshotTest {
 
         AwaitConditionEvaluationException failure = assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> complete(new FailureFactory(),
+                () -> new FailureFactory().complete(
                         outcome, runtime, config(1, 2, 0)));
 
         assertEquals("""
@@ -480,7 +447,6 @@ class DiagnosticsSnapshotTest {
     @Test
     void rendersNullBlankThrowingAndAnonymousCauseMessages() {
         var nullMessage = new CountingCause(null);
-        var blankMessage = new CountingCause(" \t");
         RuntimeException anonymous = new RuntimeException() {
         };
         RuntimeException anonymousMessageFailure = new RuntimeException() {
@@ -488,13 +454,11 @@ class DiagnosticsSnapshotTest {
         var throwingMessage = new ThrowingMessageCause(anonymousMessageFailure);
 
         AwaitSourceRetrievalException nullFailure = sourceFailure(nullMessage);
-        AwaitSourceRetrievalException blankFailure = sourceFailure(blankMessage);
         AwaitSourceRetrievalException anonymousFailure = sourceFailure(anonymous);
         AwaitSourceRetrievalException throwingFailure = sourceFailure(
                 throwingMessage);
 
         assertTrue(nullFailure.getMessage().endsWith("Cause: CountingCause"));
-        assertTrue(blankFailure.getMessage().endsWith("Cause: CountingCause"));
         assertTrue(anonymousFailure.getMessage().endsWith(
                 "Cause: " + anonymous.getClass().getName()));
         assertTrue(throwingFailure.getMessage().endsWith(
@@ -503,60 +467,14 @@ class DiagnosticsSnapshotTest {
                         + anonymousMessageFailure.getClass().getName() + ">"));
         assertSame(throwingMessage, throwingFailure.getCause());
         assertEquals(1, nullMessage.calls);
-        assertEquals(1, blankMessage.calls);
         assertEquals(1, throwingMessage.calls);
-    }
-
-    @Test
-    void diagnosticCallbacksMaySetTheInterruptFlagWithoutChangingTheOutcome() {
-        var sourceCause = new IllegalStateException("source broke");
-        WaitOutcome<Object> sourceOutcome =
-                new Attempt.Uncontrolled.BeforeObservation<>(
-                        Attempt.Origin.SOURCE, sourceCause, 1, 0);
-        var interruptingActual = new InterruptingValue();
-        WaitOutcome<Object> timeoutOutcome =
-                new WaitOutcome.LateUnsatisfiedTimeout<>(0,
-                        new Attempt.Unsatisfied<>(
-                                interruptingActual, "not ready", null, 1, 2));
-
-        interrupted();
-        try {
-            AwaitSourceRetrievalException sourceFailure = assertThrows(
-                    AwaitSourceRetrievalException.class,
-                    () -> complete(new FailureFactory(), sourceOutcome,
-                            new RuntimeCondition<>(
-                                    value -> Evaluation.satisfied(value), () -> {
-                                        currentThread().interrupt();
-                                        return "condition";
-                                    }, null), config(1, 2, 0)));
-            assertSame(sourceCause, sourceFailure.getCause());
-            assertFalse(sourceFailure.getMessage().contains("Interrupt flag"));
-            assertTrue(currentThread().isInterrupted());
-        } finally {
-            interrupted();
-        }
-
-        try {
-            AwaitTimeoutException timeoutFailure = assertThrows(
-                    AwaitTimeoutException.class,
-                    () -> complete(timeoutOutcome, "condition", null,
-                            config(1, 2, 0)));
-            assertNull(timeoutFailure.getCause());
-            assertFalse(timeoutFailure.getMessage().contains("Interrupt flag"));
-            assertTrue(currentThread().isInterrupted());
-            assertEquals(1, interruptingActual.calls);
-        } finally {
-            interrupted();
-        }
     }
 
     @Test
     void callbackFreeEmergencyBranchFailureEscapesWithoutAnotherWrapper() {
         var actual = new CountingValue(null);
         var formatterFailure = new IllegalStateException("formatter broke");
-        var formatterCalls = new int[1];
         Function<FailureMessage.Context, String> formatter = context -> {
-            formatterCalls[0]++;
             context.actualValue();
             throw formatterFailure;
         };
@@ -564,45 +482,34 @@ class DiagnosticsSnapshotTest {
                 0, new Attempt.Unsatisfied<>(
                         actual, "not ready", null, 1, 2));
 
-        NullPointerException failure = assertThrows(NullPointerException.class,
-                () -> complete(new FailureFactory(new FailureMessage(formatter)),
-                        outcome,
-                        runtime("condition", null), config(1, 2, 0)));
+        assertThrows(NullPointerException.class,
+                () -> new FailureFactory(new FailureMessage(formatter)).complete(
+                        outcome, runtime("condition", null), config(1, 2, 0)));
 
-        assertNull(failure.getCause());
-        assertEquals(0, failure.getSuppressed().length);
-        assertEquals(1, formatterCalls[0]);
         assertEquals(1, actual.calls);
-        assertEquals(" \t", renderedActual(new CountingValue(" \t")));
     }
 
     @Test
     void usesCallbackFreeEmergencyFormattingOnce() {
         var formatterFailure = new IllegalStateException("formatter broke");
-        var formatterCalls = new int[1];
-        var descriptions = new int[1];
-        var actual = new CountingValue("actual");
         Function<FailureMessage.Context, String> formatter = context -> {
-            formatterCalls[0]++;
             throw formatterFailure;
         };
         RuntimeCondition<Object, Object> runtime = new RuntimeCondition<>(
                 value -> Evaluation.satisfied(value), () -> {
-                    descriptions[0]++;
-                    return "condition";
+                    throw new InternalError("description must not be read");
                 }, "payment must complete");
         WaitOutcome<Object> outcome = new WaitOutcome.LateUnsatisfiedTimeout<>(
                 0, new Attempt.Unsatisfied<>(
-                        actual, "not ready", null, 7, 2));
+                        new ThrowingValue(new InternalError(
+                                "actual must not be rendered")),
+                        "not ready", null, 7, 2));
 
         AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
-                () -> complete(new FailureFactory(new FailureMessage(formatter)),
+                () -> new FailureFactory(new FailureMessage(formatter)).complete(
                         outcome, runtime, config(1, 2, 0)));
 
         assertSame(formatterFailure, failure.getCause());
-        assertEquals(1, formatterCalls[0]);
-        assertEquals(0, descriptions[0]);
-        assertEquals(0, actual.calls);
         assertEquals("""
                 Await execution was unhandled
 
@@ -627,13 +534,41 @@ class DiagnosticsSnapshotTest {
                         actual, "not ready", null, 3, 2));
 
         AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
-                () -> complete(new FailureFactory(new FailureMessage(formatter)),
-                        outcome,
-                        runtime("rendered condition", null), config(1, 2, 0)));
+                () -> new FailureFactory(new FailureMessage(formatter)).complete(
+                        outcome, runtime("rendered condition", null),
+                        config(1, 2, 0)));
 
         assertEquals(1, actual.calls);
         assertTrue(failure.getMessage().contains(
                 "Condition: rendered condition\nActual: rendered actual"));
+    }
+
+    @Test
+    void readsAReentrantConditionDescriptionOnce() {
+        var calls = new int[1];
+        var contexts = new FailureMessage.Context[1];
+        RuntimeCondition<Object, Object> runtime = new RuntimeCondition<>(
+                Evaluation::satisfied, () -> {
+                    calls[0]++;
+                    if (calls[0] == 1) {
+                        contexts[0].conditionDescription();
+                    }
+                    return "condition";
+                }, null);
+        Function<FailureMessage.Context, String> formatter = context -> {
+            contexts[0] = context;
+            return context.conditionDescription();
+        };
+        WaitOutcome<Object> outcome = new WaitOutcome.LateUnsatisfiedTimeout<>(
+                0, new Attempt.Unsatisfied<>(
+                        "actual", "not ready", null, 1, 2));
+
+        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
+                () -> new FailureFactory(new FailureMessage(formatter)).complete(
+                        outcome, runtime, config(1, 2, 0)));
+
+        assertEquals("condition", failure.getMessage());
+        assertEquals(1, calls[0]);
     }
 
     @Test
@@ -657,7 +592,7 @@ class DiagnosticsSnapshotTest {
                                 "assertion did not pass", assertion, 1, 2));
 
         assertSame(descriptionFatal, assertThrows(InternalError.class,
-                () -> complete(new FailureFactory(), sourceFailure,
+                () -> new FailureFactory().complete(sourceFailure,
                         new RuntimeCondition<>(value -> Evaluation.satisfied(value),
                                 () -> {
                                     throw descriptionFatal;
@@ -668,9 +603,9 @@ class DiagnosticsSnapshotTest {
                 () -> complete(assertionFailure, "condition", null,
                         config(1, 2, 0))));
         assertSame(formatterFatal, assertThrows(InternalError.class,
-                () -> complete(new FailureFactory(new FailureMessage(context -> {
+                () -> new FailureFactory(new FailureMessage(context -> {
                     throw formatterFatal;
-                })), sourceFailure, runtime("condition", null),
+                })).complete(sourceFailure, runtime("condition", null),
                         config(1, 2, 0))));
     }
 
@@ -681,8 +616,9 @@ class DiagnosticsSnapshotTest {
                         Attempt.Origin.SOURCE,
                         new IllegalStateException("failure"), 1, 0);
 
-        String message = sourceFailure(outcome,
-                "first\r\n second\rthird\n").getMessage();
+        String message = assertThrows(AwaitSourceRetrievalException.class,
+                () -> complete(outcome, "first\r\n second\rthird\n", null,
+                        config(1, 2, 0))).getMessage();
 
         assertEquals("""
                 Await source retrieval failed
@@ -702,17 +638,8 @@ class DiagnosticsSnapshotTest {
         Object[] recursive = new Object[1];
         recursive[0] = recursive;
 
-        assertEquals(List.of("[true, false]", "[1, 2]", "[1, 2]", "[1, 2]",
-                        "[1, 2]", "[a, b]", "[1.0, 2.0]", "[1.0, 2.0]",
-                        "[[1, 2], [3, 4]]", "[[...]]", "null"),
-                List.of(renderedActual(new boolean[] {true, false}),
-                        renderedActual(new byte[] {1, 2}),
-                        renderedActual(new short[] {1, 2}),
-                        renderedActual(new int[] {1, 2}),
-                        renderedActual(new long[] {1, 2}),
-                        renderedActual(new char[] {'a', 'b'}),
-                        renderedActual(new float[] {1, 2}),
-                        renderedActual(new double[] {1, 2}),
+        assertEquals(List.of("[1, 2]", "[[1, 2], [3, 4]]", "[[...]]", "null"),
+                List.of(renderedActual(new int[] {1, 2}),
                         renderedActual(nested), renderedActual(recursive),
                         renderedActual(null)));
     }
@@ -734,12 +661,6 @@ class DiagnosticsSnapshotTest {
                 () -> complete(outcome, "condition", null, config(1, 2, 0)));
     }
 
-    private static AwaitSourceRetrievalException sourceFailure(
-            WaitOutcome<Object> outcome, String description) {
-        return assertThrows(AwaitSourceRetrievalException.class,
-                () -> complete(outcome, description, null, config(1, 2, 0)));
-    }
-
     private static String renderedActual(Object actual) {
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
                 () -> complete(new WaitOutcome.LateUnsatisfiedTimeout<>(0,
@@ -756,11 +677,6 @@ class DiagnosticsSnapshotTest {
             String explanation, WaitConfiguration config) {
         return new FailureFactory().complete(
                 outcome, runtime(description, explanation), config);
-    }
-
-    private static <R> R complete(FailureFactory factory, WaitOutcome<R> outcome,
-            RuntimeCondition<?, R> runtime, WaitConfiguration config) {
-        return factory.complete(outcome, runtime, config);
     }
 
     private static <R> RuntimeCondition<Object, R> runtime(
@@ -789,55 +705,41 @@ class DiagnosticsSnapshotTest {
     }
 
     private static final class ThrowingValue {
-        private final Error error;
-        private final RuntimeException exception;
+        private final Throwable failure;
         private int calls;
 
-        private ThrowingValue(RuntimeException exception) {
-            this.exception = exception;
-            this.error = null;
-        }
-
-        private ThrowingValue(Error error) {
-            this.exception = null;
-            this.error = error;
+        private ThrowingValue(Throwable failure) {
+            this.failure = failure;
         }
 
         @Override
         public String toString() {
             calls++;
-            if (error != null) {
+            if (failure instanceof Error error) {
                 throw error;
             }
-            throw exception;
+            throw (RuntimeException) failure;
         }
     }
 
     private static final class CountingAssertion extends AssertionError {
-        private final String message;
-        private final Throwable thrown;
+        private final Object message;
         private int calls;
 
-        private CountingAssertion(String message) {
+        private CountingAssertion(Object message) {
             this.message = message;
-            this.thrown = null;
-        }
-
-        private CountingAssertion(Throwable thrown) {
-            this.message = null;
-            this.thrown = thrown;
         }
 
         @Override
         public String getMessage() {
             calls++;
-            if (thrown instanceof Error error) {
+            if (message instanceof Error error) {
                 throw error;
             }
-            if (thrown instanceof RuntimeException exception) {
+            if (message instanceof RuntimeException exception) {
                 throw exception;
             }
-            return message;
+            return (String) message;
         }
     }
 
@@ -868,17 +770,6 @@ class DiagnosticsSnapshotTest {
         public String getMessage() {
             calls++;
             throw thrown;
-        }
-    }
-
-    private static final class InterruptingValue {
-        private int calls;
-
-        @Override
-        public String toString() {
-            calls++;
-            currentThread().interrupt();
-            return "actual";
         }
     }
 

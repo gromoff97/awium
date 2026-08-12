@@ -11,12 +11,11 @@ import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
+@SuppressWarnings("removal")
 public final class FailureMessage {
 
     private static final String DESCRIPTION_UNAVAILABLE =
             "condition description unavailable";
-    private static final String ACTUAL_DIAGNOSTICS_FAILED =
-            "<value unavailable: diagnostics failed>";
     private static final long[] UNIT_NANOS = {
         86_400_000_000_000L,
         3_600_000_000_000L,
@@ -41,7 +40,6 @@ public final class FailureMessage {
         this.formatter = requireNonNull(formatter);
     }
 
-    @SuppressWarnings("removal")
     public String format(WaitOutcome<?> outcome,
             RuntimeCondition<?, ?> condition,
             WaitConfiguration configuration) {
@@ -73,7 +71,8 @@ public final class FailureMessage {
         if (!(context.outcome.attempt()
                 instanceof Attempt.Uncontrolled.BeforeObservation<?>)) {
             field(out, 0, "Actual", context.actualMaterialized
-                    ? context.actual : ACTUAL_DIAGNOSTICS_FAILED);
+                    ? context.actual
+                    : "<value unavailable: diagnostics failed>");
         }
         optionalField(out, "Because", context.condition.explanation());
         field(out, 0, "Cause", typeName(failure.getCause()));
@@ -193,7 +192,8 @@ public final class FailureMessage {
         StringBuilder out = heading(title);
         field(out, 0, "Attempt", Long.toString(attempt.number()));
         if (interrupted) {
-            field(out, 0, "Origin", origin(attempt.origin()));
+            field(out, 0, "Origin",
+                    attempt.origin().name().toLowerCase(Locale.ROOT));
         }
         field(out, 0, "Condition", context.conditionDescription());
         if (attempt instanceof Attempt.Uncontrolled.AfterObservation<?>) {
@@ -249,8 +249,7 @@ public final class FailureMessage {
     }
 
     private static String finish(StringBuilder out) {
-        out.setLength(out.length() - 1);
-        return out.toString();
+        return out.deleteCharAt(out.length() - 1).toString();
     }
 
     private static String duration(long nanos) {
@@ -272,7 +271,6 @@ public final class FailureMessage {
         return result.isEmpty() ? "0 nanoseconds" : result.toString();
     }
 
-    @SuppressWarnings("removal")
     private static String render(Object value) {
         try {
             if (value != null && value.getClass().isArray()) {
@@ -291,21 +289,6 @@ public final class FailureMessage {
     private static String typeName(Throwable failure) {
         String simpleName = failure.getClass().getSimpleName();
         return simpleName.isBlank() ? failure.getClass().getName() : simpleName;
-    }
-
-    private static String origin(Attempt.Origin origin) {
-        return origin.name().toLowerCase(Locale.ROOT);
-    }
-
-    private static Object actual(Attempt<?> attempt) {
-        return switch (attempt) {
-            case Attempt.Satisfied<?> value -> value.actual();
-            case Attempt.Unsatisfied<?> value -> value.actual();
-            case Attempt.Uncontrolled.AfterObservation<?> value -> value.actual();
-            case Attempt.Uncontrolled.BeforeObservation<?> ignored ->
-                    throw new IllegalArgumentException(
-                            "attempt has no observed actual");
-        };
     }
 
     static Throwable terminalCause(WaitOutcome<?> outcome) {
@@ -335,7 +318,6 @@ public final class FailureMessage {
             this.configuration = configuration;
         }
 
-        @SuppressWarnings("removal")
         public String conditionDescription() {
             if (!descriptionMaterialized) {
                 descriptionMaterialized = true;
@@ -355,45 +337,43 @@ public final class FailureMessage {
         public String actualValue() {
             if (!actualMaterialized) {
                 actualMaterialized = true;
-                actual = render(actual(outcome.attempt()));
+                actual = render(switch (outcome.attempt()) {
+                    case Attempt.Satisfied<?> value -> value.actual();
+                    case Attempt.Unsatisfied<?> value -> value.actual();
+                    case Attempt.Uncontrolled.AfterObservation<?> value ->
+                            value.actual();
+                    case Attempt.Uncontrolled.BeforeObservation<?> ignored ->
+                            throw new IllegalArgumentException(
+                                    "attempt has no observed actual");
+                });
             }
             return actual;
         }
 
-        @SuppressWarnings("removal")
         private AssertionDiagnostic assertionDiagnostic() {
-            AssertionError assertionCause =
-                    (AssertionError) terminalCause(outcome);
-            String type = typeName(assertionCause);
-            try {
-                String message = assertionCause.getMessage();
-                return message == null || message.isBlank()
-                        ? new AssertionDiagnostic("assertion did not pass", type)
-                        : new AssertionDiagnostic(message,
-                                type + ": " + message);
-            } catch (VirtualMachineError | ThreadDeath fatal) {
-                throw fatal;
-            } catch (Throwable failure) {
-                return new AssertionDiagnostic("assertion did not pass",
-                        type + ": <message unavailable: getMessage() threw "
-                                + typeName(failure) + ">");
-            }
+            return throwableDiagnostic(terminalCause(outcome),
+                    "assertion did not pass");
         }
 
-        @SuppressWarnings("removal")
         private String causeDiagnostic() {
-            Throwable terminalCause = terminalCause(outcome);
-            String type = typeName(terminalCause);
-            try {
-                String message = terminalCause.getMessage();
-                return message == null || message.isBlank()
-                        ? type : type + ": " + message;
-            } catch (VirtualMachineError | ThreadDeath fatal) {
-                throw fatal;
-            } catch (Throwable failure) {
-                return type + ": <message unavailable: getMessage() threw "
-                        + typeName(failure) + ">";
-            }
+            return throwableDiagnostic(terminalCause(outcome), null).cause();
+        }
+    }
+
+    private static AssertionDiagnostic throwableDiagnostic(Throwable failure,
+            String fallback) {
+        String type = typeName(failure);
+        try {
+            String message = failure.getMessage();
+            return message == null || message.isBlank()
+                    ? new AssertionDiagnostic(fallback, type)
+                    : new AssertionDiagnostic(message, type + ": " + message);
+        } catch (VirtualMachineError | ThreadDeath fatal) {
+            throw fatal;
+        } catch (Throwable messageFailure) {
+            return new AssertionDiagnostic(fallback,
+                    type + ": <message unavailable: getMessage() threw "
+                            + typeName(messageFailure) + ">");
         }
     }
 

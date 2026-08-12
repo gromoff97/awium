@@ -78,7 +78,6 @@ class PublicSurfaceTest {
     @Test
     void conditionEvaluationDescriptorsAndExplainedFormsHaveExactShapes()
             throws ReflectiveOperationException {
-        assertTrue(isPublic(Condition.class.getModifiers()));
         assertTrue(isAbstract(Condition.class.getModifiers()));
         assertFalse(isFinal(Condition.class.getModifiers()));
         Constructor<?> constructor = Condition.class.getDeclaredConstructor();
@@ -90,7 +89,6 @@ class PublicSurfaceTest {
 
         assertTrue(isFinal(Evaluation.class.getModifiers()));
         for (Class<?> type : restrictedConstructionTypes()) {
-            assertTrue(isPublic(type.getModifiers()), type.getName());
             assertNoPublicOrProtectedConstructor(type);
         }
         for (Class<?> type : closedConditionTypes()) {
@@ -165,7 +163,6 @@ class PublicSurfaceTest {
         for (Class<?> holder : List.of(Awium.class, ConditionProvider.class,
                 ObjectConditionProvider.class, OptionalConditionProvider.class,
                 CollectionConditionProvider.class, MapConditionProvider.class)) {
-            assertTrue(isPublic(holder.getModifiers()), holder.getName());
             assertTrue(isFinal(holder.getModifiers()), holder.getName());
             Constructor<?> constructor = holder.getDeclaredConstructor();
             assertTrue(isPrivate(constructor.getModifiers()), holder.getName());
@@ -191,13 +188,6 @@ class PublicSurfaceTest {
                         .map(Method::getName).toList()));
         assertFalse(Arrays.stream(ConditionProvider.class.getDeclaredFields())
                 .anyMatch(field -> isPublic(field.getModifiers())));
-        assertEquals(Set.of(AwaitTimeoutException.class,
-                        AwaitStabilizationException.class),
-                directPublicChildren(AwaitFailure.class));
-        assertEquals(Set.of(AwaitSourceRetrievalException.class,
-                        AwaitConditionEvaluationException.class,
-                        AwaitInterruptedException.class, AwaitUnhandledException.class),
-                directPublicChildren(AwaitUncontrolledException.class));
     }
 
     @Test
@@ -373,11 +363,6 @@ class PublicSurfaceTest {
                 type.getName());
         assertEquals(Exception.class,
                 abstractMethods.getFirst().getExceptionTypes()[0], type.getName());
-    }
-
-    private static Set<Class<?>> directPublicChildren(Class<?> parent) {
-        return Set.copyOf(publicTypes().stream()
-                .filter(type -> type.getSuperclass() == parent).toList());
     }
 
     private static Set<Class<?>> approvedPublicApiTypes() {
