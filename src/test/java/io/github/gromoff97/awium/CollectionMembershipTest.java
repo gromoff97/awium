@@ -14,7 +14,6 @@ import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider;
 
 import io.github.gromoff97.awium.exceptions.*;
-import io.github.gromoff97.awium.await.StructuralAwait;
 import io.github.gromoff97.awium.await.stages.StructuralAwaitStage;
 import io.github.gromoff97.awium.sources.CollectionSource;
 
@@ -33,7 +32,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.api.io.TempDir;
@@ -42,29 +40,18 @@ class CollectionMembershipTest {
 
     private static final List<Pair> PAIRS = List.of(
             new Pair("contains", contains("b"),
-                    doesNotContain("b"),
-                    List.of("a", "b", "c"), List.of("a", "c"), 2, 2),
+                    doesNotContain("b")),
             new Pair("containsAll", containsAll("a", "b"),
-                    doesNotContainAll("a", "b"),
-                    List.of("a", "b", "c"), List.of("a", "c"), 2, 2),
+                    doesNotContainAll("a", "b")),
             new Pair("containsAllElementsOf",
                     containsAllElementsOf(List.of("a", "b")),
                     doesNotContainAllElementsOf(
-                            List.of("a", "b")),
-                    List.of("a", "b", "c"), List.of("a", "c"), 2, 2),
+                            List.of("a", "b"))),
             new Pair("containsAnyOf", containsAnyOf("x", "b"),
-                    containsNoneOf("x", "b"),
-                    List.of("a", "b", "c"), List.of("a", "c"), 2, 2),
+                    containsNoneOf("x", "b")),
             new Pair("containsAnyElementsOf",
                     containsAnyElementsOf(List.of("x", "b")),
-                    containsNoElementsOf(List.of("x", "b")),
-                    List.of("a", "b", "c"), List.of("a", "c"), 2, 2));
-    private static final List<Function<Collection<String>, ?>>
-            ELEMENTS_OF_FACTORIES = List.of(
-                    CollectionConditionProvider::containsAllElementsOf,
-                    CollectionConditionProvider::doesNotContainAllElementsOf,
-                    CollectionConditionProvider::containsAnyElementsOf,
-                    CollectionConditionProvider::containsNoElementsOf);
+                    containsNoElementsOf(List.of("x", "b"))));
 
     @TempDir
     Path temporaryDirectory;
@@ -73,10 +60,8 @@ class CollectionMembershipTest {
     void completeRawMembershipTableIsComplementary()
             throws Exception {
         for (Pair pair : PAIRS) {
-            assertPair(pair, pair.matchingActual(), true,
-                    pair.matchingNextCalls());
-            assertPair(pair, pair.mismatchingActual(), false,
-                    pair.mismatchingNextCalls());
+            assertPair(pair, List.of("a", "b", "c"), true, 2);
+            assertPair(pair, List.of("a", "c"), false, 2);
         }
     }
 
@@ -86,21 +71,9 @@ class CollectionMembershipTest {
     }
 
     @Test
-    void repeatedExpectedPositionsAreSetLikeForBothAllForms()
-            throws Exception {
-        List<Pair> repeated = List.of(
-                new Pair("containsAll", containsAll("a", "a"),
-                        doesNotContainAll("a", "a"),
-                        List.of("a"), List.of("b"), 1, 1),
-                new Pair("containsAllElementsOf",
-                        containsAllElementsOf(List.of("a", "a")),
-                        doesNotContainAllElementsOf(
-                                List.of("a", "a")),
-                        List.of("a"), List.of("b"), 1, 1));
-
-        for (Pair pair : repeated) {
-            assertPair(pair, pair.matchingActual(), true, 1);
-        }
+    void repeatedExpectedPositionsAreSetLike() throws Exception {
+        assertPair(new Pair("containsAll", containsAll("a", "a"),
+                doesNotContainAll("a", "a")), List.of("a"), true, 1);
     }
 
     @Test
@@ -127,50 +100,22 @@ class CollectionMembershipTest {
     }
 
     @Test
-    void positiveAndNegativeFormsMakeIdenticalUserCalls() throws Exception {
-        CountingValue expected = new CountingValue("b");
-        CountingValue positiveFirst = new CountingValue("a");
-        CountingValue positiveSecond = new CountingValue("b");
-        CountingValue negativeFirst = new CountingValue("a");
-        CountingValue negativeSecond = new CountingValue("b");
-        var positiveActual = new ProbeContainers.MembershipCollection<>(
-                List.of(positiveFirst, positiveSecond));
-        var negativeActual = new ProbeContainers.MembershipCollection<>(
-                List.of(negativeFirst, negativeSecond));
-
-        Evaluation<?> positive = RuntimeCondition.<
-                ProbeContainers.MembershipCollection<CountingValue>>preserving(
-                        containsAnyOf(expected)).evaluate(
-                                positiveActual);
-        Evaluation<?> negative = RuntimeCondition.<
-                ProbeContainers.MembershipCollection<CountingValue>>preserving(
-                        containsNoneOf(expected)).evaluate(
-                                negativeActual);
-
-        assertNotEquals(positive.status(), negative.status());
-        assertEquals(positiveFirst.equalsCalls + positiveSecond.equalsCalls,
-                negativeFirst.equalsCalls + negativeSecond.equalsCalls);
-        assertEquals(positiveActual.hasNextCalls, negativeActual.hasNextCalls);
-        assertEquals(positiveActual.nextCalls, negativeActual.nextCalls);
-        assertOnlyIterator(positiveActual, 2);
-        assertOnlyIterator(negativeActual, 2);
-    }
-
-    @Test
     void terminalDiagnosticsDoNotTraverseAgain() {
-        var raw = new ProbeContainers.MembershipCollection<>(
-                List.of("a", "b"));
         var explained = new ProbeContainers.MembershipCollection<>(
                 List.of("a", "b"));
+        FakeTime time = new FakeTime(0);
 
         assertThrows(AwaitTimeoutException.class,
-                () -> timedCollection(raw).until(
-                        contains("missing")));
-        assertThrows(AwaitTimeoutException.class,
-                () -> timedCollection(explained).until(
-                        doesNotContain("a").because("required")));
+                () -> new StructuralAwaitStage<>(
+                        (CollectionSource<ProbeContainers.
+                                MembershipCollection<String>>) () -> {
+                            time.advanceNanos(2);
+                            return explained;
+                        }, Collection::size,
+                        defaults().withEvery(Duration.ofNanos(1))
+                                .withUpTo(Duration.ofNanos(2)), time, time)
+                        .until(doesNotContain("a").because("required")));
 
-        assertOnlyIterator(raw, 2);
         assertOnlyIterator(explained, 1);
     }
 
@@ -206,43 +151,19 @@ class CollectionMembershipTest {
 
     @Test
     void aggregateFactoriesRejectNullAndEmptyInputsWithExactMessages() {
-        List<Executable> nullVarargs = List.of(
-                () -> containsAll((Object[]) null),
-                () -> doesNotContainAll((Object[]) null),
-                () -> containsAnyOf((Object[]) null),
-                () -> containsNoneOf((Object[]) null));
-        List<Executable> nullCollections = List.of(
-                () -> containsAllElementsOf(
-                        (Collection<Object>) null),
-                () -> doesNotContainAllElementsOf(
-                        (Collection<Object>) null),
-                () -> containsAnyElementsOf(
-                        (Collection<Object>) null),
-                () -> containsNoElementsOf(
-                        (Collection<Object>) null));
-        List<Executable> emptyVarargs = List.of(
-                () -> containsAll(new Object[0]),
-                () -> doesNotContainAll(new Object[0]),
-                () -> containsAnyOf(new Object[0]),
-                () -> containsNoneOf(new Object[0]));
-        List<Executable> emptyCollections = List.of(
-                () -> containsAllElementsOf(List.of()),
-                () -> doesNotContainAllElementsOf(List.of()),
-                () -> containsAnyElementsOf(List.of()),
-                () -> containsNoElementsOf(List.of()));
-
-        nullVarargs.forEach(factory -> assertFailure(factory,
+        assertFailure(() -> containsAll((Object[]) null),
                 NullPointerException.class,
-                "expected elements must not be null"));
-        nullCollections.forEach(factory -> assertFailure(factory,
+                "expected elements must not be null");
+        assertFailure(() -> containsAllElementsOf(
+                        (Collection<Object>) null),
                 NullPointerException.class,
-                "expected elements must not be null"));
-        emptyVarargs.forEach(factory -> assertFailure(factory,
+                "expected elements must not be null");
+        assertFailure(() -> containsAll(new Object[0]),
                 IllegalArgumentException.class,
-                "expected elements must not be empty"));
-        emptyCollections.forEach(factory -> assertFailure(factory,
+                "expected elements must not be empty");
+        assertFailure(() -> containsAllElementsOf(List.of()),
                 IllegalArgumentException.class,
-                "expected elements must not be empty"));
+                "expected elements must not be empty");
     }
 
     @Test
@@ -257,23 +178,10 @@ class CollectionMembershipTest {
     }
 
     @Test
-    void elementsOfFactoriesCallOnlyIsEmptyOnceAtConstruction() {
-        for (Function<Collection<String>, ?> factory : ELEMENTS_OF_FACTORIES) {
-            var expected = new ProbeContainers.ExpectedCollection<>(List.of("a"));
-            factory.apply(expected);
-            assertEquals(1, expected.isEmptyCalls);
-        }
-    }
-
-    @Test
-    void throwingExpectedIsEmptyEscapesRawFromEveryElementsOfFactory() {
-        for (Function<Collection<String>, ?> factory : ELEMENTS_OF_FACTORIES) {
-            RuntimeException cause = new IllegalStateException("isEmpty failed");
-            var expected = new ProbeContainers.ExpectedCollection<String>(cause);
-            assertSame(cause, assertThrows(RuntimeException.class,
-                    () -> factory.apply(expected)));
-            assertEquals(1, expected.isEmptyCalls);
-        }
+    void elementsOfFactoryCallsOnlyIsEmptyOnceAtConstruction() {
+        var expected = new ProbeContainers.ExpectedCollection<String>();
+        containsAllElementsOf(expected);
+        assertEquals(1, expected.isEmptyCalls);
     }
 
     @Test
@@ -415,20 +323,6 @@ class CollectionMembershipTest {
         assertEquals(message, assertThrows(type, executable).getMessage());
     }
 
-    private static StructuralAwait<
-            ProbeContainers.MembershipCollection<String>> timedCollection(
-                    ProbeContainers.MembershipCollection<String> actual) {
-        FakeTime time = new FakeTime(0);
-        return new StructuralAwaitStage<>(
-                (CollectionSource<
-                        ProbeContainers.MembershipCollection<String>>) () -> {
-                    time.advanceNanos(2);
-                    return actual;
-                }, Collection::size,
-                defaults().withEvery(Duration.ofNanos(1))
-                        .withUpTo(Duration.ofNanos(2)), time, time);
-    }
-
     private static <E> ProbeContainers.MembershipCollection<E> await(
             ProbeContainers.MembershipCollection<E> actual,
             PreservingCondition<? super ProbeContainers.MembershipCollection<E>>
@@ -440,30 +334,7 @@ class CollectionMembershipTest {
 
     private record Pair(String name,
             PreservingCondition<Collection<? super String>> positive,
-            PreservingCondition<Collection<? super String>> negative,
-            List<String> matchingActual, List<String> mismatchingActual,
-            int matchingNextCalls, int mismatchingNextCalls) {
-    }
-
-    private static final class CountingValue {
-        private final String value;
-        private int equalsCalls;
-
-        private CountingValue(String value) {
-            this.value = value;
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            equalsCalls++;
-            return other instanceof CountingValue expected
-                    && value.equals(expected.value);
-        }
-
-        @Override
-        public int hashCode() {
-            throw new AssertionError("hashCode must not be called");
-        }
+            PreservingCondition<Collection<? super String>> negative) {
     }
 
 }

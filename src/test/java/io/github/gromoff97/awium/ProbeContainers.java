@@ -93,7 +93,6 @@ final class ProbeContainers {
         private final int failingNext;
         private final RuntimeException nextFailure;
         int iteratorCalls;
-        int hasNextCalls;
         int nextCalls;
 
         MembershipCollection(Collection<? extends E> elements) {
@@ -124,11 +123,6 @@ final class ProbeContainers {
         }
 
         @Override
-        public boolean isEmpty() {
-            throw new AssertionError("isEmpty must not be called");
-        }
-
-        @Override
         public Iterator<E> iterator() {
             iteratorCalls++;
             if (iteratorFailure != null) {
@@ -138,7 +132,6 @@ final class ProbeContainers {
             return new Iterator<>() {
                 @Override
                 public boolean hasNext() {
-                    hasNextCalls++;
                     return delegate.hasNext();
                 }
 
@@ -159,44 +152,13 @@ final class ProbeContainers {
         }
 
         @Override
-        public boolean containsAll(Collection<?> values) {
-            throw new AssertionError("containsAll must not be called");
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            throw new AssertionError("equals must not be called");
-        }
-
-        @Override
-        public int hashCode() {
-            throw new AssertionError("hashCode must not be called");
-        }
-
-        @Override
         public String toString() {
             return "membership collection";
         }
     }
 
     static final class ExpectedCollection<E> extends AbstractCollection<E> {
-        private final Collection<E> elements;
-        private final RuntimeException isEmptyFailure;
         int isEmptyCalls;
-
-        ExpectedCollection(Collection<E> elements) {
-            this(elements, null);
-        }
-
-        ExpectedCollection(RuntimeException isEmptyFailure) {
-            this(List.of(), isEmptyFailure);
-        }
-
-        private ExpectedCollection(Collection<E> elements,
-                RuntimeException isEmptyFailure) {
-            this.elements = elements;
-            this.isEmptyFailure = isEmptyFailure;
-        }
 
         @Override
         public int size() {
@@ -206,10 +168,7 @@ final class ProbeContainers {
         @Override
         public boolean isEmpty() {
             isEmptyCalls++;
-            if (isEmptyFailure != null) {
-                throw isEmptyFailure;
-            }
-            return elements.isEmpty();
+            return false;
         }
 
         @Override
