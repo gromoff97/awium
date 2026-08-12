@@ -46,7 +46,7 @@ class WaitEngineTest {
         assertEquals(List.of(100L), starts);
         assertEquals(List.of(), time.parkRequests);
         assertEquals(100, success.completedNanos());
-        assertEquals(1, success.completedAttempts());
+        assertEquals(1, success.number());
         assertSame(result, success.result());
     }
 
@@ -90,7 +90,7 @@ class WaitEngineTest {
         assertEquals(List.of(0L, 9L), starts);
         assertEquals(List.of(9L), time.parkRequests);
         assertEquals(9, success.completedNanos());
-        assertEquals(2, success.completedAttempts());
+        assertEquals(2, success.number());
         assertEquals("ready", success.result());
     }
 
@@ -115,7 +115,7 @@ class WaitEngineTest {
         assertEquals(List.of(0L, 4L), starts);
         assertEquals(List.of(4L), time.parkRequests);
         assertEquals(9, success.completedNanos());
-        assertEquals(2, success.completedAttempts());
+        assertEquals(2, success.number());
         assertEquals("ready", success.result());
     }
 
@@ -141,7 +141,7 @@ class WaitEngineTest {
         var unsatisfied = timeout.attempt();
         assertEquals(List.of(0L, 4L, 8L), starts);
         assertEquals(List.of(4L, 4L, 2L), time.parkRequests);
-        assertEquals(3, timeout.completedAttempts());
+        assertEquals(3, timeout.attempt().number());
         assertEquals(10, timeout.completedNanos());
         assertEquals(8, unsatisfied.completedNanos());
         assertEquals("mismatch 3", unsatisfied.mismatch());
@@ -163,7 +163,7 @@ class WaitEngineTest {
         var timeout = assertInstanceOf(
                 WaitOutcome.LateUnsatisfiedTimeout.class, outcome);
         var unsatisfied = timeout.attempt();
-        assertEquals(1, timeout.completedAttempts());
+        assertEquals(1, timeout.attempt().number());
         assertEquals(10, unsatisfied.completedNanos());
         assertSame(actual, unsatisfied.actual());
         assertEquals("late", unsatisfied.mismatch());
@@ -185,7 +185,7 @@ class WaitEngineTest {
         var timeout = assertInstanceOf(
                 WaitOutcome.LateSatisfiedTimeout.class, outcome);
         var satisfied = timeout.attempt();
-        assertEquals(1, timeout.completedAttempts());
+        assertEquals(1, timeout.attempt().number());
         assertEquals(11, satisfied.completedNanos());
         assertSame(actual, satisfied.actual());
         assertSame(result, satisfied.result());
@@ -229,7 +229,7 @@ class WaitEngineTest {
         assertInstanceOf(Attempt.Satisfied.class, outcome);
         assertEquals(List.of(started, Long.MIN_VALUE + 1), starts);
         assertEquals(List.of(4L), time.parkRequests);
-        assertEquals(2, outcome.completedAttempts());
+        assertEquals(2, outcome.attempt().number());
     }
 
     @Test
@@ -351,7 +351,7 @@ class WaitEngineTest {
         assertEquals(List.of(0L, 5L, 10L, 12L), starts);
         assertEquals(List.of(5L, 5L, 2L), time.parkRequests);
         assertEquals(12, success.completedNanos());
-        assertEquals(4, success.completedAttempts());
+        assertEquals(4, success.number());
         assertEquals("boundary", success.result());
     }
 
@@ -369,7 +369,7 @@ class WaitEngineTest {
         assertEquals(List.of(0L, 3L), starts);
         assertEquals(List.of(3L), time.parkRequests);
         assertEquals(3, success.completedNanos());
-        assertEquals(2, success.completedAttempts());
+        assertEquals(2, success.number());
         assertEquals(3L, success.result());
     }
 
@@ -417,7 +417,7 @@ class WaitEngineTest {
         assertEquals(List.of(0L, 4L, 13L, 14L), starts);
         assertEquals(List.of(4L, 4L, 1L), time.parkRequests);
         assertEquals(14, success.completedNanos());
-        assertEquals(4, success.completedAttempts());
+        assertEquals(4, success.number());
         assertEquals("boundary", success.result());
     }
 
@@ -442,7 +442,7 @@ class WaitEngineTest {
         assertEquals(List.of(0L, 6L), starts);
         assertEquals(List.of(6L), time.parkRequests);
         assertEquals(11, success.completedNanos());
-        assertEquals(2, success.completedAttempts());
+        assertEquals(2, success.number());
         assertEquals("late boundary", success.result());
     }
 
@@ -463,7 +463,7 @@ class WaitEngineTest {
         var unsatisfied = loss.attempt();
         assertEquals(0, loss.acquiredNanos());
         assertEquals(5, unsatisfied.completedNanos());
-        assertEquals(2, loss.completedAttempts());
+        assertEquals(2, loss.attempt().number());
         assertSame(failingActual, unsatisfied.actual());
         assertEquals("lost", unsatisfied.mismatch());
         assertSame(assertion, unsatisfied.assertionCause());

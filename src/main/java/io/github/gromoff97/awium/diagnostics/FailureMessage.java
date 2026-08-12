@@ -65,7 +65,7 @@ public final class FailureMessage {
         Context context = failure.context;
         StringBuilder out = heading("Await execution was unhandled");
         field(out, 0, "Attempt",
-                Long.toString(context.outcome.completedAttempts()));
+                Long.toString(context.outcome.attempt().number()));
         field(out, 0, "Condition", context.descriptionMaterialized
                 ? context.description : DESCRIPTION_UNAVAILABLE);
         if (!(context.outcome.attempt()
@@ -212,7 +212,7 @@ public final class FailureMessage {
                 completedNanos - startedNanos));
         if (attempts) {
             field(out, 4, "Attempts", Long.toString(
-                    context.outcome.completedAttempts()));
+                    context.outcome.attempt().number()));
         }
         field(out, 4, "Interval", duration(
                 context.configuration.everyNanos()));

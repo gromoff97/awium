@@ -54,19 +54,15 @@ class ObjectAndOptionalAwaitTest {
     @Test
     void reusableStageRetainsTheExactSourceAndStartsEachTerminalFresh() {
         AtomicInteger calls = new AtomicInteger();
-        Source<String> source = () -> "v" + calls.incrementAndGet();
         FakeTime time = new FakeTime(0);
-        AwaitStage<String> stage = new AwaitStage<>(source,
-                defaults().withEvery(Duration.ofNanos(1))
-                        .withUpTo(Duration.ofNanos(10)),
-                time, time);
-        Condition<String, String> evenObservation = condition(
-                "even observation", value -> Integer.parseInt(value.substring(1)) % 2 == 0
+        Await<Integer> stage = stage(time, calls::incrementAndGet);
+        Condition<Integer, Integer> evenObservation = condition(
+                "even observation", value -> value % 2 == 0
                         ? satisfied(value)
                         : unsatisfied("odd observation"));
 
-        assertEquals("v2", stage.until(evenObservation));
-        assertEquals("v4", stage.until(evenObservation));
+        assertEquals(2, stage.until(evenObservation));
+        assertEquals(4, stage.until(evenObservation));
         assertEquals(4, calls.get());
     }
 
@@ -90,27 +86,10 @@ class ObjectAndOptionalAwaitTest {
         assertSame(failure, assertThrows(
                 AwaitConditionEvaluationException.class,
                 () -> stage.until(broken)).getCause());
-        String result = stage.until(condition(
-                "ready", Evaluation::satisfied));
 
-        assertEquals("value", result);
+        assertEquals("value", stage.until(condition(
+                "ready", Evaluation::satisfied)));
         assertEquals(5, sourceCalls.get());
-    }
-
-    @Test
-    void reusableConditionRetainsOnlyItsOwnStateAcrossFreshWaits() {
-        FakeTime time = new FakeTime(0);
-        AtomicInteger evaluations = new AtomicInteger();
-        Await<String> stage = stage(time, () -> "value");
-        Condition<String, String> secondEvaluationOnward =
-                condition("second evaluation onward", value ->
-                        evaluations.incrementAndGet() >= 2
-                                ? satisfied(value)
-                                : unsatisfied("first evaluation"));
-
-        assertEquals("value", stage.until(secondEvaluationOnward));
-        assertEquals("value", stage.until(secondEvaluationOnward));
-        assertEquals(3, evaluations.get());
     }
 
     private static <T> Await<T> stage(

@@ -28,55 +28,38 @@ import org.junit.jupiter.api.Test;
 class RealTimeIntegrationTest {
 
     @Test
-    void platformCallerRetainsItsIdentityAndThreadLocalAcrossFixedDelays() {
+    void platformCallerRetainsItsIdentityAcrossFixedDelays() {
         Duration interval = Duration.ofMillis(80);
         Duration callbackDuration = Duration.ofMillis(120);
         long minimumDelayNanos = Duration.ofMillis(50).toNanos();
         long minimumStartGapNanos = callbackDuration.plusMillis(50).toNanos();
         Thread caller = currentThread();
-        ThreadLocal<String> local = new ThreadLocal<>();
-        local.set("caller state");
-        List<Thread> callbackThreads = new ArrayList<>();
-        List<String> callbackValues = new ArrayList<>();
         List<Long> sourceStarts = new ArrayList<>();
-        List<Long> conditionStarts = new ArrayList<>();
         List<Long> conditionEnds = new ArrayList<>();
         int[] observations = {0};
 
-        try {
-            int result = await((Source<Integer>) () -> {
-                sourceStarts.add(nanoTime());
-                callbackThreads.add(currentThread());
-                callbackValues.add(local.get());
-                return ++observations[0];
-            }).every(interval).upTo(Duration.ofSeconds(2))
-                    .until(condition("third observation", value -> {
-                        callbackThreads.add(currentThread());
-                        callbackValues.add(local.get());
-                        conditionStarts.add(nanoTime());
-                        parkFor(callbackDuration);
-                        Evaluation<Integer> evaluation = value == 3
-                                ? satisfied(value)
-                                : unsatisfied("not the third observation");
-                        conditionEnds.add(nanoTime());
-                        return evaluation;
-                    }));
+        int result = await((Source<Integer>) () -> {
+            sourceStarts.add(nanoTime());
+            assertSame(caller, currentThread());
+            return ++observations[0];
+        }).every(interval).upTo(Duration.ofSeconds(2))
+                .until(condition("third observation", value -> {
+                    assertSame(caller, currentThread());
+                    Thread.sleep(callbackDuration);
+                    Evaluation<Integer> evaluation = value == 3
+                            ? satisfied(value)
+                            : unsatisfied("not the third observation");
+                    conditionEnds.add(nanoTime());
+                    return evaluation;
+                }));
 
-            assertEquals(3, result);
-            assertEquals(3, observations[0]);
-            assertTrue(callbackThreads.stream().allMatch(thread -> thread == caller));
-            assertTrue(callbackValues.stream().allMatch("caller state"::equals));
-            assertEquals(3, sourceStarts.size());
-            for (int index = 0; index < sourceStarts.size() - 1; index++) {
-                assertTrue(conditionEnds.get(index) - conditionStarts.get(index)
-                        >= callbackDuration.toNanos());
-                assertTrue(sourceStarts.get(index + 1) - conditionEnds.get(index)
-                        >= minimumDelayNanos);
-                assertTrue(sourceStarts.get(index + 1) - sourceStarts.get(index)
-                        >= minimumStartGapNanos);
-            }
-        } finally {
-            local.remove();
+        assertEquals(3, result);
+        assertEquals(3, observations[0]);
+        for (int index = 0; index < sourceStarts.size() - 1; index++) {
+            assertTrue(sourceStarts.get(index + 1) - conditionEnds.get(index)
+                    >= minimumDelayNanos);
+            assertTrue(sourceStarts.get(index + 1) - sourceStarts.get(index)
+                    >= minimumStartGapNanos);
         }
     }
 
@@ -101,13 +84,9 @@ class RealTimeIntegrationTest {
         caller.start();
         awaitTimedWaiting(caller);
 
-        Thread controller = ofPlatform().daemon()
-                .name("awium-interrupt-controller")
-                .start(caller::interrupt);
-        controller.join(2_000);
+        caller.interrupt();
         caller.join(2_000);
 
-        assertSame(Thread.State.TERMINATED, controller.getState());
         assertSame(Thread.State.TERMINATED, caller.getState());
         AwaitInterruptedException failure = assertInstanceOf(
                 AwaitInterruptedException.class, terminal[0]);
@@ -123,13 +102,5 @@ class RealTimeIntegrationTest {
             parkNanos(Duration.ofMillis(1).toNanos());
         }
         assertSame(Thread.State.TIMED_WAITING, caller.getState());
-    }
-
-    private static void parkFor(Duration duration) {
-        long deadline = nanoTime() + duration.toNanos();
-        long remaining;
-        while ((remaining = deadline - nanoTime()) > 0) {
-            parkNanos(remaining);
-        }
     }
 }

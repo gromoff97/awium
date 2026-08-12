@@ -4,10 +4,6 @@ public sealed interface WaitOutcome<R> permits Attempt.Satisfied, Attempt.Uncont
 
     Attempt<R> attempt();
 
-    default long completedAttempts() {
-        return attempt().number();
-    }
-
     record TimeoutBetweenObservations<R>(long startedNanos, long completedNanos,
             Attempt.Unsatisfied<R> attempt) implements WaitOutcome<R> {
     }
