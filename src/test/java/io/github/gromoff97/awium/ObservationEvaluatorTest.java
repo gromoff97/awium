@@ -123,6 +123,24 @@ class ObservationEvaluatorTest {
     }
 
     @Test
+    void evaluationOwnedInterruptionIsPreservedAndRestored() {
+        var actual = new Object();
+        var interruption = new InterruptedException("condition stopped");
+
+        Attempt<Object> outcome = attempt(() -> actual, value -> {
+            currentThread().interrupt();
+            return uncontrolled(interruption);
+        });
+
+        var uncontrolled = assertInstanceOf(
+                AfterObservation.class, outcome);
+        assertEquals(CONDITION, uncontrolled.origin());
+        assertSame(interruption, uncontrolled.cause());
+        assertSame(actual, uncontrolled.actual());
+        assertTrue(currentThread().isInterrupted());
+    }
+
+    @Test
     void diagnosesNullEvaluationOnceAtConditionOrigin() {
         var actual = new Object();
         var conditionCalls = new int[1];
@@ -191,6 +209,17 @@ class ObservationEvaluatorTest {
         assertSame(fatal, assertThrows(fatal.getClass(),
                 () -> attempt(() -> actual,
                         value -> throwFailure(fatal))));
+    }
+
+    @ParameterizedTest
+    @MethodSource("fatalSignals")
+    void evaluationOwnedFatalSignalsEscapeRaw(Error fatal) {
+        assertSame(fatal, assertThrows(fatal.getClass(),
+                () -> attempt(Object::new, value -> {
+                    currentThread().interrupt();
+                    return uncontrolled(fatal);
+                })));
+        assertTrue(currentThread().isInterrupted());
     }
 
     @Test

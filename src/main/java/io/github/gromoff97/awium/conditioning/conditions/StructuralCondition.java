@@ -79,7 +79,7 @@ public final class StructuralCondition {
             String explanation) {
 
         public ExplainedCondition {
-            requireNonNull(delegate);
+            requireNonNull(delegate, "condition must not be null");
             explanation = literalExplanation(explanation);
         }
     }
@@ -109,14 +109,14 @@ public final class StructuralCondition {
 
         private String description(String subject, int bound) {
             return subject + switch (this) {
-                case EMPTY -> " to be empty";
-                case NON_EMPTY -> " to be non-empty";
-                case EXACTLY -> " size to be exactly " + bound;
-                case NOT_EXACTLY -> " size not to be exactly " + bound;
-                case GREATER_THAN -> " size to be greater than " + bound;
-                case AT_LEAST -> " size to be at least " + bound;
-                case LESS_THAN -> " size to be less than " + bound;
-                case AT_MOST -> " size to be at most " + bound;
+                case EMPTY -> " is empty";
+                case NON_EMPTY -> " is not empty";
+                case EXACTLY -> " size is exactly " + bound;
+                case NOT_EXACTLY -> " size is not exactly " + bound;
+                case GREATER_THAN -> " size is greater than " + bound;
+                case AT_LEAST -> " size is at least " + bound;
+                case LESS_THAN -> " size is less than " + bound;
+                case AT_MOST -> " size is at most " + bound;
             };
         }
 

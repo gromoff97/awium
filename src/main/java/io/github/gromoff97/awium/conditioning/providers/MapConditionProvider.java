@@ -58,7 +58,7 @@ public final class MapConditionProvider {
     public static <K, V> PreservingCondition<Map<? super K, ? super V>>
             containsAllEntriesOf(Map<? extends K, ? extends V> expected) {
         return membership(validate(expected), true, true,
-                "map to contain all expected entries",
+                "map contains all expected entries",
                 "map did not contain all expected entries");
     }
 
@@ -66,21 +66,21 @@ public final class MapConditionProvider {
             doesNotContainAllEntriesOf(
                     Map<? extends K, ? extends V> expected) {
         return membership(validate(expected), true, false,
-                "map not to contain all expected entries",
+                "map does not contain all expected entries",
                 "map contained all expected entries");
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>>
             containsAnyEntriesOf(Map<? extends K, ? extends V> expected) {
         return membership(validate(expected), false, true,
-                "map to contain any expected entry",
+                "map contains any expected entry",
                 "map did not contain any expected entry");
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>>
             containsNoEntriesOf(Map<? extends K, ? extends V> expected) {
         return membership(validate(expected), false, false,
-                "map to contain none of the expected entries",
+                "map does not contain any expected entry",
                 "map contained an expected entry");
     }
 
@@ -88,7 +88,7 @@ public final class MapConditionProvider {
             containsExactlyEntriesOf(
                     Map<? extends K, ? extends V> expected) {
         return exact(validateExact(expected), true,
-                "map to contain exactly the expected entries",
+                "map contains exactly the expected entries",
                 "map did not contain exactly the expected entries");
     }
 
@@ -96,7 +96,7 @@ public final class MapConditionProvider {
             doesNotContainExactlyEntriesOf(
                     Map<? extends K, ? extends V> expected) {
         return exact(validateExact(expected), false,
-                "map not to contain exactly the expected entries",
+                "map does not contain exactly the expected entries",
                 "map contained exactly the expected entries");
     }
 
@@ -104,8 +104,8 @@ public final class MapConditionProvider {
             Predicate<Map.Entry<?, ?>> matches, boolean positive,
             String expected) {
         return condition(actual -> anyMatch(actual, matches), positive,
-                "map " + (positive ? "" : "not ")
-                        + "to contain expected " + expected,
+                "map " + (positive ? "contains " : "does not contain ")
+                        + "expected " + expected,
                 "map " + (positive ? "did not contain" : "contained")
                         + " expected " + expected);
     }

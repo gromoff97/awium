@@ -39,11 +39,15 @@ class WaitConfigTest {
 
     @Test
     void eachDurationRejectsNullBeforeOtherValidation() {
-        WaitConfiguration invalidPair = defaults().withEvery(ofSeconds(20));
-
-        assertTrue(assertThrows(NullPointerException.class,
-                () -> invalidPair.withUpTo(null)).getMessage()
-                .contains("duration"));
+        assertEquals("polling interval must not be null",
+                assertThrows(NullPointerException.class,
+                        () -> defaults().withEvery(null)).getMessage());
+        assertEquals("acquisition timeout must not be null",
+                assertThrows(NullPointerException.class,
+                        () -> defaults().withUpTo(null)).getMessage());
+        assertEquals("stability duration must not be null",
+                assertThrows(NullPointerException.class,
+                        () -> defaults().withStableFor(null)).getMessage());
     }
 
     @Test
@@ -51,7 +55,7 @@ class WaitConfigTest {
         for (Duration invalid : List.of(ZERO, ofNanos(-1))) {
             assertTrue(assertThrows(IllegalArgumentException.class,
                     () -> defaults().withEvery(invalid)).getMessage()
-                    .contains("poll interval"));
+                    .contains("polling interval"));
             assertTrue(assertThrows(IllegalArgumentException.class,
                     () -> defaults().withEvery(ofSeconds(20)).withUpTo(invalid))
                     .getMessage().contains("acquisition timeout"));
@@ -70,16 +74,40 @@ class WaitConfigTest {
     }
 
     @Test
+    void rawConfigurationCannotBypassDurationValidation() {
+        assertEquals("polling interval must be greater than zero",
+                assertThrows(IllegalArgumentException.class,
+                        () -> new WaitConfiguration(0, 1, 0)).getMessage());
+        assertEquals("acquisition timeout must be greater than zero",
+                assertThrows(IllegalArgumentException.class,
+                        () -> new WaitConfiguration(1, 0, 0)).getMessage());
+        assertEquals("stability duration must not be negative",
+                assertThrows(IllegalArgumentException.class,
+                        () -> new WaitConfiguration(1, 2, -1)).getMessage());
+    }
+
+    @Test
     void durationsMustFitInSignedLongNanoseconds() {
         Duration maximum = ofNanos(Long.MAX_VALUE);
         assertEquals(Long.MAX_VALUE,
                 defaults().withEvery(maximum).everyNanos());
 
         Duration overflow = ofSeconds(Long.MAX_VALUE);
-        var failure = assertThrows(IllegalArgumentException.class,
+        var intervalFailure = assertThrows(IllegalArgumentException.class,
                 () -> defaults().withEvery(overflow));
-        assertTrue(failure.getMessage().contains("nanosecond"));
-        assertInstanceOf(ArithmeticException.class, failure.getCause());
+        var timeoutFailure = assertThrows(IllegalArgumentException.class,
+                () -> defaults().withUpTo(overflow));
+        var stabilityFailure = assertThrows(IllegalArgumentException.class,
+                () -> defaults().withStableFor(overflow));
+        assertEquals("polling interval exceeds the supported nanosecond range",
+                intervalFailure.getMessage());
+        assertEquals("acquisition timeout exceeds the supported nanosecond range",
+                timeoutFailure.getMessage());
+        assertEquals("stability duration exceeds the supported nanosecond range",
+                stabilityFailure.getMessage());
+        assertInstanceOf(ArithmeticException.class, intervalFailure.getCause());
+        assertInstanceOf(ArithmeticException.class, timeoutFailure.getCause());
+        assertInstanceOf(ArithmeticException.class, stabilityFailure.getCause());
     }
 
     @Test
@@ -89,7 +117,7 @@ class WaitConfigTest {
 
         String message = assertThrows(AwaitConfigurationConflictException.class,
                 equal::validatePair).getMessage();
-        assertTrue(message.contains("poll interval"));
+        assertTrue(message.contains("polling interval"));
         assertTrue(message.contains("acquisition timeout"));
         assertTrue(message.contains("100 milliseconds"));
     }
@@ -97,16 +125,13 @@ class WaitConfigTest {
     @Test
     void durationFormattingUsesReadableExactUnits() {
         assertEquals(
-                "poll interval (0 nanoseconds) must be shorter than acquisition timeout (0 nanoseconds)",
-                conflictMessage(0));
-        assertEquals(
-                "poll interval (1 nanosecond) must be shorter than acquisition timeout (1 nanosecond)",
+                "polling interval (1 nanosecond) must be shorter than acquisition timeout (1 nanosecond)",
                 conflictMessage(1));
         assertEquals(
-                "poll interval (1 minute 30 seconds) must be shorter than acquisition timeout (1 minute 30 seconds)",
+                "polling interval (1 minute 30 seconds) must be shorter than acquisition timeout (1 minute 30 seconds)",
                 conflictMessage(ofSeconds(90).toNanos()));
         assertEquals(
-                "poll interval (1 second 1 millisecond 1 microsecond 1 nanosecond) must be shorter than acquisition timeout (1 second 1 millisecond 1 microsecond 1 nanosecond)",
+                "polling interval (1 second 1 millisecond 1 microsecond 1 nanosecond) must be shorter than acquisition timeout (1 second 1 millisecond 1 microsecond 1 nanosecond)",
                 conflictMessage(1_001_001_001));
     }
 

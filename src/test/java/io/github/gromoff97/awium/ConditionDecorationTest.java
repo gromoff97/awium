@@ -64,6 +64,15 @@ class ConditionDecorationTest {
     }
 
     @Test
+    void runtimeConditionsCannotBypassExplanationValidation() {
+        assertValidation("explanation", IllegalArgumentException.class,
+                () -> new RuntimeCondition<>(Evaluation::satisfied,
+                        () -> "condition", " \n "));
+        assertValidation("explanation", NullPointerException.class,
+                () -> runtime().explained(null));
+    }
+
+    @Test
     void formattedExplanationsUseRootLocale() {
         Locale original = Locale.getDefault(Locale.Category.FORMAT);
         Locale.setDefault(Locale.Category.FORMAT, Locale.GERMANY);

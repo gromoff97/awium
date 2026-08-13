@@ -35,15 +35,17 @@ abstract class AbstractAwait<S, A> {
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {
         this.source = requireNonNull(source, "source must not be null")::get;
-        this.configuration = requireNonNull(configuration);
-        this.clock = requireNonNull(clock);
-        this.parker = requireNonNull(parker);
+        this.configuration = requireNonNull(configuration,
+                "configuration must not be null");
+        this.clock = requireNonNull(clock, "clock must not be null");
+        this.parker = requireNonNull(parker, "parker must not be null");
     }
 
     AbstractAwait(AbstractAwait<S, ?> await,
             WaitConfiguration configuration) {
         this.source = await.source;
-        this.configuration = requireNonNull(configuration);
+        this.configuration = requireNonNull(configuration,
+                "configuration must not be null");
         this.clock = await.clock;
         this.parker = await.parker;
     }
@@ -85,7 +87,6 @@ abstract class AbstractAwait<S, A> {
     abstract A reconfigured(WaitConfiguration configuration);
 
     protected final <R> R complete(RuntimeCondition<S, R> condition) {
-        configuration.validatePair();
         return FAILURE_FACTORY.complete(new WaitEngine(configuration, clock,
                 parker).waitFor(source, condition), condition, configuration);
     }

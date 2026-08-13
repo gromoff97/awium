@@ -11,7 +11,8 @@ public final class PresentCondition {
     private final RuntimeCondition<Optional<?>, Object> runtime;
 
     private PresentCondition(RuntimeCondition<Optional<?>, Object> runtime) {
-        this.runtime = requireNonNull(runtime);
+        this.runtime = requireNonNull(runtime,
+                "runtime condition must not be null");
     }
 
     public static PresentCondition of(
@@ -37,7 +38,7 @@ public final class PresentCondition {
             String explanation) {
 
         public ExplainedCondition {
-            requireNonNull(delegate);
+            requireNonNull(delegate, "condition must not be null");
             explanation = literalExplanation(explanation);
         }
     }

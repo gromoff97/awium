@@ -34,12 +34,12 @@ public final class Evaluation<R> {
             String mismatch, AssertionError cause) {
         return new Evaluation<>(Status.UNSATISFIED, null,
                 nonBlank(mismatch, "mismatch"),
-                requireNonNull(cause), null);
+                requireNonNull(cause, "cause must not be null"), null);
     }
 
     public static <R> Evaluation<R> uncontrolled(Throwable cause) {
         return new Evaluation<>(Status.UNCONTROLLED, null, null, null,
-                requireNonNull(cause));
+                requireNonNull(cause, "cause must not be null"));
     }
 
     public Status status() {

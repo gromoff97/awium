@@ -30,7 +30,7 @@ public abstract class Condition<S, R> {
             String explanation) {
 
         public ExplainedCondition {
-            requireNonNull(delegate);
+            requireNonNull(delegate, "condition must not be null");
             explanation = literalExplanation(explanation);
         }
     }

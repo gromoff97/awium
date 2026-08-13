@@ -21,8 +21,11 @@ public record RuntimeCondition<S, R>(
         String explanation) {
 
     public RuntimeCondition {
-        requireNonNull(evaluator);
-        requireNonNull(description);
+        requireNonNull(evaluator, "evaluator must not be null");
+        requireNonNull(description, "description must not be null");
+        if (explanation != null) {
+            explanation = literalExplanation(explanation);
+        }
     }
 
     public Evaluation<R> evaluate(S actual) throws Exception {
@@ -30,7 +33,8 @@ public record RuntimeCondition<S, R>(
     }
 
     public RuntimeCondition<S, R> explained(String value) {
-        return new RuntimeCondition<>(evaluator, description, value);
+        return new RuntimeCondition<>(evaluator, description,
+                literalExplanation(value));
     }
 
     public static <S, R> RuntimeCondition<S, R> open(
@@ -86,12 +90,16 @@ public record RuntimeCondition<S, R>(
     public static <S> RuntimeCondition<S, S> structural(
             StructuralCondition condition, String subject,
             ToIntFunction<? super S> size) {
+        requireNonNull(condition, "condition must not be null");
+        String validatedSubject = nonBlank(subject, "subject");
+        requireNonNull(size, "size function must not be null");
         return new RuntimeCondition<>(actual -> {
             if (actual == null) {
-                return unsatisfied(subject + " was null");
+                return unsatisfied(validatedSubject + " was null");
             }
-            return condition.evaluate(size.applyAsInt(actual), actual, subject);
-        }, () -> condition.description(subject), null);
+            return condition.evaluate(size.applyAsInt(actual), actual,
+                    validatedSubject);
+        }, () -> condition.description(validatedSubject), null);
     }
 
     public static <S> RuntimeCondition<S, S> structural(

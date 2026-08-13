@@ -13,6 +13,7 @@ import static java.lang.Thread.interrupted;
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.engine.*;
+import io.github.gromoff97.awium.exceptions.AwaitConfigurationConflictException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -33,6 +34,26 @@ class WaitEngineTest {
     @AfterEach
     void clearInterruptFlag() {
         interrupted();
+    }
+
+    @Test
+    void rejectsConflictingConfigurationBeforeStartingTheEngine() {
+        var clockCalls = new int[1];
+        var sourceCalls = new int[1];
+        var engine = new WaitEngine(config(2, 1, 0), () -> {
+            clockCalls[0]++;
+            return 0;
+        }, ignored -> {});
+
+        assertThrows(AwaitConfigurationConflictException.class,
+                () -> engine.waitFor(() -> {
+                    sourceCalls[0]++;
+                    return "actual";
+                }, new RuntimeCondition<>(actual -> satisfied(actual),
+                        () -> "condition", null)));
+
+        assertEquals(0, clockCalls[0]);
+        assertEquals(0, sourceCalls[0]);
     }
 
     @Test
@@ -307,6 +328,23 @@ class WaitEngineTest {
     }
 
     @Test
+    void restoresAnInterruptedExceptionThrownWhileParking() {
+        var time = new FakeTime(0);
+        var interruption = new InterruptedException("waiting stopped");
+
+        WaitOutcome<String> outcome = wait(time, config(5, 20, 0), nanos ->
+                        throwUnchecked(interruption), () -> "actual",
+                actual -> unsatisfied("not yet"));
+
+        var uncontrolled = assertInstanceOf(
+                BeforeObservation.class, outcome);
+        assertEquals(WAITING, uncontrolled.origin());
+        assertEquals(2, uncontrolled.number());
+        assertSame(interruption, uncontrolled.cause());
+        assertTrue(currentThread().isInterrupted());
+    }
+
+    @Test
     void fatalParkingSignalsEscapeUnchanged() {
         var time = new FakeTime(0);
         var fatal = new InternalError("fatal park");
@@ -501,6 +539,12 @@ class WaitEngineTest {
 
     private static WaitConfiguration config(long every, long upTo, long stableFor) {
         return new WaitConfiguration(every, upTo, stableFor);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> void throwUnchecked(Throwable failure)
+            throws E {
+        throw (E) failure;
     }
 
     private static <S, R> WaitOutcome<R> wait(

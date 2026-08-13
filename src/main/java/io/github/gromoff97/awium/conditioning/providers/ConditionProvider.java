@@ -31,7 +31,7 @@ public final class ConditionProvider {
     static <S, R> Condition<S, R> condition(
             Supplier<String> description,
             CheckedFunction<? super S, Evaluation<R>> evaluation) {
-        requireNonNull(description);
+        requireNonNull(description, "description must not be null");
         requireNonNull(evaluation, "evaluation must not be null");
         return new Condition<>() {
             @Override
@@ -59,7 +59,7 @@ public final class ConditionProvider {
     public static <S, R> Condition<S, R> passed(
             CheckedFunction<? super S, ? extends R> assertion) {
         requireNonNull(assertion, "assertion must not be null");
-        return condition("assertion to pass", actual -> {
+        return condition("assertion passes", actual -> {
             try {
                 return satisfied(assertion.apply(actual));
             } catch (AssertionError error) {

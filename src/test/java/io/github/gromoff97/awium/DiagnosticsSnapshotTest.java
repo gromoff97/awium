@@ -1,24 +1,29 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
-import io.github.gromoff97.awium.diagnostics.FailureMessage;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
 import io.github.gromoff97.awium.exceptions.*;
+import io.github.gromoff97.awium.sources.Source;
 
+import static io.github.gromoff97.awium.Awium.await;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+import static io.github.gromoff97.awium.conditioning.Evaluation.uncontrolled;
 import static io.github.gromoff97.awium.engine.Attempt.*;
 import static io.github.gromoff97.awium.engine.Attempt.Origin.*;
 import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled.*;
 import static io.github.gromoff97.awium.engine.WaitOutcome.*;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 class DiagnosticsSnapshotTest {
@@ -28,9 +33,11 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void controlledFailuresRetainTheirSemanticContext() {
+        var betweenAssertion = new AssertionError("collection was empty");
+        var stabilityAssertion = new AssertionError("optional was empty");
         WaitOutcome<Object> between = new TimeoutBetweenObservations<>(0,
                 10 * SECOND, new Unsatisfied<>(null, "collection was empty",
-                        null, 4, 9 * SECOND));
+                        betweenAssertion, 4, 9 * SECOND));
         WaitOutcome<Object> lateUnsatisfied = new LateUnsatisfiedTimeout<>(0,
                 new Unsatisfied<>("Payment[PENDING]", "status was PENDING",
                         null, 100, 10 * SECOND + 200 * MILLISECOND));
@@ -39,11 +46,13 @@ class DiagnosticsSnapshotTest {
                         10 * SECOND + 200 * MILLISECOND));
         WaitOutcome<Object> stability = new StabilityLoss<>(0, 7 * SECOND,
                 new Unsatisfied<>("Optional.empty", "optional was empty",
-                        null, 71, 9 * SECOND + 100 * MILLISECOND));
+                        stabilityAssertion, 71,
+                        9 * SECOND + 100 * MILLISECOND));
 
         AwaitTimeoutException betweenFailure = assertThrows(
                 AwaitTimeoutException.class,
-                () -> complete(between, "collection to be non-empty", null,
+                () -> complete(between, "collection to be non-empty",
+                        "Settlement requires an eligible payment",
                         config(3 * SECOND, 10 * SECOND, 0)));
         AwaitTimeoutException lateUnsatisfiedFailure = assertThrows(
                 AwaitTimeoutException.class,
@@ -61,22 +70,85 @@ class DiagnosticsSnapshotTest {
                         "payment must remain available",
                         config(100 * MILLISECOND, 10 * SECOND, 5 * SECOND)));
 
-        assertMessage(betweenFailure, "Await timed out",
-                "collection to be non-empty", "Attempt: 4",
-                "collection was empty", "9 seconds", "10 seconds",
-                "3 seconds");
-        assertMessage(lateUnsatisfiedFailure, "Await timed out",
-                "status equals COMPLETED", "Payment[PENDING]",
-                "status was PENDING", "payment must complete",
-                "Attempts: 100", "10 seconds 200 milliseconds");
-        assertMessage(lateSatisfiedFailure, "Await timed out",
-                "status equals COMPLETED", "Payment[COMPLETED]",
-                "condition became satisfied after the timeout",
-                "payment must complete", "Attempts: 100");
-        assertMessage(stabilityFailure, "Await lost stability",
-                "optional to remain present", "payment must remain available",
-                "5 seconds", "2 seconds 100 milliseconds",
-                "Optional.empty", "optional was empty", "7 seconds");
+        assertEquals("""
+                Acquisition deadline elapsed before the next attempt
+
+                Condition:
+                    Expectation: collection to be non-empty
+                    Importance: Settlement requires an eligible payment
+
+                Attempt:
+                    Number: 4
+                    Actual: null
+                    Mismatch: collection was empty
+
+                Timing:
+                    Acquisition timeout: 10 seconds
+                    Last attempt completed after: 9 seconds
+                    Elapsed: 10 seconds
+                    Polling interval: 3 seconds
+
+                Cause:
+                    Type: AssertionError
+                    Message: collection was empty""", betweenFailure.getMessage());
+        assertEquals("""
+                Condition remained unsatisfied at or after the acquisition deadline
+
+                Condition:
+                    Expectation: status equals COMPLETED
+                    Importance: payment must complete
+
+                Attempt:
+                    Number: 100
+                    Actual: Payment[PENDING]
+                    Mismatch: status was PENDING
+
+                Timing:
+                    Acquisition timeout: 10 seconds
+                    Elapsed: 10 seconds 200 milliseconds
+                    Polling interval: 100 milliseconds""",
+                lateUnsatisfiedFailure.getMessage());
+        assertEquals("""
+                Condition became satisfied at or after the acquisition deadline
+
+                Condition:
+                    Expectation: status equals COMPLETED
+                    Importance: payment must complete
+
+                Attempt:
+                    Number: 100
+                    Actual: Payment[COMPLETED]
+
+                Timing:
+                    Acquisition timeout: 10 seconds
+                    Elapsed: 10 seconds 200 milliseconds
+                    Polling interval: 100 milliseconds""",
+                lateSatisfiedFailure.getMessage());
+        assertEquals("""
+                Condition did not remain stable for the required duration
+
+                Condition:
+                    Expectation: optional to remain present
+                    Importance: payment must remain available
+
+                Attempt:
+                    Number: 71
+                    Actual: Optional.empty
+                    Mismatch: optional was empty
+
+                Timing:
+                    Acquisition timeout: 10 seconds
+                    Acquired after: 7 seconds
+                    Required stability: 5 seconds
+                    Failure detected after: 2 seconds 100 milliseconds
+                    Elapsed: 9 seconds 100 milliseconds
+                    Polling interval: 100 milliseconds
+
+                Cause:
+                    Type: AssertionError
+                    Message: optional was empty""", stabilityFailure.getMessage());
+        assertSame(betweenAssertion, betweenFailure.getCause());
+        assertSame(stabilityAssertion, stabilityFailure.getCause());
     }
 
     @Test
@@ -111,23 +183,139 @@ class DiagnosticsSnapshotTest {
         assertSame(conditionCause, conditionFailure.getCause());
         assertSame(waitingCause, waitingFailure.getCause());
         assertSame(interruption, interruptedFailure.getCause());
-        assertMessage(sourceFailure, "source retrieval", "Attempt: 2",
-                "condition", "business reason", "source failed");
-        assertFalse(sourceFailure.getMessage().contains("Actual:"));
-        assertMessage(conditionFailure, "condition evaluation", "Attempt: 3",
-                "condition", "Actual: actual", "business reason",
-                "condition failed");
-        assertMessage(waitingFailure, "execution was unhandled", "Attempt: 4",
-                "waiting failed");
-        assertMessage(interruptedFailure, "interrupted", "Attempt: 5",
-                "Origin: waiting", "stopped");
+        assertEquals("""
+                Source retrieval failed
+
+                Condition:
+                    Expectation: condition
+                    Importance: business reason
+
+                Attempt:
+                    Number: 2
+                    Origin: source
+
+                Timing:
+                    Acquisition timeout: 10 seconds
+                    Polling interval: 1 second
+
+                Cause:
+                    Type: IllegalStateException
+                    Message: source failed""", sourceFailure.getMessage());
+        assertEquals("""
+                Condition evaluation failed
+
+                Condition:
+                    Expectation: condition
+                    Importance: business reason
+
+                Attempt:
+                    Number: 3
+                    Origin: condition
+                    Actual: actual
+
+                Timing:
+                    Acquisition timeout: 10 seconds
+                    Polling interval: 1 second
+
+                Cause:
+                    Type: IllegalArgumentException
+                    Message: condition failed""", conditionFailure.getMessage());
+        assertEquals("""
+                Waiting before the next attempt failed
+
+                Condition:
+                    Expectation: condition
+
+                Attempt:
+                    Number: 4
+                    Origin: waiting
+
+                Timing:
+                    Acquisition timeout: 10 seconds
+                    Polling interval: 1 second
+
+                Cause:
+                    Type: IllegalStateException
+                    Message: waiting failed""", waitingFailure.getMessage());
+        assertEquals("""
+                Caller thread was interrupted
+
+                Condition:
+                    Expectation: condition
+
+                Attempt:
+                    Number: 5
+                    Origin: waiting
+
+                Timing:
+                    Acquisition timeout: 10 seconds
+                    Polling interval: 1 second
+
+                Cause:
+                    Type: InterruptedException
+                    Message: stopped""", interruptedFailure.getMessage());
+    }
+
+    @Test
+    void interruptionFlagIsRestoredAfterUserDiagnosticsClearIt() {
+        var interruption = new InterruptedException("stopped");
+        RuntimeCondition<Object, Object> condition = new RuntimeCondition<>(
+                Evaluation::satisfied, () -> {
+                    assertTrue(interrupted());
+                    return "condition";
+                }, null);
+        currentThread().interrupt();
+
+        try {
+            AwaitInterruptedException failure = assertThrows(
+                    AwaitInterruptedException.class,
+                    () -> new FailureFactory().complete(
+                            new BeforeObservation<>(WAITING, interruption,
+                                    1, 0), condition,
+                            config(1, 2, 0)));
+
+            assertSame(interruption, failure.getCause());
+            assertTrue(currentThread().isInterrupted());
+        } finally {
+            interrupted();
+        }
+    }
+
+    @Test
+    void explicitUncontrolledRetainsInterruptFlagAfterDiagnosticsClearIt() {
+        var cause = new IllegalStateException("condition failed");
+        Condition<Object, Object> condition = new Condition<>() {
+            @Override
+            public Evaluation<Object> evaluate(Object actual) {
+                currentThread().interrupt();
+                return uncontrolled(cause);
+            }
+
+            @Override
+            public String description() {
+                assertTrue(interrupted());
+                return "condition";
+            }
+        };
+
+        try {
+            AwaitConditionEvaluationException failure = assertThrows(
+                    AwaitConditionEvaluationException.class,
+                    () -> await((Source<Object>) Object::new)
+                            .until(condition));
+
+            assertSame(cause, failure.getCause());
+            assertTrue(currentThread().isInterrupted());
+        } finally {
+            interrupted();
+        }
     }
 
     @Test
     void assertionCauseIsRetainedAndItsMessageIsReadOnce() {
         var assertion = new CountingAssertion("assertion failed");
         WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(0,
-                new Unsatisfied<>("actual", "fallback", assertion,
+                new Unsatisfied<>("actual", "business mismatch", assertion,
                         2, 3 * SECOND));
 
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
@@ -135,7 +323,25 @@ class DiagnosticsSnapshotTest {
                         config(SECOND, 2 * SECOND, 0)));
 
         assertSame(assertion, failure.getCause());
-        assertMessage(failure, "assertion failed", "CountingAssertion");
+        assertEquals("""
+                Condition remained unsatisfied at or after the acquisition deadline
+
+                Condition:
+                    Expectation: condition
+
+                Attempt:
+                    Number: 2
+                    Actual: actual
+                    Mismatch: business mismatch
+
+                Timing:
+                    Acquisition timeout: 2 seconds
+                    Elapsed: 3 seconds
+                    Polling interval: 1 second
+
+                Cause:
+                    Type: CountingAssertion
+                    Message: assertion failed""", failure.getMessage());
         assertTrue(assertion.calls == 1);
     }
 
@@ -153,99 +359,203 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void diagnosticRenderingFailuresDoNotChangeTheFailureCategory() {
-        var actual = new ThrowingValue(new IllegalStateException("toString"));
-        RuntimeCondition<Object, Object> condition = new RuntimeCondition<>(
+    void diagnosticRenderingFailuresAreUnhandledWithTheirOriginalCause() {
+        var descriptionCause = new IllegalStateException("description failed");
+        var valueCause = new IllegalArgumentException("toString failed");
+        var actual = new ThrowingValue(valueCause);
+        RuntimeCondition<Object, Object> brokenDescription = new RuntimeCondition<>(
                 Evaluation::satisfied, () -> {
-                    throw new IllegalStateException("description");
+                    throw descriptionCause;
                 }, "business reason");
         WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(0,
                 new Unsatisfied<>(actual, "not ready", null, 1, 2));
 
-        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
-                () -> new FailureFactory().complete(outcome, condition,
+        AwaitUnhandledException descriptionFailure = assertThrows(
+                AwaitUnhandledException.class,
+                () -> new FailureFactory().complete(outcome, brokenDescription,
+                        config(1, 2, 0)));
+        AwaitUnhandledException valueFailure = assertThrows(
+                AwaitUnhandledException.class,
+                () -> complete(outcome, "condition", "business reason",
                         config(1, 2, 0)));
 
-        assertMessage(failure, "condition description unavailable",
-                "value unavailable", "business reason", "not ready");
+        assertSame(descriptionCause, descriptionFailure.getCause());
+        assertEquals("""
+                Failure diagnostics could not be formatted
+
+                Condition:
+                    Expectation: condition description unavailable
+                    Importance: business reason
+
+                Attempt:
+                    Number: 1
+                    Origin: diagnostics
+                    Actual: <value unavailable: diagnostics failed>
+                    Mismatch: not ready
+
+                Timing:
+                    Acquisition timeout: 2 nanoseconds
+                    Elapsed: 2 nanoseconds
+                    Polling interval: 1 nanosecond
+
+                Cause:
+                    Type: IllegalStateException
+                    Message: description failed""",
+                descriptionFailure.getMessage());
+        assertSame(valueCause, valueFailure.getCause());
+        assertEquals("""
+                Failure diagnostics could not be formatted
+
+                Condition:
+                    Expectation: condition
+                    Importance: business reason
+
+                Attempt:
+                    Number: 1
+                    Origin: diagnostics
+                    Actual: <value unavailable: diagnostics failed>
+                    Mismatch: not ready
+
+                Timing:
+                    Acquisition timeout: 2 nanoseconds
+                    Elapsed: 2 nanoseconds
+                    Polling interval: 1 nanosecond
+
+                Cause:
+                    Type: IllegalArgumentException
+                    Message: toString failed""", valueFailure.getMessage());
         assertTrue(actual.calls == 1);
     }
 
     @Test
-    void emergencyFormattingReusesMaterializedContext() {
-        var formatterFailure = new IllegalStateException("formatter broke");
-        var actual = new CountingValue("rendered actual");
-        Function<FailureMessage.Context, String> formatter = context -> {
-            context.conditionDescription();
-            context.actualValue();
-            throw formatterFailure;
-        };
+    void diagnosticRenderingFailureRetainsTheEngineCauseAsSuppressed() {
+        var diagnosticCause = new IllegalStateException("toString failed");
+        var engineCause = new AssertionError("assertion failed");
         WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(0,
-                new Unsatisfied<>(actual, "not ready", null, 3, 2));
+                new Unsatisfied<>(new ThrowingValue(diagnosticCause),
+                        "not ready", engineCause, 1, 2));
 
-        AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
-                () -> new FailureFactory(new FailureMessage(formatter)).complete(
-                        outcome, runtime("rendered condition", "business reason"),
+        AwaitUnhandledException failure = assertThrows(
+                AwaitUnhandledException.class,
+                () -> complete(outcome, "condition", null,
                         config(1, 2, 0)));
 
-        assertSame(formatterFailure, failure.getCause());
-        assertMessage(failure, "execution was unhandled", "Attempt: 3",
-                "rendered condition", "rendered actual", "business reason",
-                "IllegalStateException");
-        assertTrue(actual.calls == 1);
+        assertSame(diagnosticCause, failure.getCause());
+        assertEquals(1, failure.getSuppressed().length);
+        assertSame(engineCause, failure.getSuppressed()[0]);
     }
 
     @Test
-    void reentrantDescriptionIsMaterializedOnce() {
-        var calls = new int[1];
-        var contexts = new FailureMessage.Context[1];
-        RuntimeCondition<Object, Object> condition = new RuntimeCondition<>(
-                Evaluation::satisfied, () -> {
-                    calls[0]++;
-                    if (calls[0] == 1) {
-                        contexts[0].conditionDescription();
-                    }
-                    return "condition";
-                }, null);
-        Function<FailureMessage.Context, String> formatter = context -> {
-            contexts[0] = context;
-            return context.conditionDescription();
-        };
-        WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(0,
+    void stabilityDiagnosticsDoNotDescribeDetectionTimeAsStable() {
+        WaitOutcome<Object> outcome = new StabilityLoss<>(0, 0,
+                new Unsatisfied<>("actual", "condition was false", null,
+                        2, 11));
+
+        AwaitStabilizationException failure = assertThrows(
+                AwaitStabilizationException.class,
+                () -> complete(outcome, "condition", null,
+                        config(1, 10, 2)));
+
+        assertMessage(failure, "Required stability: 2 nanoseconds",
+                "Failure detected after: 11 nanoseconds");
+        assertFalse(failure.getMessage().contains("Stable for:"));
+    }
+
+    @Test
+    void invalidDiagnosticTextIsUnhandled() {
+        RuntimeCondition<Object, Object> nullDescription = new RuntimeCondition<>(
+                Evaluation::satisfied, () -> null, null);
+        RuntimeCondition<Object, Object> blankDescription = new RuntimeCondition<>(
+                Evaluation::satisfied, () -> " \n ", null);
+        WaitOutcome<Object> described = new LateUnsatisfiedTimeout<>(0,
                 new Unsatisfied<>("actual", "not ready", null, 1, 2));
+        WaitOutcome<Object> rendered = new LateUnsatisfiedTimeout<>(0,
+                new Unsatisfied<>(new NullStringValue(), "not ready", null,
+                        1, 2));
 
-        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
-                () -> new FailureFactory(new FailureMessage(formatter)).complete(
-                        outcome, condition, config(1, 2, 0)));
+        AwaitUnhandledException nullFailure = assertThrows(
+                AwaitUnhandledException.class,
+                () -> new FailureFactory().complete(described, nullDescription,
+                        config(1, 2, 0)));
+        AwaitUnhandledException blankFailure = assertThrows(
+                AwaitUnhandledException.class,
+                () -> new FailureFactory().complete(described, blankDescription,
+                        config(1, 2, 0)));
+        AwaitUnhandledException valueFailure = assertThrows(
+                AwaitUnhandledException.class,
+                () -> complete(rendered, "condition", null,
+                        config(1, 2, 0)));
 
-        assertTrue(failure.getMessage().equals("condition"));
-        assertTrue(calls[0] == 1);
+        assertTrue(nullFailure.getCause() instanceof NullPointerException);
+        assertMessage(nullFailure, "condition description must not be null",
+                "Origin: diagnostics", "Timing:");
+        assertTrue(blankFailure.getCause() instanceof IllegalArgumentException);
+        assertMessage(blankFailure, "condition description must not be blank",
+                "Origin: diagnostics", "Timing:");
+        assertTrue(valueFailure.getCause() instanceof NullPointerException);
+        assertMessage(valueFailure, "actual toString() must not return null",
+                "Origin: diagnostics", "Timing:");
     }
 
     @Test
     void fatalDiagnosticSignalsEscapeUnchanged() {
         var descriptionFatal = new InternalError("description fatal");
         var valueFatal = new InternalError("value fatal");
-        var formatterFatal = new InternalError("formatter fatal");
+        var engineCause = new AssertionError("assertion failed");
         WaitOutcome<Object> sourceFailure = new BeforeObservation<>(SOURCE,
                 new IllegalStateException("source"), 1, 0);
         WaitOutcome<Object> valueFailure = new LateUnsatisfiedTimeout<>(0,
                 new Unsatisfied<>(new ThrowingValue(valueFatal), "not ready",
-                        null, 1, 2));
+                        engineCause, 1, 2));
 
         assertSame(descriptionFatal, assertThrows(InternalError.class,
                 () -> new FailureFactory().complete(sourceFailure,
                         new RuntimeCondition<>(Evaluation::satisfied, () -> {
                             throw descriptionFatal;
                         }, null), config(1, 2, 0))));
-        assertSame(valueFatal, assertThrows(InternalError.class,
+        InternalError thrown = assertThrows(InternalError.class,
                 () -> complete(valueFailure, "condition", null,
-                        config(1, 2, 0))));
-        assertSame(formatterFatal, assertThrows(InternalError.class,
-                () -> new FailureFactory(new FailureMessage(context -> {
-                    throw formatterFatal;
-                })).complete(sourceFailure, runtime("condition", null),
-                        config(1, 2, 0))));
+                        config(1, 2, 0)));
+        assertSame(valueFatal, thrown);
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(engineCause, thrown.getSuppressed()[0]);
+    }
+
+    @Test
+    @SuppressWarnings("removal")
+    void fatalUncontrolledCausesEscapeUnchangedAtTheLowLevelBoundary() {
+        var virtualMachineError = new InternalError("fatal");
+        var threadDeath = new ThreadDeath();
+
+        assertSame(virtualMachineError, assertThrows(InternalError.class,
+                () -> complete(new BeforeObservation<>(SOURCE,
+                                virtualMachineError, 1, 0),
+                        "condition", null, config(1, 2, 0))));
+        assertSame(threadDeath, assertThrows(ThreadDeath.class,
+                () -> complete(new BeforeObservation<>(CONDITION,
+                                threadDeath, 1, 0),
+                        "condition", null, config(1, 2, 0))));
+    }
+
+    @Test
+    void fatalEmergencyDiagnosticsRetainDiagnosticAndEngineCauses() {
+        var fatal = new InternalError("emergency diagnostics fatal");
+        var diagnosticCause = new FatalMessageException(fatal);
+        var engineCause = new IllegalStateException("source failed");
+        RuntimeCondition<Object, Object> condition = new RuntimeCondition<>(
+                Evaluation::satisfied, () -> {
+                    throw diagnosticCause;
+                }, null);
+
+        InternalError thrown = assertThrows(InternalError.class,
+                () -> new FailureFactory().complete(
+                        new BeforeObservation<>(SOURCE, engineCause, 1, 0),
+                        condition, config(1, 2, 0)));
+
+        assertSame(fatal, thrown);
+        assertEquals(2, thrown.getSuppressed().length);
+        assertSame(diagnosticCause, thrown.getSuppressed()[0]);
+        assertSame(engineCause, thrown.getSuppressed()[1]);
     }
 
     @Test
@@ -296,19 +606,16 @@ class DiagnosticsSnapshotTest {
         }
     }
 
-    private static final class CountingValue {
-        private final String value;
-        private int calls;
-
-        private CountingValue(String value) {
-            this.value = value;
+    private static void assertCondition(Throwable failure, String expectation,
+            String rationale) {
+        String expected = "Condition:\n    Expectation: " + expectation + "\n";
+        if (rationale != null) {
+            expected += "    Importance: " + rationale + "\n";
         }
-
-        @Override
-        public String toString() {
-            calls++;
-            return value;
-        }
+        assertTrue((failure.getMessage() + "\n").contains(expected),
+                failure::getMessage);
+        assertFalse(failure.getMessage().contains("Because:"));
+        assertFalse(failure.getMessage().contains("Reason:"));
     }
 
     private static final class ThrowingValue {
@@ -329,6 +636,14 @@ class DiagnosticsSnapshotTest {
         }
     }
 
+    private static final class NullStringValue {
+
+        @Override
+        public String toString() {
+            return null;
+        }
+    }
+
     private static final class CountingAssertion extends AssertionError {
         private final String message;
         private int calls;
@@ -341,6 +656,20 @@ class DiagnosticsSnapshotTest {
         public String getMessage() {
             calls++;
             return message;
+        }
+    }
+
+    private static final class FatalMessageException extends RuntimeException {
+
+        private final Error fatal;
+
+        private FatalMessageException(Error fatal) {
+            this.fatal = fatal;
+        }
+
+        @Override
+        public String getMessage() {
+            throw fatal;
         }
     }
 }

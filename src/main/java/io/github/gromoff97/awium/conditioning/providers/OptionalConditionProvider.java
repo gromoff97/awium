@@ -22,10 +22,10 @@ public final class OptionalConditionProvider {
             return actual.isPresent()
                     ? satisfied(actual.orElseThrow())
                     : unsatisfied("optional was empty");
-        }, () -> "optional to remain present", null));
+        }, () -> "optional is present", null));
 
     public static final Condition<Optional<?>, Void> absent =
-            condition("optional to be absent", actual -> {
+            condition("optional is absent", actual -> {
                 if (actual == null) {
                     return unsatisfied("optional was null");
                 }
@@ -49,7 +49,7 @@ public final class OptionalConditionProvider {
     private static <T> Condition<Optional<T>, T> valueCondition(
             T operand, boolean equal) {
         return condition(() -> "optional value "
-                        + (equal ? "equal to " : "not equal to ") + operand,
+                        + (equal ? "equals " : "does not equal ") + operand,
                 actual -> {
                     if (actual == null) {
                         return unsatisfied("optional was null");

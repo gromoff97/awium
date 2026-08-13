@@ -14,19 +14,9 @@ import static io.github.gromoff97.awium.diagnostics.FailureMessage.terminalCause
 import static io.github.gromoff97.awium.engine.Attempt.Satisfied;
 import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled;
 import static io.github.gromoff97.awium.engine.WaitOutcome.StabilityLoss;
-import static java.util.Objects.requireNonNull;
+import static java.lang.Thread.currentThread;
 
 public final class FailureFactory {
-
-    private final FailureMessage failureMessage;
-
-    public FailureFactory() {
-        this(new FailureMessage());
-    }
-
-    public FailureFactory(FailureMessage failureMessage) {
-        this.failureMessage = requireNonNull(failureMessage);
-    }
 
     @SuppressWarnings("removal")
     public <R> R complete(WaitOutcome<R> outcome,
@@ -36,18 +26,46 @@ public final class FailureFactory {
             return success.result();
         }
 
+        Throwable cause = terminalCause(outcome);
+        if (cause instanceof VirtualMachineError fatal) {
+            throw fatal;
+        }
+        if (cause instanceof ThreadDeath fatal) {
+            throw fatal;
+        }
+        boolean restoreInterrupt = currentThread().isInterrupted()
+                || cause instanceof InterruptedException;
         String message;
         try {
-            message = failureMessage.format(outcome, condition, configuration);
+            message = FailureMessage.format(outcome, condition, configuration);
         } catch (VirtualMachineError | ThreadDeath fatal) {
+            suppress(fatal, cause);
             throw fatal;
         } catch (FailureMessage.FormattingFailure formattingFailure) {
-            Throwable cause = formattingFailure.getCause();
-            throw new AwaitUnhandledException(
-                    failureMessage.emergency(formattingFailure), cause);
+            Throwable formattingCause = formattingFailure.getCause();
+            Throwable engineCause = formattingFailure.engineCause();
+            String emergencyMessage;
+            try {
+                emergencyMessage = FailureMessage.emergency(formattingFailure);
+            } catch (VirtualMachineError | ThreadDeath fatal) {
+                suppress(fatal, formattingCause);
+                if (engineCause != formattingCause) {
+                    suppress(fatal, engineCause);
+                }
+                throw fatal;
+            }
+            var failure = new AwaitUnhandledException(
+                    emergencyMessage, formattingCause);
+            if (engineCause != null && engineCause != formattingCause) {
+                suppress(failure, engineCause);
+            }
+            throw failure;
+        } finally {
+            if (restoreInterrupt) {
+                currentThread().interrupt();
+            }
         }
 
-        Throwable cause = terminalCause(outcome);
         if (outcome instanceof StabilityLoss<R>) {
             throw new AwaitStabilizationException(message, cause);
         }
@@ -63,5 +81,11 @@ public final class FailureFactory {
             };
         }
         throw new AwaitTimeoutException(message, cause);
+    }
+
+    private static void suppress(Throwable failure, Throwable cause) {
+        if (cause != null && cause != failure) {
+            failure.addSuppressed(cause);
+        }
     }
 }

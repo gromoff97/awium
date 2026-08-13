@@ -12,13 +12,22 @@ import static java.util.Objects.requireNonNull;
 public record WaitConfiguration(
         long everyNanos, long upToNanos, long stableForNanos) {
 
+    public WaitConfiguration {
+        positive(everyNanos, "polling interval");
+        positive(upToNanos, "acquisition timeout");
+        if (stableForNanos < 0) {
+            throw new IllegalArgumentException(
+                    "stability duration must not be negative");
+        }
+    }
+
     public static WaitConfiguration defaults() {
         return new WaitConfiguration(ofMillis(100).toNanos(),
                 ofSeconds(10).toNanos(), 0L);
     }
 
     public WaitConfiguration withEvery(Duration value) {
-        return new WaitConfiguration(positiveNanos(value, "poll interval"),
+        return new WaitConfiguration(positiveNanos(value, "polling interval"),
                 upToNanos, stableForNanos);
     }
 
@@ -28,12 +37,8 @@ public record WaitConfiguration(
     }
 
     public WaitConfiguration withStableFor(Duration value) {
-        long nanos = nanos(value);
-        if (nanos < 0) {
-            throw new IllegalArgumentException(
-                    "stability duration must not be negative");
-        }
-        return new WaitConfiguration(everyNanos, upToNanos, nanos);
+        return new WaitConfiguration(everyNanos, upToNanos,
+                nanos(value, "stability duration"));
     }
 
     public void validatePair() {
@@ -45,7 +50,10 @@ public record WaitConfiguration(
     }
 
     private static long positiveNanos(Duration value, String label) {
-        long nanos = nanos(value);
+        return positive(nanos(value, label), label);
+    }
+
+    private static long positive(long nanos, String label) {
         if (nanos <= 0) {
             throw new IllegalArgumentException(
                     label + " must be greater than zero");
@@ -53,12 +61,12 @@ public record WaitConfiguration(
         return nanos;
     }
 
-    private static long nanos(Duration value) {
+    private static long nanos(Duration value, String label) {
         try {
-            return requireNonNull(value, "duration must not be null").toNanos();
+            return requireNonNull(value, label + " must not be null").toNanos();
         } catch (ArithmeticException overflow) {
             throw new IllegalArgumentException(
-                    "duration exceeds the supported nanosecond range", overflow);
+                    label + " exceeds the supported nanosecond range", overflow);
         }
     }
 }

@@ -9,7 +9,8 @@ public final class PreservingCondition<S> {
     private final RuntimeCondition<S, S> runtime;
 
     private PreservingCondition(RuntimeCondition<S, S> runtime) {
-        this.runtime = requireNonNull(runtime);
+        this.runtime = requireNonNull(runtime,
+                "runtime condition must not be null");
     }
 
     public static <S> PreservingCondition<S> of(
@@ -36,7 +37,7 @@ public final class PreservingCondition<S> {
             String explanation) {
 
         public ExplainedCondition {
-            requireNonNull(delegate);
+            requireNonNull(delegate, "condition must not be null");
             explanation = literalExplanation(explanation);
         }
     }

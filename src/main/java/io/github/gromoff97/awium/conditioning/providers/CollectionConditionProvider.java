@@ -25,14 +25,14 @@ public final class CollectionConditionProvider {
     public static <E> PreservingCondition<Collection<? super E>> contains(
             E expected) {
         return membership(singletonList(expected), false, true,
-                "collection to contain expected element",
+                "collection contains expected element",
                 "collection did not contain expected element");
     }
 
     public static <E> PreservingCondition<Collection<? super E>> doesNotContain(
             E expected) {
         return membership(singletonList(expected), false, false,
-                "collection not to contain expected element",
+                "collection does not contain expected element",
                 "collection contained expected element");
     }
 
@@ -41,7 +41,7 @@ public final class CollectionConditionProvider {
     public static <E> PreservingCondition<Collection<? super E>> containsAll(
             E... expected) {
         return membership(asList(validate(expected)), true, true,
-                "collection to contain all expected elements",
+                "collection contains all expected elements",
                 "collection did not contain all expected elements");
     }
 
@@ -50,21 +50,21 @@ public final class CollectionConditionProvider {
     public static <E> PreservingCondition<Collection<? super E>> doesNotContainAll(
             E... expected) {
         return membership(asList(validate(expected)), true, false,
-                "collection not to contain all expected elements",
+                "collection does not contain all expected elements",
                 "collection contained all expected elements");
     }
 
     public static <E> PreservingCondition<Collection<? super E>>
             containsAllElementsOf(Collection<? extends E> expected) {
         return membership(validate(expected), true, true,
-                "collection to contain all expected elements",
+                "collection contains all expected elements",
                 "collection did not contain all expected elements");
     }
 
     public static <E> PreservingCondition<Collection<? super E>>
             doesNotContainAllElementsOf(Collection<? extends E> expected) {
         return membership(validate(expected), true, false,
-                "collection not to contain all expected elements",
+                "collection does not contain all expected elements",
                 "collection contained all expected elements");
     }
 
@@ -73,7 +73,7 @@ public final class CollectionConditionProvider {
     public static <E> PreservingCondition<Collection<? super E>> containsAnyOf(
             E... expected) {
         return membership(asList(validate(expected)), false, true,
-                "collection to contain any expected element",
+                "collection contains any expected element",
                 "collection did not contain any expected element");
     }
 
@@ -82,21 +82,21 @@ public final class CollectionConditionProvider {
     public static <E> PreservingCondition<Collection<? super E>> containsNoneOf(
             E... expected) {
         return membership(asList(validate(expected)), false, false,
-                "collection to contain none of the expected elements",
+                "collection does not contain any expected element",
                 "collection contained an expected element");
     }
 
     public static <E> PreservingCondition<Collection<? super E>>
             containsAnyElementsOf(Collection<? extends E> expected) {
         return membership(validate(expected), false, true,
-                "collection to contain any expected element",
+                "collection contains any expected element",
                 "collection did not contain any expected element");
     }
 
     public static <E> PreservingCondition<Collection<? super E>>
             containsNoElementsOf(Collection<? extends E> expected) {
         return membership(validate(expected), false, false,
-                "collection to contain none of the expected elements",
+                "collection does not contain any expected element",
                 "collection contained an expected element");
     }
 
@@ -193,8 +193,9 @@ public final class CollectionConditionProvider {
     private static <C extends Collection<?>> PreservingCondition<C> exact(
             Collection<?> expected, boolean ordered, boolean positive) {
         String order = ordered ? "" : " in any order";
-        String description = "collection " + (positive ? "" : "not ")
-                + "to contain exactly the expected elements" + order;
+        String description = "collection "
+                + (positive ? "contains " : "does not contain ")
+                + "exactly the expected elements" + order;
         String mismatch = "collection "
                 + (positive ? "did not contain" : "contained")
                 + " exactly the expected elements" + order;

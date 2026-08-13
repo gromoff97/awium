@@ -12,7 +12,7 @@ import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider
 public final class ObjectConditionProvider {
 
     public static final Condition<Object, Void> isNull =
-            condition("value to be null", actual ->
+            condition("value is null", actual ->
                     actual == null
                             ? satisfied(null)
                             : unsatisfied("value was not null"));
@@ -21,7 +21,7 @@ public final class ObjectConditionProvider {
             PreservingCondition.of(new RuntimeCondition<>(actual ->
                 actual != null ? satisfied(actual)
                         : unsatisfied("value was null"),
-                () -> "value to be non-null", null));
+                () -> "value is not null", null));
 
     private ObjectConditionProvider() {
         throw new AssertionError("Utility class");
@@ -32,7 +32,7 @@ public final class ObjectConditionProvider {
                 equal(actual, expected)
                         ? satisfied(actual)
                         : unsatisfied("value was not equal"),
-                () -> "value equal to " + expected, null));
+                () -> "value equals " + expected, null));
     }
 
     public static PreservingCondition<Object> notEqualTo(Object unexpected) {
@@ -40,6 +40,6 @@ public final class ObjectConditionProvider {
                 !equal(actual, unexpected)
                         ? satisfied(actual)
                         : unsatisfied("value was equal"),
-                () -> "value not equal to " + unexpected, null));
+                () -> "value does not equal " + unexpected, null));
     }
 }

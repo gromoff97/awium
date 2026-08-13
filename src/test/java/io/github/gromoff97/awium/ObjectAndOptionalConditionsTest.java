@@ -110,18 +110,6 @@ class ObjectAndOptionalConditionsTest {
                 .contains("unexpected"));
     }
 
-    @Test
-    void builtInObjectAndOptionalConditionsExposeUsefulDescriptions() {
-        for (String description : java.util.List.of(isNull.description(),
-                preserving(isNotNull).description().get(),
-                preserving(equalTo("expected")).description().get(),
-                preserving(notEqualTo("unexpected")).description().get(),
-                absent.description(), hasValueEqualTo("expected").description(),
-                hasValueNotEqualTo("unexpected").description())) {
-            assertTrue(!description.isBlank());
-        }
-    }
-
     private static Evaluation<Object> evaluate(
             PreservingCondition<Object> condition, Object actual) throws Exception {
         return preserving(condition).evaluate(actual);

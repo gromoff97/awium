@@ -19,16 +19,16 @@ public final class StructuralAwait<S> extends AbstractAwait<S, StructuralAwait<S
     public StructuralAwait(Source<? extends S> source, String subject,
             ToIntFunction<? super S> size) {
         super(source);
-        this.subject = requireNonNull(subject);
-        this.size = requireNonNull(size);
+        this.subject = subject(subject);
+        this.size = requireNonNull(size, "size function must not be null");
     }
 
     StructuralAwait(Source<? extends S> source, String subject,
             ToIntFunction<? super S> size, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         super(source, configuration, clock, parker);
-        this.subject = requireNonNull(subject);
-        this.size = requireNonNull(size);
+        this.subject = subject(subject);
+        this.size = requireNonNull(size, "size function must not be null");
     }
 
     private StructuralAwait(StructuralAwait<S> await,
@@ -54,5 +54,12 @@ public final class StructuralAwait<S> extends AbstractAwait<S, StructuralAwait<S
         return complete(structural(
                 requireNonNull(condition, "condition must not be null"),
                 subject, size));
+    }
+
+    private static String subject(String value) {
+        if (requireNonNull(value, "subject must not be null").isBlank()) {
+            throw new IllegalArgumentException("subject must not be blank");
+        }
+        return value;
     }
 }

@@ -7,6 +7,7 @@ import io.github.gromoff97.awium.sources.Source;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
+import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNCONTROLLED;
 import static io.github.gromoff97.awium.engine.Attempt.Origin;
 import static io.github.gromoff97.awium.engine.Attempt.Origin.CONDITION;
 import static io.github.gromoff97.awium.engine.Attempt.Origin.SOURCE;
@@ -23,6 +24,7 @@ import static io.github.gromoff97.awium.engine.WaitOutcome.TimeoutBetweenObserva
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Thread.currentThread;
+import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("removal")
 public final class WaitEngine {
@@ -33,13 +35,16 @@ public final class WaitEngine {
 
     public WaitEngine(WaitConfiguration config, LongSupplier clock,
             LongConsumer parker) {
-        this.config = config;
-        this.clock = clock;
-        this.parker = parker;
+        this.config = requireNonNull(config, "configuration must not be null");
+        this.clock = requireNonNull(clock, "clock must not be null");
+        this.parker = requireNonNull(parker, "parker must not be null");
     }
 
     public <S, R> WaitOutcome<R> waitFor(
             Source<S> source, RuntimeCondition<S, R> condition) {
+        requireNonNull(source, "source must not be null");
+        requireNonNull(condition, "condition must not be null");
+        config.validatePair();
         long started = clock.getAsLong();
         long acquisitionDeadline = after(started, config.upToNanos());
         Unsatisfied<R> lastUnsatisfied = null;
@@ -171,10 +176,12 @@ public final class WaitEngine {
                     clock.getAsLong());
         }
 
-        interrupted = interrupted(
-                CONDITION, number, true, actual);
-        if (interrupted != null) {
-            return interrupted;
+        if (evaluation == null || evaluation.status() != UNCONTROLLED) {
+            interrupted = interrupted(
+                    CONDITION, number, true, actual);
+            if (interrupted != null) {
+                return interrupted;
+            }
         }
 
         long completed = clock.getAsLong();
@@ -191,9 +198,20 @@ public final class WaitEngine {
             case UNSATISFIED -> new Unsatisfied<>(actual,
                     evaluation.mismatch(), evaluation.assertionCause(),
                     number, completed);
-            case UNCONTROLLED -> new AfterObservation<>(
-                    CONDITION, actual,
-                    evaluation.uncontrolledCause(), number, completed);
+            case UNCONTROLLED -> {
+                Throwable cause = evaluation.uncontrolledCause();
+                if (cause instanceof VirtualMachineError fatal) {
+                    throw fatal;
+                }
+                if (cause instanceof ThreadDeath fatal) {
+                    throw fatal;
+                }
+                yield cause instanceof InterruptedException interruption
+                        ? interrupted(CONDITION, interruption,
+                                number, true, actual)
+                        : new AfterObservation<>(CONDITION, actual,
+                                cause, number, completed);
+            }
         };
     }
 
@@ -206,6 +224,10 @@ public final class WaitEngine {
             } catch (VirtualMachineError | ThreadDeath fatal) {
                 throw fatal;
             } catch (Throwable uncontrolled) {
+                if (uncontrolled instanceof InterruptedException interruption) {
+                    return interrupted(WAITING, interruption,
+                            nextNumber, false, null);
+                }
                 return new BeforeObservation<>(
                         WAITING, uncontrolled, nextNumber,
                         clock.getAsLong());

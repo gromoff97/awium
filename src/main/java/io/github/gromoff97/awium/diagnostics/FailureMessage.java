@@ -5,7 +5,6 @@ import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
 
 import java.util.Locale;
-import java.util.function.Function;
 
 import static io.github.gromoff97.awium.engine.Attempt.Satisfied;
 import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled;
@@ -38,23 +37,16 @@ public final class FailureMessage {
         "nanosecond"
     };
 
-    private final Function<Context, String> formatter;
-
-    public FailureMessage() {
-        this(FailureMessage::format);
+    private FailureMessage() {
+        throw new AssertionError("Utility class");
     }
 
-    public FailureMessage(Function<Context, String> formatter) {
-        this.formatter = requireNonNull(formatter);
-    }
-
-    public String format(WaitOutcome<?> outcome,
+    static String format(WaitOutcome<?> outcome,
             RuntimeCondition<?, ?> condition,
             WaitConfiguration configuration) {
         Context context = new Context(outcome, condition, configuration);
         try {
-            return requireNonNull(formatter.apply(context),
-                    "diagnostic formatter returned null");
+            return format(context);
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
         } catch (Throwable failure) {
@@ -64,26 +56,28 @@ public final class FailureMessage {
 
     public static String configurationConflict(long everyNanos,
             long upToNanos) {
-        return "poll interval (" + duration(everyNanos)
+        return "polling interval (" + duration(everyNanos)
                 + ") must be shorter than acquisition timeout ("
                 + duration(upToNanos) + ")";
     }
 
-    String emergency(FormattingFailure failure) {
+    static String emergency(FormattingFailure failure) {
         Context context = failure.context;
-        StringBuilder out = heading("Await execution was unhandled");
-        field(out, 0, "Attempt",
-                Long.toString(context.outcome.attempt().number()));
-        field(out, 0, "Condition", context.descriptionMaterialized
-                ? context.description : DESCRIPTION_UNAVAILABLE);
-        if (!(context.outcome.attempt()
-                instanceof BeforeObservation<?>)) {
-            field(out, 0, "Actual", context.actualMaterialized
-                    ? context.actual
-                    : "<value unavailable: diagnostics failed>");
-        }
-        optionalField(out, "Because", context.condition.explanation());
-        field(out, 0, "Cause", typeName(failure.getCause()));
+        StringBuilder out = heading(
+                "Failure diagnostics could not be formatted");
+        condition(out, context.description == null
+                        ? DESCRIPTION_UNAVAILABLE : context.description,
+                context.condition.explanation());
+        String actual = context.outcome.attempt() instanceof BeforeObservation<?>
+                ? null : context.actual == null
+                        ? "<value unavailable: diagnostics failed>"
+                        : context.actual;
+        String mismatch = context.outcome.attempt() instanceof Unsatisfied<?> value
+                ? value.mismatch() : null;
+        attempt(out, context.outcome.attempt().number(), "diagnostics", actual,
+                mismatch);
+        timing(out, context);
+        cause(out, emergencyDiagnostic(failure.getCause()));
         return finish(out);
     }
 
@@ -107,129 +101,178 @@ public final class FailureMessage {
     private static String timeoutBetween(Context context,
             TimeoutBetweenObservations<?> outcome) {
         Unsatisfied<?> last = outcome.attempt();
-        AssertionDiagnostic assertion = last.assertionCause() == null
-                ? null : context.assertionDiagnostic();
-        StringBuilder out = heading("Await timed out");
-        field(out, 0, "Condition", context.conditionDescription());
-        field(out, 0, "Reason",
-                "acquisition deadline elapsed before the next observation");
-        out.append('\n').append("Last observation:\n");
-        field(out, 4, "Attempt", Long.toString(last.number()));
-        field(out, 4, "Completed after", duration(
-                last.completedNanos() - outcome.startedNanos()));
-        field(out, 4, "Mismatch", assertion == null
-                ? last.mismatch() : assertion.mismatch());
+        ThrowableDiagnostic assertion = last.assertionCause() == null
+                ? null : context.causeDiagnostic();
+        StringBuilder out = heading(
+                "Acquisition deadline elapsed before the next attempt");
+        condition(out, context);
+        attempt(out, last.number(), null, context.actualValue(),
+                last.mismatch());
+        timing(out, context);
         if (assertion != null) {
-            out.append('\n');
-            field(out, 0, "Cause", assertion.cause());
+            cause(out, assertion);
         }
-        out.append('\n').append("Timing:\n");
-        timeoutTiming(out, context, outcome.startedNanos(),
-                outcome.completedNanos(), false);
         return finish(out);
     }
 
     private static String lateUnsatisfied(Context context,
             LateUnsatisfiedTimeout<?> outcome) {
         Unsatisfied<?> attempt = outcome.attempt();
-        AssertionDiagnostic assertion = attempt.assertionCause() == null
-                ? null : context.assertionDiagnostic();
-        StringBuilder out = heading("Await timed out");
-        field(out, 0, "Condition", context.conditionDescription());
-        field(out, 0, "Observed", context.actualValue());
-        field(out, 0, "Mismatch", assertion == null
-                ? attempt.mismatch() : assertion.mismatch());
-        optionalField(out, "Because", context.condition.explanation());
+        ThrowableDiagnostic assertion = attempt.assertionCause() == null
+                ? null : context.causeDiagnostic();
+        StringBuilder out = heading(
+                "Condition remained unsatisfied at or after the acquisition deadline");
+        condition(out, context);
+        attempt(out, attempt.number(), null, context.actualValue(),
+                attempt.mismatch());
+        timing(out, context);
         if (assertion != null) {
-            field(out, 0, "Cause", assertion.cause());
+            cause(out, assertion);
         }
-        out.append('\n').append("Timing:\n");
-        timeoutTiming(out, context, outcome.startedNanos(),
-                outcome.attempt().completedNanos(), true);
         return finish(out);
     }
 
     private static String lateSatisfied(Context context,
             LateSatisfiedTimeout<?> outcome) {
-        StringBuilder out = heading("Await timed out");
-        field(out, 0, "Condition", context.conditionDescription());
-        field(out, 0, "Observed", context.actualValue());
-        field(out, 0, "Reason", "condition became satisfied after the timeout");
-        optionalField(out, "Because", context.condition.explanation());
-        out.append('\n').append("Timing:\n");
-        timeoutTiming(out, context, outcome.startedNanos(),
-                outcome.attempt().completedNanos(), true);
+        StringBuilder out = heading(
+                "Condition became satisfied at or after the acquisition deadline");
+        condition(out, context);
+        attempt(out, outcome.attempt().number(), null, context.actualValue(),
+                null);
+        timing(out, context);
         return finish(out);
     }
 
     private static String stabilityLoss(Context context,
             StabilityLoss<?> outcome) {
         Unsatisfied<?> attempt = outcome.attempt();
-        AssertionDiagnostic assertion = attempt.assertionCause() == null
-                ? null : context.assertionDiagnostic();
-        StringBuilder out = heading("Await lost stability");
-        field(out, 0, "Expected", context.conditionDescription());
-        optionalField(out, "Because", context.condition.explanation());
-        field(out, 0, "Required", duration(context.configuration.stableForNanos()));
-        field(out, 0, "Failure detected after", duration(
-                attempt.completedNanos() - outcome.acquiredNanos()));
-        out.append('\n').append("Observed:\n");
-        field(out, 4, "Actual", context.actualValue());
-        field(out, 4, "Mismatch", assertion == null
-                ? attempt.mismatch() : assertion.mismatch());
+        ThrowableDiagnostic assertion = attempt.assertionCause() == null
+                ? null : context.causeDiagnostic();
+        StringBuilder out = heading(
+                "Condition did not remain stable for the required duration");
+        condition(out, context);
+        attempt(out, attempt.number(), null, context.actualValue(),
+                attempt.mismatch());
+        timing(out, context);
         if (assertion != null) {
-            out.append('\n');
-            field(out, 0, "Cause", assertion.cause());
+            cause(out, assertion);
         }
-        out.append('\n').append("Timing:\n");
-        field(out, 4, "Acquired after", duration(
-                outcome.acquiredNanos() - outcome.startedNanos()));
-        field(out, 4, "Interval", duration(context.configuration.everyNanos()));
         return finish(out);
     }
 
     private static String uncontrolled(Context context,
             Uncontrolled<?> attempt) {
         boolean interrupted = attempt.cause() instanceof InterruptedException;
-        String title = interrupted ? "Await was interrupted" : switch (
+        String title = interrupted ? "Caller thread was interrupted" : switch (
                 attempt.origin()) {
-            case SOURCE -> "Await source retrieval failed";
-            case CONDITION -> "Await condition evaluation failed";
-            case WAITING -> "Await execution was unhandled";
+            case SOURCE -> "Source retrieval failed";
+            case CONDITION -> "Condition evaluation failed";
+            case WAITING -> "Waiting before the next attempt failed";
         };
         StringBuilder out = heading(title);
-        field(out, 0, "Attempt", Long.toString(attempt.number()));
-        if (interrupted) {
-            field(out, 0, "Origin",
-                    attempt.origin().name().toLowerCase(Locale.ROOT));
-        }
-        field(out, 0, "Condition", context.conditionDescription());
-        if (attempt instanceof AfterObservation<?>) {
-            field(out, 0, "Actual", context.actualValue());
-        }
-        optionalField(out, "Because", context.condition.explanation());
-        field(out, 0, "Cause", context.causeDiagnostic());
+        condition(out, context);
+        String actual = attempt instanceof AfterObservation<?>
+                ? context.actualValue() : null;
+        attempt(out, attempt.number(),
+                attempt.origin().name().toLowerCase(Locale.ROOT), actual, null);
+        timing(out, context);
+        cause(out, context.causeDiagnostic());
         return finish(out);
     }
 
-    private static void timeoutTiming(StringBuilder out, Context context,
-            long startedNanos, long completedNanos, boolean attempts) {
-        field(out, 4, "Waited up to", duration(
-                context.configuration.upToNanos()));
-        field(out, 4, "Elapsed", duration(
-                completedNanos - startedNanos));
-        if (attempts) {
-            field(out, 4, "Attempts", Long.toString(
-                    context.outcome.attempt().number()));
+    private static void timing(StringBuilder out, Context context) {
+        switch (context.outcome) {
+            case TimeoutBetweenObservations<?> outcome -> {
+                out.append('\n').append("Timing:\n");
+                acquisitionTimeout(out, context);
+                field(out, 4, "Last attempt completed after", duration(
+                        outcome.attempt().completedNanos()
+                                - outcome.startedNanos()));
+                field(out, 4, "Elapsed", duration(
+                        outcome.completedNanos() - outcome.startedNanos()));
+                pollingInterval(out, context);
+            }
+            case LateUnsatisfiedTimeout<?> outcome -> timeoutTiming(out, context,
+                    outcome.startedNanos(), outcome.attempt().completedNanos());
+            case LateSatisfiedTimeout<?> outcome -> timeoutTiming(out, context,
+                    outcome.startedNanos(), outcome.attempt().completedNanos());
+            case StabilityLoss<?> outcome -> {
+                out.append('\n').append("Timing:\n");
+                acquisitionTimeout(out, context);
+                field(out, 4, "Acquired after", duration(
+                        outcome.acquiredNanos() - outcome.startedNanos()));
+                field(out, 4, "Required stability",
+                        duration(context.configuration.stableForNanos()));
+                field(out, 4, "Failure detected after", duration(
+                        outcome.attempt().completedNanos()
+                                - outcome.acquiredNanos()));
+                field(out, 4, "Elapsed", duration(
+                        outcome.attempt().completedNanos()
+                                - outcome.startedNanos()));
+                pollingInterval(out, context);
+            }
+            case Uncontrolled<?> ignored -> {
+                out.append('\n').append("Timing:\n");
+                acquisitionTimeout(out, context);
+                pollingInterval(out, context);
+            }
+            case Satisfied<?> ignored -> {
+            }
         }
-        field(out, 4, "Interval", duration(
+    }
+
+    private static void timeoutTiming(StringBuilder out, Context context,
+            long startedNanos, long completedNanos) {
+        out.append('\n').append("Timing:\n");
+        acquisitionTimeout(out, context);
+        field(out, 4, "Elapsed", duration(completedNanos - startedNanos));
+        pollingInterval(out, context);
+    }
+
+    private static void acquisitionTimeout(StringBuilder out, Context context) {
+        field(out, 4, "Acquisition timeout", duration(
+                context.configuration.upToNanos()));
+    }
+
+    private static void pollingInterval(StringBuilder out, Context context) {
+        field(out, 4, "Polling interval", duration(
                 context.configuration.everyNanos()));
     }
 
-    private static void optionalField(StringBuilder out, String label,
-            String value) {
-        if (value != null) {
-            field(out, 0, label, value);
+    private static void attempt(StringBuilder out, long number, String origin,
+            String actual, String mismatch) {
+        out.append('\n').append("Attempt:\n");
+        field(out, 4, "Number", Long.toString(number));
+        if (origin != null) {
+            field(out, 4, "Origin", origin);
+        }
+        if (actual != null) {
+            field(out, 4, "Actual", actual);
+        }
+        if (mismatch != null) {
+            field(out, 4, "Mismatch", mismatch);
+        }
+    }
+
+    private static void cause(StringBuilder out, ThrowableDiagnostic cause) {
+        out.append('\n').append("Cause:\n");
+        field(out, 4, "Type", cause.type());
+        if (cause.message() != null) {
+            field(out, 4, "Message", cause.message());
+        }
+    }
+
+    private static void condition(StringBuilder out, Context context) {
+        condition(out, context.conditionDescription(),
+                context.condition.explanation());
+    }
+
+    private static void condition(StringBuilder out, String expectation,
+            String importance) {
+        out.append("Condition:\n");
+        field(out, 4, "Expectation", expectation);
+        if (importance != null) {
+            field(out, 4, "Importance", importance);
         }
     }
 
@@ -280,18 +323,12 @@ public final class FailureMessage {
     }
 
     private static String render(Object value) {
-        try {
-            if (value != null && value.getClass().isArray()) {
-                String array = deepToString(new Object[] {value});
-                return array.substring(1, array.length() - 1);
-            }
-            return String.valueOf(value);
-        } catch (VirtualMachineError | ThreadDeath fatal) {
-            throw fatal;
-        } catch (Throwable failure) {
-            return "<value unavailable: toString() threw "
-                    + typeName(failure) + ">";
+        if (value != null && value.getClass().isArray()) {
+            String array = deepToString(new Object[] {value});
+            return array.substring(1, array.length() - 1);
         }
+        return requireNonNull(String.valueOf(value),
+                "actual toString() must not return null");
     }
 
     private static String typeName(Throwable failure) {
@@ -307,85 +344,71 @@ public final class FailureMessage {
         };
     }
 
-    public static final class Context {
+    private static final class Context {
 
         private final WaitOutcome<?> outcome;
         private final RuntimeCondition<?, ?> condition;
         private final WaitConfiguration configuration;
 
-        private boolean descriptionMaterialized;
         private String description;
-        private boolean actualMaterialized;
         private String actual;
 
         private Context(WaitOutcome<?> outcome,
                 RuntimeCondition<?, ?> condition,
                 WaitConfiguration configuration) {
-            this.outcome = requireNonNull(outcome);
-            this.condition = requireNonNull(condition);
-            this.configuration = configuration;
+            this.outcome = requireNonNull(outcome, "outcome must not be null");
+            this.condition = requireNonNull(condition,
+                    "condition must not be null");
+            this.configuration = requireNonNull(configuration,
+                    "configuration must not be null");
         }
 
-        public String conditionDescription() {
-            if (!descriptionMaterialized) {
-                descriptionMaterialized = true;
-                try {
-                    String rendered = condition.description().get();
-                    description = rendered == null || rendered.isBlank()
-                            ? DESCRIPTION_UNAVAILABLE : rendered;
-                } catch (VirtualMachineError | ThreadDeath fatal) {
-                    throw fatal;
-                } catch (Throwable failure) {
-                    description = DESCRIPTION_UNAVAILABLE;
-                }
+        private String conditionDescription() {
+            String rendered = requireNonNull(condition.description().get(),
+                    "condition description must not be null");
+            if (rendered.isBlank()) {
+                throw new IllegalArgumentException(
+                        "condition description must not be blank");
             }
+            description = rendered;
             return description;
         }
 
-        public String actualValue() {
-            if (!actualMaterialized) {
-                actualMaterialized = true;
-                actual = render(switch (outcome.attempt()) {
-                    case Satisfied<?> value -> value.actual();
-                    case Unsatisfied<?> value -> value.actual();
-                    case AfterObservation<?> value ->
-                            value.actual();
-                    case BeforeObservation<?> ignored ->
-                            throw new IllegalArgumentException(
-                                    "attempt has no observed actual");
-                });
-            }
+        private String actualValue() {
+            actual = render(switch (outcome.attempt()) {
+                case Satisfied<?> value -> value.actual();
+                case Unsatisfied<?> value -> value.actual();
+                case AfterObservation<?> value -> value.actual();
+                case BeforeObservation<?> ignored ->
+                        throw new IllegalArgumentException(
+                                "attempt has no observed actual");
+            });
             return actual;
         }
 
-        private AssertionDiagnostic assertionDiagnostic() {
-            return throwableDiagnostic(terminalCause(outcome),
-                    "assertion did not pass");
-        }
-
-        private String causeDiagnostic() {
-            return throwableDiagnostic(terminalCause(outcome), null).cause();
+        private ThrowableDiagnostic causeDiagnostic() {
+            return throwableDiagnostic(terminalCause(outcome));
         }
     }
 
-    private static AssertionDiagnostic throwableDiagnostic(Throwable failure,
-            String fallback) {
+    private static ThrowableDiagnostic throwableDiagnostic(Throwable failure) {
         String type = typeName(failure);
+        String message = failure.getMessage();
+        return new ThrowableDiagnostic(type,
+                message == null || message.isBlank() ? null : message);
+    }
+
+    private static ThrowableDiagnostic emergencyDiagnostic(Throwable failure) {
         try {
-            String message = failure.getMessage();
-            return message == null || message.isBlank()
-                    ? new AssertionDiagnostic(fallback, type)
-                    : new AssertionDiagnostic(message, type + ": " + message);
+            return throwableDiagnostic(failure);
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
-        } catch (Throwable messageFailure) {
-            return new AssertionDiagnostic(fallback,
-                    type + ": <message unavailable: getMessage() threw "
-                            + typeName(messageFailure) + ">");
+        } catch (Throwable ignored) {
+            return new ThrowableDiagnostic(typeName(failure), null);
         }
     }
 
-    private record AssertionDiagnostic(String mismatch, String cause) {}
+    private record ThrowableDiagnostic(String type, String message) {}
 
     static final class FormattingFailure extends RuntimeException {
 
@@ -394,6 +417,10 @@ public final class FailureMessage {
         private FormattingFailure(Context context, Throwable cause) {
             super(null, cause, false, false);
             this.context = context;
+        }
+
+        Throwable engineCause() {
+            return terminalCause(context.outcome);
         }
     }
 }

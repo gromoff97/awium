@@ -10,6 +10,7 @@ import static java.time.Duration.ofNanos;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.await.StructuralAwait;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.sources.CollectionSource;
@@ -126,6 +127,48 @@ class StructuralConditionsTest {
     void sizedFactoryRejectsNegativeBoundsAndAllowsZero() {
         assertThrows(IllegalArgumentException.class, () -> sizeExactly(-1));
         assertDoesNotThrow(() -> sizeExactly(0));
+    }
+
+    @Test
+    void rawStructuralFactoryValidatesBeforeSourceRetrieval() {
+        assertTrue(assertThrows(NullPointerException.class,
+                () -> RuntimeCondition.<Collection<?>>structural(
+                        (StructuralCondition) null, "collection",
+                        Collection::size))
+                .getMessage().contains("condition"));
+        assertTrue(assertThrows(NullPointerException.class,
+                () -> RuntimeCondition.<Collection<?>>structural(
+                        empty, null, Collection::size))
+                .getMessage().contains("subject"));
+        assertEquals("subject must not be blank",
+                assertThrows(IllegalArgumentException.class,
+                        () -> RuntimeCondition.<Collection<?>>structural(
+                                empty, " \n ", Collection::size))
+                        .getMessage());
+
+        var sourceCalls = new int[1];
+        assertTrue(assertThrows(NullPointerException.class, () -> {
+            RuntimeCondition<List<String>, List<String>> runtime = structural(
+                    empty, "collection", null);
+            await((Source<List<String>>) () -> {
+                sourceCalls[0]++;
+                return List.of();
+            }).until(PreservingCondition.of(runtime));
+        }).getMessage().contains("size function"));
+        assertEquals(0, sourceCalls[0]);
+    }
+
+    @Test
+    void structuralAwaitRejectsBlankSubjectAtConstruction() {
+        var sourceCalls = new int[1];
+
+        assertEquals("subject must not be blank",
+                assertThrows(IllegalArgumentException.class,
+                        () -> new StructuralAwait<Collection<?>>(() -> {
+                            sourceCalls[0]++;
+                            return List.of();
+                        }, "", Collection::size)).getMessage());
+        assertEquals(0, sourceCalls[0]);
     }
 
     private static void assertCollectionEvaluation(Case testCase)

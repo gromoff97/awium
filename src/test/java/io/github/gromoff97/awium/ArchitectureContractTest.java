@@ -265,6 +265,8 @@ class ArchitectureContractTest {
                         "await/AbstractAwait.java").normalize();
         private static final Path INTERRUPT_PORT = MAIN_PACKAGE
                 .resolve("engine/WaitEngine.java").normalize();
+        private static final Path FINAL_INTERRUPT_PORT = MAIN_PACKAGE
+                .resolve("diagnostics/FailureFactory.java").normalize();
         private static final String THREAD = "java.lang.Thread";
         private static final String LOCK_SUPPORT =
                 "java.util.concurrent.locks.LockSupport";
@@ -300,6 +302,8 @@ class ArchitectureContractTest {
         private int parks;
         private int interruptReads;
         private int interruptRestores;
+        private int finalInterruptReads;
+        private int finalInterruptRestores;
 
         @Override
         public J.CompilationUnit visitCompilationUnit(
@@ -405,13 +409,19 @@ class ArchitectureContractTest {
                 if (tree instanceof J.MethodInvocation invocation
                         && isApprovedInterruptCall(invocation, name)) {
                     if (name.equals("isInterrupted")) {
-                        interruptReads++;
-                    } else {
+                        if (currentPath().equals(INTERRUPT_PORT)) {
+                            interruptReads++;
+                        } else {
+                            finalInterruptReads++;
+                        }
+                    } else if (currentPath().equals(INTERRUPT_PORT)) {
                         interruptRestores++;
+                    } else {
+                        finalInterruptRestores++;
                     }
                     return;
                 }
-                reject("Thread interrupt access outside WaitEngine");
+                reject("Thread interrupt access outside approved ports");
             }
             if (THREAD_METHOD.matches(method)
                     && THREAD_WORK_METHODS.contains(name)) {
@@ -508,8 +518,12 @@ class ArchitectureContractTest {
 
         private boolean isApprovedInterruptCall(
                 J.MethodInvocation invocation, String name) {
-            return currentPath().equals(INTERRUPT_PORT)
+            boolean approved = currentPath().equals(INTERRUPT_PORT)
                     && (name.equals("isInterrupted") || name.equals("interrupt"))
+                    || currentPath().equals(FINAL_INTERRUPT_PORT)
+                    && (name.equals("isInterrupted")
+                            || name.equals("interrupt"));
+            return approved
                     && hasNoArguments(invocation)
                     && invocation.getSelect() instanceof J.MethodInvocation current
                     && hasNoArguments(current)
@@ -540,6 +554,12 @@ class ArchitectureContractTest {
                     && (interruptReads != 1 || interruptRestores != 1)) {
                 throw new AssertionError(INTERRUPT_PORT
                         + ": expected exactly one interrupt read and restoration");
+            }
+            if (auditedPaths.contains(FINAL_INTERRUPT_PORT)
+                    && (finalInterruptReads != 1
+                            || finalInterruptRestores != 1)) {
+                throw new AssertionError(FINAL_INTERRUPT_PORT
+                        + ": expected exactly one final interrupt read and restoration");
             }
         }
     }
