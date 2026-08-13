@@ -83,7 +83,7 @@ class PositiveFluentMatrixTest {
         var actual = new ArrayList<>(List.of("value"));
         CollectionSource<ArrayList<String>> source = () -> actual;
 
-        StructuralCondition structural = nonEmpty();
+        StructuralCondition structural = nonEmpty;
         StructuralCondition.ExplainedCondition explained =
                 structural.because("collection full chain");
         ArrayList<String> raw = await(source).until(structural);

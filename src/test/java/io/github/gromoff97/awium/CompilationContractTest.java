@@ -160,6 +160,18 @@ class CompilationContractTest {
         }
     }
 
+    @Test
+    void structuralSingletonsAreFieldsNotFactories() throws IOException {
+        for (String condition : List.of("empty()", "nonEmpty()")) {
+            assertFalse(compiles("""
+                    import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
+                    final class Contract {
+                        void check() { Object condition = %s; }
+                    }
+                    """.formatted(condition)), condition);
+        }
+    }
+
     private boolean compiles(String source) throws IOException {
         return CompilationSupport.compiles(temporaryDirectory, source);
     }

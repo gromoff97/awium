@@ -44,14 +44,6 @@ public final class StructuralCondition {
         return relation.description(subject, bound);
     }
 
-    public static StructuralCondition empty() {
-        return empty;
-    }
-
-    public static StructuralCondition nonEmpty() {
-        return nonEmpty;
-    }
-
     public static StructuralCondition sizeExactly(int expected) {
         return sized(Relation.EXACTLY, expected);
     }

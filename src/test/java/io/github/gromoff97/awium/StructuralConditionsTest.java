@@ -53,13 +53,13 @@ class StructuralConditionsTest {
         assertSubjectFailure(() -> await(
                         (CollectionSource<List<String>>) () -> List.of("value"))
                         .every(ofNanos(1))
-                        .upTo(ofNanos(2)).until(empty()),
+                        .upTo(ofNanos(2)).until(empty),
                 "collection", "map");
         assertSubjectFailure(() -> await(
                         (MapSource<Map<String, String>>)
                                 () -> Map.of("key", "value"))
                         .every(ofNanos(1))
-                        .upTo(ofNanos(2)).until(empty()),
+                        .upTo(ofNanos(2)).until(empty),
                 "map", "collection");
     }
 
