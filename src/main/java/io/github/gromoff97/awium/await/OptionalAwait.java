@@ -40,7 +40,7 @@ public final class OptionalAwait<T> extends AbstractAwait<Optional<T>, OptionalA
         return complete(actual -> {
             Evaluation<Object> evaluation = delegate.evaluate(actual);
             T result = evaluation != null && evaluation.status() == SATISFIED ? actual.orElse(null) : null;
-            return withResult(evaluation, result);
+            return replaceSatisfiedResult(evaluation, result);
         }, delegate::description, explanation);
     }
 }

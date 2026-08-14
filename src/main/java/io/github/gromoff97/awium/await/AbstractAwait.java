@@ -25,9 +25,7 @@ import static java.util.Objects.requireNonNull;
 abstract class AbstractAwait<S, A> {
 
     private final Source<? extends S> source;
-    private final WaitConfiguration configuration;
-    private final LongSupplier clock;
-    private final LongConsumer parker;
+    private final WaitEngine engine;
 
     protected AbstractAwait(Source<? extends S> source) {
         this(source, defaults(), System::nanoTime, LockSupport::parkNanos);
@@ -35,25 +33,26 @@ abstract class AbstractAwait<S, A> {
 
     AbstractAwait(Source<? extends S> source, WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {
         this.source = requireNonNull(source, "source must not be null");
-        this.configuration = requireNonNull(configuration, "configuration must not be null");
-        this.clock = requireNonNull(clock, "clock must not be null");
-        this.parker = requireNonNull(parker, "parker must not be null");
+        this.engine = new WaitEngine(
+                requireNonNull(configuration, "configuration must not be null"),
+                requireNonNull(clock, "clock must not be null"),
+                requireNonNull(parker, "parker must not be null"));
     }
 
     AbstractAwait(AbstractAwait<S, ?> await, WaitConfiguration configuration) {
-        this(await.source, configuration, await.clock, await.parker);
+        this(await.source, configuration, await.engine.clock(), await.engine.parker());
     }
 
     public final A every(Duration interval) {
-        return reconfigured(configuration.withEvery(interval));
+        return reconfigured(engine.configuration().withEvery(interval));
     }
 
     public final A upTo(Duration timeout) {
-        return reconfigured(configuration.withUpTo(timeout));
+        return reconfigured(engine.configuration().withUpTo(timeout));
     }
 
     public final A stableFor(Duration stability) {
-        return reconfigured(configuration.withStableFor(stability));
+        return reconfigured(engine.configuration().withStableFor(stability));
     }
 
     public final S until(PreservingCondition<? super S> condition) {
@@ -77,10 +76,10 @@ abstract class AbstractAwait<S, A> {
     abstract A reconfigured(WaitConfiguration configuration);
 
     protected final <R> R complete(CheckedFunction<? super S, Evaluation<R>> evaluator, Supplier<String> description, String explanation) {
-        return FailureFactory.complete(new WaitEngine(configuration, clock, parker).waitFor(source, evaluator), description, explanation, configuration);
+        return FailureFactory.complete(engine.waitFor(source, evaluator), description, explanation, engine.configuration());
     }
 
-    protected static <R> Evaluation<R> withResult(Evaluation<?> evaluation, R satisfiedResult) {
+    protected static <R> Evaluation<R> replaceSatisfiedResult(Evaluation<?> evaluation, R satisfiedResult) {
         if (evaluation == null) {
             return null;
         }
@@ -95,7 +94,7 @@ abstract class AbstractAwait<S, A> {
 
     private S complete(PreservingCondition<? super S> condition, String explanation) {
         Condition<? super S, ?> delegate = condition.delegate();
-        return complete(actual -> withResult(delegate.evaluate(actual), actual), delegate::description, explanation);
+        return complete(actual -> replaceSatisfiedResult(delegate.evaluate(actual), actual), delegate::description, explanation);
     }
 
     private <R> R complete(Condition<? super S, ? extends R> condition, String explanation) {

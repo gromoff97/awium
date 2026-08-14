@@ -24,20 +24,16 @@ public abstract class Condition<S, R> {
     }
 
     static String literalExplanation(String explanation) {
-        return nonBlank(explanation, "explanation");
+        if (requireNonNull(explanation, "explanation must not be null").isBlank()) {
+            throw new IllegalArgumentException("explanation must not be blank");
+        }
+        return explanation;
     }
 
     static String formattedExplanation(String format, Object[] arguments) {
         requireNonNull(format, "format must not be null");
         requireNonNull(arguments, "arguments must not be null");
         return String.format(Locale.ROOT, format, arguments);
-    }
-
-    private static String nonBlank(String value, String name) {
-        if (requireNonNull(value, name + " must not be null").isBlank()) {
-            throw new IllegalArgumentException(name + " must not be blank");
-        }
-        return value;
     }
 
     public record ExplainedCondition<S, R>(Condition<S, R> delegate, String explanation) {

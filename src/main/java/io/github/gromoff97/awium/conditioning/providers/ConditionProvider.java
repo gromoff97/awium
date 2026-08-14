@@ -71,21 +71,23 @@ public final class ConditionProvider {
         return false;
     }
 
-    static <A, E> boolean allFound(Iterable<A> actual, Collection<E> remaining, BiPredicate<? super A, ? super E> matches) {
+    static <A, E> boolean containsAllMatches(Iterable<A> actual, Collection<E> remainingExpected,
+            BiPredicate<? super A, ? super E> matches) {
         for (A value : actual) {
-            remaining.removeIf(expected -> matches.test(value, expected));
-            if (remaining.isEmpty()) {
+            remainingExpected.removeIf(expected -> matches.test(value, expected));
+            if (remainingExpected.isEmpty()) {
                 return true;
             }
         }
         return false;
     }
 
-    static <A, E> boolean allMatched(Iterator<A> actual, Collection<E> remaining, BiPredicate<? super A, ? super E> matches) {
+    static <A, E> boolean matchesExactly(Iterator<A> actual, Collection<E> remainingExpected,
+            BiPredicate<? super A, ? super E> matches) {
         while (actual.hasNext()) {
             A value = actual.next();
             boolean found = false;
-            Iterator<E> candidates = remaining.iterator();
+            Iterator<E> candidates = remainingExpected.iterator();
             while (candidates.hasNext()) {
                 if (matches.test(value, candidates.next())) {
                     candidates.remove();

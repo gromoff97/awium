@@ -38,23 +38,25 @@ public final class FailureFactory {
         }
         boolean restoreInterrupt = currentThread().isInterrupted()
                 || cause instanceof InterruptedException;
-        FailureMessage.Rendering rendering;
+        FailureMessage.RenderResult rendered;
         try {
-            rendering = render(outcome, description, explanation, configuration);
-            if (rendering.failure() != null) {
-                var failure = new AwaitUnhandledException(rendering.message(), rendering.failure());
-                if (cause != rendering.failure()) {
-                    suppress(failure, cause);
-                }
-                throw failure;
-            }
+            rendered = render(outcome, description, explanation, configuration);
         } finally {
             if (restoreInterrupt) {
                 currentThread().interrupt();
             }
         }
 
-        String message = rendering.message();
+        Throwable renderingFailure = rendered.failure();
+        if (renderingFailure != null) {
+            var failure = new AwaitUnhandledException(rendered.message(), renderingFailure);
+            if (cause != renderingFailure) {
+                suppress(failure, cause);
+            }
+            throw failure;
+        }
+
+        String message = rendered.message();
         if (outcome instanceof StabilityLoss<R>) {
             throw new AwaitStabilizationException(message, cause);
         }

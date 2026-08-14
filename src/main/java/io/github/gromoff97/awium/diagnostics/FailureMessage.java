@@ -28,16 +28,17 @@ public final class FailureMessage {
         throw new AssertionError("Utility class");
     }
 
-    static Rendering render(WaitOutcome<?> outcome, Supplier<String> description, String explanation, WaitConfiguration configuration) {
+    static RenderResult render(WaitOutcome<?> outcome, Supplier<String> description, String explanation,
+            WaitConfiguration configuration) {
         Context context = new Context(outcome, description, explanation, configuration);
         try {
-            return new Rendering(format(context), null);
+            return new RenderResult(format(context), null);
         } catch (VirtualMachineError | ThreadDeath fatal) {
             suppress(fatal, terminalCause(context.outcome));
             throw fatal;
         } catch (Throwable failure) {
             try {
-                return new Rendering(emergency(context, failure), failure);
+                return new RenderResult(emergency(context, failure), failure);
             } catch (VirtualMachineError | ThreadDeath fatal) {
                 suppress(fatal, failure);
                 Throwable engineCause = terminalCause(context.outcome);
@@ -67,22 +68,23 @@ public final class FailureMessage {
     private static String emergency(Context context, Throwable failure) {
         StringBuilder out = heading("Failure diagnostics could not be formatted");
         condition(out, context.description == null ? DESCRIPTION_UNAVAILABLE : context.description, context.explanation);
-        String actual = context.outcome.attempt() instanceof BeforeObservation<?>
-                ? null : context.actual == null
-                        ? "<value unavailable: diagnostics failed>"
-                        : context.actual;
-        String mismatch = context.outcome.attempt() instanceof Unsatisfied<?> value
+        WaitOutcome.Attempt<?> attempt = context.outcome.attempt();
+        String actual = null;
+        if (!(attempt instanceof BeforeObservation<?>)) {
+            actual = context.actual == null ? "<value unavailable: diagnostics failed>" : context.actual;
+        }
+        String mismatch = attempt instanceof Unsatisfied<?> value
                 ? value.mismatch() : null;
-        attempt(out, context.outcome.attempt().number(), "diagnostics", actual, mismatch);
+        attempt(out, attempt.number(), "diagnostics", actual, mismatch);
         timing(out, context);
         cause(out, emergencyDiagnostic(failure));
         return finish(out);
     }
 
-    private static String message(Context context, Unsatisfied<?> attempt, String heading) {
+    private static String message(Context context, Unsatisfied<?> attempt, String title) {
         ThrowableDiagnostic cause = attempt.assertionCause() == null
                 ? null : context.causeDiagnostic();
-        return message(context, attempt, heading, cause);
+        return message(context, attempt, title, cause);
     }
 
     private static String uncontrolledHeading(Uncontrolled<?> attempt) {
@@ -95,13 +97,13 @@ public final class FailureMessage {
         };
     }
 
-    private static String message(Context context, WaitOutcome.Attempt<?> attempt, String heading) {
-        return message(context, attempt, heading, null);
+    private static String message(Context context, WaitOutcome.Attempt<?> attempt, String title) {
+        return message(context, attempt, title, null);
     }
 
-    private static String message(Context context, WaitOutcome.Attempt<?> attempt, String heading,
+    private static String message(Context context, WaitOutcome.Attempt<?> attempt, String title,
             ThrowableDiagnostic diagnostic) {
-        StringBuilder out = heading(heading);
+        StringBuilder out = heading(title);
         condition(out, context);
         String actual = attempt instanceof BeforeObservation<?>
                 ? null : context.actualValue();
@@ -121,44 +123,33 @@ public final class FailureMessage {
 
     private static void timing(StringBuilder out, Context context) {
         out.append('\n').append("Timing:\n");
+        if (context.outcome instanceof Satisfied<?>) {
+            return;
+        }
+        field(out, "Acquisition timeout", duration(context.configuration.upToNanos()));
         switch (context.outcome) {
             case TimeoutBetweenObservations<?> outcome -> {
-                acquisitionTimeout(out, context);
                 field(out, "Last attempt completed after", duration(outcome.attempt().completedNanos() - outcome.startedNanos()));
-                field(out, "Elapsed", duration(outcome.completedNanos() - outcome.startedNanos()));
-                pollingInterval(out, context);
+                elapsed(out, outcome.startedNanos(), outcome.completedNanos());
             }
-            case LateUnsatisfiedTimeout<?> outcome -> timeoutTiming(out, context, outcome.startedNanos(), outcome.attempt().completedNanos());
-            case LateSatisfiedTimeout<?> outcome -> timeoutTiming(out, context, outcome.startedNanos(), outcome.attempt().completedNanos());
+            case LateUnsatisfiedTimeout<?> outcome ->
+                    elapsed(out, outcome.startedNanos(), outcome.attempt().completedNanos());
+            case LateSatisfiedTimeout<?> outcome ->
+                    elapsed(out, outcome.startedNanos(), outcome.attempt().completedNanos());
             case StabilityLoss<?> outcome -> {
-                acquisitionTimeout(out, context);
                 field(out, "Acquired after", duration(outcome.acquiredNanos() - outcome.startedNanos()));
                 field(out, "Required stability", duration(context.configuration.stableForNanos()));
                 field(out, "Failure detected after", duration(outcome.attempt().completedNanos() - outcome.acquiredNanos()));
-                field(out, "Elapsed", duration(outcome.attempt().completedNanos() - outcome.startedNanos()));
-                pollingInterval(out, context);
+                elapsed(out, outcome.startedNanos(), outcome.attempt().completedNanos());
             }
-            case Uncontrolled<?> ignored -> {
-                acquisitionTimeout(out, context);
-                pollingInterval(out, context);
-            }
-            case Satisfied<?> ignored -> {
-            }
+            case Uncontrolled<?> ignored -> {}
+            case Satisfied<?> ignored -> {}
         }
-    }
-
-    private static void timeoutTiming(StringBuilder out, Context context, long startedNanos, long completedNanos) {
-        acquisitionTimeout(out, context);
-        field(out, "Elapsed", duration(completedNanos - startedNanos));
-        pollingInterval(out, context);
-    }
-
-    private static void acquisitionTimeout(StringBuilder out, Context context) {
-        field(out, "Acquisition timeout", duration(context.configuration.upToNanos()));
-    }
-
-    private static void pollingInterval(StringBuilder out, Context context) {
         field(out, "Polling interval", duration(context.configuration.everyNanos()));
+    }
+
+    private static void elapsed(StringBuilder out, long startedNanos, long completedNanos) {
+        field(out, "Elapsed", duration(completedNanos - startedNanos));
     }
 
     private static void attempt(StringBuilder out, long number, String origin, String actual, String mismatch) {
@@ -218,7 +209,7 @@ public final class FailureMessage {
         return out.deleteCharAt(out.length() - 1).toString();
     }
 
-    private static String render(Object value) {
+    private static String renderValue(Object value) {
         if (value != null && value.getClass().isArray()) {
             String array = deepToString(new Object[] {value});
             return array.substring(1, array.length() - 1);
@@ -245,7 +236,7 @@ public final class FailureMessage {
         }
     }
 
-    record Rendering(String message, Throwable failure) {}
+    record RenderResult(String message, Throwable failure) {}
 
     private static final class Context {
 
@@ -273,7 +264,7 @@ public final class FailureMessage {
         }
 
         private String actualValue() {
-            return actual = render(switch (outcome.attempt()) {
+            return actual = renderValue(switch (outcome.attempt()) {
                 case Satisfied<?> value -> value.actual();
                 case Unsatisfied<?> value -> value.actual();
                 case AfterObservation<?> value -> value.actual();

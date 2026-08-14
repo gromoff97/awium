@@ -6,7 +6,6 @@ import io.github.gromoff97.awium.sources.Source;
 
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
-import java.util.function.Supplier;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNCONTROLLED;
 import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt;
@@ -28,92 +27,77 @@ import static java.lang.Math.min;
 import static java.lang.Thread.currentThread;
 
 @SuppressWarnings("removal")
-public record WaitEngine(WaitConfiguration config, LongSupplier clock, LongConsumer parker) {
+public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {
 
     public <S, R> WaitOutcome<R> waitFor(Source<? extends S> source, CheckedFunction<? super S, Evaluation<R>> evaluator) {
-        config.validatePair();
+        configuration.validatePair();
         long started = clock.getAsLong();
-        long acquisitionDeadline = after(started, config.upToNanos());
+        long phaseDeadline = after(started, configuration.upToNanos());
         Unsatisfied<R> lastUnsatisfied = null;
-        long number = 1;
+        boolean stabilizing = false;
+        long acquiredAt = 0;
+        long completed = started;
 
-        for (;;) {
-            Uncontrolled<R> interrupted = interruptedBefore(WAITING, number);
-            if (interrupted != null) {
-                return interrupted;
-            }
-
-            long before = clock.getAsLong();
-            if (number > 1 && reached(before, acquisitionDeadline)) {
-                return new TimeoutBetweenObservations<>(started, before, lastUnsatisfied);
-            }
-
-            Attempt<R> observed = evaluate(source, evaluator, number);
-            long completed = observed.completedNanos();
-            switch (observed) {
-                case Uncontrolled<R> failure -> { return failure; }
-                case Satisfied<R> satisfied -> {
-                    if (reached(completed, acquisitionDeadline)) {
-                        return new LateSatisfiedTimeout<>(started, satisfied);
-                    }
-                    return stabilize(source, evaluator, started, satisfied);
-                }
-                case Unsatisfied<R> unsatisfied -> {
-                    if (reached(completed, acquisitionDeadline)) {
-                        return new LateUnsatisfiedTimeout<>(started, unsatisfied);
-                    }
-                    lastUnsatisfied = unsatisfied;
+        for (long number = 1;; number++) {
+            if (number > 1) {
+                long delay = min(configuration.everyNanos(), remaining(completed, phaseDeadline));
+                Uncontrolled<R> parked = parkUntil(after(completed, delay), number);
+                if (parked != null) {
+                    return parked;
                 }
             }
-
-            long delay = min(config.everyNanos(), remaining(completed, acquisitionDeadline));
-            Uncontrolled<R> parked = parkUntil(after(completed, delay), number + 1);
-            if (parked != null) {
-                return parked;
-            }
-            number++;
-        }
-    }
-
-    private <S, R> WaitOutcome<R> stabilize(Source<? extends S> source, CheckedFunction<? super S, Evaluation<R>> evaluator,
-            long started, Satisfied<R> acquired) {
-        long acquiredAt = acquired.completedNanos();
-        if (config.stableForNanos() == 0) {
-            return acquired;
-        }
-
-        long stabilityDeadline = after(acquiredAt, config.stableForNanos());
-        long number = acquired.number();
-        long completed = acquiredAt;
-
-        for (;;) {
-            long delay = min(config.everyNanos(), remaining(completed, stabilityDeadline));
-            Uncontrolled<R> parked = parkUntil(after(completed, delay), number + 1);
-            if (parked != null) {
-                return parked;
-            }
-            number++;
 
             Uncontrolled<R> interrupted = interruptedBefore(WAITING, number);
             if (interrupted != null) {
                 return interrupted;
             }
 
-            Attempt<R> observed = evaluate(source, evaluator, number);
+            if (!stabilizing) {
+                long before = clock.getAsLong();
+                if (number > 1 && reached(before, phaseDeadline)) {
+                    return new TimeoutBetweenObservations<>(started, before, lastUnsatisfied);
+                }
+            }
+
+            Attempt<R> observed = observe(source, evaluator, number);
             completed = observed.completedNanos();
-            switch (observed) {
-                case Uncontrolled<R> failure -> { return failure; }
-                case Unsatisfied<R> unsatisfied -> { return new StabilityLoss<>(started, acquiredAt, unsatisfied); }
-                case Satisfied<R> satisfied -> {
-                    if (reached(completed, stabilityDeadline)) {
-                        return satisfied;
-                    }
+            if (observed instanceof Uncontrolled<R> failure) {
+                return failure;
+            }
+
+            if (stabilizing) {
+                if (observed instanceof Unsatisfied<R> unsatisfied) {
+                    return new StabilityLoss<>(started, acquiredAt, unsatisfied);
                 }
+                Satisfied<R> satisfied = (Satisfied<R>) observed;
+                if (reached(completed, phaseDeadline)) {
+                    return satisfied;
+                }
+                continue;
+            }
+
+            if (observed instanceof Satisfied<R> satisfied) {
+                if (reached(completed, phaseDeadline)) {
+                    return new LateSatisfiedTimeout<>(started, satisfied);
+                }
+                if (configuration.stableForNanos() == 0) {
+                    return satisfied;
+                }
+                stabilizing = true;
+                acquiredAt = completed;
+                phaseDeadline = after(completed, configuration.stableForNanos());
+            } else {
+                Unsatisfied<R> unsatisfied = (Unsatisfied<R>) observed;
+                if (reached(completed, phaseDeadline)) {
+                    return new LateUnsatisfiedTimeout<>(started, unsatisfied);
+                }
+                lastUnsatisfied = unsatisfied;
             }
         }
     }
 
-    private <S, R> Attempt<R> evaluate(Source<? extends S> source, CheckedFunction<? super S, Evaluation<R>> evaluator, long number) {
+    private <S, R> Attempt<R> observe(Source<? extends S> source,
+            CheckedFunction<? super S, Evaluation<R>> evaluator, long number) {
         S actual;
         try {
             actual = source.get();
@@ -167,20 +151,20 @@ public record WaitEngine(WaitConfiguration config, LongSupplier clock, LongConsu
         };
     }
 
-    private <R> Uncontrolled<R> parkUntil(long target, long nextNumber) {
+    private <R> Uncontrolled<R> parkUntil(long deadline, long attemptNumber) {
         long remaining;
-        while ((remaining = remaining(clock.getAsLong(), target)) > 0) {
+        while ((remaining = remaining(clock.getAsLong(), deadline)) > 0) {
             try {
                 parker.accept(remaining);
             } catch (VirtualMachineError | ThreadDeath fatal) {
                 throw fatal;
             } catch (Throwable uncontrolled) {
                 if (uncontrolled instanceof InterruptedException interruption) {
-                    return interruptedBefore(WAITING, interruption, nextNumber);
+                    return interruptedBefore(WAITING, interruption, attemptNumber);
                 }
-                return new BeforeObservation<>(WAITING, uncontrolled, nextNumber, clock.getAsLong());
+                return new BeforeObservation<>(WAITING, uncontrolled, attemptNumber, clock.getAsLong());
             }
-            Uncontrolled<R> interrupted = interruptedBefore(WAITING, nextNumber);
+            Uncontrolled<R> interrupted = interruptedBefore(WAITING, attemptNumber);
             if (interrupted != null) {
                 return interrupted;
             }
@@ -189,15 +173,19 @@ public record WaitEngine(WaitConfiguration config, LongSupplier clock, LongConsu
     }
 
     private <R> Uncontrolled<R> interruptedBefore(Origin origin, long number) {
-        return interrupted(() -> interruptedBefore(origin, new InterruptedException("caller thread interrupt flag was set"), number));
+        return interrupted()
+                ? interruptedBefore(origin, new InterruptedException("caller thread interrupt flag was set"), number)
+                : null;
     }
 
     private <R> Uncontrolled<R> interruptedAfter(Origin origin, long number, Object actual) {
-        return interrupted(() -> interruptedAfter(origin, new InterruptedException("caller thread interrupt flag was set"), number, actual));
+        return interrupted()
+                ? interruptedAfter(origin, new InterruptedException("caller thread interrupt flag was set"), number, actual)
+                : null;
     }
 
-    private <R> Uncontrolled<R> interrupted(Supplier<Uncontrolled<R>> attempt) {
-        return currentThread().isInterrupted() ? attempt.get() : null;
+    private static boolean interrupted() {
+        return currentThread().isInterrupted();
     }
 
     private <R> Uncontrolled<R> interruptedBefore(Origin origin, InterruptedException interrupted, long number) {
