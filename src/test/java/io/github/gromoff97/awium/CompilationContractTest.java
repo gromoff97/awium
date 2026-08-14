@@ -21,7 +21,7 @@ class CompilationContractTest {
                 "java.util.function.Supplier<String> source = () -> \"value\";"
         }) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.Awium.await;
+                    import static io.github.gromoff97.awium.await.Await.await;
                     final class Contract {
                         void check() {
                             %s
@@ -35,15 +35,15 @@ class CompilationContractTest {
     @Test
     void ambiguousNullSourcesAndConditionsDoNotCompile() throws IOException {
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.Awium.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 final class Contract { void check() { await(() -> null); } }
                 """));
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.Awium.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 final class Contract { void check() { await(null); } }
                 """));
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.Awium.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import io.github.gromoff97.awium.sources.Source;
                 final class Contract {
                     void check(Source<String> source) {
@@ -57,7 +57,7 @@ class CompilationContractTest {
     void categorySpecificTerminalsRejectWrongConditions() throws IOException {
         for (String type : List.of("PresentCondition", "StructuralCondition")) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.Awium.await;
+                    import static io.github.gromoff97.awium.await.Await.await;
                     import io.github.gromoff97.awium.sources.Source;
                     import io.github.gromoff97.awium.conditioning.conditions.*;
                     final class Contract {
@@ -73,7 +73,7 @@ class CompilationContractTest {
     void collectionExactFactoriesRespectOrderedSourceTyping()
             throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.Awium.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
                 import io.github.gromoff97.awium.sources.*;
                 import java.util.*;
@@ -109,7 +109,7 @@ class CompilationContractTest {
     @Test
     void orderedExactFactoriesRejectCollectionOnlySources() throws IOException {
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.Awium.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
                 import io.github.gromoff97.awium.sources.CollectionSource;
                 import java.util.*;

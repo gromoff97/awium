@@ -7,7 +7,7 @@ import io.github.gromoff97.awium.exceptions.AwaitTimeoutException;
 import io.github.gromoff97.awium.sources.CollectionSource;
 import io.github.gromoff97.awium.sources.Source;
 
-import static io.github.gromoff97.awium.Awium.await;
+import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ExpectedValue;
 import static io.github.gromoff97.awium.ProbeContainers.GreedyValue;
@@ -191,11 +191,11 @@ class CollectionExactContentTest {
             List<String> matchingActual, List<String> mismatchingActual) {}
 
     private static final class ProbeList<E> extends AbstractList<E> {
-        private final List<? extends E> elements;
+        private final List<E> elements;
         private final RuntimeException iteratorFailure;
         private int iteratorCalls;
 
-        private ProbeList(List<? extends E> elements,
+        private ProbeList(List<E> elements,
                 RuntimeException iteratorFailure) {
             this.elements = elements;
             this.iteratorFailure = iteratorFailure;
@@ -217,9 +217,7 @@ class CollectionExactContentTest {
             if (iteratorFailure != null) {
                 throw iteratorFailure;
             }
-            @SuppressWarnings("unchecked")
-            Iterator<E> iterator = (Iterator<E>) elements.iterator();
-            return iterator;
+            return elements.iterator();
         }
 
         @Override

@@ -6,13 +6,10 @@ import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.literalExplanation;
 import static java.util.Objects.requireNonNull;
 
-public final class PresentCondition {
+public record PresentCondition(RuntimeCondition<Optional<?>, Object> runtime) {
 
-    private final RuntimeCondition<Optional<?>, Object> runtime;
-
-    private PresentCondition(RuntimeCondition<Optional<?>, Object> runtime) {
-        this.runtime = requireNonNull(runtime,
-                "runtime condition must not be null");
+    public PresentCondition {
+        requireNonNull(runtime, "runtime condition must not be null");
     }
 
     public static PresentCondition of(
@@ -21,17 +18,11 @@ public final class PresentCondition {
     }
 
     public ExplainedCondition because(String explanation) {
-        return new ExplainedCondition(this,
-                literalExplanation(explanation));
+        return new ExplainedCondition(this, explanation);
     }
 
     public ExplainedCondition because(String format, Object... arguments) {
-        return new ExplainedCondition(this,
-                formattedExplanation(format, arguments));
-    }
-
-    public RuntimeCondition<Optional<?>, Object> runtime() {
-        return runtime;
+        return new ExplainedCondition(this, formattedExplanation(format, arguments));
     }
 
     public record ExplainedCondition(PresentCondition delegate,

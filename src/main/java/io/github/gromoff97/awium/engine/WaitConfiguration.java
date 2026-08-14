@@ -1,20 +1,18 @@
 package io.github.gromoff97.awium.engine;
 
-import static io.github.gromoff97.awium.diagnostics.FailureMessage.configurationConflict;
 import io.github.gromoff97.awium.exceptions.AwaitConfigurationConflictException;
 
 import java.time.Duration;
 
-import static java.time.Duration.ofMillis;
-import static java.time.Duration.ofSeconds;
+import static io.github.gromoff97.awium.diagnostics.FailureMessage.configurationConflict;
 import static java.util.Objects.requireNonNull;
 
 public record WaitConfiguration(
         long everyNanos, long upToNanos, long stableForNanos) {
 
     public WaitConfiguration {
-        positive(everyNanos, "polling interval");
-        positive(upToNanos, "acquisition timeout");
+        requirePositive(everyNanos, "polling interval");
+        requirePositive(upToNanos, "acquisition timeout");
         if (stableForNanos < 0) {
             throw new IllegalArgumentException(
                     "stability duration must not be negative");
@@ -22,18 +20,15 @@ public record WaitConfiguration(
     }
 
     public static WaitConfiguration defaults() {
-        return new WaitConfiguration(ofMillis(100).toNanos(),
-                ofSeconds(10).toNanos(), 0L);
+        return new WaitConfiguration(Duration.ofMillis(100).toNanos(), Duration.ofSeconds(10).toNanos(), 0L);
     }
 
     public WaitConfiguration withEvery(Duration value) {
-        return new WaitConfiguration(positiveNanos(value, "polling interval"),
-                upToNanos, stableForNanos);
+        return new WaitConfiguration(nanos(value, "polling interval"), upToNanos, stableForNanos);
     }
 
     public WaitConfiguration withUpTo(Duration value) {
-        return new WaitConfiguration(everyNanos,
-                positiveNanos(value, "acquisition timeout"), stableForNanos);
+        return new WaitConfiguration(everyNanos, nanos(value, "acquisition timeout"), stableForNanos);
     }
 
     public WaitConfiguration withStableFor(Duration value) {
@@ -49,16 +44,11 @@ public record WaitConfiguration(
         }
     }
 
-    private static long positiveNanos(Duration value, String label) {
-        return positive(nanos(value, label), label);
-    }
-
-    private static long positive(long nanos, String label) {
+    private static void requirePositive(long nanos, String label) {
         if (nanos <= 0) {
             throw new IllegalArgumentException(
                     label + " must be greater than zero");
         }
-        return nanos;
     }
 
     private static long nanos(Duration value, String label) {

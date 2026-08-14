@@ -3,7 +3,6 @@ package io.github.gromoff97.awium;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -87,11 +86,11 @@ final class ProbeContainers {
     }
 
     static final class MembershipCollection<E> extends AbstractCollection<E> {
-        private final List<? extends E> elements;
+        private final List<E> elements;
         private final RuntimeException iteratorFailure;
         int iteratorCalls;
 
-        MembershipCollection(List<? extends E> elements) {
+        MembershipCollection(List<E> elements) {
             this(elements, null);
         }
 
@@ -99,7 +98,7 @@ final class ProbeContainers {
             this(List.of(), iteratorFailure);
         }
 
-        private MembershipCollection(List<? extends E> elements,
+        private MembershipCollection(List<E> elements,
                 RuntimeException iteratorFailure) {
             this.elements = elements;
             this.iteratorFailure = iteratorFailure;
@@ -116,9 +115,7 @@ final class ProbeContainers {
             if (iteratorFailure != null) {
                 throw iteratorFailure;
             }
-            @SuppressWarnings("unchecked")
-            Iterator<E> iterator = (Iterator<E>) elements.iterator();
-            return iterator;
+            return elements.iterator();
         }
 
         @Override
@@ -166,14 +163,7 @@ final class ProbeContainers {
         }
     }
 
-    static final class ProbeEntry<K, V> implements Map.Entry<K, V> {
-        private final K key;
-        private final V value;
-
-        ProbeEntry(K key, V value) {
-            this.key = key;
-            this.value = value;
-        }
+    record ProbeEntry<K, V>(K key, V value) implements Map.Entry<K, V> {
 
         @Override
         public K getKey() {
@@ -221,17 +211,9 @@ final class ProbeContainers {
         }
     }
 
-    static final class GreedyValue {
-        private final Set<String> matches;
-        int equalsCalls;
-
-        GreedyValue(Set<String> matches) {
-            this.matches = matches;
-        }
-
+    record GreedyValue(Set<String> matches) {
         @Override
         public boolean equals(Object other) {
-            equalsCalls++;
             return other instanceof ExpectedValue expected
                     && matches.contains(expected.value());
         }
@@ -244,13 +226,7 @@ final class ProbeContainers {
 
     record ExpectedValue(String value) {}
 
-    static final class ThrowingEquals {
-        private final RuntimeException failure;
-
-        ThrowingEquals(RuntimeException failure) {
-            this.failure = failure;
-        }
-
+    record ThrowingEquals(RuntimeException failure) {
         @Override
         public boolean equals(Object other) {
             if (failure != null) {

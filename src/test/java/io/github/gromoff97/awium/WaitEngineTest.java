@@ -3,9 +3,9 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.sources.Source;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.*;
-import static io.github.gromoff97.awium.engine.Attempt.*;
-import static io.github.gromoff97.awium.engine.Attempt.Origin.*;
-import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled.*;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.*;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Origin.*;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled.*;
 import static io.github.gromoff97.awium.engine.WaitOutcome.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;

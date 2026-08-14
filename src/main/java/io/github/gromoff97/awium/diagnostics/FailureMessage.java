@@ -5,12 +5,13 @@ import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
 
 import java.util.Locale;
+import java.util.StringJoiner;
 
-import static io.github.gromoff97.awium.engine.Attempt.Satisfied;
-import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled;
-import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled.AfterObservation;
-import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled.BeforeObservation;
-import static io.github.gromoff97.awium.engine.Attempt.Unsatisfied;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Satisfied;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled.AfterObservation;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled.BeforeObservation;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Unsatisfied;
 import static io.github.gromoff97.awium.engine.WaitOutcome.LateSatisfiedTimeout;
 import static io.github.gromoff97.awium.engine.WaitOutcome.LateUnsatisfiedTimeout;
 import static io.github.gromoff97.awium.engine.WaitOutcome.StabilityLoss;
@@ -23,19 +24,8 @@ public final class FailureMessage {
 
     private static final String DESCRIPTION_UNAVAILABLE =
             "condition description unavailable";
-    private static final long[] UNIT_NANOS = {
-        86_400_000_000_000L,
-        3_600_000_000_000L,
-        60_000_000_000L,
-        1_000_000_000L,
-        1_000_000L,
-        1_000L,
-        1L
-    };
-    private static final String[] UNIT_NAMES = {
-        "day", "hour", "minute", "second", "millisecond", "microsecond",
-        "nanosecond"
-    };
+    private static final long[] UNIT_NANOS = {86_400_000_000_000L, 3_600_000_000_000L, 60_000_000_000L, 1_000_000_000L, 1_000_000L, 1_000L, 1L};
+    private static final String[] UNIT_NAMES = {"day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond"};
 
     private FailureMessage() {
         throw new AssertionError("Utility class");
@@ -46,7 +36,18 @@ public final class FailureMessage {
             WaitConfiguration configuration) {
         Context context = new Context(outcome, condition, configuration);
         try {
-            return format(context);
+            return switch (context.outcome) {
+                case TimeoutBetweenObservations<?> value -> unsatisfied(context, value.attempt(),
+                        "Acquisition deadline elapsed before the next attempt");
+                case LateUnsatisfiedTimeout<?> value -> unsatisfied(context, value.attempt(),
+                        "Condition remained unsatisfied at or after the acquisition deadline");
+                case LateSatisfiedTimeout<?> value -> lateSatisfied(context, value);
+                case StabilityLoss<?> value -> unsatisfied(context, value.attempt(),
+                        "Condition did not remain stable for the required duration");
+                case Uncontrolled<?> value -> uncontrolled(context, value);
+                case Satisfied<?> ignored -> throw new IllegalArgumentException(
+                        "successful outcomes have no failure diagnostics");
+            };
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
         } catch (Throwable failure) {
@@ -74,57 +75,18 @@ public final class FailureMessage {
                         : context.actual;
         String mismatch = context.outcome.attempt() instanceof Unsatisfied<?> value
                 ? value.mismatch() : null;
-        attempt(out, context.outcome.attempt().number(), "diagnostics", actual,
-                mismatch);
+        attempt(out, context.outcome.attempt().number(), "diagnostics", actual, mismatch);
         timing(out, context);
         cause(out, emergencyDiagnostic(failure.getCause()));
         return finish(out);
     }
 
-    private static String format(Context context) {
-        return switch (context.outcome) {
-            case TimeoutBetweenObservations<?> outcome ->
-                    timeoutBetween(context, outcome);
-            case LateUnsatisfiedTimeout<?> outcome ->
-                    lateUnsatisfied(context, outcome);
-            case LateSatisfiedTimeout<?> outcome ->
-                    lateSatisfied(context, outcome);
-            case StabilityLoss<?> outcome ->
-                    stabilityLoss(context, outcome);
-            case Uncontrolled<?> outcome ->
-                    uncontrolled(context, outcome);
-            case Satisfied<?> ignored -> throw new IllegalArgumentException(
-                    "successful outcomes have no failure diagnostics");
-        };
-    }
-
-    private static String timeoutBetween(Context context,
-            TimeoutBetweenObservations<?> outcome) {
-        Unsatisfied<?> last = outcome.attempt();
-        ThrowableDiagnostic assertion = last.assertionCause() == null
-                ? null : context.causeDiagnostic();
-        StringBuilder out = heading(
-                "Acquisition deadline elapsed before the next attempt");
-        condition(out, context);
-        attempt(out, last.number(), null, context.actualValue(),
-                last.mismatch());
-        timing(out, context);
-        if (assertion != null) {
-            cause(out, assertion);
-        }
-        return finish(out);
-    }
-
-    private static String lateUnsatisfied(Context context,
-            LateUnsatisfiedTimeout<?> outcome) {
-        Unsatisfied<?> attempt = outcome.attempt();
+    private static String unsatisfied(Context context, Unsatisfied<?> attempt, String heading) {
         ThrowableDiagnostic assertion = attempt.assertionCause() == null
                 ? null : context.causeDiagnostic();
-        StringBuilder out = heading(
-                "Condition remained unsatisfied at or after the acquisition deadline");
+        StringBuilder out = heading(heading);
         condition(out, context);
-        attempt(out, attempt.number(), null, context.actualValue(),
-                attempt.mismatch());
+        attempt(out, attempt.number(), null, context.actualValue(), attempt.mismatch());
         timing(out, context);
         if (assertion != null) {
             cause(out, assertion);
@@ -143,27 +105,9 @@ public final class FailureMessage {
         return finish(out);
     }
 
-    private static String stabilityLoss(Context context,
-            StabilityLoss<?> outcome) {
-        Unsatisfied<?> attempt = outcome.attempt();
-        ThrowableDiagnostic assertion = attempt.assertionCause() == null
-                ? null : context.causeDiagnostic();
-        StringBuilder out = heading(
-                "Condition did not remain stable for the required duration");
-        condition(out, context);
-        attempt(out, attempt.number(), null, context.actualValue(),
-                attempt.mismatch());
-        timing(out, context);
-        if (assertion != null) {
-            cause(out, assertion);
-        }
-        return finish(out);
-    }
-
     private static String uncontrolled(Context context,
             Uncontrolled<?> attempt) {
-        boolean interrupted = attempt.cause() instanceof InterruptedException;
-        String title = interrupted ? "Caller thread was interrupted" : switch (
+        String title = attempt.cause() instanceof InterruptedException ? "Caller thread was interrupted" : switch (
                 attempt.origin()) {
             case SOURCE -> "Source retrieval failed";
             case CONDITION -> "Condition evaluation failed";
@@ -181,14 +125,14 @@ public final class FailureMessage {
     }
 
     private static void timing(StringBuilder out, Context context) {
+        out.append('\n').append("Timing:\n");
         switch (context.outcome) {
             case TimeoutBetweenObservations<?> outcome -> {
-                out.append('\n').append("Timing:\n");
                 acquisitionTimeout(out, context);
-                field(out, 4, "Last attempt completed after", duration(
+                field(out, "Last attempt completed after", duration(
                         outcome.attempt().completedNanos()
                                 - outcome.startedNanos()));
-                field(out, 4, "Elapsed", duration(
+                field(out, "Elapsed", duration(
                         outcome.completedNanos() - outcome.startedNanos()));
                 pollingInterval(out, context);
             }
@@ -197,22 +141,20 @@ public final class FailureMessage {
             case LateSatisfiedTimeout<?> outcome -> timeoutTiming(out, context,
                     outcome.startedNanos(), outcome.attempt().completedNanos());
             case StabilityLoss<?> outcome -> {
-                out.append('\n').append("Timing:\n");
                 acquisitionTimeout(out, context);
-                field(out, 4, "Acquired after", duration(
+                field(out, "Acquired after", duration(
                         outcome.acquiredNanos() - outcome.startedNanos()));
-                field(out, 4, "Required stability",
+                field(out, "Required stability",
                         duration(context.configuration.stableForNanos()));
-                field(out, 4, "Failure detected after", duration(
+                field(out, "Failure detected after", duration(
                         outcome.attempt().completedNanos()
                                 - outcome.acquiredNanos()));
-                field(out, 4, "Elapsed", duration(
+                field(out, "Elapsed", duration(
                         outcome.attempt().completedNanos()
                                 - outcome.startedNanos()));
                 pollingInterval(out, context);
             }
             case Uncontrolled<?> ignored -> {
-                out.append('\n').append("Timing:\n");
                 acquisitionTimeout(out, context);
                 pollingInterval(out, context);
             }
@@ -223,42 +165,41 @@ public final class FailureMessage {
 
     private static void timeoutTiming(StringBuilder out, Context context,
             long startedNanos, long completedNanos) {
-        out.append('\n').append("Timing:\n");
         acquisitionTimeout(out, context);
-        field(out, 4, "Elapsed", duration(completedNanos - startedNanos));
+        field(out, "Elapsed", duration(completedNanos - startedNanos));
         pollingInterval(out, context);
     }
 
     private static void acquisitionTimeout(StringBuilder out, Context context) {
-        field(out, 4, "Acquisition timeout", duration(
+        field(out, "Acquisition timeout", duration(
                 context.configuration.upToNanos()));
     }
 
     private static void pollingInterval(StringBuilder out, Context context) {
-        field(out, 4, "Polling interval", duration(
+        field(out, "Polling interval", duration(
                 context.configuration.everyNanos()));
     }
 
     private static void attempt(StringBuilder out, long number, String origin,
             String actual, String mismatch) {
         out.append('\n').append("Attempt:\n");
-        field(out, 4, "Number", Long.toString(number));
+        field(out, "Number", Long.toString(number));
         if (origin != null) {
-            field(out, 4, "Origin", origin);
+            field(out, "Origin", origin);
         }
         if (actual != null) {
-            field(out, 4, "Actual", actual);
+            field(out, "Actual", actual);
         }
         if (mismatch != null) {
-            field(out, 4, "Mismatch", mismatch);
+            field(out, "Mismatch", mismatch);
         }
     }
 
     private static void cause(StringBuilder out, ThrowableDiagnostic cause) {
         out.append('\n').append("Cause:\n");
-        field(out, 4, "Type", cause.type());
+        field(out, "Type", cause.type());
         if (cause.message() != null) {
-            field(out, 4, "Message", cause.message());
+            field(out, "Message", cause.message());
         }
     }
 
@@ -270,26 +211,23 @@ public final class FailureMessage {
     private static void condition(StringBuilder out, String expectation,
             String importance) {
         out.append("Condition:\n");
-        field(out, 4, "Expectation", expectation);
+        field(out, "Expectation", expectation);
         if (importance != null) {
-            field(out, 4, "Importance", importance);
+            field(out, "Importance", importance);
         }
     }
 
-    private static void field(StringBuilder out, int indent, String label,
-            String value) {
+    private static void field(StringBuilder out, String label, String value) {
         String normalized = value.replace("\r\n", "\n").replace('\r', '\n');
-        String prefix = " ".repeat(indent);
         if (!normalized.contains("\n")) {
-            out.append(prefix).append(label).append(": ")
+            out.append("    ").append(label).append(": ")
                     .append(normalized).append('\n');
             return;
         }
-        out.append(prefix).append(label).append(":\n");
-        String contentPrefix = " ".repeat(indent + 4);
+        out.append("    ").append(label).append(":\n");
         for (String line : normalized.split("\n", -1)) {
             if (!line.isEmpty()) {
-                out.append(contentPrefix).append(line);
+                out.append("        ").append(line);
             }
             out.append('\n');
         }
@@ -304,22 +242,16 @@ public final class FailureMessage {
     }
 
     private static String duration(long nanos) {
-        StringBuilder result = new StringBuilder();
+        StringJoiner result = new StringJoiner(" ");
         for (int index = 0; index < UNIT_NANOS.length; index++) {
             long count = nanos / UNIT_NANOS[index];
             nanos %= UNIT_NANOS[index];
             if (count == 0) {
                 continue;
             }
-            if (!result.isEmpty()) {
-                result.append(' ');
-            }
-            result.append(count).append(' ').append(UNIT_NAMES[index]);
-            if (count != 1) {
-                result.append('s');
-            }
+            result.add(count + " " + UNIT_NAMES[index] + (count == 1 ? "" : "s"));
         }
-        return result.isEmpty() ? "0 nanoseconds" : result.toString();
+        return result.length() == 0 ? "0 nanoseconds" : result.toString();
     }
 
     private static String render(Object value) {
@@ -370,12 +302,11 @@ public final class FailureMessage {
                 throw new IllegalArgumentException(
                         "condition description must not be blank");
             }
-            description = rendered;
-            return description;
+            return description = rendered;
         }
 
         private String actualValue() {
-            actual = render(switch (outcome.attempt()) {
+            return actual = render(switch (outcome.attempt()) {
                 case Satisfied<?> value -> value.actual();
                 case Unsatisfied<?> value -> value.actual();
                 case AfterObservation<?> value -> value.actual();
@@ -383,7 +314,6 @@ public final class FailureMessage {
                         throw new IllegalArgumentException(
                                 "attempt has no observed actual");
             });
-            return actual;
         }
 
         private ThrowableDiagnostic causeDiagnostic() {
@@ -392,9 +322,8 @@ public final class FailureMessage {
     }
 
     private static ThrowableDiagnostic throwableDiagnostic(Throwable failure) {
-        String type = typeName(failure);
         String message = failure.getMessage();
-        return new ThrowableDiagnostic(type,
+        return new ThrowableDiagnostic(typeName(failure),
                 message == null || message.isBlank() ? null : message);
     }
 

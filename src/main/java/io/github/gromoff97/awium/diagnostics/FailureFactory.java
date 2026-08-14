@@ -11,15 +11,19 @@ import io.github.gromoff97.awium.exceptions.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUnhandledException;
 
 import static io.github.gromoff97.awium.diagnostics.FailureMessage.terminalCause;
-import static io.github.gromoff97.awium.engine.Attempt.Satisfied;
-import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Satisfied;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled;
 import static io.github.gromoff97.awium.engine.WaitOutcome.StabilityLoss;
 import static java.lang.Thread.currentThread;
 
 public final class FailureFactory {
 
+    private FailureFactory() {
+        throw new AssertionError("Utility class");
+    }
+
     @SuppressWarnings("removal")
-    public <R> R complete(WaitOutcome<R> outcome,
+    public static <R> R complete(WaitOutcome<R> outcome,
             RuntimeCondition<?, R> condition,
             WaitConfiguration configuration) {
         if (outcome instanceof Satisfied<R> success) {
@@ -27,10 +31,8 @@ public final class FailureFactory {
         }
 
         Throwable cause = terminalCause(outcome);
-        if (cause instanceof VirtualMachineError fatal) {
-            throw fatal;
-        }
-        if (cause instanceof ThreadDeath fatal) {
+        if (cause instanceof Error fatal
+                && (fatal instanceof VirtualMachineError || fatal instanceof ThreadDeath)) {
             throw fatal;
         }
         boolean restoreInterrupt = currentThread().isInterrupted()

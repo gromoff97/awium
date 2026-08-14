@@ -25,18 +25,8 @@ public final class ValueEquality {
             if (left == right) {
                 continue;
             }
-            if (left == null || right == null) {
-                return false;
-            }
-
-            if (left.getClass().isArray() != right.getClass().isArray()) {
-                return false;
-            }
-
-            if (left instanceof Object[] leftObjects) {
-                if (!(right instanceof Object[] rightObjects)) {
-                    return false;
-                }
+            if (left instanceof Object[] leftObjects
+                    && right instanceof Object[] rightObjects) {
                 if (!visited.add(pair)) {
                     continue;
                 }
@@ -44,8 +34,7 @@ public final class ValueEquality {
                     return false;
                 }
                 for (int index = leftObjects.length - 1; index >= 0; index--) {
-                    pending.addLast(new ValuePair(
-                            leftObjects[index], rightObjects[index]));
+                    pending.addLast(new ValuePair(leftObjects[index], rightObjects[index]));
                 }
                 continue;
             }

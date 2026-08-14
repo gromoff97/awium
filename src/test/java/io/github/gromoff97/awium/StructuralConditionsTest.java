@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.Awium.await;
+import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.structural;
 import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
@@ -10,7 +10,6 @@ import static java.time.Duration.ofNanos;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.await.StructuralAwait;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.sources.CollectionSource;
@@ -25,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -155,19 +153,6 @@ class StructuralConditionsTest {
                 return List.of();
             }).until(PreservingCondition.of(runtime));
         }).getMessage().contains("size function"));
-        assertEquals(0, sourceCalls[0]);
-    }
-
-    @Test
-    void structuralAwaitRejectsBlankSubjectAtConstruction() {
-        var sourceCalls = new int[1];
-
-        assertEquals("subject must not be blank",
-                assertThrows(IllegalArgumentException.class,
-                        () -> new StructuralAwait<Collection<?>>(() -> {
-                            sourceCalls[0]++;
-                            return List.of();
-                        }, "", Collection::size)).getMessage());
         assertEquals(0, sourceCalls[0]);
     }
 

@@ -9,7 +9,6 @@ import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isProtected;
 import static java.lang.reflect.Modifier.isPublic;
 import static java.nio.file.Files.walk;
-import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -38,22 +37,16 @@ import org.junit.jupiter.api.Test;
 
 class PublicSurfaceTest {
 
-    private static final Path JAR = Path.of(
-            "build", "libs", "awium-0.1.0-SNAPSHOT.jar");
     private static final Set<String> PUBLIC_API_PACKAGES = Set.copyOf(
-            ModuleFinder.of(JAR).find("io.github.gromoff97.awium")
+            ModuleFinder.of(ArtifactContractIT.JAR).find("io.github.gromoff97.awium")
                     .orElseThrow().descriptor().exports().stream()
                     .map(export -> export.source()).toList());
 
     @Test
-    void publicApiDoesNotLeakExcludedAsyncOrContinuationSurface()
-            throws Exception {
-        assertNoExcludedApiSurface(discoveredPublicApiTypes());
-    }
-
-    @Test
-    void sourceAndCallbackContractsRemainCheckedSams() throws Exception {
-        for (Class<?> type : discoveredPublicApiTypes()) {
+    void publicApiDoesNotLeakExcludedSurfaceAndKeepsCheckedSams() throws Exception {
+        Set<Class<?>> types = discoveredPublicApiTypes();
+        assertNoExcludedApiSurface(types);
+        for (Class<?> type : types) {
             if (Source.class.isAssignableFrom(type)
                     || type == CheckedConsumer.class
                     || type == CheckedFunction.class) {
@@ -145,7 +138,7 @@ class PublicSurfaceTest {
                 if (current.getSuperclass() != null) {
                     pending.add(current.getSuperclass());
                 }
-                pending.addAll(asList(current.getInterfaces()));
+                pending.addAll(List.of(current.getInterfaces()));
             }
         }
         return hierarchy;
@@ -192,11 +185,13 @@ class PublicSurfaceTest {
         String packageName = type.getPackageName();
         return packageName.startsWith("io.github.gromoff97.awium")
                 && !PUBLIC_API_PACKAGES.contains(packageName)
+                && type.getNestHost() != PublicSurfaceTest.class
                 || Iterable.class.isAssignableFrom(type)
                 && !Collection.class.isAssignableFrom(type)
-                || List.of(Future.class, Callable.class, Runnable.class,
-                        Predicate.class).stream()
-                .anyMatch(forbidden -> forbidden.isAssignableFrom(type))
+                || Future.class.isAssignableFrom(type)
+                || Callable.class.isAssignableFrom(type)
+                || Runnable.class.isAssignableFrom(type)
+                || Predicate.class.isAssignableFrom(type)
                 || packageName.equals("org.assertj")
                 || packageName.startsWith("org.assertj.")
                 || packageName.equals("org.awaitility")
@@ -208,8 +203,8 @@ class PublicSurfaceTest {
                 .filter(method -> isAbstract(method.getModifiers()))
                 .toList();
         assertEquals(1, abstractMethods.size(), type.getName());
-        assertEquals(List.of(Exception.class), asList(
-                abstractMethods.getFirst().getExceptionTypes()), type.getName());
+        assertEquals(List.of(Exception.class),
+                List.of(abstractMethods.getFirst().getExceptionTypes()), type.getName());
     }
 
     private static Set<Class<?>> discoveredPublicApiTypes() throws Exception {
@@ -233,20 +228,14 @@ class PublicSurfaceTest {
                 }
             }
         }
-        return Set.copyOf(types);
+        return types;
     }
 
     private static boolean isPublicApiType(Class<?> type) {
-        if (!PUBLIC_API_PACKAGES.contains(type.getPackageName())) {
-            return false;
-        }
-        for (Class<?> current = type; current != null;
-                current = current.getEnclosingClass()) {
-            if (!isPublic(current.getModifiers())) {
-                return false;
-            }
-        }
-        return true;
+        Class<?> enclosing = type.getEnclosingClass();
+        return PUBLIC_API_PACKAGES.contains(type.getPackageName())
+                && isPublic(type.getModifiers())
+                && (enclosing == null || isPublicApiType(enclosing));
     }
 
     public static final class AwaitResult {}

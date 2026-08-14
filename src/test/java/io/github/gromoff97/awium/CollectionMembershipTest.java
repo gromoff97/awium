@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.await.Await;
 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.exceptions.AwaitConditionEvaluationException;
@@ -126,7 +127,7 @@ class CollectionMembershipTest {
     void ordinaryConsumerCallsAreWarningFreeAndBareNullRemainsAmbiguous()
             throws IOException {
         assertTrue(compiles(temporaryDirectory, """
-                import static io.github.gromoff97.awium.Awium.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
                 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
                 import io.github.gromoff97.awium.sources.CollectionSource;
@@ -186,7 +187,7 @@ class CollectionMembershipTest {
             ProbeContainers.MembershipCollection<E> actual,
             PreservingCondition<? super ProbeContainers.MembershipCollection<E>>
                     condition) {
-        return Awium.await((CollectionSource<
+        return Await.await((CollectionSource<
                 ProbeContainers.MembershipCollection<E>>) () -> actual)
                 .until(condition);
     }

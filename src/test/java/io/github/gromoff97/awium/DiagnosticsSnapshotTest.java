@@ -9,12 +9,12 @@ import io.github.gromoff97.awium.engine.WaitOutcome;
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.sources.Source;
 
-import static io.github.gromoff97.awium.Awium.await;
+import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.uncontrolled;
-import static io.github.gromoff97.awium.engine.Attempt.*;
-import static io.github.gromoff97.awium.engine.Attempt.Origin.*;
-import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled.*;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.*;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Origin.*;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled.*;
 import static io.github.gromoff97.awium.engine.WaitOutcome.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
@@ -269,7 +269,7 @@ class DiagnosticsSnapshotTest {
         try {
             AwaitInterruptedException failure = assertThrows(
                     AwaitInterruptedException.class,
-                    () -> new FailureFactory().complete(
+                    () -> FailureFactory.complete(
                             new BeforeObservation<>(WAITING, interruption,
                                     1, 0), condition,
                             config(1, 2, 0)));
@@ -353,7 +353,7 @@ class DiagnosticsSnapshotTest {
                     throw new AssertionError("description must not be read");
                 }, null);
 
-        assertSame(result, new FailureFactory().complete(
+        assertSame(result, FailureFactory.complete(
                 new Satisfied<>(new ThrowingValue(new AssertionError()), result,
                         1, 0), condition, config(1, 2, 0)));
     }
@@ -372,7 +372,7 @@ class DiagnosticsSnapshotTest {
 
         AwaitUnhandledException descriptionFailure = assertThrows(
                 AwaitUnhandledException.class,
-                () -> new FailureFactory().complete(outcome, brokenDescription,
+                () -> FailureFactory.complete(outcome, brokenDescription,
                         config(1, 2, 0)));
         AwaitUnhandledException valueFailure = assertThrows(
                 AwaitUnhandledException.class,
@@ -475,11 +475,11 @@ class DiagnosticsSnapshotTest {
 
         AwaitUnhandledException nullFailure = assertThrows(
                 AwaitUnhandledException.class,
-                () -> new FailureFactory().complete(described, nullDescription,
+                () -> FailureFactory.complete(described, nullDescription,
                         config(1, 2, 0)));
         AwaitUnhandledException blankFailure = assertThrows(
                 AwaitUnhandledException.class,
-                () -> new FailureFactory().complete(described, blankDescription,
+                () -> FailureFactory.complete(described, blankDescription,
                         config(1, 2, 0)));
         AwaitUnhandledException valueFailure = assertThrows(
                 AwaitUnhandledException.class,
@@ -509,7 +509,7 @@ class DiagnosticsSnapshotTest {
                         engineCause, 1, 2));
 
         assertSame(descriptionFatal, assertThrows(InternalError.class,
-                () -> new FailureFactory().complete(sourceFailure,
+                () -> FailureFactory.complete(sourceFailure,
                         new RuntimeCondition<>(Evaluation::satisfied, () -> {
                             throw descriptionFatal;
                         }, null), config(1, 2, 0))));
@@ -548,7 +548,7 @@ class DiagnosticsSnapshotTest {
                 }, null);
 
         InternalError thrown = assertThrows(InternalError.class,
-                () -> new FailureFactory().complete(
+                () -> FailureFactory.complete(
                         new BeforeObservation<>(SOURCE, engineCause, 1, 0),
                         condition, config(1, 2, 0)));
 
@@ -583,7 +583,7 @@ class DiagnosticsSnapshotTest {
 
     private static <R> R complete(WaitOutcome<R> outcome, String description,
             String explanation, WaitConfiguration configuration) {
-        return new FailureFactory().complete(outcome,
+        return FailureFactory.complete(outcome,
                 runtime(description, explanation), configuration);
     }
 
@@ -604,18 +604,6 @@ class DiagnosticsSnapshotTest {
                     () -> "missing diagnostic fragment: " + fragment
                             + "\n" + failure.getMessage());
         }
-    }
-
-    private static void assertCondition(Throwable failure, String expectation,
-            String rationale) {
-        String expected = "Condition:\n    Expectation: " + expectation + "\n";
-        if (rationale != null) {
-            expected += "    Importance: " + rationale + "\n";
-        }
-        assertTrue((failure.getMessage() + "\n").contains(expected),
-                failure::getMessage);
-        assertFalse(failure.getMessage().contains("Because:"));
-        assertFalse(failure.getMessage().contains("Reason:"));
     }
 
     private static final class ThrowingValue {

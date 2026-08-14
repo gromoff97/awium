@@ -6,15 +6,13 @@ public final class Evaluation<R> {
 
     public enum Status { SATISFIED, UNSATISFIED, UNCONTROLLED }
 
-    private final Status status;
     private final R result;
     private final String mismatch;
     private final AssertionError assertionCause;
     private final Throwable uncontrolledCause;
 
-    private Evaluation(Status status, R result, String mismatch,
-            AssertionError assertionCause, Throwable uncontrolledCause) {
-        this.status = status;
+    private Evaluation(R result, String mismatch, AssertionError assertionCause,
+            Throwable uncontrolledCause) {
         this.result = result;
         this.mismatch = mismatch;
         this.assertionCause = assertionCause;
@@ -22,28 +20,29 @@ public final class Evaluation<R> {
     }
 
     public static <R> Evaluation<R> satisfied(R result) {
-        return new Evaluation<>(Status.SATISFIED, result, null, null, null);
+        return new Evaluation<>(result, null, null, null);
     }
 
     public static <R> Evaluation<R> unsatisfied(String mismatch) {
-        return new Evaluation<>(Status.UNSATISFIED, null,
-                nonBlank(mismatch, "mismatch"), null, null);
+        return new Evaluation<>(null, nonBlank(mismatch, "mismatch"), null, null);
     }
 
     public static <R> Evaluation<R> assertionUnsatisfied(
             String mismatch, AssertionError cause) {
-        return new Evaluation<>(Status.UNSATISFIED, null,
-                nonBlank(mismatch, "mismatch"),
+        return new Evaluation<>(null, nonBlank(mismatch, "mismatch"),
                 requireNonNull(cause, "cause must not be null"), null);
     }
 
     public static <R> Evaluation<R> uncontrolled(Throwable cause) {
-        return new Evaluation<>(Status.UNCONTROLLED, null, null, null,
+        return new Evaluation<>(null, null, null,
                 requireNonNull(cause, "cause must not be null"));
     }
 
     public Status status() {
-        return status;
+        if (mismatch != null) {
+            return Status.UNSATISFIED;
+        }
+        return uncontrolledCause == null ? Status.SATISFIED : Status.UNCONTROLLED;
     }
 
     public R result() {

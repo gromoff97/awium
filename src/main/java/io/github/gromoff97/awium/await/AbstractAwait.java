@@ -19,35 +19,27 @@ import static java.util.Objects.requireNonNull;
 
 abstract class AbstractAwait<S, A> {
 
-    private static final FailureFactory FAILURE_FACTORY = new FailureFactory();
-
-    private final Source<S> source;
+    private final Source<? extends S> source;
     private final WaitConfiguration configuration;
     private final LongSupplier clock;
     private final LongConsumer parker;
 
     protected AbstractAwait(Source<? extends S> source) {
-        this(source, defaults(), System::nanoTime,
-                LockSupport::parkNanos);
+        this(source, defaults(), System::nanoTime, LockSupport::parkNanos);
     }
 
     AbstractAwait(Source<? extends S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {
-        this.source = requireNonNull(source, "source must not be null")::get;
-        this.configuration = requireNonNull(configuration,
-                "configuration must not be null");
+        this.source = requireNonNull(source, "source must not be null");
+        this.configuration = requireNonNull(configuration, "configuration must not be null");
         this.clock = requireNonNull(clock, "clock must not be null");
         this.parker = requireNonNull(parker, "parker must not be null");
     }
 
     AbstractAwait(AbstractAwait<S, ?> await,
             WaitConfiguration configuration) {
-        this.source = await.source;
-        this.configuration = requireNonNull(configuration,
-                "configuration must not be null");
-        this.clock = await.clock;
-        this.parker = await.parker;
+        this(await.source, configuration, await.clock, await.parker);
     }
 
     public final A every(Duration interval) {
@@ -63,31 +55,28 @@ abstract class AbstractAwait<S, A> {
     }
 
     public final S until(PreservingCondition<? super S> condition) {
-        return complete(preserving(
-                requireNonNull(condition, "condition must not be null")));
+        return complete(preserving(requireNonNull(condition, "condition must not be null")));
     }
 
     public final S until(
             PreservingCondition.ExplainedCondition<? super S> condition) {
-        return complete(preserving(
-                requireNonNull(condition, "condition must not be null")));
+        var explained = requireNonNull(condition, "condition must not be null");
+        return complete(RuntimeCondition.<S>preserving(explained.delegate()).explained(explained.explanation()));
     }
 
     public final <R> R until(Condition<? super S, ? extends R> condition) {
-        return complete(RuntimeCondition.<S, R>open(
-                requireNonNull(condition, "condition must not be null")));
+        return complete(RuntimeCondition.<S, R>open(requireNonNull(condition, "condition must not be null")));
     }
 
     public final <R> R until(
             Condition.ExplainedCondition<? super S, ? extends R> condition) {
-        return complete(RuntimeCondition.<S, R>open(
-                requireNonNull(condition, "condition must not be null")));
+        var explained = requireNonNull(condition, "condition must not be null");
+        return complete(RuntimeCondition.<S, R>open(explained.delegate()).explained(explained.explanation()));
     }
 
     abstract A reconfigured(WaitConfiguration configuration);
 
     protected final <R> R complete(RuntimeCondition<S, R> condition) {
-        return FAILURE_FACTORY.complete(new WaitEngine(configuration, clock,
-                parker).waitFor(source, condition), condition, configuration);
+        return FailureFactory.complete(new WaitEngine(configuration, clock, parker).waitFor(source, condition), condition, configuration);
     }
 }

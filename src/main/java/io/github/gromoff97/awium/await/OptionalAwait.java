@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.await;
 
 import io.github.gromoff97.awium.conditioning.conditions.PresentCondition;
+import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.OptionalSource;
 
@@ -11,7 +12,7 @@ import static java.util.Objects.requireNonNull;
 
 public final class OptionalAwait<T> extends AbstractAwait<Optional<T>, OptionalAwait<T>> {
 
-    public OptionalAwait(OptionalSource<T> source) {
+    OptionalAwait(OptionalSource<T> source) {
         super(source);
     }
 
@@ -26,12 +27,11 @@ public final class OptionalAwait<T> extends AbstractAwait<Optional<T>, OptionalA
     }
 
     public T until(PresentCondition condition) {
-        return complete(present(
-                requireNonNull(condition, "condition must not be null")));
+        return complete(present(requireNonNull(condition, "condition must not be null")));
     }
 
     public T until(PresentCondition.ExplainedCondition condition) {
-        return complete(present(
-                requireNonNull(condition, "condition must not be null")));
+        var explained = requireNonNull(condition, "condition must not be null");
+        return complete(RuntimeCondition.<T>present(explained.delegate()).explained(explained.explanation()));
     }
 }

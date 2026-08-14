@@ -28,63 +28,40 @@ public record RuntimeCondition<S, R>(
         }
     }
 
+    public RuntimeCondition(CheckedFunction<S, Evaluation<R>> evaluator, Supplier<String> description) {
+        this(evaluator, description, null);
+    }
+
     public Evaluation<R> evaluate(S actual) throws Exception {
         return evaluator.apply(actual);
     }
 
     public RuntimeCondition<S, R> explained(String value) {
         return new RuntimeCondition<>(evaluator, description,
-                literalExplanation(value));
+                requireNonNull(value, "explanation must not be null"));
     }
 
+    @SuppressWarnings("unchecked")
     public static <S, R> RuntimeCondition<S, R> open(
             Condition<? super S, ? extends R> condition) {
-        return new RuntimeCondition<>(actual -> {
-            @SuppressWarnings("unchecked")
-            Evaluation<R> evaluation =
-                    (Evaluation<R>) condition.evaluate(actual);
-            return evaluation;
-        },
-                condition::description, null);
-    }
-
-    public static <S, R> RuntimeCondition<S, R> open(
-            Condition.ExplainedCondition<? super S, ? extends R> condition) {
-        return RuntimeCondition.<S, R>open(condition.delegate())
-                .explained(condition.explanation());
+        return new RuntimeCondition<>(actual -> (Evaluation<R>) condition.evaluate(actual), condition::description);
     }
 
     public static <S> RuntimeCondition<S, S> preserving(
             PreservingCondition<? super S> condition) {
         RuntimeCondition<? super S, ?> runtime = condition.runtime();
-        return new RuntimeCondition<>(actual -> withResult(
-                runtime.evaluate(actual), actual), runtime.description(),
-                runtime.explanation());
-    }
-
-    public static <S> RuntimeCondition<S, S> preserving(
-            PreservingCondition.ExplainedCondition<? super S> condition) {
-        return RuntimeCondition.<S>preserving(condition.delegate())
-                .explained(condition.explanation());
+        return new RuntimeCondition<>(actual -> withResult(runtime.evaluator().apply(actual), actual),
+                runtime.description(), runtime.explanation());
     }
 
     public static <T> RuntimeCondition<Optional<T>, T> present(
             PresentCondition condition) {
         RuntimeCondition<Optional<?>, Object> runtime = condition.runtime();
         return new RuntimeCondition<>(actual -> {
-            Evaluation<Object> evaluation = runtime.evaluate(actual);
-            if (evaluation != null
-                    && evaluation.status() == SATISFIED) {
-                return satisfied(actual.orElse(null));
-            }
-            return withResult(evaluation, null);
+            Evaluation<Object> evaluation = runtime.evaluator().apply(actual);
+            return withResult(evaluation,
+                    evaluation != null && evaluation.status() == SATISFIED ? actual.orElse(null) : null);
         }, runtime.description(), runtime.explanation());
-    }
-
-    public static <T> RuntimeCondition<Optional<T>, T> present(
-            PresentCondition.ExplainedCondition condition) {
-        return RuntimeCondition.<T>present(condition.delegate())
-                .explained(condition.explanation());
     }
 
     public static <S> RuntimeCondition<S, S> structural(
@@ -99,15 +76,7 @@ public record RuntimeCondition<S, R>(
             }
             return condition.evaluate(size.applyAsInt(actual), actual,
                     validatedSubject);
-        }, () -> condition.description(validatedSubject), null);
-    }
-
-    public static <S> RuntimeCondition<S, S> structural(
-            StructuralCondition.ExplainedCondition condition, String subject,
-            ToIntFunction<? super S> size) {
-        return RuntimeCondition.<S>structural(
-                condition.delegate(), subject, size)
-                .explained(condition.explanation());
+        }, () -> condition.description(validatedSubject));
     }
 
     private static <R> Evaluation<R> withResult(
@@ -133,8 +102,7 @@ public record RuntimeCondition<S, R>(
     static String formattedExplanation(String format, Object[] arguments) {
         requireNonNull(format, "format must not be null");
         requireNonNull(arguments, "arguments must not be null");
-        return nonBlank(String.format(Locale.ROOT, format, arguments),
-                "explanation");
+        return String.format(Locale.ROOT, format, arguments);
     }
 
     private static String nonBlank(String value, String name) {

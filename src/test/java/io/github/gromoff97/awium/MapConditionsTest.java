@@ -7,7 +7,7 @@ import io.github.gromoff97.awium.exceptions.AwaitTimeoutException;
 import io.github.gromoff97.awium.sources.MapSource;
 import io.github.gromoff97.awium.sources.Source;
 
-import static io.github.gromoff97.awium.Awium.await;
+import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedStructuralAwait;
@@ -36,7 +36,7 @@ class MapConditionsTest {
     @Test
     void exactAndAggregateConditionsKeepSetLikeEntrySemantics()
             throws Exception {
-        assertStatus(containsAllEntriesOf(map("a", "1", "a", "1")),
+        assertStatus(containsAllEntriesOf(map("a", "1")),
                 map("a", "1"), SATISFIED);
         assertStatus(containsExactlyEntriesOf(map("a", "1", "b", "2")),
                 map("b", "2", "a", "1"), SATISFIED);

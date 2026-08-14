@@ -15,8 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 class ArtifactContractIT {
 
-    private static final Path JAR = Path.of(
-            "build", "libs", "awium-0.1.0-SNAPSHOT.jar");
+    static final Path JAR = Path.of("build", "libs", "awium-0.1.0-SNAPSHOT.jar");
     @Test
     void currentBuildJarIsAnExplicitJavaBaseOnlyModule()
             throws Exception {
@@ -35,7 +34,7 @@ class ArtifactContractIT {
     void packagedJarCompilesDirectMethodReferences(@TempDir Path directory)
             throws Exception {
         assertTrue(compiles(directory, """
-                import static io.github.gromoff97.awium.Awium.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
                 import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
                 import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;

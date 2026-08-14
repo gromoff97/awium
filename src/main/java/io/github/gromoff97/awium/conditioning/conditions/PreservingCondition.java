@@ -4,13 +4,10 @@ import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition
 import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.literalExplanation;
 import static java.util.Objects.requireNonNull;
 
-public final class PreservingCondition<S> {
+public record PreservingCondition<S>(RuntimeCondition<S, S> runtime) {
 
-    private final RuntimeCondition<S, S> runtime;
-
-    private PreservingCondition(RuntimeCondition<S, S> runtime) {
-        this.runtime = requireNonNull(runtime,
-                "runtime condition must not be null");
+    public PreservingCondition {
+        requireNonNull(runtime, "runtime condition must not be null");
     }
 
     public static <S> PreservingCondition<S> of(
@@ -19,18 +16,12 @@ public final class PreservingCondition<S> {
     }
 
     public ExplainedCondition<S> because(String explanation) {
-        return new ExplainedCondition<>(this,
-                literalExplanation(explanation));
+        return new ExplainedCondition<>(this, explanation);
     }
 
     public ExplainedCondition<S> because(
             String format, Object... arguments) {
-        return new ExplainedCondition<>(this,
-                formattedExplanation(format, arguments));
-    }
-
-    public RuntimeCondition<S, S> runtime() {
-        return runtime;
+        return new ExplainedCondition<>(this, formattedExplanation(format, arguments));
     }
 
     public record ExplainedCondition<S>(PreservingCondition<S> delegate,

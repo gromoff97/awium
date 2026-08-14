@@ -1,5 +1,4 @@
 import org.gradle.api.tasks.compile.JavaCompile
-import org.gradle.api.tasks.testing.Test
 
 plugins {
     `java-library`
@@ -14,11 +13,7 @@ repositories {
     mavenCentral()
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
+java.toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 
 dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.2")
@@ -30,27 +25,17 @@ tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-Xlint:all,-serial")
 }
 
-tasks.withType<Test>().configureEach {
-    useJUnitPlatform()
-}
-
 tasks.test {
-    dependsOn(tasks.jar)
+    useJUnitPlatform()
     inputs.file(tasks.jar.flatMap { it.archiveFile })
 }
 
-val verifyNoRuntimeDependencies = tasks.register("verifyNoRuntimeDependencies") {
-    description = "Verifies that Awium has no runtime dependencies"
-    group = "verification"
+tasks.check {
     doLast {
         check(configurations.runtimeClasspath.get().allDependencies.isEmpty()) {
             "Awium must not declare compile or runtime dependencies"
         }
     }
-}
-
-tasks.check {
-    dependsOn(verifyNoRuntimeDependencies)
 }
 
 pitest {

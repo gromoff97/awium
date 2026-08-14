@@ -6,17 +6,19 @@ import io.github.gromoff97.awium.sources.Source;
 
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNCONTROLLED;
-import static io.github.gromoff97.awium.engine.Attempt.Origin;
-import static io.github.gromoff97.awium.engine.Attempt.Origin.CONDITION;
-import static io.github.gromoff97.awium.engine.Attempt.Origin.SOURCE;
-import static io.github.gromoff97.awium.engine.Attempt.Origin.WAITING;
-import static io.github.gromoff97.awium.engine.Attempt.Satisfied;
-import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled;
-import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled.AfterObservation;
-import static io.github.gromoff97.awium.engine.Attempt.Uncontrolled.BeforeObservation;
-import static io.github.gromoff97.awium.engine.Attempt.Unsatisfied;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Origin;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Origin.CONDITION;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Origin.SOURCE;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Origin.WAITING;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Satisfied;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled.AfterObservation;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled.BeforeObservation;
+import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Unsatisfied;
 import static io.github.gromoff97.awium.engine.WaitOutcome.LateSatisfiedTimeout;
 import static io.github.gromoff97.awium.engine.WaitOutcome.LateUnsatisfiedTimeout;
 import static io.github.gromoff97.awium.engine.WaitOutcome.StabilityLoss;
@@ -24,26 +26,12 @@ import static io.github.gromoff97.awium.engine.WaitOutcome.TimeoutBetweenObserva
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Thread.currentThread;
-import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("removal")
-public final class WaitEngine {
-
-    private final WaitConfiguration config;
-    private final LongSupplier clock;
-    private final LongConsumer parker;
-
-    public WaitEngine(WaitConfiguration config, LongSupplier clock,
-            LongConsumer parker) {
-        this.config = requireNonNull(config, "configuration must not be null");
-        this.clock = requireNonNull(clock, "clock must not be null");
-        this.parker = requireNonNull(parker, "parker must not be null");
-    }
+public record WaitEngine(WaitConfiguration config, LongSupplier clock, LongConsumer parker) {
 
     public <S, R> WaitOutcome<R> waitFor(
-            Source<S> source, RuntimeCondition<S, R> condition) {
-        requireNonNull(source, "source must not be null");
-        requireNonNull(condition, "condition must not be null");
+            Source<? extends S> source, RuntimeCondition<S, R> condition) {
         config.validatePair();
         long started = clock.getAsLong();
         long acquisitionDeadline = after(started, config.upToNanos());
@@ -51,8 +39,7 @@ public final class WaitEngine {
         long number = 1;
 
         for (;;) {
-            Uncontrolled<R> interrupted = interrupted(
-                    WAITING, number, false, null);
+            Uncontrolled<R> interrupted = interruptedBefore(WAITING, number);
             if (interrupted != null) {
                 return interrupted;
             }
@@ -86,8 +73,7 @@ public final class WaitEngine {
 
             long delay = min(config.everyNanos(),
                     remaining(completed, acquisitionDeadline));
-            Uncontrolled<R> parked =
-                    parkUntil(after(completed, delay), number + 1);
+            Uncontrolled<R> parked = parkUntil(after(completed, delay), number + 1);
             if (parked != null) {
                 return parked;
             }
@@ -95,7 +81,7 @@ public final class WaitEngine {
         }
     }
 
-    private <S, R> WaitOutcome<R> stabilize(Source<S> source,
+    private <S, R> WaitOutcome<R> stabilize(Source<? extends S> source,
             RuntimeCondition<S, R> condition, long started,
             Satisfied<R> acquired) {
         long acquiredAt = acquired.completedNanos();
@@ -110,15 +96,13 @@ public final class WaitEngine {
         for (;;) {
             long delay = min(config.everyNanos(),
                     remaining(completed, stabilityDeadline));
-            Uncontrolled<R> parked =
-                    parkUntil(after(completed, delay), number + 1);
+            Uncontrolled<R> parked = parkUntil(after(completed, delay), number + 1);
             if (parked != null) {
                 return parked;
             }
             number++;
 
-            Uncontrolled<R> interrupted = interrupted(
-                    WAITING, number, false, null);
+            Uncontrolled<R> interrupted = interruptedBefore(WAITING, number);
             if (interrupted != null) {
                 return interrupted;
             }
@@ -140,7 +124,7 @@ public final class WaitEngine {
         }
     }
 
-    private <S, R> Attempt<R> evaluate(Source<S> source,
+    private <S, R> Attempt<R> evaluate(Source<? extends S> source,
             RuntimeCondition<S, R> condition, long number) {
         S actual;
         try {
@@ -148,28 +132,25 @@ public final class WaitEngine {
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
         } catch (InterruptedException interrupted) {
-            return interrupted(SOURCE, interrupted,
-                    number, false, null);
+            return interruptedBefore(SOURCE, interrupted, number);
         } catch (Throwable uncontrolled) {
             return new BeforeObservation<>(
                     SOURCE, uncontrolled, number,
                     clock.getAsLong());
         }
 
-        Uncontrolled<R> interrupted = interrupted(
-                SOURCE, number, true, actual);
+        Uncontrolled<R> interrupted = interruptedAfter(SOURCE, number, actual);
         if (interrupted != null) {
             return interrupted;
         }
 
         Evaluation<R> evaluation;
         try {
-            evaluation = condition.evaluate(actual);
+            evaluation = condition.evaluator().apply(actual);
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
         } catch (InterruptedException conditionInterrupted) {
-            return interrupted(CONDITION, conditionInterrupted,
-                    number, true, actual);
+            return interruptedAfter(CONDITION, conditionInterrupted, number, actual);
         } catch (Throwable uncontrolled) {
             return new AfterObservation<>(
                     CONDITION, actual, uncontrolled, number,
@@ -177,8 +158,7 @@ public final class WaitEngine {
         }
 
         if (evaluation == null || evaluation.status() != UNCONTROLLED) {
-            interrupted = interrupted(
-                    CONDITION, number, true, actual);
+            interrupted = interruptedAfter(CONDITION, number, actual);
             if (interrupted != null) {
                 return interrupted;
             }
@@ -200,15 +180,12 @@ public final class WaitEngine {
                     number, completed);
             case UNCONTROLLED -> {
                 Throwable cause = evaluation.uncontrolledCause();
-                if (cause instanceof VirtualMachineError fatal) {
-                    throw fatal;
-                }
-                if (cause instanceof ThreadDeath fatal) {
+                if (cause instanceof Error fatal
+                        && (fatal instanceof VirtualMachineError || fatal instanceof ThreadDeath)) {
                     throw fatal;
                 }
                 yield cause instanceof InterruptedException interruption
-                        ? interrupted(CONDITION, interruption,
-                                number, true, actual)
+                        ? interruptedAfter(CONDITION, interruption, number, actual)
                         : new AfterObservation<>(CONDITION, actual,
                                 cause, number, completed);
             }
@@ -225,15 +202,13 @@ public final class WaitEngine {
                 throw fatal;
             } catch (Throwable uncontrolled) {
                 if (uncontrolled instanceof InterruptedException interruption) {
-                    return interrupted(WAITING, interruption,
-                            nextNumber, false, null);
+                    return interruptedBefore(WAITING, interruption, nextNumber);
                 }
                 return new BeforeObservation<>(
                         WAITING, uncontrolled, nextNumber,
                         clock.getAsLong());
             }
-            Uncontrolled<R> interrupted = interrupted(
-                    WAITING, nextNumber, false, null);
+            Uncontrolled<R> interrupted = interruptedBefore(WAITING, nextNumber);
             if (interrupted != null) {
                 return interrupted;
             }
@@ -241,26 +216,32 @@ public final class WaitEngine {
         return null;
     }
 
-    private <R> Uncontrolled<R> interrupted(Origin origin,
-            long number, boolean hasActual, Object actual) {
-        if (!currentThread().isInterrupted()) {
-            return null;
-        }
-        return interrupted(origin, new InterruptedException(
-                        "caller thread interrupt flag was set"),
-                number, hasActual, actual);
+    private <R> Uncontrolled<R> interruptedBefore(Origin origin, long number) {
+        return interrupted(() -> interruptedBefore(origin,
+                new InterruptedException("caller thread interrupt flag was set"), number));
     }
 
-    private <R> Uncontrolled<R> interrupted(Origin origin,
-            InterruptedException interrupted, long number,
-            boolean hasActual, Object actual) {
+    private <R> Uncontrolled<R> interruptedAfter(Origin origin, long number, Object actual) {
+        return interrupted(() -> interruptedAfter(origin,
+                new InterruptedException("caller thread interrupt flag was set"), number, actual));
+    }
+
+    private <R> Uncontrolled<R> interrupted(Supplier<Uncontrolled<R>> attempt) {
+        return currentThread().isInterrupted() ? attempt.get() : null;
+    }
+
+    private <R> Uncontrolled<R> interruptedBefore(Origin origin, InterruptedException interrupted, long number) {
+        restoreInterrupt();
+        return new BeforeObservation<>(origin, interrupted, number, clock.getAsLong());
+    }
+
+    private <R> Uncontrolled<R> interruptedAfter(Origin origin, InterruptedException interrupted, long number, Object actual) {
+        restoreInterrupt();
+        return new AfterObservation<>(origin, actual, interrupted, number, clock.getAsLong());
+    }
+
+    private static void restoreInterrupt() {
         currentThread().interrupt();
-        long completed = clock.getAsLong();
-        return hasActual
-                ? new AfterObservation<>(origin, actual,
-                        interrupted, number, completed)
-                : new BeforeObservation<>(origin,
-                        interrupted, number, completed);
     }
 
     private static long after(long now, long durationNanos) {

@@ -16,14 +16,12 @@ public abstract class Condition<S, R> {
     public abstract String description();
 
     public final ExplainedCondition<S, R> because(String explanation) {
-        return new ExplainedCondition<>(this,
-                literalExplanation(explanation));
+        return new ExplainedCondition<>(this, explanation);
     }
 
     public final ExplainedCondition<S, R> because(
             String format, Object... arguments) {
-        return new ExplainedCondition<>(this,
-                formattedExplanation(format, arguments));
+        return new ExplainedCondition<>(this, formattedExplanation(format, arguments));
     }
 
     public record ExplainedCondition<S, R>(Condition<S, R> delegate,

@@ -51,11 +51,8 @@ public final class OptionalConditionProvider {
         return condition(() -> "optional value "
                         + (equal ? "equals " : "does not equal ") + operand,
                 actual -> {
-                    if (actual == null) {
-                        return unsatisfied("optional was null");
-                    }
-                    if (actual.isEmpty()) {
-                        return unsatisfied("optional was empty");
+                    if (actual == null || actual.isEmpty()) {
+                        return unsatisfied("optional was " + (actual == null ? "null" : "empty"));
                     }
                     T value = actual.orElseThrow();
                     return equal(value, operand) == equal

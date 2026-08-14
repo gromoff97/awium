@@ -5,7 +5,7 @@ dependencies. It polls a checked source in the calling thread and returns the
 natural result from the same successful observation.
 
 ```java
-import static io.github.gromoff97.awium.Awium.await;
+import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.present;
 
 import java.time.Duration;
@@ -31,7 +31,7 @@ graphs are empty; JUnit and OpenRewrite are used only to test Awium itself.
 Examples below assume:
 
 ```java
-import static io.github.gromoff97.awium.Awium.await;
+import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
@@ -41,7 +41,6 @@ import static io.github.gromoff97.awium.conditioning.providers.OptionalCondition
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.sources.OptionalSource;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
