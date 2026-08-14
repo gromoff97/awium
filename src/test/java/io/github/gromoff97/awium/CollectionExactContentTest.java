@@ -14,7 +14,6 @@ import static io.github.gromoff97.awium.ProbeContainers.GreedyValue;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedStructuralAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
-import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
@@ -119,8 +118,8 @@ class CollectionExactContentTest {
 
     @Test
     void nullActualIsUnsatisfiedAndNullAggregateIsRejected() throws Exception {
-        Evaluation<?> evaluation = preserving(
-                containsExactlyElementsOf(List.of("a"))).evaluate(null);
+        Evaluation<?> evaluation = containsExactlyElementsOf(List.of("a"))
+                .delegate().evaluate(null);
         assertEquals(UNSATISFIED, evaluation.status());
         assertFalse(evaluation.mismatch().isBlank());
         assertTrue(!assertThrows(NullPointerException.class,
@@ -147,8 +146,8 @@ class CollectionExactContentTest {
 
     private static void assertPair(Pair pair, List<String> actual,
             boolean positiveSatisfied) throws Exception {
-        Evaluation<?> positive = preserving(pair.positive()).evaluate(actual);
-        Evaluation<?> negative = preserving(pair.negative()).evaluate(actual);
+        Evaluation<?> positive = pair.positive().delegate().evaluate(actual);
+        Evaluation<?> negative = pair.negative().delegate().evaluate(actual);
         assertEquals(positiveSatisfied ? SATISFIED : UNSATISFIED,
                 positive.status(), pair.name());
         assertNotEquals(positive.status(), negative.status(), pair.name());
@@ -162,7 +161,7 @@ class CollectionExactContentTest {
             List<? extends E> elements, Evaluation.Status status)
             throws Exception {
         List<E> actual = new ArrayList<>(elements);
-        assertEquals(status, preserving(condition).evaluate(actual).status());
+        assertEquals(status, condition.delegate().evaluate(actual).status());
     }
 
     private static List<Pair> pairs() {

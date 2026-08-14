@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium.diagnostics;
 
-import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
 import io.github.gromoff97.awium.exceptions.AwaitConditionEvaluationException;
@@ -9,6 +8,8 @@ import io.github.gromoff97.awium.exceptions.AwaitSourceRetrievalException;
 import io.github.gromoff97.awium.exceptions.AwaitStabilizationException;
 import io.github.gromoff97.awium.exceptions.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUnhandledException;
+
+import java.util.function.Supplier;
 
 import static io.github.gromoff97.awium.diagnostics.FailureMessage.terminalCause;
 import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Satisfied;
@@ -23,7 +24,8 @@ public final class FailureFactory {
     }
 
     @SuppressWarnings("removal")
-    public static <R> R complete(WaitOutcome<R> outcome, RuntimeCondition<?, R> condition, WaitConfiguration configuration) {
+    public static <R> R complete(WaitOutcome<R> outcome, Supplier<String> description, String explanation,
+            WaitConfiguration configuration) {
         if (outcome instanceof Satisfied<R> success) {
             return success.result();
         }
@@ -36,7 +38,7 @@ public final class FailureFactory {
                 || cause instanceof InterruptedException;
         String message;
         try {
-            message = FailureMessage.format(outcome, condition, configuration);
+            message = FailureMessage.format(outcome, description, explanation, configuration);
         } catch (VirtualMachineError | ThreadDeath fatal) {
             suppress(fatal, cause);
             throw fatal;

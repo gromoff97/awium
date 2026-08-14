@@ -2,7 +2,6 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
-import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
@@ -259,11 +258,6 @@ class DiagnosticsSnapshotTest {
     @Test
     void interruptionFlagIsRestoredAfterUserDiagnosticsClearIt() {
         var interruption = new InterruptedException("stopped");
-        RuntimeCondition<Object, Object> condition = new RuntimeCondition<>(
-                Evaluation::satisfied, () -> {
-                    assertTrue(interrupted());
-                    return "condition";
-                }, null);
         currentThread().interrupt();
 
         try {
@@ -271,7 +265,10 @@ class DiagnosticsSnapshotTest {
                     AwaitInterruptedException.class,
                     () -> FailureFactory.complete(
                             new BeforeObservation<>(WAITING, interruption,
-                                    1, 0), condition,
+                                    1, 0), () -> {
+                                assertTrue(interrupted());
+                                return "condition";
+                            }, null,
                             config(1, 2, 0)));
 
             assertSame(interruption, failure.getCause());
@@ -348,14 +345,12 @@ class DiagnosticsSnapshotTest {
     @Test
     void successfulOutcomeDoesNotRenderFailureMetadata() {
         var result = new Object();
-        RuntimeCondition<Object, Object> condition = new RuntimeCondition<>(
-                Evaluation::satisfied, () -> {
-                    throw new AssertionError("description must not be read");
-                }, null);
 
         assertSame(result, FailureFactory.complete(
                 new Satisfied<>(new ThrowingValue(new AssertionError()), result,
-                        1, 0), condition, config(1, 2, 0)));
+                        1, 0), () -> {
+                    throw new AssertionError("description must not be read");
+                }, null, config(1, 2, 0)));
     }
 
     @Test
@@ -363,17 +358,14 @@ class DiagnosticsSnapshotTest {
         var descriptionCause = new IllegalStateException("description failed");
         var valueCause = new IllegalArgumentException("toString failed");
         var actual = new ThrowingValue(valueCause);
-        RuntimeCondition<Object, Object> brokenDescription = new RuntimeCondition<>(
-                Evaluation::satisfied, () -> {
-                    throw descriptionCause;
-                }, "business reason");
         WaitOutcome<Object> outcome = new LateUnsatisfiedTimeout<>(0,
                 new Unsatisfied<>(actual, "not ready", null, 1, 2));
 
         AwaitUnhandledException descriptionFailure = assertThrows(
                 AwaitUnhandledException.class,
-                () -> FailureFactory.complete(outcome, brokenDescription,
-                        config(1, 2, 0)));
+                () -> FailureFactory.complete(outcome, () -> {
+                    throw descriptionCause;
+                }, "business reason", config(1, 2, 0)));
         AwaitUnhandledException valueFailure = assertThrows(
                 AwaitUnhandledException.class,
                 () -> complete(outcome, "condition", "business reason",
@@ -463,10 +455,6 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void invalidDiagnosticTextIsUnhandled() {
-        RuntimeCondition<Object, Object> nullDescription = new RuntimeCondition<>(
-                Evaluation::satisfied, () -> null, null);
-        RuntimeCondition<Object, Object> blankDescription = new RuntimeCondition<>(
-                Evaluation::satisfied, () -> " \n ", null);
         WaitOutcome<Object> described = new LateUnsatisfiedTimeout<>(0,
                 new Unsatisfied<>("actual", "not ready", null, 1, 2));
         WaitOutcome<Object> rendered = new LateUnsatisfiedTimeout<>(0,
@@ -475,11 +463,11 @@ class DiagnosticsSnapshotTest {
 
         AwaitUnhandledException nullFailure = assertThrows(
                 AwaitUnhandledException.class,
-                () -> FailureFactory.complete(described, nullDescription,
+                () -> FailureFactory.complete(described, () -> null, null,
                         config(1, 2, 0)));
         AwaitUnhandledException blankFailure = assertThrows(
                 AwaitUnhandledException.class,
-                () -> FailureFactory.complete(described, blankDescription,
+                () -> FailureFactory.complete(described, () -> " \n ", null,
                         config(1, 2, 0)));
         AwaitUnhandledException valueFailure = assertThrows(
                 AwaitUnhandledException.class,
@@ -510,9 +498,9 @@ class DiagnosticsSnapshotTest {
 
         assertSame(descriptionFatal, assertThrows(InternalError.class,
                 () -> FailureFactory.complete(sourceFailure,
-                        new RuntimeCondition<>(Evaluation::satisfied, () -> {
+                        () -> {
                             throw descriptionFatal;
-                        }, null), config(1, 2, 0))));
+                        }, null, config(1, 2, 0))));
         InternalError thrown = assertThrows(InternalError.class,
                 () -> complete(valueFailure, "condition", null,
                         config(1, 2, 0)));
@@ -542,15 +530,12 @@ class DiagnosticsSnapshotTest {
         var fatal = new InternalError("emergency diagnostics fatal");
         var diagnosticCause = new FatalMessageException(fatal);
         var engineCause = new IllegalStateException("source failed");
-        RuntimeCondition<Object, Object> condition = new RuntimeCondition<>(
-                Evaluation::satisfied, () -> {
-                    throw diagnosticCause;
-                }, null);
-
         InternalError thrown = assertThrows(InternalError.class,
                 () -> FailureFactory.complete(
                         new BeforeObservation<>(SOURCE, engineCause, 1, 0),
-                        condition, config(1, 2, 0)));
+                        () -> {
+                            throw diagnosticCause;
+                        }, null, config(1, 2, 0)));
 
         assertSame(fatal, thrown);
         assertEquals(2, thrown.getSuppressed().length);
@@ -583,14 +568,8 @@ class DiagnosticsSnapshotTest {
 
     private static <R> R complete(WaitOutcome<R> outcome, String description,
             String explanation, WaitConfiguration configuration) {
-        return FailureFactory.complete(outcome,
-                runtime(description, explanation), configuration);
-    }
-
-    private static <R> RuntimeCondition<Object, R> runtime(
-            String description, String explanation) {
-        return new RuntimeCondition<>(value -> satisfied(null),
-                () -> description, explanation);
+        return FailureFactory.complete(outcome, () -> description,
+                explanation, configuration);
     }
 
     private static WaitConfiguration config(long every, long upTo,

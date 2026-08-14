@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium.conditioning.providers;
 
-import io.github.gromoff97.awium.conditioning.ValueEquality;
 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
 
 import java.util.ArrayList;
@@ -9,9 +8,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.SequencedCollection;
 
-import static io.github.gromoff97.awium.conditioning.ValueEquality.equal;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.allFound;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.anyMatch;
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.equal;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.matchCount;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.matchingCondition;
 import static java.util.Arrays.asList;
@@ -126,7 +125,7 @@ public final class CollectionConditionProvider {
             throw new IllegalArgumentException("expected elements must not be empty");
         }
         return matchingCondition("collection", description, mismatch, positive, actual -> all
-                ? allFound(actual, new ArrayList<>(expected), ValueEquality::equal)
+                ? allFound(actual, new ArrayList<>(expected), ConditionProvider::equal)
                 : anyMatch(actual, value -> anyMatch(expected, candidate -> equal(value, candidate))));
     }
 
@@ -162,7 +161,7 @@ public final class CollectionConditionProvider {
     private static boolean anyOrder(Iterator<?> actual, Iterator<?> expected, int reportedSize) {
         List<Object> remaining = new ArrayList<>(reportedSize);
         expected.forEachRemaining(remaining::add);
-        return matchCount(actual, remaining, ValueEquality::equal) == reportedSize;
+        return matchCount(actual, remaining, ConditionProvider::equal) == reportedSize;
     }
 
     private static <E> E[] validateArray(E[] expected) {

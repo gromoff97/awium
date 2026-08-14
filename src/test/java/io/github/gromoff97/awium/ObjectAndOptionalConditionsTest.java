@@ -2,13 +2,11 @@ package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
-import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
 import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -57,16 +55,15 @@ class ObjectAndOptionalConditionsTest {
     void optionalPresenceConditionsDistinguishNullEmptyAndPresent()
             throws Exception {
         Optional<String> empty = Optional.empty();
-        Optional<String> present = Optional.of("value");
+        Optional<String> presentValue = Optional.of("value");
 
-        assertTrue(!RuntimeCondition.<String>present(
-                OptionalConditionProvider.present).description().get().isBlank());
+        assertTrue(!present.delegate().description().isBlank());
         assertUnsatisfied(evaluatePresent(null));
         assertUnsatisfied(absent.evaluate(null));
         assertUnsatisfied(evaluatePresent(empty));
         assertSatisfied(absent.evaluate(empty), null);
-        assertSatisfied(evaluatePresent(present), "value");
-        assertUnsatisfied(absent.evaluate(present));
+        assertSatisfied(evaluatePresent(presentValue), "value");
+        assertUnsatisfied(absent.evaluate(presentValue));
     }
 
     @Test
@@ -112,12 +109,12 @@ class ObjectAndOptionalConditionsTest {
 
     private static Evaluation<Object> evaluate(
             PreservingCondition<Object> condition, Object actual) throws Exception {
-        return preserving(condition).evaluate(actual);
+        return condition.delegate().evaluate(actual);
     }
 
-    private static <T> Evaluation<T> evaluatePresent(Optional<T> actual)
+    private static Evaluation<?> evaluatePresent(Optional<?> actual)
             throws Exception {
-        return RuntimeCondition.<T>present(present).evaluate(actual);
+        return present.delegate().evaluate(actual);
     }
 
     private static void assertSatisfied(Evaluation<?> evaluation, Object result) {

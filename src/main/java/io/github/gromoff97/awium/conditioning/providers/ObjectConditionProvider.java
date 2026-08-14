@@ -4,8 +4,8 @@ import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.ValueEquality.equal;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.equal;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.preservingCondition;
 
 public final class ObjectConditionProvider {

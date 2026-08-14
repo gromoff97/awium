@@ -2,27 +2,25 @@ package io.github.gromoff97.awium.conditioning.providers;
 
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.PresentCondition;
-import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 
 import java.util.Optional;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.ValueEquality.equal;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.equal;
 import static java.util.Objects.requireNonNull;
 
 public final class OptionalConditionProvider {
 
-    public static final PresentCondition present =
-            PresentCondition.of(new RuntimeCondition<>(actual -> {
+    public static final PresentCondition present = new PresentCondition(condition(() -> "optional is present", actual -> {
             if (actual == null) {
                 return unsatisfied("optional was null");
             }
             return actual.isPresent()
                     ? satisfied(actual.orElseThrow())
                     : unsatisfied("optional was empty");
-        }, () -> "optional is present", null));
+        }));
 
     public static final Condition<Optional<?>, Void> absent =
             condition("optional is absent", actual -> {

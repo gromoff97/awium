@@ -4,8 +4,8 @@ import io.github.gromoff97.awium.conditioning.Evaluation;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.formattedExplanation;
-import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.literalExplanation;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.formattedExplanation;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.literalExplanation;
 import static java.util.Objects.requireNonNull;
 
 public final class StructuralCondition {
@@ -32,13 +32,13 @@ public final class StructuralCondition {
         return new ExplainedCondition(this, formattedExplanation(format, arguments));
     }
 
-    <S> Evaluation<S> evaluate(int size, S actual, String subject) {
+    public <S> Evaluation<S> evaluate(int size, S actual, String subject) {
         return relation.matches(size, bound)
                 ? satisfied(actual)
                 : unsatisfied(relation.mismatch(subject, size));
     }
 
-    String description(String subject) {
+    public String description(String subject) {
         return relation.description(subject, bound);
     }
 

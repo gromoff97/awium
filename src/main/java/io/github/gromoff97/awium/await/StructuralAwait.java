@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.await;
 
 import io.github.gromoff97.awium.conditioning.conditions.StructuralCondition;
-import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;
 
@@ -9,7 +8,7 @@ import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 import java.util.function.ToIntFunction;
 
-import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.structural;
+import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static java.util.Objects.requireNonNull;
 
 public final class StructuralAwait<S> extends AbstractAwait<S, StructuralAwait<S>> {
@@ -43,11 +42,21 @@ public final class StructuralAwait<S> extends AbstractAwait<S, StructuralAwait<S
     }
 
     public S until(StructuralCondition condition) {
-        return complete(structural(requireNonNull(condition, "condition must not be null"), subject, size));
+        return complete(requireNonNull(condition, "condition must not be null"), null);
     }
 
     public S until(StructuralCondition.ExplainedCondition condition) {
         var explained = requireNonNull(condition, "condition must not be null");
-        return complete(RuntimeCondition.<S>structural(explained.delegate(), subject, size).explained(explained.explanation()));
+        return complete(explained.delegate(), explained.explanation());
+    }
+
+    private S complete(StructuralCondition condition, String explanation) {
+        if (requireNonNull(subject, "subject must not be null").isBlank()) {
+            throw new IllegalArgumentException("subject must not be blank");
+        }
+        return complete(actual -> actual == null
+                ? unsatisfied(subject + " was null")
+                : condition.evaluate(size.applyAsInt(actual), actual, subject),
+                () -> condition.description(subject), explanation);
     }
 }

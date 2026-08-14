@@ -3,11 +3,14 @@ package io.github.gromoff97.awium.engine;
 import io.github.gromoff97.awium.exceptions.AwaitConfigurationConflictException;
 
 import java.time.Duration;
+import java.util.StringJoiner;
 
-import static io.github.gromoff97.awium.diagnostics.FailureMessage.configurationConflict;
 import static java.util.Objects.requireNonNull;
 
 public record WaitConfiguration(long everyNanos, long upToNanos, long stableForNanos) {
+
+    private static final long[] UNIT_NANOS = {86_400_000_000_000L, 3_600_000_000_000L, 60_000_000_000L, 1_000_000_000L, 1_000_000L, 1_000L, 1L};
+    private static final String[] UNIT_NAMES = {"day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond"};
 
     public WaitConfiguration {
         requirePositive(everyNanos, "polling interval");
@@ -35,8 +38,21 @@ public record WaitConfiguration(long everyNanos, long upToNanos, long stableForN
 
     public void validatePair() {
         if (everyNanos >= upToNanos) {
-            throw new AwaitConfigurationConflictException(configurationConflict(everyNanos, upToNanos));
+            throw new AwaitConfigurationConflictException("polling interval (" + duration(everyNanos)
+                    + ") must be shorter than acquisition timeout (" + duration(upToNanos) + ")");
         }
+    }
+
+    public static String duration(long nanos) {
+        StringJoiner result = new StringJoiner(" ");
+        for (int index = 0; index < UNIT_NANOS.length; index++) {
+            long count = nanos / UNIT_NANOS[index];
+            nanos %= UNIT_NANOS[index];
+            if (count != 0) {
+                result.add(count + " " + UNIT_NAMES[index] + (count == 1 ? "" : "s"));
+            }
+        }
+        return result.length() == 0 ? "0 nanoseconds" : result.toString();
     }
 
     private static void requirePositive(long nanos, String label) {

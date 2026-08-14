@@ -3,7 +3,6 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.await.Await;
 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
-import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.exceptions.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.exceptions.AwaitTimeoutException;
 import io.github.gromoff97.awium.sources.CollectionSource;
@@ -14,7 +13,6 @@ import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedStructuralAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
-import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
@@ -46,14 +44,13 @@ class CollectionMembershipTest {
     @Test
     void nullAndRepeatedExpectedValuesKeepMembershipSemantics()
             throws Exception {
-        assertUnsatisfied(preserving(contains("b")).evaluate(null));
+        assertUnsatisfied(contains("b").delegate().evaluate(null));
         assertPair(new Pair("repeated", containsAll("a", "a"),
                 doesNotContainAll("a", "a")), List.of("a"), true);
 
         String nil = null;
         Collection<String> actual = asList((String) null);
-        assertSame(actual, RuntimeCondition.<Collection<String>>preserving(
-                containsAll(nil)).evaluate(actual).result());
+        assertSame(actual, containsAll(nil).delegate().evaluate(actual).result());
     }
 
     @Test
@@ -65,10 +62,8 @@ class CollectionMembershipTest {
         Collection<Object> arrays = new ArrayList<>(
                 List.of(new int[] {1, 2}));
 
-        assertSame(directional, RuntimeCondition.<Collection<Object>>preserving(
-                contains(expectedValue)).evaluate(directional).result());
-        assertSame(arrays, RuntimeCondition.<Collection<Object>>preserving(
-                contains(new int[] {1, 2})).evaluate(arrays).result());
+        assertSame(directional, contains(expectedValue).delegate().evaluate(directional).result());
+        assertSame(arrays, contains(new int[] {1, 2}).delegate().evaluate(arrays).result());
         assertEquals(1, actualValue.equalsCalls);
     }
 
@@ -160,10 +155,8 @@ class CollectionMembershipTest {
     private static void assertPair(Pair pair, List<String> values,
             boolean positiveSatisfied) throws Exception {
         Collection<String> actual = new ArrayList<>(values);
-        Evaluation<?> positive = RuntimeCondition.<Collection<String>>preserving(
-                pair.positive()).evaluate(actual);
-        Evaluation<?> negative = RuntimeCondition.<Collection<String>>preserving(
-                pair.negative()).evaluate(actual);
+        Evaluation<?> positive = pair.positive().delegate().evaluate(actual);
+        Evaluation<?> negative = pair.negative().delegate().evaluate(actual);
 
         assertEquals(positiveSatisfied ? SATISFIED : UNSATISFIED,
                 positive.status(), pair.name());

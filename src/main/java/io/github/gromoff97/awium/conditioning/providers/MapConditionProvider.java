@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 
-import static io.github.gromoff97.awium.conditioning.ValueEquality.equal;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.allFound;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.anyMatch;
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.equal;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.matchCount;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.matchingCondition;
 import static java.util.Objects.requireNonNull;

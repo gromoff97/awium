@@ -2,7 +2,8 @@ package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.conditioning.ValueEquality.equal;
+import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
+import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -88,5 +89,13 @@ class ValueEqualityTest {
         }
 
         assertTrue(equal(left, right));
+    }
+
+    private static boolean equal(Object actual, Object expected) {
+        try {
+            return equalTo(expected).delegate().evaluate(actual).status() == SATISFIED;
+        } catch (Exception failure) {
+            throw new AssertionError(failure);
+        }
     }
 }

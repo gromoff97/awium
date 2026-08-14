@@ -64,12 +64,12 @@ class AssertionAdapterTest {
         var actual = new String("42");
         var condition = ConditionProvider.<String>asserted(value -> invocations[0]++);
 
-        Evaluation<String> evaluation = condition.runtime().evaluate(actual);
+        Evaluation<String> evaluation = condition.delegate().evaluate(actual);
 
         assertEquals(SATISFIED, evaluation.status());
         assertSame(actual, evaluation.result());
         assertEquals(1, invocations[0]);
-        assertTrue(!condition.runtime().description().get().isBlank());
+        assertTrue(!condition.delegate().description().isBlank());
     }
 
     @Test

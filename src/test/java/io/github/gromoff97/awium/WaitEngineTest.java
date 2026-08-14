@@ -49,8 +49,7 @@ class WaitEngineTest {
                 () -> engine.waitFor(() -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, new RuntimeCondition<>(actual -> satisfied(actual),
-                        () -> "condition", null)));
+                }, actual -> satisfied(actual)));
 
         assertEquals(0, clockCalls[0]);
         assertEquals(0, sourceCalls[0]);
@@ -561,8 +560,6 @@ class WaitEngineTest {
             LongConsumer parker,
             Source<S> source,
             CheckedFunction<S, Evaluation<R>> condition) {
-        return new WaitEngine(config, time, parker).waitFor(source,
-                new RuntimeCondition<>(condition,
-                        () -> "test condition", null));
+        return new WaitEngine(config, time, parker).waitFor(source, condition);
     }
 }

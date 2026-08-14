@@ -1,11 +1,10 @@
 package io.github.gromoff97.awium.diagnostics;
 
-import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
 
 import java.util.Locale;
-import java.util.StringJoiner;
+import java.util.function.Supplier;
 
 import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Satisfied;
 import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled;
@@ -16,6 +15,7 @@ import static io.github.gromoff97.awium.engine.WaitOutcome.LateSatisfiedTimeout;
 import static io.github.gromoff97.awium.engine.WaitOutcome.LateUnsatisfiedTimeout;
 import static io.github.gromoff97.awium.engine.WaitOutcome.StabilityLoss;
 import static io.github.gromoff97.awium.engine.WaitOutcome.TimeoutBetweenObservations;
+import static io.github.gromoff97.awium.engine.WaitConfiguration.duration;
 import static java.util.Arrays.deepToString;
 import static java.util.Objects.requireNonNull;
 
@@ -23,15 +23,13 @@ import static java.util.Objects.requireNonNull;
 public final class FailureMessage {
 
     private static final String DESCRIPTION_UNAVAILABLE = "condition description unavailable";
-    private static final long[] UNIT_NANOS = {86_400_000_000_000L, 3_600_000_000_000L, 60_000_000_000L, 1_000_000_000L, 1_000_000L, 1_000L, 1L};
-    private static final String[] UNIT_NAMES = {"day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond"};
 
     private FailureMessage() {
         throw new AssertionError("Utility class");
     }
 
-    static String format(WaitOutcome<?> outcome, RuntimeCondition<?, ?> condition, WaitConfiguration configuration) {
-        Context context = new Context(outcome, condition, configuration);
+    static String format(WaitOutcome<?> outcome, Supplier<String> description, String explanation, WaitConfiguration configuration) {
+        Context context = new Context(outcome, description, explanation, configuration);
         try {
             return switch (context.outcome) {
                 case TimeoutBetweenObservations<?> value -> unsatisfied(context, value.attempt(), "Acquisition deadline elapsed before the next attempt");
@@ -49,14 +47,10 @@ public final class FailureMessage {
         }
     }
 
-    public static String configurationConflict(long everyNanos, long upToNanos) {
-        return "polling interval (" + duration(everyNanos) + ") must be shorter than acquisition timeout (" + duration(upToNanos) + ")";
-    }
-
     static String emergency(FormattingFailure failure) {
         Context context = failure.context;
         StringBuilder out = heading("Failure diagnostics could not be formatted");
-        condition(out, context.description == null ? DESCRIPTION_UNAVAILABLE : context.description, context.condition.explanation());
+        condition(out, context.description == null ? DESCRIPTION_UNAVAILABLE : context.description, context.explanation);
         String actual = context.outcome.attempt() instanceof BeforeObservation<?>
                 ? null : context.actual == null
                         ? "<value unavailable: diagnostics failed>"
@@ -173,7 +167,7 @@ public final class FailureMessage {
     }
 
     private static void condition(StringBuilder out, Context context) {
-        condition(out, context.conditionDescription(), context.condition.explanation());
+        condition(out, context.conditionDescription(), context.explanation);
     }
 
     private static void condition(StringBuilder out, String expectation, String importance) {
@@ -207,19 +201,6 @@ public final class FailureMessage {
         return out.deleteCharAt(out.length() - 1).toString();
     }
 
-    private static String duration(long nanos) {
-        StringJoiner result = new StringJoiner(" ");
-        for (int index = 0; index < UNIT_NANOS.length; index++) {
-            long count = nanos / UNIT_NANOS[index];
-            nanos %= UNIT_NANOS[index];
-            if (count == 0) {
-                continue;
-            }
-            result.add(count + " " + UNIT_NAMES[index] + (count == 1 ? "" : "s"));
-        }
-        return result.length() == 0 ? "0 nanoseconds" : result.toString();
-    }
-
     private static String render(Object value) {
         if (value != null && value.getClass().isArray()) {
             String array = deepToString(new Object[] {value});
@@ -244,20 +225,22 @@ public final class FailureMessage {
     private static final class Context {
 
         private final WaitOutcome<?> outcome;
-        private final RuntimeCondition<?, ?> condition;
+        private final Supplier<String> descriptionSupplier;
+        private final String explanation;
         private final WaitConfiguration configuration;
 
         private String description;
         private String actual;
 
-        private Context(WaitOutcome<?> outcome, RuntimeCondition<?, ?> condition, WaitConfiguration configuration) {
+        private Context(WaitOutcome<?> outcome, Supplier<String> description, String explanation, WaitConfiguration configuration) {
             this.outcome = requireNonNull(outcome, "outcome must not be null");
-            this.condition = requireNonNull(condition, "condition must not be null");
+            this.descriptionSupplier = requireNonNull(description, "condition description must not be null");
+            this.explanation = explanation;
             this.configuration = requireNonNull(configuration, "configuration must not be null");
         }
 
         private String conditionDescription() {
-            String rendered = requireNonNull(condition.description().get(), "condition description must not be null");
+            String rendered = requireNonNull(descriptionSupplier.get(), "condition description must not be null");
             if (rendered.isBlank()) {
                 throw new IllegalArgumentException("condition description must not be blank");
             }

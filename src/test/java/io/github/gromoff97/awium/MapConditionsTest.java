@@ -12,7 +12,6 @@ import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedStructuralAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
-import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.preserving;
 import static io.github.gromoff97.awium.conditioning.providers.MapConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
@@ -115,8 +114,8 @@ class MapConditionsTest {
     @Test
     void nullActualShortCircuitsAndAggregateFactoriesValidateInputs()
             throws Exception {
-        Evaluation<?> evaluation = preserving(
-                containsAllEntriesOf(map("a", "1"))).evaluate(null);
+        Evaluation<?> evaluation = containsAllEntriesOf(map("a", "1"))
+                .delegate().evaluate(null);
         assertEquals(UNSATISFIED, evaluation.status());
         assertFalse(evaluation.mismatch().isBlank());
 
@@ -161,8 +160,8 @@ class MapConditionsTest {
     private static void assertPair(Pair pair,
             LinkedHashMap<String, String> actual, boolean positiveSatisfied)
             throws Exception {
-        Evaluation<?> positive = preserving(pair.positive()).evaluate(actual);
-        Evaluation<?> negative = preserving(pair.negative()).evaluate(actual);
+        Evaluation<?> positive = pair.positive().delegate().evaluate(actual);
+        Evaluation<?> negative = pair.negative().delegate().evaluate(actual);
         assertEquals(positiveSatisfied ? SATISFIED : UNSATISFIED,
                 positive.status(), pair.name());
         assertNotEquals(positive.status(), negative.status(), pair.name());
@@ -174,9 +173,8 @@ class MapConditionsTest {
     private static <K, V, M extends Map<K, V>> void assertStatus(
             PreservingCondition<? super M> condition, M actual,
             Evaluation.Status status) throws Exception {
-        var runtime = preserving(condition);
-        assertFalse(runtime.description().get().isBlank());
-        assertEquals(status, runtime.evaluate(actual).status());
+        assertFalse(condition.delegate().description().isBlank());
+        assertEquals(status, condition.delegate().evaluate(actual).status());
     }
 
     private static <K, V> ProbeContainers.EntryMap<K, V> awaitMap(

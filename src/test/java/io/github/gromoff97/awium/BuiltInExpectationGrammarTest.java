@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.*;
 import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
@@ -11,8 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
-import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
-import io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider;
 
 import java.util.List;
 import java.util.Map;
@@ -68,30 +65,20 @@ class BuiltInExpectationGrammarTest {
                         description(isNotNull),
                         description(equalTo("expected")),
                         description(notEqualTo("unexpected")),
-                        RuntimeCondition.<Object>present(
-                                OptionalConditionProvider.present)
-                                .description().get(),
+                        present.delegate().description(),
                         absent.description(),
                         hasValueEqualTo("expected").description(),
                         hasValueNotEqualTo("unexpected").description(),
                         description(asserted(value -> {})),
                         passed(value -> value).description(),
-                        structural(empty, "collection", ignored -> 0)
-                                .description().get(),
-                        structural(nonEmpty, "collection", ignored -> 0)
-                                .description().get(),
-                        structural(sizeExactly(2), "collection", ignored -> 0)
-                                .description().get(),
-                        structural(sizeNotExactly(2), "collection", ignored -> 0)
-                                .description().get(),
-                        structural(sizeGreaterThan(2), "collection", ignored -> 0)
-                                .description().get(),
-                        structural(sizeAtLeast(2), "collection", ignored -> 0)
-                                .description().get(),
-                        structural(sizeLessThan(2), "collection", ignored -> 0)
-                                .description().get(),
-                        structural(sizeAtMost(2), "collection", ignored -> 0)
-                                .description().get(),
+                        empty.description("collection"),
+                        nonEmpty.description("collection"),
+                        sizeExactly(2).description("collection"),
+                        sizeNotExactly(2).description("collection"),
+                        sizeGreaterThan(2).description("collection"),
+                        sizeAtLeast(2).description("collection"),
+                        sizeLessThan(2).description("collection"),
+                        sizeAtMost(2).description("collection"),
                         description(contains("expected")),
                         description(doesNotContain("expected")),
                         description(containsAll("expected")),
@@ -124,6 +111,6 @@ class BuiltInExpectationGrammarTest {
     }
 
     private static String description(PreservingCondition<?> condition) {
-        return condition.runtime().description().get();
+        return condition.delegate().description();
     }
 }

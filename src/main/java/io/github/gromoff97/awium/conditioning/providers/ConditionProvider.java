@@ -5,17 +5,19 @@ import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
-import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 
-import java.util.function.Supplier;
+import java.util.ArrayDeque;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
+import static java.util.Objects.deepEquals;
 import static java.util.Objects.requireNonNull;
 
 public final class ConditionProvider {
@@ -48,8 +50,7 @@ public final class ConditionProvider {
     }
 
     static <S> PreservingCondition<S> preservingCondition(Supplier<String> description, CheckedFunction<? super S, Evaluation<S>> evaluation) {
-        requireNonNull(evaluation, "evaluation must not be null");
-        return PreservingCondition.of(new RuntimeCondition<>(evaluation::apply, description));
+        return new PreservingCondition<>(condition(description, evaluation));
     }
 
     static <S> PreservingCondition<S> matchingCondition(String subject, String description, String mismatch, boolean positive, Predicate<? super S> matches) {
@@ -101,12 +102,42 @@ public final class ConditionProvider {
         return matched;
     }
 
+    static boolean equal(Object actual, Object expected) {
+        record ValuePair(Object actual, Object expected) {}
+
+        var pending = new ArrayDeque<ValuePair>();
+        var visited = new HashSet<ValuePair>();
+        pending.addLast(new ValuePair(actual, expected));
+        while (!pending.isEmpty()) {
+            ValuePair pair = pending.removeLast();
+            Object left = pair.actual();
+            Object right = pair.expected();
+            if (left == right) {
+                continue;
+            }
+            if (left instanceof Object[] leftObjects && right instanceof Object[] rightObjects) {
+                if (!visited.add(pair)) {
+                    continue;
+                }
+                if (leftObjects.length != rightObjects.length) {
+                    return false;
+                }
+                for (int index = leftObjects.length - 1; index >= 0; index--) {
+                    pending.addLast(new ValuePair(leftObjects[index], rightObjects[index]));
+                }
+            } else if (!deepEquals(left, right)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static <S> PreservingCondition<S> asserted(CheckedConsumer<? super S> assertion) {
         requireNonNull(assertion, "assertion must not be null");
-        return PreservingCondition.of(RuntimeCondition.open(ConditionProvider.<S, S>passed(actual -> {
-                    assertion.accept(actual);
-                    return actual;
-                })));
+        return new PreservingCondition<>(passed(actual -> {
+            assertion.accept(actual);
+            return actual;
+        }));
     }
 
     public static <S, R> Condition<S, R> passed(CheckedFunction<? super S, ? extends R> assertion) {

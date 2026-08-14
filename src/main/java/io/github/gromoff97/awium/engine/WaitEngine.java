@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.engine;
 
+import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.util.function.LongConsumer;
@@ -30,7 +30,7 @@ import static java.lang.Thread.currentThread;
 @SuppressWarnings("removal")
 public record WaitEngine(WaitConfiguration config, LongSupplier clock, LongConsumer parker) {
 
-    public <S, R> WaitOutcome<R> waitFor(Source<? extends S> source, RuntimeCondition<S, R> condition) {
+    public <S, R> WaitOutcome<R> waitFor(Source<? extends S> source, CheckedFunction<? super S, Evaluation<R>> evaluator) {
         config.validatePair();
         long started = clock.getAsLong();
         long acquisitionDeadline = after(started, config.upToNanos());
@@ -48,7 +48,7 @@ public record WaitEngine(WaitConfiguration config, LongSupplier clock, LongConsu
                 return new TimeoutBetweenObservations<>(started, before, lastUnsatisfied);
             }
 
-            Attempt<R> observed = evaluate(source, condition, number);
+            Attempt<R> observed = evaluate(source, evaluator, number);
             long completed = observed.completedNanos();
             switch (observed) {
                 case Uncontrolled<R> failure -> { return failure; }
@@ -56,7 +56,7 @@ public record WaitEngine(WaitConfiguration config, LongSupplier clock, LongConsu
                     if (reached(completed, acquisitionDeadline)) {
                         return new LateSatisfiedTimeout<>(started, satisfied);
                     }
-                    return stabilize(source, condition, started, satisfied);
+                    return stabilize(source, evaluator, started, satisfied);
                 }
                 case Unsatisfied<R> unsatisfied -> {
                     if (reached(completed, acquisitionDeadline)) {
@@ -75,7 +75,8 @@ public record WaitEngine(WaitConfiguration config, LongSupplier clock, LongConsu
         }
     }
 
-    private <S, R> WaitOutcome<R> stabilize(Source<? extends S> source, RuntimeCondition<S, R> condition, long started, Satisfied<R> acquired) {
+    private <S, R> WaitOutcome<R> stabilize(Source<? extends S> source, CheckedFunction<? super S, Evaluation<R>> evaluator,
+            long started, Satisfied<R> acquired) {
         long acquiredAt = acquired.completedNanos();
         if (config.stableForNanos() == 0) {
             return acquired;
@@ -98,7 +99,7 @@ public record WaitEngine(WaitConfiguration config, LongSupplier clock, LongConsu
                 return interrupted;
             }
 
-            Attempt<R> observed = evaluate(source, condition, number);
+            Attempt<R> observed = evaluate(source, evaluator, number);
             completed = observed.completedNanos();
             switch (observed) {
                 case Uncontrolled<R> failure -> { return failure; }
@@ -112,7 +113,7 @@ public record WaitEngine(WaitConfiguration config, LongSupplier clock, LongConsu
         }
     }
 
-    private <S, R> Attempt<R> evaluate(Source<? extends S> source, RuntimeCondition<S, R> condition, long number) {
+    private <S, R> Attempt<R> evaluate(Source<? extends S> source, CheckedFunction<? super S, Evaluation<R>> evaluator, long number) {
         S actual;
         try {
             actual = source.get();
@@ -131,7 +132,7 @@ public record WaitEngine(WaitConfiguration config, LongSupplier clock, LongConsu
 
         Evaluation<R> evaluation;
         try {
-            evaluation = condition.evaluator().apply(actual);
+            evaluation = evaluator.apply(actual);
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
         } catch (InterruptedException conditionInterrupted) {

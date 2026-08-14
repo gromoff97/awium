@@ -2,18 +2,14 @@ package io.github.gromoff97.awium.conditioning.conditions;
 
 import java.util.Optional;
 
-import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.formattedExplanation;
-import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.literalExplanation;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.formattedExplanation;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.literalExplanation;
 import static java.util.Objects.requireNonNull;
 
-public record PresentCondition(RuntimeCondition<Optional<?>, Object> runtime) {
+public record PresentCondition(Condition<Optional<?>, Object> delegate) {
 
     public PresentCondition {
-        requireNonNull(runtime, "runtime condition must not be null");
-    }
-
-    public static PresentCondition of(RuntimeCondition<Optional<?>, Object> runtime) {
-        return new PresentCondition(runtime);
+        requireNonNull(delegate, "condition must not be null");
     }
 
     public ExplainedCondition because(String explanation) {

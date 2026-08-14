@@ -1,17 +1,13 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
-import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.formattedExplanation;
-import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.literalExplanation;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.formattedExplanation;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.literalExplanation;
 import static java.util.Objects.requireNonNull;
 
-public record PreservingCondition<S>(RuntimeCondition<S, S> runtime) {
+public record PreservingCondition<S>(Condition<S, S> delegate) {
 
     public PreservingCondition {
-        requireNonNull(runtime, "runtime condition must not be null");
-    }
-
-    public static <S> PreservingCondition<S> of(RuntimeCondition<S, S> runtime) {
-        return new PreservingCondition<>(runtime);
+        requireNonNull(delegate, "condition must not be null");
     }
 
     public ExplainedCondition<S> because(String explanation) {

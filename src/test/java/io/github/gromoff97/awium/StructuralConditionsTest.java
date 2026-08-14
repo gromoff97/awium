@@ -2,7 +2,6 @@ package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
-import static io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition.structural;
 import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedStructuralAwait;
@@ -40,11 +39,20 @@ class StructuralConditionsTest {
     }
 
     @Test
-    void nullContainersShortCircuitRawConditions()
-            throws Exception {
-        assertUnsatisfied(collection(empty).evaluate(null));
-        assertUnsatisfied(RuntimeCondition.<Map<?, ?>>structural(
-                        empty, "map", Map::size).evaluate(null));
+    void nullContainersRemainUnsatisfied() {
+        FakeTime collectionTime = new FakeTime(0);
+        FakeTime mapTime = new FakeTime(0);
+
+        assertThrows(AwaitTimeoutException.class,
+                () -> timedStructuralAwait((Source<Collection<?>>) () -> null,
+                        "collection", Collection::size,
+                        defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
+                        collectionTime, collectionTime).until(empty));
+        assertThrows(AwaitTimeoutException.class,
+                () -> timedStructuralAwait((Source<Map<?, ?>>) () -> null,
+                        "map", Map::size,
+                        defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
+                        mapTime, mapTime).until(empty));
     }
 
     @Test
@@ -128,31 +136,31 @@ class StructuralConditionsTest {
     }
 
     @Test
-    void rawStructuralFactoryValidatesBeforeSourceRetrieval() {
+    void structuralAwaitValidatesBeforeSourceRetrieval() {
+        FakeTime time = new FakeTime(0);
+        var sourceCalls = new int[1];
+        Source<List<String>> source = () -> {
+            sourceCalls[0]++;
+            return List.of();
+        };
+
         assertTrue(assertThrows(NullPointerException.class,
-                () -> RuntimeCondition.<Collection<?>>structural(
-                        (StructuralCondition) null, "collection",
-                        Collection::size))
+                () -> timedStructuralAwait(source, "collection", List::size,
+                        defaults(), time, time).until((StructuralCondition) null))
                 .getMessage().contains("condition"));
         assertTrue(assertThrows(NullPointerException.class,
-                () -> RuntimeCondition.<Collection<?>>structural(
-                        empty, null, Collection::size))
+                () -> timedStructuralAwait(source, null, List::size,
+                        defaults(), time, time).until(empty))
                 .getMessage().contains("subject"));
         assertEquals("subject must not be blank",
                 assertThrows(IllegalArgumentException.class,
-                        () -> RuntimeCondition.<Collection<?>>structural(
-                                empty, " \n ", Collection::size))
+                        () -> timedStructuralAwait(source, " \n ", List::size,
+                                defaults(), time, time).until(empty))
                         .getMessage());
-
-        var sourceCalls = new int[1];
-        assertTrue(assertThrows(NullPointerException.class, () -> {
-            RuntimeCondition<List<String>, List<String>> runtime = structural(
-                    empty, "collection", null);
-            await((Source<List<String>>) () -> {
-                sourceCalls[0]++;
-                return List.of();
-            }).until(PreservingCondition.of(runtime));
-        }).getMessage().contains("size function"));
+        assertTrue(assertThrows(NullPointerException.class,
+                () -> timedStructuralAwait(source, "collection", null,
+                        defaults(), time, time))
+                .getMessage().contains("size function"));
         assertEquals(0, sourceCalls[0]);
     }
 
@@ -162,25 +170,16 @@ class StructuralConditionsTest {
                 testCase.matchingSize());
         var mismatching = new ProbeContainers.ProbeCollection<Object>(
                 testCase.mismatchingSize());
-        RuntimeCondition<ProbeContainers.ProbeCollection<Object>,
-                ProbeContainers.ProbeCollection<Object>> runtime =
-                        collection(testCase.condition());
-
-        Evaluation<?> satisfied = runtime.evaluate(matching);
+        Evaluation<?> satisfied = testCase.condition().evaluate(
+                matching.size(), matching, "collection");
         assertEquals(SATISFIED, satisfied.status());
         assertSame(matching, satisfied.result());
         assertNull(satisfied.mismatch());
-        assertUnsatisfied(runtime.evaluate(mismatching));
-        assertTrue(!runtime.description().get().isBlank());
-        assertNull(runtime.explanation());
+        assertUnsatisfied(testCase.condition().evaluate(
+                mismatching.size(), mismatching, "collection"));
+        assertTrue(!testCase.condition().description("collection").isBlank());
         assertEquals(1, matching.sizeCalls);
         assertEquals(1, mismatching.sizeCalls);
-    }
-
-    private static <C extends Collection<?>> RuntimeCondition<C, C> collection(
-            StructuralCondition condition) {
-        return structural(
-                condition, "collection", Collection::size);
     }
 
     private static void assertUnsatisfied(Evaluation<?> evaluation) {

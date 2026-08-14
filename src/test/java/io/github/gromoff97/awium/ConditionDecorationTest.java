@@ -20,9 +20,9 @@ class ConditionDecorationTest {
     void everyConditionKindFormatsItsExplanationEagerly() {
         Condition<Object, Object> condition = condition(
                 "custom condition", Evaluation::satisfied);
-        var preserving = PreservingCondition.of(runtime());
-        var present = PresentCondition.of(new RuntimeCondition<>(
-                value -> satisfied(value.orElse(null)), () -> "present", null));
+        var preserving = new PreservingCondition<>(condition);
+        var present = new PresentCondition(condition(
+                "present", value -> satisfied(value.orElse(null))));
 
         assertEquals("the value must be ready",
                 condition.because("the value must be ready").explanation());
@@ -64,12 +64,11 @@ class ConditionDecorationTest {
     }
 
     @Test
-    void runtimeConditionsCannotBypassExplanationValidation() {
+    void specializedConditionsCannotBypassExplanationValidation() {
         assertValidation("explanation", IllegalArgumentException.class,
-                () -> new RuntimeCondition<>(Evaluation::satisfied,
-                        () -> "condition", " \n "));
+                () -> new PreservingCondition<>(runtime()).because(" \n "));
         assertValidation("explanation", NullPointerException.class,
-                () -> runtime().explained(null));
+                () -> new PreservingCondition<>(runtime()).because((String) null));
     }
 
     @Test
@@ -77,15 +76,15 @@ class ConditionDecorationTest {
         Locale original = Locale.getDefault(Locale.Category.FORMAT);
         Locale.setDefault(Locale.Category.FORMAT, Locale.GERMANY);
         try {
-            assertEquals("1.5", PreservingCondition.of(runtime())
+            assertEquals("1.5", new PreservingCondition<>(runtime())
                     .because("%.1f", 1.5).explanation());
         } finally {
             Locale.setDefault(Locale.Category.FORMAT, original);
         }
     }
 
-    private static RuntimeCondition<Object, Object> runtime() {
-        return new RuntimeCondition<>(Evaluation::satisfied, () -> "condition", null);
+    private static Condition<Object, Object> runtime() {
+        return condition("condition", Evaluation::satisfied);
     }
 
     private static <T extends Throwable> void assertValidation(String context,

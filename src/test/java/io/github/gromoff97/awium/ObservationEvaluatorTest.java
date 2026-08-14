@@ -2,7 +2,6 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.conditions.RuntimeCondition;
 import io.github.gromoff97.awium.engine.WaitOutcome.Attempt;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
@@ -324,11 +323,11 @@ class ObservationEvaluatorTest {
             CheckedFunction<Object, Evaluation<R>> condition) {
         var time = new FakeTime(0);
         return new WaitEngine(new WaitConfiguration(1, 2, 0), time, time)
-                .waitFor(source, new RuntimeCondition<>(actual -> {
+                .waitFor(source, actual -> {
                     Evaluation<R> evaluation = condition.apply(actual);
                     time.advanceNanos(2);
                     return evaluation;
-                }, () -> "test condition", null)).attempt();
+                }).attempt();
     }
 
     private static void assertFlagInterruption(Attempt<?> outcome,
