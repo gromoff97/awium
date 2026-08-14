@@ -28,27 +28,43 @@ public final class FailureMessage {
         throw new AssertionError("Utility class");
     }
 
-    static String format(WaitOutcome<?> outcome, Supplier<String> description, String explanation, WaitConfiguration configuration) {
+    static Rendering render(WaitOutcome<?> outcome, Supplier<String> description, String explanation, WaitConfiguration configuration) {
         Context context = new Context(outcome, description, explanation, configuration);
         try {
-            return switch (context.outcome) {
-                case TimeoutBetweenObservations<?> value -> unsatisfied(context, value.attempt(), "Acquisition deadline elapsed before the next attempt");
-                case LateUnsatisfiedTimeout<?> value -> unsatisfied(context, value.attempt(),
-                        "Condition remained unsatisfied at or after the acquisition deadline");
-                case LateSatisfiedTimeout<?> value -> lateSatisfied(context, value);
-                case StabilityLoss<?> value -> unsatisfied(context, value.attempt(), "Condition did not remain stable for the required duration");
-                case Uncontrolled<?> value -> uncontrolled(context, value);
-                case Satisfied<?> ignored -> throw new IllegalArgumentException("successful outcomes have no failure diagnostics");
-            };
+            return new Rendering(format(context), null);
         } catch (VirtualMachineError | ThreadDeath fatal) {
+            suppress(fatal, terminalCause(context.outcome));
             throw fatal;
         } catch (Throwable failure) {
-            throw new FormattingFailure(context, failure);
+            try {
+                return new Rendering(emergency(context, failure), failure);
+            } catch (VirtualMachineError | ThreadDeath fatal) {
+                suppress(fatal, failure);
+                Throwable engineCause = terminalCause(context.outcome);
+                if (engineCause != failure) {
+                    suppress(fatal, engineCause);
+                }
+                throw fatal;
+            }
         }
     }
 
-    static String emergency(FormattingFailure failure) {
-        Context context = failure.context;
+    private static String format(Context context) {
+        return switch (context.outcome) {
+            case TimeoutBetweenObservations<?> value -> message(context, value.attempt(),
+                    "Acquisition deadline elapsed before the next attempt");
+            case LateUnsatisfiedTimeout<?> value -> message(context, value.attempt(),
+                    "Condition remained unsatisfied at or after the acquisition deadline");
+            case LateSatisfiedTimeout<?> value -> message(context, value.attempt(),
+                    "Condition became satisfied at or after the acquisition deadline");
+            case StabilityLoss<?> value -> message(context, value.attempt(),
+                    "Condition did not remain stable for the required duration");
+            case Uncontrolled<?> value -> message(context, value, uncontrolledHeading(value));
+            case Satisfied<?> ignored -> throw new IllegalArgumentException("successful outcomes have no failure diagnostics");
+        };
+    }
+
+    private static String emergency(Context context, Throwable failure) {
         StringBuilder out = heading("Failure diagnostics could not be formatted");
         condition(out, context.description == null ? DESCRIPTION_UNAVAILABLE : context.description, context.explanation);
         String actual = context.outcome.attempt() instanceof BeforeObservation<?>
@@ -59,46 +75,47 @@ public final class FailureMessage {
                 ? value.mismatch() : null;
         attempt(out, context.outcome.attempt().number(), "diagnostics", actual, mismatch);
         timing(out, context);
-        cause(out, emergencyDiagnostic(failure.getCause()));
+        cause(out, emergencyDiagnostic(failure));
         return finish(out);
     }
 
-    private static String unsatisfied(Context context, Unsatisfied<?> attempt, String heading) {
-        ThrowableDiagnostic assertion = attempt.assertionCause() == null
+    private static String message(Context context, Unsatisfied<?> attempt, String heading) {
+        ThrowableDiagnostic cause = attempt.assertionCause() == null
                 ? null : context.causeDiagnostic();
-        StringBuilder out = heading(heading);
-        condition(out, context);
-        attempt(out, attempt.number(), null, context.actualValue(), attempt.mismatch());
-        timing(out, context);
-        if (assertion != null) {
-            cause(out, assertion);
-        }
-        return finish(out);
+        return message(context, attempt, heading, cause);
     }
 
-    private static String lateSatisfied(Context context, LateSatisfiedTimeout<?> outcome) {
-        StringBuilder out = heading("Condition became satisfied at or after the acquisition deadline");
-        condition(out, context);
-        attempt(out, outcome.attempt().number(), null, context.actualValue(), null);
-        timing(out, context);
-        return finish(out);
-    }
-
-    private static String uncontrolled(Context context, Uncontrolled<?> attempt) {
-        String title = attempt.cause() instanceof InterruptedException
+    private static String uncontrolledHeading(Uncontrolled<?> attempt) {
+        return attempt.cause() instanceof InterruptedException
                 ? "Caller thread was interrupted"
                 : switch (attempt.origin()) {
             case SOURCE -> "Source retrieval failed";
             case CONDITION -> "Condition evaluation failed";
             case WAITING -> "Waiting before the next attempt failed";
         };
-        StringBuilder out = heading(title);
+    }
+
+    private static String message(Context context, WaitOutcome.Attempt<?> attempt, String heading) {
+        return message(context, attempt, heading, null);
+    }
+
+    private static String message(Context context, WaitOutcome.Attempt<?> attempt, String heading,
+            ThrowableDiagnostic diagnostic) {
+        StringBuilder out = heading(heading);
         condition(out, context);
-        String actual = attempt instanceof AfterObservation<?>
-                ? context.actualValue() : null;
-        attempt(out, attempt.number(), attempt.origin().name().toLowerCase(Locale.ROOT), actual, null);
+        String actual = attempt instanceof BeforeObservation<?>
+                ? null : context.actualValue();
+        String origin = attempt instanceof Uncontrolled<?> uncontrolled
+                ? uncontrolled.origin().name().toLowerCase(Locale.ROOT) : null;
+        String mismatch = attempt instanceof Unsatisfied<?> unsatisfied
+                ? unsatisfied.mismatch() : null;
+        attempt(out, attempt.number(), origin, actual, mismatch);
         timing(out, context);
-        cause(out, context.causeDiagnostic());
+        if (attempt instanceof Uncontrolled<?>) {
+            cause(out, context.causeDiagnostic());
+        } else if (diagnostic != null) {
+            cause(out, diagnostic);
+        }
         return finish(out);
     }
 
@@ -222,6 +239,14 @@ public final class FailureMessage {
         };
     }
 
+    static void suppress(Throwable failure, Throwable cause) {
+        if (cause != null && cause != failure) {
+            failure.addSuppressed(cause);
+        }
+    }
+
+    record Rendering(String message, Throwable failure) {}
+
     private static final class Context {
 
         private final WaitOutcome<?> outcome;
@@ -278,17 +303,4 @@ public final class FailureMessage {
 
     private record ThrowableDiagnostic(String type, String message) {}
 
-    static final class FormattingFailure extends RuntimeException {
-
-        private final transient Context context;
-
-        private FormattingFailure(Context context, Throwable cause) {
-            super(null, cause, false, false);
-            this.context = context;
-        }
-
-        Throwable engineCause() {
-            return terminalCause(context.outcome);
-        }
-    }
 }

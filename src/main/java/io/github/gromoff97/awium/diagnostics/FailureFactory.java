@@ -11,6 +11,8 @@ import io.github.gromoff97.awium.exceptions.AwaitUnhandledException;
 
 import java.util.function.Supplier;
 
+import static io.github.gromoff97.awium.diagnostics.FailureMessage.render;
+import static io.github.gromoff97.awium.diagnostics.FailureMessage.suppress;
 import static io.github.gromoff97.awium.diagnostics.FailureMessage.terminalCause;
 import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Satisfied;
 import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled;
@@ -36,36 +38,23 @@ public final class FailureFactory {
         }
         boolean restoreInterrupt = currentThread().isInterrupted()
                 || cause instanceof InterruptedException;
-        String message;
+        FailureMessage.Rendering rendering;
         try {
-            message = FailureMessage.format(outcome, description, explanation, configuration);
-        } catch (VirtualMachineError | ThreadDeath fatal) {
-            suppress(fatal, cause);
-            throw fatal;
-        } catch (FailureMessage.FormattingFailure formattingFailure) {
-            Throwable formattingCause = formattingFailure.getCause();
-            Throwable engineCause = formattingFailure.engineCause();
-            String emergencyMessage;
-            try {
-                emergencyMessage = FailureMessage.emergency(formattingFailure);
-            } catch (VirtualMachineError | ThreadDeath fatal) {
-                suppress(fatal, formattingCause);
-                if (engineCause != formattingCause) {
-                    suppress(fatal, engineCause);
+            rendering = render(outcome, description, explanation, configuration);
+            if (rendering.failure() != null) {
+                var failure = new AwaitUnhandledException(rendering.message(), rendering.failure());
+                if (cause != rendering.failure()) {
+                    suppress(failure, cause);
                 }
-                throw fatal;
+                throw failure;
             }
-            var failure = new AwaitUnhandledException(emergencyMessage, formattingCause);
-            if (engineCause != null && engineCause != formattingCause) {
-                suppress(failure, engineCause);
-            }
-            throw failure;
         } finally {
             if (restoreInterrupt) {
                 currentThread().interrupt();
             }
         }
 
+        String message = rendering.message();
         if (outcome instanceof StabilityLoss<R>) {
             throw new AwaitStabilizationException(message, cause);
         }
@@ -82,9 +71,4 @@ public final class FailureFactory {
         throw new AwaitTimeoutException(message, cause);
     }
 
-    private static void suppress(Throwable failure, Throwable cause) {
-        if (cause != null && cause != failure) {
-            failure.addSuppressed(cause);
-        }
-    }
 }
