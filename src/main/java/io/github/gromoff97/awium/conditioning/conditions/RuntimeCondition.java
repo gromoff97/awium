@@ -15,10 +15,7 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.uncontrolled;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static java.util.Objects.requireNonNull;
 
-public record RuntimeCondition<S, R>(
-        CheckedFunction<S, Evaluation<R>> evaluator,
-        Supplier<String> description,
-        String explanation) {
+public record RuntimeCondition<S, R>(CheckedFunction<S, Evaluation<R>> evaluator, Supplier<String> description, String explanation) {
 
     public RuntimeCondition {
         requireNonNull(evaluator, "evaluator must not be null");
@@ -37,36 +34,28 @@ public record RuntimeCondition<S, R>(
     }
 
     public RuntimeCondition<S, R> explained(String value) {
-        return new RuntimeCondition<>(evaluator, description,
-                requireNonNull(value, "explanation must not be null"));
+        return new RuntimeCondition<>(evaluator, description, requireNonNull(value, "explanation must not be null"));
     }
 
     @SuppressWarnings("unchecked")
-    public static <S, R> RuntimeCondition<S, R> open(
-            Condition<? super S, ? extends R> condition) {
+    public static <S, R> RuntimeCondition<S, R> open(Condition<? super S, ? extends R> condition) {
         return new RuntimeCondition<>(actual -> (Evaluation<R>) condition.evaluate(actual), condition::description);
     }
 
-    public static <S> RuntimeCondition<S, S> preserving(
-            PreservingCondition<? super S> condition) {
+    public static <S> RuntimeCondition<S, S> preserving(PreservingCondition<? super S> condition) {
         RuntimeCondition<? super S, ?> runtime = condition.runtime();
-        return new RuntimeCondition<>(actual -> withResult(runtime.evaluator().apply(actual), actual),
-                runtime.description(), runtime.explanation());
+        return new RuntimeCondition<>(actual -> withResult(runtime.evaluator().apply(actual), actual), runtime.description(), runtime.explanation());
     }
 
-    public static <T> RuntimeCondition<Optional<T>, T> present(
-            PresentCondition condition) {
+    public static <T> RuntimeCondition<Optional<T>, T> present(PresentCondition condition) {
         RuntimeCondition<Optional<?>, Object> runtime = condition.runtime();
         return new RuntimeCondition<>(actual -> {
             Evaluation<Object> evaluation = runtime.evaluator().apply(actual);
-            return withResult(evaluation,
-                    evaluation != null && evaluation.status() == SATISFIED ? actual.orElse(null) : null);
+            return withResult(evaluation, evaluation != null && evaluation.status() == SATISFIED ? actual.orElse(null) : null);
         }, runtime.description(), runtime.explanation());
     }
 
-    public static <S> RuntimeCondition<S, S> structural(
-            StructuralCondition condition, String subject,
-            ToIntFunction<? super S> size) {
+    public static <S> RuntimeCondition<S, S> structural(StructuralCondition condition, String subject, ToIntFunction<? super S> size) {
         requireNonNull(condition, "condition must not be null");
         String validatedSubject = nonBlank(subject, "subject");
         requireNonNull(size, "size function must not be null");
@@ -74,13 +63,11 @@ public record RuntimeCondition<S, R>(
             if (actual == null) {
                 return unsatisfied(validatedSubject + " was null");
             }
-            return condition.evaluate(size.applyAsInt(actual), actual,
-                    validatedSubject);
+            return condition.evaluate(size.applyAsInt(actual), actual, validatedSubject);
         }, () -> condition.description(validatedSubject));
     }
 
-    private static <R> Evaluation<R> withResult(
-            Evaluation<?> evaluation, R satisfiedResult) {
+    private static <R> Evaluation<R> withResult(Evaluation<?> evaluation, R satisfiedResult) {
         if (evaluation == null) {
             return null;
         }
@@ -88,10 +75,8 @@ public record RuntimeCondition<S, R>(
             case SATISFIED -> satisfied(satisfiedResult);
             case UNSATISFIED -> evaluation.assertionCause() == null
                     ? unsatisfied(evaluation.mismatch())
-                    : assertionUnsatisfied(
-                            evaluation.mismatch(), evaluation.assertionCause());
-            case UNCONTROLLED -> uncontrolled(
-                    evaluation.uncontrolledCause());
+                    : assertionUnsatisfied(evaluation.mismatch(), evaluation.assertionCause());
+            case UNCONTROLLED -> uncontrolled(evaluation.uncontrolledCause());
         };
     }
 

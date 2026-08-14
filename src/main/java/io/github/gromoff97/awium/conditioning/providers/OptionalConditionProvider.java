@@ -46,8 +46,7 @@ public final class OptionalConditionProvider {
         return valueCondition(requireNonNull(unexpected, "unexpected must not be null"), false);
     }
 
-    private static <T> Condition<Optional<T>, T> valueCondition(
-            T operand, boolean equal) {
+    private static <T> Condition<Optional<T>, T> valueCondition(T operand, boolean equal) {
         return condition(() -> "optional value "
                         + (equal ? "equals " : "does not equal ") + operand,
                 actual -> {

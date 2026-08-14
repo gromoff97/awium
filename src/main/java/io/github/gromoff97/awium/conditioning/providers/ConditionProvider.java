@@ -24,18 +24,14 @@ public final class ConditionProvider {
         throw new AssertionError("Utility class");
     }
 
-    public static <S, R> Condition<S, R> condition(
-            String description,
-            CheckedFunction<? super S, Evaluation<R>> evaluation) {
+    public static <S, R> Condition<S, R> condition(String description, CheckedFunction<? super S, Evaluation<R>> evaluation) {
         if (requireNonNull(description, "description must not be null").isBlank()) {
             throw new IllegalArgumentException("description must not be blank");
         }
         return condition(() -> description, evaluation);
     }
 
-    static <S, R> Condition<S, R> condition(
-            Supplier<String> description,
-            CheckedFunction<? super S, Evaluation<R>> evaluation) {
+    static <S, R> Condition<S, R> condition(Supplier<String> description, CheckedFunction<? super S, Evaluation<R>> evaluation) {
         requireNonNull(description, "description must not be null");
         requireNonNull(evaluation, "evaluation must not be null");
         return new Condition<>() {
@@ -51,15 +47,12 @@ public final class ConditionProvider {
         };
     }
 
-    static <S> PreservingCondition<S> preservingCondition(
-            Supplier<String> description,
-            CheckedFunction<? super S, Evaluation<S>> evaluation) {
+    static <S> PreservingCondition<S> preservingCondition(Supplier<String> description, CheckedFunction<? super S, Evaluation<S>> evaluation) {
         requireNonNull(evaluation, "evaluation must not be null");
         return PreservingCondition.of(new RuntimeCondition<>(evaluation::apply, description));
     }
 
-    static <S> PreservingCondition<S> matchingCondition(String subject, String description,
-            String mismatch, boolean positive, Predicate<? super S> matches) {
+    static <S> PreservingCondition<S> matchingCondition(String subject, String description, String mismatch, boolean positive, Predicate<? super S> matches) {
         return preservingCondition(() -> description, actual -> {
             if (actual == null) {
                 return unsatisfied(subject + " was null");
@@ -77,8 +70,7 @@ public final class ConditionProvider {
         return false;
     }
 
-    static <A, E> boolean allFound(Iterable<A> actual, Collection<E> remaining,
-            BiPredicate<? super A, ? super E> matches) {
+    static <A, E> boolean allFound(Iterable<A> actual, Collection<E> remaining, BiPredicate<? super A, ? super E> matches) {
         for (A value : actual) {
             remaining.removeIf(expected -> matches.test(value, expected));
             if (remaining.isEmpty()) {
@@ -88,8 +80,7 @@ public final class ConditionProvider {
         return false;
     }
 
-    static <A, E> int matchCount(Iterator<A> actual, Collection<E> remaining,
-            BiPredicate<? super A, ? super E> matches) {
+    static <A, E> int matchCount(Iterator<A> actual, Collection<E> remaining, BiPredicate<? super A, ? super E> matches) {
         int matched = 0;
         while (actual.hasNext()) {
             A value = actual.next();
@@ -110,18 +101,15 @@ public final class ConditionProvider {
         return matched;
     }
 
-    public static <S> PreservingCondition<S> asserted(
-            CheckedConsumer<? super S> assertion) {
+    public static <S> PreservingCondition<S> asserted(CheckedConsumer<? super S> assertion) {
         requireNonNull(assertion, "assertion must not be null");
-        return PreservingCondition.of(RuntimeCondition.open(
-                ConditionProvider.<S, S>passed(actual -> {
+        return PreservingCondition.of(RuntimeCondition.open(ConditionProvider.<S, S>passed(actual -> {
                     assertion.accept(actual);
                     return actual;
                 })));
     }
 
-    public static <S, R> Condition<S, R> passed(
-            CheckedFunction<? super S, ? extends R> assertion) {
+    public static <S, R> Condition<S, R> passed(CheckedFunction<? super S, ? extends R> assertion) {
         requireNonNull(assertion, "assertion must not be null");
         return condition("assertion passes", actual -> {
             try {

@@ -25,8 +25,7 @@ public final class ValueEquality {
             if (left == right) {
                 continue;
             }
-            if (left instanceof Object[] leftObjects
-                    && right instanceof Object[] rightObjects) {
+            if (left instanceof Object[] leftObjects && right instanceof Object[] rightObjects) {
                 if (!visited.add(pair)) {
                     continue;
                 }

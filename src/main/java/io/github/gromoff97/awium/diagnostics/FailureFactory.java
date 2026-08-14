@@ -23,16 +23,13 @@ public final class FailureFactory {
     }
 
     @SuppressWarnings("removal")
-    public static <R> R complete(WaitOutcome<R> outcome,
-            RuntimeCondition<?, R> condition,
-            WaitConfiguration configuration) {
+    public static <R> R complete(WaitOutcome<R> outcome, RuntimeCondition<?, R> condition, WaitConfiguration configuration) {
         if (outcome instanceof Satisfied<R> success) {
             return success.result();
         }
 
         Throwable cause = terminalCause(outcome);
-        if (cause instanceof Error fatal
-                && (fatal instanceof VirtualMachineError || fatal instanceof ThreadDeath)) {
+        if (cause instanceof Error fatal && (fatal instanceof VirtualMachineError || fatal instanceof ThreadDeath)) {
             throw fatal;
         }
         boolean restoreInterrupt = currentThread().isInterrupted()
@@ -56,8 +53,7 @@ public final class FailureFactory {
                 }
                 throw fatal;
             }
-            var failure = new AwaitUnhandledException(
-                    emergencyMessage, formattingCause);
+            var failure = new AwaitUnhandledException(emergencyMessage, formattingCause);
             if (engineCause != null && engineCause != formattingCause) {
                 suppress(failure, engineCause);
             }
@@ -77,8 +73,7 @@ public final class FailureFactory {
             }
             throw switch (uncontrolled.origin()) {
                 case SOURCE -> new AwaitSourceRetrievalException(message, cause);
-                case CONDITION -> new AwaitConditionEvaluationException(
-                        message, cause);
+                case CONDITION -> new AwaitConditionEvaluationException(message, cause);
                 case WAITING -> new AwaitUnhandledException(message, cause);
             };
         }

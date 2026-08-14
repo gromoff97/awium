@@ -16,8 +16,7 @@ public final class OptionalAwait<T> extends AbstractAwait<Optional<T>, OptionalA
         super(source);
     }
 
-    private OptionalAwait(OptionalAwait<T> await,
-            WaitConfiguration configuration) {
+    private OptionalAwait(OptionalAwait<T> await, WaitConfiguration configuration) {
         super(await, configuration);
     }
 

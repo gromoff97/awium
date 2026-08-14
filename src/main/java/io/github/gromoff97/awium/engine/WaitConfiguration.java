@@ -7,15 +7,13 @@ import java.time.Duration;
 import static io.github.gromoff97.awium.diagnostics.FailureMessage.configurationConflict;
 import static java.util.Objects.requireNonNull;
 
-public record WaitConfiguration(
-        long everyNanos, long upToNanos, long stableForNanos) {
+public record WaitConfiguration(long everyNanos, long upToNanos, long stableForNanos) {
 
     public WaitConfiguration {
         requirePositive(everyNanos, "polling interval");
         requirePositive(upToNanos, "acquisition timeout");
         if (stableForNanos < 0) {
-            throw new IllegalArgumentException(
-                    "stability duration must not be negative");
+            throw new IllegalArgumentException("stability duration must not be negative");
         }
     }
 
@@ -32,22 +30,18 @@ public record WaitConfiguration(
     }
 
     public WaitConfiguration withStableFor(Duration value) {
-        return new WaitConfiguration(everyNanos, upToNanos,
-                nanos(value, "stability duration"));
+        return new WaitConfiguration(everyNanos, upToNanos, nanos(value, "stability duration"));
     }
 
     public void validatePair() {
         if (everyNanos >= upToNanos) {
-            throw new AwaitConfigurationConflictException(
-                    configurationConflict(
-                            everyNanos, upToNanos));
+            throw new AwaitConfigurationConflictException(configurationConflict(everyNanos, upToNanos));
         }
     }
 
     private static void requirePositive(long nanos, String label) {
         if (nanos <= 0) {
-            throw new IllegalArgumentException(
-                    label + " must be greater than zero");
+            throw new IllegalArgumentException(label + " must be greater than zero");
         }
     }
 
@@ -55,8 +49,7 @@ public record WaitConfiguration(
         try {
             return requireNonNull(value, label + " must not be null").toNanos();
         } catch (ArithmeticException overflow) {
-            throw new IllegalArgumentException(
-                    label + " exceeds the supported nanosecond range", overflow);
+            throw new IllegalArgumentException(label + " exceeds the supported nanosecond range", overflow);
         }
     }
 }

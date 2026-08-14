@@ -22,8 +22,7 @@ import static java.util.Objects.requireNonNull;
 @SuppressWarnings("removal")
 public final class FailureMessage {
 
-    private static final String DESCRIPTION_UNAVAILABLE =
-            "condition description unavailable";
+    private static final String DESCRIPTION_UNAVAILABLE = "condition description unavailable";
     private static final long[] UNIT_NANOS = {86_400_000_000_000L, 3_600_000_000_000L, 60_000_000_000L, 1_000_000_000L, 1_000_000L, 1_000L, 1L};
     private static final String[] UNIT_NAMES = {"day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond"};
 
@@ -31,22 +30,17 @@ public final class FailureMessage {
         throw new AssertionError("Utility class");
     }
 
-    static String format(WaitOutcome<?> outcome,
-            RuntimeCondition<?, ?> condition,
-            WaitConfiguration configuration) {
+    static String format(WaitOutcome<?> outcome, RuntimeCondition<?, ?> condition, WaitConfiguration configuration) {
         Context context = new Context(outcome, condition, configuration);
         try {
             return switch (context.outcome) {
-                case TimeoutBetweenObservations<?> value -> unsatisfied(context, value.attempt(),
-                        "Acquisition deadline elapsed before the next attempt");
+                case TimeoutBetweenObservations<?> value -> unsatisfied(context, value.attempt(), "Acquisition deadline elapsed before the next attempt");
                 case LateUnsatisfiedTimeout<?> value -> unsatisfied(context, value.attempt(),
                         "Condition remained unsatisfied at or after the acquisition deadline");
                 case LateSatisfiedTimeout<?> value -> lateSatisfied(context, value);
-                case StabilityLoss<?> value -> unsatisfied(context, value.attempt(),
-                        "Condition did not remain stable for the required duration");
+                case StabilityLoss<?> value -> unsatisfied(context, value.attempt(), "Condition did not remain stable for the required duration");
                 case Uncontrolled<?> value -> uncontrolled(context, value);
-                case Satisfied<?> ignored -> throw new IllegalArgumentException(
-                        "successful outcomes have no failure diagnostics");
+                case Satisfied<?> ignored -> throw new IllegalArgumentException("successful outcomes have no failure diagnostics");
             };
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
@@ -55,20 +49,14 @@ public final class FailureMessage {
         }
     }
 
-    public static String configurationConflict(long everyNanos,
-            long upToNanos) {
-        return "polling interval (" + duration(everyNanos)
-                + ") must be shorter than acquisition timeout ("
-                + duration(upToNanos) + ")";
+    public static String configurationConflict(long everyNanos, long upToNanos) {
+        return "polling interval (" + duration(everyNanos) + ") must be shorter than acquisition timeout (" + duration(upToNanos) + ")";
     }
 
     static String emergency(FormattingFailure failure) {
         Context context = failure.context;
-        StringBuilder out = heading(
-                "Failure diagnostics could not be formatted");
-        condition(out, context.description == null
-                        ? DESCRIPTION_UNAVAILABLE : context.description,
-                context.condition.explanation());
+        StringBuilder out = heading("Failure diagnostics could not be formatted");
+        condition(out, context.description == null ? DESCRIPTION_UNAVAILABLE : context.description, context.condition.explanation());
         String actual = context.outcome.attempt() instanceof BeforeObservation<?>
                 ? null : context.actual == null
                         ? "<value unavailable: diagnostics failed>"
@@ -94,21 +82,18 @@ public final class FailureMessage {
         return finish(out);
     }
 
-    private static String lateSatisfied(Context context,
-            LateSatisfiedTimeout<?> outcome) {
-        StringBuilder out = heading(
-                "Condition became satisfied at or after the acquisition deadline");
+    private static String lateSatisfied(Context context, LateSatisfiedTimeout<?> outcome) {
+        StringBuilder out = heading("Condition became satisfied at or after the acquisition deadline");
         condition(out, context);
-        attempt(out, outcome.attempt().number(), null, context.actualValue(),
-                null);
+        attempt(out, outcome.attempt().number(), null, context.actualValue(), null);
         timing(out, context);
         return finish(out);
     }
 
-    private static String uncontrolled(Context context,
-            Uncontrolled<?> attempt) {
-        String title = attempt.cause() instanceof InterruptedException ? "Caller thread was interrupted" : switch (
-                attempt.origin()) {
+    private static String uncontrolled(Context context, Uncontrolled<?> attempt) {
+        String title = attempt.cause() instanceof InterruptedException
+                ? "Caller thread was interrupted"
+                : switch (attempt.origin()) {
             case SOURCE -> "Source retrieval failed";
             case CONDITION -> "Condition evaluation failed";
             case WAITING -> "Waiting before the next attempt failed";
@@ -117,8 +102,7 @@ public final class FailureMessage {
         condition(out, context);
         String actual = attempt instanceof AfterObservation<?>
                 ? context.actualValue() : null;
-        attempt(out, attempt.number(),
-                attempt.origin().name().toLowerCase(Locale.ROOT), actual, null);
+        attempt(out, attempt.number(), attempt.origin().name().toLowerCase(Locale.ROOT), actual, null);
         timing(out, context);
         cause(out, context.causeDiagnostic());
         return finish(out);
@@ -129,29 +113,18 @@ public final class FailureMessage {
         switch (context.outcome) {
             case TimeoutBetweenObservations<?> outcome -> {
                 acquisitionTimeout(out, context);
-                field(out, "Last attempt completed after", duration(
-                        outcome.attempt().completedNanos()
-                                - outcome.startedNanos()));
-                field(out, "Elapsed", duration(
-                        outcome.completedNanos() - outcome.startedNanos()));
+                field(out, "Last attempt completed after", duration(outcome.attempt().completedNanos() - outcome.startedNanos()));
+                field(out, "Elapsed", duration(outcome.completedNanos() - outcome.startedNanos()));
                 pollingInterval(out, context);
             }
-            case LateUnsatisfiedTimeout<?> outcome -> timeoutTiming(out, context,
-                    outcome.startedNanos(), outcome.attempt().completedNanos());
-            case LateSatisfiedTimeout<?> outcome -> timeoutTiming(out, context,
-                    outcome.startedNanos(), outcome.attempt().completedNanos());
+            case LateUnsatisfiedTimeout<?> outcome -> timeoutTiming(out, context, outcome.startedNanos(), outcome.attempt().completedNanos());
+            case LateSatisfiedTimeout<?> outcome -> timeoutTiming(out, context, outcome.startedNanos(), outcome.attempt().completedNanos());
             case StabilityLoss<?> outcome -> {
                 acquisitionTimeout(out, context);
-                field(out, "Acquired after", duration(
-                        outcome.acquiredNanos() - outcome.startedNanos()));
-                field(out, "Required stability",
-                        duration(context.configuration.stableForNanos()));
-                field(out, "Failure detected after", duration(
-                        outcome.attempt().completedNanos()
-                                - outcome.acquiredNanos()));
-                field(out, "Elapsed", duration(
-                        outcome.attempt().completedNanos()
-                                - outcome.startedNanos()));
+                field(out, "Acquired after", duration(outcome.acquiredNanos() - outcome.startedNanos()));
+                field(out, "Required stability", duration(context.configuration.stableForNanos()));
+                field(out, "Failure detected after", duration(outcome.attempt().completedNanos() - outcome.acquiredNanos()));
+                field(out, "Elapsed", duration(outcome.attempt().completedNanos() - outcome.startedNanos()));
                 pollingInterval(out, context);
             }
             case Uncontrolled<?> ignored -> {
@@ -163,25 +136,21 @@ public final class FailureMessage {
         }
     }
 
-    private static void timeoutTiming(StringBuilder out, Context context,
-            long startedNanos, long completedNanos) {
+    private static void timeoutTiming(StringBuilder out, Context context, long startedNanos, long completedNanos) {
         acquisitionTimeout(out, context);
         field(out, "Elapsed", duration(completedNanos - startedNanos));
         pollingInterval(out, context);
     }
 
     private static void acquisitionTimeout(StringBuilder out, Context context) {
-        field(out, "Acquisition timeout", duration(
-                context.configuration.upToNanos()));
+        field(out, "Acquisition timeout", duration(context.configuration.upToNanos()));
     }
 
     private static void pollingInterval(StringBuilder out, Context context) {
-        field(out, "Polling interval", duration(
-                context.configuration.everyNanos()));
+        field(out, "Polling interval", duration(context.configuration.everyNanos()));
     }
 
-    private static void attempt(StringBuilder out, long number, String origin,
-            String actual, String mismatch) {
+    private static void attempt(StringBuilder out, long number, String origin, String actual, String mismatch) {
         out.append('\n').append("Attempt:\n");
         field(out, "Number", Long.toString(number));
         if (origin != null) {
@@ -204,12 +173,10 @@ public final class FailureMessage {
     }
 
     private static void condition(StringBuilder out, Context context) {
-        condition(out, context.conditionDescription(),
-                context.condition.explanation());
+        condition(out, context.conditionDescription(), context.condition.explanation());
     }
 
-    private static void condition(StringBuilder out, String expectation,
-            String importance) {
+    private static void condition(StringBuilder out, String expectation, String importance) {
         out.append("Condition:\n");
         field(out, "Expectation", expectation);
         if (importance != null) {
@@ -220,8 +187,7 @@ public final class FailureMessage {
     private static void field(StringBuilder out, String label, String value) {
         String normalized = value.replace("\r\n", "\n").replace('\r', '\n');
         if (!normalized.contains("\n")) {
-            out.append("    ").append(label).append(": ")
-                    .append(normalized).append('\n');
+            out.append("    ").append(label).append(": ").append(normalized).append('\n');
             return;
         }
         out.append("    ").append(label).append(":\n");
@@ -259,8 +225,7 @@ public final class FailureMessage {
             String array = deepToString(new Object[] {value});
             return array.substring(1, array.length() - 1);
         }
-        return requireNonNull(String.valueOf(value),
-                "actual toString() must not return null");
+        return requireNonNull(String.valueOf(value), "actual toString() must not return null");
     }
 
     private static String typeName(Throwable failure) {
@@ -285,22 +250,16 @@ public final class FailureMessage {
         private String description;
         private String actual;
 
-        private Context(WaitOutcome<?> outcome,
-                RuntimeCondition<?, ?> condition,
-                WaitConfiguration configuration) {
+        private Context(WaitOutcome<?> outcome, RuntimeCondition<?, ?> condition, WaitConfiguration configuration) {
             this.outcome = requireNonNull(outcome, "outcome must not be null");
-            this.condition = requireNonNull(condition,
-                    "condition must not be null");
-            this.configuration = requireNonNull(configuration,
-                    "configuration must not be null");
+            this.condition = requireNonNull(condition, "condition must not be null");
+            this.configuration = requireNonNull(configuration, "configuration must not be null");
         }
 
         private String conditionDescription() {
-            String rendered = requireNonNull(condition.description().get(),
-                    "condition description must not be null");
+            String rendered = requireNonNull(condition.description().get(), "condition description must not be null");
             if (rendered.isBlank()) {
-                throw new IllegalArgumentException(
-                        "condition description must not be blank");
+                throw new IllegalArgumentException("condition description must not be blank");
             }
             return description = rendered;
         }
@@ -310,9 +269,7 @@ public final class FailureMessage {
                 case Satisfied<?> value -> value.actual();
                 case Unsatisfied<?> value -> value.actual();
                 case AfterObservation<?> value -> value.actual();
-                case BeforeObservation<?> ignored ->
-                        throw new IllegalArgumentException(
-                                "attempt has no observed actual");
+                case BeforeObservation<?> ignored -> throw new IllegalArgumentException("attempt has no observed actual");
             });
         }
 
@@ -323,8 +280,7 @@ public final class FailureMessage {
 
     private static ThrowableDiagnostic throwableDiagnostic(Throwable failure) {
         String message = failure.getMessage();
-        return new ThrowableDiagnostic(typeName(failure),
-                message == null || message.isBlank() ? null : message);
+        return new ThrowableDiagnostic(typeName(failure), message == null || message.isBlank() ? null : message);
     }
 
     private static ThrowableDiagnostic emergencyDiagnostic(Throwable failure) {

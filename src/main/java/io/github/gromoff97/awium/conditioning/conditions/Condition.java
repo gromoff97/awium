@@ -19,13 +19,11 @@ public abstract class Condition<S, R> {
         return new ExplainedCondition<>(this, explanation);
     }
 
-    public final ExplainedCondition<S, R> because(
-            String format, Object... arguments) {
+    public final ExplainedCondition<S, R> because(String format, Object... arguments) {
         return new ExplainedCondition<>(this, formattedExplanation(format, arguments));
     }
 
-    public record ExplainedCondition<S, R>(Condition<S, R> delegate,
-            String explanation) {
+    public record ExplainedCondition<S, R>(Condition<S, R> delegate, String explanation) {
 
         public ExplainedCondition {
             requireNonNull(delegate, "condition must not be null");

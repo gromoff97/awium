@@ -10,14 +10,11 @@ import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider
 
 public final class ObjectConditionProvider {
 
-    public static final Condition<Object, Void> isNull =
-            condition("value is null", actual ->
-                    actual == null
-                            ? satisfied(null)
-                            : unsatisfied("value was not null"));
+    public static final Condition<Object, Void> isNull = condition("value is null",
+            actual -> actual == null ? satisfied(null) : unsatisfied("value was not null"));
 
-    public static final PreservingCondition<Object> isNotNull = preservingCondition(
-            () -> "value is not null", actual -> actual != null ? satisfied(actual) : unsatisfied("value was null"));
+    public static final PreservingCondition<Object> isNotNull = preservingCondition(() -> "value is not null",
+            actual -> actual != null ? satisfied(actual) : unsatisfied("value was null"));
 
     private ObjectConditionProvider() {
         throw new AssertionError("Utility class");

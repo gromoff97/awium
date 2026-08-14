@@ -28,17 +28,14 @@ abstract class AbstractAwait<S, A> {
         this(source, defaults(), System::nanoTime, LockSupport::parkNanos);
     }
 
-    AbstractAwait(Source<? extends S> source,
-            WaitConfiguration configuration, LongSupplier clock,
-            LongConsumer parker) {
+    AbstractAwait(Source<? extends S> source, WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {
         this.source = requireNonNull(source, "source must not be null");
         this.configuration = requireNonNull(configuration, "configuration must not be null");
         this.clock = requireNonNull(clock, "clock must not be null");
         this.parker = requireNonNull(parker, "parker must not be null");
     }
 
-    AbstractAwait(AbstractAwait<S, ?> await,
-            WaitConfiguration configuration) {
+    AbstractAwait(AbstractAwait<S, ?> await, WaitConfiguration configuration) {
         this(await.source, configuration, await.clock, await.parker);
     }
 
@@ -58,8 +55,7 @@ abstract class AbstractAwait<S, A> {
         return complete(preserving(requireNonNull(condition, "condition must not be null")));
     }
 
-    public final S until(
-            PreservingCondition.ExplainedCondition<? super S> condition) {
+    public final S until(PreservingCondition.ExplainedCondition<? super S> condition) {
         var explained = requireNonNull(condition, "condition must not be null");
         return complete(RuntimeCondition.<S>preserving(explained.delegate()).explained(explained.explanation()));
     }
@@ -68,8 +64,7 @@ abstract class AbstractAwait<S, A> {
         return complete(RuntimeCondition.<S, R>open(requireNonNull(condition, "condition must not be null")));
     }
 
-    public final <R> R until(
-            Condition.ExplainedCondition<? super S, ? extends R> condition) {
+    public final <R> R until(Condition.ExplainedCondition<? super S, ? extends R> condition) {
         var explained = requireNonNull(condition, "condition must not be null");
         return complete(RuntimeCondition.<S, R>open(explained.delegate()).explained(explained.explanation()));
     }

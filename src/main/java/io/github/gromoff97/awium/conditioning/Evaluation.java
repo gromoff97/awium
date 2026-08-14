@@ -11,8 +11,7 @@ public final class Evaluation<R> {
     private final AssertionError assertionCause;
     private final Throwable uncontrolledCause;
 
-    private Evaluation(R result, String mismatch, AssertionError assertionCause,
-            Throwable uncontrolledCause) {
+    private Evaluation(R result, String mismatch, AssertionError assertionCause, Throwable uncontrolledCause) {
         this.result = result;
         this.mismatch = mismatch;
         this.assertionCause = assertionCause;
@@ -27,15 +26,12 @@ public final class Evaluation<R> {
         return new Evaluation<>(null, nonBlank(mismatch, "mismatch"), null, null);
     }
 
-    public static <R> Evaluation<R> assertionUnsatisfied(
-            String mismatch, AssertionError cause) {
-        return new Evaluation<>(null, nonBlank(mismatch, "mismatch"),
-                requireNonNull(cause, "cause must not be null"), null);
+    public static <R> Evaluation<R> assertionUnsatisfied(String mismatch, AssertionError cause) {
+        return new Evaluation<>(null, nonBlank(mismatch, "mismatch"), requireNonNull(cause, "cause must not be null"), null);
     }
 
     public static <R> Evaluation<R> uncontrolled(Throwable cause) {
-        return new Evaluation<>(null, null, null,
-                requireNonNull(cause, "cause must not be null"));
+        return new Evaluation<>(null, null, null, requireNonNull(cause, "cause must not be null"));
     }
 
     public Status status() {

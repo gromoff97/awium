@@ -10,8 +10,7 @@ public record PreservingCondition<S>(RuntimeCondition<S, S> runtime) {
         requireNonNull(runtime, "runtime condition must not be null");
     }
 
-    public static <S> PreservingCondition<S> of(
-            RuntimeCondition<S, S> runtime) {
+    public static <S> PreservingCondition<S> of(RuntimeCondition<S, S> runtime) {
         return new PreservingCondition<>(runtime);
     }
 
@@ -19,13 +18,11 @@ public record PreservingCondition<S>(RuntimeCondition<S, S> runtime) {
         return new ExplainedCondition<>(this, explanation);
     }
 
-    public ExplainedCondition<S> because(
-            String format, Object... arguments) {
+    public ExplainedCondition<S> because(String format, Object... arguments) {
         return new ExplainedCondition<>(this, formattedExplanation(format, arguments));
     }
 
-    public record ExplainedCondition<S>(PreservingCondition<S> delegate,
-            String explanation) {
+    public record ExplainedCondition<S>(PreservingCondition<S> delegate, String explanation) {
 
         public ExplainedCondition {
             requireNonNull(delegate, "condition must not be null");

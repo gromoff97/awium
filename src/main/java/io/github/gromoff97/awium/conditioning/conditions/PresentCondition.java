@@ -12,8 +12,7 @@ public record PresentCondition(RuntimeCondition<Optional<?>, Object> runtime) {
         requireNonNull(runtime, "runtime condition must not be null");
     }
 
-    public static PresentCondition of(
-            RuntimeCondition<Optional<?>, Object> runtime) {
+    public static PresentCondition of(RuntimeCondition<Optional<?>, Object> runtime) {
         return new PresentCondition(runtime);
     }
 
@@ -25,8 +24,7 @@ public record PresentCondition(RuntimeCondition<Optional<?>, Object> runtime) {
         return new ExplainedCondition(this, formattedExplanation(format, arguments));
     }
 
-    public record ExplainedCondition(PresentCondition delegate,
-            String explanation) {
+    public record ExplainedCondition(PresentCondition delegate, String explanation) {
 
         public ExplainedCondition {
             requireNonNull(delegate, "condition must not be null");

@@ -28,8 +28,7 @@ public final class StructuralCondition {
         return new ExplainedCondition(this, explanation);
     }
 
-    public ExplainedCondition because(
-            String format, Object... arguments) {
+    public ExplainedCondition because(String format, Object... arguments) {
         return new ExplainedCondition(this, formattedExplanation(format, arguments));
     }
 
@@ -67,8 +66,7 @@ public final class StructuralCondition {
         return new StructuralCondition(Relation.AT_MOST, upperBound);
     }
 
-    public record ExplainedCondition(StructuralCondition delegate,
-            String explanation) {
+    public record ExplainedCondition(StructuralCondition delegate, String explanation) {
 
         public ExplainedCondition {
             requireNonNull(delegate, "condition must not be null");

@@ -17,8 +17,7 @@ public final class StructuralAwait<S> extends AbstractAwait<S, StructuralAwait<S
     private final String subject;
     private final ToIntFunction<? super S> size;
 
-    StructuralAwait(Source<? extends S> source, String subject,
-            ToIntFunction<? super S> size) {
+    StructuralAwait(Source<? extends S> source, String subject, ToIntFunction<? super S> size) {
         super(source);
         this.subject = subject;
         this.size = requireNonNull(size, "size function must not be null");
@@ -32,16 +31,14 @@ public final class StructuralAwait<S> extends AbstractAwait<S, StructuralAwait<S
         this.size = requireNonNull(size, "size function must not be null");
     }
 
-    private StructuralAwait(StructuralAwait<S> await,
-            WaitConfiguration configuration) {
+    private StructuralAwait(StructuralAwait<S> await, WaitConfiguration configuration) {
         super(await, configuration);
         this.subject = await.subject;
         this.size = await.size;
     }
 
     @Override
-    StructuralAwait<S> reconfigured(
-            WaitConfiguration configuration) {
+    StructuralAwait<S> reconfigured(WaitConfiguration configuration) {
         return new StructuralAwait<>(this, configuration);
     }
 

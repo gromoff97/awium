@@ -33,8 +33,7 @@ public final class Await<S> extends AbstractAwait<S, Await<S>> {
         return new StructuralAwait<>(source, "map", Map::size);
     }
 
-    Await(Source<? extends S> source, WaitConfiguration configuration,
-            LongSupplier clock, LongConsumer parker) {
+    Await(Source<? extends S> source, WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {
         super(source, configuration, clock, parker);
     }
 
