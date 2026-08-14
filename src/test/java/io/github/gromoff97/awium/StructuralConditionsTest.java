@@ -11,9 +11,9 @@ import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 
 import io.github.gromoff97.awium.exceptions.*;
-import io.github.gromoff97.awium.sources.CollectionSource;
-import io.github.gromoff97.awium.sources.MapSource;
 import io.github.gromoff97.awium.sources.Source;
+import io.github.gromoff97.awium.sources.Source.CollectionSource;
+import io.github.gromoff97.awium.sources.Source.MapSource;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -136,7 +136,7 @@ class StructuralConditionsTest {
     }
 
     @Test
-    void structuralAwaitValidatesBeforeSourceRetrieval() {
+    void structuralAwaitRejectsNullConditionBeforeSourceRetrieval() {
         FakeTime time = new FakeTime(0);
         var sourceCalls = new int[1];
         Source<List<String>> source = () -> {
@@ -148,19 +148,6 @@ class StructuralConditionsTest {
                 () -> timedStructuralAwait(source, "collection", List::size,
                         defaults(), time, time).until((StructuralCondition) null))
                 .getMessage().contains("condition"));
-        assertTrue(assertThrows(NullPointerException.class,
-                () -> timedStructuralAwait(source, null, List::size,
-                        defaults(), time, time).until(empty))
-                .getMessage().contains("subject"));
-        assertEquals("subject must not be blank",
-                assertThrows(IllegalArgumentException.class,
-                        () -> timedStructuralAwait(source, " \n ", List::size,
-                                defaults(), time, time).until(empty))
-                        .getMessage());
-        assertTrue(assertThrows(NullPointerException.class,
-                () -> timedStructuralAwait(source, "collection", null,
-                        defaults(), time, time))
-                .getMessage().contains("size function"));
         assertEquals(0, sourceCalls[0]);
     }
 

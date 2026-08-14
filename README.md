@@ -40,7 +40,7 @@ import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionPr
 import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.sources.OptionalSource;
+import io.github.gromoff97.awium.sources.Source.OptionalSource;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,8 +50,8 @@ import java.util.Set;
 
 `await(...)` accepts a repeatedly invokable source, never a direct value.
 Concrete-return lambdas and method references normally select the right
-category. The checked-exception-capable `Source<T>`, `OptionalSource<T>`,
-`CollectionSource<C>`, and `MapSource<M>` interfaces are needed only to type an
+category. The checked-exception-capable `Source<T>`, `Source.OptionalSource<T>`,
+`Source.CollectionSource<C>`, and `Source.MapSource<M>` interfaces are needed only to type an
 otherwise ambiguous source explicitly:
 
 ```java

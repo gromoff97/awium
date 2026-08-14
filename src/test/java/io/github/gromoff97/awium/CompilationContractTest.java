@@ -75,7 +75,7 @@ class CompilationContractTest {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
-                import io.github.gromoff97.awium.sources.*;
+                import io.github.gromoff97.awium.sources.Source.CollectionSource;
                 import java.util.*;
 
                 final class Contract {
@@ -111,7 +111,7 @@ class CompilationContractTest {
         assertFalse(compiles("""
                 import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
-                import io.github.gromoff97.awium.sources.CollectionSource;
+                import io.github.gromoff97.awium.sources.Source.CollectionSource;
                 import java.util.*;
 
                 final class Contract {

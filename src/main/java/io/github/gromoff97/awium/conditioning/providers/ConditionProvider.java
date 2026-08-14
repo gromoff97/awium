@@ -81,8 +81,7 @@ public final class ConditionProvider {
         return false;
     }
 
-    static <A, E> int matchCount(Iterator<A> actual, Collection<E> remaining, BiPredicate<? super A, ? super E> matches) {
-        int matched = 0;
+    static <A, E> boolean allMatched(Iterator<A> actual, Collection<E> remaining, BiPredicate<? super A, ? super E> matches) {
         while (actual.hasNext()) {
             A value = actual.next();
             boolean found = false;
@@ -90,16 +89,15 @@ public final class ConditionProvider {
             while (candidates.hasNext()) {
                 if (matches.test(value, candidates.next())) {
                     candidates.remove();
-                    matched++;
                     found = true;
                     break;
                 }
             }
             if (!found) {
-                return -1;
+                return false;
             }
         }
-        return matched;
+        return true;
     }
 
     static boolean equal(Object actual, Object expected) {

@@ -8,9 +8,9 @@ import java.util.Map;
 import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.allFound;
+import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.allMatched;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.anyMatch;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.equal;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.matchCount;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.matchingCondition;
 import static java.util.Objects.requireNonNull;
 
@@ -45,27 +45,27 @@ public final class MapConditionProvider {
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsAllEntriesOf(Map<? extends K, ? extends V> expected) {
-        return membership(expected, true, true, "map contains all expected entries", "map did not contain all expected entries");
+        return membership(expected, true, true, "all expected entries");
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainAllEntriesOf(Map<? extends K, ? extends V> expected) {
-        return membership(expected, true, false, "map does not contain all expected entries", "map contained all expected entries");
+        return membership(expected, true, false, "all expected entries");
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsAnyEntriesOf(Map<? extends K, ? extends V> expected) {
-        return membership(expected, false, true, "map contains any expected entry", "map did not contain any expected entry");
+        return membership(expected, false, true, "any expected entry");
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsNoEntriesOf(Map<? extends K, ? extends V> expected) {
-        return membership(expected, false, false, "map does not contain any expected entry", "map contained an expected entry");
+        return membership(expected, false, false, "any expected entry");
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsExactlyEntriesOf(Map<? extends K, ? extends V> expected) {
-        return exact(expected, true, "map contains exactly the expected entries", "map did not contain exactly the expected entries");
+        return exact(expected, true);
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainExactlyEntriesOf(Map<? extends K, ? extends V> expected) {
-        return exact(expected, false, "map does not contain exactly the expected entries", "map contained exactly the expected entries");
+        return exact(expected, false);
     }
 
     private static <M extends Map<?, ?>> PreservingCondition<M> entryCondition(Predicate<Map.Entry<?, ?>> matches, boolean positive, String expected) {
@@ -76,10 +76,13 @@ public final class MapConditionProvider {
     }
 
     private static <K, V> PreservingCondition<Map<? super K, ? super V>> membership(Map<? extends K, ? extends V> expected, boolean all,
-            boolean positive, String description, String mismatch) {
+            boolean positive, String target) {
         if (requireNonNull(expected, "expected entries must not be null").isEmpty()) {
             throw new IllegalArgumentException("expected entries must not be empty");
         }
+        String description = "map " + (positive ? "contains " : "does not contain ") + target;
+        String mismatch = "map " + (positive ? "did not contain " : "contained ")
+                + (positive || all ? target : "an expected entry");
         return matchingCondition("map", description, mismatch, positive, actual -> {
             List<Map.Entry<?, ?>> positions = new ArrayList<>(expected.entrySet());
             return all
@@ -89,9 +92,10 @@ public final class MapConditionProvider {
         });
     }
 
-    private static <K, V> PreservingCondition<Map<? super K, ? super V>> exact(Map<? extends K, ? extends V> expected, boolean positive,
-            String description, String mismatch) {
+    private static <K, V> PreservingCondition<Map<? super K, ? super V>> exact(Map<? extends K, ? extends V> expected, boolean positive) {
         requireNonNull(expected, "expected entries must not be null");
+        String description = "map " + (positive ? "contains " : "does not contain ") + "exactly the expected entries";
+        String mismatch = "map " + (positive ? "did not contain " : "contained ") + "exactly the expected entries";
         return matchingCondition("map", description, mismatch, positive, actual -> exactContent(actual, expected));
     }
 
@@ -105,8 +109,7 @@ public final class MapConditionProvider {
         }
 
         List<Map.Entry<?, ?>> remaining = new ArrayList<>(expected.entrySet());
-        int matched = matchCount(actual.entrySet().iterator(), remaining, MapConditionProvider::entryMatches);
-        return matched == actualSize && remaining.isEmpty();
+        return allMatched(actual.entrySet().iterator(), remaining, MapConditionProvider::entryMatches);
     }
 
     private static boolean entryMatches(Map.Entry<?, ?> actual, Map.Entry<?, ?> expected) {

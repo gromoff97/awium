@@ -1,10 +1,10 @@
 package io.github.gromoff97.awium.await;
 
 import io.github.gromoff97.awium.engine.WaitConfiguration;
-import io.github.gromoff97.awium.sources.CollectionSource;
-import io.github.gromoff97.awium.sources.MapSource;
-import io.github.gromoff97.awium.sources.OptionalSource;
 import io.github.gromoff97.awium.sources.Source;
+import io.github.gromoff97.awium.sources.Source.CollectionSource;
+import io.github.gromoff97.awium.sources.Source.MapSource;
+import io.github.gromoff97.awium.sources.Source.OptionalSource;
 
 import java.util.Collection;
 import java.util.Map;

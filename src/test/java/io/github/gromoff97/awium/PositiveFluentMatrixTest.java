@@ -7,10 +7,10 @@ import static io.github.gromoff97.awium.conditioning.providers.OptionalCondition
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.sources.CollectionSource;
-import io.github.gromoff97.awium.sources.MapSource;
-import io.github.gromoff97.awium.sources.OptionalSource;
 import io.github.gromoff97.awium.sources.Source;
+import io.github.gromoff97.awium.sources.Source.CollectionSource;
+import io.github.gromoff97.awium.sources.Source.MapSource;
+import io.github.gromoff97.awium.sources.Source.OptionalSource;
 
 import static io.github.gromoff97.awium.await.Await.await;
 import static java.time.Duration.*;

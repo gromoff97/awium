@@ -2,6 +2,8 @@ package io.github.gromoff97.awium.conditioning.conditions;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 
+import java.util.function.IntPredicate;
+
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.formattedExplanation;
@@ -10,18 +12,17 @@ import static java.util.Objects.requireNonNull;
 
 public final class StructuralCondition {
 
-    public static final StructuralCondition empty = new StructuralCondition(Relation.EMPTY, 0);
-    public static final StructuralCondition nonEmpty = new StructuralCondition(Relation.NON_EMPTY, 0);
+    public static final StructuralCondition empty = new StructuralCondition(size -> size == 0, " is empty", " was non-empty");
+    public static final StructuralCondition nonEmpty = new StructuralCondition(size -> size > 0, " is not empty", " was empty");
 
-    private final Relation relation;
-    private final int bound;
+    private final IntPredicate matches;
+    private final String expectation;
+    private final String fixedMismatch;
 
-    private StructuralCondition(Relation relation, int bound) {
-        this.relation = relation;
-        if (bound < 0) {
-            throw new IllegalArgumentException("size must not be negative");
-        }
-        this.bound = bound;
+    private StructuralCondition(IntPredicate matches, String expectation, String fixedMismatch) {
+        this.matches = matches;
+        this.expectation = expectation;
+        this.fixedMismatch = fixedMismatch;
     }
 
     public ExplainedCondition because(String explanation) {
@@ -33,37 +34,44 @@ public final class StructuralCondition {
     }
 
     public <S> Evaluation<S> evaluate(int size, S actual, String subject) {
-        return relation.matches(size, bound)
+        return matches.test(size)
                 ? satisfied(actual)
-                : unsatisfied(relation.mismatch(subject, size));
+                : unsatisfied(subject + (fixedMismatch == null ? " size was " + size : fixedMismatch));
     }
 
     public String description(String subject) {
-        return relation.description(subject, bound);
+        return subject + expectation;
     }
 
     public static StructuralCondition sizeExactly(int expected) {
-        return new StructuralCondition(Relation.EXACTLY, expected);
+        return sized(expected, size -> size == expected, "is exactly");
     }
 
     public static StructuralCondition sizeNotExactly(int unexpected) {
-        return new StructuralCondition(Relation.NOT_EXACTLY, unexpected);
+        return sized(unexpected, size -> size != unexpected, "is not exactly");
     }
 
     public static StructuralCondition sizeGreaterThan(int lowerBound) {
-        return new StructuralCondition(Relation.GREATER_THAN, lowerBound);
+        return sized(lowerBound, size -> size > lowerBound, "is greater than");
     }
 
     public static StructuralCondition sizeAtLeast(int lowerBound) {
-        return new StructuralCondition(Relation.AT_LEAST, lowerBound);
+        return sized(lowerBound, size -> size >= lowerBound, "is at least");
     }
 
     public static StructuralCondition sizeLessThan(int upperBound) {
-        return new StructuralCondition(Relation.LESS_THAN, upperBound);
+        return sized(upperBound, size -> size < upperBound, "is less than");
     }
 
     public static StructuralCondition sizeAtMost(int upperBound) {
-        return new StructuralCondition(Relation.AT_MOST, upperBound);
+        return sized(upperBound, size -> size <= upperBound, "is at most");
+    }
+
+    private static StructuralCondition sized(int bound, IntPredicate matches, String relation) {
+        if (bound < 0) {
+            throw new IllegalArgumentException("size must not be negative");
+        }
+        return new StructuralCondition(matches, " size " + relation + " " + bound, null);
     }
 
     public record ExplainedCondition(StructuralCondition delegate, String explanation) {
@@ -74,48 +82,4 @@ public final class StructuralCondition {
         }
     }
 
-    private enum Relation {
-        EMPTY,
-        NON_EMPTY,
-        EXACTLY,
-        NOT_EXACTLY,
-        GREATER_THAN,
-        AT_LEAST,
-        LESS_THAN,
-        AT_MOST;
-
-        private boolean matches(int size, int bound) {
-            return switch (this) {
-                case EMPTY -> size == 0;
-                case NON_EMPTY -> size > 0;
-                case EXACTLY -> size == bound;
-                case NOT_EXACTLY -> size != bound;
-                case GREATER_THAN -> size > bound;
-                case AT_LEAST -> size >= bound;
-                case LESS_THAN -> size < bound;
-                case AT_MOST -> size <= bound;
-            };
-        }
-
-        private String description(String subject, int bound) {
-            return subject + switch (this) {
-                case EMPTY -> " is empty";
-                case NON_EMPTY -> " is not empty";
-                case EXACTLY -> " size is exactly " + bound;
-                case NOT_EXACTLY -> " size is not exactly " + bound;
-                case GREATER_THAN -> " size is greater than " + bound;
-                case AT_LEAST -> " size is at least " + bound;
-                case LESS_THAN -> " size is less than " + bound;
-                case AT_MOST -> " size is at most " + bound;
-            };
-        }
-
-        private String mismatch(String subject, int size) {
-            return switch (this) {
-                case EMPTY -> subject + " was non-empty";
-                case NON_EMPTY -> subject + " was empty";
-                default -> subject + " size was " + size;
-            };
-        }
-    }
 }
