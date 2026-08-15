@@ -1,7 +1,5 @@
 package io.github.gromoff97.awium.conditioning.providers;
 
-import io.github.gromoff97.awium.conditioning.CheckedConsumer;
-import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
@@ -149,5 +147,17 @@ public final class ConditionProvider {
                 return assertionUnsatisfied("assertion did not pass", error);
             }
         });
+    }
+
+    @FunctionalInterface
+    public interface CheckedConsumer<T> {
+
+        void accept(T value) throws Exception;
+    }
+
+    @FunctionalInterface
+    public interface CheckedFunction<T, R> {
+
+        R apply(T value) throws Exception;
     }
 }

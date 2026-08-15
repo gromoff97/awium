@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.conditioning.CheckedConsumer;
-import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider.CheckedConsumer;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider.CheckedFunction;
 import io.github.gromoff97.awium.sources.Source;
 
 import static java.lang.reflect.Modifier.isAbstract;

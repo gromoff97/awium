@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.engine;
 
-import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider.CheckedFunction;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.util.function.LongConsumer;

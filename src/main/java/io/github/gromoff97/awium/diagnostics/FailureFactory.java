@@ -168,9 +168,6 @@ public final class FailureFactory {
 
     private static void timing(StringBuilder out, Context context) {
         out.append('\n').append("Timing:\n");
-        if (context.outcome instanceof Satisfied<?>) {
-            return;
-        }
         field(out, "Acquisition timeout", duration(context.configuration.upToNanos()));
         switch (context.outcome) {
             case TimeoutBetweenObservations<?> outcome -> {
