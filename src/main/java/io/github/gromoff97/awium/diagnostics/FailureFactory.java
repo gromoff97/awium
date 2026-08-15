@@ -2,12 +2,12 @@ package io.github.gromoff97.awium.diagnostics;
 
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
-import io.github.gromoff97.awium.exceptions.AwaitConditionEvaluationException;
-import io.github.gromoff97.awium.exceptions.AwaitInterruptedException;
-import io.github.gromoff97.awium.exceptions.AwaitSourceRetrievalException;
-import io.github.gromoff97.awium.exceptions.AwaitStabilizationException;
-import io.github.gromoff97.awium.exceptions.AwaitTimeoutException;
-import io.github.gromoff97.awium.exceptions.AwaitUnhandledException;
+import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitStabilizationException;
+import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
+import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
+import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitInterruptedException;
+import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitSourceRetrievalException;
+import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitUnhandledException;
 
 import java.util.Locale;
 import java.util.function.Supplier;
@@ -28,8 +28,6 @@ import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("removal")
 public final class FailureFactory {
-
-    private static final String DESCRIPTION_UNAVAILABLE = "condition description unavailable";
 
     private FailureFactory() {
         throw new AssertionError("Utility class");
@@ -82,7 +80,7 @@ public final class FailureFactory {
         throw new AwaitTimeoutException(message, cause);
     }
 
-    static RenderResult render(WaitOutcome<?> outcome, Supplier<String> description, String explanation,
+    private static RenderResult render(WaitOutcome<?> outcome, Supplier<String> description, String explanation,
             WaitConfiguration configuration) {
         Context context = new Context(outcome, description, explanation, configuration);
         try {
@@ -121,7 +119,8 @@ public final class FailureFactory {
 
     private static String emergency(Context context, Throwable failure) {
         StringBuilder out = heading("Failure diagnostics could not be formatted");
-        condition(out, context.description == null ? DESCRIPTION_UNAVAILABLE : context.description, context.explanation);
+        condition(out, context.description == null ? "condition description unavailable" : context.description,
+                context.explanation);
         WaitOutcome.Attempt<?> attempt = context.outcome.attempt();
         String actual = null;
         if (!(attempt instanceof BeforeObservation<?>)) {
@@ -150,7 +149,7 @@ public final class FailureFactory {
                 && unsatisfied.assertionCause() != null
                 ? context.causeDiagnostic() : null;
         StringBuilder out = heading(title);
-        condition(out, context);
+        condition(out, context.conditionDescription(), context.explanation);
         String actual = attempt instanceof BeforeObservation<?>
                 ? null : context.actualValue();
         String origin = attempt instanceof Uncontrolled<?> uncontrolled
@@ -220,10 +219,6 @@ public final class FailureFactory {
         }
     }
 
-    private static void condition(StringBuilder out, Context context) {
-        condition(out, context.conditionDescription(), context.explanation);
-    }
-
     private static void condition(StringBuilder out, String expectation, String importance) {
         out.append("Condition:\n");
         field(out, "Expectation", expectation);
@@ -268,7 +263,7 @@ public final class FailureFactory {
         return simpleName.isBlank() ? failure.getClass().getName() : simpleName;
     }
 
-    static Throwable terminalCause(WaitOutcome<?> outcome) {
+    private static Throwable terminalCause(WaitOutcome<?> outcome) {
         return switch (outcome.attempt()) {
             case Satisfied<?> ignored -> null;
             case Unsatisfied<?> attempt -> attempt.assertionCause();
@@ -276,13 +271,13 @@ public final class FailureFactory {
         };
     }
 
-    static void suppress(Throwable failure, Throwable cause) {
+    private static void suppress(Throwable failure, Throwable cause) {
         if (cause != null && cause != failure) {
             failure.addSuppressed(cause);
         }
     }
 
-    record RenderResult(String message, Throwable failure) {}
+    private record RenderResult(String message, Throwable failure) {}
 
     private static final class Context {
 

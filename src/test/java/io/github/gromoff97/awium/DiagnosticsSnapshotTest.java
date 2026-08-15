@@ -6,6 +6,12 @@ import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
 import io.github.gromoff97.awium.exceptions.*;
+import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitStabilizationException;
+import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
+import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
+import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitInterruptedException;
+import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitSourceRetrievalException;
+import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitUnhandledException;
 import io.github.gromoff97.awium.sources.Source;
 
 import static io.github.gromoff97.awium.await.Await.await;

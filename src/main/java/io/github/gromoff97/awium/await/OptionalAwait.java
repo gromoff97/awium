@@ -2,7 +2,7 @@ package io.github.gromoff97.awium.await;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
-import io.github.gromoff97.awium.conditioning.conditions.PresentCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.PresentCondition;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 

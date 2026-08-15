@@ -2,9 +2,9 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.await.Await;
-import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
-import io.github.gromoff97.awium.exceptions.AwaitConditionEvaluationException;
-import io.github.gromoff97.awium.exceptions.AwaitTimeoutException;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
+import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 
@@ -124,7 +124,7 @@ class CollectionMembershipTest {
         assertTrue(compiles(temporaryDirectory, """
                 import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
-                import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
+                import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
                 import io.github.gromoff97.awium.sources.Source.CollectionSource;
                 import java.util.*;
 

@@ -5,4 +5,18 @@ public abstract class AwaitFailure extends AssertionError {
     AwaitFailure(String message, Throwable cause) {
         super(message, cause);
     }
+
+    public static final class AwaitTimeoutException extends AwaitFailure {
+
+        public AwaitTimeoutException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    public static final class AwaitStabilizationException extends AwaitFailure {
+
+        public AwaitStabilizationException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
 }

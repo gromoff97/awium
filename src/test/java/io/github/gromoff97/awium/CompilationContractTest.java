@@ -60,6 +60,7 @@ class CompilationContractTest {
                     import static io.github.gromoff97.awium.await.Await.await;
                     import io.github.gromoff97.awium.sources.Source;
                     import io.github.gromoff97.awium.conditioning.conditions.*;
+                    import io.github.gromoff97.awium.conditioning.conditions.Condition.PresentCondition;
                     final class Contract {
                         void check(Source<String> source, %s condition) {
                             await(source).until(condition);

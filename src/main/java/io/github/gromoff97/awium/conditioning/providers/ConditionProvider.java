@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.conditioning.CheckedConsumer;
 import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
-import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 
 import java.util.ArrayDeque;
 import java.util.Collection;

@@ -3,6 +3,7 @@ package io.github.gromoff97.awium.conditioning.conditions;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 
 import java.util.Locale;
+import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
@@ -41,6 +42,52 @@ public abstract class Condition<S, R> {
         public ExplainedCondition {
             requireNonNull(delegate, "condition must not be null");
             explanation = literalExplanation(explanation);
+        }
+    }
+
+    public record PreservingCondition<S>(Condition<S, S> delegate) {
+
+        public PreservingCondition {
+            requireNonNull(delegate, "condition must not be null");
+        }
+
+        public ExplainedCondition<S> because(String explanation) {
+            return new ExplainedCondition<>(this, explanation);
+        }
+
+        public ExplainedCondition<S> because(String format, Object... arguments) {
+            return new ExplainedCondition<>(this, formattedExplanation(format, arguments));
+        }
+
+        public record ExplainedCondition<S>(PreservingCondition<S> delegate, String explanation) {
+
+            public ExplainedCondition {
+                requireNonNull(delegate, "condition must not be null");
+                explanation = literalExplanation(explanation);
+            }
+        }
+    }
+
+    public record PresentCondition(Condition<Optional<?>, Object> delegate) {
+
+        public PresentCondition {
+            requireNonNull(delegate, "condition must not be null");
+        }
+
+        public ExplainedCondition because(String explanation) {
+            return new ExplainedCondition(this, explanation);
+        }
+
+        public ExplainedCondition because(String format, Object... arguments) {
+            return new ExplainedCondition(this, formattedExplanation(format, arguments));
+        }
+
+        public record ExplainedCondition(PresentCondition delegate, String explanation) {
+
+            public ExplainedCondition {
+                requireNonNull(delegate, "condition must not be null");
+                explanation = literalExplanation(explanation);
+            }
         }
     }
 }

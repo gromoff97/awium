@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.conditioning.providers;
 
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
-import io.github.gromoff97.awium.conditioning.conditions.PresentCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.PresentCondition;
 
 import java.util.Optional;
 

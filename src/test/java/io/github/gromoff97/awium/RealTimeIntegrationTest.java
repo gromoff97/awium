@@ -11,7 +11,7 @@ import static java.lang.Thread.ofPlatform;
 import static java.lang.Thread.State.*;
 import static java.time.Duration.*;
 import static java.util.concurrent.locks.LockSupport.parkNanos;
-import io.github.gromoff97.awium.exceptions.AwaitInterruptedException;
+import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitInterruptedException;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;

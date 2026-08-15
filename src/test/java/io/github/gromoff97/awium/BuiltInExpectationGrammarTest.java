@@ -9,7 +9,7 @@ import static io.github.gromoff97.awium.conditioning.providers.OptionalCondition
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
-import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 
 import java.util.List;
 import java.util.Map;

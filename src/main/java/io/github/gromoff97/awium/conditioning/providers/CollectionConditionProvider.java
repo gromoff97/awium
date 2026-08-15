@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.conditioning.providers;
 
-import io.github.gromoff97.awium.conditioning.conditions.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 
 import java.util.ArrayList;
 import java.util.Collection;
