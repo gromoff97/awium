@@ -45,19 +45,19 @@ public final class MapConditionProvider {
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsAllEntriesOf(Map<? extends K, ? extends V> expected) {
-        return membership(expected, true, true, "all expected entries");
+        return membership(expected, true, true);
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainAllEntriesOf(Map<? extends K, ? extends V> expected) {
-        return membership(expected, true, false, "all expected entries");
+        return membership(expected, true, false);
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsAnyEntriesOf(Map<? extends K, ? extends V> expected) {
-        return membership(expected, false, true, "any expected entry");
+        return membership(expected, false, true);
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsNoEntriesOf(Map<? extends K, ? extends V> expected) {
-        return membership(expected, false, false, "any expected entry");
+        return membership(expected, false, false);
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsExactlyEntriesOf(Map<? extends K, ? extends V> expected) {
@@ -75,11 +75,12 @@ public final class MapConditionProvider {
                 positive, actual -> anyMatch(actual.entrySet(), matches));
     }
 
-    private static <K, V> PreservingCondition<Map<? super K, ? super V>> membership(Map<? extends K, ? extends V> expected, boolean all,
-            boolean positive, String target) {
+    private static <K, V> PreservingCondition<Map<? super K, ? super V>> membership(Map<? extends K, ? extends V> expected,
+            boolean all, boolean positive) {
         if (requireNonNull(expected, "expected entries must not be null").isEmpty()) {
             throw new IllegalArgumentException("expected entries must not be empty");
         }
+        String target = all ? "all expected entries" : "any expected entry";
         String description = "map " + (positive ? "contains " : "does not contain ") + target;
         String mismatch = "map " + (positive ? "did not contain " : "contained ")
                 + (positive || all ? target : "an expected entry");

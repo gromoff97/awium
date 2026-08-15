@@ -75,7 +75,8 @@ abstract class AbstractAwait<S, A> {
 
     abstract A reconfigured(WaitConfiguration configuration);
 
-    protected final <R> R complete(CheckedFunction<? super S, Evaluation<R>> evaluator, Supplier<String> description, String explanation) {
+    protected final <R> R complete(CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator,
+            Supplier<String> description, String explanation) {
         return FailureFactory.complete(engine.waitFor(source, evaluator), description, explanation, engine.configuration());
     }
 
@@ -98,11 +99,6 @@ abstract class AbstractAwait<S, A> {
     }
 
     private <R> R complete(Condition<? super S, ? extends R> condition, String explanation) {
-        return complete(actual -> evaluate(condition, actual), condition::description, explanation);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <S, R> Evaluation<R> evaluate(Condition<? super S, ? extends R> condition, S actual) throws Exception {
-        return (Evaluation<R>) condition.evaluate(actual);
+        return complete(condition::evaluate, condition::description, explanation);
     }
 }

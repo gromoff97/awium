@@ -29,7 +29,8 @@ import static java.lang.Thread.currentThread;
 @SuppressWarnings("removal")
 public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {
 
-    public <S, R> WaitOutcome<R> waitFor(Source<? extends S> source, CheckedFunction<? super S, Evaluation<R>> evaluator) {
+    public <S, R> WaitOutcome<R> waitFor(Source<? extends S> source,
+            CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator) {
         configuration.validatePair();
         long started = clock.getAsLong();
         long phaseDeadline = after(started, configuration.upToNanos());
@@ -97,7 +98,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
     }
 
     private <S, R> Attempt<R> observe(Source<? extends S> source,
-            CheckedFunction<? super S, Evaluation<R>> evaluator, long number) {
+            CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator, long number) {
         S actual;
         try {
             actual = source.get();
@@ -114,7 +115,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
             return interrupted;
         }
 
-        Evaluation<R> evaluation;
+        Evaluation<? extends R> evaluation;
         try {
             evaluation = evaluator.apply(actual);
         } catch (VirtualMachineError | ThreadDeath fatal) {
