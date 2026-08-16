@@ -12,7 +12,6 @@ import static java.lang.Thread.interrupted;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider.CheckedFunction;
 import io.github.gromoff97.awium.engine.*;
 import io.github.gromoff97.awium.exceptions.AwaitConfigurationConflictException;
 

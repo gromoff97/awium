@@ -200,6 +200,21 @@ class ArchitectureContractTest {
                     }
                 }
                 """);
+        assertRejectedAt(MAIN_PACKAGE.resolve(
+                "engine/ObservationEvaluator.java"), """
+                package io.github.gromoff97.awium.engine;
+                final class ObservationEvaluator {
+                    boolean first() {
+                        return Thread.currentThread().isInterrupted();
+                    }
+                    boolean second() {
+                        return Thread.currentThread().isInterrupted();
+                    }
+                    void restore() {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                """);
     }
 
     private static void assertRejected(String name, String source) {
@@ -263,8 +278,10 @@ class ArchitectureContractTest {
         private static final Path PARK_PORT =
                 MAIN_PACKAGE.resolve(
                         "await/AbstractAwait.java").normalize();
-        private static final Path INTERRUPT_PORT = MAIN_PACKAGE
+        private static final Path WAIT_INTERRUPT_PORT = MAIN_PACKAGE
                 .resolve("engine/WaitEngine.java").normalize();
+        private static final Path OBSERVATION_INTERRUPT_PORT = MAIN_PACKAGE
+                .resolve("engine/ObservationEvaluator.java").normalize();
         private static final Path FINAL_INTERRUPT_PORT = MAIN_PACKAGE
                 .resolve("diagnostics/FailureFactory.java").normalize();
         private static final String THREAD = "java.lang.Thread";
@@ -300,8 +317,10 @@ class ArchitectureContractTest {
 
         private final Set<Path> auditedPaths = new java.util.HashSet<>();
         private int parks;
-        private int interruptReads;
-        private int interruptRestores;
+        private int waitInterruptReads;
+        private int waitInterruptRestores;
+        private int observationInterruptReads;
+        private int observationInterruptRestores;
         private int finalInterruptReads;
         private int finalInterruptRestores;
 
@@ -409,13 +428,17 @@ class ArchitectureContractTest {
                 if (tree instanceof J.MethodInvocation invocation
                         && isApprovedInterruptCall(invocation, name)) {
                     if (name.equals("isInterrupted")) {
-                        if (currentPath().equals(INTERRUPT_PORT)) {
-                            interruptReads++;
+                        if (currentPath().equals(WAIT_INTERRUPT_PORT)) {
+                            waitInterruptReads++;
+                        } else if (currentPath().equals(OBSERVATION_INTERRUPT_PORT)) {
+                            observationInterruptReads++;
                         } else {
                             finalInterruptReads++;
                         }
-                    } else if (currentPath().equals(INTERRUPT_PORT)) {
-                        interruptRestores++;
+                    } else if (currentPath().equals(WAIT_INTERRUPT_PORT)) {
+                        waitInterruptRestores++;
+                    } else if (currentPath().equals(OBSERVATION_INTERRUPT_PORT)) {
+                        observationInterruptRestores++;
                     } else {
                         finalInterruptRestores++;
                     }
@@ -518,7 +541,9 @@ class ArchitectureContractTest {
 
         private boolean isApprovedInterruptCall(
                 J.MethodInvocation invocation, String name) {
-            boolean approved = currentPath().equals(INTERRUPT_PORT)
+            boolean approved = currentPath().equals(WAIT_INTERRUPT_PORT)
+                    && (name.equals("isInterrupted") || name.equals("interrupt"))
+                    || currentPath().equals(OBSERVATION_INTERRUPT_PORT)
                     && (name.equals("isInterrupted") || name.equals("interrupt"))
                     || currentPath().equals(FINAL_INTERRUPT_PORT)
                     && (name.equals("isInterrupted")
@@ -550,9 +575,15 @@ class ArchitectureContractTest {
                 throw new AssertionError(PARK_PORT
                         + ": expected exactly one LockSupport::parkNanos");
             }
-            if (auditedPaths.contains(INTERRUPT_PORT)
-                    && (interruptReads != 1 || interruptRestores != 1)) {
-                throw new AssertionError(INTERRUPT_PORT
+            if (auditedPaths.contains(WAIT_INTERRUPT_PORT)
+                    && (waitInterruptReads != 1 || waitInterruptRestores != 1)) {
+                throw new AssertionError(WAIT_INTERRUPT_PORT
+                        + ": expected exactly one interrupt read and restoration");
+            }
+            if (auditedPaths.contains(OBSERVATION_INTERRUPT_PORT)
+                    && (observationInterruptReads != 1
+                            || observationInterruptRestores != 1)) {
+                throw new AssertionError(OBSERVATION_INTERRUPT_PORT
                         + ": expected exactly one interrupt read and restoration");
             }
             if (auditedPaths.contains(FINAL_INTERRUPT_PORT)

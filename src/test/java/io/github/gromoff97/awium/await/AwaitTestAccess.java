@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium.await;
 
-import io.github.gromoff97.awium.await.Await.StructuralAwait;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;
 

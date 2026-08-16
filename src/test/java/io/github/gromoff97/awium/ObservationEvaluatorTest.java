@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider.CheckedFunction;
 import io.github.gromoff97.awium.engine.WaitOutcome.Attempt;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;

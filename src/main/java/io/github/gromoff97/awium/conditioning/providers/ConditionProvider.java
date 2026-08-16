@@ -1,21 +1,17 @@
 package io.github.gromoff97.awium.conditioning.providers;
 
+import io.github.gromoff97.awium.conditioning.CheckedConsumer;
+import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 
-import java.util.ArrayDeque;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static java.util.Objects.deepEquals;
 import static java.util.Objects.requireNonNull;
 
 public final class ConditionProvider {
@@ -60,76 +56,6 @@ public final class ConditionProvider {
         });
     }
 
-    static <T> boolean anyMatch(Iterable<T> values, Predicate<? super T> matches) {
-        for (T value : values) {
-            if (matches.test(value)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    static <A, E> boolean containsAllMatches(Iterable<A> actual, Collection<E> remainingExpected,
-            BiPredicate<? super A, ? super E> matches) {
-        for (A value : actual) {
-            remainingExpected.removeIf(expected -> matches.test(value, expected));
-            if (remainingExpected.isEmpty()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    static <A, E> boolean matchesExactly(Iterator<A> actual, Collection<E> remainingExpected,
-            BiPredicate<? super A, ? super E> matches) {
-        while (actual.hasNext()) {
-            A value = actual.next();
-            boolean found = false;
-            Iterator<E> candidates = remainingExpected.iterator();
-            while (candidates.hasNext()) {
-                if (matches.test(value, candidates.next())) {
-                    candidates.remove();
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    static boolean equal(Object actual, Object expected) {
-        record ValuePair(Object actual, Object expected) {}
-
-        var pending = new ArrayDeque<ValuePair>();
-        var visited = new HashSet<ValuePair>();
-        pending.addLast(new ValuePair(actual, expected));
-        while (!pending.isEmpty()) {
-            ValuePair pair = pending.removeLast();
-            Object left = pair.actual();
-            Object right = pair.expected();
-            if (left == right) {
-                continue;
-            }
-            if (left instanceof Object[] leftObjects && right instanceof Object[] rightObjects) {
-                if (!visited.add(pair)) {
-                    continue;
-                }
-                if (leftObjects.length != rightObjects.length) {
-                    return false;
-                }
-                for (int index = leftObjects.length - 1; index >= 0; index--) {
-                    pending.addLast(new ValuePair(leftObjects[index], rightObjects[index]));
-                }
-            } else if (!deepEquals(left, right)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     public static <S> PreservingCondition<S> asserted(CheckedConsumer<? super S> assertion) {
         requireNonNull(assertion, "assertion must not be null");
         return new PreservingCondition<>(passed(actual -> {
@@ -149,15 +75,4 @@ public final class ConditionProvider {
         });
     }
 
-    @FunctionalInterface
-    public interface CheckedConsumer<T> {
-
-        void accept(T value) throws Exception;
-    }
-
-    @FunctionalInterface
-    public interface CheckedFunction<T, R> {
-
-        R apply(T value) throws Exception;
-    }
 }

@@ -5,8 +5,8 @@ import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCon
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.equal;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.preservingCondition;
+import static io.github.gromoff97.awium.conditioning.providers.ValueMatching.equal;
 
 public final class ObjectConditionProvider {
 

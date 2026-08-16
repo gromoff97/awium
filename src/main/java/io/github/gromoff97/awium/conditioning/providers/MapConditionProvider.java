@@ -7,11 +7,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.anyMatch;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.containsAllMatches;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.equal;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.matchesExactly;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.matchingCondition;
+import static io.github.gromoff97.awium.conditioning.providers.ValueMatching.anyMatch;
+import static io.github.gromoff97.awium.conditioning.providers.ValueMatching.containsAllMatches;
+import static io.github.gromoff97.awium.conditioning.providers.ValueMatching.equal;
+import static io.github.gromoff97.awium.conditioning.providers.ValueMatching.matchesExactly;
 import static java.util.Objects.requireNonNull;
 
 public final class MapConditionProvider {
