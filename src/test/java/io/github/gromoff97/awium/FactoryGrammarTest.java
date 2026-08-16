@@ -72,9 +72,15 @@ class FactoryGrammarTest {
         assertNull("condition", () -> optional.until((PresentCondition.ExplainedCondition) null));
 
         var collection = await((CollectionSource<Collection<String>>) List::of).every(ofSeconds(20));
-        assertNull("condition", () -> collection.until((StructuralCondition) null));
+        assertNull("condition", () -> collection.until((CollectionCondition) null));
         assertNull("condition", () -> collection.until(
-                (StructuralCondition.ExplainedCondition) null));
+                (CollectionCondition.ExplainedCondition) null));
+
+        var map = await((MapSource<Map<String, String>>) Map::of)
+                .every(ofSeconds(20));
+        assertNull("condition", () -> map.until((MapCondition) null));
+        assertNull("condition", () -> map.until(
+                (MapCondition.ExplainedCondition) null));
     }
 
     private static void assertNull(String context, Executable action) {

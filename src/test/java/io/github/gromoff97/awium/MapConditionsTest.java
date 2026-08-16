@@ -10,7 +10,7 @@ import io.github.gromoff97.awium.sources.Source.MapSource;
 import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedStructuralAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedMapAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
 import static io.github.gromoff97.awium.conditioning.providers.MapConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
@@ -133,12 +133,11 @@ class MapConditionsTest {
         FakeTime time = new FakeTime(0);
 
         assertThrows(AwaitTimeoutException.class,
-                () -> timedStructuralAwait((Source<ProbeContainers.EntryMap<
+                () -> timedMapAwait((Source<ProbeContainers.EntryMap<
                                 String, String>>) () -> {
                             time.advanceNanos(2);
                             return actual;
-                        }, "map", Map::size,
-                        defaults().withEvery(ofNanos(1))
+                        }, defaults().withEvery(ofNanos(1))
                                 .withUpTo(ofNanos(2)), time, time)
                         .until(doesNotContainKey("a")
                                 .because("business reason")));

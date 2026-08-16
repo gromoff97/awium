@@ -11,7 +11,7 @@ import io.github.gromoff97.awium.sources.Source.CollectionSource;
 import static io.github.gromoff97.awium.CompilationSupport.compiles;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedStructuralAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
@@ -92,13 +92,12 @@ class CollectionMembershipTest {
         FakeTime time = new FakeTime(0);
 
         assertThrows(AwaitTimeoutException.class,
-                () -> timedStructuralAwait(
+                () -> timedCollectionAwait(
                         (Source<ProbeContainers.MembershipCollection<String>>)
                                 () -> {
                                     time.advanceNanos(2);
                                     return actual;
                                 },
-                        "collection", Collection::size,
                         defaults().withEvery(ofNanos(1))
                                 .withUpTo(ofNanos(2)), time, time)
                         .until(doesNotContain("a").because("business reason")));

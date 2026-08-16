@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 import static io.github.gromoff97.awium.conditioning.providers.MapConditionProvider.*;
@@ -10,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
+import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
 
 import java.util.List;
 import java.util.Map;
@@ -48,6 +49,14 @@ class BuiltInExpectationGrammarTest {
                 "collection does not contain exactly the expected elements",
                 "collection contains exactly the expected elements in any order",
                 "collection does not contain exactly the expected elements in any order",
+                "map is empty",
+                "map is not empty",
+                "map size is exactly 2",
+                "map size is not exactly 2",
+                "map size is greater than 2",
+                "map size is at least 2",
+                "map size is less than 2",
+                "map size is at most 2",
                 "map contains expected key",
                 "map does not contain expected key",
                 "map contains expected value",
@@ -71,14 +80,14 @@ class BuiltInExpectationGrammarTest {
                         hasValueNotEqualTo("unexpected").description(),
                         description(asserted(value -> {})),
                         passed(value -> value).description(),
-                        empty.description("collection"),
-                        nonEmpty.description("collection"),
-                        sizeExactly(2).description("collection"),
-                        sizeNotExactly(2).description("collection"),
-                        sizeGreaterThan(2).description("collection"),
-                        sizeAtLeast(2).description("collection"),
-                        sizeLessThan(2).description("collection"),
-                        sizeAtMost(2).description("collection"),
+                        CollectionCondition.empty.description(),
+                        CollectionCondition.nonEmpty.description(),
+                        CollectionCondition.sizeExactly(2).description(),
+                        CollectionCondition.sizeNotExactly(2).description(),
+                        CollectionCondition.sizeGreaterThan(2).description(),
+                        CollectionCondition.sizeAtLeast(2).description(),
+                        CollectionCondition.sizeLessThan(2).description(),
+                        CollectionCondition.sizeAtMost(2).description(),
                         description(contains("expected")),
                         description(doesNotContain("expected")),
                         description(containsAll("expected")),
@@ -89,6 +98,14 @@ class BuiltInExpectationGrammarTest {
                         description(doesNotContainExactly("expected")),
                         description(containsExactlyInAnyOrder("expected")),
                         description(doesNotContainExactlyInAnyOrder("expected")),
+                        MapCondition.empty.description(),
+                        MapCondition.nonEmpty.description(),
+                        MapCondition.sizeExactly(2).description(),
+                        MapCondition.sizeNotExactly(2).description(),
+                        MapCondition.sizeGreaterThan(2).description(),
+                        MapCondition.sizeAtLeast(2).description(),
+                        MapCondition.sizeLessThan(2).description(),
+                        MapCondition.sizeAtMost(2).description(),
                         description(containsKey("expected")),
                         description(doesNotContainKey("expected")),
                         description(containsValue("expected")),

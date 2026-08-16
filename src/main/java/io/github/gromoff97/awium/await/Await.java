@@ -25,12 +25,12 @@ public final class Await<S> extends AbstractAwait<S, Await<S>> {
         return new OptionalAwait<>(source);
     }
 
-    public static <C extends Collection<?>> StructuralAwait<C> await(CollectionSource<C> source) {
-        return new StructuralAwait<>(source, "collection", Collection::size);
+    public static <C extends Collection<?>> CollectionAwait<C> await(CollectionSource<C> source) {
+        return new CollectionAwait<>(source);
     }
 
-    public static <M extends Map<?, ?>> StructuralAwait<M> await(MapSource<M> source) {
-        return new StructuralAwait<>(source, "map", Map::size);
+    public static <M extends Map<?, ?>> MapAwait<M> await(MapSource<M> source) {
+        return new MapAwait<>(source);
     }
 
     Await(Source<? extends S> source, WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {

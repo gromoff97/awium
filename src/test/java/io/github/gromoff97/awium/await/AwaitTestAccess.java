@@ -3,9 +3,10 @@ package io.github.gromoff97.awium.await;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
-import java.util.function.ToIntFunction;
 
 public final class AwaitTestAccess {
 
@@ -19,11 +20,15 @@ public final class AwaitTestAccess {
         return new Await<>(source, configuration, clock, parker);
     }
 
-    public static <S> StructuralAwait<S> timedStructuralAwait(
-            Source<? extends S> source, String subject,
-            ToIntFunction<? super S> size, WaitConfiguration configuration,
+    public static <C extends Collection<?>> CollectionAwait<C> timedCollectionAwait(
+            Source<? extends C> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
-        return new StructuralAwait<>(source, subject, size, configuration,
-                clock, parker);
+        return new CollectionAwait<>(source, configuration, clock, parker);
+    }
+
+    public static <M extends Map<?, ?>> MapAwait<M> timedMapAwait(
+            Source<? extends M> source, WaitConfiguration configuration,
+            LongSupplier clock, LongConsumer parker) {
+        return new MapAwait<>(source, configuration, clock, parker);
     }
 }

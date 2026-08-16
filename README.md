@@ -32,7 +32,7 @@ Examples below assume:
 
 ```java
 import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
 import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 import static io.github.gromoff97.awium.conditioning.providers.MapConditionProvider.*;
@@ -40,6 +40,7 @@ import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionPr
 import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 import java.util.List;
 import java.util.Map;
@@ -164,6 +165,9 @@ exactness through conditions such as `containsExactlyInAnyOrder(...)`.
 Map conditions likewise return the concrete map:
 
 ```java
+Map<String, Payment> populated = await(paymentRepository::index)
+        .until(MapCondition.nonEmpty);
+
 Map<String, Payment> indexed = await(paymentRepository::index)
         .until(containsEntry(paymentId, expectedPayment));
 

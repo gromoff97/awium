@@ -55,7 +55,8 @@ class CompilationContractTest {
 
     @Test
     void categorySpecificTerminalsRejectWrongConditions() throws IOException {
-        for (String type : List.of("PresentCondition", "StructuralCondition")) {
+        for (String type : List.of("PresentCondition", "CollectionCondition",
+                "MapCondition")) {
             assertFalse(compiles("""
                     import static io.github.gromoff97.awium.await.Await.await;
                     import io.github.gromoff97.awium.sources.Source;
@@ -68,6 +69,32 @@ class CompilationContractTest {
                     }
                     """.formatted(type)), type);
         }
+    }
+
+    @Test
+    void collectionAndMapSizeConditionsCannotBeMixed() throws IOException {
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.await.Await.await;
+                import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
+                import io.github.gromoff97.awium.sources.Source.CollectionSource;
+                import java.util.List;
+                final class Contract {
+                    void check(CollectionSource<List<String>> source) {
+                        await(source).until(MapCondition.nonEmpty);
+                    }
+                }
+                """));
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.await.Await.await;
+                import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
+                import io.github.gromoff97.awium.sources.Source.MapSource;
+                import java.util.Map;
+                final class Contract {
+                    void check(MapSource<Map<String, String>> source) {
+                        await(source).until(CollectionCondition.nonEmpty);
+                    }
+                }
+                """));
     }
 
     @Test
@@ -146,12 +173,14 @@ class CompilationContractTest {
                 "asserted((Object value) -> {})",
                 "passed((Object value) -> value)",
                 "present",
-                "nonEmpty")) {
+                "CollectionCondition.nonEmpty",
+                "MapCondition.nonEmpty")) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
                     import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
                     import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
                     import io.github.gromoff97.awium.conditioning.Evaluation;
+                    import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
+                    import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
                     final class Contract {
                         void check() {
                             %s.because("first").because("second");
@@ -162,10 +191,13 @@ class CompilationContractTest {
     }
 
     @Test
-    void structuralSingletonsAreFieldsNotFactories() throws IOException {
-        for (String condition : List.of("empty()", "nonEmpty()")) {
+    void sizeSingletonsAreFieldsNotFactories() throws IOException {
+        for (String condition : List.of("CollectionCondition.empty()",
+                "CollectionCondition.nonEmpty()", "MapCondition.empty()",
+                "MapCondition.nonEmpty()")) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
+                    import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
+                    import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
                     final class Contract {
                         void check() { Object condition = %s; }
                     }

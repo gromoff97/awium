@@ -35,9 +35,11 @@ class ArtifactContractIT {
             throws Exception {
         assertTrue(compiles(directory, """
                 import static io.github.gromoff97.awium.await.Await.await;
-                import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
                 import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
                 import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
+
+                import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
 
                 import java.util.List;
                 import java.util.Map;
@@ -54,7 +56,7 @@ class ArtifactContractIT {
                         return await(this::loadCollection).until(nonEmpty);
                     }
                     Map<String, Integer> map() {
-                        return await(this::loadMap).until(nonEmpty);
+                        return await(this::loadMap).until(MapCondition.nonEmpty);
                     }
                     String loadObject() { return "value"; }
                     Optional<String> loadOptional() {

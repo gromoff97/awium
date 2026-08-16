@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.*;
-import static io.github.gromoff97.awium.conditioning.conditions.StructuralCondition.*;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.*;
@@ -34,8 +33,10 @@ class ConditionDecorationTest {
                 preserving.because("preserving").explanation());
         assertEquals("present value",
                 present.because("present %s", "value").explanation());
-        assertEquals("structural value",
-                nonEmpty.because("structural %s", "value").explanation());
+        assertEquals("collection value", CollectionCondition.nonEmpty
+                .because("collection %s", "value").explanation());
+        assertEquals("map value", MapCondition.nonEmpty
+                .because("map %s", "value").explanation());
     }
 
     @Test
