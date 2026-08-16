@@ -36,10 +36,11 @@ class ArtifactContractIT {
         assertTrue(compiles(directory, """
                 import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
-                import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
-                import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
-
-                import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
+                import static io.github.gromoff97.awium.conditioning.conditions.ComparableCondition.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.StringCondition.*;
 
                 import java.util.List;
                 import java.util.Map;
@@ -53,10 +54,16 @@ class ArtifactContractIT {
                         return await(this::loadOptional).until(present);
                     }
                     List<String> collection() {
-                        return await(this::loadCollection).until(nonEmpty);
+                        return await(this::loadCollection).until(hasElements);
+                    }
+                    String singleElement() {
+                        return await(this::loadCollection).until(singleElement);
                     }
                     Map<String, Integer> map() {
-                        return await(this::loadMap).until(MapCondition.nonEmpty);
+                        return await(this::loadMap).until(hasEntries);
+                    }
+                    Map.Entry<String, Integer> singleEntry() {
+                        return await(this::loadMap).until(singleEntry);
                     }
                     String loadObject() { return "value"; }
                     Optional<String> loadOptional() {

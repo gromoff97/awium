@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
 import static java.time.Duration.*;
 
 import io.github.gromoff97.awium.conditioning.*;
@@ -43,12 +43,8 @@ class FactoryGrammarTest {
         var initial = await(() -> "v" + ++calls[0]);
 
         var slow = initial.every(ofSeconds(20));
-        var repaired = slow
-                .upTo(ofSeconds(10))
-                .every(ofMillis(1))
-                .upTo(ofSeconds(1))
-                .stableFor(ofSeconds(2))
-                .stableFor(ZERO);
+        var repaired = slow.upTo(ofSeconds(10)).every(ofMillis(1)).upTo(ofSeconds(1))
+                .stableFor(ofSeconds(2)).stableFor(ZERO);
 
         assertThrows(AwaitConfigurationConflictException.class,
                 () -> slow.until(isNotNull));
@@ -57,8 +53,7 @@ class FactoryGrammarTest {
 
     @Test
     void nullConditionWinsOverFinalConfigurationConflictForEveryOverload() {
-        var object = await((Source<String>) () -> "value")
-                .every(ofSeconds(20));
+        var object = await((Source<String>) () -> "value").every(ofSeconds(20));
         assertNull("condition", () -> object.until((PreservingCondition<String>) null));
         assertNull("condition", () -> object.until(
                 (PreservingCondition.ExplainedCondition<String>) null));
@@ -66,21 +61,19 @@ class FactoryGrammarTest {
         assertNull("condition", () -> object.until(
                 (Condition.ExplainedCondition<String, String>) null));
 
-        var optional = await((OptionalSource<String>) Optional::empty)
-                .every(ofSeconds(20));
+        var optional = await((OptionalSource<String>) Optional::empty).every(ofSeconds(20));
         assertNull("condition", () -> optional.until((PresentCondition) null));
         assertNull("condition", () -> optional.until((PresentCondition.ExplainedCondition) null));
 
         var collection = await((CollectionSource<Collection<String>>) List::of).every(ofSeconds(20));
-        assertNull("condition", () -> collection.until((CollectionCondition) null));
+        assertNull("condition", () -> collection.until((CollectionCondition.SingleElement) null));
         assertNull("condition", () -> collection.until(
-                (CollectionCondition.ExplainedCondition) null));
+                (CollectionCondition.SingleElement.Explained) null));
 
-        var map = await((MapSource<Map<String, String>>) Map::of)
-                .every(ofSeconds(20));
-        assertNull("condition", () -> map.until((MapCondition) null));
+        var map = await((MapSource<Map<String, String>>) Map::of).every(ofSeconds(20));
+        assertNull("condition", () -> map.until((MapCondition.SingleEntry) null));
         assertNull("condition", () -> map.until(
-                (MapCondition.ExplainedCondition) null));
+                (MapCondition.SingleEntry.Explained) null));
     }
 
     private static void assertNull(String context, Executable action) {

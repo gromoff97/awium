@@ -25,11 +25,11 @@ public final class Await<S> extends AbstractAwait<S, Await<S>> {
         return new OptionalAwait<>(source);
     }
 
-    public static <C extends Collection<?>> CollectionAwait<C> await(CollectionSource<C> source) {
+    public static <E, C extends Collection<E>> CollectionAwait<E, C> await(CollectionSource<C> source) {
         return new CollectionAwait<>(source);
     }
 
-    public static <M extends Map<?, ?>> MapAwait<M> await(MapSource<M> source) {
+    public static <K, V, M extends Map<K, V>> MapAwait<K, V, M> await(MapSource<M> source) {
         return new MapAwait<>(source);
     }
 

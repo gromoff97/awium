@@ -4,15 +4,14 @@ import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
-import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
-import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
+import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
 import static java.time.Duration.ofNanos;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
@@ -33,23 +32,18 @@ class ObjectAndOptionalAwaitTest {
 
     @Test
     void voidAndNullableSelectingTerminalsReturnNullOnSuccess() {
-        assertNull(await(
-                (Source<Object>) () -> null)
-                .until(isNull));
-        assertNull(await(
-                (Source<String>) () -> "value")
-                .until(ConditionProvider.<String, String>passed(value -> null)
-                        .because("nullable property")));
+        assertNull(await((Source<Object>) () -> null).until(isNull));
+        assertNull(await((Source<String>) () -> "value").until(yields(value -> {
+            return null;
+        }).because("nullable property")));
     }
 
     @Test
     void optionalValueConditionsReturnTheContainedValueThroughUntil() {
         var equalValue = new Object();
 
-        assertSame(equalValue, await(
-                (OptionalSource<Object>)
-                        () -> Optional.of(equalValue))
-                .until(hasValueEqualTo(equalValue)));
+        assertSame(equalValue, await((OptionalSource<Object>)
+                () -> Optional.of(equalValue)).until(hasValue(equalValue)));
     }
 
     @Test

@@ -6,15 +6,12 @@ natural result from the same successful observation.
 
 ```java
 import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.present;
+import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.present;
 
 import java.time.Duration;
 
-Payment payment = await(paymentRepository::findById)
-        .every(Duration.ofMillis(100))
-        .upTo(Duration.ofSeconds(10))
-        .stableFor(Duration.ofSeconds(5))
-        .until(present.because("Checkout cannot continue without the payment"));
+Payment payment = await(paymentRepository::findById).every(Duration.ofMillis(100)).upTo(Duration.ofSeconds(10)).stableFor(Duration.ofSeconds(5)).until(
+        present.because("Checkout cannot continue without the payment"));
 ```
 
 ## Installation
@@ -33,14 +30,14 @@ Examples below assume:
 ```java
 import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
-import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.conditions.ComparableCondition.*;
+import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.*;
+import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
+import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
+import static io.github.gromoff97.awium.conditioning.conditions.StringCondition.*;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
-import static io.github.gromoff97.awium.conditioning.providers.MapConditionProvider.*;
-import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
-import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 import java.util.List;
 import java.util.Map;
@@ -88,21 +85,21 @@ state while retaining the caller-owned source and condition objects.
 
 The condition determines the terminal result type:
 
-- preserving conditions such as `equalTo`, `nonEmpty`, and `containsEntry`
+- preserving conditions such as `equalTo`, `hasElements`, and `containsEntry`
   return the exact observed source value;
+- `singleElement` and `singleEntry` are fields, so no parentheses are needed;
+  they return the sole collection element or map entry with its inferred type;
 - `present` returns the contained `T` from `Optional<T>`;
 - custom `Condition<S, R>` instances return their selected `R`;
 - `isNull` and `absent` return `Void` and are normally used as statements.
 
 ```java
-Payment payment = await(paymentRepository::load)
-        .until(equalTo(expectedPayment));
+Payment payment = await(paymentRepository::load).until(equalTo(expectedPayment));
 
-Receipt receipt = await(paymentRepository::load)
-        .until(condition("payment has a receipt", payment ->
-                payment.receipt() == null
-                        ? Evaluation.unsatisfied("receipt was absent")
-                        : Evaluation.satisfied(payment.receipt())));
+Receipt receipt = await(paymentRepository::load).until(condition("payment has a receipt", payment ->
+        payment.receipt() == null
+                ? Evaluation.unsatisfied("receipt was absent")
+                : Evaluation.satisfied(payment.receipt())));
 ```
 
 Every raw condition form supports one eager `because(...)` explanation. It is
@@ -111,51 +108,69 @@ included in terminal diagnostics without changing evaluation or result typing.
 repeat what the condition checks:
 
 ```java
-// Avoid: repeats nonEmpty.
-nonEmpty.because("The collection must not be empty");
+// Avoid: repeats hasElements.
+hasElements.because("The collection must not be empty");
 
 // Prefer: states the business consequence.
-nonEmpty.because("Settlement requires at least one eligible payment");
+hasElements.because("Settlement requires at least one eligible payment");
 
-await(paymentRepository::load)
-        .until(equalTo(expectedPayment)
-                .because("Refund processing requires payment %s in the replica",
-                        paymentId));
+await(paymentRepository::load).until(equalTo(expectedPayment).because(
+        "Refund processing requires payment %s in the replica", paymentId));
 ```
 
-Sources and callback adapters may throw checked exceptions. `asserted(...)`
-retries an `AssertionError` and preserves the observed source; `passed(...)`
-returns the callback result:
+Sources, `asserted(...)` callbacks, and `yields(...)` callbacks may throw
+checked exceptions. `asserted(...)` preserves the observed source, while
+`yields(...)` selects its callback result. Both retry an `AssertionError`:
 
 ```java
-Payment payment = await(paymentRepository::loadChecked)
-        .until(asserted(actual -> {
+Payment payment = await(paymentRepository::loadChecked).until(asserted(actual -> {
     if (!actual.isComplete()) {
         throw new AssertionError("payment was not complete");
     }
 }));
 
-Receipt receipt = await(paymentRepository::loadChecked)
-        .until(passed(Payment::loadReceiptChecked));
+Receipt receipt = await(paymentRepository::loadChecked).until(yields(actual -> {
+    return actual.loadReceiptChecked();
+}));
 ```
 
 Other checked or unchecked callback failures stop immediately and preserve the
 original cause.
+
+## Built-in condition catalogue
+
+Names stay close to AssertJ but omit redundant suffixes such as `Matching`.
+Predicate overloads use Awium's checked predicate types, so their lambdas may
+throw checked exceptions.
+
+| Domain | Conditions | Successful result |
+| --- | --- | --- |
+| Object | `isNull`, `isNotNull`, `equalTo`, `notEqualTo`, `sameAs`, `notSameAs`, `instanceOf`, `exactInstanceOf`, `in`, `notIn`, `matches`, `extracting` | source value, narrowed type, or extracted value |
+| Optional | `present`, `absent`, `hasValue`, `doesNotHaveValue` | contained or narrowed value; `Void` for `absent` |
+| Comparable | `greaterThan`, `atLeast`, `lessThan`, `atMost`, `between`, `strictlyBetween` | source value |
+| String | `empty`, `nonEmpty`, `blank`, `nonBlank`, `containsText`, `doesNotContainText`, `containsIgnoringCase`, `startsWith`, `doesNotStartWith`, `endsWith`, `doesNotEndWith`, `matchesRegex`, `doesNotMatchRegex`, `equalIgnoringCase`, `notEqualIgnoringCase`, and the `length...` family | source string |
+| Collection | `singleElement`, `noElements`, `hasElements`, null and duplicate checks, `allElements`, `anyElement`, `noElement`, membership and exact-content checks, prefixes, suffixes, sequences, subsequences, `first`, `last`, `element`, `sorted`, and the `elementCount...` family | collection, or the selected element |
+| Map | `singleEntry`, `noEntries`, `hasEntries`, `allEntries`, `anyEntry`, `noEntry`, key/value quantifiers, key/value/entry membership, exact content, `valueFor`, `entry`, `onlyValueFor`, `singleKey`, `singleValue`, and the `entryCount...` family | map, selected entry, key, or value |
+
+All public static names in these namespaces are unique. Every condition class
+can therefore be wildcard-imported in the same source file without requiring
+qualified calls.
 
 ## Collection and Map examples
 
 Collection state and membership conditions preserve the concrete collection:
 
 ```java
-List<Payment> payments = await(paymentRepository::findAll)
-        .until(nonEmpty.because(
-                "Settlement requires at least one eligible payment"));
+List<Payment> payments = await(paymentRepository::findAll).until(hasElements.because(
+        "Settlement requires at least one eligible payment"));
 
-List<Payment> exact = await(paymentRepository::findAll)
-        .until(containsExactly(firstPayment, secondPayment));
+Payment onlyPayment = await(paymentRepository::findAll).until(singleElement);
 
-Set<Payment> accepted = await(paymentRepository::findAccepted)
-        .until(containsAll(firstPayment, secondPayment));
+List<Payment> exact = await(paymentRepository::findAll).until(
+        containsExactly(firstPayment, secondPayment));
+
+Set<Payment> accepted = await(paymentRepository::findAccepted).until(
+        contains(firstPayment, secondPayment));
 ```
 
 Ordered exactness is available only when the source return type is a Java 21
@@ -165,15 +180,16 @@ exactness through conditions such as `containsExactlyInAnyOrder(...)`.
 Map conditions likewise return the concrete map:
 
 ```java
-Map<String, Payment> populated = await(paymentRepository::index)
-        .until(MapCondition.nonEmpty);
+Map<String, Payment> populated = await(paymentRepository::index).until(hasEntries);
 
-Map<String, Payment> indexed = await(paymentRepository::index)
-        .until(containsEntry(paymentId, expectedPayment));
+Map.Entry<String, Payment> onlyEntry = await(paymentRepository::index).until(singleEntry);
 
-Map<String, Payment> completeIndex = await(paymentRepository::index)
-        .until(containsExactlyEntriesOf(expectedIndex)
-                .because("Reconciliation requires the complete payment index"));
+Map<String, Payment> indexed = await(paymentRepository::index).until(
+        containsEntry(paymentId, expectedPayment));
+
+Map<String, Payment> completeIndex = await(paymentRepository::index).until(
+        containsExactlyEntriesOf(expectedIndex).because(
+                "Reconciliation requires the complete payment index"));
 ```
 
 ## Threading and interruption

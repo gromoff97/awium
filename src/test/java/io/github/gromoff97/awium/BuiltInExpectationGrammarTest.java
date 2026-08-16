@@ -1,16 +1,17 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
-import static io.github.gromoff97.awium.conditioning.providers.MapConditionProvider.*;
-import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
-import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.*;
+import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
+import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
 import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
+import io.github.gromoff97.awium.conditioning.conditions.OptionalCondition;
 
 import java.util.List;
 import java.util.Map;
@@ -29,12 +30,13 @@ class BuiltInExpectationGrammarTest {
                 "optional is absent",
                 "optional value equals expected",
                 "optional value does not equal unexpected",
-                "assertion passes",
-                "assertion passes",
+                "value satisfies assertion",
+                "callback yields a result",
+                "collection has a single element",
                 "collection is empty",
                 "collection is not empty",
-                "collection size is exactly 2",
-                "collection size is not exactly 2",
+                "collection size is 2",
+                "collection size is not 2",
                 "collection size is greater than 2",
                 "collection size is at least 2",
                 "collection size is less than 2",
@@ -43,16 +45,17 @@ class BuiltInExpectationGrammarTest {
                 "collection does not contain expected element",
                 "collection contains all expected elements",
                 "collection does not contain all expected elements",
-                "collection contains any expected element",
-                "collection does not contain any expected element",
+                "collection contains expected element",
+                "collection does not contain expected element",
                 "collection contains exactly the expected elements",
                 "collection does not contain exactly the expected elements",
                 "collection contains exactly the expected elements in any order",
                 "collection does not contain exactly the expected elements in any order",
+                "map has a single entry",
                 "map is empty",
                 "map is not empty",
-                "map size is exactly 2",
-                "map size is not exactly 2",
+                "map size is 2",
+                "map size is not 2",
                 "map size is greater than 2",
                 "map size is at least 2",
                 "map size is less than 2",
@@ -65,8 +68,8 @@ class BuiltInExpectationGrammarTest {
                 "map does not contain expected entry",
                 "map contains all expected entries",
                 "map does not contain all expected entries",
-                "map contains any expected entry",
-                "map does not contain any expected entry",
+                "map contains an expected entry",
+                "map does not contain an expected entry",
                 "map contains exactly the expected entries",
                 "map does not contain exactly the expected entries"),
                 List.of(
@@ -76,36 +79,40 @@ class BuiltInExpectationGrammarTest {
                         description(notEqualTo("unexpected")),
                         present.delegate().description(),
                         absent.description(),
-                        hasValueEqualTo("expected").description(),
-                        hasValueNotEqualTo("unexpected").description(),
+                        OptionalCondition.hasValue("expected").description(),
+                        doesNotHaveValue("unexpected").description(),
                         description(asserted(value -> {})),
-                        passed(value -> value).description(),
-                        CollectionCondition.empty.description(),
-                        CollectionCondition.nonEmpty.description(),
-                        CollectionCondition.sizeExactly(2).description(),
-                        CollectionCondition.sizeNotExactly(2).description(),
-                        CollectionCondition.sizeGreaterThan(2).description(),
-                        CollectionCondition.sizeAtLeast(2).description(),
-                        CollectionCondition.sizeLessThan(2).description(),
-                        CollectionCondition.sizeAtMost(2).description(),
+                        yields(value -> {
+                            return value;
+                        }).description(),
+                        CollectionCondition.singleElement.description(),
+                        CollectionCondition.noElements.delegate().description(),
+                        CollectionCondition.hasElements.delegate().description(),
+                        CollectionCondition.elementCount(2).delegate().description(),
+                        CollectionCondition.elementCountNot(2).delegate().description(),
+                        CollectionCondition.elementCountGreaterThan(2).delegate().description(),
+                        CollectionCondition.elementCountAtLeast(2).delegate().description(),
+                        CollectionCondition.elementCountLessThan(2).delegate().description(),
+                        CollectionCondition.elementCountAtMost(2).delegate().description(),
                         description(contains("expected")),
                         description(doesNotContain("expected")),
-                        description(containsAll("expected")),
-                        description(doesNotContainAll("expected")),
-                        description(containsAnyOf("expected")),
-                        description(containsNoneOf("expected")),
+                        description(contains("first", "second")),
+                        description(doesNotContainAll("first", "second")),
+                        description(containsAny("expected")),
+                        description(doesNotContain("expected")),
                         description(containsExactly("expected")),
                         description(doesNotContainExactly("expected")),
                         description(containsExactlyInAnyOrder("expected")),
                         description(doesNotContainExactlyInAnyOrder("expected")),
-                        MapCondition.empty.description(),
-                        MapCondition.nonEmpty.description(),
-                        MapCondition.sizeExactly(2).description(),
-                        MapCondition.sizeNotExactly(2).description(),
-                        MapCondition.sizeGreaterThan(2).description(),
-                        MapCondition.sizeAtLeast(2).description(),
-                        MapCondition.sizeLessThan(2).description(),
-                        MapCondition.sizeAtMost(2).description(),
+                        MapCondition.singleEntry.description(),
+                        MapCondition.noEntries.delegate().description(),
+                        MapCondition.hasEntries.delegate().description(),
+                        MapCondition.entryCount(2).delegate().description(),
+                        MapCondition.entryCountNot(2).delegate().description(),
+                        MapCondition.entryCountGreaterThan(2).delegate().description(),
+                        MapCondition.entryCountAtLeast(2).delegate().description(),
+                        MapCondition.entryCountLessThan(2).delegate().description(),
+                        MapCondition.entryCountAtMost(2).delegate().description(),
                         description(containsKey("expected")),
                         description(doesNotContainKey("expected")),
                         description(containsValue("expected")),

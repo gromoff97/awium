@@ -1,13 +1,23 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.conditioning.CheckedConsumer;
+import io.github.gromoff97.awium.conditioning.CheckedBiPredicate;
 import io.github.gromoff97.awium.conditioning.CheckedFunction;
+import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
+import io.github.gromoff97.awium.conditioning.conditions.ComparableCondition;
+import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
+import io.github.gromoff97.awium.conditioning.conditions.ObjectCondition;
+import io.github.gromoff97.awium.conditioning.conditions.OptionalCondition;
+import io.github.gromoff97.awium.conditioning.conditions.StringCondition;
+import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 import io.github.gromoff97.awium.sources.Source;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isProtected;
 import static java.lang.reflect.Modifier.isPublic;
+import static java.lang.reflect.Modifier.isStatic;
 import static java.nio.file.Files.walk;
 import static java.util.Arrays.stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,7 +39,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.function.Predicate;
@@ -49,10 +62,37 @@ class PublicSurfaceTest {
         for (Class<?> type : types) {
             if (Source.class.isAssignableFrom(type)
                     || type == CheckedConsumer.class
-                    || type == CheckedFunction.class) {
+                    || type == CheckedFunction.class
+                    || type == CheckedPredicate.class
+                    || type == CheckedBiPredicate.class) {
                 assertCheckedSam(type);
             }
         }
+    }
+
+    @Test
+    void staticConditionMemberNamesAreUniqueAcrossNamespaces() {
+        Map<String, Set<String>> ownersByName = new TreeMap<>();
+        for (Class<?> owner : List.of(CollectionCondition.class,
+                ComparableCondition.class, MapCondition.class,
+                ObjectCondition.class, OptionalCondition.class,
+                StringCondition.class, ConditionProvider.class)) {
+            stream(owner.getDeclaredFields())
+                    .filter(field -> isPublic(field.getModifiers())
+                            && isStatic(field.getModifiers()))
+                    .forEach(field -> addOwner(ownersByName, field.getName(), owner));
+            stream(owner.getDeclaredMethods())
+                    .filter(method -> isPublic(method.getModifiers())
+                            && isStatic(method.getModifiers()))
+                    .forEach(method -> addOwner(ownersByName, method.getName(), owner));
+            stream(owner.getDeclaredClasses())
+                    .filter(type -> isPublic(type.getModifiers())
+                            && isStatic(type.getModifiers()))
+                    .forEach(type -> addOwner(ownersByName, type.getSimpleName(), owner));
+        }
+        ownersByName.entrySet().removeIf(entry -> entry.getValue().size() == 1);
+
+        assertEquals(Map.of(), ownersByName);
     }
 
     @Test
@@ -127,6 +167,12 @@ class PublicSurfaceTest {
 
     private static boolean isApiMember(int modifiers) {
         return isPublic(modifiers) || isProtected(modifiers);
+    }
+
+    private static void addOwner(Map<String, Set<String>> ownersByName,
+            String memberName, Class<?> owner) {
+        ownersByName.computeIfAbsent(memberName, ignored -> new TreeSet<>())
+                .add(owner.getSimpleName());
     }
 
     private static Set<Class<?>> typeHierarchy(Class<?> type) {

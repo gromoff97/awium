@@ -20,13 +20,13 @@ public final class AwaitTestAccess {
         return new Await<>(source, configuration, clock, parker);
     }
 
-    public static <C extends Collection<?>> CollectionAwait<C> timedCollectionAwait(
+    public static <E, C extends Collection<E>> CollectionAwait<E, C> timedCollectionAwait(
             Source<? extends C> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         return new CollectionAwait<>(source, configuration, clock, parker);
     }
 
-    public static <M extends Map<?, ?>> MapAwait<M> timedMapAwait(
+    public static <K, V, M extends Map<K, V>> MapAwait<K, V, M> timedMapAwait(
             Source<? extends M> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         return new MapAwait<>(source, configuration, clock, parker);

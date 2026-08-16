@@ -2,8 +2,8 @@ package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
-import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
-import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
+import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -73,8 +73,8 @@ class ObjectAndOptionalConditionsTest {
         var expected = new String("1");
         var equalActual = new String("1");
         var differentActual = "2";
-        var equal = hasValueEqualTo(expected);
-        var notEqual = hasValueNotEqualTo(expected);
+        var equal = hasValue(expected);
+        var notEqual = doesNotHaveValue(expected);
 
         assertUnsatisfied(equal.evaluate(null));
         assertUnsatisfied(equal.evaluate(Optional.empty()));
@@ -90,21 +90,21 @@ class ObjectAndOptionalConditionsTest {
         var expected = new Directional(false);
         var actual = new Directional(true);
 
-        assertSatisfied(hasValueEqualTo((Object) expected)
+        assertSatisfied(hasValue((Object) expected)
                 .evaluate(Optional.of(actual)), actual);
         assertEquals(1, actual.equalsCalls);
 
         int[] actualArray = {1, 2};
-        assertSame(actualArray, hasValueEqualTo(
+        assertSame(actualArray, hasValue(
                 new int[]{1, 2}).evaluate(Optional.of(actualArray)).result());
     }
 
     @Test
     void optionalValueFactoriesRejectNullOperandsImmediately() {
         assertTrue(assertThrows(NullPointerException.class,
-                () -> hasValueEqualTo(null)).getMessage().contains("expected"));
+                () -> hasValue((Object) null)).getMessage().contains("expected"));
         assertTrue(assertThrows(NullPointerException.class,
-                () -> hasValueNotEqualTo(null)).getMessage()
+                () -> doesNotHaveValue(null)).getMessage()
                 .contains("unexpected"));
     }
 

@@ -304,8 +304,7 @@ class DiagnosticsSnapshotTest {
         try {
             AwaitConditionEvaluationException failure = assertThrows(
                     AwaitConditionEvaluationException.class,
-                    () -> await((Source<Object>) Object::new)
-                            .until(condition));
+                    () -> await((Source<Object>) Object::new).until(condition));
 
             assertSame(cause, failure.getCause());
             assertTrue(currentThread().isInterrupted());

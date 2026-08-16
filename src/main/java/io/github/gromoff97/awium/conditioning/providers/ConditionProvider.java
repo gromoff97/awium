@@ -58,19 +58,25 @@ public final class ConditionProvider {
 
     public static <S> PreservingCondition<S> asserted(CheckedConsumer<? super S> assertion) {
         requireNonNull(assertion, "assertion must not be null");
-        return new PreservingCondition<>(passed(actual -> {
+        return new PreservingCondition<>(evaluated("value satisfies assertion",
+                "value did not satisfy assertion", actual -> {
             assertion.accept(actual);
             return actual;
         }));
     }
 
-    public static <S, R> Condition<S, R> passed(CheckedFunction<? super S, ? extends R> assertion) {
-        requireNonNull(assertion, "assertion must not be null");
-        return condition("assertion passes", actual -> {
+    public static <S, R> Condition<S, R> yields(CheckedFunction<? super S, ? extends R> callback) {
+        requireNonNull(callback, "callback must not be null");
+        return evaluated("callback yields a result", "callback did not yield a result", callback);
+    }
+
+    private static <S, R> Condition<S, R> evaluated(String description, String mismatch,
+            CheckedFunction<? super S, ? extends R> function) {
+        return condition(description, actual -> {
             try {
-                return satisfied(assertion.apply(actual));
+                return satisfied(function.apply(actual));
             } catch (AssertionError error) {
-                return assertionUnsatisfied("assertion did not pass", error);
+                return assertionUnsatisfied(mismatch, error);
             }
         });
     }

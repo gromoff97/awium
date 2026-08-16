@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.await;
 
-import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
+import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.SingleElement;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;
 
@@ -8,9 +9,10 @@ import java.util.Collection;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
+import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
 import static java.util.Objects.requireNonNull;
 
-public final class CollectionAwait<C extends Collection<?>> extends AbstractAwait<C, CollectionAwait<C>> {
+public final class CollectionAwait<E, C extends Collection<E>> extends AbstractAwait<C, CollectionAwait<E, C>> {
 
     CollectionAwait(Source<? extends C> source) {
         super(source);
@@ -21,26 +23,29 @@ public final class CollectionAwait<C extends Collection<?>> extends AbstractAwai
         super(source, configuration, clock, parker);
     }
 
-    private CollectionAwait(CollectionAwait<C> await, WaitConfiguration configuration) {
+    private CollectionAwait(CollectionAwait<E, C> await, WaitConfiguration configuration) {
         super(await, configuration);
     }
 
     @Override
-    CollectionAwait<C> reconfigured(WaitConfiguration configuration) {
+    CollectionAwait<E, C> reconfigured(WaitConfiguration configuration) {
         return new CollectionAwait<>(this, configuration);
     }
 
-    public C until(CollectionCondition condition) {
+    public E until(SingleElement condition) {
         return complete(requireNonNull(condition, "condition must not be null"), null);
     }
 
-    public C until(CollectionCondition.ExplainedCondition condition) {
+    public E until(SingleElement.Explained condition) {
         var explained = requireNonNull(condition, "condition must not be null");
         return complete(explained.delegate(), explained.explanation());
     }
 
-    private C complete(CollectionCondition condition, String explanation) {
-        return complete(actual -> replaceSatisfiedResult(condition.evaluate(actual), actual),
-                condition::description, explanation);
+    private E complete(SingleElement condition, String explanation) {
+        return complete(actual -> {
+            Evaluation<Collection<?>> evaluation = condition.evaluate(actual);
+            E result = evaluation.status() == SATISFIED ? actual.iterator().next() : null;
+            return replaceSatisfiedResult(evaluation, result);
+        }, condition::description, explanation);
     }
 }

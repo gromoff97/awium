@@ -13,7 +13,7 @@ import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
-import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
@@ -45,12 +45,12 @@ class CollectionMembershipTest {
     void nullAndRepeatedExpectedValuesKeepMembershipSemantics()
             throws Exception {
         assertUnsatisfied(contains("b").delegate().evaluate(null));
-        assertPair(new Pair("repeated", containsAll("a", "a"),
+        assertPair(new Pair("repeated", contains("a", "a"),
                 doesNotContainAll("a", "a")), List.of("a"), true);
 
         String nil = null;
         Collection<String> actual = asList((String) null);
-        assertSame(actual, containsAll(nil).delegate().evaluate(actual).result());
+        assertSame(actual, contains(nil).delegate().evaluate(actual).result());
     }
 
     @Test
@@ -82,7 +82,7 @@ class CollectionMembershipTest {
         assertSame(equalityCause, assertThrows(
                 AwaitConditionEvaluationException.class,
                 () -> await(brokenEquality,
-                        containsNoneOf(new ThrowingEquals(null)))).getCause());
+                        doesNotContain(new ThrowingEquals(null)))).getCause());
     }
 
     @Test
@@ -99,8 +99,8 @@ class CollectionMembershipTest {
                                     return actual;
                                 },
                         defaults().withEvery(ofNanos(1))
-                                .withUpTo(ofNanos(2)), time, time)
-                        .until(doesNotContain("a").because("business reason")));
+                                .withUpTo(ofNanos(2)), time, time).until(
+                                doesNotContain("a").because("business reason")));
 
         assertEquals(1, actual.iteratorCalls);
     }
@@ -108,13 +108,13 @@ class CollectionMembershipTest {
     @Test
     void aggregateFactoriesRejectNullAndEmptyInputs() {
         assertValidation(NullPointerException.class,
-                () -> containsAll((Object[]) null));
+                () -> contains((Object[]) null));
         assertValidation(NullPointerException.class,
-                () -> containsAllElementsOf((Collection<Object>) null));
+                () -> contains((Collection<Object>) null));
         assertValidation(IllegalArgumentException.class,
-                () -> containsAll(new Object[0]));
+                () -> contains(new Object[0]));
         assertValidation(IllegalArgumentException.class,
-                () -> containsAllElementsOf(List.of()));
+                () -> contains(List.of()));
     }
 
     @Test
@@ -122,7 +122,7 @@ class CollectionMembershipTest {
             throws IOException {
         assertTrue(compiles(temporaryDirectory, """
                 import static io.github.gromoff97.awium.await.Await.await;
-                import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
                 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
                 import io.github.gromoff97.awium.sources.Source.CollectionSource;
                 import java.util.*;
@@ -131,23 +131,22 @@ class CollectionMembershipTest {
                     void check() {
                         String nil = null;
                         Collection<Integer> integers = List.of(1, 2);
-                        containsAll("a", "b");
+                        contains("a", "b");
                         doesNotContainAll("a", "b");
-                        containsAnyOf("a", "b");
-                        containsNoneOf("a", "b");
-                        containsAll(nil);
+                        containsAny("a", "b");
+                        doesNotContain("a", "b");
+                        contains(nil);
                         PreservingCondition<Collection<? super Integer>> typed =
-                                containsAllElementsOf(integers);
+                                contains(integers);
                         CollectionSource<ArrayList<Number>> source =
                                 () -> new ArrayList<>(integers);
-                        ArrayList<Number> result = await(source)
-                                .until(containsAllElementsOf(integers));
+                        ArrayList<Number> result = await(source).until(contains(integers));
                     }
                 }
                 """));
         assertFalse(compiles(temporaryDirectory, """
-                import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
-                final class Contract { void check() { containsAll(null); } }
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
+                final class Contract { void check() { contains(null); } }
                 """));
     }
 
@@ -179,24 +178,21 @@ class CollectionMembershipTest {
             ProbeContainers.MembershipCollection<E> actual,
             PreservingCondition<? super ProbeContainers.MembershipCollection<E>>
                     condition) {
-        return Await.await((CollectionSource<
-                ProbeContainers.MembershipCollection<E>>) () -> actual)
-                .until(condition);
+        return Await.await((CollectionSource<ProbeContainers.MembershipCollection<E>>)
+                () -> actual).until(condition);
     }
 
     private static List<Pair> pairs() {
         return List.of(
                 new Pair("contains", contains("b"), doesNotContain("b")),
-                new Pair("containsAll", containsAll("a", "b"),
+                new Pair("contains", contains("a", "b"),
                         doesNotContainAll("a", "b")),
-                new Pair("containsAllElementsOf",
-                        containsAllElementsOf(List.of("a", "b")),
-                        doesNotContainAllElementsOf(List.of("a", "b"))),
-                new Pair("containsAnyOf", containsAnyOf("x", "b"),
-                        containsNoneOf("x", "b")),
-                new Pair("containsAnyElementsOf",
-                        containsAnyElementsOf(List.of("x", "b")),
-                        containsNoElementsOf(List.of("x", "b"))));
+                new Pair("contains collection", contains(List.of("a", "b")),
+                        doesNotContainAll(List.of("a", "b"))),
+                new Pair("containsAny", containsAny("x", "b"),
+                        doesNotContain("x", "b")),
+                new Pair("containsAny collection", containsAny(List.of("x", "b")),
+                        doesNotContain(List.of("x", "b"))));
     }
 
     private record Pair(String name,

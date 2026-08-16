@@ -1,11 +1,12 @@
-package io.github.gromoff97.awium.conditioning.providers;
+package io.github.gromoff97.awium.conditioning.conditions;
+
+import io.github.gromoff97.awium.conditioning.CheckedBiPredicate;
+import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 
 import static java.util.Objects.deepEquals;
 
@@ -15,7 +16,7 @@ final class ValueMatching {
         throw new AssertionError("Utility class");
     }
 
-    static <T> boolean anyMatch(Iterable<T> values, Predicate<? super T> matches) {
+    static <T> boolean matchesAny(Iterable<T> values, CheckedPredicate<? super T> matches) throws Exception {
         for (T value : values) {
             if (matches.test(value)) {
                 return true;
@@ -24,10 +25,24 @@ final class ValueMatching {
         return false;
     }
 
-    static <A, E> boolean containsAllMatches(Iterable<A> actual, Collection<E> remainingExpected,
-            BiPredicate<? super A, ? super E> matches) {
+    static <T> boolean matchesAll(Iterable<T> values, CheckedPredicate<? super T> matches) throws Exception {
+        for (T value : values) {
+            if (!matches.test(value)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    static <A, E> boolean containsAll(Iterable<A> actual, Collection<E> remainingExpected,
+            CheckedBiPredicate<? super A, ? super E> matches) throws Exception {
         for (A value : actual) {
-            remainingExpected.removeIf(expected -> matches.test(value, expected));
+            Iterator<E> candidates = remainingExpected.iterator();
+            while (candidates.hasNext()) {
+                if (matches.test(value, candidates.next())) {
+                    candidates.remove();
+                }
+            }
             if (remainingExpected.isEmpty()) {
                 return true;
             }
@@ -35,8 +50,8 @@ final class ValueMatching {
         return false;
     }
 
-    static <A, E> boolean matchesExactly(Iterator<A> actual, Collection<E> remainingExpected,
-            BiPredicate<? super A, ? super E> matches) {
+    static <A, E> boolean exactly(Iterator<A> actual, Collection<E> remainingExpected,
+            CheckedBiPredicate<? super A, ? super E> matches) throws Exception {
         while (actual.hasNext()) {
             A value = actual.next();
             boolean found = false;
@@ -52,7 +67,7 @@ final class ValueMatching {
                 return false;
             }
         }
-        return true;
+        return remainingExpected.isEmpty();
     }
 
     static boolean equal(Object actual, Object expected) {

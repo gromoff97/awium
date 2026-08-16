@@ -2,8 +2,8 @@ package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
 import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
-import static io.github.gromoff97.awium.conditioning.providers.ObjectConditionProvider.*;
-import static io.github.gromoff97.awium.conditioning.providers.OptionalConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
+import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
@@ -35,30 +36,20 @@ class PositiveFluentMatrixTest {
 
         assertAllSame(actual,
                 await(source).until(isNotNull),
-                await(source).every(EVERY)
-                        .until(isNotNull.because("object every")),
+                await(source).every(EVERY).until(isNotNull.because("object every")),
                 await(source).upTo(UP_TO).until(isNotNull),
-                await(source).stableFor(ZERO)
-                        .until(isNotNull.because("object stable")),
-                await(source).every(EVERY).upTo(UP_TO)
-                        .until(isNotNull),
-                await(source).every(EVERY).stableFor(ZERO)
-                        .until(isNotNull.because("object every stable")),
-                await(source).upTo(UP_TO).stableFor(ZERO)
-                        .until(isNotNull),
-                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(isNotNull.because("object all")),
-                await(source).stableFor(ZERO).upTo(UP_TO).every(EVERY)
-                        .until(isNotNull),
-                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .every(EVERY).upTo(UP_TO).stableFor(ZERO)
-                        .until(isNotNull));
+                await(source).stableFor(ZERO).until(isNotNull.because("object stable")),
+                await(source).every(EVERY).upTo(UP_TO).until(isNotNull),
+                await(source).every(EVERY).stableFor(ZERO).until(isNotNull.because("object every stable")),
+                await(source).upTo(UP_TO).stableFor(ZERO).until(isNotNull),
+                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO).until(isNotNull.because("object all")),
+                await(source).stableFor(ZERO).upTo(UP_TO).every(EVERY).until(isNotNull),
+                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO).every(EVERY).upTo(UP_TO).stableFor(ZERO).until(isNotNull));
 
         Condition<Object, Object> selecting = condition(
                 "select actual", Evaluation::satisfied);
         assertSame(actual, await(source).until(selecting));
-        assertSame(actual, await(source)
-                .until(selecting.because("selected object")));
+        assertSame(actual, await(source).until(selecting.because("selected object")));
         Void nil = await((Source<Object>) () -> null).until(isNull);
         assertSame(null, nil);
     }
@@ -68,11 +59,8 @@ class PositiveFluentMatrixTest {
         var value = new String("value");
         OptionalSource<String> source = () -> Optional.of(value);
 
-        String selected = await(source).every(EVERY).upTo(UP_TO)
-                .stableFor(ZERO)
-                .until(present.because("optional full chain"));
-        Void absentValue = await((OptionalSource<String>) Optional::empty)
-                .until(absent);
+        String selected = await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO).until(present.because("optional full chain"));
+        Void absentValue = await((OptionalSource<String>) Optional::empty).until(absent);
 
         assertSame(value, selected);
         assertSame(null, absentValue);
@@ -83,12 +71,11 @@ class PositiveFluentMatrixTest {
         var actual = new ArrayList<>(List.of("value"));
         CollectionSource<ArrayList<String>> source = () -> actual;
 
-        CollectionCondition collectionCondition = nonEmpty;
-        CollectionCondition.ExplainedCondition explained =
+        Condition.PreservingCondition<Collection<?>> collectionCondition = hasElements;
+        Condition.PreservingCondition.ExplainedCondition<Collection<?>> explained =
                 collectionCondition.because("collection full chain");
         ArrayList<String> raw = await(source).until(collectionCondition);
-        ArrayList<String> selected = await(source).every(EVERY).upTo(UP_TO)
-                .stableFor(ZERO).until(explained);
+        ArrayList<String> selected = await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO).until(explained);
 
         assertSame(actual, raw);
         assertSame(actual, selected);
@@ -99,11 +86,8 @@ class PositiveFluentMatrixTest {
         var actual = new LinkedHashMap<>(java.util.Map.of("key", "value"));
         MapSource<LinkedHashMap<String, String>> source = () -> actual;
 
-        LinkedHashMap<String, String> raw = await(source)
-                .until(MapCondition.nonEmpty);
-        LinkedHashMap<String, String> selected = await(source).every(EVERY)
-                .upTo(UP_TO).stableFor(ZERO)
-                .until(MapCondition.nonEmpty.because("map full chain"));
+        LinkedHashMap<String, String> raw = await(source).until(MapCondition.hasEntries);
+        LinkedHashMap<String, String> selected = await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO).until(MapCondition.hasEntries.because("map full chain"));
 
         assertSame(actual, raw);
         assertSame(actual, selected);

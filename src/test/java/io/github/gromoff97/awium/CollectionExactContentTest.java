@@ -14,7 +14,7 @@ import static io.github.gromoff97.awium.ProbeContainers.GreedyValue;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
-import static io.github.gromoff97.awium.conditioning.providers.CollectionConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
@@ -90,7 +90,7 @@ class CollectionExactContentTest {
 
         List<String> expected = new ArrayList<>(List.of("before"));
         PreservingCondition<? super List<String>> collectionCondition =
-                containsExactlyElementsOf(expected);
+                containsExactly(expected);
         expected.set(0, "after");
         assertStatus(collectionCondition, List.of("after"), SATISFIED);
     }
@@ -105,20 +105,17 @@ class CollectionExactContentTest {
 
         assertSame(iteratorCause, assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> await((CollectionSource<ProbeList<String>>)
-                        () -> brokenIterator)
-                        .until(doesNotContainExactly("a"))).getCause());
+                () -> await((CollectionSource<ProbeList<String>>) () -> brokenIterator).until(
+                        doesNotContainExactly("a"))).getCause());
         assertSame(equalityCause, assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> await((CollectionSource<ProbeList<ThrowingEquals>>)
-                        () -> brokenEquality)
-                        .until(doesNotContainExactly(
-                                new ThrowingEquals(null)))).getCause());
+                () -> await((CollectionSource<ProbeList<ThrowingEquals>>) () -> brokenEquality).until(
+                        doesNotContainExactly(new ThrowingEquals(null)))).getCause());
     }
 
     @Test
     void nullActualIsUnsatisfiedAndNullAggregateIsRejected() throws Exception {
-        Evaluation<?> evaluation = containsExactlyElementsOf(List.of("a"))
+        Evaluation<?> evaluation = containsExactly(List.of("a"))
                 .delegate().evaluate(null);
         assertEquals(UNSATISFIED, evaluation.status());
         assertFalse(evaluation.mismatch().isBlank());
@@ -136,8 +133,8 @@ class CollectionExactContentTest {
                             time.advanceNanos(2);
                             return actual;
                         }, defaults().withEvery(ofNanos(1))
-                                .withUpTo(ofNanos(2)), time, time)
-                        .until(containsExactly("b")
+                                .withUpTo(ofNanos(2)), time, time).until(
+                                containsExactly("b")
                                 .because("business reason")));
 
         assertEquals(1, actual.iteratorCalls);
@@ -169,16 +166,16 @@ class CollectionExactContentTest {
                         doesNotContainExactly("a", "a"),
                         List.of("a", "a"), List.of("a", "b")),
                 new Pair("ordered collection",
-                        containsExactlyElementsOf(List.of("a", "a")),
-                        doesNotContainExactlyElementsOf(List.of("a", "a")),
+                        containsExactly(List.of("a", "a")),
+                        doesNotContainExactly(List.of("a", "a")),
                         List.of("a", "a"), List.of("a", "b")),
                 new Pair("any-order varargs",
                         containsExactlyInAnyOrder("a", "b"),
                         doesNotContainExactlyInAnyOrder("a", "b"),
                         List.of("b", "a"), List.of("a", "a")),
                 new Pair("any-order collection",
-                        containsExactlyInAnyOrderElementsOf(List.of("a", "b")),
-                        doesNotContainExactlyInAnyOrderElementsOf(
+                        containsExactlyInAnyOrder(List.of("a", "b")),
+                        doesNotContainExactlyInAnyOrder(
                                 List.of("a", "b")),
                         List.of("b", "a"), List.of("a", "a")));
     }

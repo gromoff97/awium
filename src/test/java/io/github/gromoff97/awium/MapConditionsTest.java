@@ -12,7 +12,7 @@ import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedMapAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
-import static io.github.gromoff97.awium.conditioning.providers.MapConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
@@ -138,8 +138,8 @@ class MapConditionsTest {
                             time.advanceNanos(2);
                             return actual;
                         }, defaults().withEvery(ofNanos(1))
-                                .withUpTo(ofNanos(2)), time, time)
-                        .until(doesNotContainKey("a")
+                                .withUpTo(ofNanos(2)), time, time).until(
+                                doesNotContainKey("a")
                                 .because("business reason")));
 
         assertEquals(1, actual.entrySetCalls);
@@ -150,8 +150,7 @@ class MapConditionsTest {
         var actual = map("a", "1");
         MapSource<LinkedHashMap<String, String>> source = () -> actual;
 
-        LinkedHashMap<String, String> result = await(source)
-                .until(containsEntry("a", "1"));
+        LinkedHashMap<String, String> result = await(source).until(containsEntry("a", "1"));
 
         assertSame(actual, result);
     }
@@ -180,8 +179,7 @@ class MapConditionsTest {
             ProbeContainers.EntryMap<K, V> actual,
             PreservingCondition<? super ProbeContainers.EntryMap<K, V>>
                     condition) {
-        return await((MapSource<ProbeContainers.EntryMap<K, V>>) () -> actual)
-                .until(condition);
+        return await((MapSource<ProbeContainers.EntryMap<K, V>>) () -> actual).until(condition);
     }
 
     private static void assertValidation(Class<? extends Throwable> type,

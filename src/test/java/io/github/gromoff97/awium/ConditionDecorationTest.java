@@ -33,10 +33,14 @@ class ConditionDecorationTest {
                 preserving.because("preserving").explanation());
         assertEquals("present value",
                 present.because("present %s", "value").explanation());
-        assertEquals("collection value", CollectionCondition.nonEmpty
+        assertEquals("collection value", CollectionCondition.hasElements
                 .because("collection %s", "value").explanation());
-        assertEquals("map value", MapCondition.nonEmpty
+        assertEquals("single element", CollectionCondition.singleElement
+                .because("single %s", "element").explanation());
+        assertEquals("map value", MapCondition.hasEntries
                 .because("map %s", "value").explanation());
+        assertEquals("single entry", MapCondition.singleEntry
+                .because("single %s", "entry").explanation());
     }
 
     @Test

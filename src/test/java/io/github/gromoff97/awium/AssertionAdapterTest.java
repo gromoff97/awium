@@ -59,10 +59,12 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void assertedReturnsTheExactActualAndInvokesItsCallbackOnce() throws Exception {
+    void assertedWithoutResultReturnsTheExactActualAndInvokesItsCallbackOnce() throws Exception {
         var invocations = new int[1];
         var actual = new String("42");
-        var condition = ConditionProvider.<String>asserted(value -> invocations[0]++);
+        var condition = ConditionProvider.<String>asserted(value -> {
+            invocations[0]++;
+        });
 
         Evaluation<String> evaluation = condition.delegate().evaluate(actual);
 
@@ -73,9 +75,9 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void passedMaySatisfyWithNullAndInvokesItsCallbackOnce() throws Exception {
+    void yieldsMayReturnNullAndInvokesItsCallbackOnce() throws Exception {
         var invocations = new int[1];
-        var condition = ConditionProvider.<String, String>passed(value -> {
+        var condition = ConditionProvider.<String, String>yields(value -> {
             invocations[0]++;
             return null;
         });
@@ -89,15 +91,14 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void passedReturnsTheFinalSelectedResultAfterDiscardedAssertionRetries() {
+    void yieldsSelectsTheFinalResultAfterDiscardedAssertionRetries() {
         var time = new FakeTime(0);
         var discarded = new MessageReadingAssertion();
         var invocations = new int[1];
 
         Long result = timedAwait((Source<String>) () -> "42",
                 defaults().withEvery(ofNanos(1))
-                        .withUpTo(ofNanos(10)), time, time).until(
-                ConditionProvider.<String, Long>passed(value -> {
+                        .withUpTo(ofNanos(10)), time, time).until(ConditionProvider.<String, Long>yields(value -> {
                     if (invocations[0]++ < 2) {
                         throw discarded;
                     }
@@ -110,10 +111,10 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void passedPreservesTheCaughtAssertionWithoutReadingItsMessage()
+    void yieldsPreservesTheCaughtAssertionWithoutReadingItsMessage()
             throws Exception {
         var failure = new MessageReadingAssertion();
-        var condition = ConditionProvider.<String, Long>passed(value -> {
+        var condition = ConditionProvider.<String, Long>yields(value -> {
             throw failure;
         });
         Evaluation<Long> evaluation = condition.evaluate("42");
@@ -123,9 +124,9 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void checkedExceptionEscapesPassedUnchanged() {
+    void checkedExceptionEscapesYieldsUnchanged() {
         var failure = new Exception("checked");
-        var condition = ConditionProvider.<String, Long>passed(value -> {
+        var condition = ConditionProvider.<String, Long>yields(value -> {
             throw failure;
         });
 
@@ -134,10 +135,10 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void nonAssertionErrorEscapesPassedUnchanged() {
+    void nonAssertionErrorEscapesYieldsUnchanged() {
         var failure = new LinkageError("error");
 
-        var condition = ConditionProvider.<String, Long>passed(value -> {
+        var condition = ConditionProvider.<String, Long>yields(value -> {
             throw failure;
         });
 
@@ -146,11 +147,13 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void assertionFactoriesRejectNullCallbacks() {
+    void callbackFactoriesRejectNullCallbacks() {
         assertTrue(assertThrows(NullPointerException.class,
-                () -> asserted(null)).getMessage().contains("assertion"));
+                () -> asserted((CheckedConsumer<String>) null))
+                .getMessage().contains("assertion"));
         assertTrue(assertThrows(NullPointerException.class,
-                () -> passed(null)).getMessage().contains("assertion"));
+                () -> yields((CheckedFunction<String, String>) null))
+                .getMessage().contains("callback"));
     }
 
     private static final class MessageReadingAssertion extends AssertionError {
