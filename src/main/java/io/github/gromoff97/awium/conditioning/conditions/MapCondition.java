@@ -43,7 +43,7 @@ public final class MapCondition {
                 "map size is " + expected);
     }
 
-    public static PreservingCondition<Map<?, ?>> entryCountNot(int unexpected) {
+    public static PreservingCondition<Map<?, ?>> entryCountIsNot(int unexpected) {
         return sized(unexpected, actual -> actual != unexpected,
                 "map size is not " + unexpected);
     }
@@ -182,7 +182,7 @@ public final class MapCondition {
         return MapCondition.<K, V, V>valueFor(key, preserve(nested.delegate()));
     }
 
-    public static <K, V> Condition<Map<K, V>, Map.Entry<K, V>> entry(K key) {
+    public static <K, V> Condition<Map<K, V>, Map.Entry<K, V>> entryFor(K key) {
         return condition("map contains the expected key", actual -> findEntry(actual, key));
     }
 

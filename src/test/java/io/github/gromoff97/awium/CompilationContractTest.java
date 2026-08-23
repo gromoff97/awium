@@ -206,6 +206,34 @@ class CompilationContractTest {
     }
 
     @Test
+    void optionalValueKindsDoNotConflictWithSpecializedFactories() throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.await.Await.await;
+                import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.equalTo;
+                import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
+                import io.github.gromoff97.awium.conditioning.CheckedPredicate;
+                import io.github.gromoff97.awium.conditioning.conditions.Condition;
+                import io.github.gromoff97.awium.sources.Source.OptionalSource;
+
+                final class Contract {
+                    void check(OptionalSource<Class<?>> classes, Class<?> expectedClass,
+                            OptionalSource<Condition<String, String>> conditions,
+                            Condition<String, String> expectedCondition,
+                            OptionalSource<CheckedPredicate<String>> predicates,
+                            CheckedPredicate<String> expectedPredicate,
+                            OptionalSource<Object> objects, OptionalSource<String> strings) {
+                        Class<?> classValue = await(classes).until(hasValue(expectedClass));
+                        Condition<String, String> conditionValue = await(conditions).until(hasValue(expectedCondition));
+                        CheckedPredicate<String> predicateValue = await(predicates).until(hasValue(expectedPredicate));
+                        String typed = await(objects).until(containsInstanceOf(String.class));
+                        String matching = await(strings).until(hasValueMatching(value -> !value.isBlank()));
+                        String satisfying = await(strings).until(hasValueSatisfying(equalTo("ready")));
+                    }
+                }
+                """));
+    }
+
+    @Test
     void allConditionNamespacesCanBeWildcardImportedTogether() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.await.Await.await;

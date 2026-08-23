@@ -108,7 +108,7 @@ class BuiltInExpectationGrammarTest {
                         MapCondition.noEntries.delegate().description(),
                         MapCondition.hasEntries.delegate().description(),
                         MapCondition.entryCount(2).delegate().description(),
-                        MapCondition.entryCountNot(2).delegate().description(),
+                        MapCondition.entryCountIsNot(2).delegate().description(),
                         MapCondition.entryCountGreaterThan(2).delegate().description(),
                         MapCondition.entryCountAtLeast(2).delegate().description(),
                         MapCondition.entryCountLessThan(2).delegate().description(),

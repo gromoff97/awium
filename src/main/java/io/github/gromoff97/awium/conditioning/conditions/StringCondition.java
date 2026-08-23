@@ -90,13 +90,13 @@ public final class StringCondition {
                 actual -> !unexpected.matcher(actual).matches());
     }
 
-    public static PreservingCondition<String> equalIgnoringCase(String expected) {
+    public static PreservingCondition<String> equalToIgnoringCase(String expected) {
         requireNonNull(expected, "expected string must not be null");
         return matching("string equals expected string ignoring case",
                 "string was not equal to expected string ignoring case", actual -> actual.equalsIgnoreCase(expected));
     }
 
-    public static PreservingCondition<String> notEqualIgnoringCase(String unexpected) {
+    public static PreservingCondition<String> notEqualToIgnoringCase(String unexpected) {
         requireNonNull(unexpected, "unexpected string must not be null");
         return matching("string does not equal unexpected string ignoring case",
                 "string was equal to unexpected string ignoring case", actual -> !actual.equalsIgnoreCase(unexpected));
@@ -106,7 +106,7 @@ public final class StringCondition {
         return sized(expected, actual -> actual == expected, "is " + expected, "was not " + expected);
     }
 
-    public static PreservingCondition<String> lengthNot(int unexpected) {
+    public static PreservingCondition<String> lengthIsNot(int unexpected) {
         return sized(unexpected, actual -> actual != unexpected, "is not " + unexpected, "was " + unexpected);
     }
 

@@ -50,9 +50,9 @@ class ObjectOptionalAndScalarConditionsTest {
         OptionalSource<Object> source = () -> Optional.of("ready");
 
         Object expected = await(source).until(OptionalCondition.hasValue((Object) "ready"));
-        Object selected = await(source).until(OptionalCondition.hasValue(value -> value.toString().startsWith("r")));
-        String narrowed = await(source).until(OptionalCondition.hasValue(String.class));
-        String nested = await((OptionalSource<String>) () -> Optional.of("ready")).until(OptionalCondition.hasValue(StringCondition.startsWith("rea")));
+        Object selected = await(source).until(OptionalCondition.hasValueMatching(value -> value.toString().startsWith("r")));
+        String narrowed = await(source).until(OptionalCondition.containsInstanceOf(String.class));
+        String nested = await((OptionalSource<String>) () -> Optional.of("ready")).until(OptionalCondition.hasValueSatisfying(StringCondition.startsWith("rea")));
 
         assertEquals("ready", expected);
         assertEquals("ready", selected);
@@ -81,7 +81,7 @@ class ObjectOptionalAndScalarConditionsTest {
         assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.startsWith("Ready")));
         assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.endsWith("42")));
         assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.matchesRegex("Ready \\d+")));
-        assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.equalIgnoringCase("ready 42")));
+        assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.equalToIgnoringCase("ready 42")));
         assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.lengthBetween(1, 20)));
         assertEquals(SATISFIED, StringCondition.blank.delegate().evaluate(" \n").status());
         assertEquals(UNSATISFIED, StringCondition.nonEmpty.delegate().evaluate("").status());
@@ -116,10 +116,10 @@ class ObjectOptionalAndScalarConditionsTest {
         assertStatus(OptionalCondition.hasValue("ready"), Optional.empty(), UNSATISFIED);
         assertStatus(OptionalCondition.doesNotHaveValue("failed"), Optional.of("ready"), SATISFIED);
         assertStatus(OptionalCondition.doesNotHaveValue("ready"), Optional.of("ready"), UNSATISFIED);
-        assertStatus(OptionalCondition.hasValue(value -> value.startsWith("r")), Optional.of("ready"), SATISFIED);
-        assertStatus(OptionalCondition.hasValue(value -> value.startsWith("r")), Optional.of("failed"), UNSATISFIED);
-        assertStatus(OptionalCondition.hasValue(String.class), Optional.of("ready"), SATISFIED);
-        assertStatus(OptionalCondition.hasValue(String.class), Optional.of(42), UNSATISFIED);
+        assertStatus(OptionalCondition.hasValueMatching(value -> value.startsWith("r")), Optional.of("ready"), SATISFIED);
+        assertStatus(OptionalCondition.hasValueMatching(value -> value.startsWith("r")), Optional.of("failed"), UNSATISFIED);
+        assertStatus(OptionalCondition.containsInstanceOf(String.class), Optional.of("ready"), SATISFIED);
+        assertStatus(OptionalCondition.containsInstanceOf(String.class), Optional.of(42), UNSATISFIED);
     }
 
     @Test
@@ -159,10 +159,10 @@ class ObjectOptionalAndScalarConditionsTest {
         assertPreserving(StringCondition.doesNotEndWith("ed"), "ready", "failed");
         assertPreserving(StringCondition.matchesRegex(Pattern.compile("r.*y")), "ready", "failed");
         assertPreserving(StringCondition.doesNotMatchRegex("f.*d"), "ready", "failed");
-        assertPreserving(StringCondition.equalIgnoringCase("READY"), "ready", "failed");
-        assertPreserving(StringCondition.notEqualIgnoringCase("FAILED"), "ready", "failed");
+        assertPreserving(StringCondition.equalToIgnoringCase("READY"), "ready", "failed");
+        assertPreserving(StringCondition.notEqualToIgnoringCase("FAILED"), "ready", "failed");
         assertPreserving(StringCondition.length(5), "ready", "read");
-        assertPreserving(StringCondition.lengthNot(4), "ready", "read");
+        assertPreserving(StringCondition.lengthIsNot(4), "ready", "read");
         assertPreserving(StringCondition.lengthGreaterThan(4), "ready", "read");
         assertPreserving(StringCondition.lengthAtLeast(5), "ready", "read");
         assertPreserving(StringCondition.lengthLessThan(6), "ready", "failed");

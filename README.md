@@ -146,11 +146,11 @@ throw checked exceptions.
 | Domain | Conditions | Successful result |
 | --- | --- | --- |
 | Object | `isNull`, `isNotNull`, `equalTo`, `notEqualTo`, `sameAs`, `notSameAs`, `instanceOf`, `exactInstanceOf`, `in`, `notIn`, `matches`, `extracting` | source value, narrowed type, or extracted value |
-| Optional | `present`, `absent`, `hasValue`, `doesNotHaveValue` | contained or narrowed value; `Void` for `absent` |
+| Optional | `present`, `absent`, `hasValue`, `doesNotHaveValue`, `hasValueMatching`, `hasValueSatisfying`, `containsInstanceOf` | contained or narrowed value; `Void` for `absent` |
 | Comparable | `greaterThan`, `atLeast`, `lessThan`, `atMost`, `between`, `strictlyBetween` | source value |
-| String | `empty`, `nonEmpty`, `blank`, `nonBlank`, `containsText`, `doesNotContainText`, `containsIgnoringCase`, `startsWith`, `doesNotStartWith`, `endsWith`, `doesNotEndWith`, `matchesRegex`, `doesNotMatchRegex`, `equalIgnoringCase`, `notEqualIgnoringCase`, and the `length...` family | source string |
+| String | `empty`, `nonEmpty`, `blank`, `nonBlank`, `containsText`, `doesNotContainText`, `containsIgnoringCase`, `startsWith`, `doesNotStartWith`, `endsWith`, `doesNotEndWith`, `matchesRegex`, `doesNotMatchRegex`, `equalToIgnoringCase`, `notEqualToIgnoringCase`, and the `length...` family | source string |
 | Collection | `singleElement`, `noElements`, `hasElements`, null and duplicate checks, `allMatch`, `anyMatch`, `noneMatch`, membership and exact-content checks, prefixes, suffixes, sequences, subsequences, `first`, `last`, `element`, `sorted`, and the `elementCount...` family | collection, or the selected element |
-| Map | `singleEntry`, `noEntries`, `hasEntries`, `allEntries`, `anyEntry`, `noEntry`, key/value quantifiers, key/value/entry membership, exact content, `valueFor`, `entry`, `onlyValueFor`, `singleKey`, `singleValue`, and the `entryCount...` family | map, selected entry, key, or value |
+| Map | `singleEntry`, `noEntries`, `hasEntries`, `allEntries`, `anyEntry`, `noEntry`, key/value quantifiers, key/value/entry membership, exact content, `valueFor`, `entryFor`, `onlyValueFor`, `singleKey`, `singleValue`, and the `entryCount...` family | map, selected entry, key, or value |
 
 All public static names in these namespaces are unique. Every condition class
 can therefore be wildcard-imported in the same source file without requiring

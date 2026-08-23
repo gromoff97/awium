@@ -24,7 +24,7 @@ import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.ent
 import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCount;
 import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCountGreaterThan;
 import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCountLessThan;
-import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCountNot;
+import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCountIsNot;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -167,7 +167,7 @@ class MapSizeConditionsTest {
     private static List<Case> cases() {
         return List.of(new Case(noEntries, 0, 1), new Case(hasEntries, 1, 0),
                 new Case(entryCount(2), 2, 1),
-                new Case(entryCountNot(2), 1, 2),
+                new Case(entryCountIsNot(2), 1, 2),
                 new Case(entryCountGreaterThan(2), 3, 2),
                 new Case(entryCountAtLeast(2), 2, 1),
                 new Case(entryCountLessThan(2), 1, 2),

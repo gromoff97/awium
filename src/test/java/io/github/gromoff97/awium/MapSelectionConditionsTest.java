@@ -26,7 +26,7 @@ class MapSelectionConditionsTest {
         MapSource<LinkedHashMap<String, Integer>> source = () -> actual;
 
         Map.Entry<String, Integer> selected = await(source).until(MapCondition.singleEntry((key, value) -> value == 2));
-        Map.Entry<String, Integer> byKey = await(source).until(MapCondition.entry("first"));
+        Map.Entry<String, Integer> byKey = await(source).until(MapCondition.entryFor("first"));
         Integer value = await(source).until(MapCondition.valueFor("second"));
         Integer nested = await(source).until(MapCondition.valueFor("second", ComparableCondition.atLeast(2)));
         String key = await(source).until(MapCondition.singleKey(candidate -> candidate.startsWith("f")));
