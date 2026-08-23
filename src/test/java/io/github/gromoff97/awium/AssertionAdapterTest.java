@@ -2,14 +2,14 @@ package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
 import static java.lang.Long.parseLong;
 import static java.time.Duration.ofNanos;
 
 import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
+import io.github.gromoff97.awium.conditioning.conditions.Condition;
 
 import io.github.gromoff97.awium.sources.Source;
 
@@ -26,7 +26,7 @@ class AssertionAdapterTest {
     @Test
     void namedConditionDelegatesOnceAndSuppliesItsDescription() throws Exception {
         var invocations = new int[1];
-        var condition = ConditionProvider.<String, Long>condition(
+        var condition = Condition.<String, Long>condition(
                 "payment id", value -> {
                     invocations[0]++;
                     return satisfied(parseLong(value));
@@ -53,7 +53,7 @@ class AssertionAdapterTest {
                 () -> condition("payment", null))
                 .getMessage().contains("evaluation"));
 
-        var condition = ConditionProvider.<String, String>condition(
+        var condition = Condition.<String, String>condition(
                 "nullable evaluation", value -> null);
         assertNull(condition.evaluate("42"));
     }
@@ -62,7 +62,7 @@ class AssertionAdapterTest {
     void assertedWithoutResultReturnsTheExactActualAndInvokesItsCallbackOnce() throws Exception {
         var invocations = new int[1];
         var actual = new String("42");
-        var condition = ConditionProvider.<String>asserted(value -> {
+        var condition = Condition.<String>asserted(value -> {
             invocations[0]++;
         });
 
@@ -77,7 +77,7 @@ class AssertionAdapterTest {
     @Test
     void yieldsMayReturnNullAndInvokesItsCallbackOnce() throws Exception {
         var invocations = new int[1];
-        var condition = ConditionProvider.<String, String>yields(value -> {
+        var condition = Condition.<String, String>yields(value -> {
             invocations[0]++;
             return null;
         });
@@ -98,7 +98,7 @@ class AssertionAdapterTest {
 
         Long result = timedAwait((Source<String>) () -> "42",
                 defaults().withEvery(ofNanos(1))
-                        .withUpTo(ofNanos(10)), time, time).until(ConditionProvider.<String, Long>yields(value -> {
+                        .withUpTo(ofNanos(10)), time, time).until(Condition.<String, Long>yields(value -> {
                     if (invocations[0]++ < 2) {
                         throw discarded;
                     }
@@ -114,7 +114,7 @@ class AssertionAdapterTest {
     void yieldsPreservesTheCaughtAssertionWithoutReadingItsMessage()
             throws Exception {
         var failure = new MessageReadingAssertion();
-        var condition = ConditionProvider.<String, Long>yields(value -> {
+        var condition = Condition.<String, Long>yields(value -> {
             throw failure;
         });
         Evaluation<Long> evaluation = condition.evaluate("42");
@@ -126,7 +126,7 @@ class AssertionAdapterTest {
     @Test
     void checkedExceptionEscapesYieldsUnchanged() {
         var failure = new Exception("checked");
-        var condition = ConditionProvider.<String, Long>yields(value -> {
+        var condition = Condition.<String, Long>yields(value -> {
             throw failure;
         });
 
@@ -138,7 +138,7 @@ class AssertionAdapterTest {
     void nonAssertionErrorEscapesYieldsUnchanged() {
         var failure = new LinkageError("error");
 
-        var condition = ConditionProvider.<String, Long>yields(value -> {
+        var condition = Condition.<String, Long>yields(value -> {
             throw failure;
         });
 

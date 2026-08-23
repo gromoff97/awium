@@ -18,8 +18,9 @@ import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.eq
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.exactly;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAny;
+import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.sameDistinctElements;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionResults.failure;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.formattedExplanation;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.literalExplanation;
 import static java.util.Arrays.asList;
@@ -30,9 +31,9 @@ public final class CollectionCondition {
 
     public static final SingleElement singleElement = new SingleElement();
     public static final PreservingCondition<Collection<?>> noElements = sized(0, size -> size == 0,
-            "collection is empty", "collection was non-empty");
+            "collection is empty");
     public static final PreservingCondition<Collection<?>> hasElements = sized(0, size -> size > 0,
-            "collection is not empty", "collection was empty");
+            "collection is not empty");
     public static final PreservingCondition<Collection<?>> containsNull = preserving(
             "collection contains null", "collection did not contain null", actual -> actual.contains(null));
     public static final PreservingCondition<Collection<?>> doesNotContainNull = preserving(
@@ -49,43 +50,38 @@ public final class CollectionCondition {
 
     public static PreservingCondition<Collection<?>> elementCount(int expected) {
         return sized(expected, actual -> actual == expected,
-                "collection size is " + expected, "collection size was not " + expected);
+                "collection size is " + expected);
     }
 
     public static PreservingCondition<Collection<?>> elementCountNot(int unexpected) {
         return sized(unexpected, actual -> actual != unexpected,
-                "collection size is not " + unexpected, "collection size was " + unexpected);
+                "collection size is not " + unexpected);
     }
 
     public static PreservingCondition<Collection<?>> elementCountGreaterThan(int lowerBound) {
         return sized(lowerBound, actual -> actual > lowerBound,
-                "collection size is greater than " + lowerBound,
-                "collection size was not greater than " + lowerBound);
+                "collection size is greater than " + lowerBound);
     }
 
     public static PreservingCondition<Collection<?>> elementCountAtLeast(int lowerBound) {
         return sized(lowerBound, actual -> actual >= lowerBound,
-                "collection size is at least " + lowerBound,
-                "collection size was less than " + lowerBound);
+                "collection size is at least " + lowerBound);
     }
 
     public static PreservingCondition<Collection<?>> elementCountLessThan(int upperBound) {
         return sized(upperBound, actual -> actual < upperBound,
-                "collection size is less than " + upperBound,
-                "collection size was not less than " + upperBound);
+                "collection size is less than " + upperBound);
     }
 
     public static PreservingCondition<Collection<?>> elementCountAtMost(int upperBound) {
         return sized(upperBound, actual -> actual <= upperBound,
-                "collection size is at most " + upperBound,
-                "collection size was greater than " + upperBound);
+                "collection size is at most " + upperBound);
     }
 
     public static PreservingCondition<Collection<?>> elementCountBetween(int lowerBound, int upperBound) {
         validateRange(lowerBound, upperBound);
         return sized(lowerBound, actual -> actual >= lowerBound && actual <= upperBound,
-                "collection size is between " + lowerBound + " and " + upperBound,
-                "collection size was outside " + lowerBound + ".." + upperBound);
+                "collection size is between " + lowerBound + " and " + upperBound);
     }
 
     public static PreservingCondition<Collection<?>> sameElementCountAs(Collection<?> expected) {
@@ -128,75 +124,101 @@ public final class CollectionCondition {
 
     @SafeVarargs
     public static <E> PreservingCondition<Collection<? super E>> contains(E... expected) {
-        return membership(asList(nonEmpty(expected, "expected elements")), Match.ALL, true);
+        return contains(asList(nonEmpty(expected, "expected elements")));
     }
 
     public static <E> PreservingCondition<Collection<? super E>> contains(Collection<? extends E> expected) {
-        return membership(nonEmpty(expected, "expected elements"), Match.ALL, true);
+        Collection<? extends E> values = nonEmpty(expected, "expected elements");
+        String target = values.size() == 1 ? "expected element" : "all expected elements";
+        return preserving("collection contains " + target, "collection did not contain " + target,
+                actual -> containsAll(actual, values, ValueMatching::equal));
     }
 
     @SafeVarargs
     public static <E> PreservingCondition<Collection<? super E>> doesNotContain(E... unexpected) {
-        return membership(asList(nonEmpty(unexpected, "unexpected elements")), Match.ANY, false);
+        return doesNotContain(asList(nonEmpty(unexpected, "unexpected elements")));
     }
 
     public static <E> PreservingCondition<Collection<? super E>> doesNotContain(Collection<? extends E> unexpected) {
-        return membership(nonEmpty(unexpected, "unexpected elements"), Match.ANY, false);
+        Collection<? extends E> values = nonEmpty(unexpected, "unexpected elements");
+        String target = values.size() == 1 ? "expected element" : "an expected element";
+        return preserving("collection does not contain " + target, "collection contained " + target,
+                actual -> !matchesAny(actual,
+                        value -> matchesAny(values, candidate -> equal(value, candidate))));
     }
 
     @SafeVarargs
     public static <E> PreservingCondition<Collection<? super E>> doesNotContainAll(E... unexpected) {
-        return membership(asList(nonEmpty(unexpected, "unexpected elements")), Match.ALL, false);
+        return doesNotContainAll(asList(nonEmpty(unexpected, "unexpected elements")));
     }
 
     public static <E> PreservingCondition<Collection<? super E>> doesNotContainAll(
             Collection<? extends E> unexpected) {
-        return membership(nonEmpty(unexpected, "unexpected elements"), Match.ALL, false);
+        Collection<? extends E> values = nonEmpty(unexpected, "unexpected elements");
+        String target = values.size() == 1 ? "expected element" : "all expected elements";
+        return preserving("collection does not contain " + target, "collection contained " + target,
+                actual -> !containsAll(actual, values, ValueMatching::equal));
     }
 
     @SafeVarargs
     public static <E> PreservingCondition<Collection<? super E>> containsAny(E... expected) {
-        return membership(asList(nonEmpty(expected, "expected elements")), Match.ANY, true);
+        return containsAny(asList(nonEmpty(expected, "expected elements")));
     }
 
     public static <E> PreservingCondition<Collection<? super E>> containsAny(Collection<? extends E> expected) {
-        return membership(nonEmpty(expected, "expected elements"), Match.ANY, true);
+        Collection<? extends E> values = nonEmpty(expected, "expected elements");
+        String target = values.size() == 1 ? "expected element" : "an expected element";
+        return preserving("collection contains " + target, "collection did not contain " + target,
+                actual -> matchesAny(actual,
+                        value -> matchesAny(values, candidate -> equal(value, candidate))));
     }
 
     @SafeVarargs
     public static <E> PreservingCondition<SequencedCollection<? super E>> containsExactly(E... expected) {
-        return exact(asList(nonNull(expected, "expected elements")), true, true);
+        return containsExactly(asList(nonNull(expected, "expected elements")));
     }
 
     public static <E> PreservingCondition<SequencedCollection<? super E>> containsExactly(Collection<? extends E> expected) {
-        return exact(nonNull(expected, "expected elements"), true, true);
+        Collection<? extends E> values = nonNull(expected, "expected elements");
+        return preserving("collection contains exactly the expected elements",
+                "collection did not contain exactly the expected elements",
+                actual -> exactContent(actual, values));
     }
 
     @SafeVarargs
     public static <E> PreservingCondition<SequencedCollection<? super E>> doesNotContainExactly(E... expected) {
-        return exact(asList(nonNull(expected, "expected elements")), true, false);
+        return doesNotContainExactly(asList(nonNull(expected, "expected elements")));
     }
 
     public static <E> PreservingCondition<SequencedCollection<? super E>> doesNotContainExactly(Collection<? extends E> expected) {
-        return exact(nonNull(expected, "expected elements"), true, false);
+        Collection<? extends E> values = nonNull(expected, "expected elements");
+        return preserving("collection does not contain exactly the expected elements",
+                "collection contained exactly the expected elements",
+                actual -> !exactContent(actual, values));
     }
 
     @SafeVarargs
     public static <E> PreservingCondition<Collection<? super E>> containsExactlyInAnyOrder(E... expected) {
-        return exact(asList(nonNull(expected, "expected elements")), false, true);
+        return containsExactlyInAnyOrder(asList(nonNull(expected, "expected elements")));
     }
 
     public static <E> PreservingCondition<Collection<? super E>> containsExactlyInAnyOrder(Collection<? extends E> expected) {
-        return exact(nonNull(expected, "expected elements"), false, true);
+        Collection<? extends E> values = nonNull(expected, "expected elements");
+        return preserving("collection contains exactly the expected elements in any order",
+                "collection did not contain exactly the expected elements in any order",
+                actual -> exactContentInAnyOrder(actual, values));
     }
 
     @SafeVarargs
     public static <E> PreservingCondition<Collection<? super E>> doesNotContainExactlyInAnyOrder(E... expected) {
-        return exact(asList(nonNull(expected, "expected elements")), false, false);
+        return doesNotContainExactlyInAnyOrder(asList(nonNull(expected, "expected elements")));
     }
 
     public static <E> PreservingCondition<Collection<? super E>> doesNotContainExactlyInAnyOrder(Collection<? extends E> expected) {
-        return exact(nonNull(expected, "expected elements"), false, false);
+        Collection<? extends E> values = nonNull(expected, "expected elements");
+        return preserving("collection does not contain exactly the expected elements in any order",
+                "collection contained exactly the expected elements in any order",
+                actual -> !exactContentInAnyOrder(actual, values));
     }
 
     @SafeVarargs
@@ -220,32 +242,48 @@ public final class CollectionCondition {
 
     @SafeVarargs
     public static <E> PreservingCondition<SequencedCollection<? super E>> startsWithElements(E... expected) {
-        return ordered(asList(nonEmpty(expected, "expected elements")), Order.PREFIX, true);
+        List<? extends E> values = asList(nonEmpty(expected, "expected elements"));
+        return preserving("collection contains expected prefix", "collection did not contain expected prefix",
+                actual -> regionMatches(elements(actual), 0, values));
     }
 
     @SafeVarargs
     public static <E> PreservingCondition<SequencedCollection<? super E>> endsWithElements(E... expected) {
-        return ordered(asList(nonEmpty(expected, "expected elements")), Order.SUFFIX, true);
+        List<? extends E> values = asList(nonEmpty(expected, "expected elements"));
+        return preserving("collection contains expected suffix", "collection did not contain expected suffix",
+                actual -> {
+                    List<?> actualElements = elements(actual);
+                    return regionMatches(actualElements, actualElements.size() - values.size(), values);
+                });
     }
 
     @SafeVarargs
     public static <E> PreservingCondition<SequencedCollection<? super E>> containsSequence(E... expected) {
-        return ordered(asList(nonEmpty(expected, "expected elements")), Order.SEQUENCE, true);
+        List<? extends E> values = asList(nonEmpty(expected, "expected elements"));
+        return preserving("collection contains expected sequence", "collection did not contain expected sequence",
+                actual -> containsSequence(elements(actual), values));
     }
 
     @SafeVarargs
     public static <E> PreservingCondition<SequencedCollection<? super E>> doesNotContainSequence(E... expected) {
-        return ordered(asList(nonEmpty(expected, "expected elements")), Order.SEQUENCE, false);
+        List<? extends E> values = asList(nonEmpty(expected, "expected elements"));
+        return preserving("collection does not contain expected sequence", "collection contained expected sequence",
+                actual -> !containsSequence(elements(actual), values));
     }
 
     @SafeVarargs
     public static <E> PreservingCondition<SequencedCollection<? super E>> containsSubsequence(E... expected) {
-        return ordered(asList(nonEmpty(expected, "expected elements")), Order.SUBSEQUENCE, true);
+        List<? extends E> values = asList(nonEmpty(expected, "expected elements"));
+        return preserving("collection contains expected subsequence", "collection did not contain expected subsequence",
+                actual -> containsSubsequence(elements(actual), values));
     }
 
     @SafeVarargs
     public static <E> PreservingCondition<SequencedCollection<? super E>> doesNotContainSubsequence(E... expected) {
-        return ordered(asList(nonEmpty(expected, "expected elements")), Order.SUBSEQUENCE, false);
+        List<? extends E> values = asList(nonEmpty(expected, "expected elements"));
+        return preserving("collection does not contain expected subsequence",
+                "collection contained expected subsequence",
+                actual -> !containsSubsequence(elements(actual), values));
     }
 
     public static <E> Condition<SequencedCollection<E>, E> first() {
@@ -341,7 +379,7 @@ public final class CollectionCondition {
     }
 
     private static PreservingCondition<Collection<?>> sized(int bound, java.util.function.IntPredicate matches,
-            String description, String mismatch) {
+            String description) {
         if (bound < 0) {
             throw new IllegalArgumentException("size must not be negative");
         }
@@ -364,68 +402,29 @@ public final class CollectionCondition {
         }));
     }
 
-    private static <E> PreservingCondition<Collection<? super E>> membership(Collection<? extends E> expected,
-            Match match, boolean positive) {
-        String target = expected.size() == 1 ? "expected element"
-                : match == Match.ALL ? "all expected elements" : "an expected element";
-        String description = "collection " + (positive ? "contains " : "does not contain ") + target;
-        String mismatch = "collection " + (positive ? "did not contain " : "contained ") + target;
-        return preserving(description, mismatch, actual -> {
-            boolean matched = match == Match.ALL
-                    ? containsAll(actual, new ArrayList<>(expected), ValueMatching::equal)
-                    : matchesAny(actual, value -> matchesAny(expected, candidate -> equal(value, candidate)));
-            return matched == positive;
-        });
-    }
-
-    private static <C extends Collection<?>> PreservingCondition<C> exact(Collection<?> expected, boolean ordered,
-            boolean positive) {
-        String order = ordered ? "" : " in any order";
-        return preserving("collection " + (positive ? "contains " : "does not contain ")
-                        + "exactly the expected elements" + order,
-                "collection " + (positive ? "did not contain" : "contained")
-                        + " exactly the expected elements" + order,
-                actual -> exactContent(actual, expected, ordered) == positive);
-    }
-
-    private static <E> PreservingCondition<SequencedCollection<? super E>> ordered(List<? extends E> expected,
-            Order order, boolean positive) {
-        String target = order.name().toLowerCase(java.util.Locale.ROOT);
-        return preserving("collection " + (positive ? "contains " : "does not contain ") + "expected " + target,
-                "collection " + (positive ? "did not contain " : "contained ") + "expected " + target,
-                actual -> ordered(actual, expected, order) == positive);
-    }
-
-    private static boolean exactContent(Collection<?> actual, Collection<?> expected, boolean ordered) throws Exception {
+    private static boolean exactContent(Collection<?> actual, Collection<?> expected) {
         if (actual.size() != expected.size()) {
             return false;
         }
-        if (ordered) {
-            Iterator<?> left = actual.iterator();
-            Iterator<?> right = expected.iterator();
-            while (left.hasNext()) {
-                if (!equal(left.next(), right.next())) {
-                    return false;
-                }
+        Iterator<?> left = actual.iterator();
+        Iterator<?> right = expected.iterator();
+        while (left.hasNext()) {
+            if (!equal(left.next(), right.next())) {
+                return false;
             }
-            return true;
         }
-        return exactly(actual.iterator(), new ArrayList<>(expected), ValueMatching::equal);
+        return true;
     }
 
-    private static boolean sameDistinctElements(Collection<?> actual, Collection<?> expected) throws Exception {
-        return matchesAll(actual, value -> matchesAny(expected, candidate -> equal(value, candidate)))
-                && matchesAll(expected, value -> matchesAny(actual, candidate -> equal(value, candidate)));
+    private static boolean exactContentInAnyOrder(Collection<?> actual, Collection<?> expected) throws Exception {
+        if (actual.size() != expected.size()) {
+            return false;
+        }
+        return exactly(actual.iterator(), expected, ValueMatching::equal);
     }
 
-    private static boolean ordered(SequencedCollection<?> actual, List<?> expected, Order order) {
-        List<?> values = actual instanceof List<?> list ? list : new ArrayList<>(actual);
-        return switch (order) {
-            case PREFIX -> regionMatches(values, 0, expected);
-            case SUFFIX -> regionMatches(values, values.size() - expected.size(), expected);
-            case SEQUENCE -> containsSequence(values, expected);
-            case SUBSEQUENCE -> containsSubsequence(values, expected);
-        };
+    private static List<?> elements(SequencedCollection<?> actual) {
+        return actual instanceof List<?> list ? list : new ArrayList<>(actual);
     }
 
     private static boolean containsSequence(List<?> actual, List<?> expected) {
@@ -547,7 +546,4 @@ public final class CollectionCondition {
         }
     }
 
-    private enum Match { ALL, ANY }
-
-    private enum Order { PREFIX, SUFFIX, SEQUENCE, SUBSEQUENCE }
 }

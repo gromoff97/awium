@@ -7,11 +7,11 @@ import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
 import io.github.gromoff97.awium.conditioning.conditions.ComparableCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
 import io.github.gromoff97.awium.conditioning.conditions.ObjectCondition;
 import io.github.gromoff97.awium.conditioning.conditions.OptionalCondition;
 import io.github.gromoff97.awium.conditioning.conditions.StringCondition;
-import io.github.gromoff97.awium.conditioning.providers.ConditionProvider;
 import io.github.gromoff97.awium.sources.Source;
 
 import static java.lang.reflect.Modifier.isAbstract;
@@ -76,7 +76,7 @@ class PublicSurfaceTest {
         for (Class<?> owner : List.of(CollectionCondition.class,
                 ComparableCondition.class, MapCondition.class,
                 ObjectCondition.class, OptionalCondition.class,
-                StringCondition.class, ConditionProvider.class)) {
+                StringCondition.class, Condition.class)) {
             stream(owner.getDeclaredFields())
                     .filter(field -> isPublic(field.getModifiers())
                             && isStatic(field.getModifiers()))

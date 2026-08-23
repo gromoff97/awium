@@ -35,7 +35,7 @@ import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.*;
 import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
 import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
 import static io.github.gromoff97.awium.conditioning.conditions.StringCondition.*;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;

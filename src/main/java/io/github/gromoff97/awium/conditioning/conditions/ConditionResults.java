@@ -6,7 +6,7 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatis
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.uncontrolled;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
 
 final class ConditionResults {
 

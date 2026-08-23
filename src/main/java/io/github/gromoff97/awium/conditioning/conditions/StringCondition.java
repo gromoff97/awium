@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 

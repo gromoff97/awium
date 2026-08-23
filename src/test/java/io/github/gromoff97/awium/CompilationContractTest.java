@@ -191,7 +191,7 @@ class CompilationContractTest {
                 import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
                 import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
                 import static io.github.gromoff97.awium.conditioning.conditions.StringCondition.*;
-                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
                 import io.github.gromoff97.awium.sources.Source;
                 import io.github.gromoff97.awium.sources.Source.CollectionSource;
                 import io.github.gromoff97.awium.sources.Source.MapSource;
@@ -283,7 +283,7 @@ class CompilationContractTest {
     void callbackFactoriesPreserveTheirResultTypesAndMayBeDecoratedOnce() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.await.Await.await;
-                import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
 
                 final class Contract {
                     record Payment(long id) {}
@@ -316,7 +316,7 @@ class CompilationContractTest {
                 "MapCondition.hasEntries",
                 "MapCondition.singleEntry")) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+                    import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
                     import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
                     import io.github.gromoff97.awium.conditioning.Evaluation;
                     import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;

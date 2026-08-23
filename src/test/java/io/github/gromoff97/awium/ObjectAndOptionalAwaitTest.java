@@ -3,7 +3,7 @@ package io.github.gromoff97.awium;
 import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
 import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
 import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;

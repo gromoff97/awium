@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.*;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
 import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
 import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
 

@@ -8,7 +8,6 @@ import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
 import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Origin;
 import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Origin.WAITING;
 import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Satisfied;
 import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled;
@@ -54,7 +53,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
                 }
             }
 
-            Uncontrolled<R> interrupted = interruptedBefore(WAITING, number);
+            Uncontrolled<R> interrupted = interruptedBefore(number);
             if (interrupted != null) {
                 return interrupted;
             }
@@ -98,7 +97,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
                 return parked;
             }
 
-            Uncontrolled<R> interrupted = interruptedBefore(WAITING, number);
+            Uncontrolled<R> interrupted = interruptedBefore(number);
             if (interrupted != null) {
                 return interrupted;
             }
@@ -127,11 +126,11 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
                 throw fatal;
             } catch (Throwable uncontrolled) {
                 if (uncontrolled instanceof InterruptedException interruption) {
-                    return interruptedBefore(WAITING, interruption, attemptNumber);
+                    return interruptedBefore(interruption, attemptNumber);
                 }
                 return new BeforeObservation<>(WAITING, uncontrolled, attemptNumber, clock.getAsLong());
             }
-            Uncontrolled<R> interrupted = interruptedBefore(WAITING, attemptNumber);
+            Uncontrolled<R> interrupted = interruptedBefore(attemptNumber);
             if (interrupted != null) {
                 return interrupted;
             }
@@ -139,9 +138,9 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
         return null;
     }
 
-    private <R> Uncontrolled<R> interruptedBefore(Origin origin, long number) {
+    private <R> Uncontrolled<R> interruptedBefore(long number) {
         return interrupted()
-                ? interruptedBefore(origin, new InterruptedException("caller thread interrupt flag was set"), number)
+                ? interruptedBefore(new InterruptedException("caller thread interrupt flag was set"), number)
                 : null;
     }
 
@@ -149,9 +148,9 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
         return currentThread().isInterrupted();
     }
 
-    private <R> Uncontrolled<R> interruptedBefore(Origin origin, InterruptedException interrupted, long number) {
+    private <R> Uncontrolled<R> interruptedBefore(InterruptedException interrupted, long number) {
         restoreInterrupt();
-        return new BeforeObservation<>(origin, interrupted, number, clock.getAsLong());
+        return new BeforeObservation<>(WAITING, interrupted, number, clock.getAsLong());
     }
 
     private static void restoreInterrupt() {

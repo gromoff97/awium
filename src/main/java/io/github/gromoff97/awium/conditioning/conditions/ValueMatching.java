@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.conditioning.CheckedBiPredicate;
 import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -34,8 +35,9 @@ final class ValueMatching {
         return true;
     }
 
-    static <A, E> boolean containsAll(Iterable<A> actual, Collection<E> remainingExpected,
+    static <A, E> boolean containsAll(Iterable<A> actual, Collection<E> expected,
             CheckedBiPredicate<? super A, ? super E> matches) throws Exception {
+        var remainingExpected = new ArrayList<>(expected);
         for (A value : actual) {
             Iterator<E> candidates = remainingExpected.iterator();
             while (candidates.hasNext()) {
@@ -50,8 +52,9 @@ final class ValueMatching {
         return false;
     }
 
-    static <A, E> boolean exactly(Iterator<A> actual, Collection<E> remainingExpected,
+    static <A, E> boolean exactly(Iterator<A> actual, Collection<E> expected,
             CheckedBiPredicate<? super A, ? super E> matches) throws Exception {
+        var remainingExpected = new ArrayList<>(expected);
         while (actual.hasNext()) {
             A value = actual.next();
             boolean found = false;
@@ -68,6 +71,11 @@ final class ValueMatching {
             }
         }
         return remainingExpected.isEmpty();
+    }
+
+    static boolean sameDistinctElements(Collection<?> actual, Collection<?> expected) throws Exception {
+        return matchesAll(actual, value -> matchesAny(expected, candidate -> equal(value, candidate)))
+                && matchesAll(expected, value -> matchesAny(actual, candidate -> equal(value, candidate)));
     }
 
     static boolean equal(Object actual, Object expected) {

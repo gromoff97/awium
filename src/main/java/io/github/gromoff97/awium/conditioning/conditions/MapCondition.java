@@ -5,8 +5,6 @@ import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -20,7 +18,8 @@ import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.eq
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.exactly;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAny;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
+import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.sameDistinctElements;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.formattedExplanation;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.literalExplanation;
 import static java.util.Arrays.asList;
@@ -31,9 +30,9 @@ public final class MapCondition {
 
     public static final SingleEntry singleEntry = new SingleEntry();
     public static final PreservingCondition<Map<?, ?>> noEntries = sized(0, size -> size == 0,
-            "map is empty", "map was non-empty");
+            "map is empty");
     public static final PreservingCondition<Map<?, ?>> hasEntries = sized(0, size -> size > 0,
-            "map is not empty", "map was empty");
+            "map is not empty");
 
     private MapCondition() {
         throw new AssertionError("Utility class");
@@ -41,43 +40,38 @@ public final class MapCondition {
 
     public static PreservingCondition<Map<?, ?>> entryCount(int expected) {
         return sized(expected, actual -> actual == expected,
-                "map size is " + expected, "map size was not " + expected);
+                "map size is " + expected);
     }
 
     public static PreservingCondition<Map<?, ?>> entryCountNot(int unexpected) {
         return sized(unexpected, actual -> actual != unexpected,
-                "map size is not " + unexpected, "map size was " + unexpected);
+                "map size is not " + unexpected);
     }
 
     public static PreservingCondition<Map<?, ?>> entryCountGreaterThan(int lowerBound) {
         return sized(lowerBound, actual -> actual > lowerBound,
-                "map size is greater than " + lowerBound,
-                "map size was not greater than " + lowerBound);
+                "map size is greater than " + lowerBound);
     }
 
     public static PreservingCondition<Map<?, ?>> entryCountAtLeast(int lowerBound) {
         return sized(lowerBound, actual -> actual >= lowerBound,
-                "map size is at least " + lowerBound,
-                "map size was less than " + lowerBound);
+                "map size is at least " + lowerBound);
     }
 
     public static PreservingCondition<Map<?, ?>> entryCountLessThan(int upperBound) {
         return sized(upperBound, actual -> actual < upperBound,
-                "map size is less than " + upperBound,
-                "map size was not less than " + upperBound);
+                "map size is less than " + upperBound);
     }
 
     public static PreservingCondition<Map<?, ?>> entryCountAtMost(int upperBound) {
         return sized(upperBound, actual -> actual <= upperBound,
-                "map size is at most " + upperBound,
-                "map size was greater than " + upperBound);
+                "map size is at most " + upperBound);
     }
 
     public static PreservingCondition<Map<?, ?>> entryCountBetween(int lowerBound, int upperBound) {
         validateRange(lowerBound, upperBound);
         return sized(lowerBound, actual -> actual >= lowerBound && actual <= upperBound,
-                "map size is between " + lowerBound + " and " + upperBound,
-                "map size was outside " + lowerBound + ".." + upperBound);
+                "map size is between " + lowerBound + " and " + upperBound);
     }
 
     public static PreservingCondition<Map<?, ?>> sameEntryCountAs(Map<?, ?> expected) {
@@ -110,17 +104,26 @@ public final class MapCondition {
 
     public static <K, V> PreservingCondition<Map<K, V>> allEntries(
             CheckedBiPredicate<? super K, ? super V> predicate) {
-        return quantify("all map entries match", "not all map entries matched", predicate, Quantifier.ALL);
+        requireNonNull(predicate, "predicate must not be null");
+        return preserving("all map entries match", "not all map entries matched",
+                actual -> matchesAll(actual.entrySet(),
+                        entry -> predicate.test(entry.getKey(), entry.getValue())));
     }
 
     public static <K, V> PreservingCondition<Map<K, V>> anyEntry(
             CheckedBiPredicate<? super K, ? super V> predicate) {
-        return quantify("any map entry matches", "no map entry matched", predicate, Quantifier.ANY);
+        requireNonNull(predicate, "predicate must not be null");
+        return preserving("any map entry matches", "no map entry matched",
+                actual -> matchesAny(actual.entrySet(),
+                        entry -> predicate.test(entry.getKey(), entry.getValue())));
     }
 
     public static <K, V> PreservingCondition<Map<K, V>> noEntry(
             CheckedBiPredicate<? super K, ? super V> predicate) {
-        return quantify("no map entry matches", "a map entry matched", predicate, Quantifier.NONE);
+        requireNonNull(predicate, "predicate must not be null");
+        return preserving("no map entry matches", "a map entry matched",
+                actual -> !matchesAny(actual.entrySet(),
+                        entry -> predicate.test(entry.getKey(), entry.getValue())));
     }
 
     public static <K, V> PreservingCondition<Map<K, V>> allKeys(CheckedPredicate<? super K> predicate) {
@@ -198,11 +201,13 @@ public final class MapCondition {
     }
 
     public static <K> PreservingCondition<Map<? super K, ?>> containsKey(K expected) {
-        return entryCondition(entry -> equal(entry.getKey(), expected), true, "key");
+        return preserving("map contains expected key", "map did not contain expected key",
+                actual -> matchesAny(actual.entrySet(), entry -> equal(entry.getKey(), expected)));
     }
 
     public static <K> PreservingCondition<Map<? super K, ?>> doesNotContainKey(K expected) {
-        return entryCondition(entry -> equal(entry.getKey(), expected), false, "key");
+        return preserving("map does not contain expected key", "map contained expected key",
+                actual -> !matchesAny(actual.entrySet(), entry -> equal(entry.getKey(), expected)));
     }
 
     @SafeVarargs
@@ -227,18 +232,20 @@ public final class MapCondition {
     }
 
     public static <V> PreservingCondition<Map<?, ? super V>> containsValue(V expected) {
-        return entryCondition(entry -> equal(entry.getValue(), expected), true, "value");
+        return preserving("map contains expected value", "map did not contain expected value",
+                actual -> matchesAny(actual.entrySet(), entry -> equal(entry.getValue(), expected)));
     }
 
     public static <V> PreservingCondition<Map<?, ? super V>> doesNotContainValue(V expected) {
-        return entryCondition(entry -> equal(entry.getValue(), expected), false, "value");
+        return preserving("map does not contain expected value", "map contained expected value",
+                actual -> !matchesAny(actual.entrySet(), entry -> equal(entry.getValue(), expected)));
     }
 
     @SafeVarargs
     public static <V> PreservingCondition<Map<?, ? super V>> containsValues(V... expected) {
         List<V> values = asList(nonEmpty(expected, "expected values"));
         return preserving("map contains all expected values", "map did not contain all expected values",
-                actual -> containsAll(actual.values(), new ArrayList<>(values), ValueMatching::equal));
+                actual -> containsAll(actual.values(), values, ValueMatching::equal));
     }
 
     @SafeVarargs
@@ -249,31 +256,45 @@ public final class MapCondition {
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsEntry(K key, V value) {
-        return entryCondition(entry -> entryMatches(entry, key, value), true, "entry");
+        return preserving("map contains expected entry", "map did not contain expected entry",
+                actual -> matchesAny(actual.entrySet(), entry -> entryMatches(entry, key, value)));
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainEntry(K key, V value) {
-        return entryCondition(entry -> entryMatches(entry, key, value), false, "entry");
+        return preserving("map does not contain expected entry", "map contained expected entry",
+                actual -> !matchesAny(actual.entrySet(), entry -> entryMatches(entry, key, value)));
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsAllEntriesOf(
             Map<? extends K, ? extends V> expected) {
-        return membership(expected, Quantifier.ALL, true);
+        Map<? extends K, ? extends V> entries = nonEmpty(expected, "expected entries");
+        return preserving("map contains all expected entries", "map did not contain all expected entries",
+                actual -> containsAll(actual.entrySet(), entries.entrySet(),
+                        MapCondition::entryMatches));
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainAllEntriesOf(
             Map<? extends K, ? extends V> unexpected) {
-        return membership(unexpected, Quantifier.ALL, false);
+        Map<? extends K, ? extends V> entries = nonEmpty(unexpected, "expected entries");
+        return preserving("map does not contain all expected entries", "map contained all expected entries",
+                actual -> !containsAll(actual.entrySet(), entries.entrySet(),
+                        MapCondition::entryMatches));
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsAnyEntriesOf(
             Map<? extends K, ? extends V> expected) {
-        return membership(expected, Quantifier.ANY, true);
+        Map<? extends K, ? extends V> entries = nonEmpty(expected, "expected entries");
+        return preserving("map contains an expected entry", "map did not contain an expected entry",
+                actual -> matchesAny(actual.entrySet(), value ->
+                        matchesAny(entries.entrySet(), candidate -> entryMatches(value, candidate))));
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsNoEntriesOf(
             Map<? extends K, ? extends V> expected) {
-        return membership(expected, Quantifier.ANY, false);
+        Map<? extends K, ? extends V> entries = nonEmpty(expected, "expected entries");
+        return preserving("map does not contain an expected entry", "map contained an expected entry",
+                actual -> !matchesAny(actual.entrySet(), value ->
+                        matchesAny(entries.entrySet(), candidate -> entryMatches(value, candidate))));
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsExactlyEntriesOf(
@@ -320,39 +341,8 @@ public final class MapCondition {
         return unsatisfied("map did not contain the expected key");
     }
 
-    private static <K, V> PreservingCondition<Map<K, V>> quantify(String description, String mismatch,
-            CheckedBiPredicate<? super K, ? super V> predicate, Quantifier quantifier) {
-        requireNonNull(predicate, "predicate must not be null");
-        return preserving(description, mismatch, actual -> switch (quantifier) {
-                case ALL -> matchesAll(actual.entrySet(), entry -> predicate.test(entry.getKey(), entry.getValue()));
-                case ANY -> matchesAny(actual.entrySet(), entry -> predicate.test(entry.getKey(), entry.getValue()));
-                case NONE -> !matchesAny(actual.entrySet(), entry -> predicate.test(entry.getKey(), entry.getValue()));
-            });
-    }
-
-    private static <M extends Map<?, ?>> PreservingCondition<M> entryCondition(
-            CheckedPredicate<Map.Entry<?, ?>> matches, boolean positive, String expected) {
-        return preserving("map " + (positive ? "contains " : "does not contain ") + "expected " + expected,
-                "map " + (positive ? "did not contain" : "contained") + " expected " + expected,
-                actual -> matchesAny(actual.entrySet(), matches) == positive);
-    }
-
-    private static <K, V> PreservingCondition<Map<? super K, ? super V>> membership(
-            Map<? extends K, ? extends V> expected, Quantifier quantifier, boolean positive) {
-        Map<? extends K, ? extends V> entries = nonEmpty(expected, "expected entries");
-        String target = quantifier == Quantifier.ALL ? "all expected entries" : "an expected entry";
-        return preserving("map " + (positive ? "contains " : "does not contain ") + target,
-                "map " + (positive ? "did not contain " : "contained ") + target,
-                actual -> {
-                    boolean matched = quantifier == Quantifier.ALL
-                            ? containsAll(actual.entrySet(), new ArrayList<>(entries.entrySet()), MapCondition::entryMatches)
-                            : matchesAny(actual.entrySet(), value -> matchesAny(entries.entrySet(), candidate -> entryMatches(value, candidate)));
-                    return matched == positive;
-                });
-    }
-
     private static PreservingCondition<Map<?, ?>> sized(int bound, java.util.function.IntPredicate matches,
-            String description, String mismatch) {
+            String description) {
         if (bound < 0) {
             throw new IllegalArgumentException("size must not be negative");
         }
@@ -377,12 +367,7 @@ public final class MapCondition {
 
     private static boolean exactContent(Map<?, ?> actual, Map<?, ?> expected) throws Exception {
         return actual.size() == expected.size()
-                && exactly(actual.entrySet().iterator(), new ArrayList<>(expected.entrySet()), MapCondition::entryMatches);
-    }
-
-    private static boolean sameDistinctElements(Collection<?> actual, Collection<?> expected) throws Exception {
-        return matchesAll(actual, value -> matchesAny(expected, candidate -> equal(value, candidate)))
-                && matchesAll(expected, value -> matchesAny(actual, candidate -> equal(value, candidate)));
+                && exactly(actual.entrySet().iterator(), expected.entrySet(), MapCondition::entryMatches);
     }
 
     private static boolean entryMatches(Map.Entry<?, ?> actual, Map.Entry<?, ?> expected) {
@@ -452,5 +437,4 @@ public final class MapCondition {
         }
     }
 
-    private enum Quantifier { ALL, ANY, NONE }
 }

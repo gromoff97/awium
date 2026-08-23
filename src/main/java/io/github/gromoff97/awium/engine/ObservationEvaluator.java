@@ -36,7 +36,7 @@ final class ObservationEvaluator {
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
         } catch (InterruptedException interrupted) {
-            return interruptedBefore(SOURCE, interrupted, number);
+            return interruptedBefore(interrupted, number);
         } catch (Throwable uncontrolled) {
             return new BeforeObservation<>(SOURCE, uncontrolled, number, clock.getAsLong());
         }
@@ -86,10 +86,9 @@ final class ObservationEvaluator {
         };
     }
 
-    private <R> Uncontrolled<R> interruptedBefore(Origin origin,
-            InterruptedException interrupted, long number) {
+    private <R> Uncontrolled<R> interruptedBefore(InterruptedException interrupted, long number) {
         restoreInterrupt();
-        return new BeforeObservation<>(origin, interrupted, number, clock.getAsLong());
+        return new BeforeObservation<>(SOURCE, interrupted, number, clock.getAsLong());
     }
 
     private <R> Uncontrolled<R> interruptedAfter(Origin origin, long number, Object actual) {

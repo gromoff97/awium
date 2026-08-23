@@ -13,7 +13,7 @@ import static io.github.gromoff97.awium.conditioning.conditions.ConditionResults
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionResults.failure;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionResults.preserve;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.equal;
-import static io.github.gromoff97.awium.conditioning.providers.ConditionProvider.condition;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
 import static java.util.Objects.requireNonNull;
 
 public final class OptionalCondition {
