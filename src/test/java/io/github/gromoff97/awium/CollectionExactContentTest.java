@@ -90,7 +90,7 @@ class CollectionExactContentTest {
 
         List<String> expected = new ArrayList<>(List.of("before"));
         PreservingCondition<? super List<String>> collectionCondition =
-                containsExactly(expected);
+                containsExactlyElementsOf(expected);
         expected.set(0, "after");
         assertStatus(collectionCondition, List.of("after"), SATISFIED);
     }
@@ -115,7 +115,7 @@ class CollectionExactContentTest {
 
     @Test
     void nullActualIsUnsatisfiedAndNullAggregateIsRejected() throws Exception {
-        Evaluation<?> evaluation = containsExactly(List.of("a"))
+        Evaluation<?> evaluation = containsExactlyElementsOf(List.of("a"))
                 .delegate().evaluate(null);
         assertEquals(UNSATISFIED, evaluation.status());
         assertFalse(evaluation.mismatch().isBlank());
@@ -166,16 +166,16 @@ class CollectionExactContentTest {
                         doesNotContainExactly("a", "a"),
                         List.of("a", "a"), List.of("a", "b")),
                 new Pair("ordered collection",
-                        containsExactly(List.of("a", "a")),
-                        doesNotContainExactly(List.of("a", "a")),
+                        containsExactlyElementsOf(List.of("a", "a")),
+                        doesNotContainExactlyElementsOf(List.of("a", "a")),
                         List.of("a", "a"), List.of("a", "b")),
                 new Pair("any-order varargs",
                         containsExactlyInAnyOrder("a", "b"),
                         doesNotContainExactlyInAnyOrder("a", "b"),
                         List.of("b", "a"), List.of("a", "a")),
                 new Pair("any-order collection",
-                        containsExactlyInAnyOrder(List.of("a", "b")),
-                        doesNotContainExactlyInAnyOrder(
+                        containsExactlyInAnyOrderElementsOf(List.of("a", "b")),
+                        doesNotContainExactlyInAnyOrderElementsOf(
                                 List.of("a", "b")),
                         List.of("b", "a"), List.of("a", "a")));
     }

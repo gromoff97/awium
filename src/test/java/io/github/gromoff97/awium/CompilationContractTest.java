@@ -161,6 +161,7 @@ class CompilationContractTest {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.singleElement;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.singleElementOfType;
                 import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
                 import io.github.gromoff97.awium.sources.Source.CollectionSource;
                 import io.github.gromoff97.awium.sources.Source.MapSource;
@@ -173,9 +174,32 @@ class CompilationContractTest {
                             MapSource<Map<String, Integer>> map) {
                         String only = await(strings).until(singleElement);
                         String matching = await(strings).until(singleElement(value -> !value.isBlank()));
-                        String narrowed = await(objects).until(singleElement(String.class));
+                        String narrowed = await(objects).until(singleElementOfType(String.class));
                         Map.Entry<String, Integer> entry = await(map).until(MapCondition.singleEntry);
                         Map.Entry<String, Integer> selected = await(map).until(MapCondition.singleEntry((key, value) -> value > 0));
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void collectionElementAndAggregateFactoriesAreUnambiguous() throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.await.Await.await;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
+                import java.util.List;
+
+                final class Contract {
+                    static List<List<String>> nested() {
+                        return List.of(List.of("a"), List.of("b"));
+                    }
+
+                    void check() {
+                        List<String> expectedElement = List.of("a");
+                        List<List<String>> expectedElements = List.of(List.of("a"), List.of("b"));
+                        await(Contract::nested).until(contains(expectedElement));
+                        await(Contract::nested).until(containsAll(expectedElements));
+                        await(Contract::nested).until(containsExactlyElementsOf(expectedElements));
                     }
                 }
                 """));
@@ -213,7 +237,7 @@ class CompilationContractTest {
                         await(optional).until(hasValue("x"));
                         await(collection).until(hasElements);
                         await(collection).until(singleElement);
-                        await(collection).until(allElements(value -> true));
+                        await(collection).until(allMatch(value -> true));
                         await(collection).until(elementCount(1));
                         await(collection).until(startsWithElements("x"));
                         await(collection).until(containsExactly("x"));
@@ -245,17 +269,17 @@ class CompilationContractTest {
                         List<String> ordered = await(Contract::list).until(containsExactly("a", "b"));
                         await(Contract::list).until(doesNotContainExactly("b", "a")
                                 .because("ordered"));
-                        await(Contract::list).until(containsExactly(expected));
-                        await(Contract::list).until(doesNotContainExactly(
+                        await(Contract::list).until(containsExactlyElementsOf(expected));
+                        await(Contract::list).until(doesNotContainExactlyElementsOf(
                                 expected).because("ordered"));
 
                         Collection<String> anyOrder = await(collection).until(containsExactlyInAnyOrder("a", "b"));
                         await(collection).until(doesNotContainExactlyInAnyOrder(
                                 "a", "b").because("any order"));
                         await(collection).until(
-                                containsExactlyInAnyOrder(expected));
+                                containsExactlyInAnyOrderElementsOf(expected));
                         await(collection).until(
-                                doesNotContainExactlyInAnyOrder(expected)
+                                doesNotContainExactlyInAnyOrderElementsOf(expected)
                                         .because("any order"));
 
                     }

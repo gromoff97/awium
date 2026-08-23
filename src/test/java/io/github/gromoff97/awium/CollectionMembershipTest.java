@@ -110,11 +110,11 @@ class CollectionMembershipTest {
         assertValidation(NullPointerException.class,
                 () -> contains((Object[]) null));
         assertValidation(NullPointerException.class,
-                () -> contains((Collection<Object>) null));
+                () -> containsAll((Collection<Object>) null));
         assertValidation(IllegalArgumentException.class,
                 () -> contains(new Object[0]));
         assertValidation(IllegalArgumentException.class,
-                () -> contains(List.of()));
+                () -> containsAll(List.of()));
     }
 
     @Test
@@ -133,14 +133,14 @@ class CollectionMembershipTest {
                         Collection<Integer> integers = List.of(1, 2);
                         contains("a", "b");
                         doesNotContainAll("a", "b");
-                        containsAny("a", "b");
+                        containsAnyOf("a", "b");
                         doesNotContain("a", "b");
                         contains(nil);
                         PreservingCondition<Collection<? super Integer>> typed =
-                                contains(integers);
+                                containsAll(integers);
                         CollectionSource<ArrayList<Number>> source =
                                 () -> new ArrayList<>(integers);
-                        ArrayList<Number> result = await(source).until(contains(integers));
+                        ArrayList<Number> result = await(source).until(containsAll(integers));
                     }
                 }
                 """));
@@ -187,12 +187,12 @@ class CollectionMembershipTest {
                 new Pair("contains", contains("b"), doesNotContain("b")),
                 new Pair("contains", contains("a", "b"),
                         doesNotContainAll("a", "b")),
-                new Pair("contains collection", contains(List.of("a", "b")),
-                        doesNotContainAll(List.of("a", "b"))),
-                new Pair("containsAny", containsAny("x", "b"),
+                new Pair("contains collection", containsAll(List.of("a", "b")),
+                        doesNotContainAllElementsOf(List.of("a", "b"))),
+                new Pair("containsAny", containsAnyOf("x", "b"),
                         doesNotContain("x", "b")),
-                new Pair("containsAny collection", containsAny(List.of("x", "b")),
-                        doesNotContain(List.of("x", "b"))));
+                new Pair("containsAny collection", containsAnyElementsOf(List.of("x", "b")),
+                        doesNotContainAnyElementsOf(List.of("x", "b"))));
     }
 
     private record Pair(String name,

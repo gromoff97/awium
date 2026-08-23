@@ -25,7 +25,7 @@ import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondit
 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCount;
 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCountGreaterThan;
 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCountLessThan;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCountNot;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCountIsNot;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -161,7 +161,7 @@ class CollectionSizeConditionsTest {
     private static List<Case> cases() {
         return List.of(new Case(noElements, 0, 1), new Case(hasElements, 1, 0),
                 new Case(elementCount(2), 2, 1),
-                new Case(elementCountNot(2), 1, 2),
+                new Case(elementCountIsNot(2), 1, 2),
                 new Case(elementCountGreaterThan(2), 3, 2),
                 new Case(elementCountAtLeast(2), 2, 1),
                 new Case(elementCountLessThan(2), 1, 2),
