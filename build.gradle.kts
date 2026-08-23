@@ -51,6 +51,9 @@ pitest {
     pitestVersion = "1.25.9"
     junit5PluginVersion = "1.2.3"
     threads = 4
+    mutationThreshold = 90
+    coverageThreshold = 90
+    testStrengthThreshold = 90
     outputFormats = setOf("HTML")
     timestampedReports = false
 }

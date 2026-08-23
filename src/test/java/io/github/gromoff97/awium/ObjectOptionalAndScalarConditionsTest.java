@@ -1,6 +1,8 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.conditioning.conditions.ComparableCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.ObjectCondition;
 import io.github.gromoff97.awium.conditioning.conditions.OptionalCondition;
 import io.github.gromoff97.awium.conditioning.conditions.StringCondition;
@@ -9,11 +11,13 @@ import io.github.gromoff97.awium.sources.Source.OptionalSource;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNSATISFIED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class ObjectOptionalAndScalarConditionsTest {
@@ -81,6 +85,110 @@ class ObjectOptionalAndScalarConditionsTest {
         assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.lengthBetween(1, 20)));
         assertEquals(SATISFIED, StringCondition.blank.delegate().evaluate(" \n").status());
         assertEquals(UNSATISFIED, StringCondition.nonEmpty.delegate().evaluate("").status());
+    }
+
+    @Test
+    void objectAndOptionalConditionsCoverBothTruthValues() throws Exception {
+        Object actual = new String("ready");
+        Object equal = new String("ready");
+
+        assertStatus(ObjectCondition.isNull, null, SATISFIED);
+        assertStatus(ObjectCondition.isNull, actual, UNSATISFIED);
+        assertPreserving(ObjectCondition.isNotNull, actual, null);
+        assertPreserving(ObjectCondition.equalTo(equal), actual, "other");
+        assertPreserving(ObjectCondition.notEqualTo(equal), "other", actual);
+        assertPreserving(ObjectCondition.sameAs(actual), actual, equal);
+        assertPreserving(ObjectCondition.notSameAs(equal), actual, equal);
+        assertPreserving(ObjectCondition.in("other", equal), actual, new Object());
+        assertPreserving(ObjectCondition.notIn("other"), actual, "other");
+        assertPreserving(ObjectCondition.matches(value -> value.toString().startsWith("r")), actual, "failed");
+        assertStatus(ObjectCondition.instanceOf(String.class), actual, SATISFIED);
+        assertStatus(ObjectCondition.instanceOf(Integer.class), actual, UNSATISFIED);
+        assertStatus(ObjectCondition.exactInstanceOf(String.class), actual, SATISFIED);
+        assertStatus(ObjectCondition.exactInstanceOf(Object.class), actual, UNSATISFIED);
+
+        assertStatus(OptionalCondition.present.delegate(), Optional.of("ready"), SATISFIED);
+        assertStatus(OptionalCondition.present.delegate(), Optional.empty(), UNSATISFIED);
+        assertStatus(OptionalCondition.absent, Optional.empty(), SATISFIED);
+        assertStatus(OptionalCondition.absent, Optional.of("ready"), UNSATISFIED);
+        assertStatus(OptionalCondition.hasValue("ready"), Optional.of("ready"), SATISFIED);
+        assertStatus(OptionalCondition.hasValue("ready"), Optional.of("failed"), UNSATISFIED);
+        assertStatus(OptionalCondition.hasValue("ready"), Optional.empty(), UNSATISFIED);
+        assertStatus(OptionalCondition.doesNotHaveValue("failed"), Optional.of("ready"), SATISFIED);
+        assertStatus(OptionalCondition.doesNotHaveValue("ready"), Optional.of("ready"), UNSATISFIED);
+        assertStatus(OptionalCondition.hasValue(value -> value.startsWith("r")), Optional.of("ready"), SATISFIED);
+        assertStatus(OptionalCondition.hasValue(value -> value.startsWith("r")), Optional.of("failed"), UNSATISFIED);
+        assertStatus(OptionalCondition.hasValue(String.class), Optional.of("ready"), SATISFIED);
+        assertStatus(OptionalCondition.hasValue(String.class), Optional.of(42), UNSATISFIED);
+    }
+
+    @Test
+    void comparableConditionsCoverBoundariesAndInvalidRanges() throws Exception {
+        assertPreserving(ComparableCondition.greaterThan(5), 6, 5);
+        assertPreserving(ComparableCondition.atLeast(5), 5, 4);
+        assertPreserving(ComparableCondition.lessThan(5), 4, 5);
+        assertPreserving(ComparableCondition.atMost(5), 5, 6);
+        assertStatus(ComparableCondition.between(5, 7).delegate(), 5, SATISFIED);
+        assertStatus(ComparableCondition.between(5, 7).delegate(), 7, SATISFIED);
+        assertStatus(ComparableCondition.between(5, 7).delegate(), 4, UNSATISFIED);
+        assertStatus(ComparableCondition.between(5, 7).delegate(), 8, UNSATISFIED);
+        assertStatus(ComparableCondition.strictlyBetween(5, 7).delegate(), 6, SATISFIED);
+        assertStatus(ComparableCondition.strictlyBetween(5, 7).delegate(), 5, UNSATISFIED);
+        assertStatus(ComparableCondition.strictlyBetween(5, 7).delegate(), 7, UNSATISFIED);
+        assertStatus(ComparableCondition.greaterThan(5).delegate(), null, UNSATISFIED);
+
+        assertThrows(NullPointerException.class, () -> ComparableCondition.greaterThan(null));
+        assertThrows(NullPointerException.class, () -> ComparableCondition.between(null, 1));
+        assertThrows(NullPointerException.class, () -> ComparableCondition.between(1, null));
+        assertThrows(IllegalArgumentException.class, () -> ComparableCondition.between(2, 1));
+        assertThrows(IllegalArgumentException.class, () -> ComparableCondition.strictlyBetween(2, 1));
+    }
+
+    @Test
+    void stringConditionsCoverBothTruthValuesAndBoundaries() throws Exception {
+        assertPreserving(StringCondition.empty, "", "x");
+        assertPreserving(StringCondition.nonEmpty, "x", "");
+        assertPreserving(StringCondition.blank, " \n", "x");
+        assertPreserving(StringCondition.nonBlank, "x", " \n");
+        assertPreserving(StringCondition.containsText("a", "b"), "abc", "ac");
+        assertPreserving(StringCondition.doesNotContainText("x", "y"), "abc", "ayc");
+        assertPreserving(StringCondition.containsIgnoringCase("READY"), "ready", "failed");
+        assertPreserving(StringCondition.startsWith("re"), "ready", "already");
+        assertPreserving(StringCondition.doesNotStartWith("fail"), "ready", "failed");
+        assertPreserving(StringCondition.endsWith("dy"), "ready", "read");
+        assertPreserving(StringCondition.doesNotEndWith("ed"), "ready", "failed");
+        assertPreserving(StringCondition.matchesRegex(Pattern.compile("r.*y")), "ready", "failed");
+        assertPreserving(StringCondition.doesNotMatchRegex("f.*d"), "ready", "failed");
+        assertPreserving(StringCondition.equalIgnoringCase("READY"), "ready", "failed");
+        assertPreserving(StringCondition.notEqualIgnoringCase("FAILED"), "ready", "failed");
+        assertPreserving(StringCondition.length(5), "ready", "read");
+        assertPreserving(StringCondition.lengthNot(4), "ready", "read");
+        assertPreserving(StringCondition.lengthGreaterThan(4), "ready", "read");
+        assertPreserving(StringCondition.lengthAtLeast(5), "ready", "read");
+        assertPreserving(StringCondition.lengthLessThan(6), "ready", "failed");
+        assertPreserving(StringCondition.lengthAtMost(5), "ready", "failed");
+        assertStatus(StringCondition.lengthBetween(4, 6).delegate(), "read", SATISFIED);
+        assertStatus(StringCondition.lengthBetween(4, 6).delegate(), "failed", SATISFIED);
+        assertStatus(StringCondition.lengthBetween(4, 6).delegate(), "hey", UNSATISFIED);
+        assertStatus(StringCondition.lengthBetween(4, 6).delegate(), "failure", UNSATISFIED);
+        assertStatus(StringCondition.nonBlank.delegate(), null, UNSATISFIED);
+
+        assertThrows(IllegalArgumentException.class, () -> StringCondition.length(-1));
+        assertThrows(IllegalArgumentException.class, () -> StringCondition.lengthBetween(-1, 1));
+        assertThrows(IllegalArgumentException.class, () -> StringCondition.lengthBetween(2, 1));
+        assertThrows(IllegalArgumentException.class, StringCondition::containsText);
+        assertThrows(NullPointerException.class, () -> StringCondition.containsText((String[]) null));
+        assertThrows(NullPointerException.class, () -> StringCondition.containsText("ready", null));
+    }
+
+    private static <S> void assertPreserving(PreservingCondition<? super S> condition, S matching, S mismatching) throws Exception {
+        assertStatus(condition.delegate(), matching, SATISFIED);
+        assertStatus(condition.delegate(), mismatching, UNSATISFIED);
+    }
+
+    private static <S> void assertStatus(Condition<? super S, ?> condition, S actual,
+            io.github.gromoff97.awium.conditioning.Evaluation.Status expected) throws Exception {
+        assertEquals(expected, condition.evaluate(actual).status());
     }
 
     private static class Parent {

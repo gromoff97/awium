@@ -21,6 +21,7 @@ import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondit
 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.hasElements;
 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCountAtLeast;
 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCountAtMost;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCountBetween;
 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCount;
 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCountGreaterThan;
 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCountLessThan;
@@ -121,7 +122,18 @@ class CollectionSizeConditionsTest {
     @Test
     void sizedFactoriesRejectNegativeBoundsAndAllowZero() {
         assertThrows(IllegalArgumentException.class, () -> elementCount(-1));
+        assertThrows(IllegalArgumentException.class, () -> elementCountBetween(-1, 1));
+        assertThrows(IllegalArgumentException.class, () -> elementCountBetween(2, 1));
         assertDoesNotThrow(() -> elementCount(0));
+        assertDoesNotThrow(() -> elementCountBetween(0, 0));
+    }
+
+    @Test
+    void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() throws Exception {
+        assertEquals(SATISFIED, elementCountBetween(2, 4).delegate().evaluate(List.of(1, 2)).status());
+        assertEquals(SATISFIED, elementCountBetween(2, 4).delegate().evaluate(List.of(1, 2, 3, 4)).status());
+        assertUnsatisfied(elementCountBetween(2, 4).delegate().evaluate(List.of(1)));
+        assertUnsatisfied(elementCountBetween(2, 4).delegate().evaluate(List.of(1, 2, 3, 4, 5)));
     }
 
     @Test

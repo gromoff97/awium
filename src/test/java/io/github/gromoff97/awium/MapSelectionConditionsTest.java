@@ -14,6 +14,7 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNSATISFI
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class MapSelectionConditionsTest {
 
@@ -71,10 +72,75 @@ class MapSelectionConditionsTest {
     }
 
     @Test
+    void quantifiersAndBulkConditionsCoverTheirUnsatisfiedBranches() throws Exception {
+        var actual = new LinkedHashMap<>(Map.of("a", 1, "b", 2));
+
+        assertEquals(UNSATISFIED, MapCondition.allEntries((String key, Integer value) -> value < 2)
+                .delegate().evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.anyEntry((String key, Integer value) -> value > 2)
+                .delegate().evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.noEntry((String key, Integer value) -> value == 2)
+                .delegate().evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer>allKeys(key -> key.equals("a"))
+                .delegate().evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer>anyKey(key -> key.equals("missing"))
+                .delegate().evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer>noKey(key -> key.equals("a"))
+                .delegate().evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer>allValues(value -> value < 2)
+                .delegate().evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer>anyValue(value -> value > 2)
+                .delegate().evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer>noValue(value -> value == 2)
+                .delegate().evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.containsKeys("a", "missing")
+                .delegate().evaluate(actual).status());
+        assertEquals(SATISFIED, MapCondition.doesNotContainKeys("missing")
+                .delegate().evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.doesNotContainKeys("a", "missing")
+                .delegate().evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.containsOnlyKeys("a")
+                .delegate().evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.containsValues(1, 3)
+                .delegate().evaluate(actual).status());
+        assertEquals(SATISFIED, MapCondition.doesNotContainValues(3)
+                .delegate().evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.doesNotContainValues(2, 3)
+                .delegate().evaluate(actual).status());
+    }
+
+    @Test
     void onlyReturnsTheValueOfTheSoleExpectedKey() {
         var actual = new LinkedHashMap<>(Map.of("only", 42));
         Integer value = await((MapSource<LinkedHashMap<String, Integer>>) () -> actual).until(MapCondition.onlyValueFor("only"));
 
         assertEquals(42, value);
+    }
+
+    @Test
+    void selectorsCoverMissingMultipleAndWrongEntries() throws Exception {
+        var actual = new LinkedHashMap<>(Map.of("first", 1, "second", 2));
+
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer>singleEntry((key, value) -> value > 2)
+                .evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer>singleEntry((key, value) -> value > 0)
+                .evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer>singleKey(key -> key.startsWith("x"))
+                .evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer>singleKey(key -> key.length() > 0)
+                .evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer>singleValue(value -> value > 2)
+                .evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer>singleValue(value -> value > 0)
+                .evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer>valueFor("missing").evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer, Integer>valueFor(
+                "first", ComparableCondition.greaterThan(1).delegate()).evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer>onlyValueFor("first").evaluate(actual).status());
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer>onlyValueFor("other")
+                .evaluate(Map.of("first", 1)).status());
+        assertEquals(UNSATISFIED, MapCondition.<String, Integer>onlyValueFor("first").evaluate(null).status());
+        assertThrows(NullPointerException.class, () -> MapCondition.singleEntry(null));
+        assertThrows(NullPointerException.class, () -> MapCondition.allEntries(null));
     }
 }

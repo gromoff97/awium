@@ -35,9 +35,9 @@ public final class CollectionCondition {
     public static final PreservingCondition<Collection<?>> hasElements = sized(0, size -> size > 0,
             "collection is not empty");
     public static final PreservingCondition<Collection<?>> containsNull = preserving(
-            "collection contains null", "collection did not contain null", actual -> actual.contains(null));
+            "collection contains null", "collection did not contain null", actual -> matchesAny(actual, value -> value == null));
     public static final PreservingCondition<Collection<?>> doesNotContainNull = preserving(
-            "collection does not contain null", "collection contained null", actual -> !actual.contains(null));
+            "collection does not contain null", "collection contained null", actual -> !matchesAny(actual, value -> value == null));
     public static final PreservingCondition<Collection<?>> containsOnlyNulls = preserving(
             "collection contains only nulls", "collection did not contain only nulls",
             actual -> !actual.isEmpty() && matchesAll(actual, value -> value == null));

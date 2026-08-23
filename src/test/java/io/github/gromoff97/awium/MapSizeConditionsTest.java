@@ -20,6 +20,7 @@ import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.sin
 import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.hasEntries;
 import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCountAtLeast;
 import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCountAtMost;
+import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCountBetween;
 import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCount;
 import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCountGreaterThan;
 import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCountLessThan;
@@ -119,7 +120,18 @@ class MapSizeConditionsTest {
     @Test
     void sizedFactoriesRejectNegativeBoundsAndAllowZero() {
         assertThrows(IllegalArgumentException.class, () -> entryCount(-1));
+        assertThrows(IllegalArgumentException.class, () -> entryCountBetween(-1, 1));
+        assertThrows(IllegalArgumentException.class, () -> entryCountBetween(2, 1));
         assertDoesNotThrow(() -> entryCount(0));
+        assertDoesNotThrow(() -> entryCountBetween(0, 0));
+    }
+
+    @Test
+    void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() throws Exception {
+        assertEquals(SATISFIED, entryCountBetween(2, 4).delegate().evaluate(mapWithSize(2)).status());
+        assertEquals(SATISFIED, entryCountBetween(2, 4).delegate().evaluate(mapWithSize(4)).status());
+        assertUnsatisfied(entryCountBetween(2, 4).delegate().evaluate(mapWithSize(1)));
+        assertUnsatisfied(entryCountBetween(2, 4).delegate().evaluate(mapWithSize(5)));
     }
 
     @Test
