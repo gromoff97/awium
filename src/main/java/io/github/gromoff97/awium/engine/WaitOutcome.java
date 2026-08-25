@@ -1,48 +1,22 @@
 package io.github.gromoff97.awium.engine;
 
-public sealed interface WaitOutcome<R> {
+import io.github.gromoff97.awium.await.AwaitAttempt;
 
-    Attempt<R> attempt();
+public sealed interface WaitOutcome<S, R> {
 
-    sealed interface Attempt<R> {
+    AwaitAttempt<S, R> attempt();
 
-        long number();
+    record Satisfied<S, R>(AwaitAttempt<S, R> attempt) implements WaitOutcome<S, R> {}
 
-        long completedNanos();
+    record Uncontrolled<S, R>(AwaitAttempt<S, R> attempt) implements WaitOutcome<S, R> {}
 
-        record Satisfied<R>(Object actual, R result, long number, long completedNanos) implements Attempt<R>, WaitOutcome<R> {
-            @Override
-            public Satisfied<R> attempt() {
-                return this;
-            }
-        }
+    record TimeoutBetweenObservations<S, R>(long startedNanos, long completedNanos,
+            AwaitAttempt<S, R> attempt) implements WaitOutcome<S, R> {}
 
-        record Unsatisfied<R>(Object actual, String mismatch, AssertionError assertionCause, long number, long completedNanos) implements Attempt<R> {}
+    record LateUnsatisfiedTimeout<S, R>(long startedNanos, AwaitAttempt<S, R> attempt) implements WaitOutcome<S, R> {}
 
-        sealed interface Uncontrolled<R> extends Attempt<R>, WaitOutcome<R> {
+    record LateSatisfiedTimeout<S, R>(long startedNanos, AwaitAttempt<S, R> attempt) implements WaitOutcome<S, R> {}
 
-            Origin origin();
-
-            Throwable cause();
-
-            @Override
-            default Uncontrolled<R> attempt() {
-                return this;
-            }
-
-            record BeforeObservation<R>(Origin origin, Throwable cause, long number, long completedNanos) implements Uncontrolled<R> {}
-
-            record AfterObservation<R>(Origin origin, Object actual, Throwable cause, long number, long completedNanos) implements Uncontrolled<R> {}
-        }
-
-        enum Origin { WAITING, SOURCE, CONDITION }
-    }
-
-    record TimeoutBetweenObservations<R>(long startedNanos, long completedNanos, Attempt.Unsatisfied<R> attempt) implements WaitOutcome<R> {}
-
-    record LateUnsatisfiedTimeout<R>(long startedNanos, Attempt.Unsatisfied<R> attempt) implements WaitOutcome<R> {}
-
-    record LateSatisfiedTimeout<R>(long startedNanos, Attempt.Satisfied<R> attempt) implements WaitOutcome<R> {}
-
-    record StabilityLoss<R>(long startedNanos, long acquiredNanos, Attempt.Unsatisfied<R> attempt) implements WaitOutcome<R> {}
+    record StabilityLoss<S, R>(long startedNanos, long acquiredNanos,
+            AwaitAttempt<S, R> attempt) implements WaitOutcome<S, R> {}
 }

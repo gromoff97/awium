@@ -1,21 +1,14 @@
 package io.github.gromoff97.awium.engine;
 
+import io.github.gromoff97.awium.await.AwaitAttempt;
 import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.sources.Source;
 
+import java.time.Duration;
 import java.util.function.LongSupplier;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNCONTROLLED;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Origin;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Origin.CONDITION;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Origin.SOURCE;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Satisfied;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled.AfterObservation;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled.BeforeObservation;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Unsatisfied;
 import static java.lang.Thread.currentThread;
 
 @SuppressWarnings("removal")
@@ -27,23 +20,29 @@ final class ObservationEvaluator {
         this.clock = clock;
     }
 
-    <S, R> Attempt<R> evaluate(Source<? extends S> source,
+    <S, R> EvaluatedAttempt<S, R> evaluate(Source<? extends S> source,
             CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator,
-            long number) {
+            AwaitAttempt.Phase phase, long number, long executionStarted,
+            long attemptStarted, long retrievalStarted) {
         S actual;
         try {
             actual = source.get();
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
         } catch (InterruptedException interrupted) {
-            return interruptedBefore(interrupted, number);
-        } catch (Throwable uncontrolled) {
-            return new BeforeObservation<>(SOURCE, uncontrolled, number, clock.getAsLong());
+            restoreInterrupt();
+            return beforeObservation(phase, number, executionStarted,
+                    attemptStarted, retrievalStarted, interrupted);
+        } catch (Throwable failure) {
+            return beforeObservation(phase, number, executionStarted,
+                    attemptStarted, retrievalStarted, failure);
         }
 
-        Uncontrolled<R> interrupted = interruptedAfter(SOURCE, number, actual);
-        if (interrupted != null) {
-            return interrupted;
+        long observed = clock.getAsLong();
+        if (interruptRaised()) {
+            var interruption = new InterruptedException("caller thread interrupt flag was set");
+            return afterSourceInterruption(phase, number, executionStarted,
+                    attemptStarted, retrievalStarted, observed, actual, interruption);
         }
 
         Evaluation<? extends R> evaluation;
@@ -51,60 +50,128 @@ final class ObservationEvaluator {
             evaluation = evaluator.apply(actual);
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
-        } catch (InterruptedException conditionInterrupted) {
-            return interruptedAfter(CONDITION, conditionInterrupted, number, actual);
-        } catch (Throwable uncontrolled) {
-            return new AfterObservation<>(CONDITION, actual, uncontrolled, number, clock.getAsLong());
+        } catch (InterruptedException interrupted) {
+            restoreInterrupt();
+            return afterConditionFailure(phase, number, executionStarted,
+                    attemptStarted, retrievalStarted, observed, actual, interrupted);
+        } catch (Throwable failure) {
+            return afterConditionFailure(phase, number, executionStarted,
+                    attemptStarted, retrievalStarted, observed, actual, failure);
         }
 
-        if (evaluation == null || evaluation.status() != UNCONTROLLED) {
-            interrupted = interruptedAfter(CONDITION, number, actual);
-            if (interrupted != null) {
-                return interrupted;
-            }
+        if ((evaluation == null || evaluation.status() != UNCONTROLLED)
+                && interruptRaised()) {
+            var interruption = new InterruptedException("caller thread interrupt flag was set");
+            return afterConditionFailure(phase, number, executionStarted,
+                    attemptStarted, retrievalStarted, observed, actual, interruption);
         }
 
         long completed = clock.getAsLong();
         if (evaluation == null) {
-            return new AfterObservation<>(CONDITION, actual,
-                    new NullPointerException("condition returned null Evaluation"), number, completed);
+            return evaluated(phase, number, completed,
+                    new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(
+                            afterObservation(executionStarted, attemptStarted,
+                                    retrievalStarted, observed, completed),
+                            actual, new NullPointerException("condition returned null Evaluation")));
         }
-        return switch (evaluation.status()) {
-            case SATISFIED -> new Satisfied<>(actual, evaluation.result(), number, completed);
-            case UNSATISFIED -> new Unsatisfied<>(actual, evaluation.mismatch(),
-                    evaluation.assertionCause(), number, completed);
-            case UNCONTROLLED -> {
-                Throwable cause = evaluation.uncontrolledCause();
-                if (cause instanceof Error fatal
-                        && (fatal instanceof VirtualMachineError || fatal instanceof ThreadDeath)) {
-                    throw fatal;
-                }
-                yield cause instanceof InterruptedException interruption
-                        ? interruptedAfter(CONDITION, interruption, number, actual)
-                        : new AfterObservation<>(CONDITION, actual, cause, number, completed);
-            }
+
+        AwaitAttempt.Outcome<S, R> outcome = switch (evaluation.status()) {
+            case SATISFIED -> new AwaitAttempt.Outcome.Satisfied<>(
+                    afterObservation(executionStarted, attemptStarted,
+                            retrievalStarted, observed, completed),
+                    actual, evaluation.result());
+            case UNSATISFIED -> evaluation.assertionCause() == null
+                    ? new AwaitAttempt.Outcome.Unsatisfied<>(
+                            afterObservation(executionStarted, attemptStarted,
+                                    retrievalStarted, observed, completed),
+                            actual, evaluation.mismatch())
+                    : new AwaitAttempt.Outcome.AssertionUnsatisfied<>(
+                            afterObservation(executionStarted, attemptStarted,
+                                    retrievalStarted, observed, completed),
+                            actual, evaluation.mismatch(), evaluation.assertionCause());
+            case UNCONTROLLED -> uncontrolled(executionStarted, attemptStarted,
+                    retrievalStarted, observed, actual, evaluation.uncontrolledCause(), completed);
         };
+        return evaluated(phase, number, completed, outcome);
     }
 
-    private <R> Uncontrolled<R> interruptedBefore(InterruptedException interrupted, long number) {
+    private <S, R> EvaluatedAttempt<S, R> beforeObservation(AwaitAttempt.Phase phase,
+            long number, long executionStarted, long attemptStarted,
+            long retrievalStarted, Throwable failure) {
+        long completed = clock.getAsLong();
+        return evaluated(phase, number, completed,
+                new AwaitAttempt.Outcome.SourceRetrievalFailed<>(
+                        new AwaitAttempt.Timing.BeforeObservation(
+                                offset(executionStarted, attemptStarted),
+                                offset(executionStarted, retrievalStarted),
+                                offset(executionStarted, completed)), failure));
+    }
+
+    private <S, R> EvaluatedAttempt<S, R> afterSourceInterruption(
+            AwaitAttempt.Phase phase, long number, long executionStarted,
+            long attemptStarted, long retrievalStarted, long observed,
+            S actual, InterruptedException interruption) {
         restoreInterrupt();
-        return new BeforeObservation<>(SOURCE, interrupted, number, clock.getAsLong());
+        long completed = clock.getAsLong();
+        return evaluated(phase, number, completed,
+                new AwaitAttempt.Outcome.SourceInterrupted<>(
+                        afterObservation(executionStarted, attemptStarted,
+                                retrievalStarted, observed, completed), actual, interruption));
     }
 
-    private <R> Uncontrolled<R> interruptedAfter(Origin origin, long number, Object actual) {
-        return currentThread().isInterrupted()
-                ? interruptedAfter(origin,
-                        new InterruptedException("caller thread interrupt flag was set"), number, actual)
-                : null;
+    private <S, R> EvaluatedAttempt<S, R> afterConditionFailure(
+            AwaitAttempt.Phase phase, long number, long executionStarted,
+            long attemptStarted, long retrievalStarted, long observed,
+            S actual, Throwable failure) {
+        long completed = clock.getAsLong();
+        return evaluated(phase, number, completed,
+                new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(
+                        afterObservation(executionStarted, attemptStarted,
+                                retrievalStarted, observed, completed), actual, failure));
     }
 
-    private <R> Uncontrolled<R> interruptedAfter(Origin origin,
-            InterruptedException interrupted, long number, Object actual) {
-        restoreInterrupt();
-        return new AfterObservation<>(origin, actual, interrupted, number, clock.getAsLong());
+    private static <S, R> AwaitAttempt.Outcome<S, R> uncontrolled(
+            long executionStarted, long attemptStarted, long retrievalStarted,
+            long observed, S actual, Throwable failure, long completed) {
+        if (failure instanceof Error fatal
+                && (fatal instanceof VirtualMachineError || fatal instanceof ThreadDeath)) {
+            throw fatal;
+        }
+        if (failure instanceof InterruptedException) {
+            restoreInterrupt();
+        }
+        return new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(
+                afterObservation(executionStarted, attemptStarted,
+                        retrievalStarted, observed, completed), actual, failure);
+    }
+
+    private static AwaitAttempt.Timing.AfterObservation afterObservation(
+            long executionStarted, long attemptStarted, long retrievalStarted,
+            long observed, long completed) {
+        return new AwaitAttempt.Timing.AfterObservation(
+                offset(executionStarted, attemptStarted),
+                offset(executionStarted, retrievalStarted),
+                offset(executionStarted, observed),
+                offset(executionStarted, completed));
+    }
+
+    private static <S, R> EvaluatedAttempt<S, R> evaluated(
+            AwaitAttempt.Phase phase, long number, long completed,
+            AwaitAttempt.Outcome<S, R> outcome) {
+        return new EvaluatedAttempt<>(new AwaitAttempt<>(number, phase, outcome), completed);
+    }
+
+    private static Duration offset(long executionStarted, long stageNanos) {
+        return Duration.ofNanos(stageNanos - executionStarted);
     }
 
     private static void restoreInterrupt() {
         currentThread().interrupt();
     }
+
+    private static boolean interruptRaised() {
+        return currentThread().isInterrupted();
+    }
+
+    record EvaluatedAttempt<S, R>(AwaitAttempt<S, R> attempt, long completedNanos) {}
 }

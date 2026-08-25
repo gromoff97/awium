@@ -18,6 +18,8 @@ public record AwaitAttempt<S, R>(long number, Phase phase, Outcome<S, R> outcome
 
     public sealed interface Outcome<S, R> {
 
+        Timing timing();
+
         record Satisfied<S, R>(Timing.AfterObservation timing, S observed, R result) implements Outcome<S, R> {
 
             public Satisfied {
@@ -79,6 +81,10 @@ public record AwaitAttempt<S, R>(long number, Phase phase, Outcome<S, R> outcome
     }
 
     public sealed interface Timing {
+
+        Duration startOffset();
+
+        Duration completionOffset();
 
         record BeforeRetrieval(Duration startOffset, Duration completionOffset) implements Timing {
 

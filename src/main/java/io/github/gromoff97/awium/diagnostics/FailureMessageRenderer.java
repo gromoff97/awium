@@ -1,21 +1,13 @@
 package io.github.gromoff97.awium.diagnostics;
 
+import io.github.gromoff97.awium.await.AwaitAttempt;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
 
-import java.util.Locale;
+import java.time.Duration;
 import java.util.function.Supplier;
 
 import static io.github.gromoff97.awium.engine.WaitConfiguration.duration;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Satisfied;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled.AfterObservation;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled.BeforeObservation;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Unsatisfied;
-import static io.github.gromoff97.awium.engine.WaitOutcome.LateSatisfiedTimeout;
-import static io.github.gromoff97.awium.engine.WaitOutcome.LateUnsatisfiedTimeout;
-import static io.github.gromoff97.awium.engine.WaitOutcome.StabilityLoss;
-import static io.github.gromoff97.awium.engine.WaitOutcome.TimeoutBetweenObservations;
 import static java.util.Arrays.deepToString;
 import static java.util.Objects.requireNonNull;
 
@@ -26,9 +18,11 @@ final class FailureMessageRenderer {
         throw new AssertionError("Utility class");
     }
 
-    static Result render(WaitOutcome<?> outcome, Supplier<String> description,
-            String explanation, WaitConfiguration configuration, Throwable outcomeCause) {
-        Context context = new Context(outcome, description, explanation, configuration, outcomeCause);
+    static Result render(WaitOutcome<?, ?> outcome, Supplier<String> description,
+            String explanation, WaitConfiguration configuration,
+            Throwable outcomeCause) {
+        Context context = new Context(outcome, description, explanation,
+                configuration, outcomeCause);
         try {
             return new Result(format(context), null);
         } catch (VirtualMachineError | ThreadDeath fatal) {
@@ -49,59 +43,71 @@ final class FailureMessageRenderer {
 
     private static String format(Context context) {
         return switch (context.outcome) {
-            case TimeoutBetweenObservations<?> value -> message(context, value.attempt(),
-                    "Acquisition deadline elapsed before the next attempt");
-            case LateUnsatisfiedTimeout<?> value -> message(context, value.attempt(),
-                    "Condition remained unsatisfied at or after the acquisition deadline");
-            case LateSatisfiedTimeout<?> value -> message(context, value.attempt(),
-                    "Condition became satisfied at or after the acquisition deadline");
-            case StabilityLoss<?> value -> message(context, value.attempt(),
-                    "Condition did not remain stable for the required duration");
-            case Uncontrolled<?> value -> message(context, value, uncontrolledHeading(value));
-            case Satisfied<?> ignored ->
-                    throw new IllegalArgumentException("successful outcomes have no failure diagnostics");
+            case WaitOutcome.TimeoutBetweenObservations<?, ?> value ->
+                    message(context, value.attempt(),
+                            "Acquisition deadline elapsed before the next attempt");
+            case WaitOutcome.LateUnsatisfiedTimeout<?, ?> value ->
+                    message(context, value.attempt(),
+                            "Condition remained unsatisfied at or after the acquisition deadline");
+            case WaitOutcome.LateSatisfiedTimeout<?, ?> value ->
+                    message(context, value.attempt(),
+                            "Condition became satisfied at or after the acquisition deadline");
+            case WaitOutcome.StabilityLoss<?, ?> value ->
+                    message(context, value.attempt(),
+                            "Condition did not remain stable for the required duration");
+            case WaitOutcome.Uncontrolled<?, ?> value ->
+                    message(context, value.attempt(), uncontrolledHeading(value.attempt()));
+            case WaitOutcome.Satisfied<?, ?> ignored ->
+                    throw new IllegalArgumentException(
+                            "successful outcomes have no failure diagnostics");
         };
     }
 
     private static String emergency(Context context, Throwable failure) {
         StringBuilder out = heading("Failure diagnostics could not be formatted");
-        condition(out, context.description == null ? "condition description unavailable" : context.description,
+        condition(out, context.description == null
+                ? "condition description unavailable" : context.description,
                 context.explanation);
-        WaitOutcome.Attempt<?> attempt = context.outcome.attempt();
-        String actual = null;
-        if (!(attempt instanceof BeforeObservation<?>)) {
-            actual = context.actual == null ? "<value unavailable: diagnostics failed>" : context.actual;
-        }
-        String mismatch = attempt instanceof Unsatisfied<?> value ? value.mismatch() : null;
-        attempt(out, attempt.number(), "diagnostics", actual, mismatch);
+        AwaitAttempt<?, ?> attempt = context.outcome.attempt();
+        String actual = hasObservation(attempt)
+                ? context.actual == null
+                        ? "<value unavailable: diagnostics failed>" : context.actual
+                : null;
+        attempt(out, attempt.number(), "diagnostics", actual, mismatch(attempt));
         timing(out, context);
         cause(out, emergencyDiagnostic(failure));
         return finish(out);
     }
 
-    private static String uncontrolledHeading(Uncontrolled<?> attempt) {
-        return attempt.cause() instanceof InterruptedException
-                ? "Caller thread was interrupted"
-                : switch (attempt.origin()) {
-            case SOURCE -> "Source retrieval failed";
-            case CONDITION -> "Condition evaluation failed";
-            case WAITING -> "Waiting before the next attempt failed";
+    private static String uncontrolledHeading(AwaitAttempt<?, ?> attempt) {
+        Throwable failure = failure(attempt);
+        if (failure instanceof InterruptedException) {
+            return "Caller thread was interrupted";
+        }
+        return switch (attempt.outcome()) {
+            case AwaitAttempt.Outcome.WaitingFailed<?, ?> ignored ->
+                    "Waiting before the next attempt failed";
+            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> ignored ->
+                    "Source retrieval failed";
+            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> ignored ->
+                    "Source retrieval failed";
+            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> ignored ->
+                    "Condition evaluation failed";
+            default -> throw new IllegalArgumentException(
+                    "attempt is not uncontrolled");
         };
     }
 
-    private static String message(Context context, WaitOutcome.Attempt<?> attempt, String title) {
-        ThrowableDiagnostic assertionDiagnostic = attempt instanceof Unsatisfied<?> unsatisfied
-                && unsatisfied.assertionCause() != null
-                ? context.causeDiagnostic() : null;
+    private static String message(Context context, AwaitAttempt<?, ?> attempt,
+            String title) {
+        ThrowableDiagnostic assertionDiagnostic = assertion(attempt) == null
+                ? null : context.causeDiagnostic();
         StringBuilder out = heading(title);
         condition(out, context.conditionDescription(), context.explanation);
-        String actual = attempt instanceof BeforeObservation<?> ? null : context.actualValue();
-        String origin = attempt instanceof Uncontrolled<?> uncontrolled
-                ? uncontrolled.origin().name().toLowerCase(Locale.ROOT) : null;
-        String mismatch = attempt instanceof Unsatisfied<?> unsatisfied ? unsatisfied.mismatch() : null;
-        attempt(out, attempt.number(), origin, actual, mismatch);
+        String actual = hasObservation(attempt) ? context.actualValue() : null;
+        attempt(out, attempt.number(), origin(attempt), actual, mismatch(attempt));
         timing(out, context);
-        if (attempt instanceof Uncontrolled<?>) {
+        if (failure(attempt) != null) {
             cause(out, context.causeDiagnostic());
         } else if (assertionDiagnostic != null) {
             cause(out, assertionDiagnostic);
@@ -111,31 +117,40 @@ final class FailureMessageRenderer {
 
     private static void timing(StringBuilder out, Context context) {
         out.append('\n').append("Timing:\n");
-        field(out, "Acquisition timeout", duration(context.configuration.upToNanos()));
+        field(out, "Acquisition timeout",
+                duration(context.configuration.upToNanos()));
         switch (context.outcome) {
-            case TimeoutBetweenObservations<?> outcome -> {
+            case WaitOutcome.TimeoutBetweenObservations<?, ?> outcome -> {
                 field(out, "Last attempt completed after",
-                        duration(outcome.attempt().completedNanos() - outcome.startedNanos()));
+                        duration(completionOffset(outcome.attempt()).toNanos()));
                 elapsed(out, outcome.startedNanos(), outcome.completedNanos());
             }
-            case LateUnsatisfiedTimeout<?> outcome ->
-                    elapsed(out, outcome.startedNanos(), outcome.attempt().completedNanos());
-            case LateSatisfiedTimeout<?> outcome ->
-                    elapsed(out, outcome.startedNanos(), outcome.attempt().completedNanos());
-            case StabilityLoss<?> outcome -> {
-                field(out, "Acquired after", duration(outcome.acquiredNanos() - outcome.startedNanos()));
-                field(out, "Required stability", duration(context.configuration.stableForNanos()));
+            case WaitOutcome.LateUnsatisfiedTimeout<?, ?> outcome ->
+                    field(out, "Elapsed",
+                            duration(completionOffset(outcome.attempt()).toNanos()));
+            case WaitOutcome.LateSatisfiedTimeout<?, ?> outcome ->
+                    field(out, "Elapsed",
+                            duration(completionOffset(outcome.attempt()).toNanos()));
+            case WaitOutcome.StabilityLoss<?, ?> outcome -> {
+                long acquiredAfter = outcome.acquiredNanos() - outcome.startedNanos();
+                field(out, "Acquired after", duration(acquiredAfter));
+                field(out, "Required stability",
+                        duration(context.configuration.stableForNanos()));
                 field(out, "Failure detected after",
-                        duration(outcome.attempt().completedNanos() - outcome.acquiredNanos()));
-                elapsed(out, outcome.startedNanos(), outcome.attempt().completedNanos());
+                        duration(completionOffset(outcome.attempt()).toNanos()
+                                - acquiredAfter));
+                field(out, "Elapsed",
+                        duration(completionOffset(outcome.attempt()).toNanos()));
             }
-            case Uncontrolled<?> ignored -> {}
-            case Satisfied<?> ignored -> {}
+            case WaitOutcome.Uncontrolled<?, ?> ignored -> {}
+            case WaitOutcome.Satisfied<?, ?> ignored -> {}
         }
-        field(out, "Polling interval", duration(context.configuration.everyNanos()));
+        field(out, "Polling interval",
+                duration(context.configuration.everyNanos()));
     }
 
-    private static void elapsed(StringBuilder out, long startedNanos, long completedNanos) {
+    private static void elapsed(StringBuilder out, long startedNanos,
+            long completedNanos) {
         field(out, "Elapsed", duration(completedNanos - startedNanos));
     }
 
@@ -162,7 +177,8 @@ final class FailureMessageRenderer {
         }
     }
 
-    private static void condition(StringBuilder out, String expectation, String importance) {
+    private static void condition(StringBuilder out, String expectation,
+            String importance) {
         out.append("Condition:\n");
         field(out, "Expectation", expectation);
         if (importance != null) {
@@ -173,7 +189,8 @@ final class FailureMessageRenderer {
     private static void field(StringBuilder out, String label, String value) {
         String normalized = value.replace("\r\n", "\n").replace('\r', '\n');
         if (!normalized.contains("\n")) {
-            out.append("    ").append(label).append(": ").append(normalized).append('\n');
+            out.append("    ").append(label).append(": ")
+                    .append(normalized).append('\n');
             return;
         }
         out.append("    ").append(label).append(":\n");
@@ -198,7 +215,8 @@ final class FailureMessageRenderer {
             String array = deepToString(new Object[]{value});
             return array.substring(1, array.length() - 1);
         }
-        return requireNonNull(String.valueOf(value), "actual toString() must not return null");
+        return requireNonNull(String.valueOf(value),
+                "actual toString() must not return null");
     }
 
     private static String typeName(Throwable failure) {
@@ -208,7 +226,8 @@ final class FailureMessageRenderer {
 
     private static ThrowableDiagnostic throwableDiagnostic(Throwable failure) {
         String message = failure.getMessage();
-        return new ThrowableDiagnostic(typeName(failure), message == null || message.isBlank() ? null : message);
+        return new ThrowableDiagnostic(typeName(failure),
+                message == null || message.isBlank() ? null : message);
     }
 
     private static ThrowableDiagnostic emergencyDiagnostic(Throwable failure) {
@@ -227,11 +246,83 @@ final class FailureMessageRenderer {
         }
     }
 
+    private static boolean hasObservation(AwaitAttempt<?, ?> attempt) {
+        return switch (attempt.outcome()) {
+            case AwaitAttempt.Outcome.Satisfied<?, ?> ignored -> true;
+            case AwaitAttempt.Outcome.Unsatisfied<?, ?> ignored -> true;
+            case AwaitAttempt.Outcome.AssertionUnsatisfied<?, ?> ignored -> true;
+            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> ignored -> true;
+            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> ignored -> true;
+            case AwaitAttempt.Outcome.WaitingFailed<?, ?> ignored -> false;
+            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> ignored -> false;
+        };
+    }
+
+    private static Object observed(AwaitAttempt<?, ?> attempt) {
+        return switch (attempt.outcome()) {
+            case AwaitAttempt.Outcome.Satisfied<?, ?> value -> value.observed();
+            case AwaitAttempt.Outcome.Unsatisfied<?, ?> value -> value.observed();
+            case AwaitAttempt.Outcome.AssertionUnsatisfied<?, ?> value -> value.observed();
+            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> value -> value.observed();
+            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> value -> value.observed();
+            case AwaitAttempt.Outcome.WaitingFailed<?, ?> ignored ->
+                    throw new IllegalArgumentException("attempt has no observed actual");
+            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> ignored ->
+                    throw new IllegalArgumentException("attempt has no observed actual");
+        };
+    }
+
+    private static String mismatch(AwaitAttempt<?, ?> attempt) {
+        return switch (attempt.outcome()) {
+            case AwaitAttempt.Outcome.Unsatisfied<?, ?> value -> value.mismatch();
+            case AwaitAttempt.Outcome.AssertionUnsatisfied<?, ?> value -> value.mismatch();
+            default -> null;
+        };
+    }
+
+    private static AssertionError assertion(AwaitAttempt<?, ?> attempt) {
+        return attempt.outcome()
+                instanceof AwaitAttempt.Outcome.AssertionUnsatisfied<?, ?> value
+                ? value.assertion() : null;
+    }
+
+    private static Throwable failure(AwaitAttempt<?, ?> attempt) {
+        return switch (attempt.outcome()) {
+            case AwaitAttempt.Outcome.WaitingFailed<?, ?> value -> value.failure();
+            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> value -> value.failure();
+            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> value -> value.failure();
+            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> value -> value.failure();
+            default -> null;
+        };
+    }
+
+    private static String origin(AwaitAttempt<?, ?> attempt) {
+        return switch (attempt.outcome()) {
+            case AwaitAttempt.Outcome.WaitingFailed<?, ?> ignored -> "waiting";
+            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> ignored -> "source";
+            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> ignored -> "source";
+            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> ignored -> "condition";
+            default -> null;
+        };
+    }
+
+    private static Duration completionOffset(AwaitAttempt<?, ?> attempt) {
+        return switch (attempt.outcome()) {
+            case AwaitAttempt.Outcome.Satisfied<?, ?> value -> value.timing().completionOffset();
+            case AwaitAttempt.Outcome.Unsatisfied<?, ?> value -> value.timing().completionOffset();
+            case AwaitAttempt.Outcome.AssertionUnsatisfied<?, ?> value -> value.timing().completionOffset();
+            case AwaitAttempt.Outcome.WaitingFailed<?, ?> value -> value.timing().completionOffset();
+            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> value -> value.timing().completionOffset();
+            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> value -> value.timing().completionOffset();
+            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> value -> value.timing().completionOffset();
+        };
+    }
+
     record Result(String message, Throwable failure) {}
 
     private static final class Context {
 
-        private final WaitOutcome<?> outcome;
+        private final WaitOutcome<?, ?> outcome;
         private final Supplier<String> descriptionSupplier;
         private final String explanation;
         private final WaitConfiguration configuration;
@@ -240,12 +331,15 @@ final class FailureMessageRenderer {
         private String description;
         private String actual;
 
-        private Context(WaitOutcome<?> outcome, Supplier<String> description,
-                String explanation, WaitConfiguration configuration, Throwable outcomeCause) {
+        private Context(WaitOutcome<?, ?> outcome,
+                Supplier<String> description, String explanation,
+                WaitConfiguration configuration, Throwable outcomeCause) {
             this.outcome = requireNonNull(outcome, "outcome must not be null");
-            this.descriptionSupplier = requireNonNull(description, "condition description must not be null");
+            this.descriptionSupplier = requireNonNull(description,
+                    "condition description must not be null");
             this.explanation = explanation;
-            this.configuration = requireNonNull(configuration, "configuration must not be null");
+            this.configuration = requireNonNull(configuration,
+                    "configuration must not be null");
             this.outcomeCause = outcomeCause;
         }
 
@@ -253,19 +347,14 @@ final class FailureMessageRenderer {
             String rendered = requireNonNull(descriptionSupplier.get(),
                     "condition description must not be null");
             if (rendered.isBlank()) {
-                throw new IllegalArgumentException("condition description must not be blank");
+                throw new IllegalArgumentException(
+                        "condition description must not be blank");
             }
             return description = rendered;
         }
 
         private String actualValue() {
-            return actual = renderValue(switch (outcome.attempt()) {
-                case Satisfied<?> value -> value.actual();
-                case Unsatisfied<?> value -> value.actual();
-                case AfterObservation<?> value -> value.actual();
-                case BeforeObservation<?> ignored ->
-                        throw new IllegalArgumentException("attempt has no observed actual");
-            });
+            return actual = renderValue(observed(outcome.attempt()));
         }
 
         private ThrowableDiagnostic causeDiagnostic() {

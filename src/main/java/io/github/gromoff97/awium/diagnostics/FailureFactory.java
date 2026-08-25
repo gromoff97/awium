@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium.diagnostics;
 
+import io.github.gromoff97.awium.await.AwaitAttempt;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitStabilizationException;
@@ -11,10 +12,6 @@ import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitUnha
 
 import java.util.function.Supplier;
 
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Satisfied;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Uncontrolled;
-import static io.github.gromoff97.awium.engine.WaitOutcome.Attempt.Unsatisfied;
-import static io.github.gromoff97.awium.engine.WaitOutcome.StabilityLoss;
 import static java.lang.Thread.currentThread;
 
 @SuppressWarnings("removal")
@@ -24,13 +21,14 @@ public final class FailureFactory {
         throw new AssertionError("Utility class");
     }
 
-    public static <R> R complete(WaitOutcome<R> outcome, Supplier<String> description,
-            String explanation, WaitConfiguration configuration) {
-        if (outcome instanceof Satisfied<R> success) {
-            return success.result();
+    public static <S, R> R complete(WaitOutcome<S, R> outcome,
+            Supplier<String> description, String explanation,
+            WaitConfiguration configuration) {
+        if (outcome instanceof WaitOutcome.Satisfied<S, R> success) {
+            return satisfied(success.attempt()).result();
         }
 
-        Throwable cause = terminalCause(outcome);
+        Throwable cause = terminalCause(outcome.attempt());
         if (cause instanceof Error fatal
                 && (fatal instanceof VirtualMachineError || fatal instanceof ThreadDeath)) {
             throw fatal;
@@ -57,14 +55,14 @@ public final class FailureFactory {
         }
 
         String message = rendered.message();
-        if (outcome instanceof StabilityLoss<R>) {
+        if (outcome instanceof WaitOutcome.StabilityLoss<S, R>) {
             throw new AwaitStabilizationException(message, cause);
         }
-        if (outcome instanceof Uncontrolled<R> uncontrolled) {
+        if (outcome instanceof WaitOutcome.Uncontrolled<S, R>) {
             if (cause instanceof InterruptedException) {
                 throw new AwaitInterruptedException(message, cause);
             }
-            throw switch (uncontrolled.origin()) {
+            throw switch (origin(outcome.attempt())) {
                 case SOURCE -> new AwaitSourceRetrievalException(message, cause);
                 case CONDITION -> new AwaitConditionEvaluationException(message, cause);
                 case WAITING -> new AwaitUnhandledException(message, cause);
@@ -73,12 +71,32 @@ public final class FailureFactory {
         throw new AwaitTimeoutException(message, cause);
     }
 
-    private static Throwable terminalCause(WaitOutcome<?> outcome) {
-        return switch (outcome.attempt()) {
-            case Satisfied<?> ignored -> null;
-            case Unsatisfied<?> attempt -> attempt.assertionCause();
-            case Uncontrolled<?> attempt -> attempt.cause();
+    private static Throwable terminalCause(AwaitAttempt<?, ?> attempt) {
+        return switch (attempt.outcome()) {
+            case AwaitAttempt.Outcome.Satisfied<?, ?> ignored -> null;
+            case AwaitAttempt.Outcome.Unsatisfied<?, ?> ignored -> null;
+            case AwaitAttempt.Outcome.AssertionUnsatisfied<?, ?> value -> value.assertion();
+            case AwaitAttempt.Outcome.WaitingFailed<?, ?> value -> value.failure();
+            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> value -> value.failure();
+            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> value -> value.failure();
+            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> value -> value.failure();
         };
+    }
+
+    private static Origin origin(AwaitAttempt<?, ?> attempt) {
+        return switch (attempt.outcome()) {
+            case AwaitAttempt.Outcome.WaitingFailed<?, ?> ignored -> Origin.WAITING;
+            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> ignored -> Origin.SOURCE;
+            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> ignored -> Origin.SOURCE;
+            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> ignored -> Origin.CONDITION;
+            default -> throw new IllegalArgumentException("attempt is not uncontrolled");
+        };
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <S, R> AwaitAttempt.Outcome.Satisfied<S, R> satisfied(
+            AwaitAttempt<S, R> attempt) {
+        return (AwaitAttempt.Outcome.Satisfied<S, R>) attempt.outcome();
     }
 
     private static void addSuppressed(Throwable failure, Throwable cause) {
@@ -86,4 +104,6 @@ public final class FailureFactory {
             failure.addSuppressed(cause);
         }
     }
+
+    private enum Origin { WAITING, SOURCE, CONDITION }
 }
