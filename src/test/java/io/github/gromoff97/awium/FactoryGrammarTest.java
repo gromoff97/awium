@@ -6,8 +6,8 @@ import static java.time.Duration.*;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PresentCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 import io.github.gromoff97.awium.sources.Source.MapSource;
@@ -62,18 +62,19 @@ class FactoryGrammarTest {
                 (Condition.ExplainedCondition<String, String>) null));
 
         var optional = await((OptionalSource<String>) Optional::empty).every(ofSeconds(20));
-        assertNull("condition", () -> optional.until((PresentCondition) null));
-        assertNull("condition", () -> optional.until((PresentCondition.ExplainedCondition) null));
+        assertNull("condition", () -> optional.until((SelectedCondition<Optional<?>>) null));
+        assertNull("condition", () -> optional.until(
+                (SelectedCondition.ExplainedCondition<Optional<?>>) null));
 
         var collection = await((CollectionSource<Collection<String>>) List::of).every(ofSeconds(20));
-        assertNull("condition", () -> collection.until((CollectionCondition.SingleElement) null));
+        assertNull("condition", () -> collection.until((SelectedCondition<Collection<?>>) null));
         assertNull("condition", () -> collection.until(
-                (CollectionCondition.SingleElement.Explained) null));
+                (SelectedCondition.ExplainedCondition<Collection<?>>) null));
 
         var map = await((MapSource<Map<String, String>>) Map::of).every(ofSeconds(20));
-        assertNull("condition", () -> map.until((MapCondition.SingleEntry) null));
+        assertNull("condition", () -> map.until((SelectedCondition<Map<?, ?>>) null));
         assertNull("condition", () -> map.until(
-                (MapCondition.SingleEntry.Explained) null));
+                (SelectedCondition.ExplainedCondition<Map<?, ?>>) null));
     }
 
     private static void assertNull(String context, Executable action) {

@@ -41,7 +41,7 @@ import org.junit.jupiter.api.Test;
 class MapSizeConditionsTest {
 
     @Test
-    void hasSingleEntryReturnsTheTypedEntry() {
+    void hasSingleEntryReturnsTheTypedEntry() throws Exception {
         MapSource<LinkedHashMap<String, Integer>> source = () -> {
             var map = new LinkedHashMap<String, Integer>();
             map.put("key", 42);
@@ -55,11 +55,11 @@ class MapSizeConditionsTest {
         assertEquals("key", selected.getKey());
         assertEquals(42, selected.getValue());
         assertEquals(selected, explained);
-        assertEquals("map has a single entry", singleEntry.description());
+        assertEquals("map has a single entry", singleEntry.delegate().description());
         assertEquals("map size was 0",
-                singleEntry.evaluate(Map.of()).mismatch());
+                singleEntry.delegate().evaluate(Map.of()).mismatch());
         assertEquals("map size was 2",
-                singleEntry.evaluate(Map.of("first", 1, "second", 2)).mismatch());
+                singleEntry.delegate().evaluate(Map.of("first", 1, "second", 2)).mismatch());
     }
 
     @Test

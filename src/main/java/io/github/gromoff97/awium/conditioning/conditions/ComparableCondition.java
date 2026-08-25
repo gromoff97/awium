@@ -3,9 +3,7 @@ package io.github.gromoff97.awium.conditioning.conditions;
 import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 
-import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preservingNonNull;
 import static java.util.Objects.requireNonNull;
 
 public final class ComparableCondition {
@@ -53,9 +51,7 @@ public final class ComparableCondition {
 
     private static <T> PreservingCondition<T> preserving(String description, String mismatch,
             CheckedPredicate<? super T> matches) {
-        return new PreservingCondition<>(condition(description, actual -> actual == null
-                ? unsatisfied("value was null")
-                : matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch)));
+        return preservingNonNull("value", description, mismatch, matches);
     }
 
     private static <T extends Comparable<? super T>> void validateRange(T lowerBound, T upperBound) {

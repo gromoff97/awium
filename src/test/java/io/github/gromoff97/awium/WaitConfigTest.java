@@ -131,7 +131,8 @@ class WaitConfigTest {
                 "polling interval (1 minute 30 seconds) must be shorter than acquisition timeout (1 minute 30 seconds)",
                 conflictMessage(ofSeconds(90).toNanos()));
         assertEquals(
-                "polling interval (1 second 1 millisecond 1 microsecond 1 nanosecond) must be shorter than acquisition timeout (1 second 1 millisecond 1 microsecond 1 nanosecond)",
+                "polling interval (1 second 1 millisecond 1 microsecond 1 nanosecond) must be shorter than "
+                        + "acquisition timeout (1 second 1 millisecond 1 microsecond 1 nanosecond)",
                 conflictMessage(1_001_001_001));
     }
 

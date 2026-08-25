@@ -5,7 +5,6 @@ import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 
 import java.util.Locale;
-import java.util.Optional;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
@@ -116,21 +115,21 @@ public abstract class Condition<S, R> {
         }
     }
 
-    public record PresentCondition(Condition<Optional<?>, Object> delegate) {
+    public record SelectedCondition<S>(Condition<S, ?> delegate) {
 
-        public PresentCondition {
+        public SelectedCondition {
             requireNonNull(delegate, "condition must not be null");
         }
 
-        public ExplainedCondition because(String explanation) {
-            return new ExplainedCondition(this, explanation);
+        public ExplainedCondition<S> because(String explanation) {
+            return new ExplainedCondition<>(this, explanation);
         }
 
-        public ExplainedCondition because(String format, Object... arguments) {
-            return new ExplainedCondition(this, formattedExplanation(format, arguments));
+        public ExplainedCondition<S> because(String format, Object... arguments) {
+            return new ExplainedCondition<>(this, formattedExplanation(format, arguments));
         }
 
-        public record ExplainedCondition(PresentCondition delegate, String explanation) {
+        public record ExplainedCondition<S>(SelectedCondition<S> delegate, String explanation) {
 
             public ExplainedCondition {
                 requireNonNull(delegate, "condition must not be null");

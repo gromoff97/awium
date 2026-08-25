@@ -6,9 +6,8 @@ import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCon
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preservingNonNull;
+import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.validateRange;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
@@ -131,9 +130,7 @@ public final class StringCondition {
     }
 
     public static PreservingCondition<String> lengthBetween(int lowerBound, int upperBound) {
-        if (lowerBound < 0 || upperBound < lowerBound) {
-            throw new IllegalArgumentException("length range must be non-negative and ordered");
-        }
+        validateRange(lowerBound, upperBound, "length");
         return matching("string length is between " + lowerBound + " and " + upperBound,
                 "string length was outside " + lowerBound + ".." + upperBound,
                 actual -> actual.length() >= lowerBound && actual.length() <= upperBound);
@@ -150,16 +147,11 @@ public final class StringCondition {
 
     private static PreservingCondition<String> matching(String description, String mismatch,
             CheckedPredicate<String> matches) {
-        return new PreservingCondition<>(condition(description, actual -> actual == null
-                ? unsatisfied("string was null")
-                : matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch)));
+        return preservingNonNull("string", description, mismatch, matches);
     }
 
     private static String[] nonEmpty(String[] values, String name) {
-        requireNonNull(values, name + " must not be null");
-        if (values.length == 0) {
-            throw new IllegalArgumentException(name + " must not be empty");
-        }
+        ConditionSupport.nonEmpty(values, name);
         for (int index = 0; index < values.length; index++) {
             requireNonNull(values[index], name + " must not contain null");
         }

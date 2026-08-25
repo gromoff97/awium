@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
@@ -15,10 +16,7 @@ import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
-import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.uncontrolled;
-import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.util.Objects.requireNonNull;
 
@@ -80,22 +78,22 @@ abstract class AbstractAwait<S, A> {
         return FailureFactory.complete(engine.waitFor(source, evaluator), description, explanation, engine.configuration());
     }
 
-    protected static <R> Evaluation<R> replaceSatisfiedResult(Evaluation<?> evaluation, R satisfiedResult) {
-        if (evaluation == null) {
-            return null;
-        }
-        return switch (evaluation.status()) {
-            case SATISFIED -> satisfied(satisfiedResult);
-            case UNSATISFIED -> evaluation.assertionCause() == null
-                    ? unsatisfied(evaluation.mismatch())
-                    : assertionUnsatisfied(evaluation.mismatch(), evaluation.assertionCause());
-            case UNCONTROLLED -> uncontrolled(evaluation.uncontrolledCause());
-        };
+    protected final <R> R completeSelected(SelectedCondition<? super S> condition,
+            CheckedFunction<? super S, ? extends R> selector, String explanation) {
+        return completeSelected(condition.delegate(), selector, explanation);
+    }
+
+    private <R> R completeSelected(Condition<? super S, ?> condition,
+            CheckedFunction<? super S, ? extends R> selector, String explanation) {
+        return complete(actual -> {
+            Evaluation<?> evaluation = condition.evaluate(actual);
+            return evaluation == null ? null : evaluation.continueIfSatisfied(
+                    ignored -> satisfied(selector.apply(actual)));
+        }, condition::description, explanation);
     }
 
     private S complete(PreservingCondition<? super S> condition, String explanation) {
-        Condition<? super S, ?> delegate = condition.delegate();
-        return complete(actual -> replaceSatisfiedResult(delegate.evaluate(actual), actual), delegate::description, explanation);
+        return completeSelected(condition.delegate(), actual -> actual, explanation);
     }
 
     private <R> R complete(Condition<? super S, ? extends R> condition, String explanation) {

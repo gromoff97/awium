@@ -4,15 +4,18 @@ import io.github.gromoff97.awium.conditioning.CheckedBiPredicate;
 import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
 
 import java.util.List;
 import java.util.Map;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionResults.copy;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionResults.failure;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionResults.preserve;
+import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.nonEmpty;
+import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.nonNull;
+import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preserve;
+import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preservingNonNull;
+import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.validateRange;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.containsAll;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.equal;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.exactly;
@@ -20,15 +23,18 @@ import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.ma
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.sameDistinctElements;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.formattedExplanation;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.literalExplanation;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("varargs")
 public final class MapCondition {
 
-    public static final SingleEntry singleEntry = new SingleEntry();
+    public static final SelectedCondition<Map<?, ?>> singleEntry = new SelectedCondition<>(condition("map has a single entry", actual -> {
+        if (actual == null) {
+            return unsatisfied("map was null");
+        }
+        return actual.size() == 1 ? satisfied(actual) : unsatisfied("map size was " + actual.size());
+    }));
     public static final PreservingCondition<Map<?, ?>> empty = sized(0, size -> size == 0,
             "map is empty");
     public static final PreservingCondition<Map<?, ?>> nonEmpty = sized(0, size -> size > 0,
@@ -69,7 +75,7 @@ public final class MapCondition {
     }
 
     public static PreservingCondition<Map<?, ?>> sizeBetween(int lowerBound, int upperBound) {
-        validateRange(lowerBound, upperBound);
+        validateRange(lowerBound, upperBound, "size");
         return sized(lowerBound, actual -> actual >= lowerBound && actual <= upperBound,
                 "map size is between " + lowerBound + " and " + upperBound);
     }
@@ -86,20 +92,16 @@ public final class MapCondition {
 
     public static <K, V> Condition<Map<K, V>, K> singleKey(CheckedPredicate<? super K> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return condition("map has a single matching key", actual -> {
-            Evaluation<Map.Entry<K, V>> selected = selectSingle(actual, (key, value) -> predicate.test(key));
-            return selected.status() == Evaluation.Status.SATISFIED
-                    ? satisfied(selected.result().getKey()) : failure(selected);
-        });
+        return condition("map has a single matching key", actual ->
+                selectSingle(actual, (key, value) -> predicate.test(key))
+                        .continueIfSatisfied(entry -> satisfied(entry.getKey())));
     }
 
     public static <K, V> Condition<Map<K, V>, V> singleValue(CheckedPredicate<? super V> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return condition("map has a single matching value", actual -> {
-            Evaluation<Map.Entry<K, V>> selected = selectSingle(actual, (key, value) -> predicate.test(value));
-            return selected.status() == Evaluation.Status.SATISFIED
-                    ? satisfied(selected.result().getValue()) : failure(selected);
-        });
+        return condition("map has a single matching value", actual ->
+                selectSingle(actual, (key, value) -> predicate.test(value))
+                        .continueIfSatisfied(entry -> satisfied(entry.getValue())));
     }
 
     public static <K, V> PreservingCondition<Map<K, V>> allEntries(
@@ -157,23 +159,15 @@ public final class MapCondition {
     }
 
     public static <K, V> Condition<Map<K, V>, V> valueFor(K key) {
-        return condition("map contains the expected key", actual -> {
-            Evaluation<Map.Entry<K, V>> entry = findEntry(actual, key);
-            return entry.status() == Evaluation.Status.SATISFIED
-                    ? satisfied(entry.result().getValue()) : failure(entry);
-        });
+        return condition("map contains the expected key", actual -> findEntry(actual, key)
+                .continueIfSatisfied(entry -> satisfied(entry.getValue())));
     }
 
     public static <K, V, R> Condition<Map<K, V>, R> valueFor(K key,
             Condition<? super V, ? extends R> nested) {
         requireNonNull(nested, "condition must not be null");
-        return condition("map value " + nested.description(), actual -> {
-            Evaluation<Map.Entry<K, V>> entry = findEntry(actual, key);
-            if (entry.status() != Evaluation.Status.SATISFIED) {
-                return failure(entry);
-            }
-            return copy(nested.evaluate(entry.result().getValue()));
-        });
+        return condition("map value " + nested.description(), actual -> findEntry(actual, key)
+                .continueIfSatisfied(entry -> nested.evaluate(entry.getValue())));
     }
 
     public static <K, V> Condition<Map<K, V>, V> valueFor(K key,
@@ -343,26 +337,12 @@ public final class MapCondition {
 
     private static PreservingCondition<Map<?, ?>> sized(int bound, java.util.function.IntPredicate matches,
             String description) {
-        if (bound < 0) {
-            throw new IllegalArgumentException("size must not be negative");
-        }
-        return new PreservingCondition<>(condition(description, actual -> {
-            if (actual == null) {
-                return unsatisfied("map was null");
-            }
-            int size = actual.size();
-            return matches.test(size) ? satisfied(actual) : unsatisfied("map size was " + size);
-        }));
+        return ConditionSupport.sized("map", bound, matches, description, Map::size);
     }
 
     private static <M extends Map<?, ?>> PreservingCondition<M> preserving(String description, String mismatch,
             CheckedPredicate<? super M> matches) {
-        return new PreservingCondition<>(condition(description, actual -> {
-            if (actual == null) {
-                return unsatisfied("map was null");
-            }
-            return matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch);
-        }));
+        return preservingNonNull("map", description, mismatch, matches);
     }
 
     private static boolean exactContent(Map<?, ?> actual, Map<?, ?> expected) throws Exception {
@@ -376,65 +356,6 @@ public final class MapCondition {
 
     private static boolean entryMatches(Map.Entry<?, ?> actual, Object expectedKey, Object expectedValue) {
         return equal(actual.getKey(), expectedKey) && equal(actual.getValue(), expectedValue);
-    }
-
-    private static void validateRange(int lowerBound, int upperBound) {
-        if (lowerBound < 0 || upperBound < lowerBound) {
-            throw new IllegalArgumentException("size range must be non-negative and ordered");
-        }
-    }
-
-    private static <T> T nonNull(T value, String name) {
-        return requireNonNull(value, name + " must not be null");
-    }
-
-    private static <E> E[] nonEmpty(E[] values, String name) {
-        nonNull(values, name);
-        if (values.length == 0) {
-            throw new IllegalArgumentException(name + " must not be empty");
-        }
-        return values;
-    }
-
-    private static <K, V> Map<? extends K, ? extends V> nonEmpty(Map<? extends K, ? extends V> values, String name) {
-        nonNull(values, name);
-        if (values.isEmpty()) {
-            throw new IllegalArgumentException(name + " must not be empty");
-        }
-        return values;
-    }
-
-    public static final class SingleEntry {
-
-        private SingleEntry() {
-        }
-
-        public Evaluation<Map<?, ?>> evaluate(Map<?, ?> actual) {
-            if (actual == null) {
-                return unsatisfied("map was null");
-            }
-            return actual.size() == 1 ? satisfied(actual) : unsatisfied("map size was " + actual.size());
-        }
-
-        public String description() {
-            return "map has a single entry";
-        }
-
-        public Explained because(String explanation) {
-            return new Explained(this, explanation);
-        }
-
-        public Explained because(String format, Object... arguments) {
-            return new Explained(this, formattedExplanation(format, arguments));
-        }
-
-        public record Explained(SingleEntry delegate, String explanation) {
-
-            public Explained {
-                requireNonNull(delegate, "condition must not be null");
-                explanation = literalExplanation(explanation);
-            }
-        }
     }
 
 }

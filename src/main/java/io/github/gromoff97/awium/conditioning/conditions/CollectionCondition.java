@@ -3,6 +3,7 @@ package io.github.gromoff97.awium.conditioning.conditions;
 import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -18,17 +19,24 @@ import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.ex
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.sameDistinctElements;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionResults.failure;
+import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.nonEmpty;
+import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.nonNull;
+import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preservingNonNull;
+import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.validateRange;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.formattedExplanation;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.literalExplanation;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("varargs")
 public final class CollectionCondition {
 
-    public static final SingleElement single = new SingleElement();
+    public static final SelectedCondition<Collection<?>> single = new SelectedCondition<>(condition("collection has a single element", actual -> {
+        if (actual == null) {
+            return unsatisfied("collection was null");
+        }
+        return actual.size() == 1
+                ? satisfied(actual) : unsatisfied("collection size was " + actual.size());
+    }));
     public static final PreservingCondition<Collection<?>> empty = sized(0, size -> size == 0,
             "collection is empty");
     public static final PreservingCondition<Collection<?>> nonEmpty = sized(0, size -> size > 0,
@@ -78,7 +86,7 @@ public final class CollectionCondition {
     }
 
     public static PreservingCondition<Collection<?>> sizeBetween(int lowerBound, int upperBound) {
-        validateRange(lowerBound, upperBound);
+        validateRange(lowerBound, upperBound, "size");
         return sized(lowerBound, actual -> actual >= lowerBound && actual <= upperBound,
                 "collection size is between " + lowerBound + " and " + upperBound);
     }
@@ -95,12 +103,9 @@ public final class CollectionCondition {
 
     public static <R> Condition<Collection<?>, R> singleElementOfType(Class<R> type) {
         requireNonNull(type, "type must not be null");
-        return condition("collection has a single element of type " + type.getTypeName(), actual -> {
-            var selected = selectSingle(actual, type::isInstance);
-            return selected.status() == io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED
-                    ? satisfied(type.cast(selected.result()))
-                    : failure(selected);
-        });
+        return condition("collection has a single element of type " + type.getTypeName(), actual ->
+                selectSingle(actual, type::isInstance)
+                        .continueIfSatisfied(value -> satisfied(type.cast(value))));
     }
 
     public static <E> PreservingCondition<Collection<E>> all(CheckedPredicate<? super E> predicate) {
@@ -386,26 +391,12 @@ public final class CollectionCondition {
 
     private static PreservingCondition<Collection<?>> sized(int bound, java.util.function.IntPredicate matches,
             String description) {
-        if (bound < 0) {
-            throw new IllegalArgumentException("size must not be negative");
-        }
-        return new PreservingCondition<>(condition(description, actual -> {
-            if (actual == null) {
-                return unsatisfied("collection was null");
-            }
-            int size = actual.size();
-            return matches.test(size) ? satisfied(actual) : unsatisfied("collection size was " + size);
-        }));
+        return ConditionSupport.sized("collection", bound, matches, description, Collection::size);
     }
 
     private static <C extends Collection<?>> PreservingCondition<C> preserving(String description, String mismatch,
             CheckedPredicate<? super C> matches) {
-        return new PreservingCondition<>(condition(description, actual -> {
-            if (actual == null) {
-                return unsatisfied("collection was null");
-            }
-            return matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch);
-        }));
+        return preservingNonNull("collection", description, mismatch, matches);
     }
 
     private static boolean exactContent(Collection<?> actual, Collection<?> expected) {
@@ -489,67 +480,6 @@ public final class CollectionCondition {
             previous = next;
         }
         return true;
-    }
-
-    private static void validateRange(int lowerBound, int upperBound) {
-        if (lowerBound < 0 || upperBound < lowerBound) {
-            throw new IllegalArgumentException("size range must be non-negative and ordered");
-        }
-    }
-
-    private static <T> T nonNull(T value, String name) {
-        return requireNonNull(value, name + " must not be null");
-    }
-
-    private static <E> E[] nonEmpty(E[] values, String name) {
-        nonNull(values, name);
-        if (values.length == 0) {
-            throw new IllegalArgumentException(name + " must not be empty");
-        }
-        return values;
-    }
-
-    private static <E, C extends Collection<? extends E>> C nonEmpty(C values, String name) {
-        nonNull(values, name);
-        if (values.isEmpty()) {
-            throw new IllegalArgumentException(name + " must not be empty");
-        }
-        return values;
-    }
-
-    public static final class SingleElement {
-
-        private SingleElement() {
-        }
-
-        public Evaluation<Collection<?>> evaluate(Collection<?> actual) {
-            if (actual == null) {
-                return unsatisfied("collection was null");
-            }
-            return actual.size() == 1
-                    ? satisfied(actual)
-                    : unsatisfied("collection size was " + actual.size());
-        }
-
-        public String description() {
-            return "collection has a single element";
-        }
-
-        public Explained because(String explanation) {
-            return new Explained(this, explanation);
-        }
-
-        public Explained because(String format, Object... arguments) {
-            return new Explained(this, formattedExplanation(format, arguments));
-        }
-
-        public record Explained(SingleElement delegate, String explanation) {
-
-            public Explained {
-                requireNonNull(delegate, "condition must not be null");
-                explanation = literalExplanation(explanation);
-            }
-        }
     }
 
 }

@@ -3,22 +3,20 @@ package io.github.gromoff97.awium.conditioning.conditions;
 import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PresentCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
 
 import java.util.Optional;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionResults.copy;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionResults.failure;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionResults.preserve;
+import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preserve;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.equal;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
 import static java.util.Objects.requireNonNull;
 
 public final class OptionalCondition {
 
-    public static final PresentCondition present = new PresentCondition(condition("optional is present", actual -> {
+    public static final SelectedCondition<Optional<?>> present = new SelectedCondition<>(condition("optional is present", actual -> {
         if (actual == null) {
             return unsatisfied("optional was null");
         }
@@ -54,24 +52,15 @@ public final class OptionalCondition {
 
     public static <R> Condition<Optional<?>, R> containsInstanceOf(Class<R> type) {
         requireNonNull(type, "type must not be null");
-        return condition("optional contains an instance of " + type.getTypeName(), actual -> {
-            Evaluation<?> selected = present(actual);
-            if (selected.status() != Evaluation.Status.SATISFIED) {
-                return failure(selected);
-            }
-            Object value = selected.result();
-            return type.isInstance(value) ? satisfied(type.cast(value))
-                    : unsatisfied("optional value had a different type");
-        });
+        return condition("optional contains an instance of " + type.getTypeName(), actual -> present(actual)
+                .continueIfSatisfied(value -> type.isInstance(value)
+                        ? satisfied(type.cast(value)) : unsatisfied("optional value had a different type")));
     }
 
     public static <T, R> Condition<Optional<T>, R> hasValue(Condition<? super T, ? extends R> nested) {
         requireNonNull(nested, "condition must not be null");
-        return condition("optional value " + nested.description(), actual -> {
-            Evaluation<T> selected = present(actual);
-            return selected.status() == Evaluation.Status.SATISFIED
-                    ? copy(nested.evaluate(selected.result())) : failure(selected);
-        });
+        return condition("optional value " + nested.description(), actual -> present(actual)
+                .continueIfSatisfied(nested::evaluate));
     }
 
     public static <T> Condition<Optional<T>, T> hasValue(PreservingCondition<? super T> nested) {
@@ -81,14 +70,9 @@ public final class OptionalCondition {
 
     private static <T> Condition<Optional<T>, T> selected(String description, String mismatch,
             CheckedPredicate<? super T> predicate) {
-        return condition(description, actual -> {
-            Evaluation<T> selected = present(actual);
-            if (selected.status() != Evaluation.Status.SATISFIED) {
-                return failure(selected);
-            }
-            T value = selected.result();
-            return predicate.test(value) ? satisfied(value) : unsatisfied(mismatch);
-        });
+        return condition(description, actual -> present(actual)
+                .continueIfSatisfied(value -> predicate.test(value)
+                        ? satisfied(value) : unsatisfied(mismatch)));
     }
 
     @SuppressWarnings("unchecked")

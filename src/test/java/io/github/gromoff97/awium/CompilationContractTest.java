@@ -55,13 +55,13 @@ class CompilationContractTest {
 
     @Test
     void categorySpecificTerminalsRejectWrongConditions() throws IOException {
-        for (String type : List.of("PresentCondition", "CollectionCondition.SingleElement",
-                "MapCondition.SingleEntry")) {
+        for (String type : List.of("SelectedCondition<java.util.Optional<?>>",
+                "SelectedCondition<java.util.Collection<?>>", "SelectedCondition<java.util.Map<?, ?>>")) {
             assertFalse(compiles("""
                     import static io.github.gromoff97.awium.await.Await.await;
                     import io.github.gromoff97.awium.sources.Source;
                     import io.github.gromoff97.awium.conditioning.conditions.*;
-                    import io.github.gromoff97.awium.conditioning.conditions.Condition.PresentCondition;
+                    import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
                     final class Contract {
                         void check(Source<String> source, %s condition) {
                             await(source).until(condition);
@@ -69,6 +69,24 @@ class CompilationContractTest {
                     }
                     """.formatted(type)), type);
         }
+    }
+
+    @Test
+    void sourceSelectedFieldsShareOneSourceTypedCondition() throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.present;
+                import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
+                import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
+                import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
+                import java.util.Collection;
+                import java.util.Map;
+                import java.util.Optional;
+                final class Contract {
+                    SelectedCondition<Optional<?>> optional = present;
+                    SelectedCondition<Collection<?>> collection = CollectionCondition.single;
+                    SelectedCondition<Map<?, ?>> map = MapCondition.singleEntry;
+                }
+                """));
     }
 
     @Test

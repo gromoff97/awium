@@ -41,7 +41,7 @@ import org.junit.jupiter.api.Test;
 class CollectionSizeConditionsTest {
 
     @Test
-    void hasSingleElementReturnsTheTypedElement() {
+    void hasSingleElementReturnsTheTypedElement() throws Exception {
         String element = new String("element");
         CollectionSource<ArrayList<String>> source = () -> new ArrayList<>(List.of(element));
 
@@ -54,11 +54,11 @@ class CollectionSizeConditionsTest {
         assertSame(element, selected);
         assertSame(element, explained);
         assertNull(nullElement);
-        assertEquals("collection has a single element", single.description());
+        assertEquals("collection has a single element", single.delegate().description());
         assertEquals("collection size was 0",
-                single.evaluate(List.of()).mismatch());
+                single.delegate().evaluate(List.of()).mismatch());
         assertEquals("collection size was 2",
-                single.evaluate(List.of("first", "second")).mismatch());
+                single.delegate().evaluate(List.of("first", "second")).mismatch());
     }
 
     @Test

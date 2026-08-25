@@ -5,8 +5,8 @@ import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PresentCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,8 +22,8 @@ class ConditionDecorationTest {
         Condition<Object, Object> condition = condition(
                 "custom condition", Evaluation::satisfied);
         var preserving = new PreservingCondition<>(condition);
-        var present = new PresentCondition(condition(
-                "present", value -> satisfied(value.orElse(null))));
+        var selected = new SelectedCondition<>(Condition.<java.util.Optional<?>, Object>condition(
+                "selected", value -> satisfied(value.orElse(null))));
 
         assertEquals("the value must be ready",
                 condition.because("the value must be ready").explanation());
@@ -31,8 +31,8 @@ class ConditionDecorationTest {
                 condition.because("attempt %d", 3).explanation());
         assertEquals("preserving",
                 preserving.because("preserving").explanation());
-        assertEquals("present value",
-                present.because("present %s", "value").explanation());
+        assertEquals("selected value",
+                selected.because("selected %s", "value").explanation());
         assertEquals("collection value", CollectionCondition.nonEmpty
                 .because("collection %s", "value").explanation());
         assertEquals("single element", CollectionCondition.single

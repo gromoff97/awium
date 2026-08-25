@@ -6,8 +6,9 @@ import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCon
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionResults.copy;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionResults.preserve;
+import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.nonEmpty;
+import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preserve;
+import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preserving;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.equal;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
@@ -82,7 +83,8 @@ public final class ObjectCondition {
             Condition<? super T, ? extends R> nested) {
         requireNonNull(extractor, "extractor must not be null");
         requireNonNull(nested, "condition must not be null");
-        return condition("extracted " + nested.description(), actual -> copy(nested.evaluate(extractor.apply(actual))));
+        return condition("extracted " + nested.description(), actual -> nested.evaluate(extractor.apply(actual))
+                .continueIfSatisfied(value -> satisfied(value)));
     }
 
     public static <S, T> Condition<S, T> extracting(CheckedFunction<? super S, ? extends T> extractor,
@@ -92,17 +94,4 @@ public final class ObjectCondition {
         return extracting(extractor, preserve(delegate));
     }
 
-    private static <S> PreservingCondition<S> preserving(String description, String mismatch,
-            CheckedPredicate<? super S> matches) {
-        return new PreservingCondition<>(condition(description, actual ->
-                matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch)));
-    }
-
-    private static Object[] nonEmpty(Object[] values, String name) {
-        requireNonNull(values, name + " must not be null");
-        if (values.length == 0) {
-            throw new IllegalArgumentException(name + " must not be empty");
-        }
-        return values;
-    }
 }

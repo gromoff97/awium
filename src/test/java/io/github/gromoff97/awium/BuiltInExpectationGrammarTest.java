@@ -85,7 +85,7 @@ class BuiltInExpectationGrammarTest {
                         yields(value -> {
                             return value;
                         }).description(),
-                        CollectionCondition.single.description(),
+                        CollectionCondition.single.delegate().description(),
                         CollectionCondition.empty.delegate().description(),
                         CollectionCondition.nonEmpty.delegate().description(),
                         CollectionCondition.size(2).delegate().description(),
@@ -104,7 +104,7 @@ class BuiltInExpectationGrammarTest {
                         description(doesNotContainExactly("expected")),
                         description(containsExactlyInAnyOrder("expected")),
                         description(doesNotContainExactlyInAnyOrder("expected")),
-                        MapCondition.singleEntry.description(),
+                        MapCondition.singleEntry.delegate().description(),
                         MapCondition.empty.delegate().description(),
                         MapCondition.nonEmpty.delegate().description(),
                         MapCondition.size(2).delegate().description(),

@@ -34,6 +34,12 @@ public final class Evaluation<R> {
         return new Evaluation<>(null, null, null, requireNonNull(cause, "cause must not be null"));
     }
 
+    public <T> Evaluation<T> continueIfSatisfied(
+            CheckedFunction<? super R, ? extends Evaluation<? extends T>> continuation) throws Exception {
+        requireNonNull(continuation, "continuation must not be null");
+        return status() == Status.SATISFIED ? copy(continuation.apply(result)) : failure(this);
+    }
+
     public Status status() {
         if (mismatch != null) {
             return Status.UNSATISFIED;
@@ -55,6 +61,24 @@ public final class Evaluation<R> {
 
     public Throwable uncontrolledCause() {
         return uncontrolledCause;
+    }
+
+    private static <T> Evaluation<T> copy(Evaluation<? extends T> evaluation) {
+        if (evaluation == null) {
+            return null;
+        }
+        return evaluation.status() == Status.SATISFIED
+                ? satisfied(evaluation.result()) : failure(evaluation);
+    }
+
+    private static <T> Evaluation<T> failure(Evaluation<?> evaluation) {
+        return switch (evaluation.status()) {
+            case UNSATISFIED -> evaluation.assertionCause() == null
+                    ? unsatisfied(evaluation.mismatch())
+                    : assertionUnsatisfied(evaluation.mismatch(), evaluation.assertionCause());
+            case UNCONTROLLED -> uncontrolled(evaluation.uncontrolledCause());
+            case SATISFIED -> throw new IllegalArgumentException("evaluation must not be satisfied");
+        };
     }
 
     private static String nonBlank(String value, String name) {
