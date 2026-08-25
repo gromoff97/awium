@@ -1,0 +1,102 @@
+package io.github.gromoff97.awium;
+
+import io.github.gromoff97.awium.await.AwaitAttempt;
+import io.github.gromoff97.awium.engine.WaitConfiguration;
+import io.github.gromoff97.awium.engine.WaitEngine;
+
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+
+import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.ACQUISITION;
+import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.STABILIZATION;
+import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
+import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class TryAwaitHistoryTest {
+
+    @Test
+    void storesOnlyTheFirstOfAdjacentEquivalentAttempts() {
+        var time = new FakeTime(0);
+        var actual = new Object();
+        var firstResult = new Object();
+        var finalResult = new Object();
+        int[] calls = {0};
+
+        var execution = new WaitEngine(config(1, 10, 3), time, time).recordedWaitFor(
+                () -> actual,
+                value -> satisfied(calls[0]++ < 3 ? firstResult : finalResult));
+
+        assertEquals(4, execution.totalAttempts());
+        assertEquals(List.of(1L, 2L, 4L), execution.attempts().stream()
+                .map(AwaitAttempt::number).toList());
+        assertEquals(List.of(ACQUISITION, STABILIZATION, STABILIZATION),
+                execution.attempts().stream().map(AwaitAttempt::phase).toList());
+    }
+
+    @Test
+    void compressionNeverCallsUserObjectMethods() {
+        var time = new FakeTime(0);
+        var probe = new ThrowingProbe();
+
+        var execution = new WaitEngine(config(1, 10, 2), time, time)
+                .recordedWaitFor(() -> probe, actual -> satisfied(probe));
+
+        assertEquals(2, execution.attempts().size());
+        assertEquals(3, execution.totalAttempts());
+    }
+
+    @Test
+    void mismatchUsesValueWhileObservedAndAssertionUseIdentity() {
+        var sameActual = new Object();
+        var sameAssertion = new AssertionError();
+
+        var same = recordUnsatisfied(() -> sameActual,
+                call -> assertionUnsatisfied(new String("same"), sameAssertion));
+        var changedActual = recordUnsatisfied(Object::new,
+                call -> unsatisfied(new String("same")));
+        var changedAssertion = recordUnsatisfied(() -> sameActual,
+                call -> assertionUnsatisfied(new String("same"), new AssertionError()));
+
+        assertEquals(List.of(1L), numbers(same));
+        assertEquals(List.of(1L, 2L), numbers(changedActual));
+        assertEquals(List.of(1L, 2L), numbers(changedAssertion));
+    }
+
+    private static WaitEngine.Execution<Object, Object> recordUnsatisfied(
+            io.github.gromoff97.awium.sources.Source<Object> source,
+            java.util.function.IntFunction<io.github.gromoff97.awium.conditioning.Evaluation<Object>> evaluation) {
+        var time = new FakeTime(0);
+        int[] calls = {0};
+        return new WaitEngine(config(1, 2, 0), time, time)
+                .recordedWaitFor(source, actual -> evaluation.apply(calls[0]++));
+    }
+
+    private static List<Long> numbers(WaitEngine.Execution<?, ?> execution) {
+        return execution.attempts().stream().map(AwaitAttempt::number).toList();
+    }
+
+    private static WaitConfiguration config(long every, long upTo, long stableFor) {
+        return new WaitConfiguration(every, upTo, stableFor);
+    }
+
+    private static final class ThrowingProbe {
+
+        @Override
+        public boolean equals(Object other) {
+            throw new AssertionError("equals must not be called");
+        }
+
+        @Override
+        public int hashCode() {
+            throw new AssertionError("hashCode must not be called");
+        }
+
+        @Override
+        public String toString() {
+            throw new AssertionError("toString must not be called");
+        }
+    }
+}

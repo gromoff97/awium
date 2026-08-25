@@ -6,6 +6,9 @@ import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
@@ -20,20 +23,35 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
 
     public <S, R> WaitOutcome<S, R> waitFor(Source<? extends S> source,
             CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator) {
+        return waitFor(source, evaluator, ignored -> {});
+    }
+
+    public <S, R> Execution<S, R> recordedWaitFor(Source<? extends S> source,
+            CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator) {
+        var history = new History<S, R>();
+        WaitOutcome<S, R> outcome = waitFor(source, evaluator, history::record);
+        return new Execution<>(outcome, history.attempts, history.totalAttempts);
+    }
+
+    private <S, R> WaitOutcome<S, R> waitFor(Source<? extends S> source,
+            CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator,
+            Consumer<AwaitAttempt<S, R>> recorder) {
         configuration.validatePair();
         long started = clock.getAsLong();
         var observations = new ObservationEvaluator(clock);
-        WaitOutcome<S, R> acquisition = acquire(source, evaluator, observations, started);
+        WaitOutcome<S, R> acquisition = acquire(
+                source, evaluator, observations, recorder, started);
         if (!(acquisition instanceof WaitOutcome.Satisfied<S, R> acquired)
                 || configuration.stableForNanos() == 0) {
             return acquisition;
         }
-        return stabilize(source, evaluator, observations, started, acquired);
+        return stabilize(source, evaluator, observations, recorder, started, acquired);
     }
 
     private <S, R> WaitOutcome<S, R> acquire(Source<? extends S> source,
             CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator,
-            ObservationEvaluator observations, long started) {
+            ObservationEvaluator observations, Consumer<AwaitAttempt<S, R>> recorder,
+            long started) {
         long deadline = after(started, configuration.upToNanos());
         AwaitAttempt<S, R> lastUnsatisfied = null;
         long completed = started;
@@ -45,6 +63,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
                 AwaitAttempt<S, R> parked = parkUntil(after(completed, delay),
                         ACQUISITION, number, started, attemptStarted);
                 if (parked != null) {
+                    recorder.accept(parked);
                     return new WaitOutcome.Uncontrolled<>(parked);
                 }
             }
@@ -52,6 +71,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
             AwaitAttempt<S, R> interrupted = interruptedBefore(
                     ACQUISITION, number, started, attemptStarted);
             if (interrupted != null) {
+                recorder.accept(interrupted);
                 return new WaitOutcome.Uncontrolled<>(interrupted);
             }
 
@@ -66,6 +86,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
                     number, started, attemptStarted, retrievalStarted);
             AwaitAttempt<S, R> attempt = evaluated.attempt();
             completed = evaluated.completedNanos();
+            recorder.accept(attempt);
             if (failed(attempt)) {
                 return new WaitOutcome.Uncontrolled<>(attempt);
             }
@@ -83,7 +104,8 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
 
     private <S, R> WaitOutcome<S, R> stabilize(Source<? extends S> source,
             CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator,
-            ObservationEvaluator observations, long started,
+            ObservationEvaluator observations, Consumer<AwaitAttempt<S, R>> recorder,
+            long started,
             WaitOutcome.Satisfied<S, R> acquired) {
         long acquiredAt = completedNanos(started, acquired.attempt());
         long deadline = after(acquiredAt, configuration.stableForNanos());
@@ -95,12 +117,14 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
             AwaitAttempt<S, R> parked = parkUntil(after(completed, delay),
                     STABILIZATION, number, started, attemptStarted);
             if (parked != null) {
+                recorder.accept(parked);
                 return new WaitOutcome.Uncontrolled<>(parked);
             }
 
             AwaitAttempt<S, R> interrupted = interruptedBefore(
                     STABILIZATION, number, started, attemptStarted);
             if (interrupted != null) {
+                recorder.accept(interrupted);
                 return new WaitOutcome.Uncontrolled<>(interrupted);
             }
 
@@ -110,6 +134,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
                     number, started, attemptStarted, retrievalStarted);
             AwaitAttempt<S, R> attempt = evaluated.attempt();
             completed = evaluated.completedNanos();
+            recorder.accept(attempt);
             if (failed(attempt)) {
                 return new WaitOutcome.Uncontrolled<>(attempt);
             }
@@ -184,16 +209,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
     }
 
     private static long completedNanos(long started, AwaitAttempt<?, ?> attempt) {
-        Duration completion = switch (attempt.outcome()) {
-            case AwaitAttempt.Outcome.Satisfied<?, ?> value -> value.timing().completionOffset();
-            case AwaitAttempt.Outcome.Unsatisfied<?, ?> value -> value.timing().completionOffset();
-            case AwaitAttempt.Outcome.AssertionUnsatisfied<?, ?> value -> value.timing().completionOffset();
-            case AwaitAttempt.Outcome.WaitingFailed<?, ?> value -> value.timing().completionOffset();
-            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> value -> value.timing().completionOffset();
-            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> value -> value.timing().completionOffset();
-            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> value -> value.timing().completionOffset();
-        };
-        return started + completion.toNanos();
+        return started + attempt.outcome().timing().completionOffset().toNanos();
     }
 
     private static Duration offset(long started, long stage) {
@@ -214,5 +230,60 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
 
     private static long remaining(long now, long deadline) {
         return max(deadline - now, 0);
+    }
+
+    public record Execution<S, R>(WaitOutcome<S, R> outcome,
+            List<AwaitAttempt<S, R>> attempts, long totalAttempts) {
+
+        public Execution {
+            attempts = List.copyOf(attempts);
+        }
+    }
+
+    private static final class History<S, R> {
+
+        private final List<AwaitAttempt<S, R>> attempts = new ArrayList<>();
+        private long totalAttempts;
+
+        private void record(AwaitAttempt<S, R> attempt) {
+            totalAttempts = attempt.number();
+            if (attempts.isEmpty() || !equivalent(attempts.getLast(), attempt)) {
+                attempts.add(attempt);
+            }
+        }
+    }
+
+    private static boolean equivalent(AwaitAttempt<?, ?> left,
+            AwaitAttempt<?, ?> right) {
+        if (left.phase() != right.phase()) {
+            return false;
+        }
+        return switch (left.outcome()) {
+            case AwaitAttempt.Outcome.Satisfied<?, ?> value
+                    when right.outcome() instanceof AwaitAttempt.Outcome.Satisfied<?, ?> other ->
+                    value.observed() == other.observed() && value.result() == other.result();
+            case AwaitAttempt.Outcome.Unsatisfied<?, ?> value
+                    when right.outcome() instanceof AwaitAttempt.Outcome.Unsatisfied<?, ?> other ->
+                    value.observed() == other.observed()
+                            && value.mismatch().equals(other.mismatch());
+            case AwaitAttempt.Outcome.AssertionUnsatisfied<?, ?> value
+                    when right.outcome() instanceof AwaitAttempt.Outcome.AssertionUnsatisfied<?, ?> other ->
+                    value.observed() == other.observed()
+                            && value.mismatch().equals(other.mismatch())
+                            && value.assertion() == other.assertion();
+            case AwaitAttempt.Outcome.WaitingFailed<?, ?> value
+                    when right.outcome() instanceof AwaitAttempt.Outcome.WaitingFailed<?, ?> other ->
+                    value.failure() == other.failure();
+            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> value
+                    when right.outcome() instanceof AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> other ->
+                    value.failure() == other.failure();
+            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> value
+                    when right.outcome() instanceof AwaitAttempt.Outcome.SourceInterrupted<?, ?> other ->
+                    value.observed() == other.observed() && value.failure() == other.failure();
+            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> value
+                    when right.outcome() instanceof AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> other ->
+                    value.observed() == other.observed() && value.failure() == other.failure();
+            default -> false;
+        };
     }
 }
