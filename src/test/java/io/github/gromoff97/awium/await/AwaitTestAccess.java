@@ -20,6 +20,12 @@ public final class AwaitTestAccess {
         return new Await<>(source, actual -> actual, configuration, clock, parker);
     }
 
+    public static <S> TryAwait<S, S> timedTryAwait(Source<? extends S> source,
+            WaitConfiguration configuration, LongSupplier clock,
+            LongConsumer parker) {
+        return new TryAwait<>(source, actual -> actual, configuration, clock, parker);
+    }
+
     public static <E, C extends Collection<E>> Await<C, E> timedCollectionAwait(
             Source<? extends C> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {

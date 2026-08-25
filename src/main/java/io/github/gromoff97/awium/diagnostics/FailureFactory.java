@@ -1,7 +1,9 @@
 package io.github.gromoff97.awium.diagnostics;
 
 import io.github.gromoff97.awium.await.AwaitAttempt;
+import io.github.gromoff97.awium.await.AwaitResult;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
+import io.github.gromoff97.awium.engine.WaitEngine;
 import io.github.gromoff97.awium.engine.WaitOutcome;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitStabilizationException;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
@@ -27,7 +29,27 @@ public final class FailureFactory {
         if (outcome instanceof WaitOutcome.Satisfied<S, R> success) {
             return satisfied(success.attempt()).result();
         }
+        Throwable failure = failure(outcome, description, explanation, configuration);
+        if (failure instanceof RuntimeException runtime) {
+            throw runtime;
+        }
+        throw (Error) failure;
+    }
 
+    public static <S, R> AwaitResult<S, R> capture(WaitEngine.Execution<S, R> execution,
+            Supplier<String> description, String explanation,
+            WaitConfiguration configuration) {
+        if (execution.outcome() instanceof WaitOutcome.Satisfied<S, R> success) {
+            return new AwaitResult.Satisfied<>(execution.attempts(), execution.totalAttempts(),
+                    satisfied(success.attempt()).result());
+        }
+        return new AwaitResult.Failed<>(execution.attempts(), execution.totalAttempts(),
+                failure(execution.outcome(), description, explanation, configuration));
+    }
+
+    private static <S, R> Throwable failure(WaitOutcome<S, R> outcome,
+            Supplier<String> description, String explanation,
+            WaitConfiguration configuration) {
         Throwable cause = terminalCause(outcome.attempt());
         if (cause instanceof Error fatal
                 && (fatal instanceof VirtualMachineError || fatal instanceof ThreadDeath)) {
@@ -51,24 +73,24 @@ public final class FailureFactory {
             if (cause != renderingFailure) {
                 addSuppressed(failure, cause);
             }
-            throw failure;
+            return failure;
         }
 
         String message = rendered.message();
         if (outcome instanceof WaitOutcome.StabilityLoss<S, R>) {
-            throw new AwaitStabilizationException(message, cause);
+            return new AwaitStabilizationException(message, cause);
         }
         if (outcome instanceof WaitOutcome.Uncontrolled<S, R>) {
             if (cause instanceof InterruptedException) {
-                throw new AwaitInterruptedException(message, cause);
+                return new AwaitInterruptedException(message, cause);
             }
-            throw switch (origin(outcome.attempt())) {
+            return switch (origin(outcome.attempt())) {
                 case SOURCE -> new AwaitSourceRetrievalException(message, cause);
                 case CONDITION -> new AwaitConditionEvaluationException(message, cause);
                 case WAITING -> new AwaitUnhandledException(message, cause);
             };
         }
-        throw new AwaitTimeoutException(message, cause);
+        return new AwaitTimeoutException(message, cause);
     }
 
     private static Throwable terminalCause(AwaitAttempt<?, ?> attempt) {

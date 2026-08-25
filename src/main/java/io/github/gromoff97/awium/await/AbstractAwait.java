@@ -101,6 +101,11 @@ abstract class AbstractAwait<S, E, A> {
                 condition.description(), condition.explanation(), engine.configuration());
     }
 
+    protected final <R> AwaitResult<S, R> capture(Prepared<S, R> condition) {
+        return FailureFactory.capture(engine.recordedWaitFor(source, condition.evaluator()),
+                condition.description(), condition.explanation(), engine.configuration());
+    }
+
     private <R> Prepared<S, R> prepare(Condition<? super S, ? extends R> condition,
             String explanation) {
         return new Prepared<>(condition::evaluate, condition::description, explanation);
