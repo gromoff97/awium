@@ -152,8 +152,8 @@ public final class StringCondition {
 
     private static String[] nonEmpty(String[] values, String name) {
         ConditionSupport.nonEmpty(values, name);
-        for (int index = 0; index < values.length; index++) {
-            requireNonNull(values[index], name + " must not contain null");
+        for (String value : values) {
+            requireNonNull(value, name + " must not contain null");
         }
         return values;
     }

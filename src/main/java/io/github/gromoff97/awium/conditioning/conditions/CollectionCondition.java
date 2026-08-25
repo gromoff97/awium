@@ -346,7 +346,7 @@ public final class CollectionCondition {
         return preserving("collection is sorted", "collection was not sorted", actual -> isSorted(actual, comparator));
     }
 
-    private static <E> io.github.gromoff97.awium.conditioning.Evaluation<E> selectSingle(Collection<E> actual,
+    private static <E> Evaluation<E> selectSingle(Collection<E> actual,
             CheckedPredicate<? super E> predicate) throws Exception {
         if (actual == null) {
             return unsatisfied("collection was null");
@@ -366,7 +366,7 @@ public final class CollectionCondition {
         return found ? satisfied(selected) : unsatisfied("no collection element matched");
     }
 
-    private static <E> io.github.gromoff97.awium.conditioning.Evaluation<E> selectFirst(Iterable<E> actual,
+    private static <E> Evaluation<E> selectFirst(Iterable<E> actual,
             CheckedPredicate<? super E> predicate) throws Exception {
         if (actual == null) {
             return unsatisfied("collection was null");
