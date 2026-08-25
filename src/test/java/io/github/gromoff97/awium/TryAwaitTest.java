@@ -14,6 +14,7 @@ import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
 import static io.github.gromoff97.awium.await.TryAwait.tryAwait;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.yields;
 import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.isNotNull;
+import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.isNull;
 import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.present;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -43,11 +44,17 @@ class TryAwaitTest {
     void retainsLegitimateNullAndSelectedOptionalValue() {
         AwaitResult<String, String> nullable = tryAwait((Source<String>) () -> "actual")
                 .until(yields(actual -> null));
+        AwaitResult<String, Void> nullSource = tryAwait((Source<String>) () -> null)
+                .until(isNull);
         AwaitResult<Optional<String>, String> selected = tryAwait(
                 (Source.OptionalSource<String>) () -> Optional.of("payment"))
                 .until(present);
 
         assertNull(satisfied(nullable).result());
+        assertNull(satisfied(nullSource).result());
+        var outcome = assertInstanceOf(AwaitAttempt.Outcome.Satisfied.class,
+                satisfied(nullSource).attempts().getFirst().outcome());
+        assertNull(outcome.observed());
         assertEquals("payment", satisfied(selected).result());
     }
 

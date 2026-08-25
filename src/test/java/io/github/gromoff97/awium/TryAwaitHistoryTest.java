@@ -1,10 +1,14 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.await.AwaitAttempt;
+import io.github.gromoff97.awium.await.AwaitResult;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +18,8 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatis
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TryAwaitHistoryTest {
 
@@ -34,6 +40,7 @@ class TryAwaitHistoryTest {
                 .map(AwaitAttempt::number).toList());
         assertEquals(List.of(ACQUISITION, STABILIZATION, STABILIZATION),
                 execution.attempts().stream().map(AwaitAttempt::phase).toList());
+        assertThrows(UnsupportedOperationException.class, execution.attempts()::clear);
     }
 
     @Test
@@ -65,6 +72,16 @@ class TryAwaitHistoryTest {
         assertEquals(List.of(1L, 2L), numbers(changedAssertion));
     }
 
+    @Test
+    void diagnosticRecordsHaveNoOptionalComponents() {
+        Stream.of(AwaitResult.class, AwaitAttempt.class)
+                .flatMap(TryAwaitHistoryTest::typeAndNestedTypes)
+                .filter(Class::isRecord)
+                .flatMap(type -> Arrays.stream(type.getRecordComponents()))
+                .forEach(component -> assertNotEquals(Optional.class, component.getType(),
+                        component.getDeclaringRecord().getName() + "." + component.getName()));
+    }
+
     private static WaitEngine.Execution<Object, Object> recordUnsatisfied(
             io.github.gromoff97.awium.sources.Source<Object> source,
             java.util.function.IntFunction<io.github.gromoff97.awium.conditioning.Evaluation<Object>> evaluation) {
@@ -76,6 +93,11 @@ class TryAwaitHistoryTest {
 
     private static List<Long> numbers(WaitEngine.Execution<?, ?> execution) {
         return execution.attempts().stream().map(AwaitAttempt::number).toList();
+    }
+
+    private static Stream<Class<?>> typeAndNestedTypes(Class<?> type) {
+        return Stream.concat(Stream.of(type), Arrays.stream(type.getDeclaredClasses())
+                .flatMap(TryAwaitHistoryTest::typeAndNestedTypes));
     }
 
     private static WaitConfiguration config(long every, long upTo, long stableFor) {
