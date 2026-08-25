@@ -5,6 +5,8 @@ import io.github.gromoff97.awium.conditioning.CheckedBiPredicate;
 import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.await.AwaitAttempt;
+import io.github.gromoff97.awium.await.AwaitResult;
 import io.github.gromoff97.awium.sources.Source;
 
 import static java.lang.reflect.Modifier.isAbstract;
@@ -61,8 +63,7 @@ class PublicSurfaceTest {
 
     @Test
     void excludedSurfaceAuditCoversNamesAndNestedSignatures() {
-        for (Class<?> type : List.of(AwaitResult.class,
-                ForbiddenFieldSignature.class,
+        for (Class<?> type : List.of(ForbiddenFieldSignature.class,
                 ForbiddenConstructorSignature.class,
                 ForbiddenMethodName.class,
                 ForbiddenInheritedField.class,
@@ -77,7 +78,7 @@ class PublicSurfaceTest {
 
     private static void assertNoExcludedApiSurface(Collection<Class<?>> types) {
         Set<String> forbiddenNames = Set.of("map", "flatMap", "not", "allOf",
-                "anyOf", "execute", "start", "result", "AwaitResult",
+                "anyOf", "execute", "start", "result",
                 "ExecutableSource", "FutureSource", "IterableSource");
 
         for (Class<?> type : types) {
@@ -104,8 +105,7 @@ class PublicSurfaceTest {
                         continue;
                     }
                     assertFalse(forbiddenNames.contains(method.getName())
-                                    && !(inherited == Evaluation.class
-                                    && method.getName().equals("result")),
+                                    && !explicitlyAllowedForbiddenMethod(inherited, method),
                             method.toGenericString());
                     assertAllowedType(method.getGenericReturnType());
                     stream(method.getGenericParameterTypes()).forEach(
@@ -131,6 +131,13 @@ class PublicSurfaceTest {
 
     private static boolean isApiMember(int modifiers) {
         return isPublic(modifiers) || isProtected(modifiers);
+    }
+
+    private static boolean explicitlyAllowedForbiddenMethod(Class<?> owner, Method method) {
+        return method.getName().equals("result")
+                && (owner == Evaluation.class
+                || owner == AwaitResult.Satisfied.class
+                || owner == AwaitAttempt.Outcome.Satisfied.class);
     }
 
     private static Set<Class<?>> typeHierarchy(Class<?> type) {
@@ -241,8 +248,6 @@ class PublicSurfaceTest {
                 && isPublic(type.getModifiers())
                 && (enclosing == null || isPublicApiType(enclosing));
     }
-
-    public static final class AwaitResult {}
 
     public static final class ForbiddenFieldSignature {
         public Future<?> leaked;
