@@ -85,9 +85,9 @@ state while retaining the caller-owned source and condition objects.
 
 The condition determines the terminal result type:
 
-- preserving conditions such as `equalTo`, `hasElements`, and `containsEntry`
+- preserving conditions such as `equalTo`, `nonEmpty`, and `containsEntry`
   return the exact observed source value;
-- `singleElement` and `singleEntry` are fields, so no parentheses are needed;
+- `single` and `singleEntry` are fields, so no parentheses are needed;
   they return the sole collection element or map entry with its inferred type;
 - `present` returns the contained `T` from `Optional<T>`;
 - custom `Condition<S, R>` instances return their selected `R`;
@@ -108,11 +108,11 @@ included in terminal diagnostics without changing evaluation or result typing.
 repeat what the condition checks:
 
 ```java
-// Avoid: repeats hasElements.
-hasElements.because("The collection must not be empty");
+// Avoid: repeats nonEmpty.
+nonEmpty.because("The collection must not be empty");
 
 // Prefer: states the business consequence.
-hasElements.because("Settlement requires at least one eligible payment");
+nonEmpty.because("Settlement requires at least one eligible payment");
 
 await(paymentRepository::load).until(equalTo(expectedPayment).because(
         "Refund processing requires payment %s in the replica", paymentId));
@@ -146,25 +146,25 @@ throw checked exceptions.
 | Domain | Conditions | Successful result |
 | --- | --- | --- |
 | Object | `isNull`, `isNotNull`, `equalTo`, `notEqualTo`, `sameAs`, `notSameAs`, `instanceOf`, `exactInstanceOf`, `in`, `notIn`, `matches`, `extracting` | source value, narrowed type, or extracted value |
-| Optional | `present`, `absent`, `hasValue`, `doesNotHaveValue`, `hasValueMatching`, `hasValueSatisfying`, `containsInstanceOf` | contained or narrowed value; `Void` for `absent` |
+| Optional | `present`, `absent`, `hasValue`, `doesNotHaveValue`, `containsInstanceOf` | contained, transformed, or narrowed value; `Void` for `absent` |
 | Comparable | `greaterThan`, `atLeast`, `lessThan`, `atMost`, `between`, `strictlyBetween` | source value |
-| String | `empty`, `nonEmpty`, `blank`, `nonBlank`, `containsText`, `doesNotContainText`, `containsIgnoringCase`, `startsWith`, `doesNotStartWith`, `endsWith`, `doesNotEndWith`, `matchesRegex`, `doesNotMatchRegex`, `equalToIgnoringCase`, `notEqualToIgnoringCase`, and the `length...` family | source string |
-| Collection | `singleElement`, `noElements`, `hasElements`, null and duplicate checks, `allMatch`, `anyMatch`, `noneMatch`, membership and exact-content checks, prefixes, suffixes, sequences, subsequences, `first`, `last`, `element`, `sorted`, and the `elementCount...` family | collection, or the selected element |
-| Map | `singleEntry`, `noEntries`, `hasEntries`, `allEntries`, `anyEntry`, `noEntry`, key/value quantifiers, key/value/entry membership, exact content, `valueFor`, `entryFor`, `onlyValueFor`, `singleKey`, `singleValue`, and the `entryCount...` family | map, selected entry, key, or value |
+| String | `empty`, `nonEmpty`, `blank`, `nonBlank`, `contains`, `doesNotContain`, `containsIgnoringCase`, `startsWith`, `doesNotStartWith`, `endsWith`, `doesNotEndWith`, `matchesRegex`, `doesNotMatchRegex`, `equalToIgnoringCase`, `notEqualToIgnoringCase`, and the `length...` family | source string |
+| Collection | `single`, `empty`, `nonEmpty`, null and duplicate checks, `all`, `any`, `none`, membership and exact-content checks, prefixes, suffixes, sequences, subsequences, `first`, `last`, `element`, `sorted`, and the `size...` family | collection, or the selected element |
+| Map | `singleEntry`, `empty`, `nonEmpty`, `allEntries`, `anyEntry`, `noEntry`, key/value quantifiers, key/value/entry membership, exact content, `valueFor`, `entryFor`, `onlyValueFor`, `singleKey`, `singleValue`, and the `size...` family | map, selected entry, key, or value |
 
-All public static names in these namespaces are unique. Every condition class
-can therefore be wildcard-imported in the same source file without requiring
-qualified calls.
+Condition providers deliberately share domain vocabulary such as `empty`,
+`nonEmpty`, and `size`. Qualify the provider class when wildcard imports make a
+call ambiguous.
 
 ## Collection and Map examples
 
 Collection state and membership conditions preserve the concrete collection:
 
 ```java
-List<Payment> payments = await(paymentRepository::findAll).until(hasElements.because(
+List<Payment> payments = await(paymentRepository::findAll).until(nonEmpty.because(
         "Settlement requires at least one eligible payment"));
 
-Payment onlyPayment = await(paymentRepository::findAll).until(singleElement);
+Payment onlyPayment = await(paymentRepository::findAll).until(single);
 
 List<Payment> exact = await(paymentRepository::findAll).until(
         containsExactly(firstPayment, secondPayment));
@@ -180,7 +180,7 @@ exactness through conditions such as `containsExactlyInAnyOrder(...)`.
 Map conditions likewise return the concrete map:
 
 ```java
-Map<String, Payment> populated = await(paymentRepository::index).until(hasEntries);
+Map<String, Payment> populated = await(paymentRepository::index).until(MapCondition.nonEmpty);
 
 Map.Entry<String, Payment> onlyEntry = await(paymentRepository::index).until(singleEntry);
 

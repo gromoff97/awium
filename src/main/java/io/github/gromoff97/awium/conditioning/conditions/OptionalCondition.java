@@ -47,7 +47,7 @@ public final class OptionalCondition {
                 actual -> !equal(actual, unexpected));
     }
 
-    public static <T> Condition<Optional<T>, T> hasValueMatching(CheckedPredicate<? super T> predicate) {
+    public static <T> Condition<Optional<T>, T> hasValue(CheckedPredicate<? super T> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return selected("optional value matches", "optional value did not match", predicate);
     }
@@ -65,7 +65,7 @@ public final class OptionalCondition {
         });
     }
 
-    public static <T, R> Condition<Optional<T>, R> hasValueSatisfying(Condition<? super T, ? extends R> nested) {
+    public static <T, R> Condition<Optional<T>, R> hasValue(Condition<? super T, ? extends R> nested) {
         requireNonNull(nested, "condition must not be null");
         return condition("optional value " + nested.description(), actual -> {
             Evaluation<T> selected = present(actual);
@@ -74,9 +74,9 @@ public final class OptionalCondition {
         });
     }
 
-    public static <T> Condition<Optional<T>, T> hasValueSatisfying(PreservingCondition<? super T> nested) {
+    public static <T> Condition<Optional<T>, T> hasValue(PreservingCondition<? super T> nested) {
         requireNonNull(nested, "condition must not be null");
-        return hasValueSatisfying(preserve(nested.delegate()));
+        return hasValue(preserve(nested.delegate()));
     }
 
     private static <T> Condition<Optional<T>, T> selected(String description, String mismatch,

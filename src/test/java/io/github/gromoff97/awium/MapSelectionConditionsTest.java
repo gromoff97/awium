@@ -63,7 +63,7 @@ class MapSelectionConditionsTest {
         assertSame(actual, await(source).until(MapCondition.containsKeys("a", "b")));
         assertSame(actual, await(source).until(MapCondition.containsOnlyKeys("b", "a")));
         assertSame(actual, await(source).until(MapCondition.containsValues(1, 2)));
-        assertSame(actual, await(source).until(MapCondition.entryCountBetween(1, 3)));
+        assertSame(actual, await(source).until(MapCondition.sizeBetween(1, 3)));
 
         assertEquals(UNSATISFIED, MapCondition.doesNotContainKeys("a")
                 .delegate().evaluate(actual).status());

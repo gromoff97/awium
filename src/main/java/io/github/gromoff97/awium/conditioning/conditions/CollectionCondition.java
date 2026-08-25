@@ -28,10 +28,10 @@ import static java.util.Objects.requireNonNull;
 @SuppressWarnings("varargs")
 public final class CollectionCondition {
 
-    public static final SingleElement singleElement = new SingleElement();
-    public static final PreservingCondition<Collection<?>> noElements = sized(0, size -> size == 0,
+    public static final SingleElement single = new SingleElement();
+    public static final PreservingCondition<Collection<?>> empty = sized(0, size -> size == 0,
             "collection is empty");
-    public static final PreservingCondition<Collection<?>> hasElements = sized(0, size -> size > 0,
+    public static final PreservingCondition<Collection<?>> nonEmpty = sized(0, size -> size > 0,
             "collection is not empty");
     public static final PreservingCondition<Collection<?>> containsNull = preserving(
             "collection contains null", "collection did not contain null", actual -> matchesAny(actual, value -> value == null));
@@ -47,48 +47,48 @@ public final class CollectionCondition {
         throw new AssertionError("Utility class");
     }
 
-    public static PreservingCondition<Collection<?>> elementCount(int expected) {
+    public static PreservingCondition<Collection<?>> size(int expected) {
         return sized(expected, actual -> actual == expected,
                 "collection size is " + expected);
     }
 
-    public static PreservingCondition<Collection<?>> elementCountIsNot(int unexpected) {
+    public static PreservingCondition<Collection<?>> sizeIsNot(int unexpected) {
         return sized(unexpected, actual -> actual != unexpected,
                 "collection size is not " + unexpected);
     }
 
-    public static PreservingCondition<Collection<?>> elementCountGreaterThan(int lowerBound) {
+    public static PreservingCondition<Collection<?>> sizeGreaterThan(int lowerBound) {
         return sized(lowerBound, actual -> actual > lowerBound,
                 "collection size is greater than " + lowerBound);
     }
 
-    public static PreservingCondition<Collection<?>> elementCountAtLeast(int lowerBound) {
+    public static PreservingCondition<Collection<?>> sizeAtLeast(int lowerBound) {
         return sized(lowerBound, actual -> actual >= lowerBound,
                 "collection size is at least " + lowerBound);
     }
 
-    public static PreservingCondition<Collection<?>> elementCountLessThan(int upperBound) {
+    public static PreservingCondition<Collection<?>> sizeLessThan(int upperBound) {
         return sized(upperBound, actual -> actual < upperBound,
                 "collection size is less than " + upperBound);
     }
 
-    public static PreservingCondition<Collection<?>> elementCountAtMost(int upperBound) {
+    public static PreservingCondition<Collection<?>> sizeAtMost(int upperBound) {
         return sized(upperBound, actual -> actual <= upperBound,
                 "collection size is at most " + upperBound);
     }
 
-    public static PreservingCondition<Collection<?>> elementCountBetween(int lowerBound, int upperBound) {
+    public static PreservingCondition<Collection<?>> sizeBetween(int lowerBound, int upperBound) {
         validateRange(lowerBound, upperBound);
         return sized(lowerBound, actual -> actual >= lowerBound && actual <= upperBound,
                 "collection size is between " + lowerBound + " and " + upperBound);
     }
 
-    public static PreservingCondition<Collection<?>> sameElementCountAs(Collection<?> expected) {
+    public static PreservingCondition<Collection<?>> sameSizeAs(Collection<?> expected) {
         int expectedSize = requireNonNull(expected, "expected collection must not be null").size();
-        return elementCount(expectedSize);
+        return size(expectedSize);
     }
 
-    public static <E> Condition<Collection<E>, E> singleElement(CheckedPredicate<? super E> predicate) {
+    public static <E> Condition<Collection<E>, E> single(CheckedPredicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return condition("collection has a single matching element", actual -> selectSingle(actual, predicate));
     }
@@ -103,19 +103,19 @@ public final class CollectionCondition {
         });
     }
 
-    public static <E> PreservingCondition<Collection<E>> allMatch(CheckedPredicate<? super E> predicate) {
+    public static <E> PreservingCondition<Collection<E>> all(CheckedPredicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all collection elements match", "not all collection elements matched",
                 actual -> matchesAll(actual, predicate));
     }
 
-    public static <E> PreservingCondition<Collection<E>> anyMatch(CheckedPredicate<? super E> predicate) {
+    public static <E> PreservingCondition<Collection<E>> any(CheckedPredicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any collection element matches", "no collection element matched",
                 actual -> matchesAny(actual, predicate));
     }
 
-    public static <E> PreservingCondition<Collection<E>> noneMatch(CheckedPredicate<? super E> predicate) {
+    public static <E> PreservingCondition<Collection<E>> none(CheckedPredicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no collection element matches", "a collection element matched",
                 actual -> !matchesAny(actual, predicate));
@@ -247,14 +247,14 @@ public final class CollectionCondition {
     }
 
     @SafeVarargs
-    public static <E> PreservingCondition<SequencedCollection<? super E>> startsWithElements(E... expected) {
+    public static <E> PreservingCondition<SequencedCollection<? super E>> startsWith(E... expected) {
         List<? extends E> values = asList(nonEmpty(expected, "expected elements"));
         return preserving("collection contains expected prefix", "collection did not contain expected prefix",
                 actual -> regionMatches(elements(actual), 0, values));
     }
 
     @SafeVarargs
-    public static <E> PreservingCondition<SequencedCollection<? super E>> endsWithElements(E... expected) {
+    public static <E> PreservingCondition<SequencedCollection<? super E>> endsWith(E... expected) {
         List<? extends E> values = asList(nonEmpty(expected, "expected elements"));
         return preserving("collection contains expected suffix", "collection did not contain expected suffix",
                 actual -> {
@@ -296,7 +296,7 @@ public final class CollectionCondition {
         return position("first", SequencedCollection::getFirst);
     }
 
-    public static <E> Condition<SequencedCollection<E>, E> firstMatching(CheckedPredicate<? super E> predicate) {
+    public static <E> Condition<SequencedCollection<E>, E> first(CheckedPredicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return condition("collection has a matching element", actual -> selectFirst(actual, predicate));
     }
@@ -305,7 +305,7 @@ public final class CollectionCondition {
         return position("last", SequencedCollection::getLast);
     }
 
-    public static <E> Condition<SequencedCollection<E>, E> lastMatching(CheckedPredicate<? super E> predicate) {
+    public static <E> Condition<SequencedCollection<E>, E> last(CheckedPredicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return condition("collection has a last matching element",
                 actual -> selectFirst(actual == null ? null : actual.reversed(), predicate));

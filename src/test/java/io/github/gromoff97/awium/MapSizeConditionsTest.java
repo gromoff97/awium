@@ -15,16 +15,17 @@ import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedMapAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNSATISFIED;
-import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.noEntries;
+import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.empty;
+import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.sameSizeAs;
 import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.singleEntry;
-import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.hasEntries;
-import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCountAtLeast;
-import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCountAtMost;
-import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCountBetween;
-import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCount;
-import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCountGreaterThan;
-import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCountLessThan;
-import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.entryCountIsNot;
+import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.nonEmpty;
+import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.size;
+import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.sizeAtLeast;
+import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.sizeAtMost;
+import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.sizeBetween;
+import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.sizeGreaterThan;
+import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.sizeIsNot;
+import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.sizeLessThan;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -75,7 +76,7 @@ class MapSizeConditionsTest {
             assertFalse(testCase.condition().delegate().description().isBlank());
         }
         assertEquals("map size was 1",
-                entryCount(2).delegate().evaluate(Map.of("key", "value")).mismatch());
+                size(2).delegate().evaluate(Map.of("key", "value")).mismatch());
     }
 
     @Test
@@ -85,7 +86,7 @@ class MapSizeConditionsTest {
         assertThrows(AwaitTimeoutException.class,
                 () -> timedMapAwait((Source<Map<Object, Object>>) () -> null,
                         defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
-                        time, time).until(noEntries));
+                        time, time).until(empty));
     }
 
     @Test
@@ -99,7 +100,7 @@ class MapSizeConditionsTest {
                             time.advanceNanos(2);
                             return actual;
                         }, defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
-                        time, time).until(noEntries));
+                        time, time).until(empty));
 
         assertTrue(failure.getMessage().contains("map"));
         assertFalse(failure.getMessage().contains("collection"));
@@ -113,25 +114,25 @@ class MapSizeConditionsTest {
 
         assertSame(cause, assertThrows(AwaitConditionEvaluationException.class,
                 () -> await((MapSource<ProbeContainers.ProbeMap<Object, Object>>)
-                        () -> map).until(hasEntries)).getCause());
+                        () -> map).until(nonEmpty)).getCause());
         assertEquals(1, map.sizeCalls);
     }
 
     @Test
     void sizedFactoriesRejectNegativeBoundsAndAllowZero() {
-        assertThrows(IllegalArgumentException.class, () -> entryCount(-1));
-        assertThrows(IllegalArgumentException.class, () -> entryCountBetween(-1, 1));
-        assertThrows(IllegalArgumentException.class, () -> entryCountBetween(2, 1));
-        assertDoesNotThrow(() -> entryCount(0));
-        assertDoesNotThrow(() -> entryCountBetween(0, 0));
+        assertThrows(IllegalArgumentException.class, () -> size(-1));
+        assertThrows(IllegalArgumentException.class, () -> sizeBetween(-1, 1));
+        assertThrows(IllegalArgumentException.class, () -> sizeBetween(2, 1));
+        assertDoesNotThrow(() -> size(0));
+        assertDoesNotThrow(() -> sizeBetween(0, 0));
     }
 
     @Test
     void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() throws Exception {
-        assertEquals(SATISFIED, entryCountBetween(2, 4).delegate().evaluate(mapWithSize(2)).status());
-        assertEquals(SATISFIED, entryCountBetween(2, 4).delegate().evaluate(mapWithSize(4)).status());
-        assertUnsatisfied(entryCountBetween(2, 4).delegate().evaluate(mapWithSize(1)));
-        assertUnsatisfied(entryCountBetween(2, 4).delegate().evaluate(mapWithSize(5)));
+        assertEquals(SATISFIED, sizeBetween(2, 4).delegate().evaluate(mapWithSize(2)).status());
+        assertEquals(SATISFIED, sizeBetween(2, 4).delegate().evaluate(mapWithSize(4)).status());
+        assertUnsatisfied(sizeBetween(2, 4).delegate().evaluate(mapWithSize(1)));
+        assertUnsatisfied(sizeBetween(2, 4).delegate().evaluate(mapWithSize(5)));
     }
 
     @Test
@@ -165,13 +166,14 @@ class MapSizeConditionsTest {
     }
 
     private static List<Case> cases() {
-        return List.of(new Case(noEntries, 0, 1), new Case(hasEntries, 1, 0),
-                new Case(entryCount(2), 2, 1),
-                new Case(entryCountIsNot(2), 1, 2),
-                new Case(entryCountGreaterThan(2), 3, 2),
-                new Case(entryCountAtLeast(2), 2, 1),
-                new Case(entryCountLessThan(2), 1, 2),
-                new Case(entryCountAtMost(2), 2, 3));
+        return List.of(new Case(empty, 0, 1), new Case(nonEmpty, 1, 0),
+                new Case(size(2), 2, 1),
+                new Case(sizeIsNot(2), 1, 2),
+                new Case(sizeGreaterThan(2), 3, 2),
+                new Case(sizeAtLeast(2), 2, 1),
+                new Case(sizeLessThan(2), 1, 2),
+                new Case(sizeAtMost(2), 2, 3),
+                new Case(sameSizeAs(mapWithSize(2)), 2, 1));
     }
 
     private record Case(PreservingCondition<Map<?, ?>> condition, int matchingSize,

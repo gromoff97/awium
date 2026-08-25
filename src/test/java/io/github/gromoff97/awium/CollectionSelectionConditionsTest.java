@@ -25,9 +25,9 @@ class CollectionSelectionConditionsTest {
         var users = new ArrayList<>(List.of(new User(1), new User(2)));
         CollectionSource<ArrayList<User>> source = () -> users;
 
-        User matching = await(source).until(CollectionCondition.singleElement(user -> user.id() == 2));
+        User matching = await(source).until(CollectionCondition.single(user -> user.id() == 2));
         String typed = await((CollectionSource<List<Object>>) () -> List.of("text", 42)).until(CollectionCondition.singleElementOfType(String.class));
-        String nullable = await((CollectionSource<List<String>>) () -> Arrays.asList((String) null)).until(CollectionCondition.singleElement);
+        String nullable = await((CollectionSource<List<String>>) () -> Arrays.asList((String) null)).until(CollectionCondition.single);
 
         assertSame(users.get(1), matching);
         assertEquals("text", typed);
@@ -39,18 +39,18 @@ class CollectionSelectionConditionsTest {
         var actual = new ArrayList<>(List.of(2, 4, 6));
         CollectionSource<ArrayList<Integer>> source = () -> actual;
 
-        assertSame(actual, await(source).until(CollectionCondition.allMatch(value -> value % 2 == 0)));
-        assertSame(actual, await(source).until(CollectionCondition.anyMatch(value -> value == 4)));
-        assertSame(actual, await(source).until(CollectionCondition.noneMatch(value -> value < 0)));
+        assertSame(actual, await(source).until(CollectionCondition.all(value -> value % 2 == 0)));
+        assertSame(actual, await(source).until(CollectionCondition.any(value -> value == 4)));
+        assertSame(actual, await(source).until(CollectionCondition.none(value -> value < 0)));
     }
 
     @Test
     void quantifiersCoverTheirUnsatisfiedBranches() throws Exception {
-        assertEquals(UNSATISFIED, CollectionCondition.allMatch((Integer value) -> value % 2 == 0)
+        assertEquals(UNSATISFIED, CollectionCondition.all((Integer value) -> value % 2 == 0)
                 .delegate().evaluate(List.of(2, 3)).status());
-        assertEquals(UNSATISFIED, CollectionCondition.anyMatch((Integer value) -> value == 4)
+        assertEquals(UNSATISFIED, CollectionCondition.any((Integer value) -> value == 4)
                 .delegate().evaluate(List.of(1, 3)).status());
-        assertEquals(UNSATISFIED, CollectionCondition.noneMatch((Integer value) -> value < 0)
+        assertEquals(UNSATISFIED, CollectionCondition.none((Integer value) -> value < 0)
                 .delegate().evaluate(List.of(1, -1)).status());
     }
 
@@ -64,8 +64,8 @@ class CollectionSelectionConditionsTest {
         assertEquals(SATISFIED, CollectionCondition.containsOnly("a", null).delegate().evaluate(values).status());
         assertEquals(SATISFIED, CollectionCondition.subsetOf(Arrays.asList("a", "b", null))
                 .delegate().evaluate(values).status());
-        assertEquals(SATISFIED, CollectionCondition.elementCountBetween(2, 4).delegate().evaluate(values).status());
-        assertEquals(SATISFIED, CollectionCondition.sameElementCountAs(List.of(1, 2, 3))
+        assertEquals(SATISFIED, CollectionCondition.sizeBetween(2, 4).delegate().evaluate(values).status());
+        assertEquals(SATISFIED, CollectionCondition.sameSizeAs(List.of(1, 2, 3))
                 .delegate().evaluate(values).status());
         assertEquals(UNSATISFIED, CollectionCondition.containsOnlyNulls.delegate().evaluate(List.of()).status());
         assertEquals(UNSATISFIED, CollectionCondition.containsNull.delegate().evaluate(List.of("a")).status());
@@ -89,17 +89,17 @@ class CollectionSelectionConditionsTest {
         assertEquals(1, await(source).until(CollectionCondition.first()));
         assertEquals(5, await(source).until(CollectionCondition.last()));
         assertEquals(3, await(source).until(CollectionCondition.element(2)));
-        assertEquals(3, await(source).until(CollectionCondition.firstMatching(value -> value > 2)));
-        assertEquals(3, await(source).until(CollectionCondition.lastMatching(value -> value < 5)));
-        assertSame(values, await(source).until(CollectionCondition.startsWithElements(1, 2)));
-        assertSame(values, await(source).until(CollectionCondition.endsWithElements(3, 5)));
+        assertEquals(3, await(source).until(CollectionCondition.first(value -> value > 2)));
+        assertEquals(3, await(source).until(CollectionCondition.last(value -> value < 5)));
+        assertSame(values, await(source).until(CollectionCondition.startsWith(1, 2)));
+        assertSame(values, await(source).until(CollectionCondition.endsWith(3, 5)));
         assertSame(values, await(source).until(CollectionCondition.containsSequence(2, 3)));
         assertSame(values, await(source).until(CollectionCondition.containsSubsequence(1, 3, 5)));
         assertSame(values, await(source).until(CollectionCondition.sorted()));
 
-        assertEquals(UNSATISFIED, CollectionCondition.startsWithElements(1, 3)
+        assertEquals(UNSATISFIED, CollectionCondition.startsWith(1, 3)
                 .delegate().evaluate(values).status());
-        assertEquals(UNSATISFIED, CollectionCondition.endsWithElements(2, 5)
+        assertEquals(UNSATISFIED, CollectionCondition.endsWith(2, 5)
                 .delegate().evaluate(values).status());
         assertEquals(UNSATISFIED, CollectionCondition.containsSequence(1, 3)
                 .delegate().evaluate(values).status());
@@ -123,9 +123,9 @@ class CollectionSelectionConditionsTest {
 
     @Test
     void singlePredicateRequiresExactlyOneMatch() throws Exception {
-        Evaluation<?> none = CollectionCondition.<Integer>singleElement(value -> value > 10)
+        Evaluation<?> none = CollectionCondition.<Integer>single(value -> value > 10)
                 .evaluate(List.of(1, 2));
-        Evaluation<?> many = CollectionCondition.<Integer>singleElement(value -> value > 0)
+        Evaluation<?> many = CollectionCondition.<Integer>single(value -> value > 0)
                 .evaluate(List.of(1, 2));
 
         assertEquals(UNSATISFIED, none.status());
@@ -136,9 +136,9 @@ class CollectionSelectionConditionsTest {
     void selectorsCoverMissingNullAndInvalidPositions() throws Exception {
         assertEquals(UNSATISFIED, CollectionCondition.<String>first().evaluate(List.of()).status());
         assertEquals(UNSATISFIED, CollectionCondition.<String>last().evaluate(null).status());
-        assertEquals(UNSATISFIED, CollectionCondition.<String>firstMatching(value -> value.startsWith("r"))
+        assertEquals(UNSATISFIED, CollectionCondition.<String>first(value -> value.startsWith("r"))
                 .evaluate(List.of("failed")).status());
-        assertEquals(UNSATISFIED, CollectionCondition.<String>lastMatching(value -> value.startsWith("r"))
+        assertEquals(UNSATISFIED, CollectionCondition.<String>last(value -> value.startsWith("r"))
                 .evaluate(List.of("failed")).status());
         assertEquals(UNSATISFIED, CollectionCondition.<String>element(2).evaluate(List.of("only")).status());
         assertEquals(UNSATISFIED, CollectionCondition.<String>element(0, value -> value.startsWith("r"))

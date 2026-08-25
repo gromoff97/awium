@@ -42,6 +42,9 @@ class ArtifactContractIT {
                 import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
                 import static io.github.gromoff97.awium.conditioning.conditions.StringCondition.*;
 
+                import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
+                import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
+
                 import java.util.List;
                 import java.util.Map;
                 import java.util.Optional;
@@ -54,13 +57,13 @@ class ArtifactContractIT {
                         return await(this::loadOptional).until(present);
                     }
                     List<String> collection() {
-                        return await(this::loadCollection).until(hasElements);
+                        return await(this::loadCollection).until(CollectionCondition.nonEmpty);
                     }
-                    String singleElement() {
-                        return await(this::loadCollection).until(singleElement);
+                    String single() {
+                        return await(this::loadCollection).until(single);
                     }
                     Map<String, Integer> map() {
-                        return await(this::loadMap).until(hasEntries);
+                        return await(this::loadMap).until(MapCondition.nonEmpty);
                     }
                     Map.Entry<String, Integer> singleEntry() {
                         return await(this::loadMap).until(singleEntry);

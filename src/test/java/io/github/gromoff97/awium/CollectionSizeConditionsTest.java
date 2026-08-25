@@ -16,16 +16,16 @@ import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNSATISFIED;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.noElements;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.singleElement;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.hasElements;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCountAtLeast;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCountAtMost;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCountBetween;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCount;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCountGreaterThan;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCountLessThan;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.elementCountIsNot;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.empty;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.single;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.nonEmpty;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.sizeAtLeast;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.sizeAtMost;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.sizeBetween;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.size;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.sizeGreaterThan;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.sizeLessThan;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.sizeIsNot;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -45,20 +45,20 @@ class CollectionSizeConditionsTest {
         String element = new String("element");
         CollectionSource<ArrayList<String>> source = () -> new ArrayList<>(List.of(element));
 
-        String selected = await(source).until(singleElement);
+        String selected = await(source).until(single);
         String explained = await(source).until(
-                singleElement.because("exactly one result is required"));
+                single.because("exactly one result is required"));
         String nullElement = await((CollectionSource<List<String>>)
-                () -> Collections.singletonList(null)).until(singleElement);
+                () -> Collections.singletonList(null)).until(single);
 
         assertSame(element, selected);
         assertSame(element, explained);
         assertNull(nullElement);
-        assertEquals("collection has a single element", singleElement.description());
+        assertEquals("collection has a single element", single.description());
         assertEquals("collection size was 0",
-                singleElement.evaluate(List.of()).mismatch());
+                single.evaluate(List.of()).mismatch());
         assertEquals("collection size was 2",
-                singleElement.evaluate(List.of("first", "second")).mismatch());
+                single.evaluate(List.of("first", "second")).mismatch());
     }
 
     @Test
@@ -77,7 +77,7 @@ class CollectionSizeConditionsTest {
             assertEquals(1, mismatching.sizeCalls);
         }
         assertEquals("collection size was 1",
-                elementCount(2).delegate().evaluate(List.of("value")).mismatch());
+                size(2).delegate().evaluate(List.of("value")).mismatch());
     }
 
     @Test
@@ -87,7 +87,7 @@ class CollectionSizeConditionsTest {
         assertThrows(AwaitTimeoutException.class,
                 () -> timedCollectionAwait((Source<Collection<Object>>) () -> null,
                         defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
-                        time, time).until(noElements));
+                        time, time).until(empty));
     }
 
     @Test
@@ -101,7 +101,7 @@ class CollectionSizeConditionsTest {
                             time.advanceNanos(2);
                             return actual;
                         }, defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
-                        time, time).until(noElements));
+                        time, time).until(empty));
 
         assertTrue(failure.getMessage().contains("collection"));
         assertFalse(failure.getMessage().contains("map"));
@@ -115,25 +115,25 @@ class CollectionSizeConditionsTest {
 
         assertSame(cause, assertThrows(AwaitConditionEvaluationException.class,
                 () -> await((CollectionSource<ProbeContainers.ProbeCollection<Object>>)
-                        () -> collection).until(hasElements)).getCause());
+                        () -> collection).until(nonEmpty)).getCause());
         assertEquals(1, collection.sizeCalls);
     }
 
     @Test
     void sizedFactoriesRejectNegativeBoundsAndAllowZero() {
-        assertThrows(IllegalArgumentException.class, () -> elementCount(-1));
-        assertThrows(IllegalArgumentException.class, () -> elementCountBetween(-1, 1));
-        assertThrows(IllegalArgumentException.class, () -> elementCountBetween(2, 1));
-        assertDoesNotThrow(() -> elementCount(0));
-        assertDoesNotThrow(() -> elementCountBetween(0, 0));
+        assertThrows(IllegalArgumentException.class, () -> size(-1));
+        assertThrows(IllegalArgumentException.class, () -> sizeBetween(-1, 1));
+        assertThrows(IllegalArgumentException.class, () -> sizeBetween(2, 1));
+        assertDoesNotThrow(() -> size(0));
+        assertDoesNotThrow(() -> sizeBetween(0, 0));
     }
 
     @Test
     void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() throws Exception {
-        assertEquals(SATISFIED, elementCountBetween(2, 4).delegate().evaluate(List.of(1, 2)).status());
-        assertEquals(SATISFIED, elementCountBetween(2, 4).delegate().evaluate(List.of(1, 2, 3, 4)).status());
-        assertUnsatisfied(elementCountBetween(2, 4).delegate().evaluate(List.of(1)));
-        assertUnsatisfied(elementCountBetween(2, 4).delegate().evaluate(List.of(1, 2, 3, 4, 5)));
+        assertEquals(SATISFIED, sizeBetween(2, 4).delegate().evaluate(List.of(1, 2)).status());
+        assertEquals(SATISFIED, sizeBetween(2, 4).delegate().evaluate(List.of(1, 2, 3, 4)).status());
+        assertUnsatisfied(sizeBetween(2, 4).delegate().evaluate(List.of(1)));
+        assertUnsatisfied(sizeBetween(2, 4).delegate().evaluate(List.of(1, 2, 3, 4, 5)));
     }
 
     @Test
@@ -159,13 +159,13 @@ class CollectionSizeConditionsTest {
     }
 
     private static List<Case> cases() {
-        return List.of(new Case(noElements, 0, 1), new Case(hasElements, 1, 0),
-                new Case(elementCount(2), 2, 1),
-                new Case(elementCountIsNot(2), 1, 2),
-                new Case(elementCountGreaterThan(2), 3, 2),
-                new Case(elementCountAtLeast(2), 2, 1),
-                new Case(elementCountLessThan(2), 1, 2),
-                new Case(elementCountAtMost(2), 2, 3));
+        return List.of(new Case(empty, 0, 1), new Case(nonEmpty, 1, 0),
+                new Case(size(2), 2, 1),
+                new Case(sizeIsNot(2), 1, 2),
+                new Case(sizeGreaterThan(2), 3, 2),
+                new Case(sizeAtLeast(2), 2, 1),
+                new Case(sizeLessThan(2), 1, 2),
+                new Case(sizeAtMost(2), 2, 3));
     }
 
     private record Case(PreservingCondition<Collection<?>> condition, int matchingSize,

@@ -50,14 +50,16 @@ class ObjectOptionalAndScalarConditionsTest {
         OptionalSource<Object> source = () -> Optional.of("ready");
 
         Object expected = await(source).until(OptionalCondition.hasValue((Object) "ready"));
-        Object selected = await(source).until(OptionalCondition.hasValueMatching(value -> value.toString().startsWith("r")));
+        Object selected = await(source).until(OptionalCondition.hasValue(value -> value.toString().startsWith("r")));
         String narrowed = await(source).until(OptionalCondition.containsInstanceOf(String.class));
-        String nested = await((OptionalSource<String>) () -> Optional.of("ready")).until(OptionalCondition.hasValueSatisfying(StringCondition.startsWith("rea")));
+        String nested = await((OptionalSource<String>) () -> Optional.of("ready")).until(OptionalCondition.hasValue(StringCondition.startsWith("rea")));
+        Integer transformed = await((OptionalSource<String>) () -> Optional.of("ready")).until(OptionalCondition.hasValue(Condition.yields(String::length)));
 
         assertEquals("ready", expected);
         assertEquals("ready", selected);
         assertEquals("ready", narrowed);
         assertEquals("ready", nested);
+        assertEquals(5, transformed);
     }
 
     @Test
@@ -75,8 +77,8 @@ class ObjectOptionalAndScalarConditionsTest {
         String actual = "Ready 42";
 
         assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.nonBlank));
-        assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.containsText("Ready", "42")));
-        assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.doesNotContainText("failed")));
+        assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.contains("Ready", "42")));
+        assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.doesNotContain("failed")));
         assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.containsIgnoringCase("READY")));
         assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.startsWith("Ready")));
         assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.endsWith("42")));
@@ -116,8 +118,8 @@ class ObjectOptionalAndScalarConditionsTest {
         assertStatus(OptionalCondition.hasValue("ready"), Optional.empty(), UNSATISFIED);
         assertStatus(OptionalCondition.doesNotHaveValue("failed"), Optional.of("ready"), SATISFIED);
         assertStatus(OptionalCondition.doesNotHaveValue("ready"), Optional.of("ready"), UNSATISFIED);
-        assertStatus(OptionalCondition.hasValueMatching(value -> value.startsWith("r")), Optional.of("ready"), SATISFIED);
-        assertStatus(OptionalCondition.hasValueMatching(value -> value.startsWith("r")), Optional.of("failed"), UNSATISFIED);
+        assertStatus(OptionalCondition.hasValue(value -> value.startsWith("r")), Optional.of("ready"), SATISFIED);
+        assertStatus(OptionalCondition.hasValue(value -> value.startsWith("r")), Optional.of("failed"), UNSATISFIED);
         assertStatus(OptionalCondition.containsInstanceOf(String.class), Optional.of("ready"), SATISFIED);
         assertStatus(OptionalCondition.containsInstanceOf(String.class), Optional.of(42), UNSATISFIED);
     }
@@ -150,8 +152,8 @@ class ObjectOptionalAndScalarConditionsTest {
         assertPreserving(StringCondition.nonEmpty, "x", "");
         assertPreserving(StringCondition.blank, " \n", "x");
         assertPreserving(StringCondition.nonBlank, "x", " \n");
-        assertPreserving(StringCondition.containsText("a", "b"), "abc", "ac");
-        assertPreserving(StringCondition.doesNotContainText("x", "y"), "abc", "ayc");
+        assertPreserving(StringCondition.contains("a", "b"), "abc", "ac");
+        assertPreserving(StringCondition.doesNotContain("x", "y"), "abc", "ayc");
         assertPreserving(StringCondition.containsIgnoringCase("READY"), "ready", "failed");
         assertPreserving(StringCondition.startsWith("re"), "ready", "already");
         assertPreserving(StringCondition.doesNotStartWith("fail"), "ready", "failed");
@@ -172,13 +174,19 @@ class ObjectOptionalAndScalarConditionsTest {
         assertStatus(StringCondition.lengthBetween(4, 6).delegate(), "hey", UNSATISFIED);
         assertStatus(StringCondition.lengthBetween(4, 6).delegate(), "failure", UNSATISFIED);
         assertStatus(StringCondition.nonBlank.delegate(), null, UNSATISFIED);
+        assertEquals("string length is 5", StringCondition.length(5).delegate().description());
+        assertEquals("string length was not 5",
+                StringCondition.length(5).delegate().evaluate("read").mismatch());
 
-        assertThrows(IllegalArgumentException.class, () -> StringCondition.length(-1));
-        assertThrows(IllegalArgumentException.class, () -> StringCondition.lengthBetween(-1, 1));
+        assertEquals("length must not be negative",
+                assertThrows(IllegalArgumentException.class, () -> StringCondition.length(-1)).getMessage());
+        assertEquals("length range must be non-negative and ordered",
+                assertThrows(IllegalArgumentException.class,
+                        () -> StringCondition.lengthBetween(-1, 1)).getMessage());
         assertThrows(IllegalArgumentException.class, () -> StringCondition.lengthBetween(2, 1));
-        assertThrows(IllegalArgumentException.class, StringCondition::containsText);
-        assertThrows(NullPointerException.class, () -> StringCondition.containsText((String[]) null));
-        assertThrows(NullPointerException.class, () -> StringCondition.containsText("ready", null));
+        assertThrows(IllegalArgumentException.class, StringCondition::contains);
+        assertThrows(NullPointerException.class, () -> StringCondition.contains((String[]) null));
+        assertThrows(NullPointerException.class, () -> StringCondition.contains("ready", null));
     }
 
     private static <S> void assertPreserving(PreservingCondition<? super S> condition, S matching, S mismatching) throws Exception {

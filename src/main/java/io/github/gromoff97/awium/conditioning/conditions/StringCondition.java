@@ -27,13 +27,13 @@ public final class StringCondition {
         throw new AssertionError("Utility class");
     }
 
-    public static PreservingCondition<String> containsText(String... expected) {
+    public static PreservingCondition<String> contains(String... expected) {
         String[] values = nonEmpty(expected, "expected strings");
         return matching("string contains all expected strings", "string did not contain all expected strings",
                 actual -> stream(values).allMatch(actual::contains));
     }
 
-    public static PreservingCondition<String> doesNotContainText(String... unexpected) {
+    public static PreservingCondition<String> doesNotContain(String... unexpected) {
         String[] values = nonEmpty(unexpected, "unexpected strings");
         return matching("string does not contain unexpected strings", "string contained an unexpected string",
                 actual -> stream(values).noneMatch(actual::contains));
@@ -103,48 +103,48 @@ public final class StringCondition {
     }
 
     public static PreservingCondition<String> length(int expected) {
-        return sized(expected, actual -> actual == expected, "is " + expected, "was not " + expected);
+        return matchingLength(expected, actual -> actual == expected, "is " + expected, "was not " + expected);
     }
 
     public static PreservingCondition<String> lengthIsNot(int unexpected) {
-        return sized(unexpected, actual -> actual != unexpected, "is not " + unexpected, "was " + unexpected);
+        return matchingLength(unexpected, actual -> actual != unexpected, "is not " + unexpected, "was " + unexpected);
     }
 
     public static PreservingCondition<String> lengthGreaterThan(int lowerBound) {
-        return sized(lowerBound, actual -> actual > lowerBound, "is greater than " + lowerBound,
+        return matchingLength(lowerBound, actual -> actual > lowerBound, "is greater than " + lowerBound,
                 "was not greater than " + lowerBound);
     }
 
     public static PreservingCondition<String> lengthAtLeast(int lowerBound) {
-        return sized(lowerBound, actual -> actual >= lowerBound, "is at least " + lowerBound,
+        return matchingLength(lowerBound, actual -> actual >= lowerBound, "is at least " + lowerBound,
                 "was less than " + lowerBound);
     }
 
     public static PreservingCondition<String> lengthLessThan(int upperBound) {
-        return sized(upperBound, actual -> actual < upperBound, "is less than " + upperBound,
+        return matchingLength(upperBound, actual -> actual < upperBound, "is less than " + upperBound,
                 "was not less than " + upperBound);
     }
 
     public static PreservingCondition<String> lengthAtMost(int upperBound) {
-        return sized(upperBound, actual -> actual <= upperBound, "is at most " + upperBound,
+        return matchingLength(upperBound, actual -> actual <= upperBound, "is at most " + upperBound,
                 "was greater than " + upperBound);
     }
 
     public static PreservingCondition<String> lengthBetween(int lowerBound, int upperBound) {
         if (lowerBound < 0 || upperBound < lowerBound) {
-            throw new IllegalArgumentException("size range must be non-negative and ordered");
+            throw new IllegalArgumentException("length range must be non-negative and ordered");
         }
-        return matching("string size is between " + lowerBound + " and " + upperBound,
-                "string size was outside " + lowerBound + ".." + upperBound,
+        return matching("string length is between " + lowerBound + " and " + upperBound,
+                "string length was outside " + lowerBound + ".." + upperBound,
                 actual -> actual.length() >= lowerBound && actual.length() <= upperBound);
     }
 
-    private static PreservingCondition<String> sized(int bound, java.util.function.IntPredicate matches,
+    private static PreservingCondition<String> matchingLength(int bound, java.util.function.IntPredicate matches,
             String relation, String mismatch) {
         if (bound < 0) {
-            throw new IllegalArgumentException("size must not be negative");
+            throw new IllegalArgumentException("length must not be negative");
         }
-        return matching("string size " + relation, "string size " + mismatch,
+        return matching("string length " + relation, "string length " + mismatch,
                 actual -> matches.test(actual.length()));
     }
 

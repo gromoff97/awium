@@ -71,7 +71,7 @@ class PositiveFluentMatrixTest {
         var actual = new ArrayList<>(List.of("value"));
         CollectionSource<ArrayList<String>> source = () -> actual;
 
-        Condition.PreservingCondition<Collection<?>> collectionCondition = hasElements;
+        Condition.PreservingCondition<Collection<?>> collectionCondition = nonEmpty;
         Condition.PreservingCondition.ExplainedCondition<Collection<?>> explained =
                 collectionCondition.because("collection full chain");
         ArrayList<String> raw = await(source).until(collectionCondition);
@@ -86,8 +86,8 @@ class PositiveFluentMatrixTest {
         var actual = new LinkedHashMap<>(java.util.Map.of("key", "value"));
         MapSource<LinkedHashMap<String, String>> source = () -> actual;
 
-        LinkedHashMap<String, String> raw = await(source).until(MapCondition.hasEntries);
-        LinkedHashMap<String, String> selected = await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO).until(MapCondition.hasEntries.because("map full chain"));
+        LinkedHashMap<String, String> raw = await(source).until(MapCondition.nonEmpty);
+        LinkedHashMap<String, String> selected = await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO).until(MapCondition.nonEmpty.because("map full chain"));
 
         assertSame(actual, raw);
         assertSame(actual, selected);

@@ -29,53 +29,53 @@ import static java.util.Objects.requireNonNull;
 public final class MapCondition {
 
     public static final SingleEntry singleEntry = new SingleEntry();
-    public static final PreservingCondition<Map<?, ?>> noEntries = sized(0, size -> size == 0,
+    public static final PreservingCondition<Map<?, ?>> empty = sized(0, size -> size == 0,
             "map is empty");
-    public static final PreservingCondition<Map<?, ?>> hasEntries = sized(0, size -> size > 0,
+    public static final PreservingCondition<Map<?, ?>> nonEmpty = sized(0, size -> size > 0,
             "map is not empty");
 
     private MapCondition() {
         throw new AssertionError("Utility class");
     }
 
-    public static PreservingCondition<Map<?, ?>> entryCount(int expected) {
+    public static PreservingCondition<Map<?, ?>> size(int expected) {
         return sized(expected, actual -> actual == expected,
                 "map size is " + expected);
     }
 
-    public static PreservingCondition<Map<?, ?>> entryCountIsNot(int unexpected) {
+    public static PreservingCondition<Map<?, ?>> sizeIsNot(int unexpected) {
         return sized(unexpected, actual -> actual != unexpected,
                 "map size is not " + unexpected);
     }
 
-    public static PreservingCondition<Map<?, ?>> entryCountGreaterThan(int lowerBound) {
+    public static PreservingCondition<Map<?, ?>> sizeGreaterThan(int lowerBound) {
         return sized(lowerBound, actual -> actual > lowerBound,
                 "map size is greater than " + lowerBound);
     }
 
-    public static PreservingCondition<Map<?, ?>> entryCountAtLeast(int lowerBound) {
+    public static PreservingCondition<Map<?, ?>> sizeAtLeast(int lowerBound) {
         return sized(lowerBound, actual -> actual >= lowerBound,
                 "map size is at least " + lowerBound);
     }
 
-    public static PreservingCondition<Map<?, ?>> entryCountLessThan(int upperBound) {
+    public static PreservingCondition<Map<?, ?>> sizeLessThan(int upperBound) {
         return sized(upperBound, actual -> actual < upperBound,
                 "map size is less than " + upperBound);
     }
 
-    public static PreservingCondition<Map<?, ?>> entryCountAtMost(int upperBound) {
+    public static PreservingCondition<Map<?, ?>> sizeAtMost(int upperBound) {
         return sized(upperBound, actual -> actual <= upperBound,
                 "map size is at most " + upperBound);
     }
 
-    public static PreservingCondition<Map<?, ?>> entryCountBetween(int lowerBound, int upperBound) {
+    public static PreservingCondition<Map<?, ?>> sizeBetween(int lowerBound, int upperBound) {
         validateRange(lowerBound, upperBound);
         return sized(lowerBound, actual -> actual >= lowerBound && actual <= upperBound,
                 "map size is between " + lowerBound + " and " + upperBound);
     }
 
-    public static PreservingCondition<Map<?, ?>> sameEntryCountAs(Map<?, ?> expected) {
-        return entryCount(requireNonNull(expected, "expected map must not be null").size());
+    public static PreservingCondition<Map<?, ?>> sameSizeAs(Map<?, ?> expected) {
+        return size(requireNonNull(expected, "expected map must not be null").size());
     }
 
     public static <K, V> Condition<Map<K, V>, Map.Entry<K, V>> singleEntry(

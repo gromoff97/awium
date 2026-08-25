@@ -80,7 +80,7 @@ class CompilationContractTest {
                 import java.util.List;
                 final class Contract {
                     void check(CollectionSource<List<String>> source) {
-                        await(source).until(MapCondition.hasEntries);
+                        await(source).until(MapCondition.nonEmpty);
                     }
                 }
                 """));
@@ -91,7 +91,7 @@ class CompilationContractTest {
                 import java.util.Map;
                 final class Contract {
                     void check(MapSource<Map<String, String>> source) {
-                        await(source).until(CollectionCondition.hasElements);
+                        await(source).until(CollectionCondition.nonEmpty);
                     }
                 }
                 """));
@@ -113,7 +113,7 @@ class CompilationContractTest {
                 import java.util.Map;
                 final class Contract {
                     void check(MapSource<Map<String, String>> source) {
-                        await(source).until(CollectionCondition.singleElement);
+                        await(source).until(CollectionCondition.single);
                     }
                 }
                 """));
@@ -138,19 +138,20 @@ class CompilationContractTest {
                         return new LinkedHashMap<>();
                     }
                     void check() {
-                        String element = await(Contract::collection).until(CollectionCondition.singleElement);
-                        Map.Entry<String, Integer> entry = await(Contract::map).every(Duration.ofMillis(1)).until(MapCondition.singleEntry.because("one entry"));
+                        String element = await(Contract::collection).until(CollectionCondition.single);
+                        Map.Entry<String, Integer> entry =
+                                await(Contract::map).every(Duration.ofMillis(1)).until(MapCondition.singleEntry.because("one entry"));
                     }
                 }
                 """));
         assertFalse(compiles("""
                 import static io.github.gromoff97.awium.await.Await.await;
-                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.singleElement;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.single;
                 import java.util.List;
                 final class Contract {
                     void check() {
                         Integer wrong = await((io.github.gromoff97.awium.sources.Source.CollectionSource<List<String>>)
-                                () -> List.of("value")).until(singleElement);
+                                () -> List.of("value")).until(single);
                     }
                 }
                 """));
@@ -160,7 +161,7 @@ class CompilationContractTest {
     void singleElementIsBothAFieldAndAnOverloadedSelector() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.await.Await.await;
-                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.singleElement;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.single;
                 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.singleElementOfType;
                 import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
                 import io.github.gromoff97.awium.sources.Source.CollectionSource;
@@ -172,8 +173,8 @@ class CompilationContractTest {
                     void check(CollectionSource<List<String>> strings,
                             CollectionSource<List<Object>> objects,
                             MapSource<Map<String, Integer>> map) {
-                        String only = await(strings).until(singleElement);
-                        String matching = await(strings).until(singleElement(value -> !value.isBlank()));
+                        String only = await(strings).until(single);
+                        String matching = await(strings).until(single(value -> !value.isBlank()));
                         String narrowed = await(objects).until(singleElementOfType(String.class));
                         Map.Entry<String, Integer> entry = await(map).until(MapCondition.singleEntry);
                         Map.Entry<String, Integer> selected = await(map).until(MapCondition.singleEntry((key, value) -> value > 0));
@@ -206,13 +207,15 @@ class CompilationContractTest {
     }
 
     @Test
-    void optionalValueKindsDoNotConflictWithSpecializedFactories() throws IOException {
+    void optionalOverloadsAllowExplicitCallbackValues() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.await.Await.await;
+                import static io.github.gromoff97.awium.conditioning.conditions.Condition.yields;
                 import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.equalTo;
                 import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
                 import io.github.gromoff97.awium.conditioning.CheckedPredicate;
                 import io.github.gromoff97.awium.conditioning.conditions.Condition;
+                import io.github.gromoff97.awium.conditioning.conditions.OptionalCondition;
                 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 
                 final class Contract {
@@ -223,18 +226,21 @@ class CompilationContractTest {
                             CheckedPredicate<String> expectedPredicate,
                             OptionalSource<Object> objects, OptionalSource<String> strings) {
                         Class<?> classValue = await(classes).until(hasValue(expectedClass));
-                        Condition<String, String> conditionValue = await(conditions).until(hasValue(expectedCondition));
-                        CheckedPredicate<String> predicateValue = await(predicates).until(hasValue(expectedPredicate));
+                        Condition<String, String> conditionValue =
+                                await(conditions).until(OptionalCondition.<Condition<String, String>>hasValue(expectedCondition));
+                        CheckedPredicate<String> predicateValue =
+                                await(predicates).until(OptionalCondition.<CheckedPredicate<String>>hasValue(expectedPredicate));
                         String typed = await(objects).until(containsInstanceOf(String.class));
-                        String matching = await(strings).until(hasValueMatching(value -> !value.isBlank()));
-                        String satisfying = await(strings).until(hasValueSatisfying(equalTo("ready")));
+                        String matching = await(strings).until(hasValue(value -> !value.isBlank()));
+                        String satisfying = await(strings).until(hasValue(equalTo("ready")));
+                        Integer transformed = await(strings).until(hasValue(yields(String::length)));
                     }
                 }
                 """));
     }
 
     @Test
-    void allConditionNamespacesCanBeWildcardImportedTogether() throws IOException {
+    void wildcardImportedNamespacesAllowQualifiedNameCollisions() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
@@ -244,6 +250,9 @@ class CompilationContractTest {
                 import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
                 import static io.github.gromoff97.awium.conditioning.conditions.StringCondition.*;
                 import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
+                import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
+                import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
+                import io.github.gromoff97.awium.conditioning.conditions.StringCondition;
                 import io.github.gromoff97.awium.sources.Source;
                 import io.github.gromoff97.awium.sources.Source.CollectionSource;
                 import io.github.gromoff97.awium.sources.Source.MapSource;
@@ -256,23 +265,23 @@ class CompilationContractTest {
                             OptionalSource<String> optional,
                             CollectionSource<List<String>> collection,
                             MapSource<Map<String, Integer>> map) {
-                        await(text).until(empty);
-                        await(text).until(containsText("x"));
+                        await(text).until(StringCondition.empty);
+                        await(text).until(StringCondition.contains("x"));
                         await(text).until(matchesRegex("x"));
-                        await(text).until(length(1));
+                        await(text).until(StringCondition.length(1));
                         await(object).until(matches(value -> true));
                         await(object).until(extracting(Object::toString, equalTo("x")));
                         await(optional).until(hasValue("x"));
-                        await(collection).until(hasElements);
-                        await(collection).until(singleElement);
-                        await(collection).until(allMatch(value -> true));
-                        await(collection).until(elementCount(1));
-                        await(collection).until(startsWithElements("x"));
+                        await(collection).until(CollectionCondition.nonEmpty);
+                        await(collection).until(single);
+                        await(collection).until(all(value -> true));
+                        await(collection).until(CollectionCondition.size(1));
+                        await(collection).until(CollectionCondition.startsWith("x"));
                         await(collection).until(containsExactly("x"));
-                        await(map).until(hasEntries);
+                        await(map).until(MapCondition.nonEmpty);
                         await(map).until(singleEntry);
                         await(map).until(allEntries((key, value) -> true));
-                        await(map).until(entryCount(1));
+                        await(map).until(MapCondition.size(1));
                         await(map).until(valueFor("x"));
                         await(map).until(containsExactlyEntriesOf(Map.of("x", 1)));
                     }
@@ -363,9 +372,9 @@ class CompilationContractTest {
                 "asserted((Object value) -> {})",
                 "yields((Object value) -> { return value; })",
                 "present",
-                "CollectionCondition.hasElements",
-                "CollectionCondition.singleElement",
-                "MapCondition.hasEntries",
+                "CollectionCondition.nonEmpty",
+                "CollectionCondition.single",
+                "MapCondition.nonEmpty",
                 "MapCondition.singleEntry")) {
             assertFalse(compiles("""
                     import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
@@ -384,10 +393,10 @@ class CompilationContractTest {
 
     @Test
     void constantConditionsAreFieldsNotFactories() throws IOException {
-        for (String condition : List.of("CollectionCondition.noElements()",
-                "CollectionCondition.hasElements()", "MapCondition.noEntries()",
-                "MapCondition.hasEntries()",
-                "CollectionCondition.singleElement()",
+        for (String condition : List.of("CollectionCondition.empty()",
+                "CollectionCondition.nonEmpty()", "MapCondition.empty()",
+                "MapCondition.nonEmpty()",
+                "CollectionCondition.single()",
                 "MapCondition.singleEntry()")) {
             assertFalse(compiles("""
                     import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
