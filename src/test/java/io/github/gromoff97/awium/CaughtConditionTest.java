@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
+import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitPersistenceException;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import org.junit.jupiter.api.Test;
 
@@ -21,6 +22,7 @@ import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.
 import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.present;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class CaughtConditionTest {
@@ -63,6 +65,76 @@ class CaughtConditionTest {
                 payment -> payment.status() == Status.FINISHED));
 
         assertEquals(List.of(created, pending, finished), result);
+    }
+
+    @Test
+    void persistsByEvaluatingOnlyTheFinalCapturedStage() {
+        var time = new FakeTime(0);
+        String early = new String("early");
+        String acquiredFinal = new String("acquired final");
+        String persistedFinal = new String("persisted final");
+        String[] observations = {early, acquiredFinal, persistedFinal, persistedFinal};
+        int[] sourceCalls = {0};
+        int[] earlyStageCalls = {0};
+        int[] finalStageCalls = {0};
+
+        List<String> result = timedAwait(() -> observations[sourceCalls[0]++],
+                config(1, 10, 2), time, time).until(caught(
+                value -> {
+                    earlyStageCalls[0]++;
+                    return value == early;
+                },
+                value -> {
+                    finalStageCalls[0]++;
+                    return value != early;
+                }));
+
+        assertSame(early, result.get(0));
+        assertSame(persistedFinal, result.get(1));
+        assertEquals(4, sourceCalls[0]);
+        assertEquals(1, earlyStageCalls[0]);
+        assertEquals(3, finalStageCalls[0]);
+        assertEquals(List.of(1L, 1L, 1L), time.parkRequests);
+    }
+
+    @Test
+    void persistenceReplacesOnlyTheFinalCapturedResult() {
+        var time = new FakeTime(0);
+        String early = new String("early");
+        String acquiredFinal = new String("acquired final");
+        String firstPersistedFinal = new String("first persisted final");
+        String finalPersistedFinal = new String("final persisted final");
+        String[] observations = {early, acquiredFinal, firstPersistedFinal,
+                finalPersistedFinal};
+        int[] sourceCalls = {0};
+
+        List<String> result = timedAwait(() -> observations[sourceCalls[0]++],
+                config(1, 10, 2), time, time).until(caught(
+                value -> value == early,
+                value -> value != early));
+
+        assertSame(early, result.get(0));
+        assertSame(finalPersistedFinal, result.get(1));
+        assertEquals(4, sourceCalls[0]);
+        assertEquals(List.of(1L, 1L, 1L), time.parkRequests);
+    }
+
+    @Test
+    void finalStageMismatchDuringPersistenceFailsImmediately() {
+        var time = new FakeTime(0);
+        String early = new String("early");
+        String acquiredFinal = new String("acquired final");
+        String rejectedFinal = new String("rejected final");
+        String[] observations = {early, acquiredFinal, rejectedFinal};
+        int[] sourceCalls = {0};
+
+        assertThrows(AwaitPersistenceException.class, () -> timedAwait(
+                () -> observations[sourceCalls[0]++], config(1, 10, 10), time, time)
+                .until(caught(value -> value == early,
+                        value -> value != rejectedFinal)));
+
+        assertEquals(3, sourceCalls[0]);
+        assertEquals(List.of(1L, 1L), time.parkRequests);
     }
 
     @Test

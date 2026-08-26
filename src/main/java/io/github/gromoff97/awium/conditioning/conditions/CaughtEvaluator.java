@@ -25,6 +25,10 @@ public final class CaughtEvaluator<S, R>
 
     @Override
     public Evaluation<List<R>> apply(S actual) {
+        if (next == stages.size()) {
+            Evaluation<? extends R> evaluation = stages.getLast().apply(actual);
+            return evaluation == null ? null : evaluation.continueIfSatisfied(this::replaceLast);
+        }
         Evaluation<? extends R> evaluation = stages.get(next).apply(actual);
         return evaluation == null ? null : evaluation.continueIfSatisfied(this::capture);
     }
@@ -34,6 +38,11 @@ public final class CaughtEvaluator<S, R>
         if (++next < stages.size()) {
             return unsatisfied("waiting for sequence stage " + (next + 1));
         }
+        return satisfied(resultCopy());
+    }
+
+    private Evaluation<List<R>> replaceLast(R result) {
+        results.set(results.size() - 1, result);
         return satisfied(resultCopy());
     }
 
