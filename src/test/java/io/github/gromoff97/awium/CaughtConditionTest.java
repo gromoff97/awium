@@ -8,14 +8,17 @@ import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedOptionalAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.caught;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
 import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.matches;
+import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.present;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -164,6 +167,57 @@ class CaughtConditionTest {
                 time, time).until(sequence);
 
         assertEquals(List.of(1, 1, 1), result);
+    }
+
+    @Test
+    void selectedSequenceCapturesSelectedValues() {
+        var time = new FakeTime(0);
+        List<Optional<String>> observations = List.of(Optional.of("first"),
+                Optional.of("second"));
+        int[] next = {0};
+
+        List<String> result = timedOptionalAwait(() -> observations.get(next[0]++),
+                config(1, 10, 0), time, time).until(caught(present, present));
+
+        assertEquals(List.of("first", "second"), result);
+    }
+
+    @Test
+    void reusesOneSequenceDefinitionAcrossExecutions() {
+        var lifecycle = caught(
+                (Payment value) -> value.status() == Status.CREATED,
+                value -> value.status() == Status.FINISHED);
+        var created = new Payment(Status.CREATED, "accepted");
+        var firstFinished = new Payment(Status.FINISHED, "first");
+        var secondFinished = new Payment(Status.FINISHED, "second");
+
+        assertEquals(List.of(created, firstFinished), runLifecycle(
+                new Payment[]{created, firstFinished}, lifecycle, 10));
+        assertEquals(List.of(created, secondFinished), runLifecycle(
+                new Payment[]{created, secondFinished}, lifecycle, 10));
+    }
+
+    @Test
+    void timeoutDoesNotAdvanceTheNextExecution() {
+        var lifecycle = caught(
+                (Payment value) -> value.status() == Status.CREATED,
+                value -> value.status() == Status.FINISHED);
+        var created = new Payment(Status.CREATED, "accepted");
+        var pending = new Payment(Status.PENDING, "waiting");
+        var finished = new Payment(Status.FINISHED, "paid");
+
+        assertThrows(AwaitTimeoutException.class, () -> runLifecycle(
+                new Payment[]{created, pending, pending}, lifecycle, 3));
+        assertEquals(List.of(created, finished), runLifecycle(
+                new Payment[]{created, finished}, lifecycle, 10));
+    }
+
+    private static List<Payment> runLifecycle(Payment[] observations,
+            Condition<Payment, List<Payment>> lifecycle, long timeout) {
+        var time = new FakeTime(0);
+        int[] next = {0};
+        return timedAwait(() -> observations[Math.min(next[0]++, observations.length - 1)],
+                config(1, timeout, 0), time, time).until(lifecycle);
     }
 
     private static WaitConfiguration config(long every, long upTo,

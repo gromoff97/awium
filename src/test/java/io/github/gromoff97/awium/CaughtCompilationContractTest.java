@@ -5,6 +5,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,6 +41,119 @@ class CaughtCompilationContractTest {
                                         ? satisfied(value.length()) : unsatisfied("length was not 1")),
                                 condition("length 2", value -> value.length() == 2
                                         ? satisfied(value.length()) : unsatisfied("length was not 2"))));
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void selectedSequencesInferFacadeElementLists() throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.await.Await.await;
+                import static io.github.gromoff97.awium.await.TryAwait.tryAwait;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.Condition.caught;
+                import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.singleEntry;
+                import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.present;
+                import io.github.gromoff97.awium.await.AwaitResult;
+                import io.github.gromoff97.awium.sources.Source.*;
+                import java.util.*;
+
+                final class Contract {
+                    void check(OptionalSource<String> optionalSource,
+                            CollectionSource<List<String>> collectionSource,
+                            MapSource<Map<String, Integer>> mapSource) {
+                        List<String> optional = await(optionalSource).until(caught(present, present));
+                        List<String> collection = await(collectionSource).until(caught(first, last));
+                        List<Map.Entry<String, Integer>> map =
+                                await(mapSource).until(caught(singleEntry, singleEntry));
+                        AwaitResult<Optional<String>, List<String>> attempted =
+                                tryAwait(optionalSource).until(caught(present, present));
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void selectedSequencesCannotCrossSourceKinds() throws IOException {
+        for (String invocation : List.of(
+                "await(optional).until(caught(first, last))",
+                "await(collection).until(caught(present, present))",
+                "await(map).until(caught(first, last))",
+                "await(collection).until(caught(singleEntry, singleEntry))")) {
+            assertFalse(compiles("""
+                    import static io.github.gromoff97.awium.await.Await.await;
+                    import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
+                    import static io.github.gromoff97.awium.conditioning.conditions.Condition.caught;
+                    import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.singleEntry;
+                    import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.present;
+                    import io.github.gromoff97.awium.sources.Source.*;
+                    import java.util.*;
+                    final class Contract {
+                        void check(OptionalSource<String> optional,
+                                CollectionSource<List<String>> collection,
+                                MapSource<Map<String, Integer>> map) {
+                            %s;
+                        }
+                    }
+                    """.formatted(invocation)), invocation);
+        }
+    }
+
+    @Test
+    void plainSourcesRejectSelectedSequences() throws IOException {
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.await.Await.await;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.Condition.caught;
+                import io.github.gromoff97.awium.sources.Source;
+                import java.util.List;
+                final class Contract {
+                    void check(Source<List<String>> source) {
+                        await(source).until(caught(first, last));
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void selectedStagesCannotMixWithOtherFamilies() throws IOException {
+        for (String stage : List.of(
+                "matches((Optional<String> value) -> true)",
+                "condition(\"text\", (Optional<String> value) -> satisfied(value.toString()))")) {
+            assertFalse(compiles("""
+                    import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+                    import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
+                    import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.matches;
+                    import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.present;
+                    import java.util.Optional;
+                    final class Contract {
+                        void check() {
+                            caught(present, %s);
+                        }
+                    }
+                    """.formatted(stage)), stage);
+        }
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.first;
+                import static io.github.gromoff97.awium.conditioning.conditions.Condition.caught;
+                import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.singleEntry;
+                final class Contract {
+                    void check() {
+                        caught(first, singleEntry);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void explainedSelectedSequenceCannotBeExplainedAgain() throws IOException {
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.Condition.caught;
+                final class Contract {
+                    void check() {
+                        caught(first, last).because("first").because("second");
                     }
                 }
                 """));

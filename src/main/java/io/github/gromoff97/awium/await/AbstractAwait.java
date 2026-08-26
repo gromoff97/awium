@@ -3,6 +3,7 @@ package io.github.gromoff97.awium.await;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSequenceStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
 import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
@@ -11,6 +12,7 @@ import io.github.gromoff97.awium.engine.WaitEngine;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
 import java.util.function.LongConsumer;
@@ -66,6 +68,11 @@ abstract class AbstractAwait<S, E, F extends Source<?>, A> {
 
     protected final Prepared<S, E> prepare(SelectedStage<? super S, F> condition) {
         return prepared(ConditionRuntime.selectedEvaluator(condition), condition);
+    }
+
+    protected final Prepared<S, List<E>> prepareSelectedSequence(
+            SelectedSequenceStage<? super S, F> condition) {
+        return prepared(ConditionRuntime.selectedSequenceEvaluator(condition), condition);
     }
 
     protected final <R> R complete(Prepared<S, R> condition) {

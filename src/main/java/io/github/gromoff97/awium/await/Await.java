@@ -2,6 +2,7 @@ package io.github.gromoff97.awium.await;
 
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSequenceStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;
@@ -10,6 +11,7 @@ import io.github.gromoff97.awium.sources.Source.MapSource;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.LongConsumer;
@@ -64,5 +66,9 @@ public final class Await<S, E, F extends Source<?>>
 
     public E until(SelectedStage<? super S, F> condition) {
         return complete(prepare(condition));
+    }
+
+    public List<E> until(SelectedSequenceStage<? super S, F> condition) {
+        return complete(prepareSelectedSequence(condition));
     }
 }

@@ -6,6 +6,8 @@ import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSequenceCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSequenceStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
 import io.github.gromoff97.awium.conditioning.conditions.ObjectCondition;
@@ -77,6 +79,23 @@ public final class ConditionRuntime {
             implements SelectedStage<S, F>, Operand<S, Object> {
     }
 
+    public record RuntimeSelectedSequenceCondition<S, F extends Source<?>>(
+            String description,
+            Supplier<Function<S, Evaluation<List<Object>>>> evaluators)
+            implements SelectedSequenceCondition<S, F>, Operand<S, List<Object>> {
+
+        @Override
+        public String explanation() {
+            return null;
+        }
+    }
+
+    public record RuntimeExplainedSelectedSequenceCondition<S, F extends Source<?>>(
+            String description, String explanation,
+            Supplier<Function<S, Evaluation<List<Object>>>> evaluators)
+            implements SelectedSequenceStage<S, F>, Operand<S, List<Object>> {
+    }
+
     public static <S, R> Condition<S, R> condition(String description,
             Supplier<Function<S, Evaluation<R>>> evaluators) {
         return new RuntimeCondition<>(nonBlank(description, "description"),
@@ -117,6 +136,20 @@ public final class ConditionRuntime {
         return condition("conditions are satisfied in order", () ->
                 new CaughtEvaluator<>(stages.stream()
                         .map(stage -> ConditionRuntime.<S, R>evaluator(stage)).toList()));
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <S, F extends Source<?>> SelectedSequenceCondition<S, F> caught(
+            SelectedStage<? super S, F> first,
+            SelectedStage<? super S, F> second,
+            SelectedStage<? super S, F>... rest) {
+        List<SelectedStage<? super S, F>> stages =
+                stages("condition", first, second, rest);
+        return new RuntimeSelectedSequenceCondition<>("conditions are satisfied in order",
+                () -> new CaughtEvaluator<>(stages.stream()
+                        .map(stage -> ConditionRuntime.<S, Object, F>selectedEvaluator(stage))
+                        .toList()));
     }
 
     private static <S> Condition<S, List<S>> caughtPreserving(
@@ -176,6 +209,13 @@ public final class ConditionRuntime {
         return (Function<S, Evaluation<R>>) newEvaluator(operand);
     }
 
+    @SuppressWarnings("unchecked")
+    public static <S, E, F extends Source<?>> Function<S, Evaluation<List<E>>>
+            selectedSequenceEvaluator(SelectedSequenceStage<? super S, F> condition) {
+        Operand<?, ?> operand = operand(condition);
+        return (Function<S, Evaluation<List<E>>>) newEvaluator(operand);
+    }
+
     public static String description(Object condition) {
         return operand(condition).description();
     }
@@ -202,6 +242,13 @@ public final class ConditionRuntime {
             SelectedCondition<S, F> condition, String explanation) {
         Operand<S, Object> operand = operand(condition);
         return new RuntimeExplainedSelectedCondition<>(operand.description(),
+                nonBlank(explanation, "explanation"), operand.evaluators());
+    }
+
+    public static <S, F extends Source<?>> SelectedSequenceStage<S, F> explained(
+            SelectedSequenceCondition<S, F> condition, String explanation) {
+        Operand<S, List<Object>> operand = operand(condition);
+        return new RuntimeExplainedSelectedSequenceCondition<>(operand.description(),
                 nonBlank(explanation, "explanation"), operand.evaluators());
     }
 

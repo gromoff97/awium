@@ -45,6 +45,15 @@ public sealed interface Condition<S, R> extends ConditionStage<S, R>
         return ConditionRuntime.caught(first, second, rest);
     }
 
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    static <S, F extends Source<?>> SelectedSequenceCondition<S, F> caught(
+            SelectedStage<? super S, F> first,
+            SelectedStage<? super S, F> second,
+            SelectedStage<? super S, F>... rest) {
+        return ConditionRuntime.caught(first, second, rest);
+    }
+
     static <S> PreservingCondition<S> asserted(Consumer<? super S> assertion) {
         requireNonNull(assertion, "assertion must not be null");
         return ConditionRuntime.preserving("value satisfies assertion",
@@ -115,6 +124,26 @@ public sealed interface Condition<S, R> extends ConditionStage<S, R>
         }
 
         default SelectedStage<S, F> because(String format, Object... arguments) {
+            return ConditionRuntime.explained(this,
+                    formattedExplanation(format, arguments));
+        }
+    }
+
+    public sealed interface SelectedSequenceStage<S, F extends Source<?>>
+            permits SelectedSequenceCondition,
+            ConditionRuntime.RuntimeExplainedSelectedSequenceCondition {
+    }
+
+    public sealed interface SelectedSequenceCondition<S, F extends Source<?>>
+            extends SelectedSequenceStage<S, F>
+            permits ConditionRuntime.RuntimeSelectedSequenceCondition {
+
+        default SelectedSequenceStage<S, F> because(String explanation) {
+            return ConditionRuntime.explained(this, explanation);
+        }
+
+        default SelectedSequenceStage<S, F> because(String format,
+                Object... arguments) {
             return ConditionRuntime.explained(this,
                     formattedExplanation(format, arguments));
         }
