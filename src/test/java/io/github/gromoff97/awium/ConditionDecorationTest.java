@@ -42,8 +42,7 @@ class ConditionDecorationTest {
                 import io.github.gromoff97.awium.conditioning.Evaluation;
                 final class Contract {
                     void check() {
-                        condition("condition", Evaluation::satisfied)
-                                .because("first").because("second");
+                        condition("condition", Evaluation::satisfied).because("first").because("second");
                     }
                 }
                 """));
@@ -64,14 +63,14 @@ class ConditionDecorationTest {
                 explanation(preserving.because("preserving")));
         assertEquals("selected value",
                 explanation(selected.because("selected %s", "value")));
-        assertEquals("collection value", explanation(CollectionCondition.nonEmpty
-                .because("collection %s", "value")));
-        assertEquals("single element", explanation(CollectionCondition.single
-                .because("single %s", "element")));
-        assertEquals("map value", explanation(MapCondition.nonEmpty
-                .because("map %s", "value")));
-        assertEquals("single entry", explanation(MapCondition.singleEntry
-                .because("single %s", "entry")));
+        assertEquals("collection value", explanation(
+                CollectionCondition.nonEmpty.because("collection %s", "value")));
+        assertEquals("single element", explanation(
+                CollectionCondition.single.because("single %s", "element")));
+        assertEquals("map value", explanation(
+                MapCondition.nonEmpty.because("map %s", "value")));
+        assertEquals("single entry", explanation(
+                MapCondition.singleEntry.because("single %s", "entry")));
     }
 
     @Test
@@ -114,8 +113,8 @@ class ConditionDecorationTest {
         Locale original = Locale.getDefault(Locale.Category.FORMAT);
         Locale.setDefault(Locale.Category.FORMAT, Locale.GERMANY);
         try {
-            assertEquals("1.5", explanation(asserted((Object actual) -> {})
-                    .because("%.1f", 1.5)));
+            assertEquals("1.5", explanation(
+                    asserted((Object actual) -> {}).because("%.1f", 1.5)));
         } finally {
             Locale.setDefault(Locale.Category.FORMAT, original);
         }
