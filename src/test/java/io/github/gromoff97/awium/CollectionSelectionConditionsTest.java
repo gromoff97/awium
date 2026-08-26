@@ -162,8 +162,7 @@ class CollectionSelectionConditionsTest {
         FakeTime time = new FakeTime(0);
 
         assertEquals(3, timedCollectionAwait(source,
-                new io.github.gromoff97.awium.engine.WaitConfiguration(1, 5, 2), time, time)
-                .until(last));
+                new io.github.gromoff97.awium.engine.WaitConfiguration(1, 5, 2), time, time).until(last));
     }
 
     private record User(int id) {
