@@ -12,9 +12,10 @@ import static java.time.Duration.ofNanos;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
-
+import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.sources.Source;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -98,36 +99,28 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void yieldsSelectsTheFinalResultAfterDiscardedAssertionRetries() {
+    void yieldsAssertionStopsImmediatelyWithItsOriginalCauseAndStackTrace() {
         var time = new FakeTime(0);
-        var discarded = new MessageReadingAssertion();
+        var assertion = new AssertionError("selection failed");
+        var frame = new StackTraceElement("PaymentSelector", "select",
+                "PaymentSelector.java", 42);
+        assertion.setStackTrace(new StackTraceElement[]{frame});
         var invocations = new int[1];
 
-        Long result = timedAwait((Source<String>) () -> "42",
+        AwaitConditionEvaluationException failure = assertThrows(
+                AwaitConditionEvaluationException.class, () -> timedAwait(
+                (Source<String>) () -> "42",
                 defaults().withEvery(ofNanos(1))
-                        .withUpTo(ofNanos(10)), time, time).until(Condition.<String, Long>yields(value -> {
-                    if (invocations[0]++ < 2) {
-                        throw discarded;
-                    }
-                    return parseLong(value);
-                }).because("payment selection"));
+                        .withUpTo(ofNanos(10)), time, time).until(
+                        Condition.<String, Long>yields(value -> {
+                            invocations[0]++;
+                            throw assertion;
+                        }).because("payment selection")));
 
-        assertEquals(42L, result);
-        assertEquals(3, invocations[0]);
-        assertEquals(java.util.List.of(1L, 1L), time.parkRequests);
-    }
-
-    @Test
-    void yieldsPreservesTheCaughtAssertionWithoutReadingItsMessage()
-            throws Exception {
-        var failure = new MessageReadingAssertion();
-        var condition = Condition.<String, Long>yields(value -> {
-            throw failure;
-        });
-        Evaluation<Long> evaluation = evaluate(condition, "42");
-
-        assertTrue(!evaluation.mismatch().isBlank());
-        assertSame(failure, evaluation.assertionCause());
+        assertEquals(1, invocations[0]);
+        assertSame(assertion, failure.getCause());
+        assertArrayEquals(new StackTraceElement[]{frame},
+                failure.getCause().getStackTrace());
     }
 
     @Test
@@ -161,12 +154,5 @@ class AssertionAdapterTest {
         assertTrue(assertThrows(NullPointerException.class,
                 () -> yields((Function<String, String>) null))
                 .getMessage().contains("callback"));
-    }
-
-    private static final class MessageReadingAssertion extends AssertionError {
-        @Override
-        public String getMessage() {
-            throw new InternalError("message read");
-        }
     }
 }

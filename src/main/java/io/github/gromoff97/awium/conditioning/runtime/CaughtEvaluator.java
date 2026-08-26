@@ -40,14 +40,15 @@ final class CaughtEvaluator<S, R>
         Evaluation<? extends R> contextual = evaluation.withContext(context(current));
         return next == stages.size()
                 ? contextual.continueIfSatisfied(this::replaceLast)
-                : contextual.continueIfSatisfied(this::capture);
+                : contextual.continueIfSatisfied(result -> capture(result, current));
     }
 
-    private Evaluation<List<R>> capture(R result) {
+    private Evaluation<List<R>> capture(R result, int evaluated) {
         results.add(result);
         if (++next < stages.size()) {
             return Evaluation.<List<R>>unsatisfied(
-                    "waiting for sequence stage " + (next + 1)).withContext(context(next));
+                    "waiting for sequence stage " + (next + 1)).withContext(
+                            context(next, evaluated));
         }
         return satisfied(resultCopy());
     }
@@ -62,9 +63,13 @@ final class CaughtEvaluator<S, R>
     }
 
     private Evaluation.Context.Sequence context(int stage) {
+        return context(stage, stage);
+    }
+
+    private Evaluation.Context.Sequence context(int stage, int evaluated) {
         Stage<S, R> metadata = stages.get(stage);
         return new Evaluation.Context.Sequence(stage, stages.size(), stage + 1,
-                metadata.expectation(), metadata.importance());
+                evaluated + 1, metadata.expectation(), metadata.importance());
     }
 
     record Stage<S, R>(Function<? super S,

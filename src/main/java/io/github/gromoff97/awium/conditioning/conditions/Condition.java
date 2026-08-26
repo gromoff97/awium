@@ -66,7 +66,7 @@ public sealed interface Condition<S, R> extends ConditionStage<S, R>
     static <S, R> Condition<S, R> yields(Function<? super S, ? extends R> callback) {
         requireNonNull(callback, "callback must not be null");
         return condition("callback yields a result",
-                evaluated("callback did not yield a result", callback));
+                actual -> satisfied(callback.apply(actual)));
     }
 
     private static <S, R> Function<S, Evaluation<R>> evaluated(String mismatch,

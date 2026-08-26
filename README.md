@@ -10,7 +10,7 @@ import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditio
 
 import java.time.Duration;
 
-Payment payment = await(paymentRepository::findById).every(Duration.ofMillis(100)).upTo(Duration.ofSeconds(10)).stableFor(Duration.ofSeconds(5)).until(
+Payment payment = await(paymentRepository::findById).every(Duration.ofMillis(100)).upTo(Duration.ofSeconds(10)).persisting(Duration.ofSeconds(5)).until(
         present.because("Checkout cannot continue without the payment"));
 ```
 
@@ -57,13 +57,13 @@ OptionalSource<Payment> source = () -> null;
 await(source).until(absent);
 ```
 
-`every`, `upTo`, and `stableFor` are optional and may be called in any order or
+`every`, `upTo`, and `persisting` are optional and may be called in any order or
 repeated. Each call returns a new immutable stage; the last value supplied for a
 setting is used by `until(...)`. Defaults are:
 
 - `every`: 100 milliseconds
 - `upTo`: 10 seconds
-- `stableFor`: zero (disabled)
+- `persisting`: zero (disabled)
 
 Each duration is validated when supplied. The final `every < upTo` relationship
 is validated by `until(...)` before polling, so a temporarily conflicting
@@ -71,7 +71,7 @@ intermediate configuration may be repaired by a later call.
 
 The first observation is immediate. `every` is a fixed delay from the end of
 one observation to the start of the next. `upTo` limits acquisition only. Once
-the condition first succeeds, a configured `stableFor` period may extend the
+the condition first succeeds, a configured `persisting` period may extend the
 total call beyond `upTo`; success then returns the final satisfied boundary
 observation. A stability mismatch fails immediately instead of restarting
 acquisition.
@@ -118,9 +118,12 @@ await(paymentRepository::load).until(equalTo(expectedPayment).because(
         "Refund processing requires payment %s in the replica", paymentId));
 ```
 
-Sources, `asserted(...)` callbacks, and `yields(...)` callbacks may throw
-checked exceptions. `asserted(...)` preserves the observed source, while
-`yields(...)` selects its callback result. Both retry an `AssertionError`:
+Sources may throw checked exceptions. Public callbacks and predicates use the
+JDK `Consumer`, `Function`, and `Predicate` interfaces, so callers must handle
+or convert checked callback failures themselves. `asserted(...)` preserves the
+observed source and treats `AssertionError` as unsatisfied so polling continues.
+`yields(...)` selects its callback result; an `AssertionError` from it is an
+uncontrolled condition failure and stops polling immediately:
 
 ```java
 Payment payment = await(paymentRepository::loadChecked).until(asserted(actual -> {
@@ -129,19 +132,38 @@ Payment payment = await(paymentRepository::loadChecked).until(asserted(actual ->
     }
 }));
 
-Receipt receipt = await(paymentRepository::loadChecked).until(yields(actual -> {
-    return actual.loadReceiptChecked();
-}));
+Receipt receipt = await(paymentRepository::loadChecked).until(yields(Payment::receipt));
 ```
 
-Other checked or unchecked callback failures stop immediately and preserve the
+Other unchecked callback failures also stop immediately and preserve the
 original cause.
+
+## Ordered capture
+
+`caught(...)` captures at least two stages in strict order. It evaluates only
+the current stage on each poll, captures at most one result, and returns the
+captured results as a list:
+
+```java
+List<Payment> lifecycle = await(paymentRepository::load).until(caught(
+        payment -> payment.status() == CREATED,
+        payment -> payment.status() == FINISHED));
+```
+
+With `persisting(...)`, only the final stage is re-evaluated after acquisition;
+earlier captures remain unchanged. Predicate stages infer their parameter type
+without annotations. When `matches(...)` is chained immediately to
+`because(...)`, type its generic lambda parameter explicitly:
+
+```java
+var finished = matches((Payment payment) -> payment.status() == FINISHED).because(
+        "Settlement requires a finished payment");
+```
 
 ## Built-in condition catalogue
 
 Names stay close to AssertJ but omit redundant suffixes such as `Matching`.
-Predicate overloads use Awium's checked predicate types, so their lambdas may
-throw checked exceptions.
+Predicate overloads use the JDK `Predicate` type.
 
 | Domain | Conditions | Successful result |
 | --- | --- | --- |

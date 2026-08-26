@@ -18,6 +18,9 @@ import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.PERSISTENCE;
 import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.caught;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -83,7 +86,7 @@ class TryAwaitHistoryTest {
                 .recordedWaitFor(() -> actual, value -> {
                     int current = ++stage[0];
                     return Evaluation.<Object>unsatisfied("same mismatch").withContext(
-                            new Evaluation.Context.Sequence(current - 1, 3, current,
+                            new Evaluation.Context.Sequence(current - 1, 3, current, current,
                                     "stage " + current, null));
                 });
 
@@ -95,6 +98,25 @@ class TryAwaitHistoryTest {
                 .map(Evaluation.Context.Sequence.class::cast)
                 .map(Evaluation.Context.Sequence::stage)
                 .toList());
+    }
+
+    @Test
+    void caughtStageTransitionsAreNotCompressedWhenDiagnosticsMatch() {
+        var time = new FakeTime(0);
+        var actual = new Object();
+        var nested = caught(
+                condition("inner stage 1", value -> satisfied(value)),
+                condition("inner stage 2", value -> satisfied(value)));
+
+        var result = timedTryAwait(() -> actual, config(1, 10, 0), time, time)
+                .until(caught(
+                        condition("conditions are satisfied in order",
+                                value -> satisfied(List.of(value))),
+                        nested));
+
+        assertEquals(3, result.totalAttempts());
+        assertEquals(List.of(1L, 2L, 3L), result.attempts().stream()
+                .map(AwaitAttempt::number).toList());
     }
 
     @Test
