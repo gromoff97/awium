@@ -75,6 +75,31 @@ class TryAwaitCompilationContractTest {
                 """));
     }
 
+    @Test
+    void specializedSourcesRetainSelectedResultTypes() throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.await.TryAwait.tryAwait;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.first;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.single;
+                import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.singleEntry;
+                import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.present;
+                import io.github.gromoff97.awium.await.AwaitResult;
+                import io.github.gromoff97.awium.sources.Source.*;
+                import java.util.*;
+                final class Contract {
+                    void check(OptionalSource<String> optional,
+                            CollectionSource<List<String>> collection,
+                            MapSource<Map<String, Integer>> map) {
+                        AwaitResult<Optional<String>, String> optionalResult = tryAwait(optional).until(present);
+                        AwaitResult<List<String>, String> collectionResult = tryAwait(collection).until(single);
+                        AwaitResult<List<String>, String> firstResult = tryAwait(collection).until(first);
+                        AwaitResult<Map<String, Integer>, Map.Entry<String, Integer>> mapResult =
+                                tryAwait(map).until(singleEntry);
+                    }
+                }
+                """));
+    }
+
     private boolean compiles(String source) throws IOException {
         return CompilationSupport.compiles(temporaryDirectory, source);
     }

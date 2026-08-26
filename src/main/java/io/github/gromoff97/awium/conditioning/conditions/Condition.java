@@ -3,6 +3,7 @@ package io.github.gromoff97.awium.conditioning.conditions;
 import io.github.gromoff97.awium.conditioning.CheckedConsumer;
 import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.sources.Source;
 
 import java.util.Locale;
 
@@ -115,21 +116,28 @@ public abstract class Condition<S, R> {
         }
     }
 
-    public record SelectedCondition<S>(Condition<S, ?> delegate) {
+    public static final class SelectedCondition<S, F extends Source<?>> {
 
-        public SelectedCondition {
-            requireNonNull(delegate, "condition must not be null");
+        private final Condition<S, ?> delegate;
+
+        SelectedCondition(Condition<S, ?> delegate) {
+            this.delegate = requireNonNull(delegate, "condition must not be null");
         }
 
-        public ExplainedCondition<S> because(String explanation) {
+        public Condition<S, ?> delegate() {
+            return delegate;
+        }
+
+        public ExplainedCondition<S, F> because(String explanation) {
             return new ExplainedCondition<>(this, explanation);
         }
 
-        public ExplainedCondition<S> because(String format, Object... arguments) {
+        public ExplainedCondition<S, F> because(String format, Object... arguments) {
             return new ExplainedCondition<>(this, formattedExplanation(format, arguments));
         }
 
-        public record ExplainedCondition<S>(SelectedCondition<S> delegate, String explanation) {
+        public record ExplainedCondition<S, F extends Source<?>>(
+                SelectedCondition<S, F> delegate, String explanation) {
 
             public ExplainedCondition {
                 requireNonNull(delegate, "condition must not be null");

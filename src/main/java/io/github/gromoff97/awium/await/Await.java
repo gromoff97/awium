@@ -15,25 +15,28 @@ import java.util.Optional;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
-public final class Await<S, E> extends AbstractAwait<S, E, Await<S, E>> {
+public final class Await<S, E, F extends Source<?>>
+        extends AbstractAwait<S, E, F, Await<S, E, F>> {
 
     private Await(Source<? extends S> source) {
         super(source);
     }
 
-    public static <T> Await<T, T> await(Source<T> source) {
+    public static <T> Await<T, T, Source<?>> await(Source<T> source) {
         return new Await<>(source);
     }
 
-    public static <T> Await<Optional<T>, T> await(OptionalSource<T> source) {
+    public static <T> Await<Optional<T>, T, OptionalSource<?>> await(OptionalSource<T> source) {
         return new Await<>(source);
     }
 
-    public static <E, C extends Collection<E>> Await<C, E> await(CollectionSource<C> source) {
+    public static <E, C extends Collection<E>> Await<C, E, CollectionSource<?>> await(
+            CollectionSource<C> source) {
         return new Await<>(source);
     }
 
-    public static <K, V, M extends Map<K, V>> Await<M, Map.Entry<K, V>> await(MapSource<M> source) {
+    public static <K, V, M extends Map<K, V>> Await<M, Map.Entry<K, V>, MapSource<?>> await(
+            MapSource<M> source) {
         return new Await<>(source);
     }
 
@@ -42,12 +45,12 @@ public final class Await<S, E> extends AbstractAwait<S, E, Await<S, E>> {
         super(source, configuration, clock, parker);
     }
 
-    private Await(Await<S, E> await, WaitConfiguration configuration) {
+    private Await(Await<S, E, F> await, WaitConfiguration configuration) {
         super(await, configuration);
     }
 
     @Override
-    Await<S, E> reconfigured(WaitConfiguration configuration) {
+    Await<S, E, F> reconfigured(WaitConfiguration configuration) {
         return new Await<>(this, configuration);
     }
 
@@ -67,11 +70,11 @@ public final class Await<S, E> extends AbstractAwait<S, E, Await<S, E>> {
         return complete(prepare(condition));
     }
 
-    public E until(SelectedCondition<? super S> condition) {
+    public E until(SelectedCondition<? super S, F> condition) {
         return complete(prepare(condition));
     }
 
-    public E until(SelectedCondition.ExplainedCondition<? super S> condition) {
+    public E until(SelectedCondition.ExplainedCondition<? super S, F> condition) {
         return complete(prepare(condition));
     }
 }

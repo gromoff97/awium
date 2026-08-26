@@ -274,8 +274,9 @@ class TryAwaitFailureTest {
         });
     }
 
-    private static Condition<Object, Object> nullEvaluation() {
-        return condition("condition succeeds", actual -> null);
+    private static Condition.PreservingCondition<Object> nullEvaluation() {
+        return new Condition.PreservingCondition<>(
+                condition("condition succeeds", actual -> null));
     }
 
     private static Condition<Object, Object> brokenDescription() {

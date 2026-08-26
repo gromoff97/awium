@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
+import io.github.gromoff97.awium.sources.Source.OptionalSource;
 
 import java.util.Optional;
 
@@ -16,12 +17,7 @@ import static java.util.Objects.requireNonNull;
 
 public final class OptionalCondition {
 
-    public static final SelectedCondition<Optional<?>> present = new SelectedCondition<>(condition("optional is present", actual -> {
-        if (actual == null) {
-            return unsatisfied("optional was null");
-        }
-        return actual.isPresent() ? satisfied(actual.orElseThrow()) : unsatisfied("optional was empty");
-    }));
+    public static final SelectedCondition<Optional<?>, OptionalSource<?>> present = new SelectedCondition<>(condition("optional is present", OptionalCondition::present));
     public static final Condition<Optional<?>, Void> absent = condition("optional is absent", actual -> {
         if (actual == null) {
             return unsatisfied("optional was null");
@@ -75,9 +71,11 @@ public final class OptionalCondition {
                         ? satisfied(value) : unsatisfied(mismatch)));
     }
 
-    @SuppressWarnings("unchecked")
-    private static <T> Evaluation<T> present(Optional<T> actual) throws Exception {
-        return (Evaluation<T>) present.delegate().evaluate(actual);
+    private static <T> Evaluation<T> present(Optional<T> actual) {
+        if (actual == null) {
+            return unsatisfied("optional was null");
+        }
+        return actual.isPresent() ? satisfied(actual.orElseThrow()) : unsatisfied("optional was empty");
     }
 
 }

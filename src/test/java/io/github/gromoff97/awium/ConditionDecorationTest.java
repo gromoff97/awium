@@ -6,7 +6,6 @@ import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,8 +21,7 @@ class ConditionDecorationTest {
         Condition<Object, Object> condition = condition(
                 "custom condition", Evaluation::satisfied);
         var preserving = new PreservingCondition<>(condition);
-        var selected = new SelectedCondition<>(Condition.<java.util.Optional<?>, Object>condition(
-                "selected", value -> satisfied(value.orElse(null))));
+        var selected = OptionalCondition.present;
 
         assertEquals("the value must be ready",
                 condition.because("the value must be ready").explanation());

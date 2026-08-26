@@ -55,8 +55,10 @@ class CompilationContractTest {
 
     @Test
     void categorySpecificTerminalsRejectWrongConditions() throws IOException {
-        for (String type : List.of("SelectedCondition<java.util.Optional<?>>",
-                "SelectedCondition<java.util.Collection<?>>", "SelectedCondition<java.util.Map<?, ?>>")) {
+        for (String type : List.of(
+                "SelectedCondition<java.util.Optional<?>, Source.OptionalSource<?>>",
+                "SelectedCondition<java.util.Collection<?>, Source.CollectionSource<?>>",
+                "SelectedCondition<java.util.Map<?, ?>, Source.MapSource<?>>")) {
             assertFalse(compiles("""
                     import static io.github.gromoff97.awium.await.Await.await;
                     import io.github.gromoff97.awium.sources.Source;
@@ -72,6 +74,45 @@ class CompilationContractTest {
     }
 
     @Test
+    void plainSourcesRejectSelectedConditionCategoryEscapes() throws IOException {
+        for (String condition : List.of("present", "single", "first", "last", "singleEntry")) {
+            assertFalse(compiles("""
+                    import static io.github.gromoff97.awium.await.Await.await;
+                    import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
+                    import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.singleEntry;
+                    import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.present;
+                    import io.github.gromoff97.awium.sources.Source;
+                    import java.util.*;
+                    final class Contract {
+                        void check(Source<Optional<String>> optional,
+                                Source<List<String>> collection,
+                                Source<Map<String, String>> map) {
+                            await(%s).until(%s);
+                        }
+                    }
+                    """.formatted(condition.equals("present") ? "optional"
+                                    : condition.equals("singleEntry") ? "map" : "collection",
+                            condition)), condition);
+        }
+    }
+
+    @Test
+    void externalCallersCannotConstructSelectedConditions() throws IOException {
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+                import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+                import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
+                import java.util.Optional;
+                final class Contract {
+                    void check() {
+                        new SelectedCondition<>(condition("selected",
+                                (Optional<?> value) -> satisfied(value.orElse(null))));
+                    }
+                }
+                """));
+    }
+
+    @Test
     void sourceSelectedFieldsShareOneSourceTypedCondition() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.present;
@@ -82,9 +123,9 @@ class CompilationContractTest {
                 import java.util.Map;
                 import java.util.Optional;
                 final class Contract {
-                    SelectedCondition<Optional<?>> optional = present;
-                    SelectedCondition<Collection<?>> collection = CollectionCondition.single;
-                    SelectedCondition<Map<?, ?>> map = MapCondition.singleEntry;
+                    SelectedCondition<Optional<?>, io.github.gromoff97.awium.sources.Source.OptionalSource<?>> optional = present;
+                    SelectedCondition<Collection<?>, io.github.gromoff97.awium.sources.Source.CollectionSource<?>> collection = CollectionCondition.single;
+                    SelectedCondition<Map<?, ?>, io.github.gromoff97.awium.sources.Source.MapSource<?>> map = MapCondition.singleEntry;
                 }
                 """));
     }
@@ -170,6 +211,29 @@ class CompilationContractTest {
                     void check() {
                         Integer wrong = await((io.github.gromoff97.awium.sources.Source.CollectionSource<List<String>>)
                                 () -> List.of("value")).until(single);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void specializedSourcesRetainSelectedResultTypes() throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.await.Await.await;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.first;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.single;
+                import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.singleEntry;
+                import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.present;
+                import io.github.gromoff97.awium.sources.Source.*;
+                import java.util.*;
+                final class Contract {
+                    void check(OptionalSource<String> optional,
+                            CollectionSource<List<String>> collection,
+                            MapSource<Map<String, Integer>> map) {
+                        String optionalResult = await(optional).until(present);
+                        String collectionResult = await(collection).until(single);
+                        String firstResult = await(collection).until(first);
+                        Map.Entry<String, Integer> mapResult = await(map).until(singleEntry);
                     }
                 }
                 """));

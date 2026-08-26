@@ -15,26 +15,27 @@ import java.util.Optional;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
-public final class TryAwait<S, E> extends AbstractAwait<S, E, TryAwait<S, E>> {
+public final class TryAwait<S, E, F extends Source<?>>
+        extends AbstractAwait<S, E, F, TryAwait<S, E, F>> {
 
     private TryAwait(Source<? extends S> source) {
         super(source);
     }
 
-    public static <T> TryAwait<T, T> tryAwait(Source<T> source) {
+    public static <T> TryAwait<T, T, Source<?>> tryAwait(Source<T> source) {
         return new TryAwait<>(source);
     }
 
-    public static <T> TryAwait<Optional<T>, T> tryAwait(OptionalSource<T> source) {
+    public static <T> TryAwait<Optional<T>, T, OptionalSource<?>> tryAwait(OptionalSource<T> source) {
         return new TryAwait<>(source);
     }
 
-    public static <E, C extends Collection<E>> TryAwait<C, E> tryAwait(
+    public static <E, C extends Collection<E>> TryAwait<C, E, CollectionSource<?>> tryAwait(
             CollectionSource<C> source) {
         return new TryAwait<>(source);
     }
 
-    public static <K, V, M extends Map<K, V>> TryAwait<M, Map.Entry<K, V>> tryAwait(
+    public static <K, V, M extends Map<K, V>> TryAwait<M, Map.Entry<K, V>, MapSource<?>> tryAwait(
             MapSource<M> source) {
         return new TryAwait<>(source);
     }
@@ -44,12 +45,12 @@ public final class TryAwait<S, E> extends AbstractAwait<S, E, TryAwait<S, E>> {
         super(source, configuration, clock, parker);
     }
 
-    private TryAwait(TryAwait<S, E> await, WaitConfiguration configuration) {
+    private TryAwait(TryAwait<S, E, F> await, WaitConfiguration configuration) {
         super(await, configuration);
     }
 
     @Override
-    TryAwait<S, E> reconfigured(WaitConfiguration configuration) {
+    TryAwait<S, E, F> reconfigured(WaitConfiguration configuration) {
         return new TryAwait<>(this, configuration);
     }
 
@@ -71,12 +72,12 @@ public final class TryAwait<S, E> extends AbstractAwait<S, E, TryAwait<S, E>> {
         return capture(prepare(condition));
     }
 
-    public AwaitResult<S, E> until(SelectedCondition<? super S> condition) {
+    public AwaitResult<S, E> until(SelectedCondition<? super S, F> condition) {
         return capture(prepare(condition));
     }
 
     public AwaitResult<S, E> until(
-            SelectedCondition.ExplainedCondition<? super S> condition) {
+            SelectedCondition.ExplainedCondition<? super S, F> condition) {
         return capture(prepare(condition));
     }
 }

@@ -14,25 +14,25 @@ public final class AwaitTestAccess {
         throw new AssertionError("Utility class");
     }
 
-    public static <S> Await<S, S> timedAwait(Source<? extends S> source,
+    public static <S> Await<S, S, Source<?>> timedAwait(Source<? extends S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {
         return new Await<>(source, configuration, clock, parker);
     }
 
-    public static <S> TryAwait<S, S> timedTryAwait(Source<? extends S> source,
+    public static <S> TryAwait<S, S, Source<?>> timedTryAwait(Source<? extends S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {
         return new TryAwait<>(source, configuration, clock, parker);
     }
 
-    public static <E, C extends Collection<E>> Await<C, E> timedCollectionAwait(
+    public static <E, C extends Collection<E>> Await<C, E, Source.CollectionSource<?>> timedCollectionAwait(
             Source<? extends C> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         return new Await<>(source, configuration, clock, parker);
     }
 
-    public static <K, V, M extends Map<K, V>> Await<M, Map.Entry<K, V>> timedMapAwait(
+    public static <K, V, M extends Map<K, V>> Await<M, Map.Entry<K, V>, Source.MapSource<?>> timedMapAwait(
             Source<? extends M> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         return new Await<>(source, configuration, clock, parker);

@@ -17,9 +17,10 @@ import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static java.util.Objects.requireNonNull;
 
-abstract class AbstractAwait<S, E, A> {
+abstract class AbstractAwait<S, E, F extends Source<?>, A> {
 
     private final Source<? extends S> source;
     private final WaitEngine engine;
@@ -37,7 +38,7 @@ abstract class AbstractAwait<S, E, A> {
                 requireNonNull(parker, "parker must not be null"));
     }
 
-    AbstractAwait(AbstractAwait<S, E, ?> await, WaitConfiguration configuration) {
+    AbstractAwait(AbstractAwait<S, E, F, ?> await, WaitConfiguration configuration) {
         this(await.source, configuration, await.engine.clock(), await.engine.parker());
     }
 
@@ -77,12 +78,12 @@ abstract class AbstractAwait<S, E, A> {
         return prepare(explained.delegate(), explained.explanation());
     }
 
-    protected final Prepared<S, E> prepare(SelectedCondition<? super S> condition) {
+    protected final Prepared<S, E> prepare(SelectedCondition<? super S, F> condition) {
         return prepareSelected(requireNonNull(condition, "condition must not be null").delegate(), null);
     }
 
     protected final Prepared<S, E> prepare(
-            SelectedCondition.ExplainedCondition<? super S> condition) {
+            SelectedCondition.ExplainedCondition<? super S, F> condition) {
         var explained = requireNonNull(condition, "condition must not be null");
         return prepareSelected(explained.delegate().delegate(), explained.explanation());
     }
@@ -108,10 +109,13 @@ abstract class AbstractAwait<S, E, A> {
         return prepare((Condition<? super S, ? extends E>) condition, explanation);
     }
 
-    @SuppressWarnings("unchecked")
     private Prepared<S, S> preparePreserving(Condition<? super S, ?> condition,
             String explanation) {
-        return prepare((Condition<? super S, ? extends S>) condition, explanation);
+        return new Prepared<>(actual -> {
+            Evaluation<?> evaluation = condition.evaluate(actual);
+            return evaluation == null ? null : evaluation.continueIfSatisfied(
+                    ignored -> satisfied(actual));
+        }, condition::description, explanation);
     }
 
     protected record Prepared<S, R>(

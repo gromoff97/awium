@@ -62,19 +62,22 @@ class FactoryGrammarTest {
                 (Condition.ExplainedCondition<String, String>) null));
 
         var optional = await((OptionalSource<String>) Optional::empty).every(ofSeconds(20));
-        assertNull("condition", () -> optional.until((SelectedCondition<Optional<?>>) null));
         assertNull("condition", () -> optional.until(
-                (SelectedCondition.ExplainedCondition<Optional<?>>) null));
+                (SelectedCondition<Optional<?>, OptionalSource<?>>) null));
+        assertNull("condition", () -> optional.until(
+                (SelectedCondition.ExplainedCondition<Optional<?>, OptionalSource<?>>) null));
 
         var collection = await((CollectionSource<Collection<String>>) List::of).every(ofSeconds(20));
-        assertNull("condition", () -> collection.until((SelectedCondition<Collection<?>>) null));
         assertNull("condition", () -> collection.until(
-                (SelectedCondition.ExplainedCondition<Collection<?>>) null));
+                (SelectedCondition<Collection<?>, CollectionSource<?>>) null));
+        assertNull("condition", () -> collection.until(
+                (SelectedCondition.ExplainedCondition<Collection<?>, CollectionSource<?>>) null));
 
         var map = await((MapSource<Map<String, String>>) Map::of).every(ofSeconds(20));
-        assertNull("condition", () -> map.until((SelectedCondition<Map<?, ?>>) null));
         assertNull("condition", () -> map.until(
-                (SelectedCondition.ExplainedCondition<Map<?, ?>>) null));
+                (SelectedCondition<Map<?, ?>, MapSource<?>>) null));
+        assertNull("condition", () -> map.until(
+                (SelectedCondition.ExplainedCondition<Map<?, ?>, MapSource<?>>) null));
     }
 
     private static void assertNull(String context, Executable action) {

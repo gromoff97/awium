@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
+import io.github.gromoff97.awium.sources.Source.CollectionSource;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,7 +31,7 @@ import static java.util.Objects.requireNonNull;
 @SuppressWarnings("varargs")
 public final class CollectionCondition {
 
-    public static final SelectedCondition<Collection<?>> single = new SelectedCondition<>(condition("collection has a single element", actual -> {
+    public static final SelectedCondition<Collection<?>, CollectionSource<?>> single = new SelectedCondition<>(condition("collection has a single element", actual -> {
         if (actual == null) {
             return unsatisfied("collection was null");
         }
@@ -298,7 +299,7 @@ public final class CollectionCondition {
                 actual -> !containsSubsequence(elements(actual), values));
     }
 
-    public static final SelectedCondition<SequencedCollection<?>> first = position(
+    public static final SelectedCondition<SequencedCollection<?>, CollectionSource<?>> first = position(
             "first", SequencedCollection::getFirst);
 
     public static <E> Condition<SequencedCollection<E>, E> first(CheckedPredicate<? super E> predicate) {
@@ -306,7 +307,7 @@ public final class CollectionCondition {
         return condition("collection has a matching element", actual -> selectFirst(actual, predicate));
     }
 
-    public static final SelectedCondition<SequencedCollection<?>> last = position(
+    public static final SelectedCondition<SequencedCollection<?>, CollectionSource<?>> last = position(
             "last", SequencedCollection::getLast);
 
     public static <E> Condition<SequencedCollection<E>, E> last(CheckedPredicate<? super E> predicate) {
@@ -378,7 +379,7 @@ public final class CollectionCondition {
         return unsatisfied("no collection element matched");
     }
 
-    private static SelectedCondition<SequencedCollection<?>> position(String name,
+    private static SelectedCondition<SequencedCollection<?>, CollectionSource<?>> position(String name,
             java.util.function.Function<SequencedCollection<?>, ?> selector) {
         return new SelectedCondition<>(condition("collection has a " + name + " element", actual -> {
             if (actual == null) {

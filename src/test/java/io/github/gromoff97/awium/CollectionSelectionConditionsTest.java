@@ -3,6 +3,7 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
+import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -21,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CollectionSelectionConditionsTest {
 
@@ -163,6 +165,21 @@ class CollectionSelectionConditionsTest {
 
         assertEquals(3, timedCollectionAwait(source,
                 new io.github.gromoff97.awium.engine.WaitConfiguration(1, 5, 2), time, time).until(last));
+    }
+
+    @Test
+    void explainedFirstRetainsSelectedTimeoutDiagnostics() {
+        FakeTime time = new FakeTime(0);
+        CollectionSource<List<String>> source = List::of;
+
+        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
+                () -> timedCollectionAwait(source,
+                        new io.github.gromoff97.awium.engine.WaitConfiguration(1, 3, 0),
+                        time, time).until(first.because("a first result is required")));
+
+        assertTrue(failure.getMessage().contains("Expectation: collection has a first element"));
+        assertTrue(failure.getMessage().contains("Importance: a first result is required"));
+        assertTrue(failure.getMessage().contains("Mismatch: collection was empty"));
     }
 
     private record User(int id) {

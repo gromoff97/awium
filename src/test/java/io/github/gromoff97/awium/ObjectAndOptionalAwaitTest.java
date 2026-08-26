@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.await.Await.await;
+import static io.github.gromoff97.awium.await.TryAwait.tryAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
@@ -17,10 +18,12 @@ import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.await.Await;
+import io.github.gromoff97.awium.await.AwaitResult;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -29,6 +32,22 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class ObjectAndOptionalAwaitTest {
+
+    @Test
+    void awaitReturnsTheObservationFromABroadPreservingCondition() {
+        Source<String> source = () -> "observed";
+
+        assertEquals("observed", await(source).until(broadPreservingCondition()));
+    }
+
+    @Test
+    void tryAwaitReturnsTheObservationFromABroadPreservingCondition() {
+        Source<String> source = () -> "observed";
+
+        AwaitResult<String, String> result = tryAwait(source).until(broadPreservingCondition());
+        assertInstanceOf(AwaitResult.Satisfied.class, result);
+        assertEquals("observed", ((AwaitResult.Satisfied<?, ?>) result).result());
+    }
 
     @Test
     void voidAndNullableSelectingTerminalsReturnNullOnSuccess() {
@@ -50,7 +69,7 @@ class ObjectAndOptionalAwaitTest {
     void reusableStageRetainsTheExactSourceAndStartsEachTerminalFresh() {
         int[] calls = {0};
         FakeTime time = new FakeTime(0);
-        Await<Integer, Integer> stage = stage(time, () -> ++calls[0]);
+        Await<Integer, Integer, Source<?>> stage = stage(time, () -> ++calls[0]);
         Condition<Integer, Integer> evenObservation = condition(
                 "even observation", value -> value % 2 == 0
                         ? satisfied(value)
@@ -65,7 +84,7 @@ class ObjectAndOptionalAwaitTest {
     void reusableStageStartsFreshAfterControlledAndUncontrolledFailures() {
         FakeTime time = new FakeTime(0);
         int[] sourceCalls = {0};
-        Await<String, String> stage = stage(time, () -> {
+        Await<String, String, Source<?>> stage = stage(time, () -> {
             sourceCalls[0]++;
             return "value";
         });
@@ -87,11 +106,16 @@ class ObjectAndOptionalAwaitTest {
         assertEquals(5, sourceCalls[0]);
     }
 
-    private static <T> Await<T, T> stage(
+    private static <T> Await<T, T, Source<?>> stage(
             FakeTime time, Source<T> source) {
         return timedAwait(source,
                 defaults().withEvery(ofNanos(1))
                         .withUpTo(ofNanos(3)),
                 time, time);
+    }
+
+    private static PreservingCondition<Object> broadPreservingCondition() {
+        return new PreservingCondition<>(condition("broad preserving condition",
+                ignored -> satisfied(new Object())));
     }
 }

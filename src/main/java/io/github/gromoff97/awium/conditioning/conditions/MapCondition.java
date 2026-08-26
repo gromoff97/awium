@@ -5,6 +5,7 @@ import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
+import io.github.gromoff97.awium.sources.Source.MapSource;
 
 import java.util.List;
 import java.util.Map;
@@ -29,7 +30,7 @@ import static java.util.Objects.requireNonNull;
 @SuppressWarnings("varargs")
 public final class MapCondition {
 
-    public static final SelectedCondition<Map<?, ?>> singleEntry = new SelectedCondition<>(condition("map has a single entry", actual -> {
+    public static final SelectedCondition<Map<?, ?>, MapSource<?>> singleEntry = new SelectedCondition<>(condition("map has a single entry", actual -> {
         if (actual == null) {
             return unsatisfied("map was null");
         }
