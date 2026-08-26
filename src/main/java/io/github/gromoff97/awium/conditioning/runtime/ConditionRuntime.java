@@ -1,16 +1,22 @@
 package io.github.gromoff97.awium.conditioning.runtime;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.conditions.CaughtEvaluator;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
+import io.github.gromoff97.awium.conditioning.conditions.ObjectCondition;
 import io.github.gromoff97.awium.sources.Source;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static java.util.Objects.requireNonNull;
@@ -83,6 +89,48 @@ public final class ConditionRuntime {
         requireNonNull(evaluation, "evaluation must not be null");
         Function<S, Evaluation<R>> evaluator = evaluation::apply;
         return new RuntimeCondition<>(validatedDescription, () -> evaluator);
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <S> Condition<S, List<S>> caught(Predicate<? super S> first,
+            Predicate<? super S> second, Predicate<? super S>... rest) {
+        return caughtPreserving(stages("predicate", first, second, rest).stream()
+                .map(predicate -> ObjectCondition.<S>matches(predicate)).toList());
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <S> Condition<S, List<S>> caught(PreservingStage<? super S> first,
+            PreservingStage<? super S> second, PreservingStage<? super S>... rest) {
+        return caughtPreserving(stages("condition", first, second, rest));
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <S, R> Condition<S, List<R>> caught(
+            ConditionStage<? super S, R> first,
+            ConditionStage<? super S, R> second,
+            ConditionStage<? super S, R>... rest) {
+        List<ConditionStage<? super S, R>> stages =
+                stages("condition", first, second, rest);
+        return condition("conditions are satisfied in order", () ->
+                new CaughtEvaluator<>(stages.stream()
+                        .map(stage -> ConditionRuntime.<S, R>evaluator(stage)).toList()));
+    }
+
+    private static <S> Condition<S, List<S>> caughtPreserving(
+            List<? extends PreservingStage<? super S>> stages) {
+        return condition("conditions are satisfied in order", () ->
+                new CaughtEvaluator<>(stages.stream()
+                        .map(stage -> ConditionRuntime.<S>preservingEvaluator(stage)).toList()));
+    }
+
+    private static <T> List<T> stages(String name, T first, T second, T[] rest) {
+        T[] capturedRest = requireNonNull(rest, name + "s must not be null").clone();
+        return Stream.concat(Stream.of(first, second), Arrays.stream(capturedRest))
+                .map(stage -> requireNonNull(stage, name + " must not be null"))
+                .toList();
     }
 
     public static <S> PreservingCondition<S> preserving(String description,

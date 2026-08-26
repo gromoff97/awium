@@ -4,9 +4,11 @@ import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
 import io.github.gromoff97.awium.sources.Source;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
@@ -18,6 +20,29 @@ public sealed interface Condition<S, R> extends ConditionStage<S, R>
     static <S, R> Condition<S, R> condition(String description,
             Function<? super S, Evaluation<R>> evaluation) {
         return ConditionRuntime.condition(description, evaluation);
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    static <S> Condition<S, List<S>> caught(Predicate<? super S> first,
+            Predicate<? super S> second, Predicate<? super S>... rest) {
+        return ConditionRuntime.caught(first, second, rest);
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    static <S> Condition<S, List<S>> caught(PreservingStage<? super S> first,
+            PreservingStage<? super S> second, PreservingStage<? super S>... rest) {
+        return ConditionRuntime.caught(first, second, rest);
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    static <S, R> Condition<S, List<R>> caught(
+            ConditionStage<? super S, R> first,
+            ConditionStage<? super S, R> second,
+            ConditionStage<? super S, R>... rest) {
+        return ConditionRuntime.caught(first, second, rest);
     }
 
     static <S> PreservingCondition<S> asserted(Consumer<? super S> assertion) {
