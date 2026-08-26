@@ -118,10 +118,10 @@ await(paymentRepository::load).until(equalTo(expectedPayment).because(
         "Refund processing requires payment %s in the replica", paymentId));
 ```
 
-Sources may throw checked exceptions. Public callbacks and predicates use the
-JDK `Consumer`, `Function`, and `Predicate` interfaces, so callers must handle
-or convert checked callback failures themselves. `asserted(...)` preserves the
-observed source and treats `AssertionError` as unsatisfied so polling continues.
+Sources may throw checked exceptions. Public callbacks and predicates use JDK
+functional interfaces, so callers must handle or convert checked callback
+failures themselves. `asserted(...)` preserves the observed source and treats
+`AssertionError` as unsatisfied so polling continues.
 `yields(...)` selects its callback result; an `AssertionError` from it is an
 uncontrolled condition failure and stops polling immediately:
 
