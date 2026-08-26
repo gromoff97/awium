@@ -42,7 +42,7 @@ class TryAwaitCompilationContractTest {
                             Source.MapSource<Map<String, Payment>> paymentMap,
                             Source<Payment> rawPayment) {
                         AwaitResult<String, String> ordinary = tryAwait(text).every(ofMillis(1))
-                                .upTo(ofSeconds(1)).stableFor(ZERO)
+                                .upTo(ofSeconds(1)).persisting(ZERO)
                                 .until(isNotNull.because("business availability"));
                         AwaitResult<Optional<Payment>, Payment> optional = tryAwait(payment).until(present);
                         AwaitResult<List<Payment>, Payment> collection = tryAwait(payments).until(single);
@@ -57,6 +57,20 @@ class TryAwaitCompilationContractTest {
                     }
                 }
                 """));
+    }
+
+    @Test
+    void rejectsRemovedConfigurationName() throws IOException {
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.await.Await.await;
+                import static java.time.Duration.ZERO;
+                import io.github.gromoff97.awium.sources.Source;
+                final class Contract {
+                    void check(Source<String> source) {
+                        await(source).%s(ZERO);
+                    }
+                }
+                """.formatted("sta" + "bleFor")));
     }
 
     @Test

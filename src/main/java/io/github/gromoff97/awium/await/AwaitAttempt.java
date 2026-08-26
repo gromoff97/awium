@@ -14,7 +14,7 @@ public record AwaitAttempt<S, R>(long number, Phase phase, Outcome<S, R> outcome
         requireNonNull(outcome, "outcome must not be null");
     }
 
-    public enum Phase { ACQUISITION, STABILIZATION }
+    public enum Phase { ACQUISITION, PERSISTENCE }
 
     public sealed interface Outcome<S, R> {
 

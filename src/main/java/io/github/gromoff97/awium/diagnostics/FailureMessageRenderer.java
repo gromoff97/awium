@@ -52,9 +52,9 @@ final class FailureMessageRenderer {
             case WaitOutcome.LateSatisfiedTimeout<?, ?> value ->
                     message(context, value.attempt(),
                             "Condition became satisfied at or after the acquisition deadline");
-            case WaitOutcome.StabilityLoss<?, ?> value ->
+            case WaitOutcome.PersistenceFailure<?, ?> value ->
                     message(context, value.attempt(),
-                            "Condition did not remain stable for the required duration");
+                            "Condition did not persist for the required duration");
             case WaitOutcome.Uncontrolled<?, ?> value ->
                     message(context, value.attempt(), uncontrolledHeading(value.attempt()));
             case WaitOutcome.Satisfied<?, ?> ignored ->
@@ -131,11 +131,11 @@ final class FailureMessageRenderer {
             case WaitOutcome.LateSatisfiedTimeout<?, ?> outcome ->
                     field(out, "Elapsed",
                             duration(completionOffset(outcome.attempt()).toNanos()));
-            case WaitOutcome.StabilityLoss<?, ?> outcome -> {
+            case WaitOutcome.PersistenceFailure<?, ?> outcome -> {
                 long acquiredAfter = outcome.acquiredNanos() - outcome.startedNanos();
                 field(out, "Acquired after", duration(acquiredAfter));
-                field(out, "Required stability",
-                        duration(context.configuration.stableForNanos()));
+                field(out, "Required persistence",
+                        duration(context.configuration.persistenceNanos()));
                 field(out, "Failure detected after",
                         duration(completionOffset(outcome.attempt()).toNanos()
                                 - acquiredAfter));

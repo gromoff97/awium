@@ -44,7 +44,7 @@ class FactoryGrammarTest {
 
         var slow = initial.every(ofSeconds(20));
         var repaired = slow.upTo(ofSeconds(10)).every(ofMillis(1)).upTo(ofSeconds(1))
-                .stableFor(ofSeconds(2)).stableFor(ZERO);
+                .persisting(ofSeconds(2)).persisting(ZERO);
 
         assertThrows(AwaitConfigurationConflictException.class,
                 () -> slow.until(isNotNull));

@@ -17,6 +17,6 @@ public sealed interface WaitOutcome<S, R> {
 
     record LateSatisfiedTimeout<S, R>(long startedNanos, AwaitAttempt<S, R> attempt) implements WaitOutcome<S, R> {}
 
-    record StabilityLoss<S, R>(long startedNanos, long acquiredNanos,
+    record PersistenceFailure<S, R>(long startedNanos, long acquiredNanos,
             AwaitAttempt<S, R> attempt) implements WaitOutcome<S, R> {}
 }

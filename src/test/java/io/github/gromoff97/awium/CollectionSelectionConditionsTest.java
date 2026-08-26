@@ -158,7 +158,7 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
-    void lastReturnsTheFinalStabilizationObservation() {
+    void lastReturnsTheFinalPersistenceObservation() {
         var observations = new ArrayDeque<>(List.of(List.of(1), List.of(2), List.of(3)));
         CollectionSource<List<Integer>> source = observations::removeFirst;
         FakeTime time = new FakeTime(0);

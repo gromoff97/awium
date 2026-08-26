@@ -23,9 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class TryAwaitTest {
 
     @Test
-    void returnsTheLastStableResultAndBothPhases() {
+    void returnsTheLastPersistenceResultAndBothPhases() {
         var time = new FakeTime(0);
-        var results = List.of("acquired", "stable", "boundary");
+        var results = List.of("acquired", "persisting", "boundary");
         int[] calls = {0};
 
         AwaitResult<String, String> result = timedTryAwait(() -> "actual",
@@ -35,8 +35,8 @@ class TryAwaitTest {
         var success = satisfied(result);
         assertEquals("boundary", success.result());
         assertEquals(List.of(AwaitAttempt.Phase.ACQUISITION,
-                        AwaitAttempt.Phase.STABILIZATION,
-                        AwaitAttempt.Phase.STABILIZATION),
+                        AwaitAttempt.Phase.PERSISTENCE,
+                        AwaitAttempt.Phase.PERSISTENCE),
                 success.attempts().stream().map(AwaitAttempt::phase).toList());
     }
 
@@ -70,8 +70,8 @@ class TryAwaitTest {
         assertEquals(List.of(1L), second.attempts().stream().map(AwaitAttempt::number).toList());
     }
 
-    private static WaitConfiguration config(long every, long upTo, long stableFor) {
-        return new WaitConfiguration(every, upTo, stableFor);
+    private static WaitConfiguration config(long every, long upTo, long persistence) {
+        return new WaitConfiguration(every, upTo, persistence);
     }
 
     @SuppressWarnings("unchecked")

@@ -5,7 +5,7 @@ import io.github.gromoff97.awium.await.AwaitResult;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
 import io.github.gromoff97.awium.engine.WaitOutcome;
-import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitStabilizationException;
+import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitPersistenceException;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitInterruptedException;
@@ -77,8 +77,8 @@ public final class FailureFactory {
         }
 
         String message = rendered.message();
-        if (outcome instanceof WaitOutcome.StabilityLoss<S, R>) {
-            return new AwaitStabilizationException(message, cause);
+        if (outcome instanceof WaitOutcome.PersistenceFailure<S, R>) {
+            return new AwaitPersistenceException(message, cause);
         }
         if (outcome instanceof WaitOutcome.Uncontrolled<S, R>) {
             if (cause instanceof InterruptedException) {

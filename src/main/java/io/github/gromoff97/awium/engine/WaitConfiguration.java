@@ -7,7 +7,7 @@ import java.util.StringJoiner;
 
 import static java.util.Objects.requireNonNull;
 
-public record WaitConfiguration(long everyNanos, long upToNanos, long stableForNanos) {
+public record WaitConfiguration(long everyNanos, long upToNanos, long persistenceNanos) {
 
     private static final long[] UNIT_NANOS = {86_400_000_000_000L, 3_600_000_000_000L, 60_000_000_000L, 1_000_000_000L, 1_000_000L, 1_000L, 1L};
     private static final String[] UNIT_NAMES = {"day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond"};
@@ -15,8 +15,8 @@ public record WaitConfiguration(long everyNanos, long upToNanos, long stableForN
     public WaitConfiguration {
         requirePositive(everyNanos, "polling interval");
         requirePositive(upToNanos, "acquisition timeout");
-        if (stableForNanos < 0) {
-            throw new IllegalArgumentException("stability duration must not be negative");
+        if (persistenceNanos < 0) {
+            throw new IllegalArgumentException("persistence duration must not be negative");
         }
     }
 
@@ -25,15 +25,15 @@ public record WaitConfiguration(long everyNanos, long upToNanos, long stableForN
     }
 
     public WaitConfiguration withEvery(Duration value) {
-        return new WaitConfiguration(nanos(value, "polling interval"), upToNanos, stableForNanos);
+        return new WaitConfiguration(nanos(value, "polling interval"), upToNanos, persistenceNanos);
     }
 
     public WaitConfiguration withUpTo(Duration value) {
-        return new WaitConfiguration(everyNanos, nanos(value, "acquisition timeout"), stableForNanos);
+        return new WaitConfiguration(everyNanos, nanos(value, "acquisition timeout"), persistenceNanos);
     }
 
-    public WaitConfiguration withStableFor(Duration value) {
-        return new WaitConfiguration(everyNanos, upToNanos, nanos(value, "stability duration"));
+    public WaitConfiguration withPersistence(Duration value) {
+        return new WaitConfiguration(everyNanos, upToNanos, nanos(value, "persistence duration"));
     }
 
     public void validatePair() {

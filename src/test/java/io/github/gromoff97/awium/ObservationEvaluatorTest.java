@@ -298,7 +298,7 @@ class ObservationEvaluatorTest {
         }).attempt();
     }
 
-    private static WaitConfiguration config(long every, long upTo, long stableFor) {
-        return new WaitConfiguration(every, upTo, stableFor);
+    private static WaitConfiguration config(long every, long upTo, long persistence) {
+        return new WaitConfiguration(every, upTo, persistence);
     }
 }

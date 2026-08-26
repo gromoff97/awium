@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.exceptions.*;
-import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitStabilizationException;
+import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitPersistenceException;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitInterruptedException;
@@ -19,7 +19,7 @@ class FailureTaxonomyTest {
     void controlledFailuresRemainAssertionFailures() {
         assertTrue(AssertionError.class.isAssignableFrom(AwaitFailure.class));
         for (Class<?> type : List.of(AwaitTimeoutException.class,
-                AwaitStabilizationException.class)) {
+                AwaitPersistenceException.class)) {
             assertTrue(AwaitFailure.class.isAssignableFrom(type));
         }
     }

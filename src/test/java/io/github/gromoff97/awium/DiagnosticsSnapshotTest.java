@@ -7,7 +7,7 @@ import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
 import io.github.gromoff97.awium.exceptions.*;
-import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitStabilizationException;
+import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitPersistenceException;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitInterruptedException;
@@ -40,7 +40,7 @@ class DiagnosticsSnapshotTest {
     @Test
     void controlledFailuresRetainTheirSemanticContext() {
         var betweenAssertion = new AssertionError("collection was empty");
-        var stabilityAssertion = new AssertionError("optional was empty");
+        var persistenceAssertion = new AssertionError("optional was empty");
         WaitOutcome<Object, Object> between = new TimeoutBetweenObservations<>(0,
                 10 * SECOND, assertionUnsatisfiedAttempt(null, "collection was empty",
                         betweenAssertion, 4, 9 * SECOND));
@@ -50,9 +50,9 @@ class DiagnosticsSnapshotTest {
         WaitOutcome<Object, Object> lateSatisfied = new LateSatisfiedTimeout<>(0,
                 satisfiedAttempt("Payment[COMPLETED]", new Object(), 100,
                         10 * SECOND + 200 * MILLISECOND));
-        WaitOutcome<Object, Object> stability = new StabilityLoss<>(0, 7 * SECOND,
+        WaitOutcome<Object, Object> persistence = new PersistenceFailure<>(0, 7 * SECOND,
                 assertionUnsatisfiedAttempt("Optional.empty", "optional was empty",
-                        stabilityAssertion, 71, 9 * SECOND + 100 * MILLISECOND));
+                        persistenceAssertion, 71, 9 * SECOND + 100 * MILLISECOND));
 
         AwaitTimeoutException betweenFailure = assertThrows(
                 AwaitTimeoutException.class,
@@ -69,9 +69,9 @@ class DiagnosticsSnapshotTest {
                 () -> complete(lateSatisfied, "status equals COMPLETED",
                         "payment must complete",
                         config(100 * MILLISECOND, 10 * SECOND, 0)));
-        AwaitStabilizationException stabilityFailure = assertThrows(
-                AwaitStabilizationException.class,
-                () -> complete(stability, "optional to remain present",
+        AwaitPersistenceException persistenceFailure = assertThrows(
+                AwaitPersistenceException.class,
+                () -> complete(persistence, "optional to remain present",
                         "payment must remain available",
                         config(100 * MILLISECOND, 10 * SECOND, 5 * SECOND)));
 
@@ -130,7 +130,7 @@ class DiagnosticsSnapshotTest {
                     Polling interval: 100 milliseconds""",
                 lateSatisfiedFailure.getMessage());
         assertEquals("""
-                Condition did not remain stable for the required duration
+                Condition did not persist for the required duration
 
                 Condition:
                     Expectation: optional to remain present
@@ -144,16 +144,16 @@ class DiagnosticsSnapshotTest {
                 Timing:
                     Acquisition timeout: 10 seconds
                     Acquired after: 7 seconds
-                    Required stability: 5 seconds
+                    Required persistence: 5 seconds
                     Failure detected after: 2 seconds 100 milliseconds
                     Elapsed: 9 seconds 100 milliseconds
                     Polling interval: 100 milliseconds
 
                 Cause:
                     Type: AssertionError
-                    Message: optional was empty""", stabilityFailure.getMessage());
+                    Message: optional was empty""", persistenceFailure.getMessage());
         assertSame(betweenAssertion, betweenFailure.getCause());
-        assertSame(stabilityAssertion, stabilityFailure.getCause());
+        assertSame(persistenceAssertion, persistenceFailure.getCause());
     }
 
     @Test
@@ -439,18 +439,17 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void stabilityDiagnosticsDoNotDescribeDetectionTimeAsStable() {
-        WaitOutcome<Object, Object> outcome = new StabilityLoss<>(0, 0,
+    void persistenceDiagnosticsDistinguishRequiredDurationFromDetectionTime() {
+        WaitOutcome<Object, Object> outcome = new PersistenceFailure<>(0, 0,
                 unsatisfiedAttempt("actual", "condition was false", 2, 11));
 
-        AwaitStabilizationException failure = assertThrows(
-                AwaitStabilizationException.class,
+        AwaitPersistenceException failure = assertThrows(
+                AwaitPersistenceException.class,
                 () -> complete(outcome, "condition", null,
                         config(1, 10, 2)));
 
-        assertMessage(failure, "Required stability: 2 nanoseconds",
+        assertMessage(failure, "Required persistence: 2 nanoseconds",
                 "Failure detected after: 11 nanoseconds");
-        assertFalse(failure.getMessage().contains("Stable for:"));
     }
 
     @Test
@@ -621,8 +620,8 @@ class DiagnosticsSnapshotTest {
     }
 
     private static WaitConfiguration config(long every, long upTo,
-            long stableFor) {
-        return new WaitConfiguration(every, upTo, stableFor);
+            long persistence) {
+        return new WaitConfiguration(every, upTo, persistence);
     }
 
     private static void assertMessage(Throwable failure, String... fragments) {

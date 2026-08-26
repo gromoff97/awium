@@ -50,8 +50,8 @@ abstract class AbstractAwait<S, E, F extends Source<?>, A> {
         return reconfigured(engine.configuration().withUpTo(timeout));
     }
 
-    public final A stableFor(Duration stability) {
-        return reconfigured(engine.configuration().withStableFor(stability));
+    public final A persisting(Duration persistence) {
+        return reconfigured(engine.configuration().withPersistence(persistence));
     }
 
     abstract A reconfigured(WaitConfiguration configuration);

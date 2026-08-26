@@ -38,13 +38,13 @@ class PositiveFluentMatrixTest {
                 await(source).until(isNotNull),
                 await(source).every(EVERY).until(isNotNull.because("object every")),
                 await(source).upTo(UP_TO).until(isNotNull),
-                await(source).stableFor(ZERO).until(isNotNull.because("object stable")),
+                await(source).persisting(ZERO).until(isNotNull.because("object must remain available")),
                 await(source).every(EVERY).upTo(UP_TO).until(isNotNull),
-                await(source).every(EVERY).stableFor(ZERO).until(isNotNull.because("object every stable")),
-                await(source).upTo(UP_TO).stableFor(ZERO).until(isNotNull),
-                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO).until(isNotNull.because("object all")),
-                await(source).stableFor(ZERO).upTo(UP_TO).every(EVERY).until(isNotNull),
-                await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO).every(EVERY).upTo(UP_TO).stableFor(ZERO).until(isNotNull));
+                await(source).every(EVERY).persisting(ZERO).until(isNotNull.because("object must remain available")),
+                await(source).upTo(UP_TO).persisting(ZERO).until(isNotNull),
+                await(source).every(EVERY).upTo(UP_TO).persisting(ZERO).until(isNotNull.because("object all")),
+                await(source).persisting(ZERO).upTo(UP_TO).every(EVERY).until(isNotNull),
+                await(source).every(EVERY).upTo(UP_TO).persisting(ZERO).every(EVERY).upTo(UP_TO).persisting(ZERO).until(isNotNull));
 
         Condition<Object, Object> selecting = condition(
                 "select actual", Evaluation::satisfied);
@@ -59,7 +59,7 @@ class PositiveFluentMatrixTest {
         var value = new String("value");
         OptionalSource<String> source = () -> Optional.of(value);
 
-        String selected = await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO).until(present.because("optional full chain"));
+        String selected = await(source).every(EVERY).upTo(UP_TO).persisting(ZERO).until(present.because("optional full chain"));
         Void absentValue = await((OptionalSource<String>) Optional::empty).until(absent);
 
         assertSame(value, selected);
@@ -75,7 +75,7 @@ class PositiveFluentMatrixTest {
         Condition.PreservingCondition.ExplainedCondition<Collection<?>> explained =
                 collectionCondition.because("collection full chain");
         ArrayList<String> raw = await(source).until(collectionCondition);
-        ArrayList<String> selected = await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO).until(explained);
+        ArrayList<String> selected = await(source).every(EVERY).upTo(UP_TO).persisting(ZERO).until(explained);
 
         assertSame(actual, raw);
         assertSame(actual, selected);
@@ -87,7 +87,7 @@ class PositiveFluentMatrixTest {
         MapSource<LinkedHashMap<String, String>> source = () -> actual;
 
         LinkedHashMap<String, String> raw = await(source).until(MapCondition.nonEmpty);
-        LinkedHashMap<String, String> selected = await(source).every(EVERY).upTo(UP_TO).stableFor(ZERO).until(MapCondition.nonEmpty.because("map full chain"));
+        LinkedHashMap<String, String> selected = await(source).every(EVERY).upTo(UP_TO).persisting(ZERO).until(MapCondition.nonEmpty.because("map full chain"));
 
         assertSame(actual, raw);
         assertSame(actual, selected);

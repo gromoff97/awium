@@ -13,7 +13,7 @@ import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
 import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.ACQUISITION;
-import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.STABILIZATION;
+import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.PERSISTENCE;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Thread.currentThread;
@@ -42,10 +42,10 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
         WaitOutcome<S, R> acquisition = acquire(
                 source, evaluator, observations, recorder, started);
         if (!(acquisition instanceof WaitOutcome.Satisfied<S, R> acquired)
-                || configuration.stableForNanos() == 0) {
+                || configuration.persistenceNanos() == 0) {
             return acquisition;
         }
-        return stabilize(source, evaluator, observations, recorder, started, acquired);
+        return persist(source, evaluator, observations, recorder, started, acquired);
     }
 
     private <S, R> WaitOutcome<S, R> acquire(Source<? extends S> source,
@@ -102,27 +102,27 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
         }
     }
 
-    private <S, R> WaitOutcome<S, R> stabilize(Source<? extends S> source,
+    private <S, R> WaitOutcome<S, R> persist(Source<? extends S> source,
             CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator,
             ObservationEvaluator observations, Consumer<AwaitAttempt<S, R>> recorder,
             long started,
             WaitOutcome.Satisfied<S, R> acquired) {
         long acquiredAt = completedNanos(started, acquired.attempt());
-        long deadline = after(acquiredAt, configuration.stableForNanos());
+        long deadline = after(acquiredAt, configuration.persistenceNanos());
         long completed = acquiredAt;
 
         for (long number = acquired.attempt().number() + 1;; number++) {
             long attemptStarted = completed;
             long delay = min(configuration.everyNanos(), remaining(completed, deadline));
             AwaitAttempt<S, R> parked = parkUntil(after(completed, delay),
-                    STABILIZATION, number, started, attemptStarted);
+                    PERSISTENCE, number, started, attemptStarted);
             if (parked != null) {
                 recorder.accept(parked);
                 return new WaitOutcome.Uncontrolled<>(parked);
             }
 
             AwaitAttempt<S, R> interrupted = interruptedBefore(
-                    STABILIZATION, number, started, attemptStarted);
+                    PERSISTENCE, number, started, attemptStarted);
             if (interrupted != null) {
                 recorder.accept(interrupted);
                 return new WaitOutcome.Uncontrolled<>(interrupted);
@@ -130,7 +130,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
 
             long retrievalStarted = clock.getAsLong();
             ObservationEvaluator.EvaluatedAttempt<S, R> evaluated = observations.evaluate(
-                    source, evaluator, STABILIZATION,
+                    source, evaluator, PERSISTENCE,
                     number, started, attemptStarted, retrievalStarted);
             AwaitAttempt<S, R> attempt = evaluated.attempt();
             completed = evaluated.completedNanos();
@@ -139,7 +139,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
                 return new WaitOutcome.Uncontrolled<>(attempt);
             }
             if (unsatisfied(attempt)) {
-                return new WaitOutcome.StabilityLoss<>(started, acquiredAt, attempt);
+                return new WaitOutcome.PersistenceFailure<>(started, acquiredAt, attempt);
             }
             if (reached(completed, deadline)) {
                 return new WaitOutcome.Satisfied<>(attempt);

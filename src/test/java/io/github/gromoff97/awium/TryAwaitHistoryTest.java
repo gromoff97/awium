@@ -13,7 +13,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.ACQUISITION;
-import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.STABILIZATION;
+import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.PERSISTENCE;
 import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
@@ -38,7 +38,7 @@ class TryAwaitHistoryTest {
         assertEquals(4, execution.totalAttempts());
         assertEquals(List.of(1L, 2L, 4L), execution.attempts().stream()
                 .map(AwaitAttempt::number).toList());
-        assertEquals(List.of(ACQUISITION, STABILIZATION, STABILIZATION),
+        assertEquals(List.of(ACQUISITION, PERSISTENCE, PERSISTENCE),
                 execution.attempts().stream().map(AwaitAttempt::phase).toList());
         assertThrows(UnsupportedOperationException.class, execution.attempts()::clear);
     }
@@ -100,8 +100,8 @@ class TryAwaitHistoryTest {
                 .flatMap(TryAwaitHistoryTest::typeAndNestedTypes));
     }
 
-    private static WaitConfiguration config(long every, long upTo, long stableFor) {
-        return new WaitConfiguration(every, upTo, stableFor);
+    private static WaitConfiguration config(long every, long upTo, long persistence) {
+        return new WaitConfiguration(every, upTo, persistence);
     }
 
     private static final class ThrowingProbe {

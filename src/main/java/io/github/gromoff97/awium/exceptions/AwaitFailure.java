@@ -13,9 +13,9 @@ public abstract class AwaitFailure extends AssertionError {
         }
     }
 
-    public static final class AwaitStabilizationException extends AwaitFailure {
+    public static final class AwaitPersistenceException extends AwaitFailure {
 
-        public AwaitStabilizationException(String message, Throwable cause) {
+        public AwaitPersistenceException(String message, Throwable cause) {
             super(message, cause);
         }
     }

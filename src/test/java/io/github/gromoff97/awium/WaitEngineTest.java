@@ -54,7 +54,7 @@ class WaitEngineTest {
     }
 
     @Test
-    void startsAttemptOneImmediatelyAndZeroStabilityReturnsItsResult() {
+    void startsAttemptOneImmediatelyAndZeroPersistenceReturnsItsResult() {
         var time = new FakeTime(100);
         var starts = new ArrayList<Long>();
         var result = new Object();
@@ -275,14 +275,14 @@ class WaitEngineTest {
 
     @ParameterizedTest
     @ValueSource(longs = {0, 10})
-    void classifiesAParkingFailureForTheNextAttempt(long stableFor) {
+    void classifiesAParkingFailureForTheNextAttempt(long persistence) {
         var time = new FakeTime(0);
         var failure = new IllegalStateException("park failed");
 
-        WaitOutcome<?, String> outcome = wait(time, config(5, 20, stableFor), nanos -> {
+        WaitOutcome<?, String> outcome = wait(time, config(5, 20, persistence), nanos -> {
                     throw failure;
                 }, () -> "actual",
-                actual -> stableFor == 0
+                actual -> persistence == 0
                         ? unsatisfied("not yet")
                         : satisfied("ready"));
 
@@ -297,15 +297,15 @@ class WaitEngineTest {
 
     @ParameterizedTest
     @ValueSource(longs = {0, 10})
-    void detectsAnInterruptRaisedWhileParkedForTheNextAttempt(long stableFor) {
+    void detectsAnInterruptRaisedWhileParkedForTheNextAttempt(long persistence) {
         var time = new FakeTime(0);
         var parkCalls = new int[1];
 
-        WaitOutcome<?, String> outcome = wait(time, config(5, 20, stableFor), nanos -> {
+        WaitOutcome<?, String> outcome = wait(time, config(5, 20, persistence), nanos -> {
                     parkCalls[0]++;
                     currentThread().interrupt();
                 }, () -> "actual",
-                actual -> stableFor == 0
+                actual -> persistence == 0
                         ? unsatisfied("not yet")
                         : satisfied("ready"));
 
@@ -371,7 +371,7 @@ class WaitEngineTest {
     }
 
     @Test
-    void observesTheStabilityBoundaryAndReturnsItsChangingResult() {
+    void observesThePersistenceBoundaryAndReturnsItsChangingResult() {
         var time = new FakeTime(0);
         var starts = new ArrayList<Long>();
         var results = List.of("acquired", "second", "third", "boundary");
@@ -391,7 +391,7 @@ class WaitEngineTest {
     }
 
     @Test
-    void stabilityRemainderCapsThePollingInterval() {
+    void persistenceRemainderCapsThePollingInterval() {
         var time = new FakeTime(0);
         var starts = new ArrayList<Long>();
 
@@ -409,7 +409,7 @@ class WaitEngineTest {
     }
 
     @Test
-    void usesOverflowSafeDeadlinesDuringStability() {
+    void usesOverflowSafeDeadlinesDuringPersistence() {
         long started = Long.MAX_VALUE - 2;
         var time = new FakeTime(started);
         var starts = new ArrayList<Long>();
@@ -428,7 +428,7 @@ class WaitEngineTest {
     }
 
     @Test
-    void stabilizesBeyondUpToAfterAcquisitionAtTheLastValidNanosecond() {
+    void persistsBeyondUpToAfterAcquisitionAtTheLastValidNanosecond() {
         var time = new FakeTime(0);
         var starts = new ArrayList<Long>();
         var calls = new int[1];
@@ -445,7 +445,7 @@ class WaitEngineTest {
                 time.advanceNanos(5);
                 return satisfied("acquired");
             }
-            return satisfied(call == 2 ? "stable" : "boundary");
+            return satisfied(call == 2 ? "persisting" : "boundary");
         });
 
         var success = assertInstanceOf(Satisfied.class, outcome);
@@ -482,7 +482,7 @@ class WaitEngineTest {
     }
 
     @Test
-    void losesStabilityImmediatelyOnTheFirstUnsatisfiedObservation() {
+    void losesPersistenceImmediatelyOnTheFirstUnsatisfiedObservation() {
         var time = new FakeTime(0);
         var failingActual = new Object();
         var assertion = new AssertionError("lost");
@@ -494,7 +494,7 @@ class WaitEngineTest {
                         ? satisfied(new Object())
                         : assertionUnsatisfied("lost", assertion));
 
-        var loss = assertInstanceOf(StabilityLoss.class, outcome);
+        var loss = assertInstanceOf(PersistenceFailure.class, outcome);
         var unsatisfied = loss.attempt();
         assertEquals(0, loss.acquiredNanos());
         assertEquals(5, completed(unsatisfied));
@@ -506,7 +506,7 @@ class WaitEngineTest {
     }
 
     @Test
-    void uncontrolledStabilityObservationWinsAfterBothDeadlines() {
+    void uncontrolledPersistenceObservationWinsAfterBothDeadlines() {
         var time = new FakeTime(0);
         var failure = new IllegalStateException("condition failed");
         var calls = new int[1];
@@ -529,8 +529,8 @@ class WaitEngineTest {
         assertEquals(2, uncontrolled.attempt().number());
     }
 
-    private static WaitConfiguration config(long every, long upTo, long stableFor) {
-        return new WaitConfiguration(every, upTo, stableFor);
+    private static WaitConfiguration config(long every, long upTo, long persistence) {
+        return new WaitConfiguration(every, upTo, persistence);
     }
 
     @SuppressWarnings("unchecked")

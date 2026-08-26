@@ -23,7 +23,7 @@ class WaitConfigTest {
 
         assertEquals(ofMillis(100).toNanos(), config.everyNanos());
         assertEquals(ofSeconds(10).toNanos(), config.upToNanos());
-        assertEquals(0L, config.stableForNanos());
+        assertEquals(0L, config.persistenceNanos());
     }
 
     @Test
@@ -45,9 +45,9 @@ class WaitConfigTest {
         assertEquals("acquisition timeout must not be null",
                 assertThrows(NullPointerException.class,
                         () -> defaults().withUpTo(null)).getMessage());
-        assertEquals("stability duration must not be null",
+        assertEquals("persistence duration must not be null",
                 assertThrows(NullPointerException.class,
-                        () -> defaults().withStableFor(null)).getMessage());
+                        () -> defaults().withPersistence(null)).getMessage());
     }
 
     @Test
@@ -63,14 +63,14 @@ class WaitConfigTest {
     }
 
     @Test
-    void stabilityMayBeZeroButNotNegative() {
+    void persistenceMayBeZeroButNotNegative() {
         assertEquals(0L, defaults()
-                .withStableFor(ZERO)
-                .stableForNanos());
+                .withPersistence(ZERO)
+                .persistenceNanos());
 
         assertTrue(assertThrows(IllegalArgumentException.class,
-                () -> defaults().withStableFor(ofNanos(-1))).getMessage()
-                .contains("stability"));
+                () -> defaults().withPersistence(ofNanos(-1))).getMessage()
+                .contains("persistence"));
     }
 
     @Test
@@ -81,7 +81,7 @@ class WaitConfigTest {
         assertEquals("acquisition timeout must be greater than zero",
                 assertThrows(IllegalArgumentException.class,
                         () -> new WaitConfiguration(1, 0, 0)).getMessage());
-        assertEquals("stability duration must not be negative",
+        assertEquals("persistence duration must not be negative",
                 assertThrows(IllegalArgumentException.class,
                         () -> new WaitConfiguration(1, 2, -1)).getMessage());
     }
@@ -97,17 +97,17 @@ class WaitConfigTest {
                 () -> defaults().withEvery(overflow));
         var timeoutFailure = assertThrows(IllegalArgumentException.class,
                 () -> defaults().withUpTo(overflow));
-        var stabilityFailure = assertThrows(IllegalArgumentException.class,
-                () -> defaults().withStableFor(overflow));
+        var persistenceFailure = assertThrows(IllegalArgumentException.class,
+                () -> defaults().withPersistence(overflow));
         assertEquals("polling interval exceeds the supported nanosecond range",
                 intervalFailure.getMessage());
         assertEquals("acquisition timeout exceeds the supported nanosecond range",
                 timeoutFailure.getMessage());
-        assertEquals("stability duration exceeds the supported nanosecond range",
-                stabilityFailure.getMessage());
+        assertEquals("persistence duration exceeds the supported nanosecond range",
+                persistenceFailure.getMessage());
         assertInstanceOf(ArithmeticException.class, intervalFailure.getCause());
         assertInstanceOf(ArithmeticException.class, timeoutFailure.getCause());
-        assertInstanceOf(ArithmeticException.class, stabilityFailure.getCause());
+        assertInstanceOf(ArithmeticException.class, persistenceFailure.getCause());
     }
 
     @Test

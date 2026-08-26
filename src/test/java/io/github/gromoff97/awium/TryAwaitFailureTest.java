@@ -36,13 +36,13 @@ class TryAwaitFailureTest {
     }
 
     @Test
-    void capturesAcquisitionTimeoutAndStabilityLossWithoutChangingThem() {
+    void capturesAcquisitionTimeoutAndPersistenceFailureWithoutChangingThem() {
         var timeout = assertParity(time -> timedAwait(() -> "actual",
                         config(1, 2, 0), time, time)
                         .until(condition("value is ready", actual -> unsatisfied("not ready"))),
                 time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time)
                         .until(condition("value is ready", actual -> unsatisfied("not ready"))));
-        var stabilization = assertParity(time -> timedAwait(() -> "actual",
+        var persistence = assertParity(time -> timedAwait(() -> "actual",
                         config(1, 3, 2), time, time).until(unstableCondition()),
                 time -> timedTryAwait(() -> "actual", config(1, 3, 2), time, time)
                         .until(unstableCondition()));
@@ -50,7 +50,7 @@ class TryAwaitFailureTest {
         assertInstanceOf(AwaitAttempt.Outcome.Unsatisfied.class,
                 timeout.attempts().getLast().outcome());
         assertInstanceOf(AwaitAttempt.Outcome.Unsatisfied.class,
-                stabilization.attempts().getLast().outcome());
+                persistence.attempts().getLast().outcome());
     }
 
     @Test
@@ -92,7 +92,7 @@ class TryAwaitFailureTest {
                         config(1, 2, 0), time, time).until(failingAssertion()),
                 time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time)
                         .until(failingAssertion()));
-        var stabilization = assertParity(time -> timedAwait(() -> "actual",
+        var persistence = assertParity(time -> timedAwait(() -> "actual",
                         config(1, 3, 2), time, time).until(unstableAssertion()),
                 time -> timedTryAwait(() -> "actual", config(1, 3, 2), time, time)
                         .until(unstableAssertion()));
@@ -100,7 +100,7 @@ class TryAwaitFailureTest {
         assertInstanceOf(AwaitAttempt.Outcome.AssertionUnsatisfied.class,
                 timeout.attempts().getLast().outcome());
         assertInstanceOf(AwaitAttempt.Outcome.AssertionUnsatisfied.class,
-                stabilization.attempts().getLast().outcome());
+                persistence.attempts().getLast().outcome());
     }
 
     @Test
@@ -262,7 +262,7 @@ class TryAwaitFailureTest {
         int[] calls = {0};
         return asserted(actual -> {
             if (calls[0]++ > 0) {
-                throw new AssertionError("stability assertion failed");
+                throw new AssertionError("persistence assertion failed");
             }
         });
     }
@@ -294,8 +294,8 @@ class TryAwaitFailureTest {
         };
     }
 
-    private static WaitConfiguration config(long every, long upTo, long stableFor) {
-        return new WaitConfiguration(every, upTo, stableFor);
+    private static WaitConfiguration config(long every, long upTo, long persistence) {
+        return new WaitConfiguration(every, upTo, persistence);
     }
 
     @FunctionalInterface
