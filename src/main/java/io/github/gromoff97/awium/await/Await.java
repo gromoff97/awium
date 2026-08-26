@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium.await;
 
-import io.github.gromoff97.awium.conditioning.conditions.Condition;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
+import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
@@ -54,27 +54,15 @@ public final class Await<S, E, F extends Source<?>>
         return new Await<>(this, configuration);
     }
 
-    public S until(PreservingCondition<? super S> condition) {
+    public S until(PreservingStage<? super S> condition) {
         return complete(prepare(condition));
     }
 
-    public S until(PreservingCondition.ExplainedCondition<? super S> condition) {
+    public <R> R until(ConditionStage<? super S, ? extends R> condition) {
         return complete(prepare(condition));
     }
 
-    public <R> R until(Condition<? super S, ? extends R> condition) {
-        return complete(prepare(condition));
-    }
-
-    public <R> R until(Condition.ExplainedCondition<? super S, ? extends R> condition) {
-        return complete(prepare(condition));
-    }
-
-    public E until(SelectedCondition<? super S, F> condition) {
-        return complete(prepare(condition));
-    }
-
-    public E until(SelectedCondition.ExplainedCondition<? super S, F> condition) {
+    public E until(SelectedStage<? super S, F> condition) {
         return complete(prepare(condition));
     }
 }

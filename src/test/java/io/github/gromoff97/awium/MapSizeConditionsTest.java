@@ -13,6 +13,8 @@ import java.util.Map;
 
 import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedMapAwait;
+import static io.github.gromoff97.awium.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNSATISFIED;
 import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.empty;
@@ -55,11 +57,11 @@ class MapSizeConditionsTest {
         assertEquals("key", selected.getKey());
         assertEquals(42, selected.getValue());
         assertEquals(selected, explained);
-        assertEquals("map has a single entry", singleEntry.delegate().description());
+        assertEquals("map has a single entry", description(singleEntry));
         assertEquals("map size was 0",
-                singleEntry.delegate().evaluate(Map.of()).mismatch());
+                evaluate(singleEntry, Map.of()).mismatch());
         assertEquals("map size was 2",
-                singleEntry.delegate().evaluate(Map.of("first", 1, "second", 2)).mismatch());
+                evaluate(singleEntry, Map.of("first", 1, "second", 2)).mismatch());
     }
 
     @Test
@@ -68,15 +70,15 @@ class MapSizeConditionsTest {
             Map<Integer, Integer> matching = mapWithSize(testCase.matchingSize());
             Map<Integer, Integer> mismatching = mapWithSize(testCase.mismatchingSize());
 
-            Evaluation<?> satisfied = testCase.condition().delegate().evaluate(matching);
+            Evaluation<?> satisfied = evaluate(testCase.condition(), matching);
             assertEquals(SATISFIED, satisfied.status());
             assertSame(matching, satisfied.result());
             assertNull(satisfied.mismatch());
-            assertUnsatisfied(testCase.condition().delegate().evaluate(mismatching));
-            assertFalse(testCase.condition().delegate().description().isBlank());
+            assertUnsatisfied(evaluate(testCase.condition(), mismatching));
+            assertFalse(description(testCase.condition()).isBlank());
         }
         assertEquals("map size was 1",
-                size(2).delegate().evaluate(Map.of("key", "value")).mismatch());
+                evaluate(size(2), Map.of("key", "value")).mismatch());
     }
 
     @Test
@@ -129,10 +131,10 @@ class MapSizeConditionsTest {
 
     @Test
     void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() throws Exception {
-        assertEquals(SATISFIED, sizeBetween(2, 4).delegate().evaluate(mapWithSize(2)).status());
-        assertEquals(SATISFIED, sizeBetween(2, 4).delegate().evaluate(mapWithSize(4)).status());
-        assertUnsatisfied(sizeBetween(2, 4).delegate().evaluate(mapWithSize(1)));
-        assertUnsatisfied(sizeBetween(2, 4).delegate().evaluate(mapWithSize(5)));
+        assertEquals(SATISFIED, evaluate(sizeBetween(2, 4), mapWithSize(2)).status());
+        assertEquals(SATISFIED, evaluate(sizeBetween(2, 4), mapWithSize(4)).status());
+        assertUnsatisfied(evaluate(sizeBetween(2, 4), mapWithSize(1)));
+        assertUnsatisfied(evaluate(sizeBetween(2, 4), mapWithSize(5)));
     }
 
     @Test

@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium.await;
 
-import io.github.gromoff97.awium.conditioning.conditions.Condition;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
+import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
@@ -54,30 +54,15 @@ public final class TryAwait<S, E, F extends Source<?>>
         return new TryAwait<>(this, configuration);
     }
 
-    public AwaitResult<S, S> until(PreservingCondition<? super S> condition) {
+    public AwaitResult<S, S> until(PreservingStage<? super S> condition) {
         return capture(prepare(condition));
     }
 
-    public AwaitResult<S, S> until(
-            PreservingCondition.ExplainedCondition<? super S> condition) {
+    public <R> AwaitResult<S, R> until(ConditionStage<? super S, ? extends R> condition) {
         return capture(prepare(condition));
     }
 
-    public <R> AwaitResult<S, R> until(Condition<? super S, ? extends R> condition) {
-        return capture(prepare(condition));
-    }
-
-    public <R> AwaitResult<S, R> until(
-            Condition.ExplainedCondition<? super S, ? extends R> condition) {
-        return capture(prepare(condition));
-    }
-
-    public AwaitResult<S, E> until(SelectedCondition<? super S, F> condition) {
-        return capture(prepare(condition));
-    }
-
-    public AwaitResult<S, E> until(
-            SelectedCondition.ExplainedCondition<? super S, F> condition) {
+    public AwaitResult<S, E> until(SelectedStage<? super S, F> condition) {
         return capture(prepare(condition));
     }
 }

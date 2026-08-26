@@ -9,6 +9,7 @@ import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 
 import static io.github.gromoff97.awium.CompilationSupport.compiles;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
@@ -44,13 +45,13 @@ class CollectionMembershipTest {
     @Test
     void nullAndRepeatedExpectedValuesKeepMembershipSemantics()
             throws Exception {
-        assertUnsatisfied(contains("b").delegate().evaluate(null));
+        assertUnsatisfied(evaluate(contains("b"), null));
         assertPair(new Pair("repeated", contains("a", "a"),
                 doesNotContainAll("a", "a")), List.of("a"), true);
 
         String nil = null;
         Collection<String> actual = asList((String) null);
-        assertSame(actual, contains(nil).delegate().evaluate(actual).result());
+        assertSame(actual, evaluate(contains(nil), actual).result());
     }
 
     @Test
@@ -62,8 +63,8 @@ class CollectionMembershipTest {
         Collection<Object> arrays = new ArrayList<>(
                 List.of(new int[] {1, 2}));
 
-        assertSame(directional, contains(expectedValue).delegate().evaluate(directional).result());
-        assertSame(arrays, contains(new int[] {1, 2}).delegate().evaluate(arrays).result());
+        assertSame(directional, evaluate(contains(expectedValue), directional).result());
+        assertSame(arrays, evaluate(contains(new int[] {1, 2}), arrays).result());
         assertEquals(1, actualValue.equalsCalls);
     }
 
@@ -153,8 +154,8 @@ class CollectionMembershipTest {
     private static void assertPair(Pair pair, List<String> values,
             boolean positiveSatisfied) throws Exception {
         Collection<String> actual = new ArrayList<>(values);
-        Evaluation<?> positive = pair.positive().delegate().evaluate(actual);
-        Evaluation<?> negative = pair.negative().delegate().evaluate(actual);
+        Evaluation<?> positive = evaluate(pair.positive(), actual);
+        Evaluation<?> negative = evaluate(pair.negative(), actual);
 
         assertEquals(positiveSatisfied ? SATISFIED : UNSATISFIED,
                 positive.status(), pair.name());

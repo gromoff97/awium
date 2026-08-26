@@ -3,6 +3,7 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.conditioning.conditions.ComparableCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.ObjectCondition;
 import io.github.gromoff97.awium.conditioning.conditions.OptionalCondition;
 import io.github.gromoff97.awium.conditioning.conditions.StringCondition;
@@ -14,6 +15,8 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 import static io.github.gromoff97.awium.await.Await.await;
+import static io.github.gromoff97.awium.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNSATISFIED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -41,8 +44,8 @@ class ObjectOptionalAndScalarConditionsTest {
         assertSame(actual, child);
         assertSame(actual, exact);
         assertEquals("ready", status);
-        assertEquals(UNSATISFIED, ObjectCondition.exactInstanceOf(Parent.class)
-                .evaluate(actual).status());
+        assertEquals(UNSATISFIED, evaluate(
+                ObjectCondition.exactInstanceOf(Parent.class), actual).status());
     }
 
     @Test
@@ -85,8 +88,8 @@ class ObjectOptionalAndScalarConditionsTest {
         assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.matchesRegex("Ready \\d+")));
         assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.equalToIgnoringCase("ready 42")));
         assertSame(actual, await((Source<String>) () -> actual).until(StringCondition.lengthBetween(1, 20)));
-        assertEquals(SATISFIED, StringCondition.blank.delegate().evaluate(" \n").status());
-        assertEquals(UNSATISFIED, StringCondition.nonEmpty.delegate().evaluate("").status());
+        assertEquals(SATISFIED, evaluate(StringCondition.blank, " \n").status());
+        assertEquals(UNSATISFIED, evaluate(StringCondition.nonEmpty, "").status());
     }
 
     @Test
@@ -109,8 +112,10 @@ class ObjectOptionalAndScalarConditionsTest {
         assertStatus(ObjectCondition.exactInstanceOf(String.class), actual, SATISFIED);
         assertStatus(ObjectCondition.exactInstanceOf(Object.class), actual, UNSATISFIED);
 
-        assertStatus(OptionalCondition.present.delegate(), Optional.of("ready"), SATISFIED);
-        assertStatus(OptionalCondition.present.delegate(), Optional.empty(), UNSATISFIED);
+        assertEquals(SATISFIED,
+                evaluate(OptionalCondition.present, Optional.of("ready")).status());
+        assertEquals(UNSATISFIED,
+                evaluate(OptionalCondition.present, Optional.empty()).status());
         assertStatus(OptionalCondition.absent, Optional.empty(), SATISFIED);
         assertStatus(OptionalCondition.absent, Optional.of("ready"), UNSATISFIED);
         assertStatus(OptionalCondition.hasValue("ready"), Optional.of("ready"), SATISFIED);
@@ -130,14 +135,14 @@ class ObjectOptionalAndScalarConditionsTest {
         assertPreserving(ComparableCondition.atLeast(5), 5, 4);
         assertPreserving(ComparableCondition.lessThan(5), 4, 5);
         assertPreserving(ComparableCondition.atMost(5), 5, 6);
-        assertStatus(ComparableCondition.between(5, 7).delegate(), 5, SATISFIED);
-        assertStatus(ComparableCondition.between(5, 7).delegate(), 7, SATISFIED);
-        assertStatus(ComparableCondition.between(5, 7).delegate(), 4, UNSATISFIED);
-        assertStatus(ComparableCondition.between(5, 7).delegate(), 8, UNSATISFIED);
-        assertStatus(ComparableCondition.strictlyBetween(5, 7).delegate(), 6, SATISFIED);
-        assertStatus(ComparableCondition.strictlyBetween(5, 7).delegate(), 5, UNSATISFIED);
-        assertStatus(ComparableCondition.strictlyBetween(5, 7).delegate(), 7, UNSATISFIED);
-        assertStatus(ComparableCondition.greaterThan(5).delegate(), null, UNSATISFIED);
+        assertStatus(ComparableCondition.between(5, 7), 5, SATISFIED);
+        assertStatus(ComparableCondition.between(5, 7), 7, SATISFIED);
+        assertStatus(ComparableCondition.between(5, 7), 4, UNSATISFIED);
+        assertStatus(ComparableCondition.between(5, 7), 8, UNSATISFIED);
+        assertStatus(ComparableCondition.strictlyBetween(5, 7), 6, SATISFIED);
+        assertStatus(ComparableCondition.strictlyBetween(5, 7), 5, UNSATISFIED);
+        assertStatus(ComparableCondition.strictlyBetween(5, 7), 7, UNSATISFIED);
+        assertStatus(ComparableCondition.greaterThan(5), null, UNSATISFIED);
 
         assertThrows(NullPointerException.class, () -> ComparableCondition.greaterThan(null));
         assertThrows(NullPointerException.class, () -> ComparableCondition.between(null, 1));
@@ -169,14 +174,14 @@ class ObjectOptionalAndScalarConditionsTest {
         assertPreserving(StringCondition.lengthAtLeast(5), "ready", "read");
         assertPreserving(StringCondition.lengthLessThan(6), "ready", "failed");
         assertPreserving(StringCondition.lengthAtMost(5), "ready", "failed");
-        assertStatus(StringCondition.lengthBetween(4, 6).delegate(), "read", SATISFIED);
-        assertStatus(StringCondition.lengthBetween(4, 6).delegate(), "failed", SATISFIED);
-        assertStatus(StringCondition.lengthBetween(4, 6).delegate(), "hey", UNSATISFIED);
-        assertStatus(StringCondition.lengthBetween(4, 6).delegate(), "failure", UNSATISFIED);
-        assertStatus(StringCondition.nonBlank.delegate(), null, UNSATISFIED);
-        assertEquals("string length is 5", StringCondition.length(5).delegate().description());
+        assertStatus(StringCondition.lengthBetween(4, 6), "read", SATISFIED);
+        assertStatus(StringCondition.lengthBetween(4, 6), "failed", SATISFIED);
+        assertStatus(StringCondition.lengthBetween(4, 6), "hey", UNSATISFIED);
+        assertStatus(StringCondition.lengthBetween(4, 6), "failure", UNSATISFIED);
+        assertStatus(StringCondition.nonBlank, null, UNSATISFIED);
+        assertEquals("string length is 5", description(StringCondition.length(5)));
         assertEquals("string length was not 5",
-                StringCondition.length(5).delegate().evaluate("read").mismatch());
+                evaluate(StringCondition.length(5), "read").mismatch());
 
         assertEquals("length must not be negative",
                 assertThrows(IllegalArgumentException.class, () -> StringCondition.length(-1)).getMessage());
@@ -190,13 +195,18 @@ class ObjectOptionalAndScalarConditionsTest {
     }
 
     private static <S> void assertPreserving(PreservingCondition<? super S> condition, S matching, S mismatching) throws Exception {
-        assertStatus(condition.delegate(), matching, SATISFIED);
-        assertStatus(condition.delegate(), mismatching, UNSATISFIED);
+        assertStatus(condition, matching, SATISFIED);
+        assertStatus(condition, mismatching, UNSATISFIED);
     }
 
     private static <S> void assertStatus(Condition<? super S, ?> condition, S actual,
             io.github.gromoff97.awium.conditioning.Evaluation.Status expected) throws Exception {
-        assertEquals(expected, condition.evaluate(actual).status());
+        assertEquals(expected, evaluate(condition, actual).status());
+    }
+
+    private static <S> void assertStatus(PreservingStage<? super S> condition, S actual,
+            io.github.gromoff97.awium.conditioning.Evaluation.Status expected) throws Exception {
+        assertEquals(expected, evaluate(condition, actual).status());
     }
 
     private static class Parent {

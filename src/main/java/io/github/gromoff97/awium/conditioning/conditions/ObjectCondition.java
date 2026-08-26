@@ -1,6 +1,9 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
+import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
+import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
 
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -13,6 +16,8 @@ import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.equal;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.description;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.evaluator;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
@@ -81,18 +86,19 @@ public final class ObjectCondition {
     }
 
     public static <S, T, R> Condition<S, R> extracting(Function<? super S, ? extends T> extractor,
-            Condition<? super T, ? extends R> nested) {
+            ConditionStage<? super T, ? extends R> nested) {
         requireNonNull(extractor, "extractor must not be null");
         requireNonNull(nested, "condition must not be null");
-        return condition("extracted " + nested.description(), actual -> nested.evaluate(extractor.apply(actual))
-                .continueIfSatisfied(value -> satisfied(value)));
+        return ConditionRuntime.condition("extracted " + description(nested), () -> {
+            Function<T, Evaluation<R>> nestedEvaluator = evaluator(nested);
+            return actual -> nestedEvaluator.apply(extractor.apply(actual));
+        });
     }
 
     public static <S, T> Condition<S, T> extracting(Function<? super S, ? extends T> extractor,
-            PreservingCondition<? super T> nested) {
+            PreservingStage<? super T> nested) {
         requireNonNull(nested, "condition must not be null");
-        Condition<? super T, ?> delegate = nested.delegate();
-        return extracting(extractor, preserve(delegate));
+        return extracting(extractor, preserve(nested));
     }
 
 }

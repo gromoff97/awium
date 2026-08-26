@@ -3,6 +3,8 @@ package io.github.gromoff97.awium;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
+import static io.github.gromoff97.awium.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
 import static java.lang.Long.parseLong;
@@ -34,12 +36,12 @@ class AssertionAdapterTest {
                     return satisfied(parseLong(value));
                 });
 
-        Evaluation<Long> evaluation = condition.evaluate("42");
+        Evaluation<Long> evaluation = evaluate(condition, "42");
 
         assertEquals(SATISFIED, evaluation.status());
         assertEquals(42L, evaluation.result());
         assertEquals(1, invocations[0]);
-        assertEquals("payment id", condition.description());
+        assertEquals("payment id", description(condition));
     }
 
     @Test
@@ -47,6 +49,9 @@ class AssertionAdapterTest {
             throws Exception {
         assertTrue(assertThrows(NullPointerException.class,
                 () -> condition(null, payment -> satisfied(payment)))
+                .getMessage().contains("description"));
+        assertTrue(assertThrows(NullPointerException.class,
+                () -> condition(null, null))
                 .getMessage().contains("description"));
         assertTrue(assertThrows(IllegalArgumentException.class,
                 () -> condition(" \n ", payment -> satisfied(payment)))
@@ -57,7 +62,7 @@ class AssertionAdapterTest {
 
         var condition = Condition.<String, String>condition(
                 "nullable evaluation", value -> null);
-        assertNull(condition.evaluate("42"));
+        assertNull(evaluate(condition, "42"));
     }
 
     @Test
@@ -68,12 +73,12 @@ class AssertionAdapterTest {
             invocations[0]++;
         });
 
-        Evaluation<String> evaluation = condition.delegate().evaluate(actual);
+        Evaluation<String> evaluation = evaluate(condition, actual);
 
         assertEquals(SATISFIED, evaluation.status());
         assertSame(actual, evaluation.result());
         assertEquals(1, invocations[0]);
-        assertTrue(!condition.delegate().description().isBlank());
+        assertTrue(!description(condition).isBlank());
     }
 
     @Test
@@ -84,12 +89,12 @@ class AssertionAdapterTest {
             return null;
         });
 
-        Evaluation<String> evaluation = condition.evaluate("42");
+        Evaluation<String> evaluation = evaluate(condition, "42");
 
         assertEquals(SATISFIED, evaluation.status());
         assertNull(evaluation.result());
         assertEquals(1, invocations[0]);
-        assertTrue(!condition.description().isBlank());
+        assertTrue(!description(condition).isBlank());
     }
 
     @Test
@@ -119,7 +124,7 @@ class AssertionAdapterTest {
         var condition = Condition.<String, Long>yields(value -> {
             throw failure;
         });
-        Evaluation<Long> evaluation = condition.evaluate("42");
+        Evaluation<Long> evaluation = evaluate(condition, "42");
 
         assertTrue(!evaluation.mismatch().isBlank());
         assertSame(failure, evaluation.assertionCause());
@@ -133,7 +138,7 @@ class AssertionAdapterTest {
         });
 
         assertSame(failure, assertThrows(RuntimeException.class,
-                () -> condition.evaluate("42")));
+                () -> evaluate(condition, "42")));
     }
 
     @Test
@@ -145,7 +150,7 @@ class AssertionAdapterTest {
         });
 
         assertSame(failure, assertThrows(LinkageError.class,
-                () -> condition.evaluate("42")));
+                () -> evaluate(condition, "42")));
     }
 
     @Test

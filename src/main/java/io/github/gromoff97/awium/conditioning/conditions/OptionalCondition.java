@@ -2,10 +2,13 @@ package io.github.gromoff97.awium.conditioning.conditions;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
+import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
@@ -13,11 +16,16 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preserve;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.equal;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.description;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.evaluator;
 import static java.util.Objects.requireNonNull;
 
 public final class OptionalCondition {
 
-    public static final SelectedCondition<Optional<?>, OptionalSource<?>> present = new SelectedCondition<>(condition("optional is present", OptionalCondition::present));
+    public static final SelectedCondition<Optional<?>, OptionalSource<?>> present =
+            ConditionRuntime.selected("optional is present", actual ->
+                    OptionalCondition.present(actual)
+                    .continueIfSatisfied(Evaluation::satisfied));
     public static final Condition<Optional<?>, Void> absent = condition("optional is absent", actual -> {
         if (actual == null) {
             return unsatisfied("optional was null");
@@ -53,15 +61,18 @@ public final class OptionalCondition {
                         ? satisfied(type.cast(value)) : unsatisfied("optional value had a different type")));
     }
 
-    public static <T, R> Condition<Optional<T>, R> hasValue(Condition<? super T, ? extends R> nested) {
+    public static <T, R> Condition<Optional<T>, R> hasValue(
+            ConditionStage<? super T, ? extends R> nested) {
         requireNonNull(nested, "condition must not be null");
-        return condition("optional value " + nested.description(), actual -> present(actual)
-                .continueIfSatisfied(nested::evaluate));
+        return ConditionRuntime.condition("optional value " + description(nested), () -> {
+            Function<T, Evaluation<R>> nestedEvaluator = evaluator(nested);
+            return actual -> present(actual).continueIfSatisfied(nestedEvaluator);
+        });
     }
 
-    public static <T> Condition<Optional<T>, T> hasValue(PreservingCondition<? super T> nested) {
+    public static <T> Condition<Optional<T>, T> hasValue(PreservingStage<? super T> nested) {
         requireNonNull(nested, "condition must not be null");
-        return hasValue(preserve(nested.delegate()));
+        return hasValue(preserve(nested));
     }
 
     private static <T> Condition<Optional<T>, T> selected(String description, String mismatch,

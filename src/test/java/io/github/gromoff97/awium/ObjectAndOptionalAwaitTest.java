@@ -115,7 +115,6 @@ class ObjectAndOptionalAwaitTest {
     }
 
     private static PreservingCondition<Object> broadPreservingCondition() {
-        return new PreservingCondition<>(condition("broad preserving condition",
-                ignored -> satisfied(new Object())));
+        return Condition.asserted(actual -> {});
     }
 }

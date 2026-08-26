@@ -72,7 +72,7 @@ class PositiveFluentMatrixTest {
         CollectionSource<ArrayList<String>> source = () -> actual;
 
         Condition.PreservingCondition<Collection<?>> collectionCondition = nonEmpty;
-        Condition.PreservingCondition.ExplainedCondition<Collection<?>> explained =
+        Condition.PreservingStage<Collection<?>> explained =
                 collectionCondition.because("collection full chain");
         ArrayList<String> raw = await(source).until(collectionCondition);
         ArrayList<String> selected = await(source).every(EVERY).upTo(UP_TO).persisting(ZERO).until(explained);

@@ -152,10 +152,11 @@ class TryAwaitFailureTest {
                         config(1, 2, 0), time, time).until(nullEvaluation()),
                 time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time)
                         .until(nullEvaluation()));
-        var diagnostics = assertParity(time -> timedAwait(() -> "actual",
-                        config(1, 2, 0), time, time).until(brokenDescription()),
-                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time)
-                        .until(brokenDescription()));
+        var diagnostics = assertParity(time -> timedAwait(
+                        TryAwaitFailureTest::brokenDiagnosticActual,
+                        config(1, 2, 0), time, time).until(brokenDiagnostics()),
+                time -> timedTryAwait(TryAwaitFailureTest::brokenDiagnosticActual,
+                        config(1, 2, 0), time, time).until(brokenDiagnostics()));
 
         assertInstanceOf(AwaitAttempt.Outcome.ConditionEvaluationFailed.class,
                 nullEvaluation.attempts().getLast().outcome());
@@ -187,19 +188,14 @@ class TryAwaitFailureTest {
                         .until(condition("fatal", actual -> uncontrolled(evaluationFatal)))));
         assertSame(diagnosticsFatal, assertThrows(InternalError.class, () -> {
             var diagnosticTime = new FakeTime(0);
-            timedTryAwait(Object::new, config(1, 2, 0),
-                    diagnosticTime, diagnosticTime).until(new Condition<>() {
+            Object actual = new Object() {
                     @Override
-                    public io.github.gromoff97.awium.conditioning.Evaluation<Object> evaluate(
-                            Object actual) {
-                        return assertionUnsatisfied("not ready", new AssertionError("engine"));
-                    }
-
-                    @Override
-                    public String description() {
+                    public String toString() {
                         throw diagnosticsFatal;
                     }
-                });
+                };
+            timedTryAwait(() -> actual, config(1, 2, 0),
+                    diagnosticTime, diagnosticTime).until(brokenDiagnostics());
         }));
     }
 
@@ -274,24 +270,22 @@ class TryAwaitFailureTest {
         });
     }
 
-    private static Condition.PreservingCondition<Object> nullEvaluation() {
-        return new Condition.PreservingCondition<>(
-                condition("condition succeeds", actual -> null));
+    private static Condition<Object, Object> nullEvaluation() {
+        return condition("condition succeeds", actual -> null);
     }
 
-    private static Condition<Object, Object> brokenDescription() {
-        return new Condition<>() {
+    private static Object brokenDiagnosticActual() {
+        return new Object() {
             @Override
-            public io.github.gromoff97.awium.conditioning.Evaluation<Object> evaluate(
-                    Object actual) {
-                return assertionUnsatisfied("not ready", new AssertionError("engine"));
-            }
-
-            @Override
-            public String description() {
+            public String toString() {
                 throw new IllegalStateException("description failed");
             }
         };
+    }
+
+    private static Condition<Object, Object> brokenDiagnostics() {
+        return condition("condition", actual ->
+                assertionUnsatisfied("not ready", new AssertionError("engine")));
     }
 
     private static WaitConfiguration config(long every, long upTo, long persistence) {

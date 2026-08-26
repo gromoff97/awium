@@ -8,6 +8,8 @@ import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.MapSource;
 
 import static io.github.gromoff97.awium.await.Await.await;
+import static io.github.gromoff97.awium.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedMapAwait;
@@ -114,8 +116,8 @@ class MapConditionsTest {
     @Test
     void nullActualShortCircuitsAndAggregateFactoriesValidateInputs()
             throws Exception {
-        Evaluation<?> evaluation = containsAllEntriesOf(map("a", "1"))
-                .delegate().evaluate(null);
+        Evaluation<?> evaluation = evaluate(
+                containsAllEntriesOf(map("a", "1")), null);
         assertEquals(UNSATISFIED, evaluation.status());
         assertFalse(evaluation.mismatch().isBlank());
 
@@ -158,8 +160,8 @@ class MapConditionsTest {
     private static void assertPair(Pair pair,
             LinkedHashMap<String, String> actual, boolean positiveSatisfied)
             throws Exception {
-        Evaluation<?> positive = pair.positive().delegate().evaluate(actual);
-        Evaluation<?> negative = pair.negative().delegate().evaluate(actual);
+        Evaluation<?> positive = evaluate(pair.positive(), actual);
+        Evaluation<?> negative = evaluate(pair.negative(), actual);
         assertEquals(positiveSatisfied ? SATISFIED : UNSATISFIED,
                 positive.status(), pair.name());
         assertNotEquals(positive.status(), negative.status(), pair.name());
@@ -171,8 +173,8 @@ class MapConditionsTest {
     private static <K, V, M extends Map<K, V>> void assertStatus(
             PreservingCondition<? super M> condition, M actual,
             Evaluation.Status status) throws Exception {
-        assertFalse(condition.delegate().description().isBlank());
-        assertEquals(status, condition.delegate().evaluate(actual).status());
+        assertFalse(description(condition).isBlank());
+        assertEquals(status, evaluate(condition, actual).status());
     }
 
     private static <K, V> ProbeContainers.EntryMap<K, V> awaitMap(

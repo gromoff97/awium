@@ -283,19 +283,10 @@ class DiagnosticsSnapshotTest {
     @Test
     void explicitUncontrolledRetainsInterruptFlagAfterDiagnosticsClearIt() {
         var cause = new IllegalStateException("condition failed");
-        Condition<Object, Object> condition = new Condition<>() {
-            @Override
-            public Evaluation<Object> evaluate(Object actual) {
-                currentThread().interrupt();
-                return uncontrolled(cause);
-            }
-
-            @Override
-            public String description() {
-                assertTrue(interrupted());
-                return "condition";
-            }
-        };
+        Condition<Object, Object> condition = Condition.condition("condition", actual -> {
+            currentThread().interrupt();
+            return uncontrolled(cause);
+        });
 
         try {
             AwaitConditionEvaluationException failure = assertThrows(

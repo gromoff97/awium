@@ -8,6 +8,7 @@ import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 
 import static io.github.gromoff97.awium.await.Await.await;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ExpectedValue;
 import static io.github.gromoff97.awium.ProbeContainers.GreedyValue;
@@ -115,8 +116,8 @@ class CollectionExactContentTest {
 
     @Test
     void nullActualIsUnsatisfiedAndNullAggregateIsRejected() throws Exception {
-        Evaluation<?> evaluation = containsExactlyElementsOf(List.of("a"))
-                .delegate().evaluate(null);
+        Evaluation<?> evaluation = evaluate(
+                containsExactlyElementsOf(List.of("a")), null);
         assertEquals(UNSATISFIED, evaluation.status());
         assertFalse(evaluation.mismatch().isBlank());
         assertTrue(!assertThrows(NullPointerException.class,
@@ -142,8 +143,8 @@ class CollectionExactContentTest {
 
     private static void assertPair(Pair pair, List<String> actual,
             boolean positiveSatisfied) throws Exception {
-        Evaluation<?> positive = pair.positive().delegate().evaluate(actual);
-        Evaluation<?> negative = pair.negative().delegate().evaluate(actual);
+        Evaluation<?> positive = evaluate(pair.positive(), actual);
+        Evaluation<?> negative = evaluate(pair.negative(), actual);
         assertEquals(positiveSatisfied ? SATISFIED : UNSATISFIED,
                 positive.status(), pair.name());
         assertNotEquals(positive.status(), negative.status(), pair.name());
@@ -157,7 +158,7 @@ class CollectionExactContentTest {
             List<? extends E> elements, Evaluation.Status status)
             throws Exception {
         List<E> actual = new ArrayList<>(elements);
-        assertEquals(status, condition.delegate().evaluate(actual).status());
+        assertEquals(status, evaluate(condition, actual).status());
     }
 
     private static List<Pair> pairs() {

@@ -14,6 +14,8 @@ import java.util.List;
 
 import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
+import static io.github.gromoff97.awium.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNSATISFIED;
 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.empty;
@@ -54,11 +56,11 @@ class CollectionSizeConditionsTest {
         assertSame(element, selected);
         assertSame(element, explained);
         assertNull(nullElement);
-        assertEquals("collection has a single element", single.delegate().description());
+        assertEquals("collection has a single element", description(single));
         assertEquals("collection size was 0",
-                single.delegate().evaluate(List.of()).mismatch());
+                evaluate(single, List.of()).mismatch());
         assertEquals("collection size was 2",
-                single.delegate().evaluate(List.of("first", "second")).mismatch());
+                evaluate(single, List.of("first", "second")).mismatch());
     }
 
     @Test
@@ -67,17 +69,17 @@ class CollectionSizeConditionsTest {
             var matching = new ProbeContainers.ProbeCollection<Object>(testCase.matchingSize());
             var mismatching = new ProbeContainers.ProbeCollection<Object>(testCase.mismatchingSize());
 
-            Evaluation<?> satisfied = testCase.condition().delegate().evaluate(matching);
+            Evaluation<?> satisfied = evaluate(testCase.condition(), matching);
             assertEquals(SATISFIED, satisfied.status());
             assertSame(matching, satisfied.result());
             assertNull(satisfied.mismatch());
-            assertUnsatisfied(testCase.condition().delegate().evaluate(mismatching));
-            assertFalse(testCase.condition().delegate().description().isBlank());
+            assertUnsatisfied(evaluate(testCase.condition(), mismatching));
+            assertFalse(description(testCase.condition()).isBlank());
             assertEquals(1, matching.sizeCalls);
             assertEquals(1, mismatching.sizeCalls);
         }
         assertEquals("collection size was 1",
-                size(2).delegate().evaluate(List.of("value")).mismatch());
+                evaluate(size(2), List.of("value")).mismatch());
     }
 
     @Test
@@ -130,10 +132,11 @@ class CollectionSizeConditionsTest {
 
     @Test
     void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() throws Exception {
-        assertEquals(SATISFIED, sizeBetween(2, 4).delegate().evaluate(List.of(1, 2)).status());
-        assertEquals(SATISFIED, sizeBetween(2, 4).delegate().evaluate(List.of(1, 2, 3, 4)).status());
-        assertUnsatisfied(sizeBetween(2, 4).delegate().evaluate(List.of(1)));
-        assertUnsatisfied(sizeBetween(2, 4).delegate().evaluate(List.of(1, 2, 3, 4, 5)));
+        assertEquals(SATISFIED, evaluate(sizeBetween(2, 4), List.of(1, 2)).status());
+        assertEquals(SATISFIED,
+                evaluate(sizeBetween(2, 4), List.of(1, 2, 3, 4)).status());
+        assertUnsatisfied(evaluate(sizeBetween(2, 4), List.of(1)));
+        assertUnsatisfied(evaluate(sizeBetween(2, 4), List.of(1, 2, 3, 4, 5)));
     }
 
     @Test

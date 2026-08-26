@@ -1,6 +1,8 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
+import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
 
 import java.util.Collection;
 import java.util.Map;
@@ -10,7 +12,9 @@ import java.util.function.ToIntFunction;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.condition;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.description;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.preservingEvaluator;
 import static java.util.Objects.requireNonNull;
 
 final class ConditionSupport {
@@ -19,22 +23,22 @@ final class ConditionSupport {
         throw new AssertionError("Utility class");
     }
 
-    static <T> Condition<T, T> preserve(Condition<? super T, ?> nested) {
-        return condition(nested.description(), actual -> nested.evaluate(actual)
-                .continueIfSatisfied(ignored -> satisfied(actual)));
+    static <T> Condition<T, T> preserve(PreservingStage<? super T> nested) {
+        requireNonNull(nested, "condition must not be null");
+        return condition(description(nested), () -> preservingEvaluator(nested));
     }
 
     static <S> PreservingCondition<S> preserving(String description, String mismatch,
             Predicate<? super S> matches) {
-        return new PreservingCondition<>(condition(description, actual ->
-                matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch)));
+        return ConditionRuntime.preserving(description, actual -> matches.test(actual)
+                ? satisfied(actual) : unsatisfied(mismatch));
     }
 
     static <S> PreservingCondition<S> preservingNonNull(String subject, String description,
             String mismatch, Predicate<? super S> matches) {
-        return new PreservingCondition<>(condition(description, actual -> actual == null
+        return ConditionRuntime.preserving(description, actual -> actual == null
                 ? unsatisfied(subject + " was null")
-                : matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch)));
+                : matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch));
     }
 
     static <S> PreservingCondition<S> sized(String subject, int bound, IntPredicate matches,
@@ -42,13 +46,13 @@ final class ConditionSupport {
         if (bound < 0) {
             throw new IllegalArgumentException("size must not be negative");
         }
-        return new PreservingCondition<>(condition(description, actual -> {
+        return ConditionRuntime.preserving(description, actual -> {
             if (actual == null) {
                 return unsatisfied(subject + " was null");
             }
             int size = sizeOf.applyAsInt(actual);
             return matches.test(size) ? satisfied(actual) : unsatisfied(subject + " size was " + size);
-        }));
+        });
     }
 
     static void validateRange(int lowerBound, int upperBound, String measure) {

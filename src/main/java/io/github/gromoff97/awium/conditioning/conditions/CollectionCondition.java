@@ -25,20 +25,21 @@ import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.validateRange;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.selected;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("varargs")
 public final class CollectionCondition {
 
-    public static final SelectedCondition<Collection<?>, CollectionSource<?>> single = new SelectedCondition<>(condition("collection has a single element", actual -> {
+    public static final SelectedCondition<Collection<?>, CollectionSource<?>> single = selected("collection has a single element", actual -> {
         if (actual == null) {
             return unsatisfied("collection was null");
         }
         return actual.size() == 1
                 ? satisfied(actual.iterator().next())
                 : unsatisfied("collection size was " + actual.size());
-    }));
+    });
     public static final PreservingCondition<Collection<?>> empty = sized(0, size -> size == 0,
             "collection is empty");
     public static final PreservingCondition<Collection<?>> nonEmpty = sized(0, size -> size > 0,
@@ -381,14 +382,14 @@ public final class CollectionCondition {
 
     private static SelectedCondition<SequencedCollection<?>, CollectionSource<?>> position(String name,
             java.util.function.Function<SequencedCollection<?>, ?> selector) {
-        return new SelectedCondition<>(condition("collection has a " + name + " element", actual -> {
+        return selected("collection has a " + name + " element", actual -> {
             if (actual == null) {
                 return unsatisfied("collection was null");
             }
             return actual.isEmpty()
                     ? unsatisfied("collection was empty")
                     : satisfied(selector.apply(actual));
-        }));
+        });
     }
 
     private static PreservingCondition<Collection<?>> sized(int bound, java.util.function.IntPredicate matches,

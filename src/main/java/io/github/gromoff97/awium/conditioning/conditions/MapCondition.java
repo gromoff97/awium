@@ -2,12 +2,15 @@ package io.github.gromoff97.awium.conditioning.conditions;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
+import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
 import io.github.gromoff97.awium.sources.Source.MapSource;
 
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
@@ -24,20 +27,23 @@ import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.ma
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.sameDistinctElements;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.description;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.evaluator;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.selected;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("varargs")
 public final class MapCondition {
 
-    public static final SelectedCondition<Map<?, ?>, MapSource<?>> singleEntry = new SelectedCondition<>(condition("map has a single entry", actual -> {
+    public static final SelectedCondition<Map<?, ?>, MapSource<?>> singleEntry = selected("map has a single entry", actual -> {
         if (actual == null) {
             return unsatisfied("map was null");
         }
         return actual.size() == 1
                 ? satisfied(actual.entrySet().iterator().next())
                 : unsatisfied("map size was " + actual.size());
-    }));
+    });
     public static final PreservingCondition<Map<?, ?>> empty = sized(0, size -> size == 0,
             "map is empty");
     public static final PreservingCondition<Map<?, ?>> nonEmpty = sized(0, size -> size > 0,
@@ -167,16 +173,19 @@ public final class MapCondition {
     }
 
     public static <K, V, R> Condition<Map<K, V>, R> valueFor(K key,
-            Condition<? super V, ? extends R> nested) {
+            ConditionStage<? super V, ? extends R> nested) {
         requireNonNull(nested, "condition must not be null");
-        return condition("map value " + nested.description(), actual -> findEntry(actual, key)
-                .continueIfSatisfied(entry -> nested.evaluate(entry.getValue())));
+        return ConditionRuntime.condition("map value " + description(nested), () -> {
+            Function<V, Evaluation<R>> nestedEvaluator = evaluator(nested);
+            return actual -> findEntry(actual, key)
+                    .continueIfSatisfied(entry -> nestedEvaluator.apply(entry.getValue()));
+        });
     }
 
     public static <K, V> Condition<Map<K, V>, V> valueFor(K key,
-            PreservingCondition<? super V> nested) {
+            PreservingStage<? super V> nested) {
         requireNonNull(nested, "condition must not be null");
-        return MapCondition.<K, V, V>valueFor(key, preserve(nested.delegate()));
+        return MapCondition.<K, V, V>valueFor(key, preserve(nested));
     }
 
     public static <K, V> Condition<Map<K, V>, Map.Entry<K, V>> entryFor(K key) {

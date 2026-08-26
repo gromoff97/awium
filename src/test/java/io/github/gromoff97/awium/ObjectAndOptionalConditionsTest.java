@@ -1,13 +1,14 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
+import static io.github.gromoff97.awium.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
 import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
 import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -25,8 +26,8 @@ class ObjectAndOptionalConditionsTest {
             throws Exception {
         var actual = new Object();
 
-        assertSatisfied(isNull.evaluate(null), null);
-        assertUnsatisfied(isNull.evaluate(actual));
+        assertSatisfied(evaluate(isNull, null), null);
+        assertUnsatisfied(evaluate(isNull, actual));
         assertSatisfied(evaluate(isNotNull, actual), actual);
         assertUnsatisfied(evaluate(isNotNull, null));
     }
@@ -58,13 +59,13 @@ class ObjectAndOptionalConditionsTest {
         Optional<String> empty = Optional.empty();
         Optional<String> presentValue = Optional.of("value");
 
-        assertTrue(!present.delegate().description().isBlank());
+        assertTrue(!description(present).isBlank());
         assertUnsatisfied(evaluatePresent(null));
-        assertUnsatisfied(absent.evaluate(null));
+        assertUnsatisfied(evaluate(absent, null));
         assertUnsatisfied(evaluatePresent(empty));
-        assertSatisfied(absent.evaluate(empty), null);
+        assertSatisfied(evaluate(absent, empty), null);
         assertSatisfied(evaluatePresent(presentValue), "value");
-        assertUnsatisfied(absent.evaluate(presentValue));
+        assertUnsatisfied(evaluate(absent, presentValue));
     }
 
     @Test
@@ -76,12 +77,12 @@ class ObjectAndOptionalConditionsTest {
         var equal = hasValue(expected);
         var notEqual = doesNotHaveValue(expected);
 
-        assertUnsatisfied(equal.evaluate(null));
-        assertUnsatisfied(equal.evaluate(Optional.empty()));
-        assertSatisfied(equal.evaluate(Optional.of(equalActual)), equalActual);
-        assertUnsatisfied(notEqual.evaluate(Optional.of(equalActual)));
-        assertUnsatisfied(equal.evaluate(Optional.of(differentActual)));
-        assertSatisfied(notEqual.evaluate(Optional.of(differentActual)),
+        assertUnsatisfied(evaluate(equal, null));
+        assertUnsatisfied(evaluate(equal, Optional.empty()));
+        assertSatisfied(evaluate(equal, Optional.of(equalActual)), equalActual);
+        assertUnsatisfied(evaluate(notEqual, Optional.of(equalActual)));
+        assertUnsatisfied(evaluate(equal, Optional.of(differentActual)));
+        assertSatisfied(evaluate(notEqual, Optional.of(differentActual)),
                 differentActual);
     }
 
@@ -90,13 +91,13 @@ class ObjectAndOptionalConditionsTest {
         var expected = new Directional(false);
         var actual = new Directional(true);
 
-        assertSatisfied(hasValue((Object) expected)
-                .evaluate(Optional.of(actual)), actual);
+        assertSatisfied(evaluate(hasValue((Object) expected),
+                Optional.of(actual)), actual);
         assertEquals(1, actual.equalsCalls);
 
         int[] actualArray = {1, 2};
-        assertSame(actualArray, hasValue(
-                new int[]{1, 2}).evaluate(Optional.of(actualArray)).result());
+        assertSame(actualArray, evaluate(hasValue(
+                new int[]{1, 2}), Optional.of(actualArray)).result());
     }
 
     @Test
@@ -108,14 +109,9 @@ class ObjectAndOptionalConditionsTest {
                 .contains("unexpected"));
     }
 
-    private static Evaluation<Object> evaluate(
-            PreservingCondition<Object> condition, Object actual) throws Exception {
-        return condition.delegate().evaluate(actual);
-    }
-
     private static Evaluation<?> evaluatePresent(Optional<?> actual)
             throws Exception {
-        return present.delegate().evaluate(actual);
+        return evaluate(present, actual);
     }
 
     private static void assertSatisfied(Evaluation<?> evaluation, Object result) {

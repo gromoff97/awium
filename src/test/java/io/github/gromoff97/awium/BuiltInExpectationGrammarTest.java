@@ -5,10 +5,9 @@ import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
 import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.*;
 import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
 import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
+import static io.github.gromoff97.awium.ConditionTestRuntime.description;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.github.gromoff97.awium.conditioning.conditions.Condition;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
 import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
 import io.github.gromoff97.awium.conditioning.conditions.OptionalCondition;
@@ -73,27 +72,27 @@ class BuiltInExpectationGrammarTest {
                 "map contains exactly the expected entries",
                 "map does not contain exactly the expected entries"),
                 List.of(
-                        isNull.description(),
+                        description(isNull),
                         description(isNotNull),
                         description(equalTo("expected")),
                         description(notEqualTo("unexpected")),
-                        present.delegate().description(),
-                        absent.description(),
-                        OptionalCondition.hasValue("expected").description(),
-                        doesNotHaveValue("unexpected").description(),
+                        description(present),
+                        description(absent),
+                        description(OptionalCondition.hasValue("expected")),
+                        description(doesNotHaveValue("unexpected")),
                         description(asserted(value -> {})),
-                        yields(value -> {
+                        description(yields(value -> {
                             return value;
-                        }).description(),
-                        CollectionCondition.single.delegate().description(),
-                        CollectionCondition.empty.delegate().description(),
-                        CollectionCondition.nonEmpty.delegate().description(),
-                        CollectionCondition.size(2).delegate().description(),
-                        CollectionCondition.sizeIsNot(2).delegate().description(),
-                        CollectionCondition.sizeGreaterThan(2).delegate().description(),
-                        CollectionCondition.sizeAtLeast(2).delegate().description(),
-                        CollectionCondition.sizeLessThan(2).delegate().description(),
-                        CollectionCondition.sizeAtMost(2).delegate().description(),
+                        })),
+                        description(CollectionCondition.single),
+                        description(CollectionCondition.empty),
+                        description(CollectionCondition.nonEmpty),
+                        description(CollectionCondition.size(2)),
+                        description(CollectionCondition.sizeIsNot(2)),
+                        description(CollectionCondition.sizeGreaterThan(2)),
+                        description(CollectionCondition.sizeAtLeast(2)),
+                        description(CollectionCondition.sizeLessThan(2)),
+                        description(CollectionCondition.sizeAtMost(2)),
                         description(contains("expected")),
                         description(doesNotContain("expected")),
                         description(contains("first", "second")),
@@ -104,15 +103,15 @@ class BuiltInExpectationGrammarTest {
                         description(doesNotContainExactly("expected")),
                         description(containsExactlyInAnyOrder("expected")),
                         description(doesNotContainExactlyInAnyOrder("expected")),
-                        MapCondition.singleEntry.delegate().description(),
-                        MapCondition.empty.delegate().description(),
-                        MapCondition.nonEmpty.delegate().description(),
-                        MapCondition.size(2).delegate().description(),
-                        MapCondition.sizeIsNot(2).delegate().description(),
-                        MapCondition.sizeGreaterThan(2).delegate().description(),
-                        MapCondition.sizeAtLeast(2).delegate().description(),
-                        MapCondition.sizeLessThan(2).delegate().description(),
-                        MapCondition.sizeAtMost(2).delegate().description(),
+                        description(MapCondition.singleEntry),
+                        description(MapCondition.empty),
+                        description(MapCondition.nonEmpty),
+                        description(MapCondition.size(2)),
+                        description(MapCondition.sizeIsNot(2)),
+                        description(MapCondition.sizeGreaterThan(2)),
+                        description(MapCondition.sizeAtLeast(2)),
+                        description(MapCondition.sizeLessThan(2)),
+                        description(MapCondition.sizeAtMost(2)),
                         description(containsKey("expected")),
                         description(doesNotContainKey("expected")),
                         description(containsValue("expected")),
@@ -130,11 +129,4 @@ class BuiltInExpectationGrammarTest {
                                 Map.of("key", "value")))));
     }
 
-    private static String description(Condition<?, ?> condition) {
-        return condition.description();
-    }
-
-    private static String description(PreservingCondition<?> condition) {
-        return condition.delegate().description();
-    }
 }

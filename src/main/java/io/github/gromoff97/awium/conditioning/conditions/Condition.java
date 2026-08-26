@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.util.Locale;
@@ -11,138 +12,86 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatis
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static java.util.Objects.requireNonNull;
 
-public abstract class Condition<S, R> {
+public sealed interface Condition<S, R> extends ConditionStage<S, R>
+        permits ConditionRuntime.RuntimeCondition {
 
-    protected Condition() {
-    }
-
-    public abstract Evaluation<R> evaluate(S actual);
-
-    public abstract String description();
-
-    public static <S, R> Condition<S, R> condition(String description,
+    static <S, R> Condition<S, R> condition(String description,
             Function<? super S, Evaluation<R>> evaluation) {
-        if (requireNonNull(description, "description must not be null").isBlank()) {
-            throw new IllegalArgumentException("description must not be blank");
-        }
-        requireNonNull(evaluation, "evaluation must not be null");
-        return new Condition<>() {
-            @Override
-            public Evaluation<R> evaluate(S actual) {
-                return evaluation.apply(actual);
-            }
-
-            @Override
-            public String description() {
-                return description;
-            }
-        };
+        return ConditionRuntime.condition(description, evaluation);
     }
 
-    public static <S> PreservingCondition<S> asserted(Consumer<? super S> assertion) {
+    static <S> PreservingCondition<S> asserted(Consumer<? super S> assertion) {
         requireNonNull(assertion, "assertion must not be null");
-        return new PreservingCondition<>(evaluated("value satisfies assertion",
-                "value did not satisfy assertion", actual -> {
-            assertion.accept(actual);
-            return actual;
-        }));
+        return ConditionRuntime.preserving("value satisfies assertion",
+                evaluated("value did not satisfy assertion", actual -> {
+                    assertion.accept(actual);
+                    return actual;
+                }));
     }
 
-    public static <S, R> Condition<S, R> yields(Function<? super S, ? extends R> callback) {
+    static <S, R> Condition<S, R> yields(Function<? super S, ? extends R> callback) {
         requireNonNull(callback, "callback must not be null");
-        return evaluated("callback yields a result", "callback did not yield a result", callback);
+        return condition("callback yields a result",
+                evaluated("callback did not yield a result", callback));
     }
 
-    private static <S, R> Condition<S, R> evaluated(String description, String mismatch,
+    private static <S, R> Function<S, Evaluation<R>> evaluated(String mismatch,
             Function<? super S, ? extends R> function) {
-        return condition(description, actual -> {
+        return actual -> {
             try {
                 return satisfied(function.apply(actual));
             } catch (AssertionError error) {
                 return assertionUnsatisfied(mismatch, error);
             }
-        });
+        };
     }
 
-    public final ExplainedCondition<S, R> because(String explanation) {
-        return new ExplainedCondition<>(this, explanation);
+    default ConditionStage<S, R> because(String explanation) {
+        return ConditionRuntime.explained(this, explanation);
     }
 
-    public final ExplainedCondition<S, R> because(String format, Object... arguments) {
-        return new ExplainedCondition<>(this, formattedExplanation(format, arguments));
+    default ConditionStage<S, R> because(String format, Object... arguments) {
+        return ConditionRuntime.explained(this,
+                formattedExplanation(format, arguments));
     }
 
-    static String literalExplanation(String explanation) {
-        if (requireNonNull(explanation, "explanation must not be null").isBlank()) {
-            throw new IllegalArgumentException("explanation must not be blank");
-        }
-        return explanation;
-    }
-
-    static String formattedExplanation(String format, Object[] arguments) {
+    private static String formattedExplanation(String format, Object[] arguments) {
         requireNonNull(format, "format must not be null");
         requireNonNull(arguments, "arguments must not be null");
         return String.format(Locale.ROOT, format, arguments);
     }
 
-    public record ExplainedCondition<S, R>(Condition<S, R> delegate, String explanation) {
+    public sealed interface PreservingStage<S> permits PreservingCondition,
+            ConditionRuntime.RuntimeExplainedPreservingCondition {
+    }
 
-        public ExplainedCondition {
-            requireNonNull(delegate, "condition must not be null");
-            explanation = literalExplanation(explanation);
+    public sealed interface PreservingCondition<S> extends PreservingStage<S>
+            permits ConditionRuntime.RuntimePreservingCondition {
+
+        default PreservingStage<S> because(String explanation) {
+            return ConditionRuntime.explained(this, explanation);
+        }
+
+        default PreservingStage<S> because(String format, Object... arguments) {
+            return ConditionRuntime.explained(this,
+                    formattedExplanation(format, arguments));
         }
     }
 
-    public record PreservingCondition<S>(Condition<S, S> delegate) {
-
-        public PreservingCondition {
-            requireNonNull(delegate, "condition must not be null");
-        }
-
-        public ExplainedCondition<S> because(String explanation) {
-            return new ExplainedCondition<>(this, explanation);
-        }
-
-        public ExplainedCondition<S> because(String format, Object... arguments) {
-            return new ExplainedCondition<>(this, formattedExplanation(format, arguments));
-        }
-
-        public record ExplainedCondition<S>(PreservingCondition<S> delegate, String explanation) {
-
-            public ExplainedCondition {
-                requireNonNull(delegate, "condition must not be null");
-                explanation = literalExplanation(explanation);
-            }
-        }
+    public sealed interface SelectedStage<S, F extends Source<?>> permits SelectedCondition,
+            ConditionRuntime.RuntimeExplainedSelectedCondition {
     }
 
-    public static final class SelectedCondition<S, F extends Source<?>> {
+    public sealed interface SelectedCondition<S, F extends Source<?>> extends SelectedStage<S, F>
+            permits ConditionRuntime.RuntimeSelectedCondition {
 
-        private final Condition<S, ?> delegate;
-
-        SelectedCondition(Condition<S, ?> delegate) {
-            this.delegate = requireNonNull(delegate, "condition must not be null");
+        default SelectedStage<S, F> because(String explanation) {
+            return ConditionRuntime.explained(this, explanation);
         }
 
-        public Condition<S, ?> delegate() {
-            return delegate;
-        }
-
-        public ExplainedCondition<S, F> because(String explanation) {
-            return new ExplainedCondition<>(this, explanation);
-        }
-
-        public ExplainedCondition<S, F> because(String format, Object... arguments) {
-            return new ExplainedCondition<>(this, formattedExplanation(format, arguments));
-        }
-
-        public record ExplainedCondition<S, F extends Source<?>>(
-                SelectedCondition<S, F> delegate, String explanation) {
-
-            public ExplainedCondition {
-                requireNonNull(delegate, "condition must not be null");
-                explanation = literalExplanation(explanation);
-            }
+        default SelectedStage<S, F> because(String format, Object... arguments) {
+            return ConditionRuntime.explained(this,
+                    formattedExplanation(format, arguments));
         }
     }
 }

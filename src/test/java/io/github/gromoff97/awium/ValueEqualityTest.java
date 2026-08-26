@@ -2,6 +2,7 @@ package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -93,7 +94,7 @@ class ValueEqualityTest {
 
     private static boolean equal(Object actual, Object expected) {
         try {
-            return equalTo(expected).delegate().evaluate(actual).status() == SATISFIED;
+            return evaluate(equalTo(expected), actual).status() == SATISFIED;
         } catch (Exception failure) {
             throw new AssertionError(failure);
         }

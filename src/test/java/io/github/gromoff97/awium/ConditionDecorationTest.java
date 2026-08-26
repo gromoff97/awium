@@ -2,43 +2,76 @@ package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.*;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.explanation;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.IllegalFormatException;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class ConditionDecorationTest {
+
+    @TempDir
+    Path temporaryDirectory;
+
+    @Test
+    void plainAndExplainedConditionsShareOneNonDecoratableStage() throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+                import io.github.gromoff97.awium.conditioning.Evaluation;
+                import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
+                final class Contract {
+                    void check() {
+                        accept(condition("plain", Evaluation::satisfied));
+                        accept(condition("explained", Evaluation::satisfied).because("reason"));
+                    }
+                    void accept(ConditionStage<Object, Object> condition) {}
+                }
+                """));
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+                import io.github.gromoff97.awium.conditioning.Evaluation;
+                final class Contract {
+                    void check() {
+                        condition("condition", Evaluation::satisfied)
+                                .because("first").because("second");
+                    }
+                }
+                """));
+    }
 
     @Test
     void everyConditionKindFormatsItsExplanationEagerly() {
         Condition<Object, Object> condition = condition(
                 "custom condition", Evaluation::satisfied);
-        var preserving = new PreservingCondition<>(condition);
+        var preserving = asserted(actual -> {});
         var selected = OptionalCondition.present;
 
         assertEquals("the value must be ready",
-                condition.because("the value must be ready").explanation());
+                explanation(condition.because("the value must be ready")));
         assertEquals("attempt 3",
-                condition.because("attempt %d", 3).explanation());
+                explanation(condition.because("attempt %d", 3)));
         assertEquals("preserving",
-                preserving.because("preserving").explanation());
+                explanation(preserving.because("preserving")));
         assertEquals("selected value",
-                selected.because("selected %s", "value").explanation());
-        assertEquals("collection value", CollectionCondition.nonEmpty
-                .because("collection %s", "value").explanation());
-        assertEquals("single element", CollectionCondition.single
-                .because("single %s", "element").explanation());
-        assertEquals("map value", MapCondition.nonEmpty
-                .because("map %s", "value").explanation());
-        assertEquals("single entry", MapCondition.singleEntry
-                .because("single %s", "entry").explanation());
+                explanation(selected.because("selected %s", "value")));
+        assertEquals("collection value", explanation(CollectionCondition.nonEmpty
+                .because("collection %s", "value")));
+        assertEquals("single element", explanation(CollectionCondition.single
+                .because("single %s", "element")));
+        assertEquals("map value", explanation(MapCondition.nonEmpty
+                .because("map %s", "value")));
+        assertEquals("single entry", explanation(MapCondition.singleEntry
+                .because("single %s", "entry")));
     }
 
     @Test
@@ -71,9 +104,9 @@ class ConditionDecorationTest {
     @Test
     void specializedConditionsCannotBypassExplanationValidation() {
         assertValidation("explanation", IllegalArgumentException.class,
-                () -> new PreservingCondition<>(runtime()).because(" \n "));
+                () -> asserted((Object actual) -> {}).because(" \n "));
         assertValidation("explanation", NullPointerException.class,
-                () -> new PreservingCondition<>(runtime()).because((String) null));
+                () -> asserted((Object actual) -> {}).because((String) null));
     }
 
     @Test
@@ -81,19 +114,19 @@ class ConditionDecorationTest {
         Locale original = Locale.getDefault(Locale.Category.FORMAT);
         Locale.setDefault(Locale.Category.FORMAT, Locale.GERMANY);
         try {
-            assertEquals("1.5", new PreservingCondition<>(runtime())
-                    .because("%.1f", 1.5).explanation());
+            assertEquals("1.5", explanation(asserted((Object actual) -> {})
+                    .because("%.1f", 1.5)));
         } finally {
             Locale.setDefault(Locale.Category.FORMAT, original);
         }
     }
 
-    private static Condition<Object, Object> runtime() {
-        return condition("condition", Evaluation::satisfied);
-    }
-
     private static <T extends Throwable> void assertValidation(String context,
             Class<T> type, org.junit.jupiter.api.function.Executable action) {
         assertTrue(assertThrows(type, action).getMessage().contains(context));
+    }
+
+    private boolean compiles(String source) throws IOException {
+        return CompilationSupport.compiles(temporaryDirectory, source);
     }
 }
