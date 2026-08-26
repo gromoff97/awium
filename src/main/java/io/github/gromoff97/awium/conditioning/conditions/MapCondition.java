@@ -33,7 +33,9 @@ public final class MapCondition {
         if (actual == null) {
             return unsatisfied("map was null");
         }
-        return actual.size() == 1 ? satisfied(actual) : unsatisfied("map size was " + actual.size());
+        return actual.size() == 1
+                ? satisfied(actual.entrySet().iterator().next())
+                : unsatisfied("map size was " + actual.size());
     }));
     public static final PreservingCondition<Map<?, ?>> empty = sized(0, size -> size == 0,
             "map is empty");

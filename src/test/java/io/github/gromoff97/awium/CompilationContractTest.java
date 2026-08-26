@@ -202,6 +202,47 @@ class CompilationContractTest {
     }
 
     @Test
+    void firstAndLastAreTypedFieldsWithPredicateOverloads() throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.await.Await.await;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.first;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.last;
+                import io.github.gromoff97.awium.sources.Source.CollectionSource;
+                import java.util.List;
+                final class Contract {
+                    void check(CollectionSource<List<String>> source) {
+                        String firstValue = await(source).until(first);
+                        String lastValue = await(source).until(last.because("latest business result"));
+                        String firstMatch = await(source).until(first(value -> !value.isBlank()));
+                        String lastMatch = await(source).until(last(value -> !value.isBlank()));
+                    }
+                }
+                """));
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.await.Await.await;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.first;
+                import io.github.gromoff97.awium.sources.Source.CollectionSource;
+                import java.util.List;
+                final class Contract {
+                    void check(CollectionSource<List<String>> source) {
+                        Integer wrong = await(source).until(first);
+                    }
+                }
+                """));
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.await.Await.await;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.first;
+                import io.github.gromoff97.awium.sources.Source.CollectionSource;
+                import java.util.HashSet;
+                final class Contract {
+                    void check(CollectionSource<HashSet<String>> source) {
+                        await(source).until(first);
+                    }
+                }
+                """));
+    }
+
+    @Test
     void collectionElementAndAggregateFactoriesAreUnambiguous() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.await.Await.await;
@@ -415,6 +456,7 @@ class CompilationContractTest {
                 "CollectionCondition.nonEmpty()", "MapCondition.empty()",
                 "MapCondition.nonEmpty()",
                 "CollectionCondition.single()",
+                "CollectionCondition.first()", "CollectionCondition.last()",
                 "MapCondition.singleEntry()")) {
             assertFalse(compiles("""
                     import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;

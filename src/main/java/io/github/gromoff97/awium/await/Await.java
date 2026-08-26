@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium.await;
 
-import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
@@ -18,30 +17,29 @@ import java.util.function.LongSupplier;
 
 public final class Await<S, E> extends AbstractAwait<S, E, Await<S, E>> {
 
-    private Await(Source<? extends S> source,
-            CheckedFunction<? super S, ? extends E> selector) {
-        super(source, selector);
+    private Await(Source<? extends S> source) {
+        super(source);
     }
 
     public static <T> Await<T, T> await(Source<T> source) {
-        return new Await<>(source, actual -> actual);
+        return new Await<>(source);
     }
 
     public static <T> Await<Optional<T>, T> await(OptionalSource<T> source) {
-        return new Await<>(source, actual -> actual.orElse(null));
+        return new Await<>(source);
     }
 
     public static <E, C extends Collection<E>> Await<C, E> await(CollectionSource<C> source) {
-        return new Await<>(source, actual -> actual.iterator().next());
+        return new Await<>(source);
     }
 
     public static <K, V, M extends Map<K, V>> Await<M, Map.Entry<K, V>> await(MapSource<M> source) {
-        return new Await<>(source, actual -> actual.entrySet().iterator().next());
+        return new Await<>(source);
     }
 
-    Await(Source<? extends S> source, CheckedFunction<? super S, ? extends E> selector,
-            WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {
-        super(source, selector, configuration, clock, parker);
+    Await(Source<? extends S> source, WaitConfiguration configuration,
+            LongSupplier clock, LongConsumer parker) {
+        super(source, configuration, clock, parker);
     }
 
     private Await(Await<S, E> await, WaitConfiguration configuration) {

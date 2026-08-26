@@ -6,13 +6,17 @@ import io.github.gromoff97.awium.sources.Source.CollectionSource;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 
 import static io.github.gromoff97.awium.await.Await.await;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNSATISFIED;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.first;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.last;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -86,8 +90,8 @@ class CollectionSelectionConditionsTest {
         var values = new ArrayList<>(List.of(1, 2, 3, 5));
         CollectionSource<ArrayList<Integer>> source = () -> values;
 
-        assertEquals(1, await(source).until(CollectionCondition.first()));
-        assertEquals(5, await(source).until(CollectionCondition.last()));
+        assertEquals(1, await(source).until(first));
+        assertEquals(5, await(source).until(last.because("latest business result")));
         assertEquals(3, await(source).until(CollectionCondition.element(2)));
         assertEquals(3, await(source).until(CollectionCondition.first(value -> value > 2)));
         assertEquals(3, await(source).until(CollectionCondition.last(value -> value < 5)));
@@ -118,7 +122,7 @@ class CollectionSelectionConditionsTest {
                 .delegate().evaluate(List.of(3, 2, 1)).status());
 
         var sequencedSet = new LinkedHashSet<>(List.of(1, 2, 3));
-        assertEquals(1, await((CollectionSource<LinkedHashSet<Integer>>) () -> sequencedSet).until(CollectionCondition.first()));
+        assertEquals(1, await((CollectionSource<LinkedHashSet<Integer>>) () -> sequencedSet).until(first));
     }
 
     @Test
@@ -134,8 +138,8 @@ class CollectionSelectionConditionsTest {
 
     @Test
     void selectorsCoverMissingNullAndInvalidPositions() throws Exception {
-        assertEquals(UNSATISFIED, CollectionCondition.<String>first().evaluate(List.of()).status());
-        assertEquals(UNSATISFIED, CollectionCondition.<String>last().evaluate(null).status());
+        assertEquals(UNSATISFIED, first.delegate().evaluate(List.of()).status());
+        assertEquals(UNSATISFIED, last.delegate().evaluate(null).status());
         assertEquals(UNSATISFIED, CollectionCondition.<String>first(value -> value.startsWith("r"))
                 .evaluate(List.of("failed")).status());
         assertEquals(UNSATISFIED, CollectionCondition.<String>last(value -> value.startsWith("r"))
@@ -149,6 +153,17 @@ class CollectionSelectionConditionsTest {
                 .evaluate(List.of("first", "second")).status());
         assertThrows(IllegalArgumentException.class, () -> CollectionCondition.element(-1));
         assertThrows(NullPointerException.class, () -> CollectionCondition.sorted(null));
+    }
+
+    @Test
+    void lastReturnsTheFinalStabilizationObservation() {
+        var observations = new ArrayDeque<>(List.of(List.of(1), List.of(2), List.of(3)));
+        CollectionSource<List<Integer>> source = observations::removeFirst;
+        FakeTime time = new FakeTime(0);
+
+        assertEquals(3, timedCollectionAwait(source,
+                new io.github.gromoff97.awium.engine.WaitConfiguration(1, 5, 2), time, time)
+                .until(last));
     }
 
     private record User(int id) {

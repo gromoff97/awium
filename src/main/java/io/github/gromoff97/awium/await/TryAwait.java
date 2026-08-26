@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium.await;
 
-import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
@@ -18,32 +17,31 @@ import java.util.function.LongSupplier;
 
 public final class TryAwait<S, E> extends AbstractAwait<S, E, TryAwait<S, E>> {
 
-    private TryAwait(Source<? extends S> source,
-            CheckedFunction<? super S, ? extends E> selector) {
-        super(source, selector);
+    private TryAwait(Source<? extends S> source) {
+        super(source);
     }
 
     public static <T> TryAwait<T, T> tryAwait(Source<T> source) {
-        return new TryAwait<>(source, actual -> actual);
+        return new TryAwait<>(source);
     }
 
     public static <T> TryAwait<Optional<T>, T> tryAwait(OptionalSource<T> source) {
-        return new TryAwait<>(source, actual -> actual.orElse(null));
+        return new TryAwait<>(source);
     }
 
     public static <E, C extends Collection<E>> TryAwait<C, E> tryAwait(
             CollectionSource<C> source) {
-        return new TryAwait<>(source, actual -> actual.iterator().next());
+        return new TryAwait<>(source);
     }
 
     public static <K, V, M extends Map<K, V>> TryAwait<M, Map.Entry<K, V>> tryAwait(
             MapSource<M> source) {
-        return new TryAwait<>(source, actual -> actual.entrySet().iterator().next());
+        return new TryAwait<>(source);
     }
 
-    TryAwait(Source<? extends S> source, CheckedFunction<? super S, ? extends E> selector,
-            WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {
-        super(source, selector, configuration, clock, parker);
+    TryAwait(Source<? extends S> source, WaitConfiguration configuration,
+            LongSupplier clock, LongConsumer parker) {
+        super(source, configuration, clock, parker);
     }
 
     private TryAwait(TryAwait<S, E> await, WaitConfiguration configuration) {

@@ -35,7 +35,8 @@ public final class CollectionCondition {
             return unsatisfied("collection was null");
         }
         return actual.size() == 1
-                ? satisfied(actual) : unsatisfied("collection size was " + actual.size());
+                ? satisfied(actual.iterator().next())
+                : unsatisfied("collection size was " + actual.size());
     }));
     public static final PreservingCondition<Collection<?>> empty = sized(0, size -> size == 0,
             "collection is empty");
@@ -297,18 +298,16 @@ public final class CollectionCondition {
                 actual -> !containsSubsequence(elements(actual), values));
     }
 
-    public static <E> Condition<SequencedCollection<E>, E> first() {
-        return position("first", SequencedCollection::getFirst);
-    }
+    public static final SelectedCondition<SequencedCollection<?>> first = position(
+            "first", SequencedCollection::getFirst);
 
     public static <E> Condition<SequencedCollection<E>, E> first(CheckedPredicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return condition("collection has a matching element", actual -> selectFirst(actual, predicate));
     }
 
-    public static <E> Condition<SequencedCollection<E>, E> last() {
-        return position("last", SequencedCollection::getLast);
-    }
+    public static final SelectedCondition<SequencedCollection<?>> last = position(
+            "last", SequencedCollection::getLast);
 
     public static <E> Condition<SequencedCollection<E>, E> last(CheckedPredicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
@@ -379,14 +378,16 @@ public final class CollectionCondition {
         return unsatisfied("no collection element matched");
     }
 
-    private static <E> Condition<SequencedCollection<E>, E> position(String name,
-            java.util.function.Function<SequencedCollection<E>, E> selector) {
-        return condition("collection has a " + name + " element", actual -> {
+    private static SelectedCondition<SequencedCollection<?>> position(String name,
+            java.util.function.Function<SequencedCollection<?>, ?> selector) {
+        return new SelectedCondition<>(condition("collection has a " + name + " element", actual -> {
             if (actual == null) {
                 return unsatisfied("collection was null");
             }
-            return actual.isEmpty() ? unsatisfied("collection was empty") : satisfied(selector.apply(actual));
-        });
+            return actual.isEmpty()
+                    ? unsatisfied("collection was empty")
+                    : satisfied(selector.apply(actual));
+        }));
     }
 
     private static PreservingCondition<Collection<?>> sized(int bound, java.util.function.IntPredicate matches,

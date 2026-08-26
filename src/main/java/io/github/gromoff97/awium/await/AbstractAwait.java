@@ -16,26 +16,21 @@ import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
-import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.util.Objects.requireNonNull;
 
 abstract class AbstractAwait<S, E, A> {
 
     private final Source<? extends S> source;
-    private final CheckedFunction<? super S, ? extends E> selector;
     private final WaitEngine engine;
 
-    protected AbstractAwait(Source<? extends S> source,
-            CheckedFunction<? super S, ? extends E> selector) {
-        this(source, selector, defaults(), System::nanoTime, LockSupport::parkNanos);
+    protected AbstractAwait(Source<? extends S> source) {
+        this(source, defaults(), System::nanoTime, LockSupport::parkNanos);
     }
 
     AbstractAwait(Source<? extends S> source,
-            CheckedFunction<? super S, ? extends E> selector,
             WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {
         this.source = requireNonNull(source, "source must not be null");
-        this.selector = requireNonNull(selector, "selector must not be null");
         this.engine = new WaitEngine(
                 requireNonNull(configuration, "configuration must not be null"),
                 requireNonNull(clock, "clock must not be null"),
@@ -43,8 +38,7 @@ abstract class AbstractAwait<S, E, A> {
     }
 
     AbstractAwait(AbstractAwait<S, E, ?> await, WaitConfiguration configuration) {
-        this(await.source, await.selector, configuration,
-                await.engine.clock(), await.engine.parker());
+        this(await.source, configuration, await.engine.clock(), await.engine.parker());
     }
 
     public final A every(Duration interval) {
@@ -62,15 +56,14 @@ abstract class AbstractAwait<S, E, A> {
     abstract A reconfigured(WaitConfiguration configuration);
 
     protected final Prepared<S, S> prepare(PreservingCondition<? super S> condition) {
-        return prepareSelected(requireNonNull(condition, "condition must not be null").delegate(),
-                actual -> actual, null);
+        return preparePreserving(
+                requireNonNull(condition, "condition must not be null").delegate(), null);
     }
 
     protected final Prepared<S, S> prepare(
             PreservingCondition.ExplainedCondition<? super S> condition) {
         var explained = requireNonNull(condition, "condition must not be null");
-        return prepareSelected(explained.delegate().delegate(),
-                actual -> actual, explained.explanation());
+        return preparePreserving(explained.delegate().delegate(), explained.explanation());
     }
 
     protected final <R> Prepared<S, R> prepare(
@@ -85,15 +78,13 @@ abstract class AbstractAwait<S, E, A> {
     }
 
     protected final Prepared<S, E> prepare(SelectedCondition<? super S> condition) {
-        return prepareSelected(requireNonNull(condition, "condition must not be null").delegate(),
-                selector, null);
+        return prepareSelected(requireNonNull(condition, "condition must not be null").delegate(), null);
     }
 
     protected final Prepared<S, E> prepare(
             SelectedCondition.ExplainedCondition<? super S> condition) {
         var explained = requireNonNull(condition, "condition must not be null");
-        return prepareSelected(explained.delegate().delegate(),
-                selector, explained.explanation());
+        return prepareSelected(explained.delegate().delegate(), explained.explanation());
     }
 
     protected final <R> R complete(Prepared<S, R> condition) {
@@ -111,13 +102,16 @@ abstract class AbstractAwait<S, E, A> {
         return new Prepared<>(condition::evaluate, condition::description, explanation);
     }
 
-    private <R> Prepared<S, R> prepareSelected(Condition<? super S, ?> condition,
-            CheckedFunction<? super S, ? extends R> selection, String explanation) {
-        return new Prepared<>(actual -> {
-            Evaluation<?> evaluation = condition.evaluate(actual);
-            return evaluation == null ? null : evaluation.continueIfSatisfied(
-                    ignored -> satisfied(selection.apply(actual)));
-        }, condition::description, explanation);
+    @SuppressWarnings("unchecked")
+    private Prepared<S, E> prepareSelected(Condition<? super S, ?> condition,
+            String explanation) {
+        return prepare((Condition<? super S, ? extends E>) condition, explanation);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Prepared<S, S> preparePreserving(Condition<? super S, ?> condition,
+            String explanation) {
+        return prepare((Condition<? super S, ? extends S>) condition, explanation);
     }
 
     protected record Prepared<S, R>(

@@ -18,6 +18,8 @@ class TryAwaitCompilationContractTest {
     void infersEverySourceAndConditionResult() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.await.TryAwait.tryAwait;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.first;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.last;
                 import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.single;
                 import static io.github.gromoff97.awium.conditioning.conditions.Condition.yields;
                 import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.singleEntry;
@@ -44,6 +46,8 @@ class TryAwaitCompilationContractTest {
                                 .until(isNotNull.because("business availability"));
                         AwaitResult<Optional<Payment>, Payment> optional = tryAwait(payment).until(present);
                         AwaitResult<List<Payment>, Payment> collection = tryAwait(payments).until(single);
+                        AwaitResult<List<Payment>, Payment> firstPayment = tryAwait(payments).until(first);
+                        AwaitResult<List<Payment>, Payment> lastPayment = tryAwait(payments).until(last);
                         AwaitResult<Map<String, Payment>, Map.Entry<String, Payment>> map =
                                 tryAwait(paymentMap).until(singleEntry);
                         AwaitResult<Payment, String> transformed =

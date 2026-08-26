@@ -17,26 +17,24 @@ public final class AwaitTestAccess {
     public static <S> Await<S, S> timedAwait(Source<? extends S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {
-        return new Await<>(source, actual -> actual, configuration, clock, parker);
+        return new Await<>(source, configuration, clock, parker);
     }
 
     public static <S> TryAwait<S, S> timedTryAwait(Source<? extends S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {
-        return new TryAwait<>(source, actual -> actual, configuration, clock, parker);
+        return new TryAwait<>(source, configuration, clock, parker);
     }
 
     public static <E, C extends Collection<E>> Await<C, E> timedCollectionAwait(
             Source<? extends C> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
-        return new Await<>(source, actual -> actual.iterator().next(),
-                configuration, clock, parker);
+        return new Await<>(source, configuration, clock, parker);
     }
 
     public static <K, V, M extends Map<K, V>> Await<M, Map.Entry<K, V>> timedMapAwait(
             Source<? extends M> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
-        return new Await<>(source, actual -> actual.entrySet().iterator().next(),
-                configuration, clock, parker);
+        return new Await<>(source, configuration, clock, parker);
     }
 }
