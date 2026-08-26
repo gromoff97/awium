@@ -12,17 +12,11 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNCONTROL
 import static java.lang.Thread.currentThread;
 
 @SuppressWarnings("removal")
-final class ObservationEvaluator {
+record ObservationEvaluator<S, R>(Source<? extends S> source,
+        Function<? super S, ? extends Evaluation<? extends R>> evaluator,
+        LongSupplier clock, long executionStarted) {
 
-    private final LongSupplier clock;
-
-    ObservationEvaluator(LongSupplier clock) {
-        this.clock = clock;
-    }
-
-    <S, R> AwaitAttempt<S, R> evaluate(Source<? extends S> source,
-            Function<? super S, ? extends Evaluation<? extends R>> evaluator,
-            AwaitAttempt.Phase phase, long number, long executionStarted,
+    AwaitAttempt<S, R> evaluate(AwaitAttempt.Phase phase, long number,
             long attemptStarted, long retrievalStarted) {
         S actual;
         try {
@@ -33,15 +27,15 @@ final class ObservationEvaluator {
             if (failure instanceof InterruptedException) {
                 restoreInterrupt();
             }
-            return beforeObservation(phase, number, executionStarted,
-                    attemptStarted, retrievalStarted, failure);
+            return beforeObservation(phase, number, attemptStarted,
+                    retrievalStarted, failure);
         }
 
         long observed = clock.getAsLong();
         if (interruptRaised()) {
             var interruption = new InterruptedException("caller thread interrupt flag was set");
-            return afterSourceInterruption(phase, number, executionStarted,
-                    attemptStarted, retrievalStarted, observed, actual, interruption);
+            return afterSourceInterruption(phase, number, attemptStarted,
+                    retrievalStarted, observed, actual, interruption);
         }
 
         Evaluation<? extends R> evaluation;
@@ -53,19 +47,20 @@ final class ObservationEvaluator {
             if (failure instanceof InterruptedException) {
                 restoreInterrupt();
             }
-            return afterConditionFailure(phase, number, executionStarted,
-                    attemptStarted, retrievalStarted, observed, actual, failure);
+            return afterConditionFailure(phase, number, attemptStarted,
+                    retrievalStarted, observed, actual, failure);
         }
 
         if ((evaluation == null || evaluation.status() != UNCONTROLLED)
                 && interruptRaised()) {
             var interruption = new InterruptedException("caller thread interrupt flag was set");
-            return afterConditionFailure(phase, number, executionStarted,
-                    attemptStarted, retrievalStarted, observed, actual, interruption);
+            return afterConditionFailure(phase, number, attemptStarted,
+                    retrievalStarted, observed, actual, interruption);
         }
 
         long completed = clock.getAsLong();
-        AwaitAttempt.Timing.AfterObservation timing = afterObservation(executionStarted, attemptStarted, retrievalStarted, observed, completed);
+        AwaitAttempt.Timing.AfterObservation timing = afterObservation(attemptStarted,
+                retrievalStarted, observed, completed);
         if (evaluation == null) {
             return evaluated(phase, number,
                     new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(timing, actual,
@@ -82,8 +77,8 @@ final class ObservationEvaluator {
         return evaluated(phase, number, outcome);
     }
 
-    private <S, R> AwaitAttempt<S, R> beforeObservation(AwaitAttempt.Phase phase,
-            long number, long executionStarted, long attemptStarted,
+    private AwaitAttempt<S, R> beforeObservation(AwaitAttempt.Phase phase,
+            long number, long attemptStarted,
             long retrievalStarted, Throwable failure) {
         long completed = clock.getAsLong();
         var timing = new AwaitAttempt.Timing.BeforeObservation(offset(executionStarted, attemptStarted),
@@ -91,20 +86,20 @@ final class ObservationEvaluator {
         return evaluated(phase, number, new AwaitAttempt.Outcome.SourceRetrievalFailed<>(timing, failure));
     }
 
-    private <S, R> AwaitAttempt<S, R> afterSourceInterruption(AwaitAttempt.Phase phase, long number, long executionStarted,
+    private AwaitAttempt<S, R> afterSourceInterruption(AwaitAttempt.Phase phase, long number,
             long attemptStarted, long retrievalStarted, long observed,
             S actual, InterruptedException interruption) {
         restoreInterrupt();
         long completed = clock.getAsLong();
-        var timing = afterObservation(executionStarted, attemptStarted, retrievalStarted, observed, completed);
+        var timing = afterObservation(attemptStarted, retrievalStarted, observed, completed);
         return evaluated(phase, number, new AwaitAttempt.Outcome.SourceInterrupted<>(timing, actual, interruption));
     }
 
-    private <S, R> AwaitAttempt<S, R> afterConditionFailure(AwaitAttempt.Phase phase, long number, long executionStarted,
+    private AwaitAttempt<S, R> afterConditionFailure(AwaitAttempt.Phase phase, long number,
             long attemptStarted, long retrievalStarted, long observed,
-        S actual, Throwable failure) {
+            S actual, Throwable failure) {
         long completed = clock.getAsLong();
-        var timing = afterObservation(executionStarted, attemptStarted, retrievalStarted, observed, completed);
+        var timing = afterObservation(attemptStarted, retrievalStarted, observed, completed);
         return evaluated(phase, number,
                 new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(timing, actual,
                         failure, Evaluation.Context.Plain.INSTANCE));
@@ -122,7 +117,7 @@ final class ObservationEvaluator {
         return new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(timing, actual, failure, context);
     }
 
-    private static AwaitAttempt.Timing.AfterObservation afterObservation(long executionStarted, long attemptStarted, long retrievalStarted,
+    private AwaitAttempt.Timing.AfterObservation afterObservation(long attemptStarted, long retrievalStarted,
             long observed, long completed) {
         return new AwaitAttempt.Timing.AfterObservation(offset(executionStarted, attemptStarted),
                 offset(executionStarted, retrievalStarted),

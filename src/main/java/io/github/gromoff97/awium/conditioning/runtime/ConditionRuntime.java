@@ -29,33 +29,33 @@ public final class ConditionRuntime {
 
         String explanation();
 
-        Supplier<Function<S, Evaluation<R>>> evaluators();
+        Supplier<Function<S, Evaluation<R>>> evaluatorFactory();
     }
 
     public record RuntimeCondition<S, R>(String description, String explanation,
-            Supplier<Function<S, Evaluation<R>>> evaluators)
+            Supplier<Function<S, Evaluation<R>>> evaluatorFactory)
             implements Condition<S, R>, Operand<S, R> {
     }
 
     public record RuntimePreservingCondition<S>(String description, String explanation,
-            Supplier<Function<S, Evaluation<S>>> evaluators)
+            Supplier<Function<S, Evaluation<S>>> evaluatorFactory)
             implements PreservingCondition<S>, Operand<S, S> {
     }
 
     public record RuntimeSelectedCondition<S, F extends Source<?>>(String description, String explanation,
-            Supplier<Function<S, Evaluation<Object>>> evaluators)
+            Supplier<Function<S, Evaluation<Object>>> evaluatorFactory)
             implements SelectedCondition<S, F>, Operand<S, Object> {
     }
 
     public record RuntimeSelectedSequenceCondition<S, F extends Source<?>>(String description, String explanation,
-            Supplier<Function<S, Evaluation<List<Object>>>> evaluators)
+            Supplier<Function<S, Evaluation<List<Object>>>> evaluatorFactory)
             implements SelectedSequenceCondition<S, F>, Operand<S, List<Object>> {
     }
 
     public static <S, R> Condition<S, R> condition(String description,
-            Supplier<Function<S, Evaluation<R>>> evaluators) {
+            Supplier<Function<S, Evaluation<R>>> evaluatorFactory) {
         return new RuntimeCondition<>(nonBlank(description, "description"), null,
-                requireNonNull(evaluators, "evaluators must not be null"));
+                requireNonNull(evaluatorFactory, "evaluator factory must not be null"));
     }
 
     public static <S, R> Condition<S, R> condition(String description,
@@ -172,25 +172,25 @@ public final class ConditionRuntime {
             String explanation) {
         Operand<S, R> operand = operand(condition);
         return new RuntimeCondition<>(operand.description(),
-                nonBlank(explanation, "explanation"), operand.evaluators());
+                nonBlank(explanation, "explanation"), operand.evaluatorFactory());
     }
 
     public static <S> PreservingStage<S> explained(PreservingCondition<S> condition, String explanation) {
         Operand<S, S> operand = operand(condition);
         return new RuntimePreservingCondition<>(operand.description(),
-                nonBlank(explanation, "explanation"), operand.evaluators());
+                nonBlank(explanation, "explanation"), operand.evaluatorFactory());
     }
 
     public static <S, F extends Source<?>> SelectedStage<S, F> explained(SelectedCondition<S, F> condition, String explanation) {
         Operand<S, Object> operand = operand(condition);
         return new RuntimeSelectedCondition<>(operand.description(),
-                nonBlank(explanation, "explanation"), operand.evaluators());
+                nonBlank(explanation, "explanation"), operand.evaluatorFactory());
     }
 
     public static <S, F extends Source<?>> SelectedSequenceStage<S, F> explained(SelectedSequenceCondition<S, F> condition, String explanation) {
         Operand<S, List<Object>> operand = operand(condition);
         return new RuntimeSelectedSequenceCondition<>(operand.description(),
-                nonBlank(explanation, "explanation"), operand.evaluators());
+                nonBlank(explanation, "explanation"), operand.evaluatorFactory());
     }
 
     @SuppressWarnings("unchecked")
@@ -200,7 +200,7 @@ public final class ConditionRuntime {
     }
 
     private static Function<?, ?> newEvaluator(Operand<?, ?> operand) {
-        return requireNonNull(operand.evaluators().get(),
+        return requireNonNull(operand.evaluatorFactory().get(),
                 "evaluator must not be null");
     }
 

@@ -98,20 +98,6 @@ public final class MapCondition {
         return condition("map has a single matching entry", actual -> selectSingle(actual, predicate));
     }
 
-    public static <K, V> Condition<Map<K, V>, K> singleKey(Predicate<? super K> predicate) {
-        requireNonNull(predicate, "predicate must not be null");
-        return condition("map has a single matching key", actual ->
-                selectSingle(actual, (key, value) -> predicate.test(key))
-                        .continueIfSatisfied(entry -> satisfied(entry.getKey())));
-    }
-
-    public static <K, V> Condition<Map<K, V>, V> singleValue(Predicate<? super V> predicate) {
-        requireNonNull(predicate, "predicate must not be null");
-        return condition("map has a single matching value", actual ->
-                selectSingle(actual, (key, value) -> predicate.test(value))
-                        .continueIfSatisfied(entry -> satisfied(entry.getValue())));
-    }
-
     public static <K, V> PreservingCondition<Map<K, V>> allEntries(BiPredicate<? super K, ? super V> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all map entries match", "not all map entries matched",

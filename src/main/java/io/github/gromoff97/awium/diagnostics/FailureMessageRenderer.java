@@ -52,7 +52,7 @@ final class FailureMessageRenderer {
                     message(context, value.attempt(),
                             "Condition did not persist for the required duration");
             case WaitOutcome.Uncontrolled<?, ?> value ->
-                    message(context, value.attempt(), uncontrolledHeading(value.attempt()));
+                    message(context, value.attempt(), uncontrolledHeading(context.diagnostic));
             case WaitOutcome.Satisfied<?, ?> ignored ->
                     throw new IllegalArgumentException("successful outcomes have no failure diagnostics");
         };
@@ -67,27 +67,22 @@ final class FailureMessageRenderer {
                         ? "<value unavailable: diagnostics failed>" : context.actual
                 : null;
         attempt(out, attempt.number(), "diagnostics", actual,
-                sequence(attempt) == null ? mismatch(attempt) : null);
-        sequence(out, attempt);
+                context.diagnostic.sequence() == null ? context.diagnostic.mismatch() : null);
+        sequence(out, context.diagnostic);
         timing(out, context);
         cause(out, emergencyDiagnostic(failure));
         return finish(out);
     }
 
-    private static String uncontrolledHeading(AwaitAttempt<?, ?> attempt) {
-        Throwable failure = failure(attempt);
+    private static String uncontrolledHeading(AttemptDiagnostic diagnostic) {
+        Throwable failure = diagnostic.failure();
         if (failure instanceof InterruptedException) {
             return "Caller thread was interrupted";
         }
-        return switch (attempt.outcome()) {
-            case AwaitAttempt.Outcome.WaitingFailed<?, ?> ignored ->
-                    "Waiting before the next attempt failed";
-            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> ignored ->
-                    "Source retrieval failed";
-            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> ignored ->
-                    "Source retrieval failed";
-            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> ignored ->
-                    "Condition evaluation failed";
+        return switch (diagnostic.origin()) {
+            case "waiting" -> "Waiting before the next attempt failed";
+            case "source" -> "Source retrieval failed";
+            case "condition" -> "Condition evaluation failed";
             default -> throw new IllegalArgumentException("attempt is not uncontrolled");
         };
     }
@@ -98,9 +93,9 @@ final class FailureMessageRenderer {
         condition(out, context.description, context.explanation);
         String actual = attempt.outcome().timing() instanceof AwaitAttempt.Timing.AfterObservation
                 ? context.actualValue() : null;
-        attempt(out, attempt.number(), origin(attempt), actual,
-                sequence(attempt) == null ? mismatch(attempt) : null);
-        sequence(out, attempt);
+        attempt(out, attempt.number(), context.diagnostic.origin(), actual,
+                context.diagnostic.sequence() == null ? context.diagnostic.mismatch() : null);
+        sequence(out, context.diagnostic);
         timing(out, context);
         if (context.outcomeCause != null) {
             cause(out, throwableDiagnostic(context.outcomeCause));
@@ -167,8 +162,8 @@ final class FailureMessageRenderer {
         }
     }
 
-    private static void sequence(StringBuilder out, AwaitAttempt<?, ?> attempt) {
-        Evaluation.Context.Sequence sequence = sequence(attempt);
+    private static void sequence(StringBuilder out, AttemptDiagnostic diagnostic) {
+        Evaluation.Context.Sequence sequence = diagnostic.sequence();
         if (sequence == null) {
             return;
         }
@@ -179,8 +174,8 @@ final class FailureMessageRenderer {
         if (sequence.importance() != null) {
             field(out, "Importance", sequence.importance());
         }
-        if (mismatch(attempt) != null) {
-            field(out, "Mismatch", mismatch(attempt));
+        if (diagnostic.mismatch() != null) {
+            field(out, "Mismatch", diagnostic.mismatch());
         }
     }
 
@@ -244,53 +239,30 @@ final class FailureMessageRenderer {
         }
     }
 
-    private static Object observed(AwaitAttempt<?, ?> attempt) {
-        return switch (attempt.outcome()) {
-            case AwaitAttempt.Outcome.Satisfied<?, ?> value -> value.observed();
-            case AwaitAttempt.Outcome.Unsatisfied<?, ?> value -> value.observed();
-            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> value -> value.observed();
-            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> value -> value.observed();
-            case AwaitAttempt.Outcome.WaitingFailed<?, ?> ignored ->
-                    throw new IllegalArgumentException("attempt has no observed actual");
-            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> ignored ->
-                    throw new IllegalArgumentException("attempt has no observed actual");
-        };
-    }
-
-    private static String mismatch(AwaitAttempt<?, ?> attempt) {
-        return switch (attempt.outcome()) {
-            case AwaitAttempt.Outcome.Unsatisfied<?, ?> value -> value.mismatch();
-            default -> null;
-        };
-    }
-
-    private static Evaluation.Context.Sequence sequence(AwaitAttempt<?, ?> attempt) {
-        Evaluation.Context context = switch (attempt.outcome()) {
-            case AwaitAttempt.Outcome.Unsatisfied<?, ?> value -> value.context();
-            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> value -> value.context();
-            default -> Evaluation.Context.Plain.INSTANCE;
-        };
+    private static Evaluation.Context.Sequence sequence(Evaluation.Context context) {
         return context instanceof Evaluation.Context.Sequence value ? value : null;
     }
 
     static Throwable failure(AwaitAttempt<?, ?> attempt) {
-        return switch (attempt.outcome()) {
-            case AwaitAttempt.Outcome.Unsatisfied<?, ?> value -> value.assertion();
-            case AwaitAttempt.Outcome.WaitingFailed<?, ?> value -> value.failure();
-            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> value -> value.failure();
-            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> value -> value.failure();
-            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> value -> value.failure();
-            default -> null;
-        };
+        return diagnostic(attempt).failure();
     }
 
-    private static String origin(AwaitAttempt<?, ?> attempt) {
+    private static AttemptDiagnostic diagnostic(AwaitAttempt<?, ?> attempt) {
         return switch (attempt.outcome()) {
-            case AwaitAttempt.Outcome.WaitingFailed<?, ?> ignored -> "waiting";
-            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> ignored -> "source";
-            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> ignored -> "source";
-            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> ignored -> "condition";
-            default -> null;
+            case AwaitAttempt.Outcome.Satisfied<?, ?> value ->
+                    new AttemptDiagnostic(value.observed(), null, null, null, null);
+            case AwaitAttempt.Outcome.Unsatisfied<?, ?> value ->
+                    new AttemptDiagnostic(value.observed(), value.mismatch(),
+                            sequence(value.context()), value.assertion(), null);
+            case AwaitAttempt.Outcome.WaitingFailed<?, ?> value ->
+                    new AttemptDiagnostic(null, null, null, value.failure(), "waiting");
+            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> value ->
+                    new AttemptDiagnostic(null, null, null, value.failure(), "source");
+            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> value ->
+                    new AttemptDiagnostic(value.observed(), null, null, value.failure(), "source");
+            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> value ->
+                    new AttemptDiagnostic(value.observed(), null,
+                            sequence(value.context()), value.failure(), "condition");
         };
     }
 
@@ -303,6 +275,7 @@ final class FailureMessageRenderer {
         private final String explanation;
         private final WaitConfiguration configuration;
         private final Throwable outcomeCause;
+        private final AttemptDiagnostic diagnostic;
 
         private String actual;
 
@@ -316,12 +289,17 @@ final class FailureMessageRenderer {
             this.configuration = requireNonNull(configuration,
                     "configuration must not be null");
             this.outcomeCause = outcomeCause;
+            this.diagnostic = diagnostic(outcome.attempt());
         }
 
         private String actualValue() {
-            return actual = renderValue(observed(outcome.attempt()));
+            return actual = renderValue(diagnostic.observed());
         }
     }
+
+    private record AttemptDiagnostic(Object observed, String mismatch,
+            Evaluation.Context.Sequence sequence, Throwable failure,
+            String origin) {}
 
     private record ThrowableDiagnostic(String type, String message) {}
 }

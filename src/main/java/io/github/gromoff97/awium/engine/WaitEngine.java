@@ -42,18 +42,17 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
             Consumer<AwaitAttempt<S, R>> recorder) {
         configuration.validatePair();
         long started = clock.getAsLong();
-        var observations = new ObservationEvaluator(clock);
-        WaitOutcome<S, R> acquisition = acquire(source, evaluator, observations, recorder, started);
+        ObservationEvaluator<S, R> observations = new ObservationEvaluator<>(source, evaluator, clock, started);
+        WaitOutcome<S, R> acquisition = acquire(observations, recorder, started);
         if (!(acquisition instanceof WaitOutcome.Satisfied<S, R> acquired)
                 || configuration.persistenceNanos() == 0) {
             return acquisition;
         }
-        return persist(source, evaluator, observations, recorder, started, acquired);
+        return persist(observations, recorder, started, acquired);
     }
 
-    private <S, R> WaitOutcome<S, R> acquire(Source<? extends S> source,
-            Function<? super S, ? extends Evaluation<? extends R>> evaluator,
-            ObservationEvaluator observations, Consumer<AwaitAttempt<S, R>> recorder,
+    private <S, R> WaitOutcome<S, R> acquire(ObservationEvaluator<S, R> observations,
+            Consumer<AwaitAttempt<S, R>> recorder,
             long started) {
         long deadline = after(started, configuration.upToNanos());
         AwaitAttempt<S, R> lastUnsatisfied = null;
@@ -82,8 +81,8 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
                 return new WaitOutcome.TimeoutBetweenObservations<>(retrievalStarted - started, lastUnsatisfied);
             }
 
-            AwaitAttempt<S, R> attempt = observations.evaluate(source, evaluator, ACQUISITION,
-                    number, started, attemptStarted, retrievalStarted);
+            AwaitAttempt<S, R> attempt = observations.evaluate(ACQUISITION,
+                    number, attemptStarted, retrievalStarted);
             completed = completedNanos(started, attempt);
             recorder.accept(attempt);
             if (failed(attempt)) {
@@ -99,9 +98,8 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
         }
     }
 
-    private <S, R> WaitOutcome<S, R> persist(Source<? extends S> source,
-            Function<? super S, ? extends Evaluation<? extends R>> evaluator,
-            ObservationEvaluator observations, Consumer<AwaitAttempt<S, R>> recorder,
+    private <S, R> WaitOutcome<S, R> persist(ObservationEvaluator<S, R> observations,
+            Consumer<AwaitAttempt<S, R>> recorder,
             long started,
             WaitOutcome.Satisfied<S, R> acquired) {
         long acquiredAt = completedNanos(started, acquired.attempt());
@@ -125,8 +123,8 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
             }
 
             long retrievalStarted = clock.getAsLong();
-            AwaitAttempt<S, R> attempt = observations.evaluate(source, evaluator, PERSISTENCE,
-                    number, started, attemptStarted, retrievalStarted);
+            AwaitAttempt<S, R> attempt = observations.evaluate(PERSISTENCE,
+                    number, attemptStarted, retrievalStarted);
             completed = completedNanos(started, attempt);
             recorder.accept(attempt);
             if (failed(attempt)) {

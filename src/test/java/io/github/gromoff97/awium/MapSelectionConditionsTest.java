@@ -30,8 +30,10 @@ class MapSelectionConditionsTest {
         Map.Entry<String, Integer> byKey = await(source).until(MapCondition.entryFor("first"));
         Integer value = await(source).until(MapCondition.valueFor("second"));
         Integer nested = await(source).until(MapCondition.valueFor("second", ComparableCondition.atLeast(2)));
-        String key = await(source).until(MapCondition.singleKey(candidate -> candidate.startsWith("f")));
-        Integer singleValue = await(source).until(MapCondition.singleValue(candidate -> candidate == 2));
+        String key = await(source).until(MapCondition.singleEntry(
+                (candidate, valueCandidate) -> candidate.startsWith("f"))).getKey();
+        Integer singleValue = await(source).until(MapCondition.singleEntry(
+                (keyCandidate, candidate) -> candidate == 2)).getValue();
 
         assertEquals("second", selected.getKey());
         assertEquals("first", byKey.getKey());
@@ -128,14 +130,6 @@ class MapSelectionConditionsTest {
                 (key, value) -> value > 2), actual).status());
         assertEquals(UNSATISFIED, evaluate(MapCondition.<String, Integer>singleEntry(
                 (key, value) -> value > 0), actual).status());
-        assertEquals(UNSATISFIED, evaluate(MapCondition.<String, Integer>singleKey(
-                key -> key.startsWith("x")), actual).status());
-        assertEquals(UNSATISFIED, evaluate(MapCondition.<String, Integer>singleKey(
-                key -> key.length() > 0), actual).status());
-        assertEquals(UNSATISFIED, evaluate(MapCondition.<String, Integer>singleValue(
-                value -> value > 2), actual).status());
-        assertEquals(UNSATISFIED, evaluate(MapCondition.<String, Integer>singleValue(
-                value -> value > 0), actual).status());
         assertEquals(UNSATISFIED,
                 evaluate(MapCondition.<String, Integer>valueFor("missing"), actual).status());
         assertEquals(UNSATISFIED, evaluate(
