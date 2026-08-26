@@ -40,10 +40,21 @@ import org.junit.jupiter.api.Test;
 
 class PublicSurfaceTest {
 
-    private static final Set<String> PUBLIC_API_PACKAGES = Set.copyOf(
-            ModuleFinder.of(ArtifactContractIT.JAR).find("io.github.gromoff97.awium")
-                    .orElseThrow().descriptor().exports().stream()
-                    .map(export -> export.source()).toList());
+    private static final Set<String> PUBLIC_API_PACKAGES = Set.of(
+            "io.github.gromoff97.awium.await",
+            "io.github.gromoff97.awium.sources",
+            "io.github.gromoff97.awium.conditioning",
+            "io.github.gromoff97.awium.conditioning.conditions",
+            "io.github.gromoff97.awium.exceptions");
+
+    @Test
+    void moduleExportsOnlyThePublicApiPackages() {
+        Set<String> exports = ModuleFinder.of(ArtifactContractIT.JAR)
+                .find("io.github.gromoff97.awium").orElseThrow()
+                .descriptor().exports().stream()
+                .map(export -> export.source()).collect(java.util.stream.Collectors.toSet());
+        assertEquals(PUBLIC_API_PACKAGES, exports);
+    }
 
     @Test
     void publicApiDoesNotLeakExcludedSurfaceAndKeepsSourceChecked() throws Exception {
@@ -62,7 +73,8 @@ class PublicSurfaceTest {
                 ForbiddenMethodName.class,
                 ForbiddenInheritedField.class,
                 ForbiddenGenericSignature.class,
-                ForbiddenIterableSubtypeSignature.class)) {
+                ForbiddenIterableSubtypeSignature.class,
+                ForbiddenCheckedSignature.class)) {
             assertThrows(AssertionError.class,
                     () -> assertNoExcludedApiSurface(Set.of(type)),
                     type.getSimpleName());
@@ -189,7 +201,10 @@ class PublicSurfaceTest {
 
     private static boolean isForbiddenApiClass(Class<?> type) {
         String packageName = type.getPackageName();
-        return packageName.startsWith("io.github.gromoff97.awium")
+        return type.getSimpleName().startsWith("Checked")
+                || type.getSimpleName().endsWith("Evaluator")
+                || type.getSimpleName().endsWith("Session")
+                || packageName.startsWith("io.github.gromoff97.awium")
                 && !PUBLIC_API_PACKAGES.contains(packageName)
                 && type.getNestHost() != PublicSurfaceTest.class
                 || Iterable.class.isAssignableFrom(type)
@@ -265,6 +280,12 @@ class PublicSurfaceTest {
     public static final class ForbiddenIterableSubtypeSignature {
         public Path leaked;
     }
+
+    public static final class ForbiddenCheckedSignature {
+        public CheckedEvaluator leaked;
+    }
+
+    public static final class CheckedEvaluator {}
 
     public static final class AllowedConcurrencyNames {
         public FutureProof future;

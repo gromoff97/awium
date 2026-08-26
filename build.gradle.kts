@@ -22,7 +22,7 @@ dependencies {
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
-    options.compilerArgs.add("-Xlint:all,-serial")
+    options.compilerArgs.addAll(listOf("-Xlint:all,-serial", "-Werror"))
 }
 
 tasks.test {

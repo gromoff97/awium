@@ -50,7 +50,7 @@ class DiagnosticsSnapshotTest {
 
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
                 () -> timedAwait(() -> "created", config(1, 2, 0), time, time)
-                        .until(lifecycle(pendingMismatch(), completed())));
+                        .until(lifecycle(pending(), completed())));
 
         assertEquals("""
                 Acquisition deadline elapsed before the next attempt
@@ -87,7 +87,7 @@ class DiagnosticsSnapshotTest {
                 AwaitPersistenceException.class,
                 () -> timedAwait(() -> statuses[next[0]++],
                         config(1, 10, 5), time, time)
-                        .until(lifecycle(pending(), completedMismatch())));
+                        .until(lifecycle(pending(), completed())));
 
         assertEquals("""
                 Condition did not persist for the required duration
@@ -739,21 +739,9 @@ class DiagnosticsSnapshotTest {
                 "processing must begin before completion");
     }
 
-    private static ConditionStage<String, String> pendingMismatch() {
-        return Condition.<String, String>condition("payment status is pending",
-                value -> unsatisfied("payment status was " + value))
-                .because("processing must begin before completion");
-    }
-
     private static ConditionStage<String, String> completed() {
         return status("completed", "payment status is completed",
                 "completion must remain stable");
-    }
-
-    private static ConditionStage<String, String> completedMismatch() {
-        return Condition.<String, String>condition("payment status is completed", value -> value.equals("completed")
-                ? satisfied(value) : unsatisfied("payment status was " + value))
-                .because("completion must remain stable");
     }
 
     private static ConditionStage<String, String> status(String expected,

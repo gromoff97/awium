@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.await.AwaitAttempt;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
@@ -14,6 +15,7 @@ import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedOptionalAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.caught;
@@ -21,6 +23,7 @@ import static io.github.gromoff97.awium.conditioning.conditions.Condition.condit
 import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.matches;
 import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.present;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -47,6 +50,21 @@ class CaughtConditionTest {
         assertEquals(List.of(1, 1, 1), result);
         assertEquals(3, calls[0]);
         assertEquals(List.of(1L, 1L), time.parkRequests);
+    }
+
+    @Test
+    void reportsTheNextStageWhenAcquisitionExpiresAfterCapture() {
+        var time = new FakeTime(0);
+
+        var result = timedTryAwait(() -> {
+            time.advanceNanos(2);
+            return "observed";
+        }, config(1, 2, 0), time, time).until(
+                caught(value -> true, value -> true));
+        var outcome = assertInstanceOf(AwaitAttempt.Outcome.Unsatisfied.class,
+                result.attempts().getFirst().outcome());
+
+        assertEquals("waiting for sequence stage 2", outcome.mismatch());
     }
 
     @Test

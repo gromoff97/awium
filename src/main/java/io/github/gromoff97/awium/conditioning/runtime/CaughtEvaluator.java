@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.conditioning.conditions;
+package io.github.gromoff97.awium.conditioning.runtime;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 
@@ -11,14 +11,14 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("removal")
-public final class CaughtEvaluator<S, R>
+final class CaughtEvaluator<S, R>
         implements Function<S, Evaluation<List<R>>> {
 
     private final List<Stage<S, R>> stages;
     private final ArrayList<R> results = new ArrayList<>();
     private int next;
 
-    public CaughtEvaluator(List<Stage<S, R>> stages) {
+    CaughtEvaluator(List<Stage<S, R>> stages) {
         this.stages = Collections.unmodifiableList(new ArrayList<>(stages));
     }
 
@@ -67,7 +67,7 @@ public final class CaughtEvaluator<S, R>
                 metadata.expectation(), metadata.importance());
     }
 
-    public record Stage<S, R>(Function<? super S,
+    record Stage<S, R>(Function<? super S,
             ? extends Evaluation<? extends R>> evaluator,
             String expectation, String importance) {
 
