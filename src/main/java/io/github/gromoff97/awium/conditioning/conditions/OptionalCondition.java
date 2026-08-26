@@ -61,9 +61,7 @@ public final class OptionalCondition {
                         ? satisfied(type.cast(value)) : unsatisfied("optional value had a different type")));
     }
 
-    public static <T, R> Condition<Optional<T>, R> hasValue(
-            ConditionStage<? super T, ? extends R> nested) {
-        requireNonNull(nested, "condition must not be null");
+    public static <T, R> Condition<Optional<T>, R> hasValue(ConditionStage<? super T, ? extends R> nested) {
         return ConditionRuntime.condition("optional value " + description(nested), () -> {
             Function<T, Evaluation<R>> nestedEvaluator = evaluator(nested);
             return actual -> present(actual).continueIfSatisfied(nestedEvaluator);
@@ -71,7 +69,6 @@ public final class OptionalCondition {
     }
 
     public static <T> Condition<Optional<T>, T> hasValue(PreservingStage<? super T> nested) {
-        requireNonNull(nested, "condition must not be null");
         return hasValue(preserve(nested));
     }
 

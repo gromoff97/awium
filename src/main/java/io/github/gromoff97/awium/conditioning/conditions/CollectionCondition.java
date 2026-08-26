@@ -44,15 +44,15 @@ public final class CollectionCondition {
             "collection is empty");
     public static final PreservingCondition<Collection<?>> nonEmpty = sized(0, size -> size > 0,
             "collection is not empty");
-    public static final PreservingCondition<Collection<?>> containsNull = preserving(
-            "collection contains null", "collection did not contain null", actual -> matchesAny(actual, value -> value == null));
-    public static final PreservingCondition<Collection<?>> doesNotContainNull = preserving(
-            "collection does not contain null", "collection contained null", actual -> !matchesAny(actual, value -> value == null));
-    public static final PreservingCondition<Collection<?>> containsOnlyNulls = preserving(
-            "collection contains only nulls", "collection did not contain only nulls",
+    public static final PreservingCondition<Collection<?>> containsNull = preserving("collection contains null",
+            "collection did not contain null", actual -> matchesAny(actual, value -> value == null));
+    public static final PreservingCondition<Collection<?>> doesNotContainNull = preserving("collection does not contain null",
+            "collection contained null", actual -> !matchesAny(actual, value -> value == null));
+    public static final PreservingCondition<Collection<?>> containsOnlyNulls = preserving("collection contains only nulls",
+            "collection did not contain only nulls",
             actual -> !actual.isEmpty() && matchesAll(actual, value -> value == null));
-    public static final PreservingCondition<Collection<?>> hasNoDuplicates = preserving(
-            "collection has no duplicates", "collection contained duplicates", CollectionCondition::hasUniqueElements);
+    public static final PreservingCondition<Collection<?>> hasNoDuplicates = preserving("collection has no duplicates",
+            "collection contained duplicates", CollectionCondition::hasUniqueElements);
 
     private CollectionCondition() {
         throw new AssertionError("Utility class");
@@ -146,8 +146,7 @@ public final class CollectionCondition {
         return doesNotContainAnyElementsOf(asList(nonEmpty(unexpected, "unexpected elements")));
     }
 
-    public static <E> PreservingCondition<Collection<? super E>> doesNotContainAnyElementsOf(
-            Collection<? extends E> unexpected) {
+    public static <E> PreservingCondition<Collection<? super E>> doesNotContainAnyElementsOf(Collection<? extends E> unexpected) {
         Collection<? extends E> values = nonEmpty(unexpected, "unexpected elements");
         String target = values.size() == 1 ? "expected element" : "an expected element";
         return preserving("collection does not contain " + target, "collection contained " + target,
@@ -160,8 +159,7 @@ public final class CollectionCondition {
         return doesNotContainAllElementsOf(asList(nonEmpty(unexpected, "unexpected elements")));
     }
 
-    public static <E> PreservingCondition<Collection<? super E>> doesNotContainAllElementsOf(
-            Collection<? extends E> unexpected) {
+    public static <E> PreservingCondition<Collection<? super E>> doesNotContainAllElementsOf(Collection<? extends E> unexpected) {
         Collection<? extends E> values = nonEmpty(unexpected, "unexpected elements");
         String target = values.size() == 1 ? "expected element" : "all expected elements";
         return preserving("collection does not contain " + target, "collection contained " + target,
@@ -173,8 +171,7 @@ public final class CollectionCondition {
         return containsAnyElementsOf(asList(nonEmpty(expected, "expected elements")));
     }
 
-    public static <E> PreservingCondition<Collection<? super E>> containsAnyElementsOf(
-            Collection<? extends E> expected) {
+    public static <E> PreservingCondition<Collection<? super E>> containsAnyElementsOf(Collection<? extends E> expected) {
         Collection<? extends E> values = nonEmpty(expected, "expected elements");
         String target = values.size() == 1 ? "expected element" : "an expected element";
         return preserving("collection contains " + target, "collection did not contain " + target,
@@ -187,8 +184,7 @@ public final class CollectionCondition {
         return containsExactlyElementsOf(asList(nonNull(expected, "expected elements")));
     }
 
-    public static <E> PreservingCondition<SequencedCollection<? super E>> containsExactlyElementsOf(
-            Collection<? extends E> expected) {
+    public static <E> PreservingCondition<SequencedCollection<? super E>> containsExactlyElementsOf(Collection<? extends E> expected) {
         Collection<? extends E> values = nonNull(expected, "expected elements");
         return preserving("collection contains exactly the expected elements",
                 "collection did not contain exactly the expected elements",
@@ -200,8 +196,7 @@ public final class CollectionCondition {
         return doesNotContainExactlyElementsOf(asList(nonNull(expected, "expected elements")));
     }
 
-    public static <E> PreservingCondition<SequencedCollection<? super E>> doesNotContainExactlyElementsOf(
-            Collection<? extends E> expected) {
+    public static <E> PreservingCondition<SequencedCollection<? super E>> doesNotContainExactlyElementsOf(Collection<? extends E> expected) {
         Collection<? extends E> values = nonNull(expected, "expected elements");
         return preserving("collection does not contain exactly the expected elements",
                 "collection contained exactly the expected elements",
@@ -213,8 +208,7 @@ public final class CollectionCondition {
         return containsExactlyInAnyOrderElementsOf(asList(nonNull(expected, "expected elements")));
     }
 
-    public static <E> PreservingCondition<Collection<? super E>> containsExactlyInAnyOrderElementsOf(
-            Collection<? extends E> expected) {
+    public static <E> PreservingCondition<Collection<? super E>> containsExactlyInAnyOrderElementsOf(Collection<? extends E> expected) {
         Collection<? extends E> values = nonNull(expected, "expected elements");
         return preserving("collection contains exactly the expected elements in any order",
                 "collection did not contain exactly the expected elements in any order",
@@ -226,8 +220,7 @@ public final class CollectionCondition {
         return doesNotContainExactlyInAnyOrderElementsOf(asList(nonNull(expected, "expected elements")));
     }
 
-    public static <E> PreservingCondition<Collection<? super E>> doesNotContainExactlyInAnyOrderElementsOf(
-            Collection<? extends E> expected) {
+    public static <E> PreservingCondition<Collection<? super E>> doesNotContainExactlyInAnyOrderElementsOf(Collection<? extends E> expected) {
         Collection<? extends E> values = nonNull(expected, "expected elements");
         return preserving("collection does not contain exactly the expected elements in any order",
                 "collection contained exactly the expected elements in any order",
@@ -239,8 +232,7 @@ public final class CollectionCondition {
         return containsOnlyElementsOf(asList(nonNull(expected, "expected elements")));
     }
 
-    public static <E> PreservingCondition<Collection<? super E>> containsOnlyElementsOf(
-            Collection<? extends E> expected) {
+    public static <E> PreservingCondition<Collection<? super E>> containsOnlyElementsOf(Collection<? extends E> expected) {
         Collection<? extends E> values = nonNull(expected, "expected elements");
         return preserving("collection contains only the expected elements",
                 "collection did not contain only the expected elements",
@@ -300,16 +292,14 @@ public final class CollectionCondition {
                 actual -> !containsSubsequence(elements(actual), values));
     }
 
-    public static final SelectedCondition<SequencedCollection<?>, CollectionSource<?>> first = position(
-            "first", SequencedCollection::getFirst);
+    public static final SelectedCondition<SequencedCollection<?>, CollectionSource<?>> first = position("first", SequencedCollection::getFirst);
 
     public static <E> Condition<SequencedCollection<E>, E> first(Predicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return condition("collection has a matching element", actual -> selectFirst(actual, predicate));
     }
 
-    public static final SelectedCondition<SequencedCollection<?>, CollectionSource<?>> last = position(
-            "last", SequencedCollection::getLast);
+    public static final SelectedCondition<SequencedCollection<?>, CollectionSource<?>> last = position("last", SequencedCollection::getLast);
 
     public static <E> Condition<SequencedCollection<E>, E> last(Predicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");

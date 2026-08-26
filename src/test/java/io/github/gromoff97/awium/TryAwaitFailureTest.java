@@ -97,9 +97,9 @@ class TryAwaitFailureTest {
                 time -> timedTryAwait(() -> "actual", config(1, 3, 2), time, time)
                         .until(unstableAssertion()));
 
-        assertInstanceOf(AwaitAttempt.Outcome.AssertionUnsatisfied.class,
+        assertInstanceOf(AwaitAttempt.Outcome.Unsatisfied.class,
                 timeout.attempts().getLast().outcome());
-        assertInstanceOf(AwaitAttempt.Outcome.AssertionUnsatisfied.class,
+        assertInstanceOf(AwaitAttempt.Outcome.Unsatisfied.class,
                 persistence.attempts().getLast().outcome());
     }
 

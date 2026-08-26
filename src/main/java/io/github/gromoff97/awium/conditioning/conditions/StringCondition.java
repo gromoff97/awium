@@ -13,14 +13,10 @@ import static java.util.Objects.requireNonNull;
 
 public final class StringCondition {
 
-    public static final PreservingCondition<String> empty = matching(
-            "string is empty", "string was not empty", String::isEmpty);
-    public static final PreservingCondition<String> nonEmpty = matching(
-            "string is not empty", "string was empty", value -> !value.isEmpty());
-    public static final PreservingCondition<String> blank = matching(
-            "string is blank", "string was not blank", String::isBlank);
-    public static final PreservingCondition<String> nonBlank = matching(
-            "string is not blank", "string was blank", value -> !value.isBlank());
+    public static final PreservingCondition<String> empty = matching("string is empty", "string was not empty", String::isEmpty);
+    public static final PreservingCondition<String> nonEmpty = matching("string is not empty", "string was empty", value -> !value.isEmpty());
+    public static final PreservingCondition<String> blank = matching("string is blank", "string was not blank", String::isBlank);
+    public static final PreservingCondition<String> nonBlank = matching("string is not blank", "string was blank", value -> !value.isBlank());
 
     private StringCondition() {
         throw new AssertionError("Utility class");

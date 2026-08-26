@@ -43,10 +43,10 @@ public final class Evaluation<R> {
                 requireNonNull(cause, "cause must not be null"), Context.Plain.INSTANCE);
     }
 
-    public <T> Evaluation<T> continueIfSatisfied(
-            Function<? super R, ? extends Evaluation<? extends T>> continuation) {
+    @SuppressWarnings("unchecked")
+    public <T> Evaluation<T> continueIfSatisfied(Function<? super R, ? extends Evaluation<? extends T>> continuation) {
         requireNonNull(continuation, "continuation must not be null");
-        return status() == Status.SATISFIED ? copy(continuation.apply(result)) : failure(this);
+        return (Evaluation<T>) (status() == Status.SATISFIED ? continuation.apply(result) : this);
     }
 
     public Status status() {
@@ -78,23 +78,6 @@ public final class Evaluation<R> {
 
     public Evaluation<R> withContext(Context context) {
         return new Evaluation<>(result, mismatch, assertionCause, uncontrolledCause, context);
-    }
-
-    private static <T> Evaluation<T> copy(Evaluation<? extends T> evaluation) {
-        if (evaluation == null) {
-            return null;
-        }
-        return new Evaluation<>(evaluation.result(), evaluation.mismatch(),
-                evaluation.assertionCause(), evaluation.uncontrolledCause(),
-                evaluation.context());
-    }
-
-    private static <T> Evaluation<T> failure(Evaluation<?> evaluation) {
-        if (evaluation.status() == Status.SATISFIED) {
-            throw new IllegalArgumentException("evaluation must not be satisfied");
-        }
-        return new Evaluation<>(null, evaluation.mismatch(), evaluation.assertionCause(),
-                evaluation.uncontrolledCause(), evaluation.context());
     }
 
     private static String nonBlank(String value, String name) {

@@ -32,72 +32,29 @@ public final class ConditionRuntime {
         Supplier<Function<S, Evaluation<R>>> evaluators();
     }
 
-    public record RuntimeCondition<S, R>(String description,
+    public record RuntimeCondition<S, R>(String description, String explanation,
             Supplier<Function<S, Evaluation<R>>> evaluators)
             implements Condition<S, R>, Operand<S, R> {
-
-        @Override
-        public String explanation() {
-            return null;
-        }
     }
 
-    public record RuntimeExplainedCondition<S, R>(String description,
-            String explanation, Supplier<Function<S, Evaluation<R>>> evaluators)
-            implements ConditionStage<S, R>, Operand<S, R> {
-    }
-
-    public record RuntimePreservingCondition<S>(String description,
+    public record RuntimePreservingCondition<S>(String description, String explanation,
             Supplier<Function<S, Evaluation<S>>> evaluators)
             implements PreservingCondition<S>, Operand<S, S> {
-
-        @Override
-        public String explanation() {
-            return null;
-        }
     }
 
-    public record RuntimeExplainedPreservingCondition<S>(String description,
-            String explanation, Supplier<Function<S, Evaluation<S>>> evaluators)
-            implements PreservingStage<S>, Operand<S, S> {
-    }
-
-    public record RuntimeSelectedCondition<S, F extends Source<?>>(String description,
+    public record RuntimeSelectedCondition<S, F extends Source<?>>(String description, String explanation,
             Supplier<Function<S, Evaluation<Object>>> evaluators)
             implements SelectedCondition<S, F>, Operand<S, Object> {
-
-        @Override
-        public String explanation() {
-            return null;
-        }
     }
 
-    public record RuntimeExplainedSelectedCondition<S, F extends Source<?>>(
-            String description, String explanation,
-            Supplier<Function<S, Evaluation<Object>>> evaluators)
-            implements SelectedStage<S, F>, Operand<S, Object> {
-    }
-
-    public record RuntimeSelectedSequenceCondition<S, F extends Source<?>>(
-            String description,
+    public record RuntimeSelectedSequenceCondition<S, F extends Source<?>>(String description, String explanation,
             Supplier<Function<S, Evaluation<List<Object>>>> evaluators)
             implements SelectedSequenceCondition<S, F>, Operand<S, List<Object>> {
-
-        @Override
-        public String explanation() {
-            return null;
-        }
-    }
-
-    public record RuntimeExplainedSelectedSequenceCondition<S, F extends Source<?>>(
-            String description, String explanation,
-            Supplier<Function<S, Evaluation<List<Object>>>> evaluators)
-            implements SelectedSequenceStage<S, F>, Operand<S, List<Object>> {
     }
 
     public static <S, R> Condition<S, R> condition(String description,
             Supplier<Function<S, Evaluation<R>>> evaluators) {
-        return new RuntimeCondition<>(nonBlank(description, "description"),
+        return new RuntimeCondition<>(nonBlank(description, "description"), null,
                 requireNonNull(evaluators, "evaluators must not be null"));
     }
 
@@ -106,7 +63,7 @@ public final class ConditionRuntime {
         String validatedDescription = nonBlank(description, "description");
         requireNonNull(evaluation, "evaluation must not be null");
         Function<S, Evaluation<R>> evaluator = evaluation::apply;
-        return new RuntimeCondition<>(validatedDescription, () -> evaluator);
+        return new RuntimeCondition<>(validatedDescription, null, () -> evaluator);
     }
 
     @SafeVarargs
@@ -126,8 +83,7 @@ public final class ConditionRuntime {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <S, R> Condition<S, List<R>> caught(
-            ConditionStage<? super S, R> first,
+    public static <S, R> Condition<S, List<R>> caught(ConditionStage<? super S, R> first,
             ConditionStage<? super S, R> second,
             ConditionStage<? super S, R>... rest) {
         List<ConditionStage<? super S, R>> stages =
@@ -140,21 +96,19 @@ public final class ConditionRuntime {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <S, F extends Source<?>> SelectedSequenceCondition<S, F> caught(
-            SelectedStage<? super S, F> first,
+    public static <S, F extends Source<?>> SelectedSequenceCondition<S, F> caught(SelectedStage<? super S, F> first,
             SelectedStage<? super S, F> second,
             SelectedStage<? super S, F>... rest) {
         List<SelectedStage<? super S, F>> stages =
                 stages("condition", first, second, rest);
-        return new RuntimeSelectedSequenceCondition<>("conditions are satisfied in order",
+        return new RuntimeSelectedSequenceCondition<>("conditions are satisfied in order", null,
                 () -> new CaughtEvaluator<>(stages.stream()
                         .map(stage -> caughtStage(stage,
-                                ConditionRuntime.<S, Object, F>selectedEvaluator(stage)))
+                                ConditionRuntime.<S, Object>evaluator(stage)))
                         .toList()));
     }
 
-    private static <S> Condition<S, List<S>> caughtPreserving(
-            List<? extends PreservingStage<? super S>> stages) {
+    private static <S> Condition<S, List<S>> caughtPreserving(List<? extends PreservingStage<? super S>> stages) {
         return condition("conditions are satisfied in order", () ->
                 new CaughtEvaluator<>(stages.stream()
                         .map(stage -> caughtStage(stage,
@@ -168,8 +122,8 @@ public final class ConditionRuntime {
     }
 
     private static <T> List<T> stages(String name, T first, T second, T[] rest) {
-        T[] capturedRest = requireNonNull(rest, name + "s must not be null").clone();
-        return Stream.concat(Stream.of(first, second), Arrays.stream(capturedRest))
+        return Stream.concat(Stream.of(first, second),
+                        Arrays.stream(requireNonNull(rest, name + "s must not be null")))
                 .map(stage -> requireNonNull(stage, name + " must not be null"))
                 .toList();
     }
@@ -178,50 +132,32 @@ public final class ConditionRuntime {
             Function<S, Evaluation<S>> evaluator) {
         String validatedDescription = nonBlank(description, "description");
         requireNonNull(evaluator, "evaluation must not be null");
-        return new RuntimePreservingCondition<>(validatedDescription,
+        return new RuntimePreservingCondition<>(validatedDescription, null,
                 () -> evaluator);
     }
 
-    public static <S, F extends Source<?>> SelectedCondition<S, F> selected(
-            String description, Function<S, Evaluation<Object>> evaluator) {
+    public static <S, F extends Source<?>> SelectedCondition<S, F> selected(String description, Function<S, Evaluation<Object>> evaluator) {
         String validatedDescription = nonBlank(description, "description");
         requireNonNull(evaluator, "evaluation must not be null");
-        return new RuntimeSelectedCondition<>(validatedDescription,
+        return new RuntimeSelectedCondition<>(validatedDescription, null,
                 () -> evaluator);
     }
 
     @SuppressWarnings("unchecked")
-    public static <S, R> Function<S, Evaluation<R>> evaluator(
-            ConditionStage<? super S, ? extends R> condition) {
+    public static <S, R> Function<S, Evaluation<R>> evaluator(Object condition) {
         Operand<?, ?> operand = operand(condition);
         return (Function<S, Evaluation<R>>) newEvaluator(operand);
     }
 
     @SuppressWarnings("unchecked")
-    public static <S> Function<S, Evaluation<S>> preservingEvaluator(
-            PreservingStage<? super S> condition) {
+    public static <S> Function<S, Evaluation<S>> preservingEvaluator(PreservingStage<? super S> condition) {
         Operand<?, ?> operand = operand(condition);
         Function<S, Evaluation<?>> evaluator =
                 (Function<S, Evaluation<?>>) newEvaluator(operand);
         return actual -> {
             Evaluation<?> evaluation = evaluator.apply(actual);
-            return evaluation == null ? null : evaluation.continueIfSatisfied(
-                    ignored -> satisfied(actual));
+            return evaluation == null ? null : evaluation.continueIfSatisfied(ignored -> satisfied(actual));
         };
-    }
-
-    @SuppressWarnings("unchecked")
-    public static <S, R, F extends Source<?>> Function<S, Evaluation<R>> selectedEvaluator(
-            SelectedStage<? super S, F> condition) {
-        Operand<?, ?> operand = operand(condition);
-        return (Function<S, Evaluation<R>>) newEvaluator(operand);
-    }
-
-    @SuppressWarnings("unchecked")
-    public static <S, E, F extends Source<?>> Function<S, Evaluation<List<E>>>
-            selectedSequenceEvaluator(SelectedSequenceStage<? super S, F> condition) {
-        Operand<?, ?> operand = operand(condition);
-        return (Function<S, Evaluation<List<E>>>) newEvaluator(operand);
     }
 
     public static String description(Object condition) {
@@ -235,28 +171,25 @@ public final class ConditionRuntime {
     public static <S, R> ConditionStage<S, R> explained(Condition<S, R> condition,
             String explanation) {
         Operand<S, R> operand = operand(condition);
-        return new RuntimeExplainedCondition<>(operand.description(),
+        return new RuntimeCondition<>(operand.description(),
                 nonBlank(explanation, "explanation"), operand.evaluators());
     }
 
-    public static <S> PreservingStage<S> explained(
-            PreservingCondition<S> condition, String explanation) {
+    public static <S> PreservingStage<S> explained(PreservingCondition<S> condition, String explanation) {
         Operand<S, S> operand = operand(condition);
-        return new RuntimeExplainedPreservingCondition<>(operand.description(),
+        return new RuntimePreservingCondition<>(operand.description(),
                 nonBlank(explanation, "explanation"), operand.evaluators());
     }
 
-    public static <S, F extends Source<?>> SelectedStage<S, F> explained(
-            SelectedCondition<S, F> condition, String explanation) {
+    public static <S, F extends Source<?>> SelectedStage<S, F> explained(SelectedCondition<S, F> condition, String explanation) {
         Operand<S, Object> operand = operand(condition);
-        return new RuntimeExplainedSelectedCondition<>(operand.description(),
+        return new RuntimeSelectedCondition<>(operand.description(),
                 nonBlank(explanation, "explanation"), operand.evaluators());
     }
 
-    public static <S, F extends Source<?>> SelectedSequenceStage<S, F> explained(
-            SelectedSequenceCondition<S, F> condition, String explanation) {
+    public static <S, F extends Source<?>> SelectedSequenceStage<S, F> explained(SelectedSequenceCondition<S, F> condition, String explanation) {
         Operand<S, List<Object>> operand = operand(condition);
-        return new RuntimeExplainedSelectedSequenceCondition<>(operand.description(),
+        return new RuntimeSelectedSequenceCondition<>(operand.description(),
                 nonBlank(explanation, "explanation"), operand.evaluators());
     }
 

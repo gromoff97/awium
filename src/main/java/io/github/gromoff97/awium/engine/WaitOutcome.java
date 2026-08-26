@@ -10,13 +10,11 @@ public sealed interface WaitOutcome<S, R> {
 
     record Uncontrolled<S, R>(AwaitAttempt<S, R> attempt) implements WaitOutcome<S, R> {}
 
-    record TimeoutBetweenObservations<S, R>(long startedNanos, long completedNanos,
+    record TimeoutBetweenObservations<S, R>(long elapsedNanos,
             AwaitAttempt<S, R> attempt) implements WaitOutcome<S, R> {}
 
-    record LateUnsatisfiedTimeout<S, R>(long startedNanos, AwaitAttempt<S, R> attempt) implements WaitOutcome<S, R> {}
+    record LateTimeout<S, R>(AwaitAttempt<S, R> attempt) implements WaitOutcome<S, R> {}
 
-    record LateSatisfiedTimeout<S, R>(long startedNanos, AwaitAttempt<S, R> attempt) implements WaitOutcome<S, R> {}
-
-    record PersistenceFailure<S, R>(long startedNanos, long acquiredNanos,
+    record PersistenceFailure<S, R>(long acquiredAfterNanos,
             AwaitAttempt<S, R> attempt) implements WaitOutcome<S, R> {}
 }

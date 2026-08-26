@@ -88,7 +88,6 @@ public final class ObjectCondition {
     public static <S, T, R> Condition<S, R> extracting(Function<? super S, ? extends T> extractor,
             ConditionStage<? super T, ? extends R> nested) {
         requireNonNull(extractor, "extractor must not be null");
-        requireNonNull(nested, "condition must not be null");
         return ConditionRuntime.condition("extracted " + description(nested), () -> {
             Function<T, Evaluation<R>> nestedEvaluator = evaluator(nested);
             return actual -> nestedEvaluator.apply(extractor.apply(actual));
@@ -97,7 +96,6 @@ public final class ObjectCondition {
 
     public static <S, T> Condition<S, T> extracting(Function<? super S, ? extends T> extractor,
             PreservingStage<? super T> nested) {
-        requireNonNull(nested, "condition must not be null");
         return extracting(extractor, preserve(nested));
     }
 

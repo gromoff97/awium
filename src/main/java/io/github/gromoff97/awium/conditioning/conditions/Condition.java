@@ -38,8 +38,7 @@ public sealed interface Condition<S, R> extends ConditionStage<S, R>
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <S, R> Condition<S, List<R>> caught(
-            ConditionStage<? super S, R> first,
+    static <S, R> Condition<S, List<R>> caught(ConditionStage<? super S, R> first,
             ConditionStage<? super S, R> second,
             ConditionStage<? super S, R>... rest) {
         return ConditionRuntime.caught(first, second, rest);
@@ -47,8 +46,7 @@ public sealed interface Condition<S, R> extends ConditionStage<S, R>
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <S, F extends Source<?>> SelectedSequenceCondition<S, F> caught(
-            SelectedStage<? super S, F> first,
+    static <S, F extends Source<?>> SelectedSequenceCondition<S, F> caught(SelectedStage<? super S, F> first,
             SelectedStage<? super S, F> second,
             SelectedStage<? super S, F>... rest) {
         return ConditionRuntime.caught(first, second, rest);
@@ -56,28 +54,20 @@ public sealed interface Condition<S, R> extends ConditionStage<S, R>
 
     static <S> PreservingCondition<S> asserted(Consumer<? super S> assertion) {
         requireNonNull(assertion, "assertion must not be null");
-        return ConditionRuntime.preserving("value satisfies assertion",
-                evaluated("value did not satisfy assertion", actual -> {
-                    assertion.accept(actual);
-                    return actual;
-                }));
+        return ConditionRuntime.preserving("value satisfies assertion", actual -> {
+            try {
+                assertion.accept(actual);
+                return satisfied(actual);
+            } catch (AssertionError error) {
+                return assertionUnsatisfied("value did not satisfy assertion", error);
+            }
+        });
     }
 
     static <S, R> Condition<S, R> yields(Function<? super S, ? extends R> callback) {
         requireNonNull(callback, "callback must not be null");
         return condition("callback yields a result",
                 actual -> satisfied(callback.apply(actual)));
-    }
-
-    private static <S, R> Function<S, Evaluation<R>> evaluated(String mismatch,
-            Function<? super S, ? extends R> function) {
-        return actual -> {
-            try {
-                return satisfied(function.apply(actual));
-            } catch (AssertionError error) {
-                return assertionUnsatisfied(mismatch, error);
-            }
-        };
     }
 
     default ConditionStage<S, R> because(String explanation) {
@@ -95,8 +85,7 @@ public sealed interface Condition<S, R> extends ConditionStage<S, R>
         return String.format(Locale.ROOT, format, arguments);
     }
 
-    public sealed interface PreservingStage<S> permits PreservingCondition,
-            ConditionRuntime.RuntimeExplainedPreservingCondition {
+    public sealed interface PreservingStage<S> permits PreservingCondition {
     }
 
     public sealed interface PreservingCondition<S> extends PreservingStage<S>
@@ -112,8 +101,7 @@ public sealed interface Condition<S, R> extends ConditionStage<S, R>
         }
     }
 
-    public sealed interface SelectedStage<S, F extends Source<?>> permits SelectedCondition,
-            ConditionRuntime.RuntimeExplainedSelectedCondition {
+    public sealed interface SelectedStage<S, F extends Source<?>> permits SelectedCondition {
     }
 
     public sealed interface SelectedCondition<S, F extends Source<?>> extends SelectedStage<S, F>
@@ -129,9 +117,7 @@ public sealed interface Condition<S, R> extends ConditionStage<S, R>
         }
     }
 
-    public sealed interface SelectedSequenceStage<S, F extends Source<?>>
-            permits SelectedSequenceCondition,
-            ConditionRuntime.RuntimeExplainedSelectedSequenceCondition {
+    public sealed interface SelectedSequenceStage<S, F extends Source<?>> permits SelectedSequenceCondition {
     }
 
     public sealed interface SelectedSequenceCondition<S, F extends Source<?>>

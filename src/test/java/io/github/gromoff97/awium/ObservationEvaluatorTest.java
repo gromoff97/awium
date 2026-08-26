@@ -24,6 +24,7 @@ import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -64,7 +65,7 @@ class ObservationEvaluatorTest {
     }
 
     @Test
-    void separatesOrdinaryAndAssertionBackedMismatches() {
+    void retainsOptionalAssertionCauseOnUnsatisfiedAttempts() {
         var actual = new Object();
         var assertion = new AssertionError("failed");
 
@@ -72,9 +73,10 @@ class ObservationEvaluatorTest {
         var asserted = attempt(() -> actual, value -> assertionUnsatisfied("assertion did not pass", assertion));
 
         var ordinaryOutcome = assertInstanceOf(AwaitAttempt.Outcome.Unsatisfied.class, ordinary.outcome());
-        var assertedOutcome = assertInstanceOf(AwaitAttempt.Outcome.AssertionUnsatisfied.class, asserted.outcome());
+        var assertedOutcome = assertInstanceOf(AwaitAttempt.Outcome.Unsatisfied.class, asserted.outcome());
         assertSame(actual, ordinaryOutcome.observed());
         assertEquals("not ready", ordinaryOutcome.mismatch());
+        assertNull(ordinaryOutcome.assertion());
         assertSame(actual, assertedOutcome.observed());
         assertEquals("assertion did not pass", assertedOutcome.mismatch());
         assertSame(assertion, assertedOutcome.assertion());

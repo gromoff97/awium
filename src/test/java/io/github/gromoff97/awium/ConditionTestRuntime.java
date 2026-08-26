@@ -20,7 +20,7 @@ final class ConditionTestRuntime {
 
     static <S, R, F extends Source<?>> Evaluation<R> evaluate(
             SelectedStage<? super S, F> condition, S actual) {
-        return ConditionRuntime.<S, R, F>selectedEvaluator(condition).apply(actual);
+        return ConditionRuntime.<S, R>evaluator(condition).apply(actual);
     }
 
     static String description(Object condition) {

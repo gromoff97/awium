@@ -30,34 +30,12 @@ public record AwaitAttempt<S, R>(long number, Phase phase, Outcome<S, R> outcome
         }
 
         record Unsatisfied<S, R>(Timing.AfterObservation timing, S observed,
-                String mismatch, Evaluation.Context context) implements Outcome<S, R> {
-
-            public Unsatisfied(Timing.AfterObservation timing, S observed,
-                    String mismatch) {
-                this(timing, observed, mismatch, Evaluation.Context.Plain.INSTANCE);
-            }
+                String mismatch, AssertionError assertion,
+                Evaluation.Context context) implements Outcome<S, R> {
 
             public Unsatisfied {
                 requireNonNull(timing, "timing must not be null");
                 requireNonNull(mismatch, "mismatch must not be null");
-                requireNonNull(context, "context must not be null");
-            }
-        }
-
-        record AssertionUnsatisfied<S, R>(Timing.AfterObservation timing, S observed,
-                String mismatch, AssertionError assertion,
-                Evaluation.Context context) implements Outcome<S, R> {
-
-            public AssertionUnsatisfied(Timing.AfterObservation timing, S observed,
-                    String mismatch, AssertionError assertion) {
-                this(timing, observed, mismatch, assertion,
-                        Evaluation.Context.Plain.INSTANCE);
-            }
-
-            public AssertionUnsatisfied {
-                requireNonNull(timing, "timing must not be null");
-                requireNonNull(mismatch, "mismatch must not be null");
-                requireNonNull(assertion, "assertion must not be null");
                 requireNonNull(context, "context must not be null");
             }
         }
@@ -90,11 +68,6 @@ public record AwaitAttempt<S, R>(long number, Phase phase, Outcome<S, R> outcome
         record ConditionEvaluationFailed<S, R>(Timing.AfterObservation timing,
                 S observed, Throwable failure,
                 Evaluation.Context context) implements Outcome<S, R> {
-
-            public ConditionEvaluationFailed(Timing.AfterObservation timing,
-                    S observed, Throwable failure) {
-                this(timing, observed, failure, Evaluation.Context.Plain.INSTANCE);
-            }
 
             public ConditionEvaluationFailed {
                 requireNonNull(timing, "timing must not be null");

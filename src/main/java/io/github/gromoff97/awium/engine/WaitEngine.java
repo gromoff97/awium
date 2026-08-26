@@ -28,9 +28,13 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
 
     public <S, R> Execution<S, R> recordedWaitFor(Source<? extends S> source,
             Function<? super S, ? extends Evaluation<? extends R>> evaluator) {
-        var history = new History<S, R>();
-        WaitOutcome<S, R> outcome = waitFor(source, evaluator, history::record);
-        return new Execution<>(outcome, history.attempts, history.totalAttempts);
+        var attempts = new ArrayList<AwaitAttempt<S, R>>();
+        WaitOutcome<S, R> outcome = waitFor(source, evaluator, attempt -> {
+            if (attempts.isEmpty() || !equivalent(attempts.getLast(), attempt)) {
+                attempts.add(attempt);
+            }
+        });
+        return new Execution<>(outcome, attempts);
     }
 
     private <S, R> WaitOutcome<S, R> waitFor(Source<? extends S> source,
@@ -39,8 +43,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
         configuration.validatePair();
         long started = clock.getAsLong();
         var observations = new ObservationEvaluator(clock);
-        WaitOutcome<S, R> acquisition = acquire(
-                source, evaluator, observations, recorder, started);
+        WaitOutcome<S, R> acquisition = acquire(source, evaluator, observations, recorder, started);
         if (!(acquisition instanceof WaitOutcome.Satisfied<S, R> acquired)
                 || configuration.persistenceNanos() == 0) {
             return acquisition;
@@ -68,8 +71,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
                 }
             }
 
-            AwaitAttempt<S, R> interrupted = interruptedBefore(
-                    ACQUISITION, number, started, attemptStarted);
+            AwaitAttempt<S, R> interrupted = interruptedBefore(ACQUISITION, number, started, attemptStarted);
             if (interrupted != null) {
                 recorder.accept(interrupted);
                 return new WaitOutcome.Uncontrolled<>(interrupted);
@@ -77,26 +79,21 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
 
             long retrievalStarted = clock.getAsLong();
             if (number > 1 && reached(retrievalStarted, deadline)) {
-                return new WaitOutcome.TimeoutBetweenObservations<>(
-                        started, retrievalStarted, lastUnsatisfied);
+                return new WaitOutcome.TimeoutBetweenObservations<>(retrievalStarted - started, lastUnsatisfied);
             }
 
-            ObservationEvaluator.EvaluatedAttempt<S, R> evaluated = observations.evaluate(
-                    source, evaluator, ACQUISITION,
+            AwaitAttempt<S, R> attempt = observations.evaluate(source, evaluator, ACQUISITION,
                     number, started, attemptStarted, retrievalStarted);
-            AwaitAttempt<S, R> attempt = evaluated.attempt();
-            completed = evaluated.completedNanos();
+            completed = completedNanos(started, attempt);
             recorder.accept(attempt);
             if (failed(attempt)) {
                 return new WaitOutcome.Uncontrolled<>(attempt);
             }
-            if (satisfied(attempt)) {
-                return reached(completed, deadline)
-                        ? new WaitOutcome.LateSatisfiedTimeout<>(started, attempt)
-                        : new WaitOutcome.Satisfied<>(attempt);
-            }
             if (reached(completed, deadline)) {
-                return new WaitOutcome.LateUnsatisfiedTimeout<>(started, attempt);
+                return new WaitOutcome.LateTimeout<>(attempt);
+            }
+            if (satisfied(attempt)) {
+                return new WaitOutcome.Satisfied<>(attempt);
             }
             lastUnsatisfied = attempt;
         }
@@ -121,25 +118,22 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
                 return new WaitOutcome.Uncontrolled<>(parked);
             }
 
-            AwaitAttempt<S, R> interrupted = interruptedBefore(
-                    PERSISTENCE, number, started, attemptStarted);
+            AwaitAttempt<S, R> interrupted = interruptedBefore(PERSISTENCE, number, started, attemptStarted);
             if (interrupted != null) {
                 recorder.accept(interrupted);
                 return new WaitOutcome.Uncontrolled<>(interrupted);
             }
 
             long retrievalStarted = clock.getAsLong();
-            ObservationEvaluator.EvaluatedAttempt<S, R> evaluated = observations.evaluate(
-                    source, evaluator, PERSISTENCE,
+            AwaitAttempt<S, R> attempt = observations.evaluate(source, evaluator, PERSISTENCE,
                     number, started, attemptStarted, retrievalStarted);
-            AwaitAttempt<S, R> attempt = evaluated.attempt();
-            completed = evaluated.completedNanos();
+            completed = completedNanos(started, attempt);
             recorder.accept(attempt);
             if (failed(attempt)) {
                 return new WaitOutcome.Uncontrolled<>(attempt);
             }
             if (unsatisfied(attempt)) {
-                return new WaitOutcome.PersistenceFailure<>(started, acquiredAt, attempt);
+                return new WaitOutcome.PersistenceFailure<>(acquiredAt - started, attempt);
             }
             if (reached(completed, deadline)) {
                 return new WaitOutcome.Satisfied<>(attempt);
@@ -157,13 +151,9 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
             } catch (VirtualMachineError | ThreadDeath fatal) {
                 throw fatal;
             } catch (Throwable failure) {
-                if (failure instanceof InterruptedException) {
-                    restoreInterrupt();
-                }
                 return waitingFailure(phase, number, started, attemptStarted, failure);
             }
-            AwaitAttempt<S, R> interrupted = interruptedBefore(
-                    phase, number, started, attemptStarted);
+            AwaitAttempt<S, R> interrupted = interruptedBefore(phase, number, started, attemptStarted);
             if (interrupted != null) {
                 return interrupted;
             }
@@ -171,8 +161,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
         return null;
     }
 
-    private <S, R> AwaitAttempt<S, R> interruptedBefore(
-            AwaitAttempt.Phase phase, long number, long started,
+    private <S, R> AwaitAttempt<S, R> interruptedBefore(AwaitAttempt.Phase phase, long number, long started,
             long attemptStarted) {
         if (!currentThread().isInterrupted()) {
             return null;
@@ -181,18 +170,14 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
                 new InterruptedException("caller thread interrupt flag was set"));
     }
 
-    private <S, R> AwaitAttempt<S, R> waitingFailure(
-            AwaitAttempt.Phase phase, long number, long started,
+    private <S, R> AwaitAttempt<S, R> waitingFailure(AwaitAttempt.Phase phase, long number, long started,
             long attemptStarted, Throwable failure) {
         if (failure instanceof InterruptedException) {
-            restoreInterrupt();
+            currentThread().interrupt();
         }
         long completed = clock.getAsLong();
-        return new AwaitAttempt<>(number, phase,
-                new AwaitAttempt.Outcome.WaitingFailed<>(
-                        new AwaitAttempt.Timing.BeforeRetrieval(
-                                offset(started, attemptStarted),
-                                offset(started, completed)), failure));
+        var timing = new AwaitAttempt.Timing.BeforeRetrieval(offset(started, attemptStarted), offset(started, completed));
+        return new AwaitAttempt<>(number, phase, new AwaitAttempt.Outcome.WaitingFailed<>(timing, failure));
     }
 
     private static boolean satisfied(AwaitAttempt<?, ?> attempt) {
@@ -200,8 +185,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
     }
 
     private static boolean unsatisfied(AwaitAttempt<?, ?> attempt) {
-        return attempt.outcome() instanceof AwaitAttempt.Outcome.Unsatisfied<?, ?>
-                || attempt.outcome() instanceof AwaitAttempt.Outcome.AssertionUnsatisfied<?, ?>;
+        return attempt.outcome() instanceof AwaitAttempt.Outcome.Unsatisfied<?, ?>;
     }
 
     private static boolean failed(AwaitAttempt<?, ?> attempt) {
@@ -214,10 +198,6 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
 
     private static Duration offset(long started, long stage) {
         return Duration.ofNanos(stage - started);
-    }
-
-    private static void restoreInterrupt() {
-        currentThread().interrupt();
     }
 
     private static long after(long now, long durationNanos) {
@@ -233,23 +213,10 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
     }
 
     public record Execution<S, R>(WaitOutcome<S, R> outcome,
-            List<AwaitAttempt<S, R>> attempts, long totalAttempts) {
+            List<AwaitAttempt<S, R>> attempts) {
 
         public Execution {
             attempts = List.copyOf(attempts);
-        }
-    }
-
-    private static final class History<S, R> {
-
-        private final List<AwaitAttempt<S, R>> attempts = new ArrayList<>();
-        private long totalAttempts;
-
-        private void record(AwaitAttempt<S, R> attempt) {
-            totalAttempts = attempt.number();
-            if (attempts.isEmpty() || !equivalent(attempts.getLast(), attempt)) {
-                attempts.add(attempt);
-            }
         }
     }
 
@@ -264,11 +231,6 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
                     value.observed() == other.observed() && value.result() == other.result();
             case AwaitAttempt.Outcome.Unsatisfied<?, ?> value
                     when right.outcome() instanceof AwaitAttempt.Outcome.Unsatisfied<?, ?> other ->
-                    value.observed() == other.observed()
-                            && value.mismatch().equals(other.mismatch())
-                            && value.context().equals(other.context());
-            case AwaitAttempt.Outcome.AssertionUnsatisfied<?, ?> value
-                    when right.outcome() instanceof AwaitAttempt.Outcome.AssertionUnsatisfied<?, ?> other ->
                     value.observed() == other.observed()
                             && value.mismatch().equals(other.mismatch())
                             && value.assertion() == other.assertion()

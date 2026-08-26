@@ -24,7 +24,6 @@ final class ConditionSupport {
     }
 
     static <T> Condition<T, T> preserve(PreservingStage<? super T> nested) {
-        requireNonNull(nested, "condition must not be null");
         return condition(description(nested), () -> preservingEvaluator(nested));
     }
 

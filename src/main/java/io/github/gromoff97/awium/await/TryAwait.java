@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingSta
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSequenceStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
+import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
@@ -18,7 +19,7 @@ import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
 public final class TryAwait<S, E, F extends Source<?>>
-        extends AbstractAwait<S, E, F, TryAwait<S, E, F>> {
+        extends AbstractAwait<S, TryAwait<S, E, F>> {
 
     private TryAwait(Source<? extends S> source) {
         super(source);
@@ -32,13 +33,11 @@ public final class TryAwait<S, E, F extends Source<?>>
         return new TryAwait<>(source);
     }
 
-    public static <E, C extends Collection<E>> TryAwait<C, E, CollectionSource<?>> tryAwait(
-            CollectionSource<C> source) {
+    public static <E, C extends Collection<E>> TryAwait<C, E, CollectionSource<?>> tryAwait(CollectionSource<C> source) {
         return new TryAwait<>(source);
     }
 
-    public static <K, V, M extends Map<K, V>> TryAwait<M, Map.Entry<K, V>, MapSource<?>> tryAwait(
-            MapSource<M> source) {
+    public static <K, V, M extends Map<K, V>> TryAwait<M, Map.Entry<K, V>, MapSource<?>> tryAwait(MapSource<M> source) {
         return new TryAwait<>(source);
     }
 
@@ -57,19 +56,18 @@ public final class TryAwait<S, E, F extends Source<?>>
     }
 
     public AwaitResult<S, S> until(PreservingStage<? super S> condition) {
-        return capture(prepare(condition));
+        return capture(ConditionRuntime.preservingEvaluator(condition), condition);
     }
 
     public <R> AwaitResult<S, R> until(ConditionStage<? super S, ? extends R> condition) {
-        return capture(prepare(condition));
+        return capture(ConditionRuntime.evaluator(condition), condition);
     }
 
     public AwaitResult<S, E> until(SelectedStage<? super S, F> condition) {
-        return capture(prepare(condition));
+        return capture(ConditionRuntime.evaluator(condition), condition);
     }
 
-    public AwaitResult<S, List<E>> until(
-            SelectedSequenceStage<? super S, F> condition) {
-        return capture(prepareSelectedSequence(condition));
+    public AwaitResult<S, List<E>> until(SelectedSequenceStage<? super S, F> condition) {
+        return capture(ConditionRuntime.evaluator(condition), condition);
     }
 }

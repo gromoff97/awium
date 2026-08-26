@@ -165,7 +165,7 @@ class WaitEngineTest {
         assertEquals(List.of(0L, 4L, 8L), starts);
         assertEquals(List.of(4L, 4L, 2L), time.parkRequests);
         assertEquals(3, timeout.attempt().number());
-        assertEquals(10, timeout.completedNanos());
+        assertEquals(10, timeout.elapsedNanos());
         assertEquals(8, completed(unsatisfied));
         assertEquals("mismatch 3", mismatch(unsatisfied));
         assertSame(assertion, assertion(unsatisfied));
@@ -184,7 +184,7 @@ class WaitEngineTest {
                 });
 
         var timeout = assertInstanceOf(
-                LateUnsatisfiedTimeout.class, outcome);
+                LateTimeout.class, outcome);
         var unsatisfied = timeout.attempt();
         assertEquals(1, timeout.attempt().number());
         assertEquals(10, completed(unsatisfied));
@@ -206,7 +206,7 @@ class WaitEngineTest {
                 });
 
         var timeout = assertInstanceOf(
-                LateSatisfiedTimeout.class, outcome);
+                LateTimeout.class, outcome);
         var satisfied = timeout.attempt();
         assertEquals(1, timeout.attempt().number());
         assertEquals(11, completed(satisfied));
@@ -497,7 +497,7 @@ class WaitEngineTest {
 
         var loss = assertInstanceOf(PersistenceFailure.class, outcome);
         var unsatisfied = loss.attempt();
-        assertEquals(0, loss.acquiredNanos());
+        assertEquals(0, loss.acquiredAfterNanos());
         assertEquals(5, completed(unsatisfied));
         assertEquals(2, loss.attempt().number());
         assertSame(failingActual, observed(unsatisfied));
@@ -565,7 +565,6 @@ class WaitEngineTest {
         return switch (attempt.outcome()) {
             case AwaitAttempt.Outcome.Satisfied<?, ?> outcome -> outcome.observed();
             case AwaitAttempt.Outcome.Unsatisfied<?, ?> outcome -> outcome.observed();
-            case AwaitAttempt.Outcome.AssertionUnsatisfied<?, ?> outcome -> outcome.observed();
             case AwaitAttempt.Outcome.SourceInterrupted<?, ?> outcome -> outcome.observed();
             case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> outcome -> outcome.observed();
             default -> throw new IllegalArgumentException("attempt has no observed value");
@@ -580,13 +579,12 @@ class WaitEngineTest {
     private static String mismatch(AwaitAttempt<?, ?> attempt) {
         return switch (attempt.outcome()) {
             case AwaitAttempt.Outcome.Unsatisfied<?, ?> outcome -> outcome.mismatch();
-            case AwaitAttempt.Outcome.AssertionUnsatisfied<?, ?> outcome -> outcome.mismatch();
             default -> throw new IllegalArgumentException("attempt is satisfied");
         };
     }
 
     private static AssertionError assertion(AwaitAttempt<?, ?> attempt) {
-        return assertInstanceOf(AwaitAttempt.Outcome.AssertionUnsatisfied.class,
+        return assertInstanceOf(AwaitAttempt.Outcome.Unsatisfied.class,
                 attempt.outcome()).assertion();
     }
 }

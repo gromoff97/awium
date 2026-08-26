@@ -39,7 +39,7 @@ class TryAwaitHistoryTest {
                 () -> actual,
                 value -> satisfied(calls[0]++ < 3 ? firstResult : finalResult));
 
-        assertEquals(4, execution.totalAttempts());
+        assertEquals(4, execution.outcome().attempt().number());
         assertEquals(List.of(1L, 2L, 4L), execution.attempts().stream()
                 .map(AwaitAttempt::number).toList());
         assertEquals(List.of(ACQUISITION, PERSISTENCE, PERSISTENCE),
@@ -56,7 +56,7 @@ class TryAwaitHistoryTest {
                 .recordedWaitFor(() -> probe, actual -> satisfied(probe));
 
         assertEquals(2, execution.attempts().size());
-        assertEquals(3, execution.totalAttempts());
+        assertEquals(3, execution.outcome().attempt().number());
     }
 
     @Test
