@@ -2,6 +2,7 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.await.AwaitAttempt;
 import io.github.gromoff97.awium.await.AwaitResult;
+import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
 
@@ -70,6 +71,30 @@ class TryAwaitHistoryTest {
         assertEquals(List.of(1L), numbers(same));
         assertEquals(List.of(1L, 2L), numbers(changedActual));
         assertEquals(List.of(1L, 2L), numbers(changedAssertion));
+    }
+
+    @Test
+    void sequenceStageChangesAreNotCompressed() {
+        var time = new FakeTime(0);
+        var actual = new Object();
+        int[] stage = {0};
+
+        var execution = new WaitEngine(config(1, 3, 0), time, time)
+                .recordedWaitFor(() -> actual, value -> {
+                    int current = ++stage[0];
+                    return Evaluation.<Object>unsatisfied("same mismatch").withContext(
+                            new Evaluation.Context.Sequence(current - 1, 3, current,
+                                    "stage " + current, null));
+                });
+
+        assertEquals(List.of(1L, 2L, 3L), numbers(execution));
+        assertEquals(List.of(1, 2, 3), execution.attempts().stream()
+                .map(AwaitAttempt::outcome)
+                .map(outcome -> ((AwaitAttempt.Outcome.Unsatisfied<?, ?>) outcome)
+                        .context())
+                .map(Evaluation.Context.Sequence.class::cast)
+                .map(Evaluation.Context.Sequence::stage)
+                .toList());
     }
 
     @Test

@@ -2,6 +2,7 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
+import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
 import io.github.gromoff97.awium.await.AwaitAttempt;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
@@ -16,13 +17,19 @@ import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitUnha
 import io.github.gromoff97.awium.sources.Source;
 
 import static io.github.gromoff97.awium.await.Await.await;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.uncontrolled;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.caught;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
 import static io.github.gromoff97.awium.engine.WaitOutcome.*;
 import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.ACQUISITION;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -36,6 +43,167 @@ class DiagnosticsSnapshotTest {
 
     private static final long SECOND = 1_000_000_000L;
     private static final long MILLISECOND = 1_000_000L;
+
+    @Test
+    void caughtAcquisitionTimeoutRendersTheWaitingStage() {
+        var time = new FakeTime(0);
+
+        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
+                () -> timedAwait(() -> "created", config(1, 2, 0), time, time)
+                        .until(lifecycle(pendingMismatch(), completed())));
+
+        assertEquals("""
+                Acquisition deadline elapsed before the next attempt
+
+                Condition:
+                    Expectation: conditions are satisfied in order
+                    Importance: payment must complete its lifecycle
+
+                Attempt:
+                    Number: 2
+                    Actual: created
+
+                Sequence:
+                    Caught: 1 of 3
+                    Waiting for: 2 of 3
+                    Expectation: payment status is pending
+                    Importance: processing must begin before completion
+                    Mismatch: payment status was created
+
+                Timing:
+                    Acquisition timeout: 2 nanoseconds
+                    Last attempt completed after: 1 nanosecond
+                    Elapsed: 2 nanoseconds
+                    Polling interval: 1 nanosecond""", failure.getMessage());
+    }
+
+    @Test
+    void caughtPersistenceFailureKeepsTheFinalWaitingStage() {
+        var time = new FakeTime(0);
+        String[] statuses = {"created", "pending", "completed", "created"};
+        int[] next = {0};
+
+        AwaitPersistenceException failure = assertThrows(
+                AwaitPersistenceException.class,
+                () -> timedAwait(() -> statuses[next[0]++],
+                        config(1, 10, 5), time, time)
+                        .until(lifecycle(pending(), completedMismatch())));
+
+        assertEquals("""
+                Condition did not persist for the required duration
+
+                Condition:
+                    Expectation: conditions are satisfied in order
+                    Importance: payment must complete its lifecycle
+
+                Attempt:
+                    Number: 4
+                    Actual: created
+
+                Sequence:
+                    Caught: 2 of 3
+                    Waiting for: 3 of 3
+                    Expectation: payment status is completed
+                    Importance: completion must remain stable
+                    Mismatch: payment status was created
+
+                Timing:
+                    Acquisition timeout: 10 nanoseconds
+                    Acquired after: 2 nanoseconds
+                    Required persistence: 5 nanoseconds
+                    Failure detected after: 1 nanosecond
+                    Elapsed: 3 nanoseconds
+                    Polling interval: 1 nanosecond""", failure.getMessage());
+    }
+
+    @Test
+    void caughtNestedAssertionRetainsCauseAndStack() {
+        var time = new FakeTime(0);
+        var assertion = new AssertionError("pending assertion failed");
+        var frame = new StackTraceElement("Payments", "verifyPending",
+                "Payments.java", 42);
+        assertion.setStackTrace(new StackTraceElement[]{frame});
+        ConditionStage<String, String> assertedPending = Condition.<String, String>condition(
+                "payment status is pending", value -> assertionUnsatisfied(
+                        "payment status was created", assertion))
+                .because("processing must begin before completion");
+
+        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
+                () -> timedAwait(() -> "created", config(1, 2, 0), time, time)
+                        .until(lifecycle(assertedPending, completed())));
+
+        assertEquals("""
+                Acquisition deadline elapsed before the next attempt
+
+                Condition:
+                    Expectation: conditions are satisfied in order
+                    Importance: payment must complete its lifecycle
+
+                Attempt:
+                    Number: 2
+                    Actual: created
+
+                Sequence:
+                    Caught: 1 of 3
+                    Waiting for: 2 of 3
+                    Expectation: payment status is pending
+                    Importance: processing must begin before completion
+                    Mismatch: payment status was created
+
+                Timing:
+                    Acquisition timeout: 2 nanoseconds
+                    Last attempt completed after: 1 nanosecond
+                    Elapsed: 2 nanoseconds
+                    Polling interval: 1 nanosecond
+
+                Cause:
+                    Type: AssertionError
+                    Message: pending assertion failed""", failure.getMessage());
+        assertSame(assertion, failure.getCause());
+        assertArrayEquals(new StackTraceElement[]{frame}, failure.getCause().getStackTrace());
+    }
+
+    @Test
+    void caughtNestedUncontrolledRetainsCauseAndStage() {
+        var time = new FakeTime(0);
+        var cause = new IllegalStateException("status callback failed");
+        ConditionStage<String, String> brokenPending = Condition.<String, String>condition(
+                "payment status is pending", value -> {
+                    throw cause;
+                }).because("processing must begin before completion");
+
+        AwaitConditionEvaluationException failure = assertThrows(
+                AwaitConditionEvaluationException.class,
+                () -> timedAwait(() -> "created", config(1, 10, 0), time, time)
+                        .until(lifecycle(brokenPending, completed())));
+
+        assertEquals("""
+                Condition evaluation failed
+
+                Condition:
+                    Expectation: conditions are satisfied in order
+                    Importance: payment must complete its lifecycle
+
+                Attempt:
+                    Number: 2
+                    Origin: condition
+                    Actual: created
+
+                Sequence:
+                    Caught: 1 of 3
+                    Waiting for: 2 of 3
+                    Expectation: payment status is pending
+                    Importance: processing must begin before completion
+
+                Timing:
+                    Acquisition timeout: 10 nanoseconds
+                    Polling interval: 1 nanosecond
+
+                Cause:
+                    Type: IllegalStateException
+                    Message: status callback failed""", failure.getMessage());
+        assertSame(cause, failure.getCause());
+    }
 
     @Test
     void controlledFailuresRetainTheirSemanticContext() {
@@ -557,6 +725,43 @@ class DiagnosticsSnapshotTest {
             String explanation, WaitConfiguration configuration) {
         return FailureFactory.complete(outcome, () -> description,
                 explanation, configuration);
+    }
+
+    private static ConditionStage<String, java.util.List<String>> lifecycle(
+            ConditionStage<String, String> pending,
+            ConditionStage<String, String> completed) {
+        return caught(status("created", "payment status is created", null),
+                pending, completed).because("payment must complete its lifecycle");
+    }
+
+    private static ConditionStage<String, String> pending() {
+        return status("pending", "payment status is pending",
+                "processing must begin before completion");
+    }
+
+    private static ConditionStage<String, String> pendingMismatch() {
+        return Condition.<String, String>condition("payment status is pending",
+                value -> unsatisfied("payment status was " + value))
+                .because("processing must begin before completion");
+    }
+
+    private static ConditionStage<String, String> completed() {
+        return status("completed", "payment status is completed",
+                "completion must remain stable");
+    }
+
+    private static ConditionStage<String, String> completedMismatch() {
+        return Condition.<String, String>condition("payment status is completed", value -> value.equals("completed")
+                ? satisfied(value) : unsatisfied("payment status was " + value))
+                .because("completion must remain stable");
+    }
+
+    private static ConditionStage<String, String> status(String expected,
+            String description, String importance) {
+        Condition<String, String> condition = condition(description,
+                value -> value.equals(expected)
+                        ? satisfied(value) : unsatisfied("payment status was " + value));
+        return importance == null ? condition : condition.because(importance);
     }
 
     private static <S, R> AwaitAttempt<S, R> satisfiedAttempt(

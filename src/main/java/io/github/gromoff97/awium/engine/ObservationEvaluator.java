@@ -83,13 +83,15 @@ final class ObservationEvaluator {
                     ? new AwaitAttempt.Outcome.Unsatisfied<>(
                             afterObservation(executionStarted, attemptStarted,
                                     retrievalStarted, observed, completed),
-                            actual, evaluation.mismatch())
+                            actual, evaluation.mismatch(), evaluation.context())
                     : new AwaitAttempt.Outcome.AssertionUnsatisfied<>(
                             afterObservation(executionStarted, attemptStarted,
                                     retrievalStarted, observed, completed),
-                            actual, evaluation.mismatch(), evaluation.assertionCause());
+                            actual, evaluation.mismatch(), evaluation.assertionCause(),
+                            evaluation.context());
             case UNCONTROLLED -> uncontrolled(executionStarted, attemptStarted,
-                    retrievalStarted, observed, actual, evaluation.uncontrolledCause(), completed);
+                    retrievalStarted, observed, actual, evaluation.uncontrolledCause(),
+                    evaluation.context(), completed);
         };
         return evaluated(phase, number, completed, outcome);
     }
@@ -131,7 +133,8 @@ final class ObservationEvaluator {
 
     private static <S, R> AwaitAttempt.Outcome<S, R> uncontrolled(
             long executionStarted, long attemptStarted, long retrievalStarted,
-            long observed, S actual, Throwable failure, long completed) {
+            long observed, S actual, Throwable failure,
+            Evaluation.Context context, long completed) {
         if (failure instanceof Error fatal
                 && (fatal instanceof VirtualMachineError || fatal instanceof ThreadDeath)) {
             throw fatal;
@@ -141,7 +144,7 @@ final class ObservationEvaluator {
         }
         return new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(
                 afterObservation(executionStarted, attemptStarted,
-                        retrievalStarted, observed, completed), actual, failure);
+                        retrievalStarted, observed, completed), actual, failure, context);
     }
 
     private static AwaitAttempt.Timing.AfterObservation afterObservation(

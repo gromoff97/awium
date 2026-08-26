@@ -135,7 +135,8 @@ public final class ConditionRuntime {
                 stages("condition", first, second, rest);
         return condition("conditions are satisfied in order", () ->
                 new CaughtEvaluator<>(stages.stream()
-                        .map(stage -> ConditionRuntime.<S, R>evaluator(stage)).toList()));
+                        .map(stage -> caughtStage(stage,
+                                ConditionRuntime.<S, R>evaluator(stage))).toList()));
     }
 
     @SafeVarargs
@@ -148,7 +149,8 @@ public final class ConditionRuntime {
                 stages("condition", first, second, rest);
         return new RuntimeSelectedSequenceCondition<>("conditions are satisfied in order",
                 () -> new CaughtEvaluator<>(stages.stream()
-                        .map(stage -> ConditionRuntime.<S, Object, F>selectedEvaluator(stage))
+                        .map(stage -> caughtStage(stage,
+                                ConditionRuntime.<S, Object, F>selectedEvaluator(stage)))
                         .toList()));
     }
 
@@ -156,7 +158,14 @@ public final class ConditionRuntime {
             List<? extends PreservingStage<? super S>> stages) {
         return condition("conditions are satisfied in order", () ->
                 new CaughtEvaluator<>(stages.stream()
-                        .map(stage -> ConditionRuntime.<S>preservingEvaluator(stage)).toList()));
+                        .map(stage -> caughtStage(stage,
+                                ConditionRuntime.<S>preservingEvaluator(stage))).toList()));
+    }
+
+    private static <S, R> CaughtEvaluator.Stage<S, R> caughtStage(Object stage,
+            Function<? super S, ? extends Evaluation<? extends R>> evaluator) {
+        return new CaughtEvaluator.Stage<>(evaluator, description(stage),
+                explanation(stage));
     }
 
     private static <T> List<T> stages(String name, T first, T second, T[] rest) {

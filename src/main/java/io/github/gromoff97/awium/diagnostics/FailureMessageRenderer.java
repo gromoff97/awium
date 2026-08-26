@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.diagnostics;
 
 import io.github.gromoff97.awium.await.AwaitAttempt;
+import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitOutcome;
 
@@ -73,7 +74,9 @@ final class FailureMessageRenderer {
                 ? context.actual == null
                         ? "<value unavailable: diagnostics failed>" : context.actual
                 : null;
-        attempt(out, attempt.number(), "diagnostics", actual, mismatch(attempt));
+        attempt(out, attempt.number(), "diagnostics", actual,
+                sequence(attempt) == null ? mismatch(attempt) : null);
+        sequence(out, attempt);
         timing(out, context);
         cause(out, emergencyDiagnostic(failure));
         return finish(out);
@@ -105,7 +108,9 @@ final class FailureMessageRenderer {
         StringBuilder out = heading(title);
         condition(out, context.conditionDescription(), context.explanation);
         String actual = hasObservation(attempt) ? context.actualValue() : null;
-        attempt(out, attempt.number(), origin(attempt), actual, mismatch(attempt));
+        attempt(out, attempt.number(), origin(attempt), actual,
+                sequence(attempt) == null ? mismatch(attempt) : null);
+        sequence(out, attempt);
         timing(out, context);
         if (failure(attempt) != null) {
             cause(out, context.causeDiagnostic());
@@ -183,6 +188,23 @@ final class FailureMessageRenderer {
         field(out, "Expectation", expectation);
         if (importance != null) {
             field(out, "Importance", importance);
+        }
+    }
+
+    private static void sequence(StringBuilder out, AwaitAttempt<?, ?> attempt) {
+        Evaluation.Context.Sequence sequence = sequence(attempt);
+        if (sequence == null) {
+            return;
+        }
+        out.append('\n').append("Sequence:\n");
+        field(out, "Caught", sequence.caught() + " of " + sequence.total());
+        field(out, "Waiting for", sequence.stage() + " of " + sequence.total());
+        field(out, "Expectation", sequence.expectation());
+        if (sequence.importance() != null) {
+            field(out, "Importance", sequence.importance());
+        }
+        if (mismatch(attempt) != null) {
+            field(out, "Mismatch", mismatch(attempt));
         }
     }
 
@@ -278,6 +300,16 @@ final class FailureMessageRenderer {
             case AwaitAttempt.Outcome.AssertionUnsatisfied<?, ?> value -> value.mismatch();
             default -> null;
         };
+    }
+
+    private static Evaluation.Context.Sequence sequence(AwaitAttempt<?, ?> attempt) {
+        Evaluation.Context context = switch (attempt.outcome()) {
+            case AwaitAttempt.Outcome.Unsatisfied<?, ?> value -> value.context();
+            case AwaitAttempt.Outcome.AssertionUnsatisfied<?, ?> value -> value.context();
+            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> value -> value.context();
+            default -> Evaluation.Context.Plain.INSTANCE;
+        };
+        return context instanceof Evaluation.Context.Sequence value ? value : null;
     }
 
     private static AssertionError assertion(AwaitAttempt<?, ?> attempt) {
