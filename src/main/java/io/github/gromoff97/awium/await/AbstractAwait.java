@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium.await;
 
-import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
@@ -12,6 +11,7 @@ import io.github.gromoff97.awium.sources.Source;
 
 import java.time.Duration;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
@@ -119,7 +119,7 @@ abstract class AbstractAwait<S, E, F extends Source<?>, A> {
     }
 
     protected record Prepared<S, R>(
-            CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator,
+            Function<? super S, ? extends Evaluation<? extends R>> evaluator,
             Supplier<String> description, String explanation) {
 
     }

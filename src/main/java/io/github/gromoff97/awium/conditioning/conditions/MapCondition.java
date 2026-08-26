@@ -1,7 +1,5 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
-import io.github.gromoff97.awium.conditioning.CheckedBiPredicate;
-import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
@@ -9,6 +7,8 @@ import io.github.gromoff97.awium.sources.Source.MapSource;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
@@ -88,19 +88,19 @@ public final class MapCondition {
     }
 
     public static <K, V> Condition<Map<K, V>, Map.Entry<K, V>> singleEntry(
-            CheckedBiPredicate<? super K, ? super V> predicate) {
+            BiPredicate<? super K, ? super V> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return condition("map has a single matching entry", actual -> selectSingle(actual, predicate));
     }
 
-    public static <K, V> Condition<Map<K, V>, K> singleKey(CheckedPredicate<? super K> predicate) {
+    public static <K, V> Condition<Map<K, V>, K> singleKey(Predicate<? super K> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return condition("map has a single matching key", actual ->
                 selectSingle(actual, (key, value) -> predicate.test(key))
                         .continueIfSatisfied(entry -> satisfied(entry.getKey())));
     }
 
-    public static <K, V> Condition<Map<K, V>, V> singleValue(CheckedPredicate<? super V> predicate) {
+    public static <K, V> Condition<Map<K, V>, V> singleValue(Predicate<? super V> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return condition("map has a single matching value", actual ->
                 selectSingle(actual, (key, value) -> predicate.test(value))
@@ -108,7 +108,7 @@ public final class MapCondition {
     }
 
     public static <K, V> PreservingCondition<Map<K, V>> allEntries(
-            CheckedBiPredicate<? super K, ? super V> predicate) {
+            BiPredicate<? super K, ? super V> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all map entries match", "not all map entries matched",
                 actual -> matchesAll(actual.entrySet(),
@@ -116,7 +116,7 @@ public final class MapCondition {
     }
 
     public static <K, V> PreservingCondition<Map<K, V>> anyEntry(
-            CheckedBiPredicate<? super K, ? super V> predicate) {
+            BiPredicate<? super K, ? super V> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any map entry matches", "no map entry matched",
                 actual -> matchesAny(actual.entrySet(),
@@ -124,39 +124,39 @@ public final class MapCondition {
     }
 
     public static <K, V> PreservingCondition<Map<K, V>> noEntry(
-            CheckedBiPredicate<? super K, ? super V> predicate) {
+            BiPredicate<? super K, ? super V> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no map entry matches", "a map entry matched",
                 actual -> !matchesAny(actual.entrySet(),
                         entry -> predicate.test(entry.getKey(), entry.getValue())));
     }
 
-    public static <K, V> PreservingCondition<Map<K, V>> allKeys(CheckedPredicate<? super K> predicate) {
+    public static <K, V> PreservingCondition<Map<K, V>> allKeys(Predicate<? super K> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all map keys match", "not all map keys matched", actual -> matchesAll(actual.keySet(), predicate));
     }
 
-    public static <K, V> PreservingCondition<Map<K, V>> anyKey(CheckedPredicate<? super K> predicate) {
+    public static <K, V> PreservingCondition<Map<K, V>> anyKey(Predicate<? super K> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any map key matches", "no map key matched", actual -> matchesAny(actual.keySet(), predicate));
     }
 
-    public static <K, V> PreservingCondition<Map<K, V>> noKey(CheckedPredicate<? super K> predicate) {
+    public static <K, V> PreservingCondition<Map<K, V>> noKey(Predicate<? super K> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no map key matches", "a map key matched", actual -> !matchesAny(actual.keySet(), predicate));
     }
 
-    public static <K, V> PreservingCondition<Map<K, V>> allValues(CheckedPredicate<? super V> predicate) {
+    public static <K, V> PreservingCondition<Map<K, V>> allValues(Predicate<? super V> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all map values match", "not all map values matched", actual -> matchesAll(actual.values(), predicate));
     }
 
-    public static <K, V> PreservingCondition<Map<K, V>> anyValue(CheckedPredicate<? super V> predicate) {
+    public static <K, V> PreservingCondition<Map<K, V>> anyValue(Predicate<? super V> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any map value matches", "no map value matched", actual -> matchesAny(actual.values(), predicate));
     }
 
-    public static <K, V> PreservingCondition<Map<K, V>> noValue(CheckedPredicate<? super V> predicate) {
+    public static <K, V> PreservingCondition<Map<K, V>> noValue(Predicate<? super V> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no map value matches", "a map value matched", actual -> !matchesAny(actual.values(), predicate));
     }
@@ -309,7 +309,7 @@ public final class MapCondition {
     }
 
     private static <K, V> Evaluation<Map.Entry<K, V>> selectSingle(Map<K, V> actual,
-            CheckedBiPredicate<? super K, ? super V> predicate) throws Exception {
+            BiPredicate<? super K, ? super V> predicate) {
         if (actual == null) {
             return unsatisfied("map was null");
         }
@@ -344,11 +344,11 @@ public final class MapCondition {
     }
 
     private static <M extends Map<?, ?>> PreservingCondition<M> preserving(String description, String mismatch,
-            CheckedPredicate<? super M> matches) {
+            Predicate<? super M> matches) {
         return preservingNonNull("map", description, mismatch, matches);
     }
 
-    private static boolean exactContent(Map<?, ?> actual, Map<?, ?> expected) throws Exception {
+    private static boolean exactContent(Map<?, ?> actual, Map<?, ?> expected) {
         return actual.size() == expected.size()
                 && exactly(actual.entrySet().iterator(), expected.entrySet(), MapCondition::entryMatches);
     }

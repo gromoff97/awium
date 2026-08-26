@@ -19,6 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.function.Consumer;
+import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 class AssertionAdapterTest {
@@ -124,13 +126,13 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void checkedExceptionEscapesYieldsUnchanged() {
-        var failure = new Exception("checked");
+    void runtimeExceptionEscapesYieldsUnchanged() {
+        var failure = new RuntimeException("runtime");
         var condition = Condition.<String, Long>yields(value -> {
             throw failure;
         });
 
-        assertSame(failure, assertThrows(Exception.class,
+        assertSame(failure, assertThrows(RuntimeException.class,
                 () -> condition.evaluate("42")));
     }
 
@@ -149,10 +151,10 @@ class AssertionAdapterTest {
     @Test
     void callbackFactoriesRejectNullCallbacks() {
         assertTrue(assertThrows(NullPointerException.class,
-                () -> asserted((CheckedConsumer<String>) null))
+                () -> asserted((Consumer<String>) null))
                 .getMessage().contains("assertion"));
         assertTrue(assertThrows(NullPointerException.class,
-                () -> yields((CheckedFunction<String, String>) null))
+                () -> yields((Function<String, String>) null))
                 .getMessage().contains("callback"));
     }
 

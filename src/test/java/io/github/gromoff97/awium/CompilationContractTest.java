@@ -15,6 +15,35 @@ class CompilationContractTest {
     Path temporaryDirectory;
 
     @Test
+    void conditionCallbacksComposeWithJdkInterfaces() throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+                import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.anyEntry;
+                import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.matches;
+                import java.util.function.*;
+
+                final class Contract {
+                    void check() {
+                        Predicate<String> present = value -> value != null;
+                        Predicate<String> text = present.and(value -> !value.isBlank());
+                        matches(Predicate.not(text).negate());
+
+                        Function<String, String> trim = String::trim;
+                        yields(Function.<String>identity().andThen(trim));
+                        condition("trimmed", trim.andThen(value -> satisfied(value)));
+
+                        Consumer<String> first = value -> {};
+                        asserted(first.andThen(value -> {}));
+
+                        BiPredicate<String, Integer> entry = (key, value) -> value > 0;
+                        anyEntry(entry.and((key, value) -> !key.isBlank()));
+                    }
+                }
+                """));
+    }
+
+    @Test
     void excludedDirectAndJdkSourceTypesDoNotCompile() throws IOException {
         for (String declaration : new String[] {
                 "String source = \"value\";",
@@ -336,23 +365,23 @@ class CompilationContractTest {
                 import static io.github.gromoff97.awium.conditioning.conditions.Condition.yields;
                 import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.equalTo;
                 import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
-                import io.github.gromoff97.awium.conditioning.CheckedPredicate;
                 import io.github.gromoff97.awium.conditioning.conditions.Condition;
                 import io.github.gromoff97.awium.conditioning.conditions.OptionalCondition;
                 import io.github.gromoff97.awium.sources.Source.OptionalSource;
+                import java.util.function.Predicate;
 
                 final class Contract {
                     void check(OptionalSource<Class<?>> classes, Class<?> expectedClass,
                             OptionalSource<Condition<String, String>> conditions,
                             Condition<String, String> expectedCondition,
-                            OptionalSource<CheckedPredicate<String>> predicates,
-                            CheckedPredicate<String> expectedPredicate,
+                            OptionalSource<Predicate<String>> predicates,
+                            Predicate<String> expectedPredicate,
                             OptionalSource<Object> objects, OptionalSource<String> strings) {
                         Class<?> classValue = await(classes).until(hasValue(expectedClass));
                         Condition<String, String> conditionValue =
                                 await(conditions).until(OptionalCondition.<Condition<String, String>>hasValue(expectedCondition));
-                        CheckedPredicate<String> predicateValue =
-                                await(predicates).until(OptionalCondition.<CheckedPredicate<String>>hasValue(expectedPredicate));
+                        Predicate<String> predicateValue =
+                                await(predicates).until(OptionalCondition.<Predicate<String>>hasValue(expectedPredicate));
                         String typed = await(objects).until(containsInstanceOf(String.class));
                         String matching = await(strings).until(hasValue(value -> !value.isBlank()));
                         String satisfying = await(strings).until(hasValue(equalTo("ready")));

@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.LongConsumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -543,7 +544,7 @@ class WaitEngineTest {
             FakeTime time,
             WaitConfiguration config,
             Source<S> source,
-            CheckedFunction<S, Evaluation<R>> condition) {
+            Function<S, Evaluation<R>> condition) {
         return wait(time, config, time, source, condition);
     }
 
@@ -552,7 +553,7 @@ class WaitEngineTest {
             WaitConfiguration config,
             LongConsumer parker,
             Source<S> source,
-            CheckedFunction<S, Evaluation<R>> condition) {
+            Function<S, Evaluation<R>> condition) {
         return new WaitEngine(config, time, parker).waitFor(source, condition);
     }
 

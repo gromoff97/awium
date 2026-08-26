@@ -1,9 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.conditioning.CheckedConsumer;
-import io.github.gromoff97.awium.conditioning.CheckedBiPredicate;
-import io.github.gromoff97.awium.conditioning.CheckedFunction;
-import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.await.AwaitAttempt;
 import io.github.gromoff97.awium.await.AwaitResult;
@@ -36,6 +32,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
+import java.util.function.BiPredicate;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
@@ -47,15 +46,11 @@ class PublicSurfaceTest {
                     .map(export -> export.source()).toList());
 
     @Test
-    void publicApiDoesNotLeakExcludedSurfaceAndKeepsCheckedSams() throws Exception {
+    void publicApiDoesNotLeakExcludedSurfaceAndKeepsSourceChecked() throws Exception {
         Set<Class<?>> types = discoveredPublicApiTypes();
         assertNoExcludedApiSurface(types);
         for (Class<?> type : types) {
-            if (Source.class.isAssignableFrom(type)
-                    || type == CheckedConsumer.class
-                    || type == CheckedFunction.class
-                    || type == CheckedPredicate.class
-                    || type == CheckedBiPredicate.class) {
+            if (Source.class.isAssignableFrom(type)) {
                 assertCheckedSam(type);
             }
         }
@@ -64,7 +59,6 @@ class PublicSurfaceTest {
     @Test
     void excludedSurfaceAuditCoversNamesAndNestedSignatures() {
         for (Class<?> type : List.of(ForbiddenFieldSignature.class,
-                ForbiddenConstructorSignature.class,
                 ForbiddenMethodName.class,
                 ForbiddenInheritedField.class,
                 ForbiddenGenericSignature.class,
@@ -73,7 +67,8 @@ class PublicSurfaceTest {
                     () -> assertNoExcludedApiSurface(Set.of(type)),
                     type.getSimpleName());
         }
-        assertNoExcludedApiSurface(Set.of(AllowedConcurrencyNames.class));
+        assertNoExcludedApiSurface(Set.of(AllowedConcurrencyNames.class,
+                AllowedJdkFunctionalSignature.class));
     }
 
     private static void assertNoExcludedApiSurface(Collection<Class<?>> types) {
@@ -202,7 +197,6 @@ class PublicSurfaceTest {
                 || Future.class.isAssignableFrom(type)
                 || Callable.class.isAssignableFrom(type)
                 || Runnable.class.isAssignableFrom(type)
-                || Predicate.class.isAssignableFrom(type)
                 || packageName.equals("org.assertj")
                 || packageName.startsWith("org.assertj.")
                 || packageName.equals("org.awaitility")
@@ -253,10 +247,6 @@ class PublicSurfaceTest {
         public Future<?> leaked;
     }
 
-    public static final class ForbiddenConstructorSignature {
-        public ForbiddenConstructorSignature(Predicate<?> predicate) {}
-    }
-
     public static final class ForbiddenMethodName {
         public void map() {}
     }
@@ -280,6 +270,12 @@ class PublicSurfaceTest {
         public FutureProof future;
 
         public PredicateResult value() { return null; }
+    }
+
+    public static final class AllowedJdkFunctionalSignature {
+        public void callbacks(Function<String, String> function,
+                Predicate<String> predicate, BiPredicate<String, Integer> biPredicate,
+                Consumer<String> consumer) {}
     }
 
     public static final class FutureProof {}

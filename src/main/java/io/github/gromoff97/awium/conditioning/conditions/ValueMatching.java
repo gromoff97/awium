@@ -1,13 +1,12 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
-import io.github.gromoff97.awium.conditioning.CheckedBiPredicate;
-import io.github.gromoff97.awium.conditioning.CheckedPredicate;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
 import static java.util.Objects.deepEquals;
 
@@ -17,7 +16,7 @@ final class ValueMatching {
         throw new AssertionError("Utility class");
     }
 
-    static <T> boolean matchesAny(Iterable<T> values, CheckedPredicate<? super T> matches) throws Exception {
+    static <T> boolean matchesAny(Iterable<T> values, Predicate<? super T> matches) {
         for (T value : values) {
             if (matches.test(value)) {
                 return true;
@@ -26,7 +25,7 @@ final class ValueMatching {
         return false;
     }
 
-    static <T> boolean matchesAll(Iterable<T> values, CheckedPredicate<? super T> matches) throws Exception {
+    static <T> boolean matchesAll(Iterable<T> values, Predicate<? super T> matches) {
         for (T value : values) {
             if (!matches.test(value)) {
                 return false;
@@ -36,7 +35,7 @@ final class ValueMatching {
     }
 
     static <A, E> boolean containsAll(Iterable<A> actual, Collection<E> expected,
-            CheckedBiPredicate<? super A, ? super E> matches) throws Exception {
+            BiPredicate<? super A, ? super E> matches) {
         var remainingExpected = new ArrayList<>(expected);
         for (A value : actual) {
             Iterator<E> candidates = remainingExpected.iterator();
@@ -53,7 +52,7 @@ final class ValueMatching {
     }
 
     static <A, E> boolean exactly(Iterator<A> actual, Collection<E> expected,
-            CheckedBiPredicate<? super A, ? super E> matches) throws Exception {
+            BiPredicate<? super A, ? super E> matches) {
         var remainingExpected = new ArrayList<>(expected);
         while (actual.hasNext()) {
             A value = actual.next();
@@ -73,7 +72,7 @@ final class ValueMatching {
         return remainingExpected.isEmpty();
     }
 
-    static boolean sameDistinctElements(Collection<?> actual, Collection<?> expected) throws Exception {
+    static boolean sameDistinctElements(Collection<?> actual, Collection<?> expected) {
         return matchesAll(actual, value -> matchesAny(expected, candidate -> equal(value, candidate)))
                 && matchesAll(expected, value -> matchesAny(actual, candidate -> equal(value, candidate)));
     }

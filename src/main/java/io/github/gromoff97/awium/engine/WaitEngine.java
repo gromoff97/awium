@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.engine;
 
 import io.github.gromoff97.awium.await.AwaitAttempt;
-import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.sources.Source;
 
@@ -9,6 +8,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
@@ -22,19 +22,19 @@ import static java.lang.Thread.currentThread;
 public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {
 
     public <S, R> WaitOutcome<S, R> waitFor(Source<? extends S> source,
-            CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator) {
+            Function<? super S, ? extends Evaluation<? extends R>> evaluator) {
         return waitFor(source, evaluator, ignored -> {});
     }
 
     public <S, R> Execution<S, R> recordedWaitFor(Source<? extends S> source,
-            CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator) {
+            Function<? super S, ? extends Evaluation<? extends R>> evaluator) {
         var history = new History<S, R>();
         WaitOutcome<S, R> outcome = waitFor(source, evaluator, history::record);
         return new Execution<>(outcome, history.attempts, history.totalAttempts);
     }
 
     private <S, R> WaitOutcome<S, R> waitFor(Source<? extends S> source,
-            CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator,
+            Function<? super S, ? extends Evaluation<? extends R>> evaluator,
             Consumer<AwaitAttempt<S, R>> recorder) {
         configuration.validatePair();
         long started = clock.getAsLong();
@@ -49,7 +49,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
     }
 
     private <S, R> WaitOutcome<S, R> acquire(Source<? extends S> source,
-            CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator,
+            Function<? super S, ? extends Evaluation<? extends R>> evaluator,
             ObservationEvaluator observations, Consumer<AwaitAttempt<S, R>> recorder,
             long started) {
         long deadline = after(started, configuration.upToNanos());
@@ -103,7 +103,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
     }
 
     private <S, R> WaitOutcome<S, R> persist(Source<? extends S> source,
-            CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator,
+            Function<? super S, ? extends Evaluation<? extends R>> evaluator,
             ObservationEvaluator observations, Consumer<AwaitAttempt<S, R>> recorder,
             long started,
             WaitOutcome.Satisfied<S, R> acquired) {

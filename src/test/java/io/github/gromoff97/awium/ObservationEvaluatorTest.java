@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.await.AwaitAttempt;
-import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
@@ -13,6 +12,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.Duration;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.ACQUISITION;
@@ -93,10 +93,10 @@ class ObservationEvaluatorTest {
     }
 
     @ParameterizedTest
-    @MethodSource("nonFatalThrowables")
+    @MethodSource("uncheckedNonFatalThrowables")
     void classifiesEveryOtherConditionThrowableAfterObservation(Throwable failure) {
         var actual = new Object();
-        var attempt = attempt(() -> actual, value -> throwFailure(failure));
+        var attempt = attempt(() -> actual, value -> throwUnchecked(failure));
 
         var outcome = assertInstanceOf(AwaitAttempt.Outcome.ConditionEvaluationFailed.class, attempt.outcome());
         assertSame(failure, outcome.failure());
@@ -161,9 +161,7 @@ class ObservationEvaluatorTest {
     void thrownConditionInterruptionIsPreservedWithActualAndRestored() {
         var actual = new Object();
         var interruption = new InterruptedException("condition stopped");
-        var attempt = attempt(() -> actual, value -> {
-            throw interruption;
-        });
+        var attempt = attempt(() -> actual, value -> throwUnchecked(interruption));
 
         var outcome = assertInstanceOf(AwaitAttempt.Outcome.ConditionEvaluationFailed.class, attempt.outcome());
         assertSame(interruption, outcome.failure());
@@ -213,12 +211,12 @@ class ObservationEvaluatorTest {
     }
 
     @ParameterizedTest
-    @MethodSource("nonFatalThrowables")
+    @MethodSource("uncheckedNonFatalThrowables")
     void abruptConditionThrowableWinsOverCallbackSetFlag(Throwable failure) {
         var actual = new Object();
         var attempt = attempt(() -> actual, value -> {
             currentThread().interrupt();
-            return throwFailure(failure);
+            return throwUnchecked(failure);
         });
 
         var outcome = assertInstanceOf(AwaitAttempt.Outcome.ConditionEvaluationFailed.class, attempt.outcome());
@@ -238,7 +236,7 @@ class ObservationEvaluatorTest {
     @MethodSource("fatalSignals")
     void fatalSignalsFromConditionEscapeRaw(Error fatal) {
         assertSame(fatal, assertThrows(fatal.getClass(),
-                () -> attempt(Object::new, value -> throwFailure(fatal))));
+                () -> attempt(Object::new, value -> throwUnchecked(fatal))));
     }
 
     @ParameterizedTest
@@ -273,6 +271,10 @@ class ObservationEvaluatorTest {
         return Stream.of(new Exception("checked"), new AssertionError("assertion"));
     }
 
+    private static Stream<Throwable> uncheckedNonFatalThrowables() {
+        return Stream.of(new RuntimeException("runtime"), new AssertionError("assertion"));
+    }
+
     private static Stream<Error> fatalSignals() {
         return Stream.of(new InternalError("fatal"), new ThreadDeath());
     }
@@ -284,12 +286,17 @@ class ObservationEvaluatorTest {
         throw (Error) failure;
     }
 
+    @SuppressWarnings("unchecked")
+    private static <T, E extends Throwable> T throwUnchecked(Throwable failure) throws E {
+        throw (E) failure;
+    }
+
     private static <T, R> Evaluation<R> failIfCalled(T ignored) {
         throw new AssertionError("condition must not be called");
     }
 
     private static <R> AwaitAttempt<Object, R> attempt(Source<Object> source,
-            CheckedFunction<Object, Evaluation<R>> condition) {
+            Function<Object, Evaluation<R>> condition) {
         var time = new FakeTime(0);
         return new WaitEngine(config(1, 2, 0), time, time).waitFor(source, actual -> {
             Evaluation<R> evaluation = condition.apply(actual);

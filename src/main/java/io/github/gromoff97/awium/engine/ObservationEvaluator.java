@@ -1,11 +1,11 @@
 package io.github.gromoff97.awium.engine;
 
 import io.github.gromoff97.awium.await.AwaitAttempt;
-import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.time.Duration;
+import java.util.function.Function;
 import java.util.function.LongSupplier;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNCONTROLLED;
@@ -21,7 +21,7 @@ final class ObservationEvaluator {
     }
 
     <S, R> EvaluatedAttempt<S, R> evaluate(Source<? extends S> source,
-            CheckedFunction<? super S, ? extends Evaluation<? extends R>> evaluator,
+            Function<? super S, ? extends Evaluation<? extends R>> evaluator,
             AwaitAttempt.Phase phase, long number, long executionStarted,
             long attemptStarted, long retrievalStarted) {
         S actual;
@@ -50,11 +50,10 @@ final class ObservationEvaluator {
             evaluation = evaluator.apply(actual);
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
-        } catch (InterruptedException interrupted) {
-            restoreInterrupt();
-            return afterConditionFailure(phase, number, executionStarted,
-                    attemptStarted, retrievalStarted, observed, actual, interrupted);
         } catch (Throwable failure) {
+            if (failure instanceof InterruptedException) {
+                restoreInterrupt();
+            }
             return afterConditionFailure(phase, number, executionStarted,
                     attemptStarted, retrievalStarted, observed, actual, failure);
         }

@@ -1,7 +1,8 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
-import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+
+import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preservingNonNull;
 import static java.util.Objects.requireNonNull;
@@ -43,14 +44,14 @@ public final class ComparableCondition {
     }
 
     private static <T extends Comparable<? super T>> PreservingCondition<T> comparing(String relation, T bound,
-            CheckedPredicate<? super T> matches) {
+            Predicate<? super T> matches) {
         requireNonNull(bound, "bound must not be null");
         return preserving("value is " + relation + " the bound",
                 "value was not " + relation + " the bound", matches);
     }
 
     private static <T> PreservingCondition<T> preserving(String description, String mismatch,
-            CheckedPredicate<? super T> matches) {
+            Predicate<? super T> matches) {
         return preservingNonNull("value", description, mismatch, matches);
     }
 

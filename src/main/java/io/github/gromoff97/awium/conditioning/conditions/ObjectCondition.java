@@ -1,8 +1,9 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
-import io.github.gromoff97.awium.conditioning.CheckedFunction;
-import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
@@ -74,12 +75,12 @@ public final class ObjectCondition {
                 actual -> !matchesAny(asList(values), candidate -> equal(actual, candidate)));
     }
 
-    public static <S> PreservingCondition<S> matches(CheckedPredicate<? super S> predicate) {
+    public static <S> PreservingCondition<S> matches(Predicate<? super S> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("value matches", "value did not match", predicate);
     }
 
-    public static <S, T, R> Condition<S, R> extracting(CheckedFunction<? super S, ? extends T> extractor,
+    public static <S, T, R> Condition<S, R> extracting(Function<? super S, ? extends T> extractor,
             Condition<? super T, ? extends R> nested) {
         requireNonNull(extractor, "extractor must not be null");
         requireNonNull(nested, "condition must not be null");
@@ -87,7 +88,7 @@ public final class ObjectCondition {
                 .continueIfSatisfied(value -> satisfied(value)));
     }
 
-    public static <S, T> Condition<S, T> extracting(CheckedFunction<? super S, ? extends T> extractor,
+    public static <S, T> Condition<S, T> extracting(Function<? super S, ? extends T> extractor,
             PreservingCondition<? super T> nested) {
         requireNonNull(nested, "condition must not be null");
         Condition<? super T, ?> delegate = nested.delegate();

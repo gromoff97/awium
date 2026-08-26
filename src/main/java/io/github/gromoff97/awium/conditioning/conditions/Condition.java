@@ -1,11 +1,11 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
-import io.github.gromoff97.awium.conditioning.CheckedConsumer;
-import io.github.gromoff97.awium.conditioning.CheckedFunction;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.util.Locale;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
@@ -16,19 +16,19 @@ public abstract class Condition<S, R> {
     protected Condition() {
     }
 
-    public abstract Evaluation<R> evaluate(S actual) throws Exception;
+    public abstract Evaluation<R> evaluate(S actual);
 
     public abstract String description();
 
     public static <S, R> Condition<S, R> condition(String description,
-            CheckedFunction<? super S, Evaluation<R>> evaluation) {
+            Function<? super S, Evaluation<R>> evaluation) {
         if (requireNonNull(description, "description must not be null").isBlank()) {
             throw new IllegalArgumentException("description must not be blank");
         }
         requireNonNull(evaluation, "evaluation must not be null");
         return new Condition<>() {
             @Override
-            public Evaluation<R> evaluate(S actual) throws Exception {
+            public Evaluation<R> evaluate(S actual) {
                 return evaluation.apply(actual);
             }
 
@@ -39,7 +39,7 @@ public abstract class Condition<S, R> {
         };
     }
 
-    public static <S> PreservingCondition<S> asserted(CheckedConsumer<? super S> assertion) {
+    public static <S> PreservingCondition<S> asserted(Consumer<? super S> assertion) {
         requireNonNull(assertion, "assertion must not be null");
         return new PreservingCondition<>(evaluated("value satisfies assertion",
                 "value did not satisfy assertion", actual -> {
@@ -48,13 +48,13 @@ public abstract class Condition<S, R> {
         }));
     }
 
-    public static <S, R> Condition<S, R> yields(CheckedFunction<? super S, ? extends R> callback) {
+    public static <S, R> Condition<S, R> yields(Function<? super S, ? extends R> callback) {
         requireNonNull(callback, "callback must not be null");
         return evaluated("callback yields a result", "callback did not yield a result", callback);
     }
 
     private static <S, R> Condition<S, R> evaluated(String description, String mismatch,
-            CheckedFunction<? super S, ? extends R> function) {
+            Function<? super S, ? extends R> function) {
         return condition(description, actual -> {
             try {
                 return satisfied(function.apply(actual));

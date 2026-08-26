@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium.conditioning;
 
+import java.util.function.Function;
+
 import static java.util.Objects.requireNonNull;
 
 public final class Evaluation<R> {
@@ -35,7 +37,7 @@ public final class Evaluation<R> {
     }
 
     public <T> Evaluation<T> continueIfSatisfied(
-            CheckedFunction<? super R, ? extends Evaluation<? extends T>> continuation) throws Exception {
+            Function<? super R, ? extends Evaluation<? extends T>> continuation) {
         requireNonNull(continuation, "continuation must not be null");
         return status() == Status.SATISFIED ? copy(continuation.apply(result)) : failure(this);
     }

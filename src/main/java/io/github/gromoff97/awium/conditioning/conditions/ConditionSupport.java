@@ -1,11 +1,11 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
-import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.function.IntPredicate;
+import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
@@ -25,13 +25,13 @@ final class ConditionSupport {
     }
 
     static <S> PreservingCondition<S> preserving(String description, String mismatch,
-            CheckedPredicate<? super S> matches) {
+            Predicate<? super S> matches) {
         return new PreservingCondition<>(condition(description, actual ->
                 matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch)));
     }
 
     static <S> PreservingCondition<S> preservingNonNull(String subject, String description,
-            String mismatch, CheckedPredicate<? super S> matches) {
+            String mismatch, Predicate<? super S> matches) {
         return new PreservingCondition<>(condition(description, actual -> actual == null
                 ? unsatisfied(subject + " was null")
                 : matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch)));

@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
-import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 
 import java.util.Locale;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preservingNonNull;
@@ -146,7 +146,7 @@ public final class StringCondition {
     }
 
     private static PreservingCondition<String> matching(String description, String mismatch,
-            CheckedPredicate<String> matches) {
+            Predicate<String> matches) {
         return preservingNonNull("string", description, mismatch, matches);
     }
 

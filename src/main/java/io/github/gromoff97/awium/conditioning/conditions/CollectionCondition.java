@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
-import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
@@ -12,6 +11,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.SequencedCollection;
+import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
@@ -98,7 +98,7 @@ public final class CollectionCondition {
         return size(expectedSize);
     }
 
-    public static <E> Condition<Collection<E>, E> single(CheckedPredicate<? super E> predicate) {
+    public static <E> Condition<Collection<E>, E> single(Predicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return condition("collection has a single matching element", actual -> selectSingle(actual, predicate));
     }
@@ -110,19 +110,19 @@ public final class CollectionCondition {
                         .continueIfSatisfied(value -> satisfied(type.cast(value))));
     }
 
-    public static <E> PreservingCondition<Collection<E>> all(CheckedPredicate<? super E> predicate) {
+    public static <E> PreservingCondition<Collection<E>> all(Predicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all collection elements match", "not all collection elements matched",
                 actual -> matchesAll(actual, predicate));
     }
 
-    public static <E> PreservingCondition<Collection<E>> any(CheckedPredicate<? super E> predicate) {
+    public static <E> PreservingCondition<Collection<E>> any(Predicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any collection element matches", "no collection element matched",
                 actual -> matchesAny(actual, predicate));
     }
 
-    public static <E> PreservingCondition<Collection<E>> none(CheckedPredicate<? super E> predicate) {
+    public static <E> PreservingCondition<Collection<E>> none(Predicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no collection element matches", "a collection element matched",
                 actual -> !matchesAny(actual, predicate));
@@ -302,7 +302,7 @@ public final class CollectionCondition {
     public static final SelectedCondition<SequencedCollection<?>, CollectionSource<?>> first = position(
             "first", SequencedCollection::getFirst);
 
-    public static <E> Condition<SequencedCollection<E>, E> first(CheckedPredicate<? super E> predicate) {
+    public static <E> Condition<SequencedCollection<E>, E> first(Predicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return condition("collection has a matching element", actual -> selectFirst(actual, predicate));
     }
@@ -310,7 +310,7 @@ public final class CollectionCondition {
     public static final SelectedCondition<SequencedCollection<?>, CollectionSource<?>> last = position(
             "last", SequencedCollection::getLast);
 
-    public static <E> Condition<SequencedCollection<E>, E> last(CheckedPredicate<? super E> predicate) {
+    public static <E> Condition<SequencedCollection<E>, E> last(Predicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return condition("collection has a last matching element",
                 actual -> selectFirst(actual == null ? null : actual.reversed(), predicate));
@@ -320,7 +320,7 @@ public final class CollectionCondition {
         return element(index, value -> true);
     }
 
-    public static <E> Condition<List<E>, E> element(int index, CheckedPredicate<? super E> predicate) {
+    public static <E> Condition<List<E>, E> element(int index, Predicate<? super E> predicate) {
         if (index < 0) {
             throw new IllegalArgumentException("index must not be negative");
         }
@@ -347,7 +347,7 @@ public final class CollectionCondition {
     }
 
     private static <E> Evaluation<E> selectSingle(Collection<E> actual,
-            CheckedPredicate<? super E> predicate) throws Exception {
+            Predicate<? super E> predicate) {
         if (actual == null) {
             return unsatisfied("collection was null");
         }
@@ -367,7 +367,7 @@ public final class CollectionCondition {
     }
 
     private static <E> Evaluation<E> selectFirst(Iterable<E> actual,
-            CheckedPredicate<? super E> predicate) throws Exception {
+            Predicate<? super E> predicate) {
         if (actual == null) {
             return unsatisfied("collection was null");
         }
@@ -397,7 +397,7 @@ public final class CollectionCondition {
     }
 
     private static <C extends Collection<?>> PreservingCondition<C> preserving(String description, String mismatch,
-            CheckedPredicate<? super C> matches) {
+            Predicate<? super C> matches) {
         return preservingNonNull("collection", description, mismatch, matches);
     }
 
@@ -415,7 +415,7 @@ public final class CollectionCondition {
         return true;
     }
 
-    private static boolean exactContentInAnyOrder(Collection<?> actual, Collection<?> expected) throws Exception {
+    private static boolean exactContentInAnyOrder(Collection<?> actual, Collection<?> expected) {
         if (actual.size() != expected.size()) {
             return false;
         }

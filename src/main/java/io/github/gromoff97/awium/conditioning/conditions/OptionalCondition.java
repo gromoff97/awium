@@ -1,12 +1,12 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
-import io.github.gromoff97.awium.conditioning.CheckedPredicate;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
@@ -41,7 +41,7 @@ public final class OptionalCondition {
                 actual -> !equal(actual, unexpected));
     }
 
-    public static <T> Condition<Optional<T>, T> hasValue(CheckedPredicate<? super T> predicate) {
+    public static <T> Condition<Optional<T>, T> hasValue(Predicate<? super T> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return selected("optional value matches", "optional value did not match", predicate);
     }
@@ -65,7 +65,7 @@ public final class OptionalCondition {
     }
 
     private static <T> Condition<Optional<T>, T> selected(String description, String mismatch,
-            CheckedPredicate<? super T> predicate) {
+            Predicate<? super T> predicate) {
         return condition(description, actual -> present(actual)
                 .continueIfSatisfied(value -> predicate.test(value)
                         ? satisfied(value) : unsatisfied(mismatch)));
