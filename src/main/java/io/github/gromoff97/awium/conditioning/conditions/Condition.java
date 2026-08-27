@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
 import io.github.gromoff97.awium.sources.Source;
 
@@ -14,8 +15,7 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatis
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static java.util.Objects.requireNonNull;
 
-public sealed interface Condition<S, R> extends ConditionStage<S, R>
-        permits ConditionRuntime.RuntimeCondition {
+public sealed interface Condition<S, R> extends ResultStage<S, R> permits ConditionRuntime.RuntimeCondition {
 
     static <S, R> Condition<S, R> condition(String description,
             Function<? super S, Evaluation<R>> evaluation) {
@@ -38,9 +38,8 @@ public sealed interface Condition<S, R> extends ConditionStage<S, R>
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <S, R> Condition<S, List<R>> caught(ConditionStage<? super S, R> first,
-            ConditionStage<? super S, R> second,
-            ConditionStage<? super S, R>... rest) {
+    static <S, R> Condition<S, List<R>> caught(ResultStage<S, R> first,
+            ResultStage<S, R> second, ResultStage<S, R>... rest) {
         return ConditionRuntime.caught(first, second, rest);
     }
 
@@ -70,11 +69,11 @@ public sealed interface Condition<S, R> extends ConditionStage<S, R>
                 actual -> satisfied(callback.apply(actual)));
     }
 
-    default ConditionStage<S, R> because(String explanation) {
+    default ResultStage<S, R> because(String explanation) {
         return ConditionRuntime.explained(this, explanation);
     }
 
-    default ConditionStage<S, R> because(String format, Object... arguments) {
+    default ResultStage<S, R> because(String format, Object... arguments) {
         return ConditionRuntime.explained(this,
                 formattedExplanation(format, arguments));
     }
@@ -85,11 +84,10 @@ public sealed interface Condition<S, R> extends ConditionStage<S, R>
         return String.format(Locale.ROOT, format, arguments);
     }
 
-    public sealed interface PreservingStage<S> permits PreservingCondition {
+    public sealed interface PreservingStage<S> extends ConditionStage<S, S> permits PreservingCondition {
     }
 
-    public sealed interface PreservingCondition<S> extends PreservingStage<S>
-            permits ConditionRuntime.RuntimePreservingCondition {
+    public sealed interface PreservingCondition<S> extends PreservingStage<S> permits ConditionRuntime.RuntimePreservingCondition {
 
         default PreservingStage<S> because(String explanation) {
             return ConditionRuntime.explained(this, explanation);
@@ -101,11 +99,10 @@ public sealed interface Condition<S, R> extends ConditionStage<S, R>
         }
     }
 
-    public sealed interface SelectedStage<S, F extends Source<?>> permits SelectedCondition {
+    public sealed interface SelectedStage<S, F extends Source<?>> extends ConditionStage<S, Object> permits SelectedCondition {
     }
 
-    public sealed interface SelectedCondition<S, F extends Source<?>> extends SelectedStage<S, F>
-            permits ConditionRuntime.RuntimeSelectedCondition {
+    public sealed interface SelectedCondition<S, F extends Source<?>> extends SelectedStage<S, F> permits ConditionRuntime.RuntimeSelectedCondition {
 
         default SelectedStage<S, F> because(String explanation) {
             return ConditionRuntime.explained(this, explanation);
@@ -117,11 +114,10 @@ public sealed interface Condition<S, R> extends ConditionStage<S, R>
         }
     }
 
-    public sealed interface SelectedSequenceStage<S, F extends Source<?>> permits SelectedSequenceCondition {
+    public sealed interface SelectedSequenceStage<S, F extends Source<?>> extends ConditionStage<S, List<Object>> permits SelectedSequenceCondition {
     }
 
-    public sealed interface SelectedSequenceCondition<S, F extends Source<?>>
-            extends SelectedSequenceStage<S, F>
+    public sealed interface SelectedSequenceCondition<S, F extends Source<?>> extends SelectedSequenceStage<S, F>
             permits ConditionRuntime.RuntimeSelectedSequenceCondition {
 
         default SelectedSequenceStage<S, F> because(String explanation) {

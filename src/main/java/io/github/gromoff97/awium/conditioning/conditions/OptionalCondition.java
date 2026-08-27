@@ -3,12 +3,12 @@ package io.github.gromoff97.awium.conditioning.conditions;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
+import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
 import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
@@ -16,8 +16,6 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preserve;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.equal;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
-import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.description;
-import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.evaluator;
 import static java.util.Objects.requireNonNull;
 
 public final class OptionalCondition {
@@ -61,9 +59,9 @@ public final class OptionalCondition {
                         ? satisfied(type.cast(value)) : unsatisfied("optional value had a different type")));
     }
 
-    public static <T, R> Condition<Optional<T>, R> hasValue(ConditionStage<? super T, ? extends R> nested) {
-        return ConditionRuntime.condition("optional value " + description(nested), () -> {
-            Function<T, Evaluation<R>> nestedEvaluator = evaluator(nested);
+    public static <T, R> Condition<Optional<T>, R> hasValue(ResultStage<? super T, ? extends R> nested) {
+        return ConditionRuntime.condition("optional value " + nested.description(), () -> {
+            var nestedEvaluator = nested.newEvaluator();
             return actual -> present(actual).continueIfSatisfied(nestedEvaluator);
         });
     }

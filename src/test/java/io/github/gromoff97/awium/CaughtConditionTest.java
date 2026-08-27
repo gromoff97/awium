@@ -3,7 +3,7 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.await.AwaitAttempt;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
-import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
+import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitPersistenceException;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
@@ -206,7 +206,7 @@ class CaughtConditionTest {
     void validatesEveryStageBeforeEvaluation() {
         Predicate<String> predicate = value -> true;
         PreservingStage<String> preserving = matches(predicate);
-        ConditionStage<String, Integer> transforming = condition("length",
+        ResultStage<String, Integer> transforming = condition("length",
                 value -> satisfied(value.length()));
 
         assertThrows(NullPointerException.class,
@@ -222,10 +222,10 @@ class CaughtConditionTest {
         assertThrows(NullPointerException.class,
                 () -> caught(preserving, preserving, (PreservingStage<String>) null));
         assertThrows(NullPointerException.class,
-                () -> caught((ConditionStage<String, Integer>) null, transforming));
+                () -> caught((ResultStage<String, Integer>) null, transforming));
         assertThrows(NullPointerException.class,
                 () -> caught(transforming, transforming,
-                        (ConditionStage<String, Integer>) null));
+                        (ResultStage<String, Integer>) null));
     }
 
     @Test

@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.await;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
+import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
@@ -52,17 +52,17 @@ abstract class AbstractAwait<S, A> {
     abstract A reconfigured(WaitConfiguration configuration);
 
     protected final <R> R complete(Function<? super S, ? extends Evaluation<? extends R>> evaluator,
-            Object condition) {
-        String description = ConditionRuntime.description(condition);
-        String explanation = ConditionRuntime.explanation(condition);
+            ConditionStage<?, ?> condition) {
+        String description = condition.description();
+        String explanation = condition.explanation();
         return FailureFactory.complete(engine.waitFor(source, evaluator),
                 description, explanation, engine.configuration());
     }
 
     protected final <R> AwaitResult<S, R> capture(Function<? super S, ? extends Evaluation<? extends R>> evaluator,
-            Object condition) {
-        String description = ConditionRuntime.description(condition);
-        String explanation = ConditionRuntime.explanation(condition);
+            ConditionStage<?, ?> condition) {
+        String description = condition.description();
+        String explanation = condition.explanation();
         return FailureFactory.capture(engine.recordedWaitFor(source, evaluator),
                 description, explanation, engine.configuration());
     }

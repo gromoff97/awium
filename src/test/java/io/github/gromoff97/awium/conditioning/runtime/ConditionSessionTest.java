@@ -1,32 +1,49 @@
 package io.github.gromoff97.awium.conditioning.runtime;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.conditions.Condition;
+import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
+import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
+import io.github.gromoff97.awium.conditioning.conditions.ObjectCondition;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+import static io.github.gromoff97.awium.conditioning.conditions.Condition.caught;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class ConditionSessionTest {
 
     @Test
-    void oneEvaluatorRetainsProgressAndTheNextEvaluatorStartsFresh() {
-        Condition<Integer, Integer> condition = ConditionRuntime.condition(
+    void everyConditionFamilyUsesTheTypedStageContract() {
+        ConditionStage<Integer, Integer> ordinary = ConditionRuntime.condition(
                 "counted", () -> {
                     int[] calls = {0};
                     return ignored -> satisfied(++calls[0]);
                 });
+        ConditionStage<Integer, Integer> preserving =
+                ObjectCondition.matches(value -> value > 0);
+        ConditionStage<Collection<?>, Object> selected = CollectionCondition.single;
+        ConditionStage<Collection<?>, List<Object>> sequence =
+                caught(CollectionCondition.single, CollectionCondition.single);
 
-        Function<Integer, Evaluation<Integer>> first =
-                ConditionRuntime.evaluator(condition);
-        Function<Integer, Evaluation<Integer>> second =
-                ConditionRuntime.evaluator(condition);
+        assertEquals("counted", ordinary.description());
+        assertNull(ordinary.explanation());
+        Function<? super Integer, ? extends Evaluation<? extends Integer>> first =
+                ordinary.newEvaluator();
+        Function<? super Integer, ? extends Evaluation<? extends Integer>> second =
+                ordinary.newEvaluator();
 
         assertEquals(1, first.apply(0).result());
         assertEquals(2, first.apply(0).result());
         assertEquals(1, second.apply(0).result());
+        assertNotNull(preserving);
+        assertNotNull(selected);
+        assertNotNull(sequence);
     }
 }

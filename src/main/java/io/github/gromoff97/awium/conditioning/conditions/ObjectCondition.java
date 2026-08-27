@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
+import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
 
 import java.util.function.Function;
@@ -16,8 +16,6 @@ import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.equal;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
-import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.description;
-import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.evaluator;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
@@ -86,10 +84,10 @@ public final class ObjectCondition {
     }
 
     public static <S, T, R> Condition<S, R> extracting(Function<? super S, ? extends T> extractor,
-            ConditionStage<? super T, ? extends R> nested) {
+            ResultStage<? super T, ? extends R> nested) {
         requireNonNull(extractor, "extractor must not be null");
-        return ConditionRuntime.condition("extracted " + description(nested), () -> {
-            Function<T, Evaluation<R>> nestedEvaluator = evaluator(nested);
+        return ConditionRuntime.condition("extracted " + nested.description(), () -> {
+            var nestedEvaluator = nested.newEvaluator();
             return actual -> nestedEvaluator.apply(extractor.apply(actual));
         });
     }

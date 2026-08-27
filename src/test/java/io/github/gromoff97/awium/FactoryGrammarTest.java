@@ -10,7 +10,7 @@ import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCon
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
-import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
+import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 import io.github.gromoff97.awium.sources.Source.MapSource;
@@ -59,7 +59,7 @@ class FactoryGrammarTest {
         var object = await((Source<String>) () -> "value").every(ofSeconds(20));
         assertNull("condition", () -> object.until(
                 (PreservingStage<String>) null));
-        assertNull("condition", () -> object.until((ConditionStage<String, String>) null));
+        assertNull("condition", () -> object.until((ResultStage<String, String>) null));
 
         var optional = await((OptionalSource<String>) Optional::empty).every(ofSeconds(20));
         assertNull("condition", () -> optional.until(

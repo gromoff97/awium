@@ -3,6 +3,7 @@ package io.github.gromoff97.awium.conditioning.conditions;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
+import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
 import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
 import io.github.gromoff97.awium.sources.Source.MapSource;
@@ -10,7 +11,6 @@ import io.github.gromoff97.awium.sources.Source.MapSource;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiPredicate;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
@@ -27,8 +27,6 @@ import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.ma
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.sameDistinctElements;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
-import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.description;
-import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.evaluator;
 import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.selected;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
@@ -155,9 +153,9 @@ public final class MapCondition {
     }
 
     public static <K, V, R> Condition<Map<K, V>, R> valueFor(K key,
-            ConditionStage<? super V, ? extends R> nested) {
-        return ConditionRuntime.condition("map value " + description(nested), () -> {
-            Function<V, Evaluation<R>> nestedEvaluator = evaluator(nested);
+            ResultStage<? super V, ? extends R> nested) {
+        return ConditionRuntime.condition("map value " + nested.description(), () -> {
+            var nestedEvaluator = nested.newEvaluator();
             return actual -> findEntry(actual, key)
                     .continueIfSatisfied(entry -> nestedEvaluator.apply(entry.getValue()));
         });

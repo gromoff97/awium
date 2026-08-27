@@ -2,7 +2,6 @@ package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.*;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
-import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.explanation;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -56,21 +55,21 @@ class ConditionDecorationTest {
         var selected = OptionalCondition.present;
 
         assertEquals("the value must be ready",
-                explanation(condition.because("the value must be ready")));
+                condition.because("the value must be ready").explanation());
         assertEquals("attempt 3",
-                explanation(condition.because("attempt %d", 3)));
+                condition.because("attempt %d", 3).explanation());
         assertEquals("preserving",
-                explanation(preserving.because("preserving")));
+                preserving.because("preserving").explanation());
         assertEquals("selected value",
-                explanation(selected.because("selected %s", "value")));
-        assertEquals("collection value", explanation(
-                CollectionCondition.nonEmpty.because("collection %s", "value")));
-        assertEquals("single element", explanation(
-                CollectionCondition.single.because("single %s", "element")));
-        assertEquals("map value", explanation(
-                MapCondition.nonEmpty.because("map %s", "value")));
-        assertEquals("single entry", explanation(
-                MapCondition.singleEntry.because("single %s", "entry")));
+                selected.because("selected %s", "value").explanation());
+        assertEquals("collection value",
+                CollectionCondition.nonEmpty.because("collection %s", "value").explanation());
+        assertEquals("single element",
+                CollectionCondition.single.because("single %s", "element").explanation());
+        assertEquals("map value",
+                MapCondition.nonEmpty.because("map %s", "value").explanation());
+        assertEquals("single entry",
+                MapCondition.singleEntry.because("single %s", "entry").explanation());
     }
 
     @Test
@@ -113,8 +112,8 @@ class ConditionDecorationTest {
         Locale original = Locale.getDefault(Locale.Category.FORMAT);
         Locale.setDefault(Locale.Category.FORMAT, Locale.GERMANY);
         try {
-            assertEquals("1.5", explanation(
-                    asserted((Object actual) -> {}).because("%.1f", 1.5)));
+            assertEquals("1.5",
+                    asserted((Object actual) -> {}).because("%.1f", 1.5).explanation());
         } finally {
             Locale.setDefault(Locale.Category.FORMAT, original);
         }

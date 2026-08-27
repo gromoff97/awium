@@ -2,7 +2,7 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
-import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
+import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.await.AwaitAttempt;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
@@ -114,7 +114,7 @@ class DiagnosticsSnapshotTest {
         var frame = new StackTraceElement("Payments", "verifyPending",
                 "Payments.java", 42);
         assertion.setStackTrace(new StackTraceElement[]{frame});
-        ConditionStage<String, String> assertedPending = Condition.<String, String>condition(
+        ResultStage<String, String> assertedPending = Condition.<String, String>condition(
                 "payment status is pending", value -> assertionUnsatisfied(
                         "payment status was created", assertion))
                 .because("processing must begin before completion");
@@ -153,7 +153,7 @@ class DiagnosticsSnapshotTest {
     void caughtNestedUncontrolledRetainsCauseAndStage() {
         var time = new FakeTime(0);
         var cause = new IllegalStateException("status callback failed");
-        ConditionStage<String, String> brokenPending = Condition.<String, String>condition(
+        ResultStage<String, String> brokenPending = Condition.<String, String>condition(
                 "payment status is pending", value -> {
                     throw cause;
                 }).because("processing must begin before completion");
@@ -613,24 +613,24 @@ class DiagnosticsSnapshotTest {
         return FailureFactory.complete(outcome, description, explanation, configuration);
     }
 
-    private static ConditionStage<String, java.util.List<String>> lifecycle(
-            ConditionStage<String, String> pending,
-            ConditionStage<String, String> completed) {
+    private static ResultStage<String, java.util.List<String>> lifecycle(
+            ResultStage<String, String> pending,
+            ResultStage<String, String> completed) {
         return caught(status("created", "payment status is created", null),
                 pending, completed).because("payment must complete its lifecycle");
     }
 
-    private static ConditionStage<String, String> pending() {
+    private static ResultStage<String, String> pending() {
         return status("pending", "payment status is pending",
                 "processing must begin before completion");
     }
 
-    private static ConditionStage<String, String> completed() {
+    private static ResultStage<String, String> completed() {
         return status("completed", "payment status is completed",
                 "completion must remain stable");
     }
 
-    private static ConditionStage<String, String> status(String expected,
+    private static ResultStage<String, String> status(String expected,
             String description, String importance) {
         Condition<String, String> condition = condition(description,
                 value -> value.equals(expected)
