@@ -62,7 +62,7 @@ record ObservationEvaluator<S, R>(Source<? extends S> source,
         AwaitAttempt.Timing.AfterObservation timing = afterObservation(attemptStarted,
                 retrievalStarted, observed, completed);
         if (evaluation == null) {
-            return evaluated(phase, number,
+            return new AwaitAttempt<>(number, phase,
                     new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(timing, actual,
                             new NullPointerException("condition returned null Evaluation"),
                             Evaluation.Context.Plain.INSTANCE));
@@ -74,7 +74,7 @@ record ObservationEvaluator<S, R>(Source<? extends S> source,
                     evaluation.mismatch(), evaluation.assertionCause(), evaluation.context());
             case UNCONTROLLED -> uncontrolled(timing, actual, evaluation.uncontrolledCause(), evaluation.context());
         };
-        return evaluated(phase, number, outcome);
+        return new AwaitAttempt<>(number, phase, outcome);
     }
 
     private AwaitAttempt<S, R> beforeObservation(AwaitAttempt.Phase phase,
@@ -83,7 +83,8 @@ record ObservationEvaluator<S, R>(Source<? extends S> source,
         long completed = clock.getAsLong();
         var timing = new AwaitAttempt.Timing.BeforeObservation(offset(executionStarted, attemptStarted),
                 offset(executionStarted, retrievalStarted), offset(executionStarted, completed));
-        return evaluated(phase, number, new AwaitAttempt.Outcome.SourceRetrievalFailed<>(timing, failure));
+        return new AwaitAttempt<>(number, phase,
+                new AwaitAttempt.Outcome.SourceRetrievalFailed<>(timing, failure));
     }
 
     private AwaitAttempt<S, R> afterSourceInterruption(AwaitAttempt.Phase phase, long number,
@@ -92,7 +93,8 @@ record ObservationEvaluator<S, R>(Source<? extends S> source,
         restoreInterrupt();
         long completed = clock.getAsLong();
         var timing = afterObservation(attemptStarted, retrievalStarted, observed, completed);
-        return evaluated(phase, number, new AwaitAttempt.Outcome.SourceInterrupted<>(timing, actual, interruption));
+        return new AwaitAttempt<>(number, phase,
+                new AwaitAttempt.Outcome.SourceInterrupted<>(timing, actual, interruption));
     }
 
     private AwaitAttempt<S, R> afterConditionFailure(AwaitAttempt.Phase phase, long number,
@@ -100,7 +102,7 @@ record ObservationEvaluator<S, R>(Source<? extends S> source,
             S actual, Throwable failure) {
         long completed = clock.getAsLong();
         var timing = afterObservation(attemptStarted, retrievalStarted, observed, completed);
-        return evaluated(phase, number,
+        return new AwaitAttempt<>(number, phase,
                 new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(timing, actual,
                         failure, Evaluation.Context.Plain.INSTANCE));
     }
@@ -123,11 +125,6 @@ record ObservationEvaluator<S, R>(Source<? extends S> source,
                 offset(executionStarted, retrievalStarted),
                 offset(executionStarted, observed),
                 offset(executionStarted, completed));
-    }
-
-    private static <S, R> AwaitAttempt<S, R> evaluated(AwaitAttempt.Phase phase, long number,
-            AwaitAttempt.Outcome<S, R> outcome) {
-        return new AwaitAttempt<>(number, phase, outcome);
     }
 
     private static Duration offset(long executionStarted, long stageNanos) {

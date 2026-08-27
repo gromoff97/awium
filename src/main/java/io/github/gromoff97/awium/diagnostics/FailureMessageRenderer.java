@@ -88,8 +88,9 @@ final class FailureMessageRenderer {
         if (!(context.outcome instanceof WaitOutcome.Uncontrolled<?, ?>)) {
             timing(out, context);
         }
-        if (context.outcomeCause != null) {
-            cause(out, throwableDiagnostic(context.outcomeCause));
+        Throwable failure = context.diagnostic.failure();
+        if (failure != null) {
+            cause(out, throwableDiagnostic(failure));
         }
         return finish(out);
     }
@@ -286,7 +287,6 @@ final class FailureMessageRenderer {
         private final String description;
         private final String explanation;
         private final WaitConfiguration configuration;
-        private final Throwable outcomeCause;
         private final AttemptDiagnostic diagnostic;
 
         private String actual;
@@ -302,7 +302,6 @@ final class FailureMessageRenderer {
                     "configuration must not be null");
             this.diagnostic = requireNonNull(diagnostic,
                     "attempt diagnostic must not be null");
-            this.outcomeCause = diagnostic.failure();
         }
 
         private String actualValue() {

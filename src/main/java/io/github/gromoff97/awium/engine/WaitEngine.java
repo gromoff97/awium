@@ -60,20 +60,13 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
 
         for (long number = 1;; number++) {
             long attemptStarted = completed;
-            if (number > 1) {
-                long delay = min(configuration.everyNanos(), remaining(completed, deadline));
-                AwaitAttempt<S, R> parked = parkUntil(after(completed, delay),
-                        ACQUISITION, number, started, attemptStarted);
-                if (parked != null) {
-                    recorder.accept(parked);
-                    return new WaitOutcome.Uncontrolled<>(parked);
-                }
-            }
-
-            AwaitAttempt<S, R> interrupted = interruptedBefore(ACQUISITION, number, started, attemptStarted);
-            if (interrupted != null) {
-                recorder.accept(interrupted);
-                return new WaitOutcome.Uncontrolled<>(interrupted);
+            AwaitAttempt<S, R> preparationFailure = number == 1
+                    ? interruptedBefore(ACQUISITION, number, started, attemptStarted)
+                    : waitBeforeAttempt(min(configuration.everyNanos(), remaining(completed, deadline)),
+                            ACQUISITION, number, started, attemptStarted);
+            if (preparationFailure != null) {
+                recorder.accept(preparationFailure);
+                return new WaitOutcome.Uncontrolled<>(preparationFailure);
             }
 
             long retrievalStarted = clock.getAsLong();
@@ -109,17 +102,11 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
         for (long number = acquired.attempt().number() + 1;; number++) {
             long attemptStarted = completed;
             long delay = min(configuration.everyNanos(), remaining(completed, deadline));
-            AwaitAttempt<S, R> parked = parkUntil(after(completed, delay),
+            AwaitAttempt<S, R> preparationFailure = waitBeforeAttempt(delay,
                     PERSISTENCE, number, started, attemptStarted);
-            if (parked != null) {
-                recorder.accept(parked);
-                return new WaitOutcome.Uncontrolled<>(parked);
-            }
-
-            AwaitAttempt<S, R> interrupted = interruptedBefore(PERSISTENCE, number, started, attemptStarted);
-            if (interrupted != null) {
-                recorder.accept(interrupted);
-                return new WaitOutcome.Uncontrolled<>(interrupted);
+            if (preparationFailure != null) {
+                recorder.accept(preparationFailure);
+                return new WaitOutcome.Uncontrolled<>(preparationFailure);
             }
 
             long retrievalStarted = clock.getAsLong();
@@ -137,6 +124,16 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
                 return new WaitOutcome.Satisfied<>(attempt);
             }
         }
+    }
+
+    private <S, R> AwaitAttempt<S, R> waitBeforeAttempt(long delay,
+            AwaitAttempt.Phase phase, long number, long started,
+            long attemptStarted) {
+        AwaitAttempt<S, R> failure = parkUntil(after(attemptStarted, delay),
+                phase, number, started, attemptStarted);
+        return failure != null
+                ? failure
+                : interruptedBefore(phase, number, started, attemptStarted);
     }
 
     private <S, R> AwaitAttempt<S, R> parkUntil(long deadline,
