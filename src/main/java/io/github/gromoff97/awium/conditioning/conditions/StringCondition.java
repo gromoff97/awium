@@ -135,7 +135,7 @@ public final class StringCondition {
     private static PreservingCondition<String> matchingLength(int bound, java.util.function.IntPredicate matches,
             String relation, String mismatch) {
         if (bound < 0) {
-            throw new IllegalArgumentException("length must not be negative");
+            throw new IllegalArgumentException("length must be non-negative");
         }
         return matching("string length " + relation, "string length " + mismatch,
                 actual -> matches.test(actual.length()));

@@ -166,7 +166,9 @@ class CollectionSelectionConditionsTest {
         assertEquals(UNSATISFIED, evaluate(
                 CollectionCondition.singleElementOfType(String.class),
                 List.of("first", "second")).status());
-        assertThrows(IllegalArgumentException.class, () -> CollectionCondition.element(-1));
+        assertEquals("index must be non-negative", assertThrows(
+                IllegalArgumentException.class,
+                () -> CollectionCondition.element(-1)).getMessage());
         assertThrows(NullPointerException.class, () -> CollectionCondition.sorted(null));
     }
 
@@ -190,7 +192,7 @@ class CollectionSelectionConditionsTest {
                         new io.github.gromoff97.awium.engine.WaitConfiguration(1, 3, 0),
                         time, time).until(first.because("a first result is required")));
 
-        assertTrue(failure.getMessage().contains("Expectation: collection has a first element"));
+        assertTrue(failure.getMessage().contains("Condition: collection has a first element"));
         assertTrue(failure.getMessage().contains("Importance: a first result is required"));
         assertTrue(failure.getMessage().contains("Mismatch: collection was empty"));
     }

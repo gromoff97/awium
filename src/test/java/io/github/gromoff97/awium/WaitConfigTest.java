@@ -75,13 +75,13 @@ class WaitConfigTest {
 
     @Test
     void rawConfigurationCannotBypassDurationValidation() {
-        assertEquals("polling interval must be greater than zero",
+        assertEquals("polling interval must be positive",
                 assertThrows(IllegalArgumentException.class,
                         () -> new WaitConfiguration(0, 1, 0)).getMessage());
-        assertEquals("acquisition timeout must be greater than zero",
+        assertEquals("acquisition timeout must be positive",
                 assertThrows(IllegalArgumentException.class,
                         () -> new WaitConfiguration(1, 0, 0)).getMessage());
-        assertEquals("persistence duration must not be negative",
+        assertEquals("persistence duration must be non-negative",
                 assertThrows(IllegalArgumentException.class,
                         () -> new WaitConfiguration(1, 2, -1)).getMessage());
     }

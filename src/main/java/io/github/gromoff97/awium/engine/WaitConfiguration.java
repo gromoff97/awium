@@ -16,7 +16,7 @@ public record WaitConfiguration(long everyNanos, long upToNanos, long persistenc
         requirePositive(everyNanos, "polling interval");
         requirePositive(upToNanos, "acquisition timeout");
         if (persistenceNanos < 0) {
-            throw new IllegalArgumentException("persistence duration must not be negative");
+            throw new IllegalArgumentException("persistence duration must be non-negative");
         }
     }
 
@@ -57,7 +57,7 @@ public record WaitConfiguration(long everyNanos, long upToNanos, long persistenc
 
     private static void requirePositive(long nanos, String label) {
         if (nanos <= 0) {
-            throw new IllegalArgumentException(label + " must be greater than zero");
+            throw new IllegalArgumentException(label + " must be positive");
         }
     }
 

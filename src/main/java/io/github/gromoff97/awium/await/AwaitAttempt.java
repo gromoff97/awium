@@ -10,7 +10,7 @@ public record AwaitAttempt<S, R>(long number, Phase phase, Outcome<S, R> outcome
 
     public AwaitAttempt {
         if (number <= 0) {
-            throw new IllegalArgumentException("attempt number must be greater than zero");
+            throw new IllegalArgumentException("attempt number must be positive");
         }
         requireNonNull(phase, "phase must not be null");
         requireNonNull(outcome, "outcome must not be null");

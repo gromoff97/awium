@@ -43,4 +43,14 @@ class AwaitResultTest {
         assertThrows(NullPointerException.class,
                 () -> new AwaitResult.Failed<String, String>(List.of(), 0, null));
     }
+
+    @Test
+    void attemptAndResultCountsHaveConciseValidationMessages() {
+        assertEquals("attempt number must be positive", assertThrows(
+                IllegalArgumentException.class,
+                () -> new AwaitAttempt<>(0, null, null)).getMessage());
+        assertEquals("total attempts must be non-negative", assertThrows(
+                IllegalArgumentException.class,
+                () -> new AwaitResult.Satisfied<>(List.of(), -1, null)).getMessage());
+    }
 }

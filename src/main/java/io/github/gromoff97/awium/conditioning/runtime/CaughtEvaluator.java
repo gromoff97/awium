@@ -65,7 +65,7 @@ final class CaughtEvaluator<S, R>
 
     private Evaluation.Context.Sequence context(int caught, int evaluatedStage) {
         Stage<S, R> metadata = stages.get(caught);
-        return new Evaluation.Context.Sequence(caught, stages.size(), caught + 1,
+        return new Evaluation.Context.Sequence(caught, stages.size(),
                 evaluatedStage + 1, metadata.expectation(), metadata.importance());
     }
 

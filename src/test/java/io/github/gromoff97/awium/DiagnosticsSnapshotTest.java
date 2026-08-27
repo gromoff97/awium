@@ -45,7 +45,7 @@ class DiagnosticsSnapshotTest {
     private static final long MILLISECOND = 1_000_000L;
 
     @Test
-    void caughtAcquisitionTimeoutRendersTheWaitingStage() {
+    void caughtAcquisitionTimeoutRendersTheCurrentStage() {
         var time = new FakeTime(0);
 
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
@@ -55,17 +55,13 @@ class DiagnosticsSnapshotTest {
         assertEquals("""
                 Acquisition deadline elapsed before the next attempt
 
-                Condition:
-                    Expectation: conditions are satisfied in order
+                Condition: conditions are satisfied in order
                     Importance: payment must complete its lifecycle
 
-                Attempt:
-                    Number: 2
+                Attempt: 2
                     Actual: created
 
-                Sequence:
-                    Caught: 1 of 3
-                    Waiting for: 2 of 3
+                Sequence (caught 1 of 3):
                     Expectation: payment status is pending
                     Importance: processing must begin before completion
                     Mismatch: payment status was created
@@ -78,7 +74,7 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void caughtPersistenceFailureKeepsTheFinalWaitingStage() {
+    void caughtPersistenceFailureKeepsTheFinalStage() {
         var time = new FakeTime(0);
         String[] statuses = {"created", "pending", "completed", "created"};
         int[] next = {0};
@@ -92,17 +88,13 @@ class DiagnosticsSnapshotTest {
         assertEquals("""
                 Condition did not persist for the required duration
 
-                Condition:
-                    Expectation: conditions are satisfied in order
+                Condition: conditions are satisfied in order
                     Importance: payment must complete its lifecycle
 
-                Attempt:
-                    Number: 4
+                Attempt: 4
                     Actual: created
 
-                Sequence:
-                    Caught: 2 of 3
-                    Waiting for: 3 of 3
+                Sequence (caught 2 of 3):
                     Expectation: payment status is completed
                     Importance: completion must remain stable
                     Mismatch: payment status was created
@@ -112,7 +104,6 @@ class DiagnosticsSnapshotTest {
                     Acquired after: 2 nanoseconds
                     Required persistence: 5 nanoseconds
                     Failure detected after: 1 nanosecond
-                    Elapsed: 3 nanoseconds
                     Polling interval: 1 nanosecond""", failure.getMessage());
     }
 
@@ -135,17 +126,13 @@ class DiagnosticsSnapshotTest {
         assertEquals("""
                 Acquisition deadline elapsed before the next attempt
 
-                Condition:
-                    Expectation: conditions are satisfied in order
+                Condition: conditions are satisfied in order
                     Importance: payment must complete its lifecycle
 
-                Attempt:
-                    Number: 2
+                Attempt: 2
                     Actual: created
 
-                Sequence:
-                    Caught: 1 of 3
-                    Waiting for: 2 of 3
+                Sequence (caught 1 of 3):
                     Expectation: payment status is pending
                     Importance: processing must begin before completion
                     Mismatch: payment status was created
@@ -156,8 +143,7 @@ class DiagnosticsSnapshotTest {
                     Elapsed: 2 nanoseconds
                     Polling interval: 1 nanosecond
 
-                Cause:
-                    Type: AssertionError
+                Cause: AssertionError
                     Message: pending assertion failed""", failure.getMessage());
         assertSame(assertion, failure.getCause());
         assertArrayEquals(new StackTraceElement[]{frame}, failure.getCause().getStackTrace());
@@ -180,27 +166,17 @@ class DiagnosticsSnapshotTest {
         assertEquals("""
                 Condition evaluation failed
 
-                Condition:
-                    Expectation: conditions are satisfied in order
+                Condition: conditions are satisfied in order
                     Importance: payment must complete its lifecycle
 
-                Attempt:
-                    Number: 2
-                    Origin: condition
+                Attempt: 2
                     Actual: created
 
-                Sequence:
-                    Caught: 1 of 3
-                    Waiting for: 2 of 3
+                Sequence (caught 1 of 3):
                     Expectation: payment status is pending
                     Importance: processing must begin before completion
 
-                Timing:
-                    Acquisition timeout: 10 nanoseconds
-                    Polling interval: 1 nanosecond
-
-                Cause:
-                    Type: IllegalStateException
+                Cause: IllegalStateException
                     Message: status callback failed""", failure.getMessage());
         assertSame(cause, failure.getCause());
     }
@@ -246,12 +222,10 @@ class DiagnosticsSnapshotTest {
         assertEquals("""
                 Acquisition deadline elapsed before the next attempt
 
-                Condition:
-                    Expectation: collection to be non-empty
+                Condition: collection to be non-empty
                     Importance: Settlement requires an eligible payment
 
-                Attempt:
-                    Number: 4
+                Attempt: 4
                     Actual: null
                     Mismatch: collection was empty
 
@@ -261,18 +235,15 @@ class DiagnosticsSnapshotTest {
                     Elapsed: 10 seconds
                     Polling interval: 3 seconds
 
-                Cause:
-                    Type: AssertionError
+                Cause: AssertionError
                     Message: collection was empty""", betweenFailure.getMessage());
         assertEquals("""
                 Condition remained unsatisfied at or after the acquisition deadline
 
-                Condition:
-                    Expectation: status equals COMPLETED
+                Condition: status equals COMPLETED
                     Importance: payment must complete
 
-                Attempt:
-                    Number: 100
+                Attempt: 100
                     Actual: Payment[PENDING]
                     Mismatch: status was PENDING
 
@@ -284,12 +255,10 @@ class DiagnosticsSnapshotTest {
         assertEquals("""
                 Condition became satisfied at or after the acquisition deadline
 
-                Condition:
-                    Expectation: status equals COMPLETED
+                Condition: status equals COMPLETED
                     Importance: payment must complete
 
-                Attempt:
-                    Number: 100
+                Attempt: 100
                     Actual: Payment[COMPLETED]
 
                 Timing:
@@ -300,12 +269,10 @@ class DiagnosticsSnapshotTest {
         assertEquals("""
                 Condition did not persist for the required duration
 
-                Condition:
-                    Expectation: optional to remain present
+                Condition: optional to remain present
                     Importance: payment must remain available
 
-                Attempt:
-                    Number: 71
+                Attempt: 71
                     Actual: Optional.empty
                     Mismatch: optional was empty
 
@@ -314,11 +281,9 @@ class DiagnosticsSnapshotTest {
                     Acquired after: 7 seconds
                     Required persistence: 5 seconds
                     Failure detected after: 2 seconds 100 milliseconds
-                    Elapsed: 9 seconds 100 milliseconds
                     Polling interval: 100 milliseconds
 
-                Cause:
-                    Type: AssertionError
+                Cause: AssertionError
                     Message: optional was empty""", persistenceFailure.getMessage());
         assertSame(betweenAssertion, betweenFailure.getCause());
         assertSame(persistenceAssertion, persistenceFailure.getCause());
@@ -356,73 +321,41 @@ class DiagnosticsSnapshotTest {
         assertEquals("""
                 Source retrieval failed
 
-                Condition:
-                    Expectation: condition
+                Condition: condition
                     Importance: business reason
 
-                Attempt:
-                    Number: 2
-                    Origin: source
+                Attempt: 2
 
-                Timing:
-                    Acquisition timeout: 10 seconds
-                    Polling interval: 1 second
-
-                Cause:
-                    Type: IllegalStateException
+                Cause: IllegalStateException
                     Message: source failed""", sourceFailure.getMessage());
         assertEquals("""
                 Condition evaluation failed
 
-                Condition:
-                    Expectation: condition
+                Condition: condition
                     Importance: business reason
 
-                Attempt:
-                    Number: 3
-                    Origin: condition
+                Attempt: 3
                     Actual: actual
 
-                Timing:
-                    Acquisition timeout: 10 seconds
-                    Polling interval: 1 second
-
-                Cause:
-                    Type: IllegalArgumentException
+                Cause: IllegalArgumentException
                     Message: condition failed""", conditionFailure.getMessage());
         assertEquals("""
                 Waiting before the next attempt failed
 
-                Condition:
-                    Expectation: condition
+                Condition: condition
 
-                Attempt:
-                    Number: 4
-                    Origin: waiting
+                Attempt: 4
 
-                Timing:
-                    Acquisition timeout: 10 seconds
-                    Polling interval: 1 second
-
-                Cause:
-                    Type: IllegalStateException
+                Cause: IllegalStateException
                     Message: waiting failed""", waitingFailure.getMessage());
         assertEquals("""
-                Caller thread was interrupted
+                Caller thread was interrupted while waiting
 
-                Condition:
-                    Expectation: condition
+                Condition: condition
 
-                Attempt:
-                    Number: 5
-                    Origin: waiting
+                Attempt: 5
 
-                Timing:
-                    Acquisition timeout: 10 seconds
-                    Polling interval: 1 second
-
-                Cause:
-                    Type: InterruptedException
+                Cause: InterruptedException
                     Message: stopped""", interruptedFailure.getMessage());
     }
 
@@ -485,11 +418,9 @@ class DiagnosticsSnapshotTest {
         assertEquals("""
                 Condition remained unsatisfied at or after the acquisition deadline
 
-                Condition:
-                    Expectation: condition
+                Condition: condition
 
-                Attempt:
-                    Number: 2
+                Attempt: 2
                     Actual: actual
                     Mismatch: business mismatch
 
@@ -498,10 +429,32 @@ class DiagnosticsSnapshotTest {
                     Elapsed: 3 seconds
                     Polling interval: 1 second
 
-                Cause:
-                    Type: CountingAssertion
+                Cause: CountingAssertion
                     Message: assertion failed""", failure.getMessage());
         assertTrue(assertion.calls == 1);
+    }
+
+    @Test
+    void longCauseMessagesPointToTheUnchangedCauseStackTrace() {
+        String exactMessage = "x".repeat(160);
+        String longMessage = "x".repeat(140) + "😀".repeat(21);
+        var exactCause = new IllegalStateException(exactMessage);
+        var longCause = new IllegalStateException(longMessage);
+
+        AwaitSourceRetrievalException exactFailure = assertThrows(
+                AwaitSourceRetrievalException.class,
+                () -> complete(sourceFailure(exactCause, 1, 0),
+                        "condition", null, config(1, 2, 0)));
+        AwaitSourceRetrievalException longFailure = assertThrows(
+                AwaitSourceRetrievalException.class,
+                () -> complete(sourceFailure(longCause, 1, 0),
+                        "condition", null, config(1, 2, 0)));
+
+        assertTrue(exactFailure.getMessage().contains("Message: " + exactMessage));
+        assertTrue(longFailure.getMessage().contains(
+                "Message: " + "x".repeat(140) + "😀… <see stack trace>"));
+        assertSame(longCause, longFailure.getCause());
+        assertEquals(longMessage, longFailure.getCause().getMessage());
     }
 
     @Test
@@ -520,13 +473,10 @@ class DiagnosticsSnapshotTest {
         assertEquals("""
                 Failure diagnostics could not be formatted
 
-                Condition:
-                    Expectation: condition
+                Condition: condition
                     Importance: business reason
 
-                Attempt:
-                    Number: 1
-                    Origin: diagnostics
+                Attempt: 1
                     Actual: <value unavailable: diagnostics failed>
                     Mismatch: not ready
 
@@ -535,8 +485,7 @@ class DiagnosticsSnapshotTest {
                     Elapsed: 2 nanoseconds
                     Polling interval: 1 nanosecond
 
-                Cause:
-                    Type: IllegalArgumentException
+                Cause: IllegalArgumentException
                     Message: toString failed""", valueFailure.getMessage());
         assertTrue(actual.calls == 1);
     }
@@ -585,7 +534,7 @@ class DiagnosticsSnapshotTest {
 
         assertTrue(valueFailure.getCause() instanceof NullPointerException);
         assertMessage(valueFailure, "actual toString() must not return null",
-                "Origin: diagnostics", "Timing:");
+                "Timing:");
     }
 
     @Test

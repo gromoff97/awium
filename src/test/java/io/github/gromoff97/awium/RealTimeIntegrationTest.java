@@ -45,7 +45,8 @@ class RealTimeIntegrationTest {
         AwaitInterruptedException failure = assertInstanceOf(
                 AwaitInterruptedException.class, terminal[0]);
         assertInstanceOf(InterruptedException.class, failure.getCause());
-        assertTrue(failure.getMessage().contains("Origin: waiting"));
+        assertTrue(failure.getMessage().startsWith(
+                "Caller thread was interrupted while waiting"));
         assertTrue(interrupted[0]);
     }
 

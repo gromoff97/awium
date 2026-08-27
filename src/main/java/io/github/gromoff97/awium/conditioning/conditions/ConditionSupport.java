@@ -43,7 +43,7 @@ final class ConditionSupport {
     static <S> PreservingCondition<S> sized(String subject, int bound, IntPredicate matches,
             String description, ToIntFunction<? super S> sizeOf) {
         if (bound < 0) {
-            throw new IllegalArgumentException("size must not be negative");
+            throw new IllegalArgumentException("size must be non-negative");
         }
         return ConditionRuntime.preserving(description, actual -> {
             if (actual == null) {

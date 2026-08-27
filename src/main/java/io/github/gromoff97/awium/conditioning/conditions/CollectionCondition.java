@@ -313,7 +313,7 @@ public final class CollectionCondition {
 
     public static <E> Condition<List<E>, E> element(int index, Predicate<? super E> predicate) {
         if (index < 0) {
-            throw new IllegalArgumentException("index must not be negative");
+            throw new IllegalArgumentException("index must be non-negative");
         }
         requireNonNull(predicate, "predicate must not be null");
         return condition("list has a matching element at index " + index, actual -> {

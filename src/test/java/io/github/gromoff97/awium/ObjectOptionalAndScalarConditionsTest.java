@@ -183,7 +183,7 @@ class ObjectOptionalAndScalarConditionsTest {
         assertEquals("string length was not 5",
                 evaluate(StringCondition.length(5), "read").mismatch());
 
-        assertEquals("length must not be negative",
+        assertEquals("length must be non-negative",
                 assertThrows(IllegalArgumentException.class, () -> StringCondition.length(-1)).getMessage());
         assertEquals("length range must be non-negative and ordered",
                 assertThrows(IllegalArgumentException.class,

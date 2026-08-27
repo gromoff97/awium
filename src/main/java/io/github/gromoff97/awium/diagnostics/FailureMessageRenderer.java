@@ -12,6 +12,9 @@ import static java.util.Objects.requireNonNull;
 @SuppressWarnings("removal")
 final class FailureMessageRenderer {
 
+    private static final int CAUSE_MESSAGE_LIMIT = 160;
+    private static final String STACK_TRACE_HINT = "… <see stack trace>";
+
     private FailureMessageRenderer() {
         throw new AssertionError("Utility class");
     }
@@ -66,7 +69,7 @@ final class FailureMessageRenderer {
                 ? context.actual == null
                         ? "<value unavailable: diagnostics failed>" : context.actual
                 : null;
-        attempt(out, attempt.number(), "diagnostics", actual,
+        attempt(out, attempt.number(), actual,
                 context.diagnostic.sequence() == null ? context.diagnostic.mismatch() : null);
         sequence(out, context.diagnostic);
         timing(out, context);
@@ -77,7 +80,12 @@ final class FailureMessageRenderer {
     private static String uncontrolledHeading(AttemptDiagnostic diagnostic) {
         Throwable failure = diagnostic.failure();
         if (failure instanceof InterruptedException) {
-            return "Caller thread was interrupted";
+            return switch (diagnostic.origin()) {
+                case "waiting" -> "Caller thread was interrupted while waiting";
+                case "source" -> "Caller thread was interrupted during source retrieval";
+                case "condition" -> "Caller thread was interrupted during condition evaluation";
+                default -> throw new IllegalArgumentException("attempt is not uncontrolled");
+            };
         }
         return switch (diagnostic.origin()) {
             case "waiting" -> "Waiting before the next attempt failed";
@@ -93,10 +101,12 @@ final class FailureMessageRenderer {
         condition(out, context.description, context.explanation);
         String actual = attempt.outcome().timing() instanceof AwaitAttempt.Timing.AfterObservation
                 ? context.actualValue() : null;
-        attempt(out, attempt.number(), context.diagnostic.origin(), actual,
+        attempt(out, attempt.number(), actual,
                 context.diagnostic.sequence() == null ? context.diagnostic.mismatch() : null);
         sequence(out, context.diagnostic);
-        timing(out, context);
+        if (!(context.outcome instanceof WaitOutcome.Uncontrolled<?, ?>)) {
+            timing(out, context);
+        }
         if (context.outcomeCause != null) {
             cause(out, throwableDiagnostic(context.outcomeCause));
         }
@@ -121,7 +131,6 @@ final class FailureMessageRenderer {
                 field(out, "Required persistence",
                         duration(context.configuration.persistenceNanos()));
                 field(out, "Failure detected after", duration(completedAfter - acquiredAfter));
-                field(out, "Elapsed", duration(completedAfter));
             }
             case WaitOutcome.Uncontrolled<?, ?> ignored -> {}
             case WaitOutcome.Satisfied<?, ?> ignored -> {}
@@ -130,13 +139,9 @@ final class FailureMessageRenderer {
                 duration(context.configuration.everyNanos()));
     }
 
-    private static void attempt(StringBuilder out, long number, String origin,
-            String actual, String mismatch) {
-        out.append('\n').append("Attempt:\n");
-        field(out, "Number", Long.toString(number));
-        if (origin != null) {
-            field(out, "Origin", origin);
-        }
+    private static void attempt(StringBuilder out, long number, String actual,
+            String mismatch) {
+        out.append('\n').append("Attempt: ").append(number).append('\n');
         if (actual != null) {
             field(out, "Actual", actual);
         }
@@ -146,8 +151,8 @@ final class FailureMessageRenderer {
     }
 
     private static void cause(StringBuilder out, ThrowableDiagnostic cause) {
-        out.append('\n').append("Cause:\n");
-        field(out, "Type", cause.type());
+        out.append('\n');
+        field(out, "", "Cause", cause.type());
         if (cause.message() != null) {
             field(out, "Message", cause.message());
         }
@@ -155,8 +160,7 @@ final class FailureMessageRenderer {
 
     private static void condition(StringBuilder out, String expectation,
             String importance) {
-        out.append("Condition:\n");
-        field(out, "Expectation", expectation);
+        field(out, "", "Condition", expectation);
         if (importance != null) {
             field(out, "Importance", importance);
         }
@@ -167,9 +171,8 @@ final class FailureMessageRenderer {
         if (sequence == null) {
             return;
         }
-        out.append('\n').append("Sequence:\n");
-        field(out, "Caught", sequence.caught() + " of " + sequence.total());
-        field(out, "Waiting for", sequence.stage() + " of " + sequence.total());
+        out.append('\n').append("Sequence (caught ").append(sequence.caught())
+                .append(" of ").append(sequence.total()).append("):\n");
         field(out, "Expectation", sequence.expectation());
         if (sequence.importance() != null) {
             field(out, "Importance", sequence.importance());
@@ -180,16 +183,21 @@ final class FailureMessageRenderer {
     }
 
     private static void field(StringBuilder out, String label, String value) {
+        field(out, "    ", label, value);
+    }
+
+    private static void field(StringBuilder out, String indentation,
+            String label, String value) {
         String normalized = value.replace("\r\n", "\n").replace('\r', '\n');
         if (!normalized.contains("\n")) {
-            out.append("    ").append(label).append(": ")
+            out.append(indentation).append(label).append(": ")
                     .append(normalized).append('\n');
             return;
         }
-        out.append("    ").append(label).append(":\n");
+        out.append(indentation).append(label).append(":\n");
         for (String line : normalized.split("\n", -1)) {
             if (!line.isEmpty()) {
-                out.append("        ").append(line);
+                out.append(indentation).append("    ").append(line);
             }
             out.append('\n');
         }
@@ -218,9 +226,22 @@ final class FailureMessageRenderer {
     }
 
     private static ThrowableDiagnostic throwableDiagnostic(Throwable failure) {
+        return new ThrowableDiagnostic(typeName(failure), causeMessage(failure));
+    }
+
+    private static String causeMessage(Throwable failure) {
         String message = failure.getMessage();
-        return new ThrowableDiagnostic(typeName(failure),
-                message == null || message.isBlank() ? null : message);
+        if (message == null || message.isBlank()) {
+            return null;
+        }
+        String normalized = message.replace("\r\n", "\n").replace('\r', '\n');
+        if (normalized.codePointCount(0, normalized.length()) <= CAUSE_MESSAGE_LIMIT) {
+            return normalized;
+        }
+        int prefixLength = CAUSE_MESSAGE_LIMIT
+                - STACK_TRACE_HINT.codePointCount(0, STACK_TRACE_HINT.length());
+        return normalized.substring(0, normalized.offsetByCodePoints(0, prefixLength))
+                .stripTrailing() + STACK_TRACE_HINT;
     }
 
     private static ThrowableDiagnostic emergencyDiagnostic(Throwable failure) {

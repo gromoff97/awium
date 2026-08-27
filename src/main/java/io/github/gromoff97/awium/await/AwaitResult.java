@@ -29,7 +29,7 @@ public sealed interface AwaitResult<S, R> {
 
     private static void requireCount(long totalAttempts) {
         if (totalAttempts < 0) {
-            throw new IllegalArgumentException("total attempts must not be negative");
+            throw new IllegalArgumentException("total attempts must be non-negative");
         }
     }
 }

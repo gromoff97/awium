@@ -86,7 +86,7 @@ class TryAwaitHistoryTest {
                 .recordedWaitFor(() -> actual, value -> {
                     int current = ++stage[0];
                     return Evaluation.<Object>unsatisfied("same mismatch").withContext(
-                            new Evaluation.Context.Sequence(current - 1, 3, current, current,
+                            new Evaluation.Context.Sequence(current - 1, 3, current,
                                     "stage " + current, null));
                 });
 
@@ -96,7 +96,7 @@ class TryAwaitHistoryTest {
                 .map(outcome -> ((AwaitAttempt.Outcome.Unsatisfied<?, ?>) outcome)
                         .context())
                 .map(Evaluation.Context.Sequence.class::cast)
-                .map(Evaluation.Context.Sequence::stage)
+                .map(Evaluation.Context.Sequence::evaluatedStage)
                 .toList());
     }
 

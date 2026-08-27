@@ -123,7 +123,8 @@ class CollectionSizeConditionsTest {
 
     @Test
     void sizedFactoriesRejectNegativeBoundsAndAllowZero() {
-        assertThrows(IllegalArgumentException.class, () -> size(-1));
+        assertEquals("size must be non-negative", assertThrows(
+                IllegalArgumentException.class, () -> size(-1)).getMessage());
         assertThrows(IllegalArgumentException.class, () -> sizeBetween(-1, 1));
         assertThrows(IllegalArgumentException.class, () -> sizeBetween(2, 1));
         assertDoesNotThrow(() -> size(0));
