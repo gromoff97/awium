@@ -34,7 +34,7 @@ public final class ConditionRuntime {
     }
 
     public record RuntimeSelectedCondition<S, F extends Source<?>>(String description, String explanation,
-            Supplier<? extends Function<? super S, ? extends Evaluation<? extends Object>>> evaluatorFactory) implements SelectedCondition<S, F> {
+            Supplier<? extends Function<? super S, ? extends Evaluation<?>>> evaluatorFactory) implements SelectedCondition<S, F> {
     }
 
     public record RuntimeSelectedSequenceCondition<S, F extends Source<?>>(String description, String explanation,
@@ -116,7 +116,8 @@ public final class ConditionRuntime {
         return new RuntimePreservingCondition<>(nonBlank(description, "description"), null, () -> evaluator);
     }
 
-    public static <S, F extends Source<?>> SelectedCondition<S, F> selected(String description, Function<S, Evaluation<Object>> evaluator) {
+    public static <S, F extends Source<?>> SelectedCondition<S, F> selected(String description,
+            Function<? super S, ? extends Evaluation<?>> evaluator) {
         requireNonNull(evaluator, "evaluation must not be null");
         return new RuntimeSelectedCondition<>(nonBlank(description, "description"), null, () -> evaluator);
     }

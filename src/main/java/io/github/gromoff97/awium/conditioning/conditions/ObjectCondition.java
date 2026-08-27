@@ -5,6 +5,7 @@ import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingSta
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
 
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -67,15 +68,15 @@ public final class ObjectCondition {
     }
 
     public static PreservingCondition<Object> in(Object... expected) {
-        Object[] values = nonEmpty(expected, "expected values");
+        List<Object> values = asList(nonEmpty(expected, "expected values"));
         return preserving("value is in the expected values", "value was not in the expected values",
-                actual -> matchesAny(asList(values), candidate -> equal(actual, candidate)));
+                actual -> matchesAny(values, candidate -> equal(actual, candidate)));
     }
 
     public static PreservingCondition<Object> notIn(Object... unexpected) {
-        Object[] values = nonEmpty(unexpected, "unexpected values");
+        List<Object> values = asList(nonEmpty(unexpected, "unexpected values"));
         return preserving("value is not in the unexpected values", "value was in the unexpected values",
-                actual -> !matchesAny(asList(values), candidate -> equal(actual, candidate)));
+                actual -> !matchesAny(values, candidate -> equal(actual, candidate)));
     }
 
     public static <S> PreservingCondition<S> matches(Predicate<? super S> predicate) {

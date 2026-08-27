@@ -16,7 +16,6 @@ import java.util.function.Predicate;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.nonEmpty;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.nonNull;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preserve;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.validateRange;
@@ -93,7 +92,8 @@ public final class MapCondition {
 
     public static <K, V> Condition<Map<K, V>, Map.Entry<K, V>> singleEntry(BiPredicate<? super K, ? super V> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return condition("map has a single matching entry", actual -> selectSingle(actual, predicate));
+        Predicate<Map.Entry<K, V>> matches = entry -> predicate.test(entry.getKey(), entry.getValue());
+        return condition("map has a single matching entry", actual -> selectSingle(actual, matches));
     }
 
     public static <K, V> PreservingCondition<Map<K, V>> allEntries(BiPredicate<? super K, ? super V> predicate) {
@@ -186,19 +186,19 @@ public final class MapCondition {
 
     public static <K> PreservingCondition<Map<? super K, ?>> containsKey(K expected) {
         return preserving("map contains expected key", "map did not contain expected key",
-                actual -> matchesAny(actual.entrySet(), entry -> equal(entry.getKey(), expected)));
+                actual -> matchesAny(actual.keySet(), key -> equal(key, expected)));
     }
 
     public static <K> PreservingCondition<Map<? super K, ?>> doesNotContainKey(K expected) {
         return preserving("map does not contain expected key", "map contained expected key",
-                actual -> !matchesAny(actual.entrySet(), entry -> equal(entry.getKey(), expected)));
+                actual -> !matchesAny(actual.keySet(), key -> equal(key, expected)));
     }
 
     @SafeVarargs
     public static <K> PreservingCondition<Map<? super K, ?>> containsKeys(K... expected) {
         List<K> keys = asList(nonEmpty(expected, "expected keys"));
         return preserving("map contains all expected keys", "map did not contain all expected keys",
-                actual -> matchesAll(keys, key -> matchesAny(actual.keySet(), value -> equal(value, key))));
+                actual -> containsAll(actual.keySet(), keys, ValueMatching::equal));
     }
 
     @SafeVarargs
@@ -210,19 +210,19 @@ public final class MapCondition {
 
     @SafeVarargs
     public static <K> PreservingCondition<Map<? super K, ?>> containsOnlyKeys(K... expected) {
-        List<K> keys = asList(nonNull(expected, "expected keys"));
+        List<K> keys = asList(requireNonNull(expected, "expected keys must not be null"));
         return preserving("map contains only the expected keys", "map did not contain only the expected keys",
                 actual -> sameDistinctElements(actual.keySet(), keys));
     }
 
     public static <V> PreservingCondition<Map<?, ? super V>> containsValue(V expected) {
         return preserving("map contains expected value", "map did not contain expected value",
-                actual -> matchesAny(actual.entrySet(), entry -> equal(entry.getValue(), expected)));
+                actual -> matchesAny(actual.values(), value -> equal(value, expected)));
     }
 
     public static <V> PreservingCondition<Map<?, ? super V>> doesNotContainValue(V expected) {
         return preserving("map does not contain expected value", "map contained expected value",
-                actual -> !matchesAny(actual.entrySet(), entry -> equal(entry.getValue(), expected)));
+                actual -> !matchesAny(actual.values(), value -> equal(value, expected)));
     }
 
     @SafeVarargs
@@ -278,33 +278,24 @@ public final class MapCondition {
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsExactlyEntriesOf(Map<? extends K, ? extends V> expected) {
-        Map<? extends K, ? extends V> entries = nonNull(expected, "expected entries");
+        Map<? extends K, ? extends V> entries = requireNonNull(expected, "expected entries must not be null");
         return preserving("map contains exactly the expected entries", "map did not contain exactly the expected entries",
                 actual -> exactContent(actual, entries));
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainExactlyEntriesOf(Map<? extends K, ? extends V> expected) {
-        Map<? extends K, ? extends V> entries = nonNull(expected, "expected entries");
+        Map<? extends K, ? extends V> entries = requireNonNull(expected, "expected entries must not be null");
         return preserving("map does not contain exactly the expected entries", "map contained exactly the expected entries",
                 actual -> !exactContent(actual, entries));
     }
 
     private static <K, V> Evaluation<Map.Entry<K, V>> selectSingle(Map<K, V> actual,
-            BiPredicate<? super K, ? super V> predicate) {
+            Predicate<? super Map.Entry<K, V>> predicate) {
         if (actual == null) {
             return unsatisfied("map was null");
         }
-        Map.Entry<K, V> selected = null;
-        for (Map.Entry<K, V> entry : actual.entrySet()) {
-            if (!predicate.test(entry.getKey(), entry.getValue())) {
-                continue;
-            }
-            if (selected != null) {
-                return unsatisfied("more than one map entry matched");
-            }
-            selected = entry;
-        }
-        return selected == null ? unsatisfied("no map entry matched") : satisfied(selected);
+        return ConditionSupport.selectSingle(actual.entrySet(), predicate,
+                "no map entry matched", "more than one map entry matched");
     }
 
     private static <K, V> Evaluation<Map.Entry<K, V>> findEntry(Map<K, V> actual, K key) {

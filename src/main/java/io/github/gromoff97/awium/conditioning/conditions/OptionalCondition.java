@@ -21,9 +21,7 @@ import static java.util.Objects.requireNonNull;
 public final class OptionalCondition {
 
     public static final SelectedCondition<Optional<?>, OptionalSource<?>> present =
-            ConditionRuntime.selected("optional is present", actual ->
-                    OptionalCondition.present(actual)
-                    .continueIfSatisfied(Evaluation::satisfied));
+            ConditionRuntime.selected("optional is present", OptionalCondition::present);
     public static final Condition<Optional<?>, Void> absent = condition("optional is absent", actual -> {
         if (actual == null) {
             return unsatisfied("optional was null");

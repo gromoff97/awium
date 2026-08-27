@@ -12,6 +12,7 @@ import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitInte
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitSourceRetrievalException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitUnhandledException;
 
+import static io.github.gromoff97.awium.diagnostics.FailureMessageRenderer.addSuppressed;
 import static java.lang.Thread.currentThread;
 
 @SuppressWarnings("removal")
@@ -38,7 +39,7 @@ public final class FailureFactory {
             String description, String explanation,
             WaitConfiguration configuration) {
         if (execution.outcome() instanceof WaitOutcome.Satisfied<S, R> success) {
-            return new AwaitResult.Satisfied<>(execution.attempts(), execution.outcome().attempt().number(),
+            return new AwaitResult.Satisfied<>(execution.attempts(), success.attempt().number(),
                     satisfied(success.attempt()).result());
         }
         return new AwaitResult.Failed<>(execution.attempts(), execution.outcome().attempt().number(),
@@ -48,7 +49,8 @@ public final class FailureFactory {
     private static <S, R> Throwable failure(WaitOutcome<S, R> outcome,
             String description, String explanation,
             WaitConfiguration configuration) {
-        Throwable cause = FailureMessageRenderer.failure(outcome.attempt());
+        FailureMessageRenderer.AttemptDiagnostic diagnostic = FailureMessageRenderer.diagnostic(outcome.attempt());
+        Throwable cause = diagnostic.failure();
         if (cause instanceof Error fatal
                 && (fatal instanceof VirtualMachineError || fatal instanceof ThreadDeath)) {
             throw fatal;
@@ -57,7 +59,8 @@ public final class FailureFactory {
                 || cause instanceof InterruptedException;
         FailureMessageRenderer.Result rendered;
         try {
-            rendered = FailureMessageRenderer.render(outcome, description, explanation, configuration, cause);
+            rendered = FailureMessageRenderer.render(outcome, description, explanation,
+                    configuration, diagnostic);
         } finally {
             if (restoreInterrupt) {
                 currentThread().interrupt();
@@ -86,8 +89,6 @@ public final class FailureFactory {
                         new AwaitUnhandledException(message, cause);
                 case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> ignored ->
                         new AwaitSourceRetrievalException(message, cause);
-                case AwaitAttempt.Outcome.SourceInterrupted<?, ?> ignored ->
-                        new AwaitSourceRetrievalException(message, cause);
                 case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> ignored ->
                         new AwaitConditionEvaluationException(message, cause);
                 default -> throw new IllegalArgumentException("attempt is not uncontrolled");
@@ -99,11 +100,5 @@ public final class FailureFactory {
     @SuppressWarnings("unchecked")
     private static <S, R> AwaitAttempt.Outcome.Satisfied<S, R> satisfied(AwaitAttempt<S, R> attempt) {
         return (AwaitAttempt.Outcome.Satisfied<S, R>) attempt.outcome();
-    }
-
-    private static void addSuppressed(Throwable failure, Throwable cause) {
-        if (cause != null && cause != failure) {
-            failure.addSuppressed(cause);
-        }
     }
 }

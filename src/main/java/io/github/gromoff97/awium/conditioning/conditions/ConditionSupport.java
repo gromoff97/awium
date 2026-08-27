@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium.conditioning.conditions;
 
+import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
@@ -53,18 +54,31 @@ final class ConditionSupport {
         });
     }
 
+    static <E> Evaluation<E> selectSingle(Iterable<E> values, Predicate<? super E> matches,
+            String noneMatched, String multipleMatched) {
+        E selected = null;
+        boolean found = false;
+        for (E value : values) {
+            if (!matches.test(value)) {
+                continue;
+            }
+            if (found) {
+                return unsatisfied(multipleMatched);
+            }
+            selected = value;
+            found = true;
+        }
+        return found ? satisfied(selected) : unsatisfied(noneMatched);
+    }
+
     static void validateRange(int lowerBound, int upperBound, String measure) {
         if (lowerBound < 0 || upperBound < lowerBound) {
             throw new IllegalArgumentException(measure + " range must be non-negative and ordered");
         }
     }
 
-    static <T> T nonNull(T value, String name) {
-        return requireNonNull(value, name + " must not be null");
-    }
-
     static <E> E[] nonEmpty(E[] values, String name) {
-        nonNull(values, name);
+        requireNonNull(values, name + " must not be null");
         if (values.length == 0) {
             throw new IllegalArgumentException(name + " must not be empty");
         }
@@ -72,7 +86,7 @@ final class ConditionSupport {
     }
 
     static <C extends Collection<?>> C nonEmpty(C values, String name) {
-        nonNull(values, name);
+        requireNonNull(values, name + " must not be null");
         if (values.isEmpty()) {
             throw new IllegalArgumentException(name + " must not be empty");
         }
@@ -80,7 +94,7 @@ final class ConditionSupport {
     }
 
     static <M extends Map<?, ?>> M nonEmpty(M values, String name) {
-        nonNull(values, name);
+        requireNonNull(values, name + " must not be null");
         if (values.isEmpty()) {
             throw new IllegalArgumentException(name + " must not be empty");
         }

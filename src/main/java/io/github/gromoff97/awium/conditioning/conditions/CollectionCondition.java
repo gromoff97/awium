@@ -21,7 +21,6 @@ import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.ma
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.sameDistinctElements;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.nonEmpty;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.nonNull;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.validateRange;
 import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
@@ -95,8 +94,7 @@ public final class CollectionCondition {
     }
 
     public static PreservingCondition<Collection<?>> sameSizeAs(Collection<?> expected) {
-        int expectedSize = requireNonNull(expected, "expected collection must not be null").size();
-        return size(expectedSize);
+        return size(requireNonNull(expected, "expected collection must not be null").size());
     }
 
     public static <E> Condition<Collection<E>, E> single(Predicate<? super E> predicate) {
@@ -181,11 +179,11 @@ public final class CollectionCondition {
 
     @SafeVarargs
     public static <E> PreservingCondition<SequencedCollection<? super E>> containsExactly(E... expected) {
-        return containsExactlyElementsOf(asList(nonNull(expected, "expected elements")));
+        return containsExactlyElementsOf(asList(requireNonNull(expected, "expected elements must not be null")));
     }
 
     public static <E> PreservingCondition<SequencedCollection<? super E>> containsExactlyElementsOf(Collection<? extends E> expected) {
-        Collection<? extends E> values = nonNull(expected, "expected elements");
+        Collection<? extends E> values = requireNonNull(expected, "expected elements must not be null");
         return preserving("collection contains exactly the expected elements",
                 "collection did not contain exactly the expected elements",
                 actual -> exactContent(actual, values));
@@ -193,11 +191,11 @@ public final class CollectionCondition {
 
     @SafeVarargs
     public static <E> PreservingCondition<SequencedCollection<? super E>> doesNotContainExactly(E... expected) {
-        return doesNotContainExactlyElementsOf(asList(nonNull(expected, "expected elements")));
+        return doesNotContainExactlyElementsOf(asList(requireNonNull(expected, "expected elements must not be null")));
     }
 
     public static <E> PreservingCondition<SequencedCollection<? super E>> doesNotContainExactlyElementsOf(Collection<? extends E> expected) {
-        Collection<? extends E> values = nonNull(expected, "expected elements");
+        Collection<? extends E> values = requireNonNull(expected, "expected elements must not be null");
         return preserving("collection does not contain exactly the expected elements",
                 "collection contained exactly the expected elements",
                 actual -> !exactContent(actual, values));
@@ -205,11 +203,11 @@ public final class CollectionCondition {
 
     @SafeVarargs
     public static <E> PreservingCondition<Collection<? super E>> containsExactlyInAnyOrder(E... expected) {
-        return containsExactlyInAnyOrderElementsOf(asList(nonNull(expected, "expected elements")));
+        return containsExactlyInAnyOrderElementsOf(asList(requireNonNull(expected, "expected elements must not be null")));
     }
 
     public static <E> PreservingCondition<Collection<? super E>> containsExactlyInAnyOrderElementsOf(Collection<? extends E> expected) {
-        Collection<? extends E> values = nonNull(expected, "expected elements");
+        Collection<? extends E> values = requireNonNull(expected, "expected elements must not be null");
         return preserving("collection contains exactly the expected elements in any order",
                 "collection did not contain exactly the expected elements in any order",
                 actual -> exactContentInAnyOrder(actual, values));
@@ -217,11 +215,11 @@ public final class CollectionCondition {
 
     @SafeVarargs
     public static <E> PreservingCondition<Collection<? super E>> doesNotContainExactlyInAnyOrder(E... expected) {
-        return doesNotContainExactlyInAnyOrderElementsOf(asList(nonNull(expected, "expected elements")));
+        return doesNotContainExactlyInAnyOrderElementsOf(asList(requireNonNull(expected, "expected elements must not be null")));
     }
 
     public static <E> PreservingCondition<Collection<? super E>> doesNotContainExactlyInAnyOrderElementsOf(Collection<? extends E> expected) {
-        Collection<? extends E> values = nonNull(expected, "expected elements");
+        Collection<? extends E> values = requireNonNull(expected, "expected elements must not be null");
         return preserving("collection does not contain exactly the expected elements in any order",
                 "collection contained exactly the expected elements in any order",
                 actual -> !exactContentInAnyOrder(actual, values));
@@ -229,18 +227,18 @@ public final class CollectionCondition {
 
     @SafeVarargs
     public static <E> PreservingCondition<Collection<? super E>> containsOnly(E... expected) {
-        return containsOnlyElementsOf(asList(nonNull(expected, "expected elements")));
+        return containsOnlyElementsOf(asList(requireNonNull(expected, "expected elements must not be null")));
     }
 
     public static <E> PreservingCondition<Collection<? super E>> containsOnlyElementsOf(Collection<? extends E> expected) {
-        Collection<? extends E> values = nonNull(expected, "expected elements");
+        Collection<? extends E> values = requireNonNull(expected, "expected elements must not be null");
         return preserving("collection contains only the expected elements",
                 "collection did not contain only the expected elements",
                 actual -> sameDistinctElements(actual, values));
     }
 
     public static <E> PreservingCondition<Collection<? extends E>> subsetOf(Collection<? extends E> expected) {
-        Collection<? extends E> values = nonNull(expected, "expected elements");
+        Collection<? extends E> values = requireNonNull(expected, "expected elements must not be null");
         return preserving("collection is a subset of the expected elements",
                 "collection was not a subset of the expected elements",
                 actual -> matchesAll(actual, value -> matchesAny(values, candidate -> equal(value, candidate))));
@@ -342,19 +340,8 @@ public final class CollectionCondition {
         if (actual == null) {
             return unsatisfied("collection was null");
         }
-        E selected = null;
-        boolean found = false;
-        for (E value : actual) {
-            if (!predicate.test(value)) {
-                continue;
-            }
-            if (found) {
-                return unsatisfied("more than one collection element matched");
-            }
-            selected = value;
-            found = true;
-        }
-        return found ? satisfied(selected) : unsatisfied("no collection element matched");
+        return ConditionSupport.selectSingle(actual, predicate,
+                "no collection element matched", "more than one collection element matched");
     }
 
     private static <E> Evaluation<E> selectFirst(Iterable<E> actual,
@@ -407,10 +394,8 @@ public final class CollectionCondition {
     }
 
     private static boolean exactContentInAnyOrder(Collection<?> actual, Collection<?> expected) {
-        if (actual.size() != expected.size()) {
-            return false;
-        }
-        return exactly(actual.iterator(), expected, ValueMatching::equal);
+        return actual.size() == expected.size()
+                && exactly(actual.iterator(), expected, ValueMatching::equal);
     }
 
     private static List<?> elements(SequencedCollection<?> actual) {
@@ -451,7 +436,7 @@ public final class CollectionCondition {
     private static boolean hasUniqueElements(Collection<?> actual) {
         List<Object> seen = new ArrayList<>();
         for (Object value : actual) {
-            if (seen.stream().anyMatch(previous -> equal(previous, value))) {
+            if (matchesAny(seen, previous -> equal(previous, value))) {
                 return false;
             }
             seen.add(value);
