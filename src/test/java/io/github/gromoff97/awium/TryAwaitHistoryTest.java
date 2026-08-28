@@ -89,7 +89,7 @@ class TryAwaitHistoryTest {
                 .recordedWaitFor(() -> actual, value -> {
                     int current = ++stage[0];
                     return new ConditionAssessment<>(ConditionEvaluation.<Object>unsatisfied("same mismatch"),
-                            new AwaitAttempt.Context.Sequence(current - 1, 3, current, "stage " + current, null));
+                            new AwaitAttempt.Context.Sequence(current - 1, 3, current, "stage " + current, null, null));
                 });
 
         assertEquals(List.of(1L, 2L, 3L), numbers(execution));

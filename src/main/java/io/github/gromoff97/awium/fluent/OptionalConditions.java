@@ -8,6 +8,7 @@ import io.github.gromoff97.awium.fluent.Condition.NarrowingStage;
 import io.github.gromoff97.awium.fluent.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.fluent.Condition.SelectedCondition;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
+import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
 
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -17,6 +18,9 @@ import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfi
 import static io.github.gromoff97.awium.engine.ConditionAssessment.plain;
 import static io.github.gromoff97.awium.fluent.ConditionSupport.preserve;
 import static io.github.gromoff97.awium.fluent.ConditionRuntime.assessedCondition;
+import static io.github.gromoff97.awium.fluent.ConditionRuntime.expectedReference;
+import static io.github.gromoff97.awium.fluent.ConditionRuntime.reference;
+import static io.github.gromoff97.awium.fluent.ConditionRuntime.unexpectedReference;
 import static io.github.gromoff97.awium.fluent.ValueMatching.equal;
 import static io.github.gromoff97.awium.fluent.Conditions.condition;
 import static java.util.Objects.requireNonNull;
@@ -39,13 +43,13 @@ public final class OptionalConditions {
     public static <Value> Condition<Optional<Value>, Value> hasValue(Value expected) {
         requireNonNull(expected, "expected must not be null");
         return selected("optional value equals expected", "optional value was not equal",
-                actual -> equal(actual, expected));
+                expectedReference(expected), actual -> equal(actual, expected));
     }
 
     public static <Value> Condition<Optional<Value>, Value> doesNotHaveValue(Value unexpected) {
         requireNonNull(unexpected, "unexpected must not be null");
         return selected("optional value does not equal unexpected", "optional value was equal",
-                actual -> !equal(actual, unexpected));
+                unexpectedReference(unexpected), actual -> !equal(actual, unexpected));
     }
 
     public static <Value> Condition<Optional<Value>, Value> hasValue(Predicate<? super Value> predicate) {
@@ -61,7 +65,7 @@ public final class OptionalConditions {
     }
 
     public static <Value, Result> Condition<Optional<Value>, Result> hasValue(ResultStage<? super Value, ? extends Result> nested) {
-        return assessedCondition("optional value " + ConditionRuntime.description(nested), ConditionRuntime.explanation(nested), () -> {
+        return assessedCondition("optional value " + ConditionRuntime.description(nested), ConditionRuntime.explanation(nested), reference(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<Value, Result>evaluator(nested);
             return actual -> plain(present(actual)).flatMap(nestedEvaluator);
         });
@@ -72,14 +76,14 @@ public final class OptionalConditions {
     }
 
     public static <Observed, Value extends Observed> Condition<Optional<Observed>, Observed> hasValue(ExpectedStage<Value> nested) {
-        return assessedCondition("optional value " + ConditionRuntime.description(nested), ConditionRuntime.explanation(nested), () -> {
+        return assessedCondition("optional value " + ConditionRuntime.description(nested), ConditionRuntime.explanation(nested), reference(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<Observed>expectedEvaluator(nested);
             return actual -> plain(present(actual)).flatMap(nestedEvaluator);
         });
     }
 
     public static <Value, Result extends Value> Condition<Optional<Value>, Result> hasValue(NarrowingStage<Result> nested) {
-        return assessedCondition("optional value " + ConditionRuntime.description(nested), ConditionRuntime.explanation(nested), () -> {
+        return assessedCondition("optional value " + ConditionRuntime.description(nested), ConditionRuntime.explanation(nested), reference(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<Value, Result>narrowingEvaluator(nested);
             return actual -> plain(present(actual)).flatMap(nestedEvaluator);
         });
@@ -87,7 +91,13 @@ public final class OptionalConditions {
 
     private static <Value> Condition<Optional<Value>, Value> selected(String description, String mismatch,
             Predicate<? super Value> predicate) {
-        return condition(description, actual -> present(actual)
+        return selected(description, mismatch, null, predicate);
+    }
+
+    private static <Value> Condition<Optional<Value>, Value> selected(String description, String mismatch,
+            Reference<?> reference,
+            Predicate<? super Value> predicate) {
+        return ConditionRuntime.condition(description, reference, actual -> present(actual)
                 .continueIfSatisfied(value -> predicate.test(value)
                         ? satisfied(value) : unsatisfied(mismatch)));
     }

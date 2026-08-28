@@ -125,7 +125,8 @@ Defaults are:
 - `upTo`: 10 seconds
 - `persisting`: zero, which disables persistence checking
 
-The first observation is invoked unconditionally as soon as the engine starts;
+Unless the caller is already interrupted, the first observation is invoked
+unconditionally with respect to the timeout as soon as the engine starts;
 `upTo` does not cancel that initial source invocation. Later observations start
 only before the acquisition deadline, and every observation must also complete
 before it to satisfy the wait. A late observation is retained for diagnostics
@@ -202,6 +203,11 @@ Import only the catalogue used by a test. Shared names such as `empty`,
 | `CollectionConditions` | `single`, empty/null/duplicate checks, quantifiers, membership, exact content, sequences, `first`, `last`, `element`, `sorted`, and `size...` | observed collection or selected element |
 | `MapConditions` | `singleEntry`, empty checks, entry/key/value quantifiers and membership, exact content, `valueFor`, `entryFor`, `onlyValueFor`, and `size...` | observed map, selected entry, or value |
 
+Expected objects and aggregates remain caller-owned: conditions retain their
+references and read their current contents on every evaluation. Optional value
+conditions, including negative ones such as `doesNotHaveValue`, require a
+present `Optional`; use `absent` when emptiness itself is the expectation.
+
 Qualify a provider when a test genuinely needs colliding catalogues:
 
 ```java
@@ -222,7 +228,7 @@ such as one that only returns `null`:
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 
 OptionalSource<Payment> source = () -> null;
-await(source).until(absent);
+await(source).until(isNull);
 ```
 
 A variable declared as plain `Source<List<Payment>>` or
@@ -276,9 +282,12 @@ AwaitResult<Optional<Payment>, Payment> result =
 contains the failure. Both expose retained `AwaitAttempt` history and the total
 attempt count. Each adjacent run of equivalent attempts is represented by its
 latest attempt, retaining the endpoint number and timing without retaining the
-whole run. There is intentionally no history limit: memory use grows with the
-number and reachable object graphs of non-equivalent observations, so choose
-`every` and `upTo` accordingly for diagnostic waits.
+whole run. Equivalence is deliberately identity-based for observed and result
+objects (plus equal built-in diagnostic text and context); Awium never invokes
+user equality merely to compress history. Fresh value-equal objects therefore
+remain separate attempts. There is intentionally no history limit: memory use
+grows with the number and reachable object graphs of non-equivalent
+observations, so choose `every` and `upTo` accordingly for diagnostic waits.
 
 ## Threading and interruption
 

@@ -281,6 +281,7 @@ class CompilationContractTest {
                 import static io.github.gromoff97.awium.fluent.Await.await;
                 import static io.github.gromoff97.awium.fluent.CollectionConditions.first;
                 import static io.github.gromoff97.awium.fluent.CollectionConditions.single;
+                import static io.github.gromoff97.awium.fluent.Conditions.isNull;
                 import static io.github.gromoff97.awium.fluent.MapConditions.singleEntry;
                 import static io.github.gromoff97.awium.fluent.OptionalConditions.present;
                 import io.github.gromoff97.awium.sources.Source.*;
@@ -290,6 +291,8 @@ class CompilationContractTest {
                             CollectionSource<List<String>> collection,
                             MapSource<Map<String, Integer>> map) {
                         String optionalResult = await(optional).until(present);
+                        OptionalSource<String> nullSource = () -> null;
+                        Void nullResult = await(nullSource).until(isNull);
                         String collectionResult = await(collection).until(single);
                         String firstResult = await(collection).until(first);
                         Map.Entry<String, Integer> mapResult = await(map).until(singleEntry);

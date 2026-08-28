@@ -3,6 +3,7 @@ package io.github.gromoff97.awium.fluent;
 import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
 import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
 import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
+import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
 
 import java.util.Collection;
 import java.util.Map;
@@ -16,6 +17,7 @@ import static io.github.gromoff97.awium.fluent.ConditionRuntime.assessedConditio
 import static io.github.gromoff97.awium.fluent.ConditionRuntime.description;
 import static io.github.gromoff97.awium.fluent.ConditionRuntime.explanation;
 import static io.github.gromoff97.awium.fluent.ConditionRuntime.preservingEvaluator;
+import static io.github.gromoff97.awium.fluent.ConditionRuntime.reference;
 import static java.util.Objects.requireNonNull;
 
 final class ConditionSupport {
@@ -25,18 +27,28 @@ final class ConditionSupport {
     }
 
     static <Observed> Condition<Observed, Observed> preserve(PreservingStage<? super Observed> nested) {
-        return assessedCondition(description(nested), explanation(nested), () -> preservingEvaluator(nested));
+        return assessedCondition(description(nested), explanation(nested), reference(nested), () -> preservingEvaluator(nested));
     }
 
     static <Observed> PreservingCondition<Observed> preserving(String description, String mismatch,
             Predicate<? super Observed> matches) {
-        return ConditionRuntime.preserving(description, actual -> matches.test(actual)
+        return preserving(description, mismatch, null, matches);
+    }
+
+    static <Observed> PreservingCondition<Observed> preserving(String description, String mismatch,
+            Reference<?> reference, Predicate<? super Observed> matches) {
+        return ConditionRuntime.preserving(description, reference, actual -> matches.test(actual)
                 ? satisfied(actual) : unsatisfied(mismatch));
     }
 
     static <Observed> PreservingCondition<Observed> preservingNonNull(String subject, String description,
             String mismatch, Predicate<? super Observed> matches) {
-        return ConditionRuntime.preserving(description, actual -> actual == null
+        return preservingNonNull(subject, description, mismatch, null, matches);
+    }
+
+    static <Observed> PreservingCondition<Observed> preservingNonNull(String subject, String description,
+            String mismatch, Reference<?> reference, Predicate<? super Observed> matches) {
+        return ConditionRuntime.preserving(description, reference, actual -> actual == null
                 ? unsatisfied(subject + " was null")
                 : matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch));
     }

@@ -74,7 +74,7 @@ final class ValueMatching {
 
     static boolean sameDistinctElements(Collection<?> actual, Collection<?> expected) {
         return matchesAll(actual, value -> matchesAny(expected, candidate -> equal(value, candidate)))
-                && matchesAll(expected, value -> matchesAny(actual, candidate -> equal(value, candidate)));
+                && matchesAll(expected, value -> matchesAny(actual, candidate -> equal(candidate, value)));
     }
 
     static boolean equal(Object actual, Object expected) {

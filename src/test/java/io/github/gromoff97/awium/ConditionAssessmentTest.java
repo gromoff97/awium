@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class ConditionAssessmentTest {
 
     private static final AwaitAttempt.Context.Sequence SEQUENCE =
-            new AwaitAttempt.Context.Sequence(1, 2, 1, "second stage", "business reason");
+            new AwaitAttempt.Context.Sequence(1, 2, 1, "second stage", "business reason", null);
 
     @Test
     void flatMapUsesNestedContextAfterSatisfiedEvaluation() {

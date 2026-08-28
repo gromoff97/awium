@@ -69,7 +69,7 @@ final class CapturedEvaluator<Observed, Result> implements Function<Observed, Co
     private AwaitAttempt.Context.Sequence contextFor(int waitingStageIndex, int evaluatedStageIndex) {
         Stage<Observed, Result> waitingStage = stages.get(waitingStageIndex);
         return new AwaitAttempt.Context.Sequence(waitingStageIndex, stages.size(), evaluatedStageIndex + 1,
-                waitingStage.expectation(), waitingStage.importance());
+                waitingStage.expectation(), waitingStage.importance(), waitingStage.reference());
     }
 
     private static <Result> ConditionAssessment<List<Result>> assessed(ConditionEvaluation<List<Result>> evaluation,
@@ -79,7 +79,7 @@ final class CapturedEvaluator<Observed, Result> implements Function<Observed, Co
 
     record Stage<Observed, Result>(Function<? super Observed,
             ? extends ConditionAssessment<? extends Result>> evaluator,
-            String expectation, String importance) {
+            String expectation, String importance, AwaitAttempt.Reference<?> reference) {
 
         public Stage {
             requireNonNull(evaluator, "evaluator must not be null");

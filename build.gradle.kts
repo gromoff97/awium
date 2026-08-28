@@ -43,7 +43,7 @@ pitest {
     targetClasses = setOf("io.github.gromoff97.awium.*")
     targetTests = setOf("io.github.gromoff97.awium.*Test")
     excludedTestClasses = setOf(
-        "io.github.gromoff97.awium.CompilationContractTest",
+        "io.github.gromoff97.awium.*CompilationContractTest",
         "io.github.gromoff97.awium.PublicSurfaceTest",
         "io.github.gromoff97.awium.RealTimeIntegrationTest",
         "io.github.gromoff97.awium.VirtualThreadIntegrationTest",

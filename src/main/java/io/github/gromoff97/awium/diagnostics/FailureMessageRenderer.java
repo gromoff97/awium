@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.diagnostics;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
+import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitCompletion;
 
@@ -19,9 +20,9 @@ final class FailureMessageRenderer {
     }
 
     static Result render(WaitCompletion<?, ?> outcome, String description,
-            String explanation, WaitConfiguration configuration,
+            String explanation, Reference<?> reference, WaitConfiguration configuration,
             AttemptDiagnostic diagnostic) {
-        Context context = new Context(outcome, description, explanation,
+        Context context = new Context(outcome, description, explanation, reference,
                 configuration, diagnostic);
         Throwable outcomeCause = diagnostic.failure();
         try {
@@ -61,7 +62,7 @@ final class FailureMessageRenderer {
 
     private static String emergency(Context context, Throwable failure) {
         StringBuilder out = heading("Failure diagnostics could not be formatted");
-        condition(out, context.description, context.explanation);
+        condition(out, context, true);
         AwaitAttempt<?, ?> attempt = context.outcome.attempt();
         String actual = attempt.outcome().timing() instanceof AwaitAttempt.Timing.AfterObservation
                 ? context.actual == null
@@ -69,7 +70,7 @@ final class FailureMessageRenderer {
                 : null;
         attempt(out, attempt.number(), actual,
                 context.diagnostic.sequence() == null ? context.diagnostic.mismatch() : null);
-        sequence(out, context.diagnostic);
+        sequence(out, context, true);
         timing(out, context);
         cause(out, emergencyDiagnostic(failure));
         return finish(out);
@@ -78,12 +79,12 @@ final class FailureMessageRenderer {
     private static String message(Context context, String title) {
         AwaitAttempt<?, ?> attempt = context.outcome.attempt();
         StringBuilder out = heading(title);
-        condition(out, context.description, context.explanation);
+        condition(out, context, false);
         String actual = attempt.outcome().timing() instanceof AwaitAttempt.Timing.AfterObservation
                 ? context.actualValue() : null;
         attempt(out, attempt.number(), actual,
                 context.diagnostic.sequence() == null ? context.diagnostic.mismatch() : null);
-        sequence(out, context.diagnostic);
+        sequence(out, context, false);
         if (!(context.outcome instanceof WaitCompletion.Uncontrolled<?, ?>)) {
             timing(out, context);
         }
@@ -139,27 +140,38 @@ final class FailureMessageRenderer {
         }
     }
 
-    private static void condition(StringBuilder out, String expectation,
-            String importance) {
-        field(out, "", "Condition", expectation);
-        if (importance != null) {
-            field(out, "Importance", importance);
+    private static void condition(StringBuilder out, Context context, boolean emergency) {
+        field(out, "", "Condition", context.description);
+        reference(out, context, context.reference, false, emergency);
+        if (context.explanation != null) {
+            field(out, "Importance", context.explanation);
         }
     }
 
-    private static void sequence(StringBuilder out, AttemptDiagnostic diagnostic) {
-        AwaitAttempt.Context.Sequence sequence = diagnostic.sequence();
+    private static void sequence(StringBuilder out, Context context, boolean emergency) {
+        AwaitAttempt.Context.Sequence sequence = context.diagnostic.sequence();
         if (sequence == null) {
             return;
         }
         out.append('\n').append("Sequence (captured ").append(sequence.capturedStages())
                 .append(" of ").append(sequence.totalStages()).append("):\n");
         field(out, "Expectation", sequence.expectation());
+        reference(out, context, sequence.reference(), true, emergency);
         if (sequence.importance() != null) {
             field(out, "Importance", sequence.importance());
         }
-        if (diagnostic.mismatch() != null) {
-            field(out, "Mismatch", diagnostic.mismatch());
+        if (context.diagnostic.mismatch() != null) {
+            field(out, "Mismatch", context.diagnostic.mismatch());
+        }
+    }
+
+    private static void reference(StringBuilder out, Context context, Reference<?> reference,
+            boolean sequence, boolean emergency) {
+        if (reference != null) {
+            String cached = sequence ? context.sequenceReference : context.referenceValue;
+            field(out, reference.label(), emergency
+                    ? cached == null ? "<value unavailable: diagnostics failed>" : cached
+                    : context.referenceValue(reference, sequence));
         }
     }
 
@@ -198,7 +210,7 @@ final class FailureMessageRenderer {
             return array.substring(1, array.length() - 1);
         }
         return requireNonNull(String.valueOf(value),
-                "actual toString() must not return null");
+                "value toString() must not return null");
     }
 
     private static String typeName(Throwable failure) {
@@ -285,18 +297,23 @@ final class FailureMessageRenderer {
         private final WaitCompletion<?, ?> outcome;
         private final String description;
         private final String explanation;
+        private final Reference<?> reference;
         private final WaitConfiguration configuration;
         private final AttemptDiagnostic diagnostic;
 
         private String actual;
+        private String referenceValue;
+        private String sequenceReference;
 
         private Context(WaitCompletion<?, ?> outcome,
                 String description, String explanation,
+                Reference<?> reference,
                 WaitConfiguration configuration, AttemptDiagnostic diagnostic) {
             this.outcome = requireNonNull(outcome, "outcome must not be null");
             this.description = requireNonNull(description,
                     "condition description must not be null");
             this.explanation = explanation;
+            this.reference = reference;
             this.configuration = requireNonNull(configuration,
                     "configuration must not be null");
             this.diagnostic = requireNonNull(diagnostic,
@@ -305,6 +322,16 @@ final class FailureMessageRenderer {
 
         private String actualValue() {
             return actual = renderValue(diagnostic.observed());
+        }
+
+        private String referenceValue(Reference<?> value, boolean sequence) {
+            String rendered = renderValue(value.value());
+            if (sequence) {
+                sequenceReference = rendered;
+            } else {
+                referenceValue = rendered;
+            }
+            return rendered;
         }
     }
 

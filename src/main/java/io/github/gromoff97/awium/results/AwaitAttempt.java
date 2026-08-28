@@ -31,7 +31,7 @@ public record AwaitAttempt<Observed, Result>(long number, Phase phase,
         enum Plain implements Context { INSTANCE }
 
         record Sequence(int capturedStages, int totalStages, int evaluatedStageNumber,
-                String expectation, String importance) implements Context {
+                String expectation, String importance, Reference<?> reference) implements Context {
 
             public Sequence {
                 if (capturedStages < 0 || capturedStages > totalStages
@@ -39,6 +39,15 @@ public record AwaitAttempt<Observed, Result>(long number, Phase phase,
                     throw new IllegalArgumentException("invalid sequence progress");
                 }
                 requireNonNull(expectation, "expectation must not be null");
+            }
+        }
+    }
+
+    public record Reference<Value>(String label, Value value) {
+
+        public Reference {
+            if (requireNonNull(label, "reference label must not be null").isBlank()) {
+                throw new IllegalArgumentException("reference label must not be blank");
             }
         }
     }

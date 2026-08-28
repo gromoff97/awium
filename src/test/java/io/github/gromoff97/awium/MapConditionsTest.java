@@ -65,6 +65,13 @@ class MapConditionsTest {
                 new ThrowingEquals(valueFailure)));
         assertStatus(containsEntry("expected", new ThrowingEquals(null)),
                 keyMismatch, UNSATISFIED);
+
+        Directional onlyActual = new Directional(true);
+        Directional onlyExpected = new Directional(false);
+        assertStatus(containsOnlyKeys(onlyExpected),
+                entryMap(entry(onlyActual, "value")), SATISFIED);
+        assertEquals(2, onlyActual.equalsCalls);
+        assertEquals(0, onlyExpected.equalsCalls);
     }
 
     @Test

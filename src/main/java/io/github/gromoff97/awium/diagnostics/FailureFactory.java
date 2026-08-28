@@ -2,6 +2,7 @@ package io.github.gromoff97.awium.diagnostics;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.results.AwaitResult;
+import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
 import io.github.gromoff97.awium.engine.WaitCompletion;
@@ -23,12 +24,12 @@ public final class FailureFactory {
     }
 
     public static <Observed, Result> Result complete(WaitCompletion<Observed, Result> outcome,
-            String description, String explanation,
+            String description, String explanation, Reference<?> reference,
             WaitConfiguration configuration) {
         if (outcome instanceof WaitCompletion.Satisfied<Observed, Result> success) {
             return satisfied(success.attempt()).result();
         }
-        Throwable failure = failure(outcome, description, explanation, configuration);
+        Throwable failure = failure(outcome, description, explanation, reference, configuration);
         if (failure instanceof RuntimeException runtime) {
             throw runtime;
         }
@@ -36,18 +37,18 @@ public final class FailureFactory {
     }
 
     public static <Observed, Result> AwaitResult<Observed, Result> capture(WaitEngine.RecordedWait<Observed, Result> execution,
-            String description, String explanation,
+            String description, String explanation, Reference<?> reference,
             WaitConfiguration configuration) {
         if (execution.outcome() instanceof WaitCompletion.Satisfied<Observed, Result> success) {
             return new AwaitResult.Satisfied<>(execution.attempts(), success.attempt().number(),
                     satisfied(success.attempt()).result());
         }
         return new AwaitResult.Failed<>(execution.attempts(), execution.outcome().attempt().number(),
-                failure(execution.outcome(), description, explanation, configuration));
+                failure(execution.outcome(), description, explanation, reference, configuration));
     }
 
     private static <Observed, Result> Throwable failure(WaitCompletion<Observed, Result> outcome,
-            String description, String explanation,
+            String description, String explanation, Reference<?> reference,
             WaitConfiguration configuration) {
         FailureMessageRenderer.AttemptDiagnostic diagnostic = FailureMessageRenderer.diagnostic(outcome.attempt());
         Throwable cause = diagnostic.failure();
@@ -59,7 +60,7 @@ public final class FailureFactory {
                 || cause instanceof InterruptedException;
         FailureMessageRenderer.Result rendered;
         try {
-            rendered = FailureMessageRenderer.render(outcome, description, explanation,
+            rendered = FailureMessageRenderer.render(outcome, description, explanation, reference,
                     configuration, diagnostic);
         } finally {
             if (restoreInterrupt) {

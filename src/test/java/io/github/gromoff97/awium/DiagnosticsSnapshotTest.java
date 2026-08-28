@@ -25,6 +25,7 @@ import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfi
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.uncontrolled;
 import static io.github.gromoff97.awium.fluent.Conditions.captured;
 import static io.github.gromoff97.awium.fluent.Conditions.condition;
+import static io.github.gromoff97.awium.fluent.Conditions.equalTo;
 import static io.github.gromoff97.awium.engine.WaitCompletion.*;
 import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.ACQUISITION;
 import static java.lang.Thread.currentThread;
@@ -44,6 +45,34 @@ class DiagnosticsSnapshotTest {
 
     private static final long SECOND = 1_000_000_000L;
     private static final long MILLISECOND = 1_000_000L;
+
+    @Test
+    void builtInOperandIsRetainedThroughBecause() {
+        var time = new FakeTime(0);
+        var condition = equalTo("expected").because("payment must reach the target state");
+
+        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
+                () -> timedAwait(() -> "actual", config(1, 2, 0), time, time).until(condition));
+
+        assertMessage(failure,
+                "Condition: value equals expected",
+                "Expected: expected",
+                "Importance: payment must reach the target state");
+    }
+
+    @Test
+    void capturedBuiltInOperandIdentifiesTheCurrentStage() {
+        var time = new FakeTime(0);
+        var condition = captured(equalTo("first"), equalTo("second"));
+
+        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
+                () -> timedAwait(() -> "actual", config(1, 2, 0), time, time).until(condition));
+
+        assertMessage(failure,
+                "Sequence (captured 0 of 2)",
+                "Expectation: value equals expected",
+                "Expected: first");
+    }
 
     @Test
     void capturedAcquisitionTimeoutRendersTheCurrentStage() {
@@ -371,7 +400,7 @@ class DiagnosticsSnapshotTest {
             AwaitInterruptedException failure = assertThrows(
                     AwaitInterruptedException.class,
                     () -> FailureFactory.complete(waitingFailure(interruption, 1, 0),
-                            "condition", null, config(1, 2, 0)));
+                            "condition", null, null, config(1, 2, 0)));
 
             assertSame(interruption, failure.getCause());
             assertTrue(currentThread().isInterrupted());
@@ -488,6 +517,23 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
+    void expectedOperandRenderingFailureKeepsItsOriginalCause() {
+        var time = new FakeTime(0);
+        var cause = new IllegalArgumentException("expected toString failed");
+        var expected = new ThrowingValue(cause);
+
+        AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
+                () -> timedAwait(Object::new, config(1, 2, 0), time, time).until(equalTo(expected)));
+
+        assertSame(cause, failure.getCause());
+        assertMessage(failure,
+                "Condition: value equals expected",
+                "Expected: <value unavailable: diagnostics failed>",
+                "Actual: <value unavailable: diagnostics failed>");
+        assertEquals(1, expected.calls);
+    }
+
+    @Test
     void diagnosticRenderingFailureRetainsTheEngineCauseAsSuppressed() {
         var diagnosticCause = new IllegalStateException("toString failed");
         var engineCause = new AssertionError("assertion failed");
@@ -530,7 +576,7 @@ class DiagnosticsSnapshotTest {
                         config(1, 2, 0)));
 
         assertTrue(valueFailure.getCause() instanceof NullPointerException);
-        assertMessage(valueFailure, "actual toString() must not return null",
+        assertMessage(valueFailure, "value toString() must not return null",
                 "Timing:");
     }
 
@@ -574,7 +620,7 @@ class DiagnosticsSnapshotTest {
                         "not ready", engineCause, 1, 2));
         InternalError thrown = assertThrows(InternalError.class,
                 () -> FailureFactory.complete(outcome, "condition", null,
-                        config(1, 2, 0)));
+                        null, config(1, 2, 0)));
 
         assertSame(fatal, thrown);
         assertEquals(2, thrown.getSuppressed().length);
@@ -607,7 +653,7 @@ class DiagnosticsSnapshotTest {
 
     private static <S, R> R complete(WaitCompletion<S, R> outcome, String description,
             String explanation, WaitConfiguration configuration) {
-        return FailureFactory.complete(outcome, description, explanation, configuration);
+        return FailureFactory.complete(outcome, description, explanation, null, configuration);
     }
 
     private static ResultStage<String, java.util.List<String>> lifecycle(

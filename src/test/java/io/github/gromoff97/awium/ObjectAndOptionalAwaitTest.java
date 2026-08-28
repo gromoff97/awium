@@ -108,10 +108,7 @@ class ObjectAndOptionalAwaitTest {
 
     private static <T> Await<T, T, Source<?>> stage(
             FakeTime time, Source<T> source) {
-        return timedAwait(source,
-                defaults().withEvery(ofNanos(1))
-                        .withUpTo(ofNanos(3)),
-                time, time);
+        return timedAwait(source, defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(3)), time, time);
     }
 
     private static PreservingCondition<Object> broadPreservingCondition() {

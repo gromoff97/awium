@@ -67,6 +67,12 @@ class CollectionExactContentTest {
         assertStatus(containsExactly(nil), asList((String) null), SATISFIED);
         assertStatus(containsExactly(new int[] {1, 2}),
                 List.<Object>of(new int[] {1, 2}), SATISFIED);
+
+        Directional onlyActual = new Directional(true);
+        Directional onlyExpected = new Directional(false);
+        assertStatus(containsOnly(onlyExpected), List.of(onlyActual), SATISFIED);
+        assertEquals(2, onlyActual.equalsCalls);
+        assertEquals(0, onlyExpected.equalsCalls);
     }
 
     @Test
@@ -131,7 +137,7 @@ class CollectionExactContentTest {
         var actual = new ProbeList<>(List.of("a"), null);
         FakeTime time = new FakeTime(0);
 
-        assertThrows(AwaitTimeoutException.class,
+        AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
                 () -> timedCollectionAwait((Source<ProbeList<String>>) () -> {
                             time.advanceNanos(2);
                             return actual;
@@ -139,6 +145,7 @@ class CollectionExactContentTest {
                         time, time).until(containsExactly("b").because("business reason")));
 
         assertEquals(1, actual.iteratorCalls);
+        assertTrue(failure.getMessage().contains("Expected: [b]"));
     }
 
     private static void assertPair(Pair pair, List<String> actual,

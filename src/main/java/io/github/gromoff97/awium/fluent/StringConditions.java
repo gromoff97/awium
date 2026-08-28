@@ -1,12 +1,15 @@
 package io.github.gromoff97.awium.fluent;
 
 import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
+import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
 
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import static io.github.gromoff97.awium.fluent.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.fluent.ConditionSupport.validateRange;
+import static io.github.gromoff97.awium.fluent.ConditionRuntime.expectedReference;
+import static io.github.gromoff97.awium.fluent.ConditionRuntime.unexpectedReference;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
@@ -23,44 +26,44 @@ public final class StringConditions {
 
     public static PreservingCondition<String> contains(String... expected) {
         String[] values = nonEmpty(expected, "expected strings");
-        return matching("string contains all expected strings", "string did not contain all expected strings",
+        return matching("string contains all expected strings", "string did not contain all expected strings", expectedReference(values),
                 actual -> stream(values).allMatch(actual::contains));
     }
 
     public static PreservingCondition<String> doesNotContain(String... unexpected) {
         String[] values = nonEmpty(unexpected, "unexpected strings");
-        return matching("string does not contain unexpected strings", "string contained an unexpected string",
+        return matching("string does not contain unexpected strings", "string contained an unexpected string", unexpectedReference(values),
                 actual -> stream(values).noneMatch(actual::contains));
     }
 
     public static PreservingCondition<String> containsIgnoringCase(String expected) {
         String fragment = requireNonNull(expected, "expected string must not be null");
         return matching("string contains expected string ignoring case",
-                "string did not contain expected string ignoring case",
+                "string did not contain expected string ignoring case", expectedReference(fragment),
                 actual -> containsIgnoringCase(actual, fragment));
     }
 
     public static PreservingCondition<String> startsWith(String prefix) {
         requireNonNull(prefix, "prefix must not be null");
-        return matching("string starts with expected prefix", "string did not start with expected prefix",
+        return matching("string starts with expected prefix", "string did not start with expected prefix", expectedReference(prefix),
                 actual -> actual.startsWith(prefix));
     }
 
     public static PreservingCondition<String> doesNotStartWith(String prefix) {
         requireNonNull(prefix, "prefix must not be null");
-        return matching("string does not start with unexpected prefix", "string started with unexpected prefix",
+        return matching("string does not start with unexpected prefix", "string started with unexpected prefix", unexpectedReference(prefix),
                 actual -> !actual.startsWith(prefix));
     }
 
     public static PreservingCondition<String> endsWith(String suffix) {
         requireNonNull(suffix, "suffix must not be null");
-        return matching("string ends with expected suffix", "string did not end with expected suffix",
+        return matching("string ends with expected suffix", "string did not end with expected suffix", expectedReference(suffix),
                 actual -> actual.endsWith(suffix));
     }
 
     public static PreservingCondition<String> doesNotEndWith(String suffix) {
         requireNonNull(suffix, "suffix must not be null");
-        return matching("string does not end with unexpected suffix", "string ended with unexpected suffix",
+        return matching("string does not end with unexpected suffix", "string ended with unexpected suffix", unexpectedReference(suffix),
                 actual -> !actual.endsWith(suffix));
     }
 
@@ -70,7 +73,7 @@ public final class StringConditions {
 
     public static PreservingCondition<String> matchesRegex(Pattern pattern) {
         Pattern expected = requireNonNull(pattern, "pattern must not be null");
-        return matching("string matches expected pattern", "string did not match expected pattern",
+        return matching("string matches expected pattern", "string did not match expected pattern", expectedReference(expected),
                 actual -> expected.matcher(actual).matches());
     }
 
@@ -80,20 +83,20 @@ public final class StringConditions {
 
     public static PreservingCondition<String> doesNotMatchRegex(Pattern pattern) {
         Pattern unexpected = requireNonNull(pattern, "pattern must not be null");
-        return matching("string does not match unexpected pattern", "string matched unexpected pattern",
+        return matching("string does not match unexpected pattern", "string matched unexpected pattern", unexpectedReference(unexpected),
                 actual -> !unexpected.matcher(actual).matches());
     }
 
     public static PreservingCondition<String> equalToIgnoringCase(String expected) {
         requireNonNull(expected, "expected string must not be null");
         return matching("string equals expected string ignoring case",
-                "string was not equal to expected string ignoring case", actual -> actual.equalsIgnoreCase(expected));
+                "string was not equal to expected string ignoring case", expectedReference(expected), actual -> actual.equalsIgnoreCase(expected));
     }
 
     public static PreservingCondition<String> notEqualToIgnoringCase(String unexpected) {
         requireNonNull(unexpected, "unexpected string must not be null");
         return matching("string does not equal unexpected string ignoring case",
-                "string was equal to unexpected string ignoring case", actual -> !actual.equalsIgnoreCase(unexpected));
+                "string was equal to unexpected string ignoring case", unexpectedReference(unexpected), actual -> !actual.equalsIgnoreCase(unexpected));
     }
 
     public static PreservingCondition<String> length(int expected) {
@@ -143,6 +146,11 @@ public final class StringConditions {
     private static PreservingCondition<String> matching(String description, String mismatch,
             Predicate<String> matches) {
         return preservingNonNull("string", description, mismatch, matches);
+    }
+
+    private static PreservingCondition<String> matching(String description, String mismatch,
+            Reference<?> reference, Predicate<String> matches) {
+        return preservingNonNull("string", description, mismatch, reference, matches);
     }
 
     private static boolean containsIgnoringCase(String actual, String expected) {

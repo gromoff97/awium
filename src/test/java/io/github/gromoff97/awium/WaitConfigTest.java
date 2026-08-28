@@ -28,9 +28,7 @@ class WaitConfigTest {
 
     @Test
     void acceptsTheSmallestStrictlyValidDurationPair() {
-        WaitConfiguration config = defaults()
-                .withEvery(ofNanos(1))
-                .withUpTo(ofNanos(2));
+        WaitConfiguration config = defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2));
 
         assertEquals(1, config.everyNanos());
         assertEquals(2, config.upToNanos());
@@ -64,9 +62,7 @@ class WaitConfigTest {
 
     @Test
     void persistenceMayBeZeroButNotNegative() {
-        assertEquals(0L, defaults()
-                .withPersistence(ZERO)
-                .persistenceNanos());
+        assertEquals(0L, defaults().withPersistence(ZERO).persistenceNanos());
 
         assertTrue(assertThrows(IllegalArgumentException.class,
                 () -> defaults().withPersistence(ofNanos(-1))).getMessage()

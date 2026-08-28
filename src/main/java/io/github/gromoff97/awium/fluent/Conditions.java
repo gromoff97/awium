@@ -11,6 +11,7 @@ import io.github.gromoff97.awium.fluent.Condition.SelectedSequenceCondition;
 import io.github.gromoff97.awium.fluent.Condition.SelectedStage;
 import io.github.gromoff97.awium.fluent.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.sources.Source;
+import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -24,7 +25,9 @@ import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfi
 import static io.github.gromoff97.awium.fluent.ConditionSupport.nonEmpty;
 import static io.github.gromoff97.awium.fluent.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.fluent.ConditionRuntime.expected;
+import static io.github.gromoff97.awium.fluent.ConditionRuntime.expectedReference;
 import static io.github.gromoff97.awium.fluent.ConditionRuntime.narrowing;
+import static io.github.gromoff97.awium.fluent.ConditionRuntime.unexpectedReference;
 import static io.github.gromoff97.awium.fluent.ValueMatching.equal;
 import static io.github.gromoff97.awium.fluent.ValueMatching.matchesAny;
 import static java.util.Arrays.asList;
@@ -114,22 +117,22 @@ public final class Conditions {
     }
 
     public static <Value> ExpectedCondition<Value> equalTo(Value expected) {
-        return expected("value equals expected", actual -> equal(actual, expected)
+        return expected("value equals expected", expectedReference(expected), actual -> equal(actual, expected)
                 ? satisfied(actual) : unsatisfied("value was not equal"));
     }
 
     public static <Value> ExpectedCondition<Value> notEqualTo(Value unexpected) {
-        return expected("value does not equal unexpected", actual -> !equal(actual, unexpected)
+        return expected("value does not equal unexpected", unexpectedReference(unexpected), actual -> !equal(actual, unexpected)
                 ? satisfied(actual) : unsatisfied("value was equal"));
     }
 
     public static <Value> ExpectedCondition<Value> sameAs(Value expected) {
-        return expected("value is the same instance", actual -> actual == expected
+        return expected("value is the same instance", expectedReference(expected), actual -> actual == expected
                 ? satisfied(actual) : unsatisfied("value was a different instance"));
     }
 
     public static <Value> ExpectedCondition<Value> notSameAs(Value unexpected) {
-        return expected("value is not the same instance", actual -> actual != unexpected
+        return expected("value is not the same instance", unexpectedReference(unexpected), actual -> actual != unexpected
                 ? satisfied(actual) : unsatisfied("value was the same instance"));
     }
 
@@ -153,7 +156,8 @@ public final class Conditions {
     @SuppressWarnings("varargs")
     public static <Value> ExpectedCondition<Value> in(Value... expected) {
         List<Value> values = asList(nonEmpty(expected, "expected values"));
-        return expected("value is in the expected values", actual -> matchesAny(values, candidate -> equal(actual, candidate))
+        return expected("value is in the expected values", expectedReference(values),
+                actual -> matchesAny(values, candidate -> equal(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was not in the expected values"));
     }
 
@@ -161,7 +165,8 @@ public final class Conditions {
     @SuppressWarnings("varargs")
     public static <Value> ExpectedCondition<Value> notIn(Value... unexpected) {
         List<Value> values = asList(nonEmpty(unexpected, "unexpected values"));
-        return expected("value is not in the unexpected values", actual -> !matchesAny(values, candidate -> equal(actual, candidate))
+        return expected("value is not in the unexpected values", unexpectedReference(values),
+                actual -> !matchesAny(values, candidate -> equal(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was in the unexpected values"));
     }
 
@@ -189,12 +194,14 @@ public final class Conditions {
     public static <Value extends Comparable<? super Value>> PreservingCondition<Value> between(Value lowerBound, Value upperBound) {
         validateRange(lowerBound, upperBound);
         return comparable("value is between the inclusive bounds", "value was outside the inclusive range",
+                expectedReference(List.of(lowerBound, upperBound)),
                 actual -> actual.compareTo(lowerBound) >= 0 && actual.compareTo(upperBound) <= 0);
     }
 
     public static <Value extends Comparable<? super Value>> PreservingCondition<Value> strictlyBetween(Value lowerBound, Value upperBound) {
         validateRange(lowerBound, upperBound);
         return comparable("value is strictly between the bounds", "value was outside the exclusive range",
+                expectedReference(List.of(lowerBound, upperBound)),
                 actual -> actual.compareTo(lowerBound) > 0 && actual.compareTo(upperBound) < 0);
     }
 
@@ -202,12 +209,12 @@ public final class Conditions {
             Predicate<? super Value> matches) {
         requireNonNull(bound, "bound must not be null");
         return comparable("value is " + relation + " the bound",
-                "value was not " + relation + " the bound", matches);
+                "value was not " + relation + " the bound", expectedReference(bound), matches);
     }
 
     private static <Value> PreservingCondition<Value> comparable(String description, String mismatch,
-            Predicate<? super Value> matches) {
-        return preservingNonNull("value", description, mismatch, matches);
+            Reference<?> reference, Predicate<? super Value> matches) {
+        return preservingNonNull("value", description, mismatch, reference, matches);
     }
 
     private static <Value extends Comparable<? super Value>> void validateRange(Value lowerBound, Value upperBound) {
