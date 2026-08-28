@@ -7,8 +7,7 @@ calling thread and returns the result from the same successful observation.
 import static io.github.gromoff97.awium.fluent.Await.await;
 import static io.github.gromoff97.awium.fluent.OptionalConditions.present;
 
-Payment payment = await(() -> paymentRepository.findById(order.paymentId()))
-        .until(present.because("Checkout cannot continue without the payment"));
+Payment payment = await(() -> paymentRepository.findById(order.paymentId())).until(present.because("Checkout cannot continue without the payment"));
 ```
 
 ## Installation
@@ -126,12 +125,13 @@ Defaults are:
 - `upTo`: 10 seconds
 - `persisting`: zero, which disables persistence checking
 
-The first observation starts immediately. `every` is the delay from the end of
-one observation to the start of the next. `upTo` limits acquisition: an
-observation must start and complete strictly before its deadline. A late
-observation is retained for diagnostics but cannot satisfy the wait. Once the
-condition first succeeds, `persisting` may extend the total call beyond `upTo`.
-Any persistence mismatch fails immediately.
+The first observation is invoked unconditionally as soon as the engine starts;
+`upTo` does not cancel that initial source invocation. Later observations start
+only before the acquisition deadline, and every observation must also complete
+before it to satisfy the wait. A late observation is retained for diagnostics
+but cannot satisfy the wait. Once the condition first succeeds, `persisting`
+may extend the total call beyond `upTo`. Any persistence mismatch fails
+immediately.
 
 Each duration is validated when supplied. The final `every < upTo`
 relationship is validated by `until(...)` before polling.
@@ -225,6 +225,35 @@ OptionalSource<Payment> source = () -> null;
 await(source).until(absent);
 ```
 
+A variable declared as plain `Source<List<Payment>>` or
+`Source<Map<String, Payment>>` does not retain its selected element family.
+Use the corresponding marker when selection is needed:
+
+```java
+import io.github.gromoff97.awium.sources.Source.CollectionSource;
+import io.github.gromoff97.awium.sources.Source.MapSource;
+
+CollectionSource<List<Payment>> payments = paymentRepository::findAll;
+MapSource<Map<String, Payment>> index = paymentRepository::index;
+
+Payment onlyPayment = await(payments).until(single);
+Map.Entry<String, Payment> onlyEntry = await(index).until(singleEntry);
+```
+
+Covariant containers use the explicit view wrappers so the selected wildcard
+types remain safe:
+
+```java
+import io.github.gromoff97.awium.sources.Source.CollectionViewSource;
+import io.github.gromoff97.awium.sources.Source.MapViewSource;
+
+var payments = new CollectionViewSource<Payment, List<? extends Payment>>(paymentRepository::findAllView);
+var index = new MapViewSource<String, Payment, Map<? extends String, ? extends Payment>>(paymentRepository::indexView);
+
+Payment payment = await(payments).until(single);
+Map.Entry<? extends String, ? extends Payment> entry = await(index).until(singleEntry);
+```
+
 `until(...)` starts the wait. Success never invokes the source again merely to
 obtain the return value. A retained stage may be reused sequentially; every
 wait gets fresh timing. Built-in and factory-backed conditions also get fresh
@@ -247,7 +276,9 @@ AwaitResult<Optional<Payment>, Payment> result =
 contains the failure. Both expose retained `AwaitAttempt` history and the total
 attempt count. Each adjacent run of equivalent attempts is represented by its
 latest attempt, retaining the endpoint number and timing without retaining the
-whole run.
+whole run. There is intentionally no history limit: memory use grows with the
+number and reachable object graphs of non-equivalent observations, so choose
+`every` and `upTo` accordingly for diagnostic waits.
 
 ## Threading and interruption
 

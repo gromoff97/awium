@@ -48,7 +48,8 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
                 restoreInterrupt();
             }
             return afterConditionFailure(phase, number, attemptStarted,
-                    retrievalStarted, observed, actual, failure);
+                    retrievalStarted, observed, actual, failure,
+                    AwaitAttempt.Context.Plain.INSTANCE);
         }
 
         ConditionEvaluation<? extends Result> evaluation = assessment.evaluation();
@@ -56,7 +57,8 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
                 && interruptRaised()) {
             var interruption = new InterruptedException("caller thread interrupt flag was set");
             return afterConditionFailure(phase, number, attemptStarted,
-                    retrievalStarted, observed, actual, interruption);
+                    retrievalStarted, observed, actual, interruption,
+                    assessment.context());
         }
 
         long completed = clock.getAsLong();
@@ -106,12 +108,12 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
 
     private AwaitAttempt<Observed, Result> afterConditionFailure(AwaitAttempt.Phase phase, long number,
             long attemptStarted, long retrievalStarted, long observed,
-            Observed actual, Throwable failure) {
+            Observed actual, Throwable failure, AwaitAttempt.Context context) {
         long completed = clock.getAsLong();
         var timing = afterObservation(attemptStarted, retrievalStarted, observed, completed);
         return new AwaitAttempt<>(number, phase,
                 new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(timing, actual,
-                        failure, AwaitAttempt.Context.Plain.INSTANCE));
+                        failure, context));
     }
 
     private static <Observed, Result> AwaitAttempt.Outcome<Observed, Result> uncontrolled(AwaitAttempt.Timing.AfterObservation timing,

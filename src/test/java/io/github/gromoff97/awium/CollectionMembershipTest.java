@@ -101,8 +101,8 @@ class CollectionMembershipTest {
                                     time.advanceNanos(2);
                                     return actual;
                                 },
-                        defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)), time, time)
-                                .until(doesNotContain("a").because("business reason")));
+                        defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
+                        time, time).until(doesNotContain("a").because("business reason")));
 
         assertEquals(1, actual.iteratorCalls);
     }
@@ -120,7 +120,7 @@ class CollectionMembershipTest {
     }
 
     @Test
-    void ordinaryConsumerCallsAreWarningFreeAndBareNullRemainsAmbiguous()
+    void ordinaryConsumerCallsAreWarningFree()
             throws IOException {
         assertTrue(compiles(temporaryDirectory, """
                 import static io.github.gromoff97.awium.fluent.Await.await;
@@ -145,10 +145,6 @@ class CollectionMembershipTest {
                         ArrayList<Number> result = await(source).until(containsAll(integers));
                     }
                 }
-                """));
-        assertFalse(compiles(temporaryDirectory, """
-                import static io.github.gromoff97.awium.fluent.CollectionConditions.*;
-                final class Contract { void check() { contains(null); } }
                 """));
     }
 

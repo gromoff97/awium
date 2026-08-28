@@ -151,8 +151,7 @@ class CollectionSizeConditionsTest {
         };
 
         assertTrue(assertThrows(NullPointerException.class,
-                () -> timedCollectionAwait(source, defaults(), time, time)
-                        .until((PreservingCondition<Collection<String>>) null))
+                () -> timedCollectionAwait(source, defaults(), time, time).until((PreservingCondition<Collection<String>>) null))
                 .getMessage().contains("condition"));
         assertEquals(0, sourceCalls[0]);
     }

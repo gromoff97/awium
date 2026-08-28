@@ -105,15 +105,15 @@ class CollectionExactContentTest {
         var brokenIterator = new ProbeList<>(List.of("a"), iteratorCause);
         var brokenEquality = new ProbeList<>(
                 List.of(new ThrowingEquals(equalityCause)), null);
+        CollectionSource<ProbeList<String>> iteratorSource = () -> brokenIterator;
+        CollectionSource<ProbeList<ThrowingEquals>> equalitySource = () -> brokenEquality;
 
         assertSame(iteratorCause, assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> await((CollectionSource<ProbeList<String>>) () -> brokenIterator)
-                        .until(doesNotContainExactly("a"))).getCause());
+                () -> await(iteratorSource).until(doesNotContainExactly("a"))).getCause());
         assertSame(equalityCause, assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> await((CollectionSource<ProbeList<ThrowingEquals>>) () -> brokenEquality)
-                        .until(doesNotContainExactly(new ThrowingEquals(null)))).getCause());
+                () -> await(equalitySource).until(doesNotContainExactly(new ThrowingEquals(null)))).getCause());
     }
 
     @Test
@@ -135,8 +135,8 @@ class CollectionExactContentTest {
                 () -> timedCollectionAwait((Source<ProbeList<String>>) () -> {
                             time.advanceNanos(2);
                             return actual;
-                        }, defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)), time, time)
-                                .until(containsExactly("b").because("business reason")));
+                        }, defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
+                        time, time).until(containsExactly("b").because("business reason")));
 
         assertEquals(1, actual.iteratorCalls);
     }

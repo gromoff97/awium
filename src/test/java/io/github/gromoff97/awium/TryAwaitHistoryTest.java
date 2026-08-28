@@ -110,8 +110,7 @@ class TryAwaitHistoryTest {
                 condition("inner stage 1", value -> satisfied(value)),
                 condition("inner stage 2", value -> satisfied(value)));
 
-        var result = timedTryAwait(() -> actual, config(1, 10, 0), time, time)
-                .until(captured(
+        var result = timedTryAwait(() -> actual, config(1, 10, 0), time, time).until(captured(
                         condition("conditions are satisfied in order",
                                 value -> satisfied(List.of(value))),
                         nested));

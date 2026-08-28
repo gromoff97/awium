@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -13,6 +14,16 @@ class CompilationContractTest {
 
     @TempDir
     Path temporaryDirectory;
+
+    @Test
+    void unrelatedFixtureFailuresCannotMasqueradeAsTypeRejections() {
+        assertThrows(AssertionError.class,
+                () -> compiles("final class Contract { void broken( }"));
+        assertThrows(AssertionError.class, () -> compiles("""
+                import missing.Type;
+                final class Contract {}
+                """));
+    }
 
     @Test
     void exposesOneEntryPointAndFocusedConditionCatalogues() throws IOException {

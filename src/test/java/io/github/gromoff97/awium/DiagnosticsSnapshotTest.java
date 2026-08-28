@@ -50,8 +50,7 @@ class DiagnosticsSnapshotTest {
         var time = new FakeTime(0);
 
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
-                () -> timedAwait(() -> "created", config(1, 2, 0), time, time)
-                        .until(lifecycle(pending(), completed())));
+                () -> timedAwait(() -> "created", config(1, 2, 0), time, time).until(lifecycle(pending(), completed())));
 
         assertEquals("""
                 Acquisition deadline elapsed before the next attempt
@@ -83,8 +82,7 @@ class DiagnosticsSnapshotTest {
         AwaitPersistenceException failure = assertThrows(
                 AwaitPersistenceException.class,
                 () -> timedAwait(() -> statuses[next[0]++],
-                        config(1, 10, 5), time, time)
-                        .until(lifecycle(pending(), completed())));
+                        config(1, 10, 5), time, time).until(lifecycle(pending(), completed())));
 
         assertEquals("""
                 Condition did not persist for the required duration
@@ -121,8 +119,7 @@ class DiagnosticsSnapshotTest {
                 .because("processing must begin before completion");
 
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
-                () -> timedAwait(() -> "created", config(1, 2, 0), time, time)
-                        .until(lifecycle(assertedPending, completed())));
+                () -> timedAwait(() -> "created", config(1, 2, 0), time, time).until(lifecycle(assertedPending, completed())));
 
         assertEquals("""
                 Acquisition deadline elapsed before the next attempt
@@ -161,8 +158,7 @@ class DiagnosticsSnapshotTest {
 
         AwaitConditionEvaluationException failure = assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> timedAwait(() -> "created", config(1, 10, 0), time, time)
-                        .until(lifecycle(brokenPending, completed())));
+                () -> timedAwait(() -> "created", config(1, 10, 0), time, time).until(lifecycle(brokenPending, completed())));
 
         assertEquals("""
                 Condition evaluation failed

@@ -5,6 +5,7 @@ import io.github.gromoff97.awium.results.AwaitResult;
 import io.github.gromoff97.awium.fluent.Condition;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
+import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitInterruptedException;
 import io.github.gromoff97.awium.sources.Source;
 
 import org.junit.jupiter.api.AfterEach;
@@ -41,14 +42,12 @@ class TryAwaitFailureTest {
     @Test
     void capturesAcquisitionTimeoutAndPersistenceFailureWithoutChangingThem() {
         var timeout = assertParity(time -> timedAwait(() -> "actual",
-                        config(1, 2, 0), time, time)
-                        .until(condition("value is ready", actual -> unsatisfied("not ready"))),
-                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time)
-                        .until(condition("value is ready", actual -> unsatisfied("not ready"))));
+                        config(1, 2, 0), time, time).until(condition("value is ready", actual -> unsatisfied("not ready"))),
+                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time).until(condition(
+                        "value is ready", actual -> unsatisfied("not ready"))));
         var persistence = assertParity(time -> timedAwait(() -> "actual",
                         config(1, 3, 2), time, time).until(unstableCondition()),
-                time -> timedTryAwait(() -> "actual", config(1, 3, 2), time, time)
-                        .until(unstableCondition()));
+                time -> timedTryAwait(() -> "actual", config(1, 3, 2), time, time).until(unstableCondition()));
 
         assertInstanceOf(AwaitAttempt.Outcome.Unsatisfied.class,
                 timeout.attempts().getLast().outcome());
@@ -72,12 +71,10 @@ class TryAwaitFailureTest {
                 }, config(1, 2, 0), time, time).until(isNotNull));
         var condition = assertParity(time -> timedAwait(() -> "actual",
                         config(1, 2, 0), time, time).until(throwingCondition()),
-                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time)
-                        .until(throwingCondition()));
+                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time).until(throwingCondition()));
         var conditionAssertion = assertParity(time -> timedAwait(() -> "actual",
                         config(1, 2, 0), time, time).until(assertionThrowingCondition()),
-                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time)
-                        .until(assertionThrowingCondition()));
+                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time).until(assertionThrowingCondition()));
 
         assertInstanceOf(AwaitAttempt.Outcome.SourceRetrievalFailed.class,
                 source.attempts().getLast().outcome());
@@ -93,12 +90,10 @@ class TryAwaitFailureTest {
     void capturesConditionFactoryFailuresInsideTheFirstAttempt() {
         var failure = assertParity(time -> timedAwait(() -> "actual",
                         config(1, 2, 0), time, time).until(failingFactory()),
-                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time)
-                        .until(failingFactory()));
+                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time).until(failingFactory()));
         var nullEvaluator = assertParity(time -> timedAwait(() -> "actual",
                         config(1, 2, 0), time, time).until(nullFactory()),
-                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time)
-                        .until(nullFactory()));
+                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time).until(nullFactory()));
 
         assertEquals(1, failure.totalAttempts());
         assertEquals(1, failure.attempts().getFirst().number());
@@ -111,12 +106,10 @@ class TryAwaitFailureTest {
     void assertedFailuresRemainControlled() {
         var timeout = assertParity(time -> timedAwait(() -> "actual",
                         config(1, 2, 0), time, time).until(failingAssertion()),
-                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time)
-                        .until(failingAssertion()));
+                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time).until(failingAssertion()));
         var persistence = assertParity(time -> timedAwait(() -> "actual",
                         config(1, 3, 2), time, time).until(unstableAssertion()),
-                time -> timedTryAwait(() -> "actual", config(1, 3, 2), time, time)
-                        .until(unstableAssertion()));
+                time -> timedTryAwait(() -> "actual", config(1, 3, 2), time, time).until(unstableAssertion()));
 
         assertInstanceOf(AwaitAttempt.Outcome.Unsatisfied.class,
                 timeout.attempts().getLast().outcome());
@@ -127,18 +120,15 @@ class TryAwaitFailureTest {
     @Test
     void capturesParkingAndEveryInterruptionBoundary() {
         assertParity(time -> timedAwait(() -> "actual", config(1, 2, 0), time,
-                        nanos -> { throw new IllegalStateException("park failed"); })
-                        .until(condition("never", actual -> unsatisfied("not ready"))),
+                        nanos -> { throw new IllegalStateException("park failed"); }).until(neverReady()),
                 time -> timedTryAwait(() -> "actual", config(1, 2, 0), time,
-                        nanos -> { throw new IllegalStateException("park failed"); })
-                        .until(condition("never", actual -> unsatisfied("not ready"))));
+                        nanos -> { throw new IllegalStateException("park failed"); }).until(neverReady()));
         assertParity(time -> {
                     currentThread().interrupt();
                     timedAwait(() -> "actual", config(1, 2, 0), time, time).until(isNotNull);
                 }, time -> {
                     currentThread().interrupt();
-                    return timedTryAwait(() -> "actual", config(1, 2, 0), time, time)
-                            .until(isNotNull);
+                    return timedTryAwait(() -> "actual", config(1, 2, 0), time, time).until(isNotNull);
                 });
         assertParity(time -> timedAwait((Source<Object>) () -> {
                     throw new InterruptedException("source interrupted");
@@ -156,8 +146,7 @@ class TryAwaitFailureTest {
                 }, config(1, 2, 0), time, time).until(isNotNull));
         var condition = assertParity(time -> timedAwait(() -> "actual",
                         config(1, 2, 0), time, time).until(interruptingCondition()),
-                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time)
-                        .until(interruptingCondition()));
+                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time).until(interruptingCondition()));
 
         assertInstanceOf(AwaitAttempt.Outcome.ConditionEvaluationFailed.class,
                 condition.attempts().getLast().outcome());
@@ -171,8 +160,7 @@ class TryAwaitFailureTest {
     void capturesNullEvaluationAndDiagnosticRenderingFailure() {
         var nullEvaluation = assertParity(time -> timedAwait(() -> "actual",
                         config(1, 2, 0), time, time).until(nullEvaluation()),
-                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time)
-                        .until(nullEvaluation()));
+                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time).until(nullEvaluation()));
         var diagnostics = assertParity(time -> timedAwait(
                         TryAwaitFailureTest::brokenDiagnosticActual,
                         config(1, 2, 0), time, time).until(brokenDiagnostics()),
@@ -207,6 +195,26 @@ class TryAwaitFailureTest {
     }
 
     @Test
+    void capturedInterruptRetainsSequenceContext() {
+        var time = new FakeTime(0);
+
+        var result = failed(timedTryAwait(() -> "actual", config(1, 2, 0), time, time).until(captured(
+                condition("first stage", actual -> {
+                    currentThread().interrupt();
+                    return satisfied(actual);
+                }),
+                condition("second stage", actual -> satisfied(actual)))));
+        var outcome = assertInstanceOf(AwaitAttempt.Outcome.ConditionEvaluationFailed.class,
+                result.attempts().getFirst().outcome());
+        var context = assertInstanceOf(AwaitAttempt.Context.Sequence.class, outcome.context());
+
+        assertInstanceOf(AwaitInterruptedException.class, result.failure());
+        assertEquals(1, context.evaluatedStageNumber());
+        assertEquals("second stage", context.expectation());
+        assertTrue(currentThread().isInterrupted());
+    }
+
+    @Test
     @SuppressWarnings("removal")
     void fatalSignalsEscapeDiagnosticExecutionUnchanged() {
         var sourceFatal = new InternalError("fatal source");
@@ -218,16 +226,13 @@ class TryAwaitFailureTest {
         assertSame(sourceFatal, assertThrows(InternalError.class,
                 () -> tryAwait((Source<Object>) () -> { throw sourceFatal; }).until(isNotNull)));
         assertSame(conditionFatal, assertThrows(ThreadDeath.class,
-                () -> tryAwait((Source<Object>) Object::new)
-                        .until(condition("fatal", actual -> { throw conditionFatal; }))));
+                () -> tryAwait((Source<Object>) Object::new).until(condition("fatal", actual -> { throw conditionFatal; }))));
         var time = new FakeTime(0);
         assertSame(parkerFatal, assertThrows(InternalError.class,
                 () -> timedTryAwait(Object::new, config(1, 2, 0), time,
-                        nanos -> { throw parkerFatal; })
-                        .until(condition("never", actual -> unsatisfied("not ready")))));
+                        nanos -> { throw parkerFatal; }).until(condition("never", actual -> unsatisfied("not ready")))));
         assertSame(evaluationFatal, assertThrows(InternalError.class,
-                () -> tryAwait((Source<Object>) Object::new)
-                        .until(condition("fatal", actual -> uncontrolled(evaluationFatal)))));
+                () -> tryAwait((Source<Object>) Object::new).until(condition("fatal", actual -> uncontrolled(evaluationFatal)))));
         assertSame(diagnosticsFatal, assertThrows(InternalError.class, () -> {
             var diagnosticTime = new FakeTime(0);
             Object actual = new Object() {
@@ -284,6 +289,10 @@ class TryAwaitFailureTest {
         return condition("condition succeeds", actual -> {
             throw new IllegalStateException("condition failed");
         });
+    }
+
+    private static Condition<Object, Object> neverReady() {
+        return condition("never", actual -> unsatisfied("not ready"));
     }
 
     private static Condition<Object, Object> failingFactory() {

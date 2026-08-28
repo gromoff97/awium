@@ -231,20 +231,6 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
                             && value.mismatch().equals(other.mismatch())
                             && value.assertion() == other.assertion()
                             && value.context().equals(other.context());
-            case AwaitAttempt.Outcome.WaitingFailed<?, ?> value
-                    when right.outcome() instanceof AwaitAttempt.Outcome.WaitingFailed<?, ?> other ->
-                    value.failure() == other.failure();
-            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> value
-                    when right.outcome() instanceof AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> other ->
-                    value.failure() == other.failure();
-            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> value
-                    when right.outcome() instanceof AwaitAttempt.Outcome.SourceInterrupted<?, ?> other ->
-                    value.observed() == other.observed() && value.failure() == other.failure();
-            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> value
-                    when right.outcome() instanceof AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> other ->
-                    value.observed() == other.observed()
-                            && value.failure() == other.failure()
-                            && value.context().equals(other.context());
             default -> false;
         };
     }

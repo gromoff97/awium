@@ -146,8 +146,7 @@ class CapturedConditionTest {
         int[] sourceCalls = {0};
 
         assertThrows(AwaitPersistenceException.class, () -> timedAwait(
-                () -> observations[sourceCalls[0]++], config(1, 10, 10), time, time)
-                .until(captured(value -> value == early,
+                () -> observations[sourceCalls[0]++], config(1, 10, 10), time, time).until(captured(value -> value == early,
                         value -> value != rejectedFinal)));
 
         assertEquals(3, sourceCalls[0]);

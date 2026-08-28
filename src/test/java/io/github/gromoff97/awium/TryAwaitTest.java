@@ -29,8 +29,7 @@ class TryAwaitTest {
         int[] calls = {0};
 
         AwaitResult<String, String> result = timedTryAwait(() -> "actual",
-                config(2, 10, 3), time, time)
-                .until(yields(actual -> results.get(calls[0]++)));
+                config(2, 10, 3), time, time).until(yields(actual -> results.get(calls[0]++)));
 
         var success = satisfied(result);
         assertEquals("boundary", success.result());
@@ -42,13 +41,10 @@ class TryAwaitTest {
 
     @Test
     void retainsLegitimateNullAndSelectedOptionalValue() {
-        AwaitResult<String, String> nullable = tryAwait((Source<String>) () -> "actual")
-                .until(yields(actual -> null));
-        AwaitResult<String, Void> nullSource = tryAwait((Source<String>) () -> null)
-                .until(isNull);
-        AwaitResult<Optional<String>, String> selected = tryAwait(
-                (Source.OptionalSource<String>) () -> Optional.of("payment"))
-                .until(present);
+        AwaitResult<String, String> nullable = tryAwait((Source<String>) () -> "actual").until(yields(actual -> null));
+        AwaitResult<String, Void> nullSource = tryAwait((Source<String>) () -> null).until(isNull);
+        AwaitResult<Optional<String>, String> selected =
+                tryAwait((Source.OptionalSource<String>) () -> Optional.of("payment")).until(present);
 
         assertNull(satisfied(nullable).result());
         assertNull(satisfied(nullSource).result());

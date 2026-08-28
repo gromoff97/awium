@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.CompilationSupport.compiles;
+import static io.github.gromoff97.awium.CompilationSupport.compilesModule;
 import static java.nio.file.Files.isRegularFile;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -76,6 +77,26 @@ class ArtifactContractIT {
                     }
                     List<String> loadCollection() { return List.of("value"); }
                     Map<String, Integer> loadMap() { return Map.of("value", 1); }
+                }
+                """, JAR));
+    }
+
+    @Test
+    void packagedJarCompilesAsAnExplicitModule(@TempDir Path directory) throws Exception {
+        assertTrue(compilesModule(directory, """
+                module consumer {
+                    requires io.github.gromoff97.awium;
+                }
+                """, """
+                package consumer;
+
+                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.fluent.Conditions.isNotNull;
+
+                final class Contract {
+                    String value() {
+                        return await(() -> "ready").until(isNotNull);
+                    }
                 }
                 """, JAR));
     }

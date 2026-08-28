@@ -147,8 +147,7 @@ class MapSizeConditionsTest {
         };
 
         assertTrue(assertThrows(NullPointerException.class,
-                () -> timedMapAwait(source, defaults(), time, time)
-                        .until((PreservingCondition<Map<String, String>>) null))
+                () -> timedMapAwait(source, defaults(), time, time).until((PreservingCondition<Map<String, String>>) null))
                 .getMessage().contains("condition"));
         assertEquals(0, sourceCalls[0]);
     }
