@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.await;
+package io.github.gromoff97.awium.results;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 
@@ -6,7 +6,8 @@ import java.time.Duration;
 
 import static java.util.Objects.requireNonNull;
 
-public record AwaitAttempt<S, R>(long number, Phase phase, Outcome<S, R> outcome) {
+public record AwaitAttempt<Observed, Result>(long number, Phase phase,
+        Outcome<Observed, Result> outcome) {
 
     public AwaitAttempt {
         if (number <= 0) {
@@ -18,20 +19,21 @@ public record AwaitAttempt<S, R>(long number, Phase phase, Outcome<S, R> outcome
 
     public enum Phase { ACQUISITION, PERSISTENCE }
 
-    public sealed interface Outcome<S, R> {
+    public sealed interface Outcome<Observed, Result> {
 
         Timing timing();
 
-        record Satisfied<S, R>(Timing.AfterObservation timing, S observed, R result) implements Outcome<S, R> {
+        record Satisfied<Observed, Result>(Timing.AfterObservation timing,
+                Observed observed, Result result) implements Outcome<Observed, Result> {
 
             public Satisfied {
                 requireNonNull(timing, "timing must not be null");
             }
         }
 
-        record Unsatisfied<S, R>(Timing.AfterObservation timing, S observed,
+        record Unsatisfied<Observed, Result>(Timing.AfterObservation timing, Observed observed,
                 String mismatch, AssertionError assertion,
-                Evaluation.Context context) implements Outcome<S, R> {
+                Evaluation.Context context) implements Outcome<Observed, Result> {
 
             public Unsatisfied {
                 requireNonNull(timing, "timing must not be null");
@@ -40,7 +42,8 @@ public record AwaitAttempt<S, R>(long number, Phase phase, Outcome<S, R> outcome
             }
         }
 
-        record WaitingFailed<S, R>(Timing.BeforeRetrieval timing, Throwable failure) implements Outcome<S, R> {
+        record WaitingFailed<Observed, Result>(Timing.BeforeRetrieval timing,
+                Throwable failure) implements Outcome<Observed, Result> {
 
             public WaitingFailed {
                 requireNonNull(timing, "timing must not be null");
@@ -48,7 +51,8 @@ public record AwaitAttempt<S, R>(long number, Phase phase, Outcome<S, R> outcome
             }
         }
 
-        record SourceRetrievalFailed<S, R>(Timing.BeforeObservation timing, Throwable failure) implements Outcome<S, R> {
+        record SourceRetrievalFailed<Observed, Result>(Timing.BeforeObservation timing,
+                Throwable failure) implements Outcome<Observed, Result> {
 
             public SourceRetrievalFailed {
                 requireNonNull(timing, "timing must not be null");
@@ -56,8 +60,8 @@ public record AwaitAttempt<S, R>(long number, Phase phase, Outcome<S, R> outcome
             }
         }
 
-        record SourceInterrupted<S, R>(Timing.AfterObservation timing, S observed,
-                InterruptedException failure) implements Outcome<S, R> {
+        record SourceInterrupted<Observed, Result>(Timing.AfterObservation timing, Observed observed,
+                InterruptedException failure) implements Outcome<Observed, Result> {
 
             public SourceInterrupted {
                 requireNonNull(timing, "timing must not be null");
@@ -65,9 +69,9 @@ public record AwaitAttempt<S, R>(long number, Phase phase, Outcome<S, R> outcome
             }
         }
 
-        record ConditionEvaluationFailed<S, R>(Timing.AfterObservation timing,
-                S observed, Throwable failure,
-                Evaluation.Context context) implements Outcome<S, R> {
+        record ConditionEvaluationFailed<Observed, Result>(Timing.AfterObservation timing,
+                Observed observed, Throwable failure,
+                Evaluation.Context context) implements Outcome<Observed, Result> {
 
             public ConditionEvaluationFailed {
                 requireNonNull(timing, "timing must not be null");

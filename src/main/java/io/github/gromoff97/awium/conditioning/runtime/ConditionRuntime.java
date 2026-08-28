@@ -186,8 +186,8 @@ public final class ConditionRuntime {
         return (Function<S, Evaluation<R>>) (Function<?, ?>) ConditionRuntime.<S, R>runtime(condition).newEvaluator();
     }
 
-    public static <S, R> Function<? super S, ? extends Evaluation<? extends R>> evaluator(
-            ConditionStage<? super S, ? extends R> condition) {
+    public static <S, R> Function<? super S, ? extends Evaluation<? extends R>> evaluator(ConditionStage<? super S,
+            ? extends R> condition) {
         return ConditionRuntime.<S, R>runtime(condition).newEvaluator();
     }
 

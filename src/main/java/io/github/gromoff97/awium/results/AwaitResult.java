@@ -1,16 +1,17 @@
-package io.github.gromoff97.awium.await;
+package io.github.gromoff97.awium.results;
 
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
-public sealed interface AwaitResult<S, R> {
+public sealed interface AwaitResult<Observed, Result> {
 
-    List<AwaitAttempt<S, R>> attempts();
+    List<AwaitAttempt<Observed, Result>> attempts();
 
     long totalAttempts();
 
-    record Satisfied<S, R>(List<AwaitAttempt<S, R>> attempts, long totalAttempts, R result) implements AwaitResult<S, R> {
+    record Satisfied<Observed, Result>(List<AwaitAttempt<Observed, Result>> attempts,
+            long totalAttempts, Result result) implements AwaitResult<Observed, Result> {
 
         public Satisfied {
             attempts = List.copyOf(attempts);
@@ -18,7 +19,8 @@ public sealed interface AwaitResult<S, R> {
         }
     }
 
-    record Failed<S, R>(List<AwaitAttempt<S, R>> attempts, long totalAttempts, Throwable failure) implements AwaitResult<S, R> {
+    record Failed<Observed, Result>(List<AwaitAttempt<Observed, Result>> attempts,
+            long totalAttempts, Throwable failure) implements AwaitResult<Observed, Result> {
 
         public Failed {
             attempts = List.copyOf(attempts);

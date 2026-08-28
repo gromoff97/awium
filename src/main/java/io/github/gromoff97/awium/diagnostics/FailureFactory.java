@@ -1,10 +1,10 @@
 package io.github.gromoff97.awium.diagnostics;
 
-import io.github.gromoff97.awium.await.AwaitAttempt;
-import io.github.gromoff97.awium.await.AwaitResult;
+import io.github.gromoff97.awium.results.AwaitAttempt;
+import io.github.gromoff97.awium.results.AwaitResult;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
-import io.github.gromoff97.awium.engine.WaitOutcome;
+import io.github.gromoff97.awium.engine.WaitCompletion;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitPersistenceException;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
@@ -22,10 +22,10 @@ public final class FailureFactory {
         throw new AssertionError("Utility class");
     }
 
-    public static <S, R> R complete(WaitOutcome<S, R> outcome,
+    public static <Observed, Result> Result complete(WaitCompletion<Observed, Result> outcome,
             String description, String explanation,
             WaitConfiguration configuration) {
-        if (outcome instanceof WaitOutcome.Satisfied<S, R> success) {
+        if (outcome instanceof WaitCompletion.Satisfied<Observed, Result> success) {
             return satisfied(success.attempt()).result();
         }
         Throwable failure = failure(outcome, description, explanation, configuration);
@@ -35,10 +35,10 @@ public final class FailureFactory {
         throw (Error) failure;
     }
 
-    public static <S, R> AwaitResult<S, R> capture(WaitEngine.Execution<S, R> execution,
+    public static <Observed, Result> AwaitResult<Observed, Result> capture(WaitEngine.RecordedWait<Observed, Result> execution,
             String description, String explanation,
             WaitConfiguration configuration) {
-        if (execution.outcome() instanceof WaitOutcome.Satisfied<S, R> success) {
+        if (execution.outcome() instanceof WaitCompletion.Satisfied<Observed, Result> success) {
             return new AwaitResult.Satisfied<>(execution.attempts(), success.attempt().number(),
                     satisfied(success.attempt()).result());
         }
@@ -46,7 +46,7 @@ public final class FailureFactory {
                 failure(execution.outcome(), description, explanation, configuration));
     }
 
-    private static <S, R> Throwable failure(WaitOutcome<S, R> outcome,
+    private static <Observed, Result> Throwable failure(WaitCompletion<Observed, Result> outcome,
             String description, String explanation,
             WaitConfiguration configuration) {
         FailureMessageRenderer.AttemptDiagnostic diagnostic = FailureMessageRenderer.diagnostic(outcome.attempt());
@@ -77,10 +77,10 @@ public final class FailureFactory {
         }
 
         String message = rendered.message();
-        if (outcome instanceof WaitOutcome.PersistenceFailure<S, R>) {
+        if (outcome instanceof WaitCompletion.PersistenceFailure<Observed, Result>) {
             return new AwaitPersistenceException(message, cause);
         }
-        if (outcome instanceof WaitOutcome.Uncontrolled<S, R>) {
+        if (outcome instanceof WaitCompletion.Uncontrolled<Observed, Result>) {
             if (cause instanceof InterruptedException) {
                 return new AwaitInterruptedException(message, cause);
             }
@@ -98,7 +98,7 @@ public final class FailureFactory {
     }
 
     @SuppressWarnings("unchecked")
-    private static <S, R> AwaitAttempt.Outcome.Satisfied<S, R> satisfied(AwaitAttempt<S, R> attempt) {
-        return (AwaitAttempt.Outcome.Satisfied<S, R>) attempt.outcome();
+    private static <Observed, Result> AwaitAttempt.Outcome.Satisfied<Observed, Result> satisfied(AwaitAttempt<Observed, Result> attempt) {
+        return (AwaitAttempt.Outcome.Satisfied<Observed, Result>) attempt.outcome();
     }
 }

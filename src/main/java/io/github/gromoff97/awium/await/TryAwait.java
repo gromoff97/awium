@@ -9,58 +9,58 @@ import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSequenceStage;
 import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
+import io.github.gromoff97.awium.results.AwaitResult;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.util.List;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
-public final class TryAwait<S, E, F extends Source<?>>
-        extends AbstractAwait<S, TryAwait<S, E, F>> {
+public final class TryAwait<Observed, Element, Family extends Source<?>> extends AbstractAwait<Observed, TryAwait<Observed, Element, Family>> {
 
-    TryAwait(Source<? extends S> source) {
+    TryAwait(Source<? extends Observed> source) {
         super(source);
     }
 
-    TryAwait(Source<? extends S> source, WaitConfiguration configuration,
+    TryAwait(Source<? extends Observed> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         super(source, configuration, clock, parker);
     }
 
-    private TryAwait(TryAwait<S, E, F> await, WaitConfiguration configuration) {
+    private TryAwait(TryAwait<Observed, Element, Family> await, WaitConfiguration configuration) {
         super(await, configuration);
     }
 
     @Override
-    TryAwait<S, E, F> reconfigured(WaitConfiguration configuration) {
+    TryAwait<Observed, Element, Family> reconfigured(WaitConfiguration configuration) {
         return new TryAwait<>(this, configuration);
     }
 
-    public AwaitResult<S, S> until(PreservingStage<? super S> condition) {
+    public AwaitResult<Observed, Observed> until(PreservingStage<? super Observed> condition) {
         return capture(ConditionRuntime.preservingEvaluator(condition), condition);
     }
 
-    public <T extends S> AwaitResult<S, S> until(ExpectedStage<T> condition) {
+    public <Expected extends Observed> AwaitResult<Observed, Observed> until(ExpectedStage<Expected> condition) {
         return capture(ConditionRuntime.expectedEvaluator(condition), condition);
     }
 
-    public <T extends S> AwaitResult<S, List<S>> until(ExpectedSequenceStage<T> condition) {
+    public <Expected extends Observed> AwaitResult<Observed, List<Observed>> until(ExpectedSequenceStage<Expected> condition) {
         return capture(ConditionRuntime.expectedSequenceEvaluator(condition), condition);
     }
 
-    public <R extends S> AwaitResult<S, R> until(NarrowingStage<R> condition) {
+    public <Result extends Observed> AwaitResult<Observed, Result> until(NarrowingStage<Result> condition) {
         return capture(ConditionRuntime.narrowingEvaluator(condition), condition);
     }
 
-    public <R> AwaitResult<S, R> until(ResultStage<? super S, ? extends R> condition) {
+    public <Result> AwaitResult<Observed, Result> until(ResultStage<? super Observed, ? extends Result> condition) {
         return capture(ConditionRuntime.evaluator(condition), condition);
     }
 
-    public AwaitResult<S, E> until(SelectedStage<? super S, F> condition) {
+    public AwaitResult<Observed, Element> until(SelectedStage<? super Observed, Family> condition) {
         return capture(ConditionRuntime.selectedEvaluator(condition), condition);
     }
 
-    public AwaitResult<S, List<E>> until(SelectedSequenceStage<? super S, F> condition) {
+    public AwaitResult<Observed, List<Element>> until(SelectedSequenceStage<? super Observed, Family> condition) {
         return capture(ConditionRuntime.selectedEvaluator(condition), condition);
     }
 }

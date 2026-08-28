@@ -91,12 +91,12 @@ public final class Evaluation<R> {
 
         enum Plain implements Context { INSTANCE }
 
-        record Sequence(int captured, int total, int evaluatedStage,
+        record Sequence(int capturedStages, int totalStages, int evaluatedStageNumber,
                 String expectation, String importance) implements Context {
 
             public Sequence {
-                if (captured < 0 || captured > total
-                        || evaluatedStage <= 0 || evaluatedStage > total) {
+                if (capturedStages < 0 || capturedStages > totalStages
+                        || evaluatedStageNumber <= 0 || evaluatedStageNumber > totalStages) {
                     throw new IllegalArgumentException("invalid sequence progress");
                 }
                 requireNonNull(expectation, "expectation must not be null");

@@ -23,7 +23,7 @@ class CompilationContractTest {
                 import static io.github.gromoff97.awium.conditioning.conditions.MapConditions.singleEntry;
                 import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.present;
                 import static io.github.gromoff97.awium.conditioning.conditions.StringConditions.nonBlank;
-                import io.github.gromoff97.awium.await.AwaitResult;
+                import io.github.gromoff97.awium.results.AwaitResult;
                 import io.github.gromoff97.awium.sources.Source;
                 import java.util.*;
 

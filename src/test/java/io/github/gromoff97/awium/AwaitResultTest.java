@@ -1,14 +1,14 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.await.AwaitAttempt;
-import io.github.gromoff97.awium.await.AwaitResult;
+import io.github.gromoff97.awium.results.AwaitAttempt;
+import io.github.gromoff97.awium.results.AwaitResult;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.ACQUISITION;
+import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.ACQUISITION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;

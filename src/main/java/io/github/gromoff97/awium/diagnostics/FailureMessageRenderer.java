@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium.diagnostics;
 
-import io.github.gromoff97.awium.await.AwaitAttempt;
+import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
-import io.github.gromoff97.awium.engine.WaitOutcome;
+import io.github.gromoff97.awium.engine.WaitCompletion;
 
 import static io.github.gromoff97.awium.engine.WaitConfiguration.duration;
 import static java.util.Arrays.deepToString;
@@ -19,7 +19,7 @@ final class FailureMessageRenderer {
         throw new AssertionError("Utility class");
     }
 
-    static Result render(WaitOutcome<?, ?> outcome, String description,
+    static Result render(WaitCompletion<?, ?> outcome, String description,
             String explanation, WaitConfiguration configuration,
             AttemptDiagnostic diagnostic) {
         Context context = new Context(outcome, description, explanation,
@@ -45,17 +45,17 @@ final class FailureMessageRenderer {
 
     private static String format(Context context) {
         return switch (context.outcome) {
-            case WaitOutcome.TimeoutBetweenObservations<?, ?> ignored ->
+            case WaitCompletion.TimeoutBetweenObservations<?, ?> ignored ->
                     message(context, "Acquisition deadline elapsed before the next attempt");
-            case WaitOutcome.LateTimeout<?, ?> value -> message(context,
+            case WaitCompletion.LateTimeout<?, ?> value -> message(context,
                     value.attempt().outcome() instanceof AwaitAttempt.Outcome.Satisfied<?, ?>
                             ? "Condition became satisfied at or after the acquisition deadline"
                             : "Condition remained unsatisfied at or after the acquisition deadline");
-            case WaitOutcome.PersistenceFailure<?, ?> ignored ->
+            case WaitCompletion.PersistenceFailure<?, ?> ignored ->
                     message(context, "Condition did not persist for the required duration");
-            case WaitOutcome.Uncontrolled<?, ?> ignored ->
+            case WaitCompletion.Uncontrolled<?, ?> ignored ->
                     message(context, context.diagnostic.heading());
-            case WaitOutcome.Satisfied<?, ?> ignored ->
+            case WaitCompletion.Satisfied<?, ?> ignored ->
                     throw new IllegalArgumentException("successful outcomes have no failure diagnostics");
         };
     }
@@ -85,7 +85,7 @@ final class FailureMessageRenderer {
         attempt(out, attempt.number(), actual,
                 context.diagnostic.sequence() == null ? context.diagnostic.mismatch() : null);
         sequence(out, context.diagnostic);
-        if (!(context.outcome instanceof WaitOutcome.Uncontrolled<?, ?>)) {
+        if (!(context.outcome instanceof WaitCompletion.Uncontrolled<?, ?>)) {
             timing(out, context);
         }
         Throwable failure = context.diagnostic.failure();
@@ -101,21 +101,21 @@ final class FailureMessageRenderer {
                 duration(context.configuration.upToNanos()));
         long completedAfter = context.outcome.attempt().outcome().timing().completionOffset().toNanos();
         switch (context.outcome) {
-            case WaitOutcome.TimeoutBetweenObservations<?, ?> outcome -> {
+            case WaitCompletion.TimeoutBetweenObservations<?, ?> outcome -> {
                 field(out, "Last attempt completed after", duration(completedAfter));
                 field(out, "Elapsed", duration(outcome.elapsedNanos()));
             }
-            case WaitOutcome.LateTimeout<?, ?> outcome ->
+            case WaitCompletion.LateTimeout<?, ?> outcome ->
                     field(out, "Elapsed", duration(completedAfter));
-            case WaitOutcome.PersistenceFailure<?, ?> outcome -> {
+            case WaitCompletion.PersistenceFailure<?, ?> outcome -> {
                 long acquiredAfter = outcome.acquiredAfterNanos();
                 field(out, "Acquired after", duration(acquiredAfter));
                 field(out, "Required persistence",
                         duration(context.configuration.persistenceNanos()));
                 field(out, "Failure detected after", duration(completedAfter - acquiredAfter));
             }
-            case WaitOutcome.Uncontrolled<?, ?> ignored -> {}
-            case WaitOutcome.Satisfied<?, ?> ignored -> {}
+            case WaitCompletion.Uncontrolled<?, ?> ignored -> {}
+            case WaitCompletion.Satisfied<?, ?> ignored -> {}
         }
         field(out, "Polling interval",
                 duration(context.configuration.everyNanos()));
@@ -153,8 +153,8 @@ final class FailureMessageRenderer {
         if (sequence == null) {
             return;
         }
-        out.append('\n').append("Sequence (captured ").append(sequence.captured())
-                .append(" of ").append(sequence.total()).append("):\n");
+        out.append('\n').append("Sequence (captured ").append(sequence.capturedStages())
+                .append(" of ").append(sequence.totalStages()).append("):\n");
         field(out, "Expectation", sequence.expectation());
         if (sequence.importance() != null) {
             field(out, "Importance", sequence.importance());
@@ -283,7 +283,7 @@ final class FailureMessageRenderer {
 
     private static final class Context {
 
-        private final WaitOutcome<?, ?> outcome;
+        private final WaitCompletion<?, ?> outcome;
         private final String description;
         private final String explanation;
         private final WaitConfiguration configuration;
@@ -291,7 +291,7 @@ final class FailureMessageRenderer {
 
         private String actual;
 
-        private Context(WaitOutcome<?, ?> outcome,
+        private Context(WaitCompletion<?, ?> outcome,
                 String description, String explanation,
                 WaitConfiguration configuration, AttemptDiagnostic diagnostic) {
             this.outcome = requireNonNull(outcome, "outcome must not be null");

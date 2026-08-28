@@ -4,10 +4,10 @@ import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.conditioning.conditions.Conditions;
-import io.github.gromoff97.awium.await.AwaitAttempt;
+import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
-import io.github.gromoff97.awium.engine.WaitOutcome;
+import io.github.gromoff97.awium.engine.WaitCompletion;
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitPersistenceException;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
@@ -25,8 +25,8 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.uncontrolled;
 import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
 import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
-import static io.github.gromoff97.awium.engine.WaitOutcome.*;
-import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.ACQUISITION;
+import static io.github.gromoff97.awium.engine.WaitCompletion.*;
+import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.ACQUISITION;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -186,16 +186,16 @@ class DiagnosticsSnapshotTest {
     void controlledFailuresRetainTheirSemanticContext() {
         var betweenAssertion = new AssertionError("collection was empty");
         var persistenceAssertion = new AssertionError("optional was empty");
-        WaitOutcome<Object, Object> between = new TimeoutBetweenObservations<>(
+        WaitCompletion<Object, Object> between = new TimeoutBetweenObservations<>(
                 10 * SECOND, assertionUnsatisfiedAttempt(null, "collection was empty",
                         betweenAssertion, 4, 9 * SECOND));
-        WaitOutcome<Object, Object> lateUnsatisfied = new LateTimeout<>(
+        WaitCompletion<Object, Object> lateUnsatisfied = new LateTimeout<>(
                 unsatisfiedAttempt("Payment[PENDING]", "status was PENDING",
                         100, 10 * SECOND + 200 * MILLISECOND));
-        WaitOutcome<Object, Object> lateSatisfied = new LateTimeout<>(
+        WaitCompletion<Object, Object> lateSatisfied = new LateTimeout<>(
                 satisfiedAttempt("Payment[COMPLETED]", new Object(), 100,
                         10 * SECOND + 200 * MILLISECOND));
-        WaitOutcome<Object, Object> persistence = new PersistenceFailure<>(7 * SECOND,
+        WaitCompletion<Object, Object> persistence = new PersistenceFailure<>(7 * SECOND,
                 assertionUnsatisfiedAttempt("Optional.empty", "optional was empty",
                         persistenceAssertion, 71, 9 * SECOND + 100 * MILLISECOND));
 
@@ -407,7 +407,7 @@ class DiagnosticsSnapshotTest {
     @Test
     void assertionCauseIsRetainedAndItsMessageIsReadOnce() {
         var assertion = new CountingAssertion("assertion failed");
-        WaitOutcome<Object, Object> outcome = new LateTimeout<>(
+        WaitCompletion<Object, Object> outcome = new LateTimeout<>(
                 assertionUnsatisfiedAttempt("actual", "business mismatch", assertion,
                         2, 3 * SECOND));
 
@@ -462,7 +462,7 @@ class DiagnosticsSnapshotTest {
     void diagnosticRenderingFailuresAreUnhandledWithTheirOriginalCause() {
         var valueCause = new IllegalArgumentException("toString failed");
         var actual = new ThrowingValue(valueCause);
-        WaitOutcome<Object, Object> outcome = new LateTimeout<>(
+        WaitCompletion<Object, Object> outcome = new LateTimeout<>(
                 unsatisfiedAttempt(actual, "not ready", 1, 2));
 
         AwaitUnhandledException valueFailure = assertThrows(
@@ -495,7 +495,7 @@ class DiagnosticsSnapshotTest {
     void diagnosticRenderingFailureRetainsTheEngineCauseAsSuppressed() {
         var diagnosticCause = new IllegalStateException("toString failed");
         var engineCause = new AssertionError("assertion failed");
-        WaitOutcome<Object, Object> outcome = new LateTimeout<>(
+        WaitCompletion<Object, Object> outcome = new LateTimeout<>(
                 assertionUnsatisfiedAttempt(new ThrowingValue(diagnosticCause),
                         "not ready", engineCause, 1, 2));
 
@@ -511,7 +511,7 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void persistenceDiagnosticsDistinguishRequiredDurationFromDetectionTime() {
-        WaitOutcome<Object, Object> outcome = new PersistenceFailure<>(0,
+        WaitCompletion<Object, Object> outcome = new PersistenceFailure<>(0,
                 unsatisfiedAttempt("actual", "condition was false", 2, 11));
 
         AwaitPersistenceException failure = assertThrows(
@@ -525,7 +525,7 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void invalidRenderedValueIsUnhandled() {
-        WaitOutcome<Object, Object> rendered = new LateTimeout<>(
+        WaitCompletion<Object, Object> rendered = new LateTimeout<>(
                 unsatisfiedAttempt(new NullStringValue(), "not ready", 1, 2));
 
         AwaitUnhandledException valueFailure = assertThrows(
@@ -542,7 +542,7 @@ class DiagnosticsSnapshotTest {
     void fatalDiagnosticSignalsEscapeUnchanged() {
         var valueFatal = new InternalError("value fatal");
         var engineCause = new AssertionError("assertion failed");
-        WaitOutcome<Object, Object> valueFailure = new LateTimeout<>(
+        WaitCompletion<Object, Object> valueFailure = new LateTimeout<>(
                 assertionUnsatisfiedAttempt(new ThrowingValue(valueFatal), "not ready",
                         engineCause, 1, 2));
 
@@ -573,7 +573,7 @@ class DiagnosticsSnapshotTest {
         var fatal = new InternalError("emergency diagnostics fatal");
         var diagnosticCause = new FatalMessageException(fatal);
         var engineCause = new AssertionError("assertion failed");
-        WaitOutcome<Object, Object> outcome = new LateTimeout<>(
+        WaitCompletion<Object, Object> outcome = new LateTimeout<>(
                 assertionUnsatisfiedAttempt(new ThrowingValue(diagnosticCause),
                         "not ready", engineCause, 1, 2));
         InternalError thrown = assertThrows(InternalError.class,
@@ -609,7 +609,7 @@ class DiagnosticsSnapshotTest {
         assertMessage(arrayFailure, "[1, 2]");
     }
 
-    private static <S, R> R complete(WaitOutcome<S, R> outcome, String description,
+    private static <S, R> R complete(WaitCompletion<S, R> outcome, String description,
             String explanation, WaitConfiguration configuration) {
         return FailureFactory.complete(outcome, description, explanation, configuration);
     }
@@ -663,7 +663,7 @@ class DiagnosticsSnapshotTest {
                         Evaluation.Context.Plain.INSTANCE));
     }
 
-    private static WaitOutcome<Object, Object> sourceFailure(
+    private static WaitCompletion<Object, Object> sourceFailure(
             Throwable failure, long number, long completedNanos) {
         var timing = new AwaitAttempt.Timing.BeforeObservation(
                 Duration.ZERO, Duration.ZERO, Duration.ofNanos(completedNanos));
@@ -671,7 +671,7 @@ class DiagnosticsSnapshotTest {
                 new AwaitAttempt.Outcome.SourceRetrievalFailed<>(timing, failure)));
     }
 
-    private static WaitOutcome<Object, Object> waitingFailure(
+    private static WaitCompletion<Object, Object> waitingFailure(
             Throwable failure, long number, long completedNanos) {
         var timing = new AwaitAttempt.Timing.BeforeRetrieval(
                 Duration.ZERO, Duration.ofNanos(completedNanos));
@@ -679,7 +679,7 @@ class DiagnosticsSnapshotTest {
                 new AwaitAttempt.Outcome.WaitingFailed<>(timing, failure)));
     }
 
-    private static WaitOutcome<Object, Object> conditionFailure(
+    private static WaitCompletion<Object, Object> conditionFailure(
             Object observed, Throwable failure, long number, long completedNanos) {
         return new Uncontrolled<>(new AwaitAttempt<>(number, ACQUISITION,
                 new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(

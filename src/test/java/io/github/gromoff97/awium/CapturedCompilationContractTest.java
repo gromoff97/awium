@@ -50,7 +50,7 @@ class CapturedCompilationContractTest {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.await.Await.*;
                 import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
-                import io.github.gromoff97.awium.await.AwaitResult;
+                import io.github.gromoff97.awium.results.AwaitResult;
                 import io.github.gromoff97.awium.sources.Source;
                 import java.util.List;
 
@@ -93,7 +93,7 @@ class CapturedCompilationContractTest {
                 import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
                 import static io.github.gromoff97.awium.conditioning.conditions.MapConditions.singleEntry;
                 import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.present;
-                import io.github.gromoff97.awium.await.AwaitResult;
+                import io.github.gromoff97.awium.results.AwaitResult;
                 import io.github.gromoff97.awium.sources.Source.*;
                 import java.util.*;
 

@@ -5,6 +5,7 @@ import io.github.gromoff97.awium.conditioning.conditions.AwaitCondition;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
+import io.github.gromoff97.awium.results.AwaitResult;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.time.Duration;
@@ -18,16 +19,16 @@ import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.de
 import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.explanation;
 import static java.util.Objects.requireNonNull;
 
-abstract class AbstractAwait<S, A> {
+abstract class AbstractAwait<Observed, Self> {
 
-    private final Source<? extends S> source;
+    private final Source<? extends Observed> source;
     private final WaitEngine engine;
 
-    protected AbstractAwait(Source<? extends S> source) {
+    protected AbstractAwait(Source<? extends Observed> source) {
         this(source, defaults(), System::nanoTime, LockSupport::parkNanos);
     }
 
-    AbstractAwait(Source<? extends S> source,
+    AbstractAwait(Source<? extends Observed> source,
             WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {
         this.source = requireNonNull(source, "source must not be null");
         this.engine = new WaitEngine(requireNonNull(configuration, "configuration must not be null"),
@@ -35,31 +36,32 @@ abstract class AbstractAwait<S, A> {
                 requireNonNull(parker, "parker must not be null"));
     }
 
-    AbstractAwait(AbstractAwait<S, ?> await, WaitConfiguration configuration) {
+    AbstractAwait(AbstractAwait<Observed, ?> await, WaitConfiguration configuration) {
         this(await.source, configuration, await.engine.clock(), await.engine.parker());
     }
 
-    public final A every(Duration interval) {
+    public final Self every(Duration interval) {
         return reconfigured(engine.configuration().withEvery(interval));
     }
 
-    public final A upTo(Duration timeout) {
+    public final Self upTo(Duration timeout) {
         return reconfigured(engine.configuration().withUpTo(timeout));
     }
 
-    public final A persisting(Duration persistence) {
+    public final Self persisting(Duration persistence) {
         return reconfigured(engine.configuration().withPersistence(persistence));
     }
 
-    abstract A reconfigured(WaitConfiguration configuration);
+    abstract Self reconfigured(WaitConfiguration configuration);
 
-    protected final <R> R complete(Function<? super S, ? extends Evaluation<? extends R>> evaluator,
+    protected final <Result> Result complete(Function<? super Observed, ? extends Evaluation<? extends Result>> evaluator,
             AwaitCondition condition) {
         return FailureFactory.complete(engine.waitFor(source, evaluator), description(condition), explanation(condition),
                 engine.configuration());
     }
 
-    protected final <R> AwaitResult<S, R> capture(Function<? super S, ? extends Evaluation<? extends R>> evaluator,
+    protected final <Result> AwaitResult<Observed, Result> capture(Function<? super Observed,
+            ? extends Evaluation<? extends Result>> evaluator,
             AwaitCondition condition) {
         return FailureFactory.capture(engine.recordedWaitFor(source, evaluator), description(condition), explanation(condition),
                 engine.configuration());

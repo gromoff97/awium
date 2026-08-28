@@ -217,6 +217,45 @@ class ArchitectureContractTest {
                 """);
     }
 
+    @Test
+    void engineAndDiagnosticsDoNotDependOnAwaitFacade() {
+        for (String lowerPackage : List.of("engine", "diagnostics")) {
+            Map<Path, String> invertedDependency = Map.of(
+                    MAIN_PACKAGE.resolve("await/Facade.java"), """
+                            package io.github.gromoff97.awium.await;
+                            public final class Facade {}
+                            """,
+                    MAIN_PACKAGE.resolve(lowerPackage + "/Mutant.java"), """
+                            package io.github.gromoff97.awium.%s;
+                            import io.github.gromoff97.awium.await.Facade;
+                            final class Mutant { Facade facade; }
+                            """.formatted(lowerPackage));
+            AssertionError rejection = assertThrows(AssertionError.class,
+                    () -> assertApprovedSources(invertedDependency), lowerPackage);
+            assertFalse(rejection.getMessage().contains("OpenRewrite parsing failed"),
+                    lowerPackage + " dependency must be rejected semantically");
+            assertFalse(rejection.getMessage().contains("type attribution failed"),
+                    lowerPackage + " dependency must be rejected semantically");
+        }
+    }
+
+    @Test
+    void lowerLayersCannotBypassDependencyRuleWithQualifiedNames() {
+        Map<Path, String> invertedDependency = Map.of(
+                MAIN_PACKAGE.resolve("await/Facade.java"), """
+                        package io.github.gromoff97.awium.await;
+                        public final class Facade {}
+                        """,
+                MAIN_PACKAGE.resolve("engine/Mutant.java"), """
+                        package io.github.gromoff97.awium.engine;
+                        final class Mutant {
+                            io.github.gromoff97.awium.await.Facade facade;
+                        }
+                        """);
+        assertThrows(AssertionError.class,
+                () -> assertApprovedSources(invertedDependency));
+    }
+
     private static void assertRejected(String name, String source) {
         AssertionError rejection = assertThrows(AssertionError.class,
                 () -> assertApprovedSources(
@@ -393,11 +432,27 @@ class ArchitectureContractTest {
             if (type == null || !isWellFormedType(type)) {
                 reject("OpenRewrite type attribution failed for import");
             }
+            rejectInvertedFacadeDependency(type);
             return super.visitImport(imported, context);
+        }
+
+        private void rejectInvertedFacadeDependency(JavaType type) {
+            JavaType.FullyQualified dependency = asFullyQualified(type);
+            if (dependency == null) {
+                return;
+            }
+            Path source = currentPath();
+            boolean lowerLayer = source.startsWith(MAIN_PACKAGE.resolve("engine"))
+                    || source.startsWith(MAIN_PACKAGE.resolve("diagnostics"));
+            if (lowerLayer && dependency.getFullyQualifiedName()
+                    .startsWith("io.github.gromoff97.awium.await.")) {
+                reject("lower layer depends on await facade");
+            }
         }
 
         private void checkTypeReference(JavaType type) {
             if (type != null && isWellFormedType(type)) {
+                rejectInvertedFacadeDependency(type);
                 if (isOfClassType(type, LOCK_SUPPORT)) {
                     if (!isApprovedLockSupportReference()) {
                         reject("LockSupport outside the approved parkNanos port");

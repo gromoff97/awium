@@ -10,67 +10,67 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("removal")
-final class CapturedEvaluator<S, R>
-        implements Function<S, Evaluation<List<R>>> {
+final class CapturedEvaluator<Observed, Result> implements Function<Observed, Evaluation<List<Result>>> {
 
-    private final List<Stage<S, R>> stages;
-    private final ArrayList<R> results = new ArrayList<>();
+    private final List<Stage<Observed, Result>> stages;
+    private final ArrayList<Result> results = new ArrayList<>();
 
-    CapturedEvaluator(List<Stage<S, R>> stages) {
+    CapturedEvaluator(List<Stage<Observed, Result>> stages) {
         this.stages = List.copyOf(stages);
     }
 
     @Override
-    public Evaluation<List<R>> apply(S actual) {
-        boolean complete = results.size() == stages.size();
-        int captured = complete ? stages.size() - 1 : results.size();
-        Evaluation<? extends R> evaluation;
+    public Evaluation<List<Result>> apply(Observed actual) {
+        boolean sequenceComplete = results.size() == stages.size();
+        int evaluatedStageIndex = sequenceComplete ? stages.size() - 1 : results.size();
+        Evaluation<? extends Result> evaluation;
         try {
-            evaluation = stages.get(captured).evaluator().apply(actual);
+            evaluation = stages.get(evaluatedStageIndex).evaluator().apply(actual);
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
         } catch (Throwable failure) {
-            return Evaluation.<List<R>>uncontrolled(failure).withContext(context(captured));
+            return Evaluation.<List<Result>>uncontrolled(failure).withContext(contextFor(evaluatedStageIndex));
         }
         if (evaluation == null) {
-            return Evaluation.<List<R>>uncontrolled(new NullPointerException("condition returned null Evaluation")).withContext(context(captured));
+            return Evaluation.<List<Result>>uncontrolled(new NullPointerException("condition returned null Evaluation"))
+                    .withContext(contextFor(evaluatedStageIndex));
         }
-        Evaluation<? extends R> contextual = evaluation.withContext(context(captured));
-        return complete
-                ? contextual.continueIfSatisfied(this::replaceLast)
-                : contextual.continueIfSatisfied(result -> capture(result, captured));
+        Evaluation<? extends Result> contextual = evaluation.withContext(contextFor(evaluatedStageIndex));
+        return sequenceComplete
+                ? contextual.continueIfSatisfied(this::refreshFinalResult)
+                : contextual.continueIfSatisfied(result -> captureStageResult(result, evaluatedStageIndex));
     }
 
-    private Evaluation<List<R>> capture(R result, int evaluatedStage) {
+    private Evaluation<List<Result>> captureStageResult(Result result, int evaluatedStageIndex) {
         results.add(result);
         if (results.size() < stages.size()) {
-            return Evaluation.<List<R>>unsatisfied("waiting for sequence stage " + (results.size() + 1))
-                    .withContext(context(results.size(), evaluatedStage));
+            return Evaluation.<List<Result>>unsatisfied("waiting for sequence stage " + (results.size() + 1))
+                    .withContext(contextFor(results.size(), evaluatedStageIndex));
         }
-        return satisfied(resultCopy());
+        return satisfied(capturedResults());
     }
 
-    private Evaluation<List<R>> replaceLast(R result) {
+    private Evaluation<List<Result>> refreshFinalResult(Result result) {
         results.set(results.size() - 1, result);
-        return satisfied(resultCopy());
+        return satisfied(capturedResults());
     }
 
-    private List<R> resultCopy() {
+    private List<Result> capturedResults() {
         return results.stream().toList();
     }
 
-    private Evaluation.Context.Sequence context(int captured) {
-        return context(captured, captured);
+    private Evaluation.Context.Sequence contextFor(int stageIndex) {
+        return contextFor(stageIndex, stageIndex);
     }
 
-    private Evaluation.Context.Sequence context(int captured, int evaluatedStage) {
-        Stage<S, R> metadata = stages.get(captured);
-        return new Evaluation.Context.Sequence(captured, stages.size(),
-                evaluatedStage + 1, metadata.expectation(), metadata.importance());
+    private Evaluation.Context.Sequence contextFor(int waitingStageIndex, int evaluatedStageIndex) {
+        Stage<Observed, Result> waitingStage = stages.get(waitingStageIndex);
+        return new Evaluation.Context.Sequence(waitingStageIndex, stages.size(),
+                evaluatedStageIndex + 1, waitingStage.expectation(), waitingStage.importance());
     }
 
-    record Stage<S, R>(Function<? super S,
-            ? extends Evaluation<? extends R>> evaluator,
+    record Stage<Observed, Result>(Function<? super Observed,
+            ? extends Evaluation<? extends Result>> evaluator,
             String expectation, String importance) {
 
         public Stage {

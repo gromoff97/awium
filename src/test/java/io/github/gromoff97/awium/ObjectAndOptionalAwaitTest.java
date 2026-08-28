@@ -18,7 +18,7 @@ import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.await.Await;
-import io.github.gromoff97.awium.await.AwaitResult;
+import io.github.gromoff97.awium.results.AwaitResult;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 

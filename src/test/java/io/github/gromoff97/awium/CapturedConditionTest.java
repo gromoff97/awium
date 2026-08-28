@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.await.AwaitAttempt;
+import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;

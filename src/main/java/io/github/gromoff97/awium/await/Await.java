@@ -21,84 +21,83 @@ import java.util.Optional;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
-public final class Await<S, E, F extends Source<?>>
-        extends AbstractAwait<S, Await<S, E, F>> {
+public final class Await<Observed, Element, Family extends Source<?>> extends AbstractAwait<Observed, Await<Observed, Element, Family>> {
 
-    private Await(Source<? extends S> source) {
+    private Await(Source<? extends Observed> source) {
         super(source);
     }
 
-    public static <T> Await<T, T, Source<?>> await(Source<T> source) {
+    public static <Value> Await<Value, Value, Source<?>> await(Source<Value> source) {
         return new Await<>(source);
     }
 
-    public static <T> Await<Optional<T>, T, OptionalSource<?>> await(OptionalSource<T> source) {
+    public static <Value> Await<Optional<Value>, Value, OptionalSource<?>> await(OptionalSource<Value> source) {
         return new Await<>(source);
     }
 
-    public static <E, C extends Collection<E>> Await<C, E, CollectionSource<?>> await(CollectionSource<C> source) {
+    public static <Element, Values extends Collection<Element>> Await<Values, Element, CollectionSource<?>> await(CollectionSource<Values> source) {
         return new Await<>(source);
     }
 
-    public static <K, V, M extends Map<K, V>> Await<M, Map.Entry<K, V>, MapSource<?>> await(MapSource<M> source) {
+    public static <Key, Value, Entries extends Map<Key, Value>> Await<Entries, Map.Entry<Key, Value>, MapSource<?>> await(MapSource<Entries> source) {
         return new Await<>(source);
     }
 
-    public static <T> TryAwait<T, T, Source<?>> tryAwait(Source<T> source) {
+    public static <Value> TryAwait<Value, Value, Source<?>> tryAwait(Source<Value> source) {
         return new TryAwait<>(source);
     }
 
-    public static <T> TryAwait<Optional<T>, T, OptionalSource<?>> tryAwait(OptionalSource<T> source) {
+    public static <Value> TryAwait<Optional<Value>, Value, OptionalSource<?>> tryAwait(OptionalSource<Value> source) {
         return new TryAwait<>(source);
     }
 
-    public static <E, C extends Collection<E>> TryAwait<C, E, CollectionSource<?>> tryAwait(CollectionSource<C> source) {
+    public static <Element, Values extends Collection<Element>> TryAwait<Values, Element, CollectionSource<?>> tryAwait(CollectionSource<Values> source) {
         return new TryAwait<>(source);
     }
 
-    public static <K, V, M extends Map<K, V>> TryAwait<M, Map.Entry<K, V>, MapSource<?>> tryAwait(MapSource<M> source) {
+    public static <Key, Value, Entries extends Map<Key, Value>> TryAwait<Entries, Map.Entry<Key, Value>, MapSource<?>> tryAwait(MapSource<Entries> source) {
         return new TryAwait<>(source);
     }
 
-    Await(Source<? extends S> source, WaitConfiguration configuration,
+    Await(Source<? extends Observed> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         super(source, configuration, clock, parker);
     }
 
-    private Await(Await<S, E, F> await, WaitConfiguration configuration) {
+    private Await(Await<Observed, Element, Family> await, WaitConfiguration configuration) {
         super(await, configuration);
     }
 
     @Override
-    Await<S, E, F> reconfigured(WaitConfiguration configuration) {
+    Await<Observed, Element, Family> reconfigured(WaitConfiguration configuration) {
         return new Await<>(this, configuration);
     }
 
-    public S until(PreservingStage<? super S> condition) {
+    public Observed until(PreservingStage<? super Observed> condition) {
         return complete(ConditionRuntime.preservingEvaluator(condition), condition);
     }
 
-    public <T extends S> S until(ExpectedStage<T> condition) {
+    public <Expected extends Observed> Observed until(ExpectedStage<Expected> condition) {
         return complete(ConditionRuntime.expectedEvaluator(condition), condition);
     }
 
-    public <T extends S> List<S> until(ExpectedSequenceStage<T> condition) {
+    public <Expected extends Observed> List<Observed> until(ExpectedSequenceStage<Expected> condition) {
         return complete(ConditionRuntime.expectedSequenceEvaluator(condition), condition);
     }
 
-    public <R extends S> R until(NarrowingStage<R> condition) {
+    public <Result extends Observed> Result until(NarrowingStage<Result> condition) {
         return complete(ConditionRuntime.narrowingEvaluator(condition), condition);
     }
 
-    public <R> R until(ResultStage<? super S, ? extends R> condition) {
+    public <Result> Result until(ResultStage<? super Observed, ? extends Result> condition) {
         return complete(ConditionRuntime.evaluator(condition), condition);
     }
 
-    public E until(SelectedStage<? super S, F> condition) {
+    public Element until(SelectedStage<? super Observed, Family> condition) {
         return complete(ConditionRuntime.selectedEvaluator(condition), condition);
     }
 
-    public List<E> until(SelectedSequenceStage<? super S, F> condition) {
+    public List<Element> until(SelectedSequenceStage<? super Observed, Family> condition) {
         return complete(ConditionRuntime.selectedEvaluator(condition), condition);
     }
 }

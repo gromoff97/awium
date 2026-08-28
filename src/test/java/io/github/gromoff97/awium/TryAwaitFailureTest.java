@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.await.AwaitAttempt;
-import io.github.gromoff97.awium.await.AwaitResult;
+import io.github.gromoff97.awium.results.AwaitAttempt;
+import io.github.gromoff97.awium.results.AwaitResult;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;

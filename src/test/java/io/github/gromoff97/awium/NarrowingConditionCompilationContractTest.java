@@ -22,7 +22,7 @@ class NarrowingConditionCompilationContractTest {
                 import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
                 import static io.github.gromoff97.awium.conditioning.conditions.MapConditions.valueFor;
                 import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.*;
-                import io.github.gromoff97.awium.await.AwaitResult;
+                import io.github.gromoff97.awium.results.AwaitResult;
                 import io.github.gromoff97.awium.sources.Source;
                 import io.github.gromoff97.awium.sources.Source.*;
                 import java.util.*;

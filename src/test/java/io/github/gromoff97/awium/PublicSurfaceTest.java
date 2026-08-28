@@ -2,8 +2,8 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.await.Await;
-import io.github.gromoff97.awium.await.AwaitAttempt;
-import io.github.gromoff97.awium.await.AwaitResult;
+import io.github.gromoff97.awium.results.AwaitAttempt;
+import io.github.gromoff97.awium.results.AwaitResult;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedSequenceStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
@@ -53,6 +53,7 @@ class PublicSurfaceTest {
 
     private static final Set<String> PUBLIC_API_PACKAGES = Set.of(
             "io.github.gromoff97.awium.await",
+            "io.github.gromoff97.awium.results",
             "io.github.gromoff97.awium.sources",
             "io.github.gromoff97.awium.conditioning",
             "io.github.gromoff97.awium.conditioning.conditions",

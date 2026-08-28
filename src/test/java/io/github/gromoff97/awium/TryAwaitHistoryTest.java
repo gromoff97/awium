@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.await.AwaitAttempt;
-import io.github.gromoff97.awium.await.AwaitResult;
+import io.github.gromoff97.awium.results.AwaitAttempt;
+import io.github.gromoff97.awium.results.AwaitResult;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
@@ -13,8 +13,8 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.ACQUISITION;
-import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.PERSISTENCE;
+import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.ACQUISITION;
+import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.PERSISTENCE;
 import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
@@ -96,7 +96,7 @@ class TryAwaitHistoryTest {
                 .map(outcome -> ((AwaitAttempt.Outcome.Unsatisfied<?, ?>) outcome)
                         .context())
                 .map(Evaluation.Context.Sequence.class::cast)
-                .map(Evaluation.Context.Sequence::evaluatedStage)
+                .map(Evaluation.Context.Sequence::evaluatedStageNumber)
                 .toList());
     }
 
@@ -129,7 +129,7 @@ class TryAwaitHistoryTest {
                         component.getDeclaringRecord().getName() + "." + component.getName()));
     }
 
-    private static WaitEngine.Execution<Object, Object> recordUnsatisfied(
+    private static WaitEngine.RecordedWait<Object, Object> recordUnsatisfied(
             io.github.gromoff97.awium.sources.Source<Object> source,
             java.util.function.IntFunction<io.github.gromoff97.awium.conditioning.Evaluation<Object>> evaluation) {
         var time = new FakeTime(0);
@@ -138,7 +138,7 @@ class TryAwaitHistoryTest {
                 .recordedWaitFor(source, actual -> evaluation.apply(calls[0]++));
     }
 
-    private static List<Long> numbers(WaitEngine.Execution<?, ?> execution) {
+    private static List<Long> numbers(WaitEngine.RecordedWait<?, ?> execution) {
         return execution.attempts().stream().map(AwaitAttempt::number).toList();
     }
 

@@ -1,10 +1,10 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.await.AwaitAttempt;
+import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
-import io.github.gromoff97.awium.engine.WaitOutcome;
+import io.github.gromoff97.awium.engine.WaitCompletion;
 import io.github.gromoff97.awium.sources.Source;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -15,7 +15,7 @@ import java.time.Duration;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.ACQUISITION;
+import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.uncontrolled;
@@ -43,7 +43,7 @@ class ObservationEvaluatorTest {
         var actual = new Object();
         var result = new Object();
 
-        WaitOutcome<Object, Object> terminal = new WaitEngine(config(1, 20, 0), time, time).waitFor(() -> {
+        WaitCompletion<Object, Object> terminal = new WaitEngine(config(1, 20, 0), time, time).waitFor(() -> {
             time.advanceNanos(2);
             return actual;
         }, value -> {

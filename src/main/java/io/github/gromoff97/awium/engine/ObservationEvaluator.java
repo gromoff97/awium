@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.engine;
 
-import io.github.gromoff97.awium.await.AwaitAttempt;
+import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.sources.Source;
 
@@ -12,13 +12,13 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNCONTROL
 import static java.lang.Thread.currentThread;
 
 @SuppressWarnings("removal")
-record ObservationEvaluator<S, R>(Source<? extends S> source,
-        Function<? super S, ? extends Evaluation<? extends R>> evaluator,
+record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
+        Function<? super Observed, ? extends Evaluation<? extends Result>> evaluator,
         LongSupplier clock, long executionStarted) {
 
-    AwaitAttempt<S, R> evaluate(AwaitAttempt.Phase phase, long number,
+    AwaitAttempt<Observed, Result> evaluate(AwaitAttempt.Phase phase, long number,
             long attemptStarted, long retrievalStarted) {
-        S actual;
+        Observed actual;
         try {
             actual = source.get();
         } catch (VirtualMachineError | ThreadDeath fatal) {
@@ -38,7 +38,7 @@ record ObservationEvaluator<S, R>(Source<? extends S> source,
                     retrievalStarted, observed, actual, interruption);
         }
 
-        Evaluation<? extends R> evaluation;
+        Evaluation<? extends Result> evaluation;
         try {
             evaluation = evaluator.apply(actual);
         } catch (VirtualMachineError | ThreadDeath fatal) {
@@ -68,7 +68,7 @@ record ObservationEvaluator<S, R>(Source<? extends S> source,
                             Evaluation.Context.Plain.INSTANCE));
         }
 
-        AwaitAttempt.Outcome<S, R> outcome = switch (evaluation.status()) {
+        AwaitAttempt.Outcome<Observed, Result> outcome = switch (evaluation.status()) {
             case SATISFIED -> new AwaitAttempt.Outcome.Satisfied<>(timing, actual, evaluation.result());
             case UNSATISFIED -> new AwaitAttempt.Outcome.Unsatisfied<>(timing, actual,
                     evaluation.mismatch(), evaluation.assertionCause(), evaluation.context());
@@ -77,7 +77,7 @@ record ObservationEvaluator<S, R>(Source<? extends S> source,
         return new AwaitAttempt<>(number, phase, outcome);
     }
 
-    private AwaitAttempt<S, R> beforeObservation(AwaitAttempt.Phase phase,
+    private AwaitAttempt<Observed, Result> beforeObservation(AwaitAttempt.Phase phase,
             long number, long attemptStarted,
             long retrievalStarted, Throwable failure) {
         long completed = clock.getAsLong();
@@ -87,9 +87,9 @@ record ObservationEvaluator<S, R>(Source<? extends S> source,
                 new AwaitAttempt.Outcome.SourceRetrievalFailed<>(timing, failure));
     }
 
-    private AwaitAttempt<S, R> afterSourceInterruption(AwaitAttempt.Phase phase, long number,
+    private AwaitAttempt<Observed, Result> afterSourceInterruption(AwaitAttempt.Phase phase, long number,
             long attemptStarted, long retrievalStarted, long observed,
-            S actual, InterruptedException interruption) {
+            Observed actual, InterruptedException interruption) {
         restoreInterrupt();
         long completed = clock.getAsLong();
         var timing = afterObservation(attemptStarted, retrievalStarted, observed, completed);
@@ -97,9 +97,9 @@ record ObservationEvaluator<S, R>(Source<? extends S> source,
                 new AwaitAttempt.Outcome.SourceInterrupted<>(timing, actual, interruption));
     }
 
-    private AwaitAttempt<S, R> afterConditionFailure(AwaitAttempt.Phase phase, long number,
+    private AwaitAttempt<Observed, Result> afterConditionFailure(AwaitAttempt.Phase phase, long number,
             long attemptStarted, long retrievalStarted, long observed,
-            S actual, Throwable failure) {
+            Observed actual, Throwable failure) {
         long completed = clock.getAsLong();
         var timing = afterObservation(attemptStarted, retrievalStarted, observed, completed);
         return new AwaitAttempt<>(number, phase,
@@ -107,8 +107,8 @@ record ObservationEvaluator<S, R>(Source<? extends S> source,
                         failure, Evaluation.Context.Plain.INSTANCE));
     }
 
-    private static <S, R> AwaitAttempt.Outcome<S, R> uncontrolled(AwaitAttempt.Timing.AfterObservation timing,
-            S actual, Throwable failure, Evaluation.Context context) {
+    private static <Observed, Result> AwaitAttempt.Outcome<Observed, Result> uncontrolled(AwaitAttempt.Timing.AfterObservation timing,
+            Observed actual, Throwable failure, Evaluation.Context context) {
         if (failure instanceof Error fatal
                 && (fatal instanceof VirtualMachineError || fatal instanceof ThreadDeath)) {
             throw fatal;

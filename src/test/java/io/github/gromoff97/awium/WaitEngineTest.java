@@ -1,10 +1,10 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.sources.Source;
-import io.github.gromoff97.awium.await.AwaitAttempt;
+import io.github.gromoff97.awium.results.AwaitAttempt;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.*;
-import static io.github.gromoff97.awium.engine.WaitOutcome.*;
+import static io.github.gromoff97.awium.engine.WaitCompletion.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 
@@ -60,7 +60,7 @@ class WaitEngineTest {
         var starts = new ArrayList<Long>();
         var result = new Object();
 
-        WaitOutcome<?, Object> outcome = wait(time, config(5, 20, 0), () -> {
+        WaitCompletion<?, Object> outcome = wait(time, config(5, 20, 0), () -> {
             starts.add(time.getAsLong());
             return "actual";
         }, actual -> satisfied(result));
@@ -79,7 +79,7 @@ class WaitEngineTest {
         var starts = new ArrayList<Long>();
         var calls = new int[1];
 
-        WaitOutcome<?, String> outcome = wait(time, config(5, 20, 0), () -> {
+        WaitCompletion<?, String> outcome = wait(time, config(5, 20, 0), () -> {
             starts.add(time.getAsLong());
             return "actual";
         }, actual -> {
@@ -102,7 +102,7 @@ class WaitEngineTest {
         var starts = new ArrayList<Long>();
         var calls = new int[1];
 
-        WaitOutcome<?, String> outcome = wait(time, config(9, 10, 0), () -> {
+        WaitCompletion<?, String> outcome = wait(time, config(9, 10, 0), () -> {
             starts.add(time.getAsLong());
             return "actual";
         }, actual -> calls[0]++ == 0
@@ -123,7 +123,7 @@ class WaitEngineTest {
         var starts = new ArrayList<Long>();
         var calls = new int[1];
 
-        WaitOutcome<?, String> outcome = wait(time, config(4, 10, 0), () -> {
+        WaitCompletion<?, String> outcome = wait(time, config(4, 10, 0), () -> {
             starts.add(time.getAsLong());
             return "actual";
         }, actual -> {
@@ -149,7 +149,7 @@ class WaitEngineTest {
         var assertion = new AssertionError("third mismatch");
         var calls = new int[1];
 
-        WaitOutcome<?, Object> outcome = wait(time, config(4, 10, 0), () -> {
+        WaitCompletion<?, Object> outcome = wait(time, config(4, 10, 0), () -> {
             starts.add(time.getAsLong());
             return new Object();
         }, actual -> {
@@ -177,7 +177,7 @@ class WaitEngineTest {
         var actual = new Object();
         var assertion = new AssertionError("late mismatch");
 
-        WaitOutcome<?, Object> outcome = wait(time, config(3, 10, 0),
+        WaitCompletion<?, Object> outcome = wait(time, config(3, 10, 0),
                 () -> actual, value -> {
                     time.advanceNanos(10);
                     return assertionUnsatisfied("late", assertion);
@@ -199,7 +199,7 @@ class WaitEngineTest {
         var actual = new Object();
         var result = new Object();
 
-        WaitOutcome<?, Object> outcome = wait(time, config(3, 10, 0),
+        WaitCompletion<?, Object> outcome = wait(time, config(3, 10, 0),
                 () -> actual, value -> {
                     time.advanceNanos(11);
                     return satisfied(result);
@@ -223,7 +223,7 @@ class WaitEngineTest {
         var starts = new ArrayList<Long>();
         var calls = new int[1];
 
-        WaitOutcome<?, String> outcome = wait(time, config(5, 20, 0), () -> {
+        WaitCompletion<?, String> outcome = wait(time, config(5, 20, 0), () -> {
             starts.add(time.getAsLong());
             return "actual";
         }, value -> calls[0]++ == 0
@@ -242,7 +242,7 @@ class WaitEngineTest {
         var starts = new ArrayList<Long>();
         var calls = new int[1];
 
-        WaitOutcome<?, String> outcome = wait(time, config(4, 10, 0), () -> {
+        WaitCompletion<?, String> outcome = wait(time, config(4, 10, 0), () -> {
             starts.add(time.getAsLong());
             return "actual";
         }, value -> calls[0]++ == 0
@@ -260,7 +260,7 @@ class WaitEngineTest {
         var time = new FakeTime(0);
         var failure = new IllegalStateException("source failed");
 
-        WaitOutcome<?, Object> outcome = wait(time, config(3, 10, 0), () -> {
+        WaitCompletion<?, Object> outcome = wait(time, config(3, 10, 0), () -> {
             time.advanceNanos(11);
             throw failure;
         }, Evaluation::satisfied);
@@ -280,7 +280,7 @@ class WaitEngineTest {
         var time = new FakeTime(0);
         var failure = new IllegalStateException("park failed");
 
-        WaitOutcome<?, String> outcome = wait(time, config(5, 20, persistence), nanos -> {
+        WaitCompletion<?, String> outcome = wait(time, config(5, 20, persistence), nanos -> {
                     throw failure;
                 }, () -> "actual",
                 actual -> persistence == 0
@@ -302,7 +302,7 @@ class WaitEngineTest {
         var time = new FakeTime(0);
         var parkCalls = new int[1];
 
-        WaitOutcome<?, String> outcome = wait(time, config(5, 20, persistence), nanos -> {
+        WaitCompletion<?, String> outcome = wait(time, config(5, 20, persistence), nanos -> {
                     parkCalls[0]++;
                     currentThread().interrupt();
                 }, () -> "actual",
@@ -327,7 +327,7 @@ class WaitEngineTest {
         var time = new FakeTime(0);
         var interruption = new InterruptedException("waiting stopped");
 
-        WaitOutcome<?, String> outcome = wait(time, config(5, 20, 0), nanos ->
+        WaitCompletion<?, String> outcome = wait(time, config(5, 20, 0), nanos ->
                         throwUnchecked(interruption), () -> "actual",
                 actual -> unsatisfied("not yet"));
 
@@ -356,7 +356,7 @@ class WaitEngineTest {
         var time = new FakeTime(0);
         currentThread().interrupt();
 
-        WaitOutcome<?, Object> outcome = wait(time, config(3, 10, 0), () -> {
+        WaitCompletion<?, Object> outcome = wait(time, config(3, 10, 0), () -> {
             throw new AssertionError("source must not be called");
         }, Evaluation::satisfied);
 
@@ -378,7 +378,7 @@ class WaitEngineTest {
         var results = List.of("acquired", "second", "third", "boundary");
         var calls = new int[1];
 
-        WaitOutcome<?, String> outcome = wait(time, config(5, 20, 12), () -> {
+        WaitCompletion<?, String> outcome = wait(time, config(5, 20, 12), () -> {
             starts.add(time.getAsLong());
             return "actual";
         }, actual -> satisfied(results.get(calls[0]++)));
@@ -396,7 +396,7 @@ class WaitEngineTest {
         var time = new FakeTime(0);
         var starts = new ArrayList<Long>();
 
-        WaitOutcome<?, Long> outcome = wait(time, config(5, 20, 3), () -> {
+        WaitCompletion<?, Long> outcome = wait(time, config(5, 20, 3), () -> {
                     starts.add(time.getAsLong());
                     return time.getAsLong();
                 }, Evaluation::satisfied);
@@ -415,7 +415,7 @@ class WaitEngineTest {
         var time = new FakeTime(started);
         var starts = new ArrayList<Long>();
 
-        WaitOutcome<?, Long> outcome = wait(time, config(4, 20, 6), () -> {
+        WaitCompletion<?, Long> outcome = wait(time, config(4, 20, 6), () -> {
             starts.add(time.getAsLong());
             return time.getAsLong();
         }, Evaluation::satisfied);
@@ -434,7 +434,7 @@ class WaitEngineTest {
         var starts = new ArrayList<Long>();
         var calls = new int[1];
 
-        WaitOutcome<?, String> outcome = wait(time, config(4, 10, 5), () -> {
+        WaitCompletion<?, String> outcome = wait(time, config(4, 10, 5), () -> {
             starts.add(time.getAsLong());
             return "actual";
         }, actual -> {
@@ -463,7 +463,7 @@ class WaitEngineTest {
         var starts = new ArrayList<Long>();
         var calls = new int[1];
 
-        WaitOutcome<?, String> outcome = wait(time, config(6, 20, 10), () -> {
+        WaitCompletion<?, String> outcome = wait(time, config(6, 20, 10), () -> {
             starts.add(time.getAsLong());
             return "actual";
         }, actual -> {
@@ -489,7 +489,7 @@ class WaitEngineTest {
         var assertion = new AssertionError("lost");
         var calls = new int[1];
 
-        WaitOutcome<?, Object> outcome = wait(time, config(5, 20, 15),
+        WaitCompletion<?, Object> outcome = wait(time, config(5, 20, 15),
                 () -> calls[0] == 0 ? new Object() : failingActual,
                 actual -> calls[0]++ == 0
                         ? satisfied(new Object())
@@ -512,7 +512,7 @@ class WaitEngineTest {
         var failure = new IllegalStateException("condition failed");
         var calls = new int[1];
 
-        WaitOutcome<?, Object> outcome = wait(time, config(2, 3, 5),
+        WaitCompletion<?, Object> outcome = wait(time, config(2, 3, 5),
                 Object::new, actual -> {
                     if (calls[0]++ == 0) {
                         return satisfied(new Object());
@@ -540,7 +540,7 @@ class WaitEngineTest {
         throw (E) failure;
     }
 
-    private static <S, R> WaitOutcome<S, R> wait(
+    private static <S, R> WaitCompletion<S, R> wait(
             FakeTime time,
             WaitConfiguration config,
             Source<S> source,
@@ -548,7 +548,7 @@ class WaitEngineTest {
         return wait(time, config, time, source, condition);
     }
 
-    private static <S, R> WaitOutcome<S, R> wait(
+    private static <S, R> WaitCompletion<S, R> wait(
             FakeTime time,
             WaitConfiguration config,
             LongConsumer parker,

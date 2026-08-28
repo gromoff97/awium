@@ -28,7 +28,7 @@ class TryAwaitCompilationContractTest {
                 import static java.time.Duration.ZERO;
                 import static java.time.Duration.ofMillis;
                 import static java.time.Duration.ofSeconds;
-                import io.github.gromoff97.awium.await.AwaitResult;
+                import io.github.gromoff97.awium.results.AwaitResult;
                 import io.github.gromoff97.awium.sources.Source;
                 import java.util.List;
                 import java.util.Map;
@@ -78,7 +78,7 @@ class TryAwaitCompilationContractTest {
         assertFalse(compiles("""
                 import static io.github.gromoff97.awium.await.Await.tryAwait;
                 import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.present;
-                import io.github.gromoff97.awium.await.AwaitResult;
+                import io.github.gromoff97.awium.results.AwaitResult;
                 import io.github.gromoff97.awium.sources.Source.OptionalSource;
                 import java.util.Optional;
                 final class Contract {
@@ -97,7 +97,7 @@ class TryAwaitCompilationContractTest {
                 import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.single;
                 import static io.github.gromoff97.awium.conditioning.conditions.MapConditions.singleEntry;
                 import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.present;
-                import io.github.gromoff97.awium.await.AwaitResult;
+                import io.github.gromoff97.awium.results.AwaitResult;
                 import io.github.gromoff97.awium.sources.Source.*;
                 import java.util.*;
                 final class Contract {

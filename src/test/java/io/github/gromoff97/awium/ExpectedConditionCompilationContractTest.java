@@ -19,7 +19,7 @@ class ExpectedConditionCompilationContractTest {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.await.Await.*;
                 import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
-                import io.github.gromoff97.awium.await.AwaitResult;
+                import io.github.gromoff97.awium.results.AwaitResult;
                 import io.github.gromoff97.awium.sources.Source;
 
                 final class Contract {
