@@ -71,6 +71,20 @@ class CollectionMembershipTest {
     }
 
     @Test
+    void clearedLiveExpectedCollectionUsesEmptyContainmentSemantics()
+            throws Exception {
+        var expected = new ArrayList<>(List.of("expected"));
+        var positive = containsAll(expected);
+        var negative = doesNotContainAllElementsOf(expected);
+        expected.clear();
+
+        for (Collection<String> actual : List.of(List.<String>of(), List.of("actual"))) {
+            assertEquals(SATISFIED, evaluate(positive, actual).status());
+            assertEquals(UNSATISFIED, evaluate(negative, actual).status());
+        }
+    }
+
+    @Test
     void traversalAndEqualityFailuresRemainFailFastForNegativeConditions() {
         var iteratorCause = new IllegalStateException("iterator failed");
         var equalityCause = new IllegalStateException("equals failed");

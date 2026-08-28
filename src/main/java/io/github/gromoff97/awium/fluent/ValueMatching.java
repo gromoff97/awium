@@ -37,6 +37,9 @@ final class ValueMatching {
     static <Actual, Expected> boolean containsAll(Iterable<Actual> actual, Collection<Expected> expected,
             BiPredicate<? super Actual, ? super Expected> matches) {
         var remainingExpected = new ArrayList<>(expected);
+        if (remainingExpected.isEmpty()) {
+            return true;
+        }
         for (Actual value : actual) {
             Iterator<Expected> candidates = remainingExpected.iterator();
             while (candidates.hasNext()) {

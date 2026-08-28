@@ -98,6 +98,20 @@ class MapConditionsTest {
     }
 
     @Test
+    void clearedLiveExpectedMapUsesEmptyContainmentSemantics()
+            throws Exception {
+        var expected = new LinkedHashMap<>(map("expected", "value"));
+        var positive = containsAllEntriesOf(expected);
+        var negative = doesNotContainAllEntriesOf(expected);
+        expected.clear();
+
+        for (Map<String, String> actual : List.of(Map.<String, String>of(), map("actual", "value"))) {
+            assertStatus(positive, actual, SATISFIED);
+            assertStatus(negative, actual, UNSATISFIED);
+        }
+    }
+
+    @Test
     void negativeMapConditionsDoNotHideTraversalOrEqualityFailures() {
         var actualCause = new IllegalStateException("actual entries");
         var expectedCause = new IllegalStateException("expected entries");

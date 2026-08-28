@@ -33,7 +33,8 @@ tasks.test {
 
 tasks.check {
     doLast {
-        check(configurations.runtimeClasspath.get().allDependencies.isEmpty()) {
+        check(configurations.compileClasspath.get().allDependencies.isEmpty()
+                && configurations.runtimeClasspath.get().allDependencies.isEmpty()) {
             "Awium must not declare compile or runtime dependencies"
         }
     }
