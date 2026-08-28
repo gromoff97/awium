@@ -97,7 +97,10 @@ public final class CollectionConditions {
     }
 
     public static PreservingCondition<Collection<?>> sameSizeAs(Collection<?> expected) {
-        return size(requireNonNull(expected, "expected collection must not be null").size());
+        Collection<?> values = requireNonNull(expected, "expected collection must not be null");
+        return preserving("collection has the same size as expected collection",
+                "collection size did not match expected collection", expectedReference(values),
+                actual -> actual.size() == values.size());
     }
 
     public static <E> Condition<Collection<E>, E> single(Predicate<? super E> predicate) {

@@ -97,6 +97,16 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
+    void sameSizeAsReadsTheExpectedCollectionWhenEvaluated() throws Exception {
+        var expected = new ArrayList<>(List.of(1));
+        var condition = CollectionConditions.sameSizeAs(expected);
+        expected.add(2);
+
+        assertEquals(UNSATISFIED, evaluate(condition, List.of(1)).status());
+        assertEquals(SATISFIED, evaluate(condition, List.of(1, 2)).status());
+    }
+
+    @Test
     void orderedConditionsCoverPositionsSequencesAndSorting() throws Exception {
         var values = new ArrayList<>(List.of(1, 2, 3, 5));
         CollectionSource<ArrayList<Integer>> source = () -> values;
@@ -109,6 +119,8 @@ class CollectionSelectionConditionsTest {
         assertSame(values, await(source).until(CollectionConditions.startsWith(1, 2)));
         assertSame(values, await(source).until(CollectionConditions.endsWith(3, 5)));
         assertSame(values, await(source).until(CollectionConditions.containsSequence(2, 3)));
+        assertEquals(SATISFIED, evaluate(CollectionConditions.containsSequence(1, 2),
+                List.of(1, 2)).status());
         assertSame(values, await(source).until(CollectionConditions.containsSubsequence(1, 3, 5)));
         assertSame(values, await(source).until(CollectionConditions.sorted()));
 
@@ -130,11 +142,15 @@ class CollectionSelectionConditionsTest {
                 CollectionConditions.doesNotContainSubsequence(1, 3, 5), values).status());
         assertEquals(UNSATISFIED, evaluate(CollectionConditions.<Integer>sorted(),
                 List.of(1, 3, 2)).status());
+        assertEquals(SATISFIED, evaluate(CollectionConditions.<Integer>sorted(),
+                List.of(1, 1)).status());
         assertEquals(SATISFIED, evaluate(CollectionConditions.<Integer>sorted(
                 java.util.Comparator.reverseOrder()), List.of(3, 2, 1)).status());
 
         var sequencedSet = new LinkedHashSet<>(List.of(1, 2, 3));
         assertEquals(1, await((CollectionSource<LinkedHashSet<Integer>>) () -> sequencedSet).until(first));
+        assertSame(sequencedSet, await((CollectionSource<LinkedHashSet<Integer>>) () -> sequencedSet).until(
+                CollectionConditions.startsWith(1, 2)));
     }
 
     @Test
@@ -158,6 +174,8 @@ class CollectionSelectionConditionsTest {
                 value -> value.startsWith("r")), List.of("failed")).status());
         assertEquals(UNSATISFIED, evaluate(
                 CollectionConditions.<String>element(2), List.of("only")).status());
+        assertEquals(UNSATISFIED, evaluate(
+                CollectionConditions.<String>element(1), List.of("only")).status());
         assertEquals(UNSATISFIED, evaluate(CollectionConditions.<String>element(
                 0, value -> value.startsWith("r")), List.of("failed")).status());
         assertEquals(UNSATISFIED, evaluate(

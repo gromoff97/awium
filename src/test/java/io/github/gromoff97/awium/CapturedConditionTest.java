@@ -2,6 +2,7 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.fluent.Condition;
+import io.github.gromoff97.awium.fluent.Conditions;
 import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
 import io.github.gromoff97.awium.fluent.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
@@ -198,6 +199,26 @@ class CapturedConditionTest {
                 matches((String value) -> value.endsWith("a")).because("final state")));
 
         assertEquals(List.of("alpha", "omega"), result);
+    }
+
+    @Test
+    void nestedSequenceFailureRetainsTheInnerStageContext() {
+        var time = new FakeTime(0);
+        Condition<String, List<String>> inner = captured(
+                Conditions.<String, String>condition("inner first", value -> satisfied(value)),
+                Conditions.<String, String>condition("inner second", value -> unsatisfied("inner mismatch"))
+                        .because("inner business reason"));
+
+        var result = timedTryAwait(() -> "actual", config(1, 3, 0), time, time).until(captured(
+                Conditions.<String, List<String>>condition("outer first", value -> satisfied(List.of(value))), inner));
+        var outcome = assertInstanceOf(AwaitAttempt.Outcome.Unsatisfied.class,
+                result.attempts().getLast().outcome());
+        var context = assertInstanceOf(AwaitAttempt.Context.Sequence.class,
+                outcome.context());
+
+        assertEquals("inner mismatch", outcome.mismatch());
+        assertEquals("inner second", context.expectation());
+        assertEquals("inner business reason", context.importance());
     }
 
     @Test

@@ -119,10 +119,21 @@ class TryAwaitFailureTest {
 
     @Test
     void capturesParkingAndEveryInterruptionBoundary() {
-        assertParity(time -> timedAwait(() -> "actual", config(1, 2, 0), time,
+        var acquisitionParking = assertParity(time -> timedAwait(() -> "actual", config(1, 2, 0), time,
                         nanos -> { throw new IllegalStateException("park failed"); }).until(neverReady()),
                 time -> timedTryAwait(() -> "actual", config(1, 2, 0), time,
                         nanos -> { throw new IllegalStateException("park failed"); }).until(neverReady()));
+        var persistenceParking = assertParity(time -> timedAwait(() -> "actual", config(1, 2, 2), time,
+                        nanos -> { throw new IllegalStateException("park failed"); }).until(isNotNull),
+                time -> timedTryAwait(() -> "actual", config(1, 2, 2), time,
+                        nanos -> { throw new IllegalStateException("park failed"); }).until(isNotNull));
+
+        assertEquals(2, acquisitionParking.totalAttempts());
+        assertEquals(2, persistenceParking.totalAttempts());
+        assertInstanceOf(AwaitAttempt.Outcome.WaitingFailed.class,
+                acquisitionParking.attempts().getLast().outcome());
+        assertInstanceOf(AwaitAttempt.Outcome.WaitingFailed.class,
+                persistenceParking.attempts().getLast().outcome());
         assertParity(time -> {
                     currentThread().interrupt();
                     timedAwait(() -> "actual", config(1, 2, 0), time, time).until(isNotNull);

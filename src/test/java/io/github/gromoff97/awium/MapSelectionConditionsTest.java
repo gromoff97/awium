@@ -64,6 +64,8 @@ class MapSelectionConditionsTest {
         assertSame(actual, await(source).until(MapConditions.anyEntry((key, value) -> key.equals("b"))));
         assertSame(actual, await(source).until(MapConditions.noEntry((key, value) -> value < 0)));
         assertSame(actual, await(source).until(MapConditions.allKeys(key -> key.length() == 1)));
+        assertSame(actual, await(source).until(MapConditions.anyKey(key -> key.equals("a"))));
+        assertSame(actual, await(source).until(MapConditions.allValues(value -> value > 0)));
         assertSame(actual, await(source).until(MapConditions.anyValue(value -> value == 2)));
         assertSame(actual, await(source).until(MapConditions.containsKeys("a", "b")));
         assertSame(actual, await(source).until(MapConditions.containsOnlyKeys("b", "a")));

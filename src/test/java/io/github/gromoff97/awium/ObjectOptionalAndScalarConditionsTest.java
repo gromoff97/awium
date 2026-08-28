@@ -141,6 +141,8 @@ class ObjectOptionalAndScalarConditionsTest {
         assertStatus(Conditions.strictlyBetween(5, 7), 6, SATISFIED);
         assertStatus(Conditions.strictlyBetween(5, 7), 5, UNSATISFIED);
         assertStatus(Conditions.strictlyBetween(5, 7), 7, UNSATISFIED);
+        assertStatus(Conditions.between(5, 5), 5, SATISFIED);
+        assertStatus(Conditions.strictlyBetween(5, 5), 5, UNSATISFIED);
         assertStatus(Conditions.greaterThan(5), null, UNSATISFIED);
 
         assertThrows(NullPointerException.class, () -> Conditions.greaterThan(null));
@@ -174,6 +176,8 @@ class ObjectOptionalAndScalarConditionsTest {
         assertPreserving(StringConditions.lengthAtLeast(5), "ready", "read");
         assertPreserving(StringConditions.lengthLessThan(6), "ready", "failed");
         assertPreserving(StringConditions.lengthAtMost(5), "ready", "failed");
+        assertStatus(StringConditions.length(0), "", SATISFIED);
+        assertStatus(StringConditions.lengthAtMost(0), "", SATISFIED);
         assertStatus(StringConditions.lengthBetween(4, 6), "read", SATISFIED);
         assertStatus(StringConditions.lengthBetween(4, 6), "failed", SATISFIED);
         assertStatus(StringConditions.lengthBetween(4, 6), "hey", UNSATISFIED);

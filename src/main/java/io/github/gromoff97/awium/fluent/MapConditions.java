@@ -94,7 +94,10 @@ public final class MapConditions {
     }
 
     public static PreservingCondition<Map<?, ?>> sameSizeAs(Map<?, ?> expected) {
-        return size(requireNonNull(expected, "expected map must not be null").size());
+        Map<?, ?> entries = requireNonNull(expected, "expected map must not be null");
+        return preserving("map has the same size as expected map",
+                "map size did not match expected map", expectedReference(entries),
+                actual -> actual.size() == entries.size());
     }
 
     public static <K, V> Condition<Map<K, V>, Map.Entry<K, V>> singleEntry(BiPredicate<? super K, ? super V> predicate) {

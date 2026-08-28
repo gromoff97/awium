@@ -534,6 +534,24 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
+    void emergencyDiagnosticsRetainSequenceContext() {
+        var cause = new IllegalArgumentException("actual toString failed");
+        var context = new AwaitAttempt.Context.Sequence(1, 2, 2,
+                "inner second", "inner business reason", null);
+        var attempt = new AwaitAttempt<>(2, ACQUISITION,
+                new AwaitAttempt.Outcome.Unsatisfied<>(afterObservation(2),
+                        new ThrowingValue(cause), "inner mismatch", null, context));
+
+        AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
+                () -> complete(new LateTimeout<>(attempt), "conditions are satisfied in order",
+                        null, config(1, 2, 0)));
+
+        assertMessage(failure, "Sequence (captured 1 of 2)",
+                "Expectation: inner second", "Importance: inner business reason",
+                "Mismatch: inner mismatch");
+    }
+
+    @Test
     void diagnosticRenderingFailureRetainsTheEngineCauseAsSuppressed() {
         var diagnosticCause = new IllegalStateException("toString failed");
         var engineCause = new AssertionError("assertion failed");

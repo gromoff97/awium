@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.LongConsumer;
+import java.util.function.LongSupplier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -148,7 +149,7 @@ class WaitEngineTest {
 
     @Test
     void timesOutWhileParkedWithoutStartingAtTheDeadline() {
-        var time = new FakeTime(0);
+        var time = new FakeTime(100);
         var starts = new ArrayList<Long>();
         var assertion = new AssertionError("third mismatch");
         var calls = new int[1];
@@ -166,13 +167,30 @@ class WaitEngineTest {
         var timeout = assertInstanceOf(
                 TimeoutBetweenObservations.class, outcome);
         var unsatisfied = timeout.attempt();
-        assertEquals(List.of(0L, 4L, 8L), starts);
+        assertEquals(List.of(100L, 104L, 108L), starts);
         assertEquals(List.of(4L, 4L, 2L), time.parkRequests);
         assertEquals(3, timeout.attempt().number());
         assertEquals(10, timeout.elapsedNanos());
         assertEquals(8, completed(unsatisfied));
         assertEquals("mismatch 3", mismatch(unsatisfied));
         assertSame(assertion, assertion(unsatisfied));
+    }
+
+    @Test
+    void startsTheFirstObservationEvenIfTheClockReachesTheDeadline() {
+        int[] clockCalls = {0};
+        int[] sourceCalls = {0};
+        LongSupplier clock = () -> clockCalls[0]++ == 0 ? 0 : 10;
+
+        WaitCompletion<?, String> outcome = new WaitEngine(config(1, 10, 0), clock,
+                ignored -> {}).waitFor(() -> {
+                    sourceCalls[0]++;
+                    return "actual";
+                }, actual -> plain(satisfied(actual)));
+
+        assertInstanceOf(LateTimeout.class, outcome);
+        assertEquals(1, sourceCalls[0]);
+        assertEquals(1, outcome.attempt().number());
     }
 
     @Test
@@ -281,7 +299,7 @@ class WaitEngineTest {
     @ParameterizedTest
     @ValueSource(longs = {0, 10})
     void classifiesAParkingFailureForTheNextAttempt(long persistence) {
-        var time = new FakeTime(0);
+        var time = new FakeTime(100);
         var failure = new IllegalStateException("park failed");
 
         WaitCompletion<?, String> outcome = wait(time, config(5, 20, persistence), nanos -> {
@@ -298,6 +316,8 @@ class WaitEngineTest {
                 uncontrolled.attempt().outcome());
         assertEquals(2, uncontrolled.attempt().number());
         assertSame(failure, attempt.failure());
+        assertEquals(0, attempt.timing().startOffset().toNanos());
+        assertEquals(0, attempt.timing().completionOffset().toNanos());
     }
 
     @ParameterizedTest
@@ -488,7 +508,7 @@ class WaitEngineTest {
 
     @Test
     void losesPersistenceImmediatelyOnTheFirstUnsatisfiedObservation() {
-        var time = new FakeTime(0);
+        var time = new FakeTime(100);
         var failingActual = new Object();
         var assertion = new AssertionError("lost");
         var calls = new int[1];

@@ -35,10 +35,13 @@ final class CapturedEvaluator<Observed, Result> implements Function<Observed, Co
         } catch (Throwable failure) {
             return assessed(uncontrolled(failure), contextFor(evaluatedStageIndex));
         }
-        var context = contextFor(evaluatedStageIndex);
         if (assessment.evaluation() == null) {
-            return assessed(uncontrolled(new NullPointerException("condition returned null ConditionEvaluation")), context);
+            return assessed(uncontrolled(new NullPointerException("condition returned null ConditionEvaluation")),
+                    contextFor(evaluatedStageIndex));
         }
+        AwaitAttempt.Context context = assessment.evaluation() instanceof ConditionEvaluation.Satisfied<?>
+                || !(assessment.context() instanceof AwaitAttempt.Context.Sequence)
+                ? contextFor(evaluatedStageIndex) : assessment.context();
         return assessment.withContext(context).flatMap(value -> sequenceComplete
                 ? refreshFinalResult(value, evaluatedStageIndex)
                 : captureStageResult(value, evaluatedStageIndex));
