@@ -1,20 +1,22 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.MapSource;
 
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.ConditionTestRuntime.description;
-import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.fluent.Await.await;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.mismatch;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedMapAwait;
-import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
-import static io.github.gromoff97.awium.conditioning.conditions.MapConditions.*;
+import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedMapAwait;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.*;
+import static io.github.gromoff97.awium.fluent.MapConditions.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
@@ -116,10 +118,10 @@ class MapConditionsTest {
     @Test
     void nullActualShortCircuitsAndAggregateFactoriesValidateInputs()
             throws Exception {
-        Evaluation<?> evaluation = evaluate(
+        ConditionEvaluation<?> evaluation = evaluate(
                 containsAllEntriesOf(map("a", "1")), null);
         assertEquals(UNSATISFIED, evaluation.status());
-        assertFalse(evaluation.mismatch().isBlank());
+        assertFalse(mismatch(evaluation).isBlank());
 
         assertValidation(NullPointerException.class,
                 () -> containsAllEntriesOf(null));
@@ -160,19 +162,18 @@ class MapConditionsTest {
     private static void assertPair(Pair pair,
             LinkedHashMap<String, String> actual, boolean positiveSatisfied)
             throws Exception {
-        Evaluation<?> positive = evaluate(pair.positive(), actual);
-        Evaluation<?> negative = evaluate(pair.negative(), actual);
+        ConditionEvaluation<?> positive = evaluate(pair.positive(), actual);
+        ConditionEvaluation<?> negative = evaluate(pair.negative(), actual);
         assertEquals(positiveSatisfied ? SATISFIED : UNSATISFIED,
                 positive.status(), pair.name());
         assertNotEquals(positive.status(), negative.status(), pair.name());
-        assertSame(actual, (positiveSatisfied ? positive : negative).result());
-        assertFalse((positiveSatisfied ? negative : positive)
-                .mismatch().isBlank());
+        assertSame(actual, result(positiveSatisfied ? positive : negative));
+        assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank());
     }
 
     private static <K, V, M extends Map<K, V>> void assertStatus(
             PreservingCondition<? super M> condition, M actual,
-            Evaluation.Status status) throws Exception {
+            ConditionEvaluation.Status status) throws Exception {
         assertFalse(description(condition).isBlank());
         assertEquals(status, evaluate(condition, actual).status());
     }

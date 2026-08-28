@@ -18,9 +18,9 @@ class CapturedCompilationContractTest {
     @Test
     void predicateAndConditionSequencesInferTypedLists() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.await.Await.await;
-                import static io.github.gromoff97.awium.conditioning.Evaluation.*;
-                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
+                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.*;
+                import static io.github.gromoff97.awium.fluent.Conditions.*;
                 import io.github.gromoff97.awium.sources.Source;
                 import java.util.List;
 
@@ -48,8 +48,8 @@ class CapturedCompilationContractTest {
     @Test
     void expectedSequencesReturnObservedSourceValues() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.await.Await.*;
-                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
+                import static io.github.gromoff97.awium.fluent.Await.*;
+                import static io.github.gromoff97.awium.fluent.Conditions.*;
                 import io.github.gromoff97.awium.results.AwaitResult;
                 import io.github.gromoff97.awium.sources.Source;
                 import java.util.List;
@@ -71,8 +71,8 @@ class CapturedCompilationContractTest {
                 "captured(equalTo(1), equalTo(2))",
                 "captured(equalTo(\"ready\"), isNotNull)")) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.await.Await.await;
-                    import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
+                    import static io.github.gromoff97.awium.fluent.Await.await;
+                    import static io.github.gromoff97.awium.fluent.Conditions.*;
                     import io.github.gromoff97.awium.sources.Source;
 
                     final class Contract {
@@ -87,12 +87,12 @@ class CapturedCompilationContractTest {
     @Test
     void selectedSequencesInferFacadeElementLists() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.await.Await.await;
-                import static io.github.gromoff97.awium.await.Await.tryAwait;
-                import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.*;
-                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
-                import static io.github.gromoff97.awium.conditioning.conditions.MapConditions.singleEntry;
-                import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.present;
+                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.fluent.Await.tryAwait;
+                import static io.github.gromoff97.awium.fluent.CollectionConditions.*;
+                import static io.github.gromoff97.awium.fluent.Conditions.captured;
+                import static io.github.gromoff97.awium.fluent.MapConditions.singleEntry;
+                import static io.github.gromoff97.awium.fluent.OptionalConditions.present;
                 import io.github.gromoff97.awium.results.AwaitResult;
                 import io.github.gromoff97.awium.sources.Source.*;
                 import java.util.*;
@@ -120,11 +120,11 @@ class CapturedCompilationContractTest {
                 "await(map).until(captured(first, last))",
                 "await(collection).until(captured(singleEntry, singleEntry))")) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.await.Await.await;
-                    import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.*;
-                    import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
-                    import static io.github.gromoff97.awium.conditioning.conditions.MapConditions.singleEntry;
-                    import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.present;
+                    import static io.github.gromoff97.awium.fluent.Await.await;
+                    import static io.github.gromoff97.awium.fluent.CollectionConditions.*;
+                    import static io.github.gromoff97.awium.fluent.Conditions.captured;
+                    import static io.github.gromoff97.awium.fluent.MapConditions.singleEntry;
+                    import static io.github.gromoff97.awium.fluent.OptionalConditions.present;
                     import io.github.gromoff97.awium.sources.Source.*;
                     import java.util.*;
                     final class Contract {
@@ -141,9 +141,9 @@ class CapturedCompilationContractTest {
     @Test
     void plainSourcesRejectSelectedSequences() throws IOException {
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.await.Await.await;
-                import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.*;
-                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
+                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.fluent.CollectionConditions.*;
+                import static io.github.gromoff97.awium.fluent.Conditions.captured;
                 import io.github.gromoff97.awium.sources.Source;
                 import java.util.List;
                 final class Contract {
@@ -160,9 +160,9 @@ class CapturedCompilationContractTest {
                 "matches((Optional<String> value) -> true)",
                 "condition(\"text\", (Optional<String> value) -> satisfied(value.toString()))")) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-                    import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
-                    import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.present;
+                    import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
+                    import static io.github.gromoff97.awium.fluent.Conditions.*;
+                    import static io.github.gromoff97.awium.fluent.OptionalConditions.present;
                     import java.util.Optional;
                     final class Contract {
                         void check() {
@@ -172,9 +172,9 @@ class CapturedCompilationContractTest {
                     """.formatted(stage)), stage);
         }
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.first;
-                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
-                import static io.github.gromoff97.awium.conditioning.conditions.MapConditions.singleEntry;
+                import static io.github.gromoff97.awium.fluent.CollectionConditions.first;
+                import static io.github.gromoff97.awium.fluent.Conditions.captured;
+                import static io.github.gromoff97.awium.fluent.MapConditions.singleEntry;
                 final class Contract {
                     void check() {
                         captured(first, singleEntry);
@@ -186,8 +186,8 @@ class CapturedCompilationContractTest {
     @Test
     void explainedSelectedSequenceCannotBeExplainedAgain() throws IOException {
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.*;
-                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
+                import static io.github.gromoff97.awium.fluent.CollectionConditions.*;
+                import static io.github.gromoff97.awium.fluent.Conditions.captured;
                 final class Contract {
                     void check() {
                         captured(first, last).because("first").because("second");
@@ -199,7 +199,7 @@ class CapturedCompilationContractTest {
     @Test
     void sequenceRequiresAtLeastTwoStages() throws IOException {
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
+                import static io.github.gromoff97.awium.fluent.Conditions.captured;
                 final class Contract {
                     void check() {
                         captured();
@@ -207,7 +207,7 @@ class CapturedCompilationContractTest {
                 }
                 """));
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
+                import static io.github.gromoff97.awium.fluent.Conditions.captured;
                 final class Contract {
                     void check() {
                         captured((String value) -> true);
@@ -219,8 +219,8 @@ class CapturedCompilationContractTest {
     @Test
     void predicateAndConditionStagesCannotMix() throws IOException {
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
-                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.matches;
+                import static io.github.gromoff97.awium.fluent.Conditions.captured;
+                import static io.github.gromoff97.awium.fluent.Conditions.matches;
                 final class Contract {
                     void check() {
                         captured((String value) -> true, matches((String value) -> true));
@@ -232,10 +232,10 @@ class CapturedCompilationContractTest {
     @Test
     void preservingAndTransformingStagesCannotMix() throws IOException {
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
-                import io.github.gromoff97.awium.conditioning.conditions.Condition;
-                import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
+                import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
+                import static io.github.gromoff97.awium.fluent.Conditions.*;
+                import io.github.gromoff97.awium.fluent.Condition;
+                import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
                 final class Contract {
                     void check() {
                         PreservingStage<String> preserving = matches(value -> true);
@@ -250,9 +250,9 @@ class CapturedCompilationContractTest {
     @Test
     void transformedStagesRequireOneInvariantResultType() throws IOException {
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
-                import io.github.gromoff97.awium.conditioning.conditions.Condition;
+                import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
+                import static io.github.gromoff97.awium.fluent.Conditions.*;
+                import io.github.gromoff97.awium.fluent.Condition;
                 final class Contract {
                     void check() {
                         Condition<String, Integer> integer = condition("integer",

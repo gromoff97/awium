@@ -1,17 +1,19 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
-import static io.github.gromoff97.awium.ConditionTestRuntime.description;
-import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
-import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.*;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.mismatch;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.*;
+import static io.github.gromoff97.awium.fluent.Conditions.*;
+import static io.github.gromoff97.awium.fluent.OptionalConditions.*;
 
-import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.evaluation.*;
+import io.github.gromoff97.awium.fluent.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -46,11 +48,10 @@ class ObjectAndOptionalConditionsTest {
         assertSatisfied(evaluate(notEqualTo(expected), differentActual),
                 differentActual);
         assertSatisfied(evaluate(equalTo(null), null), null);
-        Evaluation<?> arrays = evaluate(equalTo(
+        ConditionEvaluation<?> arrays = evaluate(equalTo(
                 new int[]{1, 2}), new int[]{1, 2});
         assertEquals(SATISFIED, arrays.status());
-        assertEquals(int[].class, arrays.result().getClass());
-        assertNull(arrays.mismatch());
+        assertEquals(int[].class, result(arrays).getClass());
     }
 
     @Test
@@ -96,8 +97,8 @@ class ObjectAndOptionalConditionsTest {
         assertEquals(1, actual.equalsCalls);
 
         int[] actualArray = {1, 2};
-        assertSame(actualArray, evaluate(hasValue(
-                new int[]{1, 2}), Optional.of(actualArray)).result());
+        assertSame(actualArray, result(evaluate(hasValue(
+                new int[]{1, 2}), Optional.of(actualArray))));
     }
 
     @Test
@@ -109,20 +110,20 @@ class ObjectAndOptionalConditionsTest {
                 .contains("unexpected"));
     }
 
-    private static Evaluation<?> evaluatePresent(Optional<?> actual)
+    private static ConditionEvaluation<?> evaluatePresent(Optional<?> actual)
             throws Exception {
         return evaluate(present, actual);
     }
 
-    private static void assertSatisfied(Evaluation<?> evaluation, Object result) {
+    private static void assertSatisfied(ConditionEvaluation<?> evaluation, Object result) {
         assertEquals(SATISFIED, evaluation.status());
-        assertSame(result, evaluation.result());
-        assertNull(evaluation.mismatch());
+        assertInstanceOf(ConditionEvaluation.Satisfied.class, evaluation);
+        assertSame(result, result(evaluation));
     }
 
-    private static void assertUnsatisfied(Evaluation<?> evaluation) {
+    private static void assertUnsatisfied(ConditionEvaluation<?> evaluation) {
         assertEquals(UNSATISFIED, evaluation.status());
-        assertNull(evaluation.result());
-        assertTrue(!evaluation.mismatch().isBlank());
+        assertInstanceOf(ConditionEvaluation.Unsatisfied.class, evaluation);
+        assertTrue(!mismatch(evaluation).isBlank());
     }
 }

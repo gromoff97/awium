@@ -1,13 +1,13 @@
-package io.github.gromoff97.awium.conditioning.conditions;
+package io.github.gromoff97.awium.fluent;
 
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
 
 import java.util.Locale;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preservingNonNull;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.validateRange;
+import static io.github.gromoff97.awium.fluent.ConditionSupport.preservingNonNull;
+import static io.github.gromoff97.awium.fluent.ConditionSupport.validateRange;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 

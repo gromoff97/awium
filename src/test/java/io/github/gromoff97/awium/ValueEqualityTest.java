@@ -2,9 +2,9 @@ package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.equalTo;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.SATISFIED;
+import static io.github.gromoff97.awium.fluent.Conditions.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

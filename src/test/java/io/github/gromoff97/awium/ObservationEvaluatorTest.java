@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
-import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
 import io.github.gromoff97.awium.engine.WaitCompletion;
@@ -16,9 +16,9 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.ACQUISITION;
-import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.uncontrolled;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.assertionUnsatisfied;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.uncontrolled;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -69,7 +69,7 @@ class ObservationEvaluatorTest {
         var actual = new Object();
         var assertion = new AssertionError("failed");
 
-        var ordinary = attempt(() -> actual, value -> Evaluation.unsatisfied("not ready"));
+        var ordinary = attempt(() -> actual, value -> ConditionEvaluation.unsatisfied("not ready"));
         var asserted = attempt(() -> actual, value -> assertionUnsatisfied("assertion did not pass", assertion));
 
         var ordinaryOutcome = assertInstanceOf(AwaitAttempt.Outcome.Unsatisfied.class, ordinary.outcome());
@@ -143,7 +143,7 @@ class ObservationEvaluatorTest {
         var outcome = assertInstanceOf(AwaitAttempt.Outcome.ConditionEvaluationFailed.class, attempt.outcome());
         assertSame(actual, outcome.observed());
         assertEquals(NullPointerException.class, outcome.failure().getClass());
-        assertEquals("condition returned null Evaluation", outcome.failure().getMessage());
+        assertEquals("condition returned null ConditionEvaluation", outcome.failure().getMessage());
         assertEquals(1, conditionCalls[0]);
     }
 
@@ -293,15 +293,15 @@ class ObservationEvaluatorTest {
         throw (E) failure;
     }
 
-    private static <T, R> Evaluation<R> failIfCalled(T ignored) {
+    private static <T, R> ConditionEvaluation<R> failIfCalled(T ignored) {
         throw new AssertionError("condition must not be called");
     }
 
     private static <R> AwaitAttempt<Object, R> attempt(Source<Object> source,
-            Function<Object, Evaluation<R>> condition) {
+            Function<Object, ConditionEvaluation<R>> condition) {
         var time = new FakeTime(0);
         return new WaitEngine(config(1, 2, 0), time, time).waitFor(source, actual -> {
-            Evaluation<R> evaluation = condition.apply(actual);
+            ConditionEvaluation<R> evaluation = condition.apply(actual);
             time.advanceNanos(2);
             return evaluation;
         }).attempt();

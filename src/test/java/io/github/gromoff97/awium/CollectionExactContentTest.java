@@ -1,21 +1,23 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.fluent.Await.await;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.mismatch;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ExpectedValue;
 import static io.github.gromoff97.awium.ProbeContainers.GreedyValue;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
-import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.*;
+import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedCollectionAwait;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.*;
+import static io.github.gromoff97.awium.fluent.CollectionConditions.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
@@ -116,10 +118,10 @@ class CollectionExactContentTest {
 
     @Test
     void nullActualIsUnsatisfiedAndNullAggregateIsRejected() throws Exception {
-        Evaluation<?> evaluation = evaluate(
+        ConditionEvaluation<?> evaluation = evaluate(
                 containsExactlyElementsOf(List.of("a")), null);
         assertEquals(UNSATISFIED, evaluation.status());
-        assertFalse(evaluation.mismatch().isBlank());
+        assertFalse(mismatch(evaluation).isBlank());
         assertTrue(!assertThrows(NullPointerException.class,
                 () -> containsExactly((Object[]) null)).getMessage().isBlank());
     }
@@ -143,19 +145,18 @@ class CollectionExactContentTest {
 
     private static void assertPair(Pair pair, List<String> actual,
             boolean positiveSatisfied) throws Exception {
-        Evaluation<?> positive = evaluate(pair.positive(), actual);
-        Evaluation<?> negative = evaluate(pair.negative(), actual);
+        ConditionEvaluation<?> positive = evaluate(pair.positive(), actual);
+        ConditionEvaluation<?> negative = evaluate(pair.negative(), actual);
         assertEquals(positiveSatisfied ? SATISFIED : UNSATISFIED,
                 positive.status(), pair.name());
         assertNotEquals(positive.status(), negative.status(), pair.name());
-        assertSame(actual, (positiveSatisfied ? positive : negative).result());
-        assertFalse((positiveSatisfied ? negative : positive)
-                .mismatch().isBlank());
+        assertSame(actual, result(positiveSatisfied ? positive : negative));
+        assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank());
     }
 
     private static <E> void assertStatus(
             PreservingCondition<? super List<E>> condition,
-            List<? extends E> elements, Evaluation.Status status)
+            List<? extends E> elements, ConditionEvaluation.Status status)
             throws Exception {
         List<E> actual = new ArrayList<>(elements);
         assertEquals(status, evaluate(condition, actual).status());

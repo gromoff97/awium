@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.conditioning.conditions;
+package io.github.gromoff97.awium.fluent;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -16,8 +16,8 @@ final class ValueMatching {
         throw new AssertionError("Utility class");
     }
 
-    static <T> boolean matchesAny(Iterable<T> values, Predicate<? super T> matches) {
-        for (T value : values) {
+    static <Value> boolean matchesAny(Iterable<Value> values, Predicate<? super Value> matches) {
+        for (Value value : values) {
             if (matches.test(value)) {
                 return true;
             }
@@ -25,8 +25,8 @@ final class ValueMatching {
         return false;
     }
 
-    static <T> boolean matchesAll(Iterable<T> values, Predicate<? super T> matches) {
-        for (T value : values) {
+    static <Value> boolean matchesAll(Iterable<Value> values, Predicate<? super Value> matches) {
+        for (Value value : values) {
             if (!matches.test(value)) {
                 return false;
             }
@@ -34,11 +34,11 @@ final class ValueMatching {
         return true;
     }
 
-    static <A, E> boolean containsAll(Iterable<A> actual, Collection<E> expected,
-            BiPredicate<? super A, ? super E> matches) {
+    static <Actual, Expected> boolean containsAll(Iterable<Actual> actual, Collection<Expected> expected,
+            BiPredicate<? super Actual, ? super Expected> matches) {
         var remainingExpected = new ArrayList<>(expected);
-        for (A value : actual) {
-            Iterator<E> candidates = remainingExpected.iterator();
+        for (Actual value : actual) {
+            Iterator<Expected> candidates = remainingExpected.iterator();
             while (candidates.hasNext()) {
                 if (matches.test(value, candidates.next())) {
                     candidates.remove();
@@ -51,13 +51,13 @@ final class ValueMatching {
         return false;
     }
 
-    static <A, E> boolean exactly(Iterator<A> actual, Collection<E> expected,
-            BiPredicate<? super A, ? super E> matches) {
+    static <Actual, Expected> boolean exactly(Iterator<Actual> actual, Collection<Expected> expected,
+            BiPredicate<? super Actual, ? super Expected> matches) {
         var remainingExpected = new ArrayList<>(expected);
         while (actual.hasNext()) {
-            A value = actual.next();
+            Actual value = actual.next();
             boolean found = false;
-            Iterator<E> candidates = remainingExpected.iterator();
+            Iterator<Expected> candidates = remainingExpected.iterator();
             while (candidates.hasNext()) {
                 if (matches.test(value, candidates.next())) {
                     candidates.remove();

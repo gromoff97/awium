@@ -3,13 +3,16 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.results.AwaitAttempt;
 
-import static io.github.gromoff97.awium.conditioning.Evaluation.*;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.assertionUnsatisfied;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.uncontrolled;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
 import static io.github.gromoff97.awium.engine.WaitCompletion.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 
-import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.evaluation.*;
+import io.github.gromoff97.awium.fluent.*;
 import io.github.gromoff97.awium.engine.*;
 import io.github.gromoff97.awium.exceptions.AwaitConfigurationConflictException;
 
@@ -263,7 +266,7 @@ class WaitEngineTest {
         WaitCompletion<?, Object> outcome = wait(time, config(3, 10, 0), () -> {
             time.advanceNanos(11);
             throw failure;
-        }, Evaluation::satisfied);
+        }, ConditionEvaluation::satisfied);
 
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
@@ -358,7 +361,7 @@ class WaitEngineTest {
 
         WaitCompletion<?, Object> outcome = wait(time, config(3, 10, 0), () -> {
             throw new AssertionError("source must not be called");
-        }, Evaluation::satisfied);
+        }, ConditionEvaluation::satisfied);
 
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
@@ -399,7 +402,7 @@ class WaitEngineTest {
         WaitCompletion<?, Long> outcome = wait(time, config(5, 20, 3), () -> {
                     starts.add(time.getAsLong());
                     return time.getAsLong();
-                }, Evaluation::satisfied);
+                }, ConditionEvaluation::satisfied);
 
         var success = assertInstanceOf(Satisfied.class, outcome);
         assertEquals(List.of(0L, 3L), starts);
@@ -418,7 +421,7 @@ class WaitEngineTest {
         WaitCompletion<?, Long> outcome = wait(time, config(4, 20, 6), () -> {
             starts.add(time.getAsLong());
             return time.getAsLong();
-        }, Evaluation::satisfied);
+        }, ConditionEvaluation::satisfied);
 
         var success = assertInstanceOf(Satisfied.class, outcome);
         assertEquals(List.of(
@@ -544,7 +547,7 @@ class WaitEngineTest {
             FakeTime time,
             WaitConfiguration config,
             Source<S> source,
-            Function<S, Evaluation<R>> condition) {
+            Function<S, ConditionEvaluation<R>> condition) {
         return wait(time, config, time, source, condition);
     }
 
@@ -553,7 +556,7 @@ class WaitEngineTest {
             WaitConfiguration config,
             LongConsumer parker,
             Source<S> source,
-            Function<S, Evaluation<R>> condition) {
+            Function<S, ConditionEvaluation<R>> condition) {
         return new WaitEngine(config, time, parker).waitFor(source, condition);
     }
 

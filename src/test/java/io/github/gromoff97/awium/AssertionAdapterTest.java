@@ -1,18 +1,19 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
-import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
-import static io.github.gromoff97.awium.ConditionTestRuntime.description;
-import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.SATISFIED;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.fluent.Conditions.*;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedAwait;
 import static java.lang.Long.parseLong;
 import static java.time.Duration.ofNanos;
 
-import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.Condition;
-import io.github.gromoff97.awium.conditioning.conditions.Conditions;
+import io.github.gromoff97.awium.evaluation.*;
+import io.github.gromoff97.awium.fluent.Condition;
+import io.github.gromoff97.awium.fluent.Conditions;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.sources.Source;
 
@@ -38,10 +39,10 @@ class AssertionAdapterTest {
                     return satisfied(parseLong(value));
                 });
 
-        Evaluation<Long> evaluation = evaluate(condition, "42");
+        ConditionEvaluation<Long> evaluation = evaluate(condition, "42");
 
         assertEquals(SATISFIED, evaluation.status());
-        assertEquals(42L, evaluation.result());
+        assertEquals(42L, result(evaluation));
         assertEquals(1, invocations[0]);
         assertEquals("payment id", description(condition));
     }
@@ -75,10 +76,10 @@ class AssertionAdapterTest {
             invocations[0]++;
         });
 
-        Evaluation<String> evaluation = evaluate(condition, actual);
+        ConditionEvaluation<String> evaluation = evaluate(condition, actual);
 
         assertEquals(SATISFIED, evaluation.status());
-        assertSame(actual, evaluation.result());
+        assertSame(actual, result(evaluation));
         assertEquals(1, invocations[0]);
         assertTrue(!description(condition).isBlank());
     }
@@ -91,10 +92,10 @@ class AssertionAdapterTest {
             return null;
         });
 
-        Evaluation<String> evaluation = evaluate(condition, "42");
+        ConditionEvaluation<String> evaluation = evaluate(condition, "42");
 
         assertEquals(SATISFIED, evaluation.status());
-        assertNull(evaluation.result());
+        assertNull(result(evaluation));
         assertEquals(1, invocations[0]);
         assertTrue(!description(condition).isBlank());
     }

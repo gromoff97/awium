@@ -1,20 +1,22 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.await.Await;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+import io.github.gromoff97.awium.fluent.Await;
+import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 
 import static io.github.gromoff97.awium.CompilationSupport.compiles;
-import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.mismatch;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
-import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.*;
+import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedCollectionAwait;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.*;
+import static io.github.gromoff97.awium.fluent.CollectionConditions.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
@@ -51,7 +53,7 @@ class CollectionMembershipTest {
 
         String nil = null;
         Collection<String> actual = asList((String) null);
-        assertSame(actual, evaluate(contains(nil), actual).result());
+        assertSame(actual, result(evaluate(contains(nil), actual)));
     }
 
     @Test
@@ -63,8 +65,8 @@ class CollectionMembershipTest {
         Collection<Object> arrays = new ArrayList<>(
                 List.of(new int[] {1, 2}));
 
-        assertSame(directional, evaluate(contains(expectedValue), directional).result());
-        assertSame(arrays, evaluate(contains(new int[] {1, 2}), arrays).result());
+        assertSame(directional, result(evaluate(contains(expectedValue), directional)));
+        assertSame(arrays, result(evaluate(contains(new int[] {1, 2}), arrays)));
         assertEquals(1, actualValue.equalsCalls);
     }
 
@@ -122,9 +124,9 @@ class CollectionMembershipTest {
     void ordinaryConsumerCallsAreWarningFreeAndBareNullRemainsAmbiguous()
             throws IOException {
         assertTrue(compiles(temporaryDirectory, """
-                import static io.github.gromoff97.awium.await.Await.await;
-                import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.*;
-                import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.fluent.CollectionConditions.*;
+                import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
                 import io.github.gromoff97.awium.sources.Source.CollectionSource;
                 import java.util.*;
 
@@ -146,7 +148,7 @@ class CollectionMembershipTest {
                 }
                 """));
         assertFalse(compiles(temporaryDirectory, """
-                import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.*;
+                import static io.github.gromoff97.awium.fluent.CollectionConditions.*;
                 final class Contract { void check() { contains(null); } }
                 """));
     }
@@ -154,20 +156,20 @@ class CollectionMembershipTest {
     private static void assertPair(Pair pair, List<String> values,
             boolean positiveSatisfied) throws Exception {
         Collection<String> actual = new ArrayList<>(values);
-        Evaluation<?> positive = evaluate(pair.positive(), actual);
-        Evaluation<?> negative = evaluate(pair.negative(), actual);
+        ConditionEvaluation<?> positive = evaluate(pair.positive(), actual);
+        ConditionEvaluation<?> negative = evaluate(pair.negative(), actual);
 
         assertEquals(positiveSatisfied ? SATISFIED : UNSATISFIED,
                 positive.status(), pair.name());
         assertNotEquals(positive.status(), negative.status(), pair.name());
-        assertSame(actual, (positiveSatisfied ? positive : negative).result());
-        assertFalse((positiveSatisfied ? negative : positive)
-                .mismatch().isBlank());
+        assertSame(actual, result(positiveSatisfied ? positive : negative));
+        assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank());
     }
 
-    private static void assertUnsatisfied(Evaluation<?> evaluation) {
+    private static void assertUnsatisfied(ConditionEvaluation<?> evaluation) {
         assertEquals(UNSATISFIED, evaluation.status());
-        assertFalse(evaluation.mismatch().isBlank());
+        assertInstanceOf(ConditionEvaluation.Unsatisfied.class, evaluation);
+        assertFalse(mismatch(evaluation).isBlank());
     }
 
     private static void assertValidation(Class<? extends Throwable> type,

@@ -2,23 +2,23 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.results.AwaitResult;
-import io.github.gromoff97.awium.conditioning.conditions.Condition;
+import io.github.gromoff97.awium.fluent.Condition;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
-import static io.github.gromoff97.awium.await.Await.tryAwait;
-import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.uncontrolled;
-import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.asserted;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.isNotNull;
+import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedTryAwait;
+import static io.github.gromoff97.awium.fluent.Await.tryAwait;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.assertionUnsatisfied;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.uncontrolled;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.fluent.Conditions.asserted;
+import static io.github.gromoff97.awium.fluent.Conditions.condition;
+import static io.github.gromoff97.awium.fluent.Conditions.isNotNull;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;

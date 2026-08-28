@@ -1,23 +1,22 @@
-package io.github.gromoff97.awium.conditioning.conditions;
+package io.github.gromoff97.awium.fluent;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.NarrowingStage;
-import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
-import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
+import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
+import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
+import io.github.gromoff97.awium.fluent.Condition.ExpectedStage;
+import io.github.gromoff97.awium.fluent.Condition.NarrowingStage;
+import io.github.gromoff97.awium.fluent.ConditionStage.ResultStage;
+import io.github.gromoff97.awium.fluent.Condition.SelectedCondition;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 
 import java.util.Optional;
 import java.util.function.Predicate;
 
-import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preserve;
-import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.equal;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.fluent.ConditionSupport.preserve;
+import static io.github.gromoff97.awium.fluent.ValueMatching.equal;
+import static io.github.gromoff97.awium.fluent.Conditions.condition;
 import static java.util.Objects.requireNonNull;
 
 public final class OptionalConditions {
@@ -35,63 +34,63 @@ public final class OptionalConditions {
         throw new AssertionError("Utility class");
     }
 
-    public static <T> Condition<Optional<T>, T> hasValue(T expected) {
+    public static <Value> Condition<Optional<Value>, Value> hasValue(Value expected) {
         requireNonNull(expected, "expected must not be null");
         return selected("optional value equals expected", "optional value was not equal",
                 actual -> equal(actual, expected));
     }
 
-    public static <T> Condition<Optional<T>, T> doesNotHaveValue(T unexpected) {
+    public static <Value> Condition<Optional<Value>, Value> doesNotHaveValue(Value unexpected) {
         requireNonNull(unexpected, "unexpected must not be null");
         return selected("optional value does not equal unexpected", "optional value was equal",
                 actual -> !equal(actual, unexpected));
     }
 
-    public static <T> Condition<Optional<T>, T> hasValue(Predicate<? super T> predicate) {
+    public static <Value> Condition<Optional<Value>, Value> hasValue(Predicate<? super Value> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return selected("optional value matches", "optional value did not match", predicate);
     }
 
-    public static <T, R extends T> Condition<Optional<T>, R> containsInstanceOf(Class<R> type) {
+    public static <Value, Result extends Value> Condition<Optional<Value>, Result> containsInstanceOf(Class<Result> type) {
         requireNonNull(type, "type must not be null");
         return condition("optional contains an instance of " + type.getTypeName(), actual -> present(actual)
                 .continueIfSatisfied(value -> type.isInstance(value)
                         ? satisfied(type.cast(value)) : unsatisfied("optional value had a different type")));
     }
 
-    public static <T, R> Condition<Optional<T>, R> hasValue(ResultStage<? super T, ? extends R> nested) {
+    public static <Value, Result> Condition<Optional<Value>, Result> hasValue(ResultStage<? super Value, ? extends Result> nested) {
         return ConditionRuntime.condition("optional value " + ConditionRuntime.description(nested), () -> {
-            var nestedEvaluator = ConditionRuntime.<T, R>evaluator(nested);
+            var nestedEvaluator = ConditionRuntime.<Value, Result>evaluator(nested);
             return actual -> present(actual).continueIfSatisfied(nestedEvaluator);
         });
     }
 
-    public static <T> Condition<Optional<T>, T> hasValue(PreservingStage<? super T> nested) {
+    public static <Value> Condition<Optional<Value>, Value> hasValue(PreservingStage<? super Value> nested) {
         return hasValue(preserve(nested));
     }
 
-    public static <S, T extends S> Condition<Optional<S>, S> hasValue(ExpectedStage<T> nested) {
+    public static <Observed, Value extends Observed> Condition<Optional<Observed>, Observed> hasValue(ExpectedStage<Value> nested) {
         return ConditionRuntime.condition("optional value " + ConditionRuntime.description(nested), () -> {
-            var nestedEvaluator = ConditionRuntime.<S>expectedEvaluator(nested);
+            var nestedEvaluator = ConditionRuntime.<Observed>expectedEvaluator(nested);
             return actual -> present(actual).continueIfSatisfied(nestedEvaluator);
         });
     }
 
-    public static <T, R extends T> Condition<Optional<T>, R> hasValue(NarrowingStage<R> nested) {
+    public static <Value, Result extends Value> Condition<Optional<Value>, Result> hasValue(NarrowingStage<Result> nested) {
         return ConditionRuntime.condition("optional value " + ConditionRuntime.description(nested), () -> {
-            var nestedEvaluator = ConditionRuntime.<T, R>narrowingEvaluator(nested);
+            var nestedEvaluator = ConditionRuntime.<Value, Result>narrowingEvaluator(nested);
             return actual -> present(actual).continueIfSatisfied(nestedEvaluator);
         });
     }
 
-    private static <T> Condition<Optional<T>, T> selected(String description, String mismatch,
-            Predicate<? super T> predicate) {
+    private static <Value> Condition<Optional<Value>, Value> selected(String description, String mismatch,
+            Predicate<? super Value> predicate) {
         return condition(description, actual -> present(actual)
                 .continueIfSatisfied(value -> predicate.test(value)
                         ? satisfied(value) : unsatisfied(mismatch)));
     }
 
-    private static <T> Evaluation<T> present(Optional<T> actual) {
+    private static <Value> ConditionEvaluation<Value> present(Optional<Value> actual) {
         if (actual == null) {
             return unsatisfied("optional was null");
         }

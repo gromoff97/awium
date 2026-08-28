@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.conditions.CollectionConditions;
+import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+import io.github.gromoff97.awium.fluent.CollectionConditions;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import org.junit.jupiter.api.Test;
@@ -12,13 +12,13 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
-import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
-import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNSATISFIED;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.first;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.last;
+import static io.github.gromoff97.awium.fluent.Await.await;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedCollectionAwait;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.SATISFIED;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.UNSATISFIED;
+import static io.github.gromoff97.awium.fluent.CollectionConditions.first;
+import static io.github.gromoff97.awium.fluent.CollectionConditions.last;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -139,9 +139,9 @@ class CollectionSelectionConditionsTest {
 
     @Test
     void singlePredicateRequiresExactlyOneMatch() throws Exception {
-        Evaluation<?> none = evaluate(
+        ConditionEvaluation<?> none = evaluate(
                 CollectionConditions.<Integer>single(value -> value > 10), List.of(1, 2));
-        Evaluation<?> many = evaluate(
+        ConditionEvaluation<?> many = evaluate(
                 CollectionConditions.<Integer>single(value -> value > 0), List.of(1, 2));
 
         assertEquals(UNSATISFIED, none.status());

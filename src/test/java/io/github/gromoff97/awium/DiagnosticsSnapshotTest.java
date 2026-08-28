@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.conditions.Condition;
-import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
-import io.github.gromoff97.awium.conditioning.conditions.Conditions;
+import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+import io.github.gromoff97.awium.fluent.Condition;
+import io.github.gromoff97.awium.fluent.ConditionStage.ResultStage;
+import io.github.gromoff97.awium.fluent.Conditions;
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
@@ -17,14 +17,14 @@ import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitSour
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitUnhandledException;
 import io.github.gromoff97.awium.sources.Source;
 
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.uncontrolled;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
+import static io.github.gromoff97.awium.fluent.Await.await;
+import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.assertionUnsatisfied;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.uncontrolled;
+import static io.github.gromoff97.awium.fluent.Conditions.captured;
+import static io.github.gromoff97.awium.fluent.Conditions.condition;
 import static io.github.gromoff97.awium.engine.WaitCompletion.*;
 import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.ACQUISITION;
 import static java.lang.Thread.currentThread;
@@ -651,7 +651,7 @@ class DiagnosticsSnapshotTest {
         return new AwaitAttempt<>(number, ACQUISITION,
                 new AwaitAttempt.Outcome.Unsatisfied<>(
                         afterObservation(completedNanos), observed, mismatch, null,
-                        Evaluation.Context.Plain.INSTANCE));
+                        ConditionEvaluation.Context.Plain.INSTANCE));
     }
 
     private static <S> AwaitAttempt<S, Object> assertionUnsatisfiedAttempt(
@@ -660,7 +660,7 @@ class DiagnosticsSnapshotTest {
         return new AwaitAttempt<>(number, ACQUISITION,
                 new AwaitAttempt.Outcome.Unsatisfied<>(
                         afterObservation(completedNanos), observed, mismatch, assertion,
-                        Evaluation.Context.Plain.INSTANCE));
+                        ConditionEvaluation.Context.Plain.INSTANCE));
     }
 
     private static WaitCompletion<Object, Object> sourceFailure(
@@ -684,7 +684,7 @@ class DiagnosticsSnapshotTest {
         return new Uncontrolled<>(new AwaitAttempt<>(number, ACQUISITION,
                 new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(
                         afterObservation(completedNanos), observed, failure,
-                        Evaluation.Context.Plain.INSTANCE)));
+                        ConditionEvaluation.Context.Plain.INSTANCE)));
     }
 
     private static AwaitAttempt.Timing.AfterObservation afterObservation(

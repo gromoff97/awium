@@ -1,17 +1,17 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.*;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
-import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.*;
+import static io.github.gromoff97.awium.fluent.CollectionConditions.*;
+import static io.github.gromoff97.awium.fluent.Conditions.*;
+import static io.github.gromoff97.awium.fluent.OptionalConditions.*;
 
-import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.evaluation.*;
+import io.github.gromoff97.awium.fluent.*;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 import io.github.gromoff97.awium.sources.Source.MapSource;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 
-import static io.github.gromoff97.awium.await.Await.await;
+import static io.github.gromoff97.awium.fluent.Await.await;
 import static java.time.Duration.*;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -46,7 +46,7 @@ class PositiveFluentMatrixTest {
                 await(source).every(EVERY).upTo(UP_TO).persisting(ZERO).every(EVERY).upTo(UP_TO).persisting(ZERO).until(isNotNull));
 
         Condition<Object, Object> selecting = condition(
-                "select actual", Evaluation::satisfied);
+                "select actual", ConditionEvaluation::satisfied);
         assertSame(actual, await(source).until(selecting));
         assertSame(actual, await(source).until(selecting.because("selected object")));
         Void nil = await((Source<Object>) () -> null).until(isNull);

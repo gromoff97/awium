@@ -1,16 +1,16 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
+import static io.github.gromoff97.awium.fluent.Await.await;
+import static io.github.gromoff97.awium.fluent.Conditions.*;
 import static java.time.Duration.*;
 
-import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.*;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
-import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
+import io.github.gromoff97.awium.evaluation.*;
+import io.github.gromoff97.awium.fluent.*;
+import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
+import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
+import io.github.gromoff97.awium.fluent.Condition.SelectedCondition;
+import io.github.gromoff97.awium.fluent.Condition.SelectedStage;
+import io.github.gromoff97.awium.fluent.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 import io.github.gromoff97.awium.sources.Source.MapSource;

@@ -1,13 +1,12 @@
-package io.github.gromoff97.awium.await;
+package io.github.gromoff97.awium.fluent;
 
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedSequenceStage;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.NarrowingStage;
-import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSequenceStage;
-import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
+import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
+import io.github.gromoff97.awium.fluent.Condition.ExpectedStage;
+import io.github.gromoff97.awium.fluent.Condition.ExpectedSequenceStage;
+import io.github.gromoff97.awium.fluent.Condition.NarrowingStage;
+import io.github.gromoff97.awium.fluent.ConditionStage.ResultStage;
+import io.github.gromoff97.awium.fluent.Condition.SelectedStage;
+import io.github.gromoff97.awium.fluent.Condition.SelectedSequenceStage;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.results.AwaitResult;
 import io.github.gromoff97.awium.sources.Source;

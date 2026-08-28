@@ -1,7 +1,6 @@
-package io.github.gromoff97.awium.await;
+package io.github.gromoff97.awium.fluent;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.conditions.AwaitCondition;
+import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
@@ -15,8 +14,8 @@ import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
-import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.description;
-import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.explanation;
+import static io.github.gromoff97.awium.fluent.ConditionRuntime.description;
+import static io.github.gromoff97.awium.fluent.ConditionRuntime.explanation;
 import static java.util.Objects.requireNonNull;
 
 abstract class AbstractAwait<Observed, Self> {
@@ -54,14 +53,14 @@ abstract class AbstractAwait<Observed, Self> {
 
     abstract Self reconfigured(WaitConfiguration configuration);
 
-    protected final <Result> Result complete(Function<? super Observed, ? extends Evaluation<? extends Result>> evaluator,
+    protected final <Result> Result complete(Function<? super Observed, ? extends ConditionEvaluation<? extends Result>> evaluator,
             AwaitCondition condition) {
         return FailureFactory.complete(engine.waitFor(source, evaluator), description(condition), explanation(condition),
                 engine.configuration());
     }
 
     protected final <Result> AwaitResult<Observed, Result> capture(Function<? super Observed,
-            ? extends Evaluation<? extends Result>> evaluator,
+            ? extends ConditionEvaluation<? extends Result>> evaluator,
             AwaitCondition condition) {
         return FailureFactory.capture(engine.recordedWaitFor(source, evaluator), description(condition), explanation(condition),
                 engine.configuration());

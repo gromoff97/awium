@@ -1,13 +1,12 @@
-package io.github.gromoff97.awium.conditioning.conditions;
+package io.github.gromoff97.awium.fluent;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.NarrowingStage;
-import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
-import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
+import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
+import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
+import io.github.gromoff97.awium.fluent.Condition.ExpectedStage;
+import io.github.gromoff97.awium.fluent.Condition.NarrowingStage;
+import io.github.gromoff97.awium.fluent.ConditionStage.ResultStage;
+import io.github.gromoff97.awium.fluent.Condition.SelectedCondition;
 import io.github.gromoff97.awium.sources.Source.MapSource;
 
 import java.util.List;
@@ -15,20 +14,20 @@ import java.util.Map;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
-import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.nonEmpty;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preserve;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preservingNonNull;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.validateRange;
-import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.containsAll;
-import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.equal;
-import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.exactly;
-import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAll;
-import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAny;
-import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.sameDistinctElements;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
-import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.selected;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.fluent.ConditionSupport.nonEmpty;
+import static io.github.gromoff97.awium.fluent.ConditionSupport.preserve;
+import static io.github.gromoff97.awium.fluent.ConditionSupport.preservingNonNull;
+import static io.github.gromoff97.awium.fluent.ConditionSupport.validateRange;
+import static io.github.gromoff97.awium.fluent.ValueMatching.containsAll;
+import static io.github.gromoff97.awium.fluent.ValueMatching.equal;
+import static io.github.gromoff97.awium.fluent.ValueMatching.exactly;
+import static io.github.gromoff97.awium.fluent.ValueMatching.matchesAll;
+import static io.github.gromoff97.awium.fluent.ValueMatching.matchesAny;
+import static io.github.gromoff97.awium.fluent.ValueMatching.sameDistinctElements;
+import static io.github.gromoff97.awium.fluent.Conditions.condition;
+import static io.github.gromoff97.awium.fluent.ConditionRuntime.selected;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
@@ -307,7 +306,7 @@ public final class MapConditions {
                 actual -> !exactContent(actual, entries));
     }
 
-    private static <K, V> Evaluation<Map.Entry<K, V>> selectSingle(Map<K, V> actual,
+    private static <K, V> ConditionEvaluation<Map.Entry<K, V>> selectSingle(Map<K, V> actual,
             Predicate<? super Map.Entry<K, V>> predicate) {
         if (actual == null) {
             return unsatisfied("map was null");
@@ -316,7 +315,7 @@ public final class MapConditions {
                 "no map entry matched", "more than one map entry matched");
     }
 
-    private static <K, V> Evaluation<Map.Entry<K, V>> findEntry(Map<K, V> actual, K key) {
+    private static <K, V> ConditionEvaluation<Map.Entry<K, V>> findEntry(Map<K, V> actual, K key) {
         if (actual == null) {
             return unsatisfied("map was null");
         }

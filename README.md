@@ -4,8 +4,8 @@ Awium is a zero-dependency Java 21 library that waits for a condition in the
 calling thread and returns the result from the same successful observation.
 
 ```java
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.present;
+import static io.github.gromoff97.awium.fluent.Await.await;
+import static io.github.gromoff97.awium.fluent.OptionalConditions.present;
 
 Payment payment = await(() -> paymentRepository.findById(order.paymentId())).until(
         present.because("Checkout cannot continue without the payment"));
@@ -19,8 +19,8 @@ dependencies {
 }
 ```
 
-Awium has no compile or runtime dependencies. JUnit and OpenRewrite are used
-only to test the library itself.
+Awium has no compile or runtime dependencies. JUnit is used only to test the
+library itself.
 
 ## The four condition forms
 
@@ -32,7 +32,7 @@ terminal result type.
 Most built-in conditions return the exact object obtained from the source:
 
 ```java
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.equalTo;
+import static io.github.gromoff97.awium.fluent.Conditions.equalTo;
 
 Payment payment = await(paymentRepository::load).until(equalTo(expectedPayment));
 ```
@@ -45,9 +45,9 @@ the same way.
 Selection conditions return a value contained in the observation:
 
 ```java
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.single;
-import static io.github.gromoff97.awium.conditioning.conditions.MapConditions.singleEntry;
-import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.present;
+import static io.github.gromoff97.awium.fluent.CollectionConditions.single;
+import static io.github.gromoff97.awium.fluent.MapConditions.singleEntry;
+import static io.github.gromoff97.awium.fluent.OptionalConditions.present;
 
 Payment payment = await(paymentRepository::find).until(present);
 Payment onlyPayment = await(paymentRepository::findAll).until(single);
@@ -64,7 +64,7 @@ as statements.
 the condition is currently unsatisfied, so polling continues:
 
 ```java
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.asserted;
+import static io.github.gromoff97.awium.fluent.Conditions.asserted;
 
 Payment payment = await(paymentRepository::load).until(asserted(actual -> {
     if (!actual.isComplete()) {
@@ -76,7 +76,7 @@ Payment payment = await(paymentRepository::load).until(asserted(actual -> {
 `yields(...)` returns the callback result instead:
 
 ```java
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.yields;
+import static io.github.gromoff97.awium.fluent.Conditions.yields;
 
 Receipt receipt = await(paymentRepository::load).until(yields(Payment::receipt));
 ```
@@ -91,7 +91,7 @@ uncontrolled failures and stop polling immediately.
 evaluates one stage at a time and returns one captured result per stage:
 
 ```java
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
+import static io.github.gromoff97.awium.fluent.Conditions.captured;
 
 List<Payment> lifecycle = await(paymentRepository::load).until(captured(
         payment -> payment.status() == CREATED,
@@ -162,9 +162,9 @@ Use `condition(...)` when neither a predicate, `asserted(...)`, nor
 `yields(...)` describes the result:
 
 ```java
-import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.fluent.Conditions.condition;
 
 Receipt receipt = await(paymentRepository::load).until(condition(
         "payment has a receipt",
@@ -180,7 +180,7 @@ Import only the catalogue used by a test. Shared names such as `empty`,
 
 | Provider | Conditions | Successful result |
 | --- | --- | --- |
-| `Conditions` | `condition`, `asserted`, `yields`, `captured`, object equality and identity, type checks, `matches`, `extracting`, and comparable ranges | observed, narrowed, transformed, or captured value |
+| `Conditions` | `condition`, `asserted`, `yields`, `captured`, object equality and identity, type checks, `matches`, and comparable ranges | observed, narrowed, transformed, or captured value |
 | `OptionalConditions` | `present`, `absent`, `hasValue`, `doesNotHaveValue`, `containsInstanceOf` | contained, transformed, or narrowed value; `Void` for `absent` |
 | `StringConditions` | empty/blank checks, content, prefix, suffix, regex, case-insensitive equality, and `length...` | observed string |
 | `CollectionConditions` | `single`, empty/null/duplicate checks, quantifiers, membership, exact content, sequences, `first`, `last`, `element`, `sorted`, and `size...` | observed collection or selected element |
@@ -219,7 +219,7 @@ gets fresh timing and condition state.
 `await(...)`, but returns one `AwaitResult<S, R>` for both success and failure:
 
 ```java
-import static io.github.gromoff97.awium.await.Await.tryAwait;
+import static io.github.gromoff97.awium.fluent.Await.tryAwait;
 
 AwaitResult<Optional<Payment>, Payment> result =
         tryAwait(paymentRepository::find).upTo(TIMEOUT).until(present);

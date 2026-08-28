@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
-import io.github.gromoff97.awium.conditioning.conditions.Condition;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
-import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
+import io.github.gromoff97.awium.fluent.Condition;
+import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
+import io.github.gromoff97.awium.fluent.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitPersistenceException;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
@@ -13,15 +13,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedOptionalAwait;
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
-import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.matches;
-import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.present;
+import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedOptionalAwait;
+import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedTryAwait;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.fluent.Conditions.captured;
+import static io.github.gromoff97.awium.fluent.Conditions.condition;
+import static io.github.gromoff97.awium.fluent.Conditions.matches;
+import static io.github.gromoff97.awium.fluent.OptionalConditions.present;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;

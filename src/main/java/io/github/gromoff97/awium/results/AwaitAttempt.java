@@ -1,11 +1,20 @@
 package io.github.gromoff97.awium.results;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
 
 import java.time.Duration;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * One polling attempt with its phase, timing, observation, and condition outcome.
+ *
+ * @param <Observed> complete value returned by the source
+ * @param <Result> value produced by the condition
+ * @param number one-based attempt number
+ * @param phase acquisition or persistence phase
+ * @param outcome terminal outcome of this attempt
+ */
 public record AwaitAttempt<Observed, Result>(long number, Phase phase,
         Outcome<Observed, Result> outcome) {
 
@@ -33,7 +42,7 @@ public record AwaitAttempt<Observed, Result>(long number, Phase phase,
 
         record Unsatisfied<Observed, Result>(Timing.AfterObservation timing, Observed observed,
                 String mismatch, AssertionError assertion,
-                Evaluation.Context context) implements Outcome<Observed, Result> {
+                ConditionEvaluation.Context context) implements Outcome<Observed, Result> {
 
             public Unsatisfied {
                 requireNonNull(timing, "timing must not be null");
@@ -71,7 +80,7 @@ public record AwaitAttempt<Observed, Result>(long number, Phase phase,
 
         record ConditionEvaluationFailed<Observed, Result>(Timing.AfterObservation timing,
                 Observed observed, Throwable failure,
-                Evaluation.Context context) implements Outcome<Observed, Result> {
+                ConditionEvaluation.Context context) implements Outcome<Observed, Result> {
 
             public ConditionEvaluationFailed {
                 requireNonNull(timing, "timing must not be null");

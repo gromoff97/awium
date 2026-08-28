@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
+import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.sources.Source;
@@ -12,27 +12,30 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
-import static io.github.gromoff97.awium.ConditionTestRuntime.description;
-import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
-import static io.github.gromoff97.awium.conditioning.Evaluation.Status.UNSATISFIED;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.empty;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.single;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.nonEmpty;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.sizeAtLeast;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.sizeAtMost;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.sizeBetween;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.size;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.sizeGreaterThan;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.sizeLessThan;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.sizeIsNot;
+import static io.github.gromoff97.awium.fluent.Await.await;
+import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedCollectionAwait;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.mismatch;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.SATISFIED;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.UNSATISFIED;
+import static io.github.gromoff97.awium.fluent.CollectionConditions.empty;
+import static io.github.gromoff97.awium.fluent.CollectionConditions.single;
+import static io.github.gromoff97.awium.fluent.CollectionConditions.nonEmpty;
+import static io.github.gromoff97.awium.fluent.CollectionConditions.sizeAtLeast;
+import static io.github.gromoff97.awium.fluent.CollectionConditions.sizeAtMost;
+import static io.github.gromoff97.awium.fluent.CollectionConditions.sizeBetween;
+import static io.github.gromoff97.awium.fluent.CollectionConditions.size;
+import static io.github.gromoff97.awium.fluent.CollectionConditions.sizeGreaterThan;
+import static io.github.gromoff97.awium.fluent.CollectionConditions.sizeLessThan;
+import static io.github.gromoff97.awium.fluent.CollectionConditions.sizeIsNot;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -58,9 +61,9 @@ class CollectionSizeConditionsTest {
         assertNull(nullElement);
         assertEquals("collection has a single element", description(single));
         assertEquals("collection size was 0",
-                evaluate(single, List.of()).mismatch());
+                mismatch(evaluate(single, List.of())));
         assertEquals("collection size was 2",
-                evaluate(single, List.of("first", "second")).mismatch());
+                mismatch(evaluate(single, List.of("first", "second"))));
     }
 
     @Test
@@ -69,17 +72,16 @@ class CollectionSizeConditionsTest {
             var matching = new ProbeContainers.ProbeCollection<Object>(testCase.matchingSize());
             var mismatching = new ProbeContainers.ProbeCollection<Object>(testCase.mismatchingSize());
 
-            Evaluation<?> satisfied = evaluate(testCase.condition(), matching);
+            ConditionEvaluation<?> satisfied = evaluate(testCase.condition(), matching);
             assertEquals(SATISFIED, satisfied.status());
-            assertSame(matching, satisfied.result());
-            assertNull(satisfied.mismatch());
+            assertSame(matching, result(satisfied));
             assertUnsatisfied(evaluate(testCase.condition(), mismatching));
             assertFalse(description(testCase.condition()).isBlank());
             assertEquals(1, matching.sizeCalls);
             assertEquals(1, mismatching.sizeCalls);
         }
         assertEquals("collection size was 1",
-                evaluate(size(2), List.of("value")).mismatch());
+                mismatch(evaluate(size(2), List.of("value"))));
     }
 
     @Test
@@ -156,10 +158,10 @@ class CollectionSizeConditionsTest {
         assertEquals(0, sourceCalls[0]);
     }
 
-    private static void assertUnsatisfied(Evaluation<?> evaluation) {
+    private static void assertUnsatisfied(ConditionEvaluation<?> evaluation) {
         assertEquals(UNSATISFIED, evaluation.status());
-        assertNull(evaluation.result());
-        assertFalse(evaluation.mismatch().isBlank());
+        assertInstanceOf(ConditionEvaluation.Unsatisfied.class, evaluation);
+        assertFalse(mismatch(evaluation).isBlank());
     }
 
     private static List<Case> cases() {

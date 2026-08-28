@@ -1,8 +1,8 @@
-package io.github.gromoff97.awium.conditioning.conditions;
+package io.github.gromoff97.awium.fluent;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
+import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
+import io.github.gromoff97.awium.fluent.Condition.SelectedCondition;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 
 import java.util.ArrayList;
@@ -13,18 +13,18 @@ import java.util.List;
 import java.util.SequencedCollection;
 import java.util.function.Predicate;
 
-import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.equal;
-import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.exactly;
-import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAll;
-import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAny;
-import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.sameDistinctElements;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.nonEmpty;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preservingNonNull;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.validateRange;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
-import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.selected;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.fluent.ValueMatching.equal;
+import static io.github.gromoff97.awium.fluent.ValueMatching.exactly;
+import static io.github.gromoff97.awium.fluent.ValueMatching.matchesAll;
+import static io.github.gromoff97.awium.fluent.ValueMatching.matchesAny;
+import static io.github.gromoff97.awium.fluent.ValueMatching.sameDistinctElements;
+import static io.github.gromoff97.awium.fluent.ConditionSupport.nonEmpty;
+import static io.github.gromoff97.awium.fluent.ConditionSupport.preservingNonNull;
+import static io.github.gromoff97.awium.fluent.ConditionSupport.validateRange;
+import static io.github.gromoff97.awium.fluent.Conditions.condition;
+import static io.github.gromoff97.awium.fluent.ConditionRuntime.selected;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
@@ -335,7 +335,7 @@ public final class CollectionConditions {
         return preserving("collection is sorted", "collection was not sorted", actual -> isSorted(actual, comparator));
     }
 
-    private static <E> Evaluation<E> selectSingle(Collection<E> actual,
+    private static <E> ConditionEvaluation<E> selectSingle(Collection<E> actual,
             Predicate<? super E> predicate) {
         if (actual == null) {
             return unsatisfied("collection was null");
@@ -344,7 +344,7 @@ public final class CollectionConditions {
                 "no collection element matched", "more than one collection element matched");
     }
 
-    private static <E> Evaluation<E> selectFirst(Iterable<E> actual,
+    private static <E> ConditionEvaluation<E> selectFirst(Iterable<E> actual,
             Predicate<? super E> predicate) {
         if (actual == null) {
             return unsatisfied("collection was null");

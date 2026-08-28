@@ -2,6 +2,12 @@ package io.github.gromoff97.awium.engine;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
 
+/**
+ * Terminal outcome of a complete acquisition and optional persistence execution.
+ *
+ * @param <Observed> complete value returned by the source
+ * @param <Result> value produced by the condition
+ */
 public sealed interface WaitCompletion<Observed, Result> {
 
     AwaitAttempt<Observed, Result> attempt();

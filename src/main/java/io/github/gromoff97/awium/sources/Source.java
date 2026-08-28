@@ -4,20 +4,25 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * Checked supplier observed on every poll; nested markers recover selected element types for structured sources.
+ *
+ * @param <Observed> complete value returned by each observation
+ */
 @FunctionalInterface
-public interface Source<T> {
+public interface Source<Observed> {
 
-    T get() throws Exception;
+    Observed get() throws Exception;
 
     @FunctionalInterface
-    interface OptionalSource<T> extends Source<Optional<T>> {
+    interface OptionalSource<Value> extends Source<Optional<Value>> {
     }
 
     @FunctionalInterface
-    interface CollectionSource<C extends Collection<?>> extends Source<C> {
+    interface CollectionSource<Values extends Collection<?>> extends Source<Values> {
     }
 
     @FunctionalInterface
-    interface MapSource<M extends Map<?, ?>> extends Source<M> {
+    interface MapSource<Entries extends Map<?, ?>> extends Source<Entries> {
     }
 }

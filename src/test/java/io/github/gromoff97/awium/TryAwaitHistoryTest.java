@@ -2,7 +2,7 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.results.AwaitResult;
-import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
 
@@ -15,12 +15,12 @@ import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.PERSISTENCE;
-import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.assertionUnsatisfied;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedTryAwait;
+import static io.github.gromoff97.awium.fluent.Conditions.captured;
+import static io.github.gromoff97.awium.fluent.Conditions.condition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -85,8 +85,8 @@ class TryAwaitHistoryTest {
         var execution = new WaitEngine(config(1, 3, 0), time, time)
                 .recordedWaitFor(() -> actual, value -> {
                     int current = ++stage[0];
-                    return Evaluation.<Object>unsatisfied("same mismatch").withContext(
-                            new Evaluation.Context.Sequence(current - 1, 3, current,
+                    return ConditionEvaluation.<Object>unsatisfied("same mismatch").withContext(
+                            new ConditionEvaluation.Context.Sequence(current - 1, 3, current,
                                     "stage " + current, null));
                 });
 
@@ -95,8 +95,8 @@ class TryAwaitHistoryTest {
                 .map(AwaitAttempt::outcome)
                 .map(outcome -> ((AwaitAttempt.Outcome.Unsatisfied<?, ?>) outcome)
                         .context())
-                .map(Evaluation.Context.Sequence.class::cast)
-                .map(Evaluation.Context.Sequence::evaluatedStageNumber)
+                .map(ConditionEvaluation.Context.Sequence.class::cast)
+                .map(ConditionEvaluation.Context.Sequence::evaluatedStageNumber)
                 .toList());
     }
 
@@ -131,7 +131,7 @@ class TryAwaitHistoryTest {
 
     private static WaitEngine.RecordedWait<Object, Object> recordUnsatisfied(
             io.github.gromoff97.awium.sources.Source<Object> source,
-            java.util.function.IntFunction<io.github.gromoff97.awium.conditioning.Evaluation<Object>> evaluation) {
+            java.util.function.IntFunction<io.github.gromoff97.awium.evaluation.ConditionEvaluation<Object>> evaluation) {
         var time = new FakeTime(0);
         int[] calls = {0};
         return new WaitEngine(config(1, 2, 0), time, time)

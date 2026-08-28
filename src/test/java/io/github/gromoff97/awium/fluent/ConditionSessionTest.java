@@ -1,20 +1,18 @@
-package io.github.gromoff97.awium.conditioning.runtime;
+package io.github.gromoff97.awium.fluent;
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSequenceStage;
-import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
-import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
-import io.github.gromoff97.awium.conditioning.conditions.CollectionConditions;
-import io.github.gromoff97.awium.conditioning.conditions.Conditions;
-
+import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
+import io.github.gromoff97.awium.fluent.Condition.SelectedSequenceStage;
+import io.github.gromoff97.awium.fluent.Condition.SelectedStage;
+import io.github.gromoff97.awium.fluent.ConditionStage;
 import java.util.Collection;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.fluent.Conditions.captured;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.result;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -36,14 +34,14 @@ class ConditionSessionTest {
 
         assertEquals("counted", ConditionRuntime.description(ordinary));
         assertNull(ConditionRuntime.explanation(ordinary));
-        Function<? super Integer, ? extends Evaluation<? extends Integer>> first =
+        Function<? super Integer, ? extends ConditionEvaluation<? extends Integer>> first =
                 ConditionRuntime.evaluator(ordinary);
-        Function<? super Integer, ? extends Evaluation<? extends Integer>> second =
+        Function<? super Integer, ? extends ConditionEvaluation<? extends Integer>> second =
                 ConditionRuntime.evaluator(ordinary);
 
-        assertEquals(1, first.apply(0).result());
-        assertEquals(2, first.apply(0).result());
-        assertEquals(1, second.apply(0).result());
+        assertEquals(1, result(first.apply(0)));
+        assertEquals(2, result(first.apply(0)));
+        assertEquals(1, result(second.apply(0)));
         assertNotNull(preserving);
         assertNotNull(selected);
         assertNotNull(sequence);

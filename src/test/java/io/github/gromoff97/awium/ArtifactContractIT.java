@@ -34,15 +34,15 @@ class ArtifactContractIT {
     void packagedJarCompilesDirectMethodReferences(@TempDir Path directory)
             throws Exception {
         assertTrue(compiles(directory, """
-                import static io.github.gromoff97.awium.await.Await.await;
-                import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.*;
-                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
-                import static io.github.gromoff97.awium.conditioning.conditions.MapConditions.*;
-                import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.*;
-                import static io.github.gromoff97.awium.conditioning.conditions.StringConditions.*;
+                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.fluent.CollectionConditions.*;
+                import static io.github.gromoff97.awium.fluent.Conditions.*;
+                import static io.github.gromoff97.awium.fluent.MapConditions.*;
+                import static io.github.gromoff97.awium.fluent.OptionalConditions.*;
+                import static io.github.gromoff97.awium.fluent.StringConditions.*;
 
-                import io.github.gromoff97.awium.conditioning.conditions.CollectionConditions;
-                import io.github.gromoff97.awium.conditioning.conditions.MapConditions;
+                import io.github.gromoff97.awium.fluent.CollectionConditions;
+                import io.github.gromoff97.awium.fluent.MapConditions;
 
                 import java.util.List;
                 import java.util.Map;

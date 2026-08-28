@@ -1,11 +1,11 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.conditioning.Evaluation.*;
-import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
-import static io.github.gromoff97.awium.ConditionTestRuntime.explanation;
+import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.*;
+import static io.github.gromoff97.awium.fluent.Conditions.*;
+import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.explanation;
 
-import io.github.gromoff97.awium.conditioning.*;
-import io.github.gromoff97.awium.conditioning.conditions.*;
+import io.github.gromoff97.awium.evaluation.*;
+import io.github.gromoff97.awium.fluent.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -26,23 +26,23 @@ class ConditionDecorationTest {
     @Test
     void plainAndExplainedConditionsShareOneNonDecoratableStage() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
-                import io.github.gromoff97.awium.conditioning.Evaluation;
-                import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
+                import static io.github.gromoff97.awium.fluent.Conditions.condition;
+                import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+                import io.github.gromoff97.awium.fluent.ConditionStage;
                 final class Contract {
                     void check() {
-                        accept(condition("plain", Evaluation::satisfied));
-                        accept(condition("explained", Evaluation::satisfied).because("reason"));
+                        accept(condition("plain", ConditionEvaluation::satisfied));
+                        accept(condition("explained", ConditionEvaluation::satisfied).because("reason"));
                     }
                     void accept(ConditionStage<Object, Object> condition) {}
                 }
                 """));
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
-                import io.github.gromoff97.awium.conditioning.Evaluation;
+                import static io.github.gromoff97.awium.fluent.Conditions.condition;
+                import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
                 final class Contract {
                     void check() {
-                        condition("condition", Evaluation::satisfied).because("first").because("second");
+                        condition("condition", ConditionEvaluation::satisfied).because("first").because("second");
                     }
                 }
                 """));
@@ -51,7 +51,7 @@ class ConditionDecorationTest {
     @Test
     void everyConditionKindFormatsItsExplanationEagerly() {
         Condition<Object, Object> condition = condition(
-                "custom condition", Evaluation::satisfied);
+                "custom condition", ConditionEvaluation::satisfied);
         var preserving = asserted(actual -> {});
         var selected = OptionalConditions.present;
 
