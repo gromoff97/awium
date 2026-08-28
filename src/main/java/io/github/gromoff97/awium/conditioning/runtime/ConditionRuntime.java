@@ -4,6 +4,8 @@ import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.AwaitCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedSequenceCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedSequenceStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
@@ -56,6 +58,11 @@ public final class ConditionRuntime {
             implements ExpectedCondition<T>, RuntimeStage<Object, Object> {
     }
 
+    public record RuntimeExpectedSequenceCondition<T>(String description, String explanation,
+            Supplier<? extends Function<? super Object, ? extends Evaluation<? extends List<Object>>>> evaluatorFactory)
+            implements ExpectedSequenceCondition<T>, RuntimeStage<Object, List<Object>> {
+    }
+
     public record RuntimeSelectedCondition<S, F extends Source<?>>(String description, String explanation,
             Supplier<? extends Function<? super S, ? extends Evaluation<?>>> evaluatorFactory)
             implements SelectedCondition<S, F>, RuntimeStage<S, Object> {
@@ -102,6 +109,16 @@ public final class ConditionRuntime {
         return condition("conditions are satisfied in order", () ->
                 new CapturedEvaluator<>(stages.stream()
                         .map(stage -> capturedStage(stage, ConditionRuntime.<S, R>evaluator(stage))).toList()));
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <T> ExpectedSequenceCondition<T> captured(ExpectedStage<? extends T> first,
+            ExpectedStage<? extends T> second, ExpectedStage<? extends T>... rest) {
+        List<ExpectedStage<? extends T>> stages = stages("condition", first, second, rest);
+        return new RuntimeExpectedSequenceCondition<>("conditions are satisfied in order", null,
+                () -> new CapturedEvaluator<>(stages.stream()
+                        .map(stage -> capturedStage(stage, ConditionRuntime.<Object>expectedEvaluator(stage))).toList()));
     }
 
     @SafeVarargs
@@ -178,6 +195,12 @@ public final class ConditionRuntime {
         };
     }
 
+    @SuppressWarnings("unchecked")
+    public static <S> Function<S, Evaluation<List<S>>> expectedSequenceEvaluator(ExpectedSequenceStage<?> condition) {
+        return (Function<S, Evaluation<List<S>>>) (Function<?, ?>)
+                ConditionRuntime.<Object, List<Object>>runtime(condition).newEvaluator();
+    }
+
     public static <S, R> ResultStage<S, R> explained(Condition<S, R> condition,
             String explanation) {
         RuntimeStage<S, R> runtime = runtime(condition);
@@ -192,6 +215,11 @@ public final class ConditionRuntime {
     public static <T> ExpectedStage<T> explained(ExpectedCondition<T> condition, String explanation) {
         RuntimeStage<Object, Object> runtime = runtime(condition);
         return new RuntimeExpectedCondition<>(runtime.description(), nonBlank(explanation, "explanation"), runtime.evaluatorFactory());
+    }
+
+    public static <T> ExpectedSequenceStage<T> explained(ExpectedSequenceCondition<T> condition, String explanation) {
+        RuntimeStage<Object, List<Object>> runtime = runtime(condition);
+        return new RuntimeExpectedSequenceCondition<>(runtime.description(), nonBlank(explanation, "explanation"), runtime.evaluatorFactory());
     }
 
     public static <S, F extends Source<?>> SelectedStage<S, F> explained(SelectedCondition<S, F> condition, String explanation) {

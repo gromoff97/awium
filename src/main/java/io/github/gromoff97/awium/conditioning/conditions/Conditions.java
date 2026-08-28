@@ -4,6 +4,8 @@ import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedSequenceCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSequenceCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
@@ -61,6 +63,13 @@ public final class Conditions {
     @SuppressWarnings("varargs")
     public static <S, R> Condition<S, List<R>> captured(ResultStage<S, R> first,
             ResultStage<S, R> second, ResultStage<S, R>... rest) {
+        return ConditionRuntime.captured(first, second, rest);
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <T> ExpectedSequenceCondition<T> captured(ExpectedStage<? extends T> first,
+            ExpectedStage<? extends T> second, ExpectedStage<? extends T>... rest) {
         return ConditionRuntime.captured(first, second, rest);
     }
 

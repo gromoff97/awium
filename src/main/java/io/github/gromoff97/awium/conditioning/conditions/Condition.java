@@ -54,6 +54,21 @@ public sealed interface Condition<S, R> extends ResultStage<S, R> permits Condit
         }
     }
 
+    public sealed interface ExpectedSequenceStage<T> extends AwaitCondition permits ExpectedSequenceCondition {
+    }
+
+    public sealed interface ExpectedSequenceCondition<T> extends ExpectedSequenceStage<T>
+            permits ConditionRuntime.RuntimeExpectedSequenceCondition {
+
+        default ExpectedSequenceStage<T> because(String explanation) {
+            return ConditionRuntime.explained(this, explanation);
+        }
+
+        default ExpectedSequenceStage<T> because(String format, Object... arguments) {
+            return ConditionRuntime.explained(this, formattedExplanation(format, arguments));
+        }
+    }
+
     public sealed interface SelectedStage<S, F extends Source<?>> extends AwaitCondition permits SelectedCondition {
     }
 

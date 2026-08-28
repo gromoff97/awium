@@ -64,6 +64,46 @@ class ExpectedConditionCompilationContractTest {
         }
     }
 
+    @Test
+    void nestedExpectedConditionsRetainContainerValueTypes() throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.await.Await.await;
+                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.equalTo;
+                import static io.github.gromoff97.awium.conditioning.conditions.MapConditions.valueFor;
+                import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.hasValue;
+                import io.github.gromoff97.awium.sources.Source.MapSource;
+                import io.github.gromoff97.awium.sources.Source.OptionalSource;
+                import java.util.Map;
+
+                final class Contract {
+                    void check(OptionalSource<Number> optional, MapSource<Map<String, Number>> map) {
+                        Number optionalValue = await(optional).until(hasValue(equalTo(42)));
+                        Number mapValue = await(map).until(valueFor("answer", equalTo(42)));
+                    }
+                }
+                """));
+
+        for (String invocation : List.of(
+                "await(optional).until(hasValue(equalTo(42)))",
+                "await(map).until(valueFor(\"answer\", equalTo(42)))")) {
+            assertFalse(compiles("""
+                    import static io.github.gromoff97.awium.await.Await.await;
+                    import static io.github.gromoff97.awium.conditioning.conditions.Conditions.equalTo;
+                    import static io.github.gromoff97.awium.conditioning.conditions.MapConditions.valueFor;
+                    import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.hasValue;
+                    import io.github.gromoff97.awium.sources.Source.MapSource;
+                    import io.github.gromoff97.awium.sources.Source.OptionalSource;
+                    import java.util.Map;
+
+                    final class Contract {
+                        void check(OptionalSource<String> optional, MapSource<Map<String, String>> map) {
+                            %s;
+                        }
+                    }
+                    """.formatted(invocation)), invocation);
+        }
+    }
+
     private boolean compiles(String source) throws IOException {
         return CompilationSupport.compiles(temporaryDirectory, source);
     }

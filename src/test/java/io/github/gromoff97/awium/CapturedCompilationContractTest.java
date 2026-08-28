@@ -46,6 +46,45 @@ class CapturedCompilationContractTest {
     }
 
     @Test
+    void expectedSequencesReturnObservedSourceValues() throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.await.Await.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
+                import io.github.gromoff97.awium.await.AwaitResult;
+                import io.github.gromoff97.awium.sources.Source;
+                import java.util.List;
+
+                final class Contract {
+                    void check(Source<String> source) {
+                        List<String> values = await(source).until(captured(
+                                equalTo("created"), equalTo("finished")).because("business lifecycle"));
+                        AwaitResult<String, List<String>> attempted = tryAwait(source).until(captured(
+                                equalTo("created"), equalTo("finished")));
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void expectedSequencesRejectIncompatibleSourcesAndMixedFamilies() throws IOException {
+        for (String condition : List.of(
+                "captured(equalTo(1), equalTo(2))",
+                "captured(equalTo(\"ready\"), isNotNull)")) {
+            assertFalse(compiles("""
+                    import static io.github.gromoff97.awium.await.Await.await;
+                    import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
+                    import io.github.gromoff97.awium.sources.Source;
+
+                    final class Contract {
+                        void check(Source<String> source) {
+                            await(source).until(%s);
+                        }
+                    }
+                    """.formatted(condition)), condition);
+        }
+    }
+
+    @Test
     void selectedSequencesInferFacadeElementLists() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.await.Await.await;
