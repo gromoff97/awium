@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.conditions.AwaitCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
-import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
 import io.github.gromoff97.awium.sources.Source;
@@ -12,7 +12,7 @@ final class ConditionTestRuntime {
 
     static <S, R> Evaluation<R> evaluate(
             ResultStage<? super S, ? extends R> condition, S actual) {
-        Evaluation<? extends R> evaluation = condition.newEvaluator().apply(actual);
+        Evaluation<? extends R> evaluation = ConditionRuntime.<S, R>evaluator(condition).apply(actual);
         return evaluation == null ? null : evaluation.continueIfSatisfied(Evaluation::satisfied);
     }
 
@@ -25,8 +25,12 @@ final class ConditionTestRuntime {
         return ConditionRuntime.<S, R>selectedEvaluator(condition).apply(actual);
     }
 
-    static String description(ConditionStage<?, ?> condition) {
-        return condition.description();
+    static String description(AwaitCondition condition) {
+        return ConditionRuntime.description(condition);
+    }
+
+    static String explanation(AwaitCondition condition) {
+        return ConditionRuntime.explanation(condition);
     }
 
     private ConditionTestRuntime() {

@@ -1,12 +1,14 @@
 package io.github.gromoff97.awium.conditioning.runtime;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSequenceStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
 import io.github.gromoff97.awium.conditioning.conditions.CollectionConditions;
 import io.github.gromoff97.awium.conditioning.conditions.Conditions;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
@@ -26,18 +28,18 @@ class ConditionSessionTest {
                     int[] calls = {0};
                     return ignored -> satisfied(++calls[0]);
                 });
-        ConditionStage<Integer, Integer> preserving =
+        PreservingStage<Integer> preserving =
                 Conditions.matches(value -> value > 0);
-        ConditionStage<Collection<?>, Object> selected = CollectionConditions.single;
-        ConditionStage<Collection<?>, List<Object>> sequence =
+        SelectedStage<Collection<?>, ?> selected = CollectionConditions.single;
+        SelectedSequenceStage<Collection<?>, ?> sequence =
                 captured(CollectionConditions.single, CollectionConditions.single);
 
-        assertEquals("counted", ordinary.description());
-        assertNull(ordinary.explanation());
+        assertEquals("counted", ConditionRuntime.description(ordinary));
+        assertNull(ConditionRuntime.explanation(ordinary));
         Function<? super Integer, ? extends Evaluation<? extends Integer>> first =
-                ordinary.newEvaluator();
+                ConditionRuntime.evaluator(ordinary);
         Function<? super Integer, ? extends Evaluation<? extends Integer>> second =
-                ordinary.newEvaluator();
+                ConditionRuntime.evaluator(ordinary);
 
         assertEquals(1, first.apply(0).result());
         assertEquals(2, first.apply(0).result());

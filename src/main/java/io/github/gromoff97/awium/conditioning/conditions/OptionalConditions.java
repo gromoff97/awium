@@ -58,8 +58,8 @@ public final class OptionalConditions {
     }
 
     public static <T, R> Condition<Optional<T>, R> hasValue(ResultStage<? super T, ? extends R> nested) {
-        return ConditionRuntime.condition("optional value " + nested.description(), () -> {
-            var nestedEvaluator = nested.newEvaluator();
+        return ConditionRuntime.condition("optional value " + ConditionRuntime.description(nested), () -> {
+            var nestedEvaluator = ConditionRuntime.<T, R>evaluator(nested);
             return actual -> present(actual).continueIfSatisfied(nestedEvaluator);
         });
     }

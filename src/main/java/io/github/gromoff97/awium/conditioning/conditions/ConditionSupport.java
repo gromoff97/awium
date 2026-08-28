@@ -14,6 +14,7 @@ import java.util.function.ToIntFunction;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.condition;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.description;
 import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.preservingEvaluator;
 import static java.util.Objects.requireNonNull;
 
@@ -24,7 +25,7 @@ final class ConditionSupport {
     }
 
     static <T> Condition<T, T> preserve(PreservingStage<? super T> nested) {
-        return condition(nested.description(), () -> preservingEvaluator(nested));
+        return condition(description(nested), () -> preservingEvaluator(nested));
     }
 
     static <S> PreservingCondition<S> preserving(String description, String mismatch,

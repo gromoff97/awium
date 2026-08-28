@@ -4,6 +4,11 @@ import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.await.Await;
 import io.github.gromoff97.awium.await.AwaitAttempt;
 import io.github.gromoff97.awium.await.AwaitResult;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSequenceStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
+import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
+import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.sources.Source;
 
 import static java.lang.reflect.Modifier.isAbstract;
@@ -82,6 +87,18 @@ class PublicSurfaceTest {
         }
         assertNoExcludedApiSurface(Set.of(AllowedConcurrencyNames.class,
                 AllowedJdkFunctionalSignature.class));
+    }
+
+    @Test
+    void publicConditionStagesDoNotExposeRuntimeMechanicsOrFictitiousResults() {
+        Set<String> runtimeMethods = Set.of("description", "explanation", "evaluatorFactory", "newEvaluator");
+        for (Class<?> stage : List.of(ConditionStage.class, ResultStage.class, PreservingStage.class,
+                SelectedStage.class, SelectedSequenceStage.class)) {
+            stream(stage.getMethods()).forEach(method -> assertFalse(runtimeMethods.contains(method.getName()),
+                    method.toGenericString()));
+        }
+        assertFalse(ConditionStage.class.isAssignableFrom(SelectedStage.class));
+        assertFalse(ConditionStage.class.isAssignableFrom(SelectedSequenceStage.class));
     }
 
     private static void assertNoExcludedApiSurface(Collection<Class<?>> types) {

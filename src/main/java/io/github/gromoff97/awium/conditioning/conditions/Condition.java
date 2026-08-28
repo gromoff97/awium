@@ -4,7 +4,6 @@ import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultSt
 import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
 import io.github.gromoff97.awium.sources.Source;
 
-import java.util.List;
 import java.util.Locale;
 
 import static java.util.Objects.requireNonNull;
@@ -41,7 +40,7 @@ public sealed interface Condition<S, R> extends ResultStage<S, R> permits Condit
         }
     }
 
-    public sealed interface SelectedStage<S, F extends Source<?>> extends ConditionStage<S, Object> permits SelectedCondition {
+    public sealed interface SelectedStage<S, F extends Source<?>> extends AwaitCondition permits SelectedCondition {
     }
 
     public sealed interface SelectedCondition<S, F extends Source<?>> extends SelectedStage<S, F> permits ConditionRuntime.RuntimeSelectedCondition {
@@ -56,7 +55,7 @@ public sealed interface Condition<S, R> extends ResultStage<S, R> permits Condit
         }
     }
 
-    public sealed interface SelectedSequenceStage<S, F extends Source<?>> extends ConditionStage<S, List<Object>> permits SelectedSequenceCondition {
+    public sealed interface SelectedSequenceStage<S, F extends Source<?>> extends AwaitCondition permits SelectedSequenceCondition {
     }
 
     public sealed interface SelectedSequenceCondition<S, F extends Source<?>> extends SelectedSequenceStage<S, F>

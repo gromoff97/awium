@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.await;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
+import io.github.gromoff97.awium.conditioning.conditions.AwaitCondition;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
@@ -14,6 +14,8 @@ import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.description;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.explanation;
 import static java.util.Objects.requireNonNull;
 
 abstract class AbstractAwait<S, A> {
@@ -52,18 +54,14 @@ abstract class AbstractAwait<S, A> {
     abstract A reconfigured(WaitConfiguration configuration);
 
     protected final <R> R complete(Function<? super S, ? extends Evaluation<? extends R>> evaluator,
-            ConditionStage<?, ?> condition) {
-        String description = condition.description();
-        String explanation = condition.explanation();
-        return FailureFactory.complete(engine.waitFor(source, evaluator),
-                description, explanation, engine.configuration());
+            AwaitCondition condition) {
+        return FailureFactory.complete(engine.waitFor(source, evaluator), description(condition), explanation(condition),
+                engine.configuration());
     }
 
     protected final <R> AwaitResult<S, R> capture(Function<? super S, ? extends Evaluation<? extends R>> evaluator,
-            ConditionStage<?, ?> condition) {
-        String description = condition.description();
-        String explanation = condition.explanation();
-        return FailureFactory.capture(engine.recordedWaitFor(source, evaluator),
-                description, explanation, engine.configuration());
+            AwaitCondition condition) {
+        return FailureFactory.capture(engine.recordedWaitFor(source, evaluator), description(condition), explanation(condition),
+                engine.configuration());
     }
 }

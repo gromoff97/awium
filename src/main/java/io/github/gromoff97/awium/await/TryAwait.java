@@ -38,7 +38,7 @@ public final class TryAwait<S, E, F extends Source<?>>
     }
 
     public <R> AwaitResult<S, R> until(ResultStage<? super S, ? extends R> condition) {
-        return capture(condition.newEvaluator(), condition);
+        return capture(ConditionRuntime.evaluator(condition), condition);
     }
 
     public AwaitResult<S, E> until(SelectedStage<? super S, F> condition) {

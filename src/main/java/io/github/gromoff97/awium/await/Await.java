@@ -76,7 +76,7 @@ public final class Await<S, E, F extends Source<?>>
     }
 
     public <R> R until(ResultStage<? super S, ? extends R> condition) {
-        return complete(condition.newEvaluator(), condition);
+        return complete(ConditionRuntime.evaluator(condition), condition);
     }
 
     public E until(SelectedStage<? super S, F> condition) {

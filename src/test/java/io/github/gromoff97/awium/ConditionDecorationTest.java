@@ -2,6 +2,7 @@ package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.*;
 import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
+import static io.github.gromoff97.awium.ConditionTestRuntime.explanation;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -55,21 +56,21 @@ class ConditionDecorationTest {
         var selected = OptionalConditions.present;
 
         assertEquals("the value must be ready",
-                condition.because("the value must be ready").explanation());
+                explanation(condition.because("the value must be ready")));
         assertEquals("attempt 3",
-                condition.because("attempt %d", 3).explanation());
+                explanation(condition.because("attempt %d", 3)));
         assertEquals("preserving",
-                preserving.because("preserving").explanation());
+                explanation(preserving.because("preserving")));
         assertEquals("selected value",
-                selected.because("selected %s", "value").explanation());
+                explanation(selected.because("selected %s", "value")));
         assertEquals("collection value",
-                CollectionConditions.nonEmpty.because("collection %s", "value").explanation());
+                explanation(CollectionConditions.nonEmpty.because("collection %s", "value")));
         assertEquals("single element",
-                CollectionConditions.single.because("single %s", "element").explanation());
+                explanation(CollectionConditions.single.because("single %s", "element")));
         assertEquals("map value",
-                MapConditions.nonEmpty.because("map %s", "value").explanation());
+                explanation(MapConditions.nonEmpty.because("map %s", "value")));
         assertEquals("single entry",
-                MapConditions.singleEntry.because("single %s", "entry").explanation());
+                explanation(MapConditions.singleEntry.because("single %s", "entry")));
     }
 
     @Test
@@ -113,7 +114,7 @@ class ConditionDecorationTest {
         Locale.setDefault(Locale.Category.FORMAT, Locale.GERMANY);
         try {
             assertEquals("1.5",
-                    asserted((Object actual) -> {}).because("%.1f", 1.5).explanation());
+                    explanation(asserted((Object actual) -> {}).because("%.1f", 1.5)));
         } finally {
             Locale.setDefault(Locale.Category.FORMAT, original);
         }

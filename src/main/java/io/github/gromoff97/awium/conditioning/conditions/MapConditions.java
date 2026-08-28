@@ -154,8 +154,8 @@ public final class MapConditions {
 
     public static <K, V, R> Condition<Map<K, V>, R> valueFor(K key,
             ResultStage<? super V, ? extends R> nested) {
-        return ConditionRuntime.condition("map value " + nested.description(), () -> {
-            var nestedEvaluator = nested.newEvaluator();
+        return ConditionRuntime.condition("map value " + ConditionRuntime.description(nested), () -> {
+            var nestedEvaluator = ConditionRuntime.<V, R>evaluator(nested);
             return actual -> findEntry(actual, key)
                     .continueIfSatisfied(entry -> nestedEvaluator.apply(entry.getValue()));
         });
