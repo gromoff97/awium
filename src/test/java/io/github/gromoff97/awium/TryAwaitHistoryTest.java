@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class TryAwaitHistoryTest {
 
     @Test
-    void storesOnlyTheFirstOfAdjacentEquivalentAttempts() {
+    void storesOnlyTheLastOfAdjacentEquivalentAttempts() {
         var time = new FakeTime(0);
         var actual = new Object();
         var firstResult = new Object();
@@ -42,7 +42,7 @@ class TryAwaitHistoryTest {
                 value -> plain(satisfied(calls[0]++ < 3 ? firstResult : finalResult)));
 
         assertEquals(4, execution.outcome().attempt().number());
-        assertEquals(List.of(1L, 2L, 4L), execution.attempts().stream()
+        assertEquals(List.of(1L, 3L, 4L), execution.attempts().stream()
                 .map(AwaitAttempt::number).toList());
         assertEquals(List.of(ACQUISITION, PERSISTENCE, PERSISTENCE),
                 execution.attempts().stream().map(AwaitAttempt::phase).toList());
@@ -58,6 +58,7 @@ class TryAwaitHistoryTest {
                 .recordedWaitFor(() -> probe, actual -> plain(satisfied(probe)));
 
         assertEquals(2, execution.attempts().size());
+        assertEquals(List.of(1L, 3L), numbers(execution));
         assertEquals(3, execution.outcome().attempt().number());
     }
 
@@ -73,7 +74,7 @@ class TryAwaitHistoryTest {
         var changedAssertion = recordUnsatisfied(() -> sameActual,
                 call -> assertionUnsatisfied(new String("same"), new AssertionError()));
 
-        assertEquals(List.of(1L), numbers(same));
+        assertEquals(List.of(2L), numbers(same));
         assertEquals(List.of(1L, 2L), numbers(changedActual));
         assertEquals(List.of(1L, 2L), numbers(changedAssertion));
     }

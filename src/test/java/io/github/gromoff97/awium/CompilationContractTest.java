@@ -525,11 +525,8 @@ class CompilationContractTest {
                         Collection<String> anyOrder = await(collection).until(containsExactlyInAnyOrder("a", "b"));
                         await(collection).until(doesNotContainExactlyInAnyOrder(
                                 "a", "b").because("any order"));
-                        await(collection).until(
-                                containsExactlyInAnyOrderElementsOf(expected));
-                        await(collection).until(
-                                doesNotContainExactlyInAnyOrderElementsOf(expected)
-                                        .because("any order"));
+                        await(collection).until(containsExactlyInAnyOrderElementsOf(expected));
+                        await(collection).until(doesNotContainExactlyInAnyOrderElementsOf(expected).because("any order"));
 
                     }
                 }

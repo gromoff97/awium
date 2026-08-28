@@ -57,21 +57,17 @@ class FactoryGrammarTest {
     @Test
     void nullConditionWinsOverFinalConfigurationConflictForEveryOverload() {
         var object = await((Source<String>) () -> "value").every(ofSeconds(20));
-        assertNull("condition", () -> object.until(
-                (PreservingStage<String>) null));
+        assertNull("condition", () -> object.until((PreservingStage<String>) null));
         assertNull("condition", () -> object.until((ResultStage<String, String>) null));
 
         var optional = await((OptionalSource<String>) Optional::empty).every(ofSeconds(20));
-        assertNull("condition", () -> optional.until(
-                (SelectedStage<Optional<?>, OptionalSource<?>>) null));
+        assertNull("condition", () -> optional.until((SelectedStage<Optional<?>, OptionalSource<?>>) null));
 
         var collection = await((CollectionSource<Collection<String>>) List::of).every(ofSeconds(20));
-        assertNull("condition", () -> collection.until(
-                (SelectedStage<Collection<?>, CollectionSource<?>>) null));
+        assertNull("condition", () -> collection.until((SelectedStage<Collection<?>, CollectionSource<?>>) null));
 
         var map = await((MapSource<Map<String, String>>) Map::of).every(ofSeconds(20));
-        assertNull("condition", () -> map.until(
-                (SelectedStage<Map<?, ?>, MapSource<?>>) null));
+        assertNull("condition", () -> map.until((SelectedStage<Map<?, ?>, MapSource<?>>) null));
     }
 
     private static void assertNull(String context, Executable action) {

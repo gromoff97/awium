@@ -112,9 +112,8 @@ class AssertionAdapterTest {
         AwaitConditionEvaluationException failure = assertThrows(
                 AwaitConditionEvaluationException.class, () -> timedAwait(
                 (Source<String>) () -> "42",
-                defaults().withEvery(ofNanos(1))
-                        .withUpTo(ofNanos(10)), time, time).until(
-                        Conditions.<String, Long>yields(value -> {
+                defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(10)), time, time)
+                        .until(Conditions.<String, Long>yields(value -> {
                             invocations[0]++;
                             throw assertion;
                         }).because("payment selection")));

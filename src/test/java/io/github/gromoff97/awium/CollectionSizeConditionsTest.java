@@ -51,8 +51,7 @@ class CollectionSizeConditionsTest {
         CollectionSource<ArrayList<String>> source = () -> new ArrayList<>(List.of(element));
 
         String selected = await(source).until(single);
-        String explained = await(source).until(
-                single.because("exactly one result is required"));
+        String explained = await(source).until(single.because("exactly one result is required"));
         String nullElement = await((CollectionSource<List<String>>)
                 () -> Collections.singletonList(null)).until(single);
 
@@ -152,8 +151,8 @@ class CollectionSizeConditionsTest {
         };
 
         assertTrue(assertThrows(NullPointerException.class,
-                () -> timedCollectionAwait(source, defaults(), time, time).until(
-                        (PreservingCondition<Collection<String>>) null))
+                () -> timedCollectionAwait(source, defaults(), time, time)
+                        .until((PreservingCondition<Collection<String>>) null))
                 .getMessage().contains("condition"));
         assertEquals(0, sourceCalls[0]);
     }

@@ -2,6 +2,7 @@ package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.CompilationSupport.compiles;
 import static java.nio.file.Files.isRegularFile;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,7 +16,9 @@ import org.junit.jupiter.api.io.TempDir;
 
 class ArtifactContractIT {
 
-    static final Path JAR = Path.of("build", "libs", "awium-0.1.0-SNAPSHOT.jar");
+    static final Path JAR = Path.of(requireNonNull(System.getProperty("awium.test.jar"),
+            "awium.test.jar must be configured"));
+
     @Test
     void currentBuildJarIsAnExplicitJavaBaseOnlyModule()
             throws Exception {

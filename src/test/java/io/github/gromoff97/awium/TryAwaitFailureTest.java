@@ -20,6 +20,7 @@ import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfi
 import static io.github.gromoff97.awium.fluent.Conditions.asserted;
 import static io.github.gromoff97.awium.fluent.Conditions.captured;
 import static io.github.gromoff97.awium.fluent.Conditions.condition;
+import static io.github.gromoff97.awium.fluent.Conditions.conditionFactory;
 import static io.github.gromoff97.awium.fluent.Conditions.isNotNull;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
@@ -86,6 +87,24 @@ class TryAwaitFailureTest {
                 condition.attempts().getLast().outcome());
         assertInstanceOf(AwaitAttempt.Outcome.ConditionEvaluationFailed.class,
                 conditionAssertion.attempts().getLast().outcome());
+    }
+
+    @Test
+    void capturesConditionFactoryFailuresInsideTheFirstAttempt() {
+        var failure = assertParity(time -> timedAwait(() -> "actual",
+                        config(1, 2, 0), time, time).until(failingFactory()),
+                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time)
+                        .until(failingFactory()));
+        var nullEvaluator = assertParity(time -> timedAwait(() -> "actual",
+                        config(1, 2, 0), time, time).until(nullFactory()),
+                time -> timedTryAwait(() -> "actual", config(1, 2, 0), time, time)
+                        .until(nullFactory()));
+
+        assertEquals(1, failure.totalAttempts());
+        assertEquals(1, failure.attempts().getFirst().number());
+        assertInstanceOf(AwaitAttempt.Outcome.ConditionEvaluationFailed.class,
+                failure.attempts().getFirst().outcome());
+        assertEquals("evaluator must not be null", nullEvaluator.failure().getCause().getMessage());
     }
 
     @Test
@@ -265,6 +284,16 @@ class TryAwaitFailureTest {
         return condition("condition succeeds", actual -> {
             throw new IllegalStateException("condition failed");
         });
+    }
+
+    private static Condition<Object, Object> failingFactory() {
+        return conditionFactory("condition succeeds", () -> {
+            throw new IllegalStateException("condition factory failed");
+        });
+    }
+
+    private static Condition<Object, Object> nullFactory() {
+        return conditionFactory("condition succeeds", () -> null);
     }
 
     private static Condition<Object, Object> assertionThrowingCondition() {

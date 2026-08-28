@@ -53,8 +53,7 @@ class MapSizeConditionsTest {
         };
 
         Map.Entry<String, Integer> selected = await(source).until(singleEntry);
-        Map.Entry<String, Integer> explained = await(source).until(
-                singleEntry.because("exactly one result is required"));
+        Map.Entry<String, Integer> explained = await(source).until(singleEntry.because("exactly one result is required"));
 
         assertEquals("key", selected.getKey());
         assertEquals(42, selected.getValue());
@@ -148,8 +147,8 @@ class MapSizeConditionsTest {
         };
 
         assertTrue(assertThrows(NullPointerException.class,
-                () -> timedMapAwait(source, defaults(), time, time).until(
-                        (PreservingCondition<Map<String, String>>) null))
+                () -> timedMapAwait(source, defaults(), time, time)
+                        .until((PreservingCondition<Map<String, String>>) null))
                 .getMessage().contains("condition"));
         assertEquals(0, sourceCalls[0]);
     }

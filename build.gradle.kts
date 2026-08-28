@@ -26,7 +26,9 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.test {
     useJUnitPlatform()
-    inputs.file(tasks.jar.flatMap { it.archiveFile })
+    val testedJar = tasks.jar.flatMap { it.archiveFile }
+    inputs.file(testedJar)
+    systemProperty("awium.test.jar", testedJar.get().asFile)
 }
 
 tasks.check {

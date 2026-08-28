@@ -59,8 +59,7 @@ class CapturedConditionTest {
         var result = timedTryAwait(() -> {
             time.advanceNanos(2);
             return "observed";
-        }, config(1, 2, 0), time, time).until(
-                captured(value -> true, value -> true));
+        }, config(1, 2, 0), time, time).until(captured(value -> true, value -> true));
         var outcome = assertInstanceOf(AwaitAttempt.Outcome.Unsatisfied.class,
                 result.attempts().getFirst().outcome());
 

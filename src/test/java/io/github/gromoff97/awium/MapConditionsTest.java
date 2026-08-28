@@ -141,10 +141,8 @@ class MapConditionsTest {
                                 String, String>>) () -> {
                             time.advanceNanos(2);
                             return actual;
-                        }, defaults().withEvery(ofNanos(1))
-                                .withUpTo(ofNanos(2)), time, time).until(
-                                doesNotContainKey("a")
-                                .because("business reason")));
+                        }, defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)), time, time)
+                                .until(doesNotContainKey("a").because("business reason")));
 
         assertEquals(1, actual.entrySetCalls);
     }

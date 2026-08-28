@@ -7,11 +7,20 @@ calling thread and returns the result from the same successful observation.
 import static io.github.gromoff97.awium.fluent.Await.await;
 import static io.github.gromoff97.awium.fluent.OptionalConditions.present;
 
-Payment payment = await(() -> paymentRepository.findById(order.paymentId())).until(
-        present.because("Checkout cannot continue without the payment"));
+Payment payment = await(() -> paymentRepository.findById(order.paymentId()))
+        .until(present.because("Checkout cannot continue without the payment"));
 ```
 
 ## Installation
+
+The current snapshot is not published to an artifact repository. Clone Awium
+next to the consuming Gradle build and include it from `settings.gradle.kts`:
+
+```kotlin
+includeBuild("../awium")
+```
+
+Then use its coordinates normally:
 
 ```kotlin
 dependencies {
@@ -108,8 +117,7 @@ values remain unchanged.
 any order, and may be repeated. The last supplied value wins:
 
 ```java
-Payment payment = await(source).every(POLL_INTERVAL).upTo(TIMEOUT)
-        .persisting(STABILITY).until(present);
+Payment payment = await(source).every(POLL_INTERVAL).upTo(TIMEOUT).persisting(STABILITY).until(present);
 ```
 
 Defaults are:
@@ -237,8 +245,9 @@ AwaitResult<Optional<Payment>, Payment> result =
 
 `AwaitResult.Satisfied` contains the terminal result. `AwaitResult.Failed`
 contains the failure. Both expose retained `AwaitAttempt` history and the total
-attempt count; repeated equivalent attempts may be compacted from the retained
-list without changing their attempt numbers.
+attempt count. Each adjacent run of equivalent attempts is represented by its
+latest attempt, retaining the endpoint number and timing without retaining the
+whole run.
 
 ## Threading and interruption
 
@@ -249,9 +258,9 @@ scheduler, or virtual thread, so caller `ThreadLocal` values remain visible.
 This release supports one-thread use only. Another thread may interrupt the
 caller as an external cancellation controller, but it must not access or mutate
 the stage, source, condition, expected values, or observed objects. Awium
-restores the interrupt flag and throws `AwaitInterruptedException`. Because
-callbacks run in the caller, Awium cannot preempt a source or condition that
-blocks indefinitely.
+restores the interrupt flag. `await(...)` throws `AwaitInterruptedException`;
+`tryAwait(...)` returns it in `AwaitResult.Failed`. Because callbacks run in the
+caller, Awium cannot preempt a source or condition that blocks indefinitely.
 
 ## Failures
 

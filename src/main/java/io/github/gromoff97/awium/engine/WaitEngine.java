@@ -31,6 +31,8 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock, Lo
         WaitCompletion<Observed, Result> outcome = waitFor(source, evaluator, attempt -> {
             if (attempts.isEmpty() || !equivalent(attempts.getLast(), attempt)) {
                 attempts.add(attempt);
+            } else {
+                attempts.set(attempts.size() - 1, attempt);
             }
         });
         return new RecordedWait<>(outcome, attempts);

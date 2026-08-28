@@ -38,8 +38,18 @@ final class ConditionRuntime {
         Supplier<? extends Function<? super Observed, ? extends ConditionAssessment<? extends Result>>> evaluatorFactory();
 
         default Function<? super Observed, ? extends ConditionAssessment<? extends Result>> newEvaluator() {
-            var evaluator = requireNonNull(evaluatorFactory().get(), "evaluator must not be null");
-            return actual -> requireNonNull(evaluator.apply(actual), "condition returned null ConditionAssessment");
+            return new Function<Observed, ConditionAssessment<? extends Result>>() {
+
+                private Function<? super Observed, ? extends ConditionAssessment<? extends Result>> evaluator;
+
+                @Override
+                public ConditionAssessment<? extends Result> apply(Observed actual) {
+                    if (evaluator == null) {
+                        evaluator = requireNonNull(evaluatorFactory().get(), "evaluator must not be null");
+                    }
+                    return requireNonNull(evaluator.apply(actual), "condition returned null ConditionAssessment");
+                }
+            };
         }
     }
 

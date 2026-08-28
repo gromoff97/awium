@@ -41,9 +41,9 @@ class TryAwaitCompilationContractTest {
                             Source.CollectionSource<List<Payment>> payments,
                             Source.MapSource<Map<String, Payment>> paymentMap,
                             Source<Payment> rawPayment) {
-                        AwaitResult<String, String> ordinary = tryAwait(text).every(ofMillis(1))
-                                .upTo(ofSeconds(1)).persisting(ZERO)
-                                .until(isNotNull.because("business availability"));
+                        var important = isNotNull.because("business availability");
+                        AwaitResult<String, String> ordinary =
+                                tryAwait(text).every(ofMillis(1)).upTo(ofSeconds(1)).persisting(ZERO).until(important);
                         AwaitResult<Optional<Payment>, Payment> optional = tryAwait(payment).until(present);
                         AwaitResult<List<Payment>, Payment> collection = tryAwait(payments).until(single);
                         AwaitResult<List<Payment>, Payment> firstPayment = tryAwait(payments).until(first);
