@@ -4,6 +4,8 @@ import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSeque
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedSequenceStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.NarrowingStage;
 
-public sealed interface AwaitCondition permits ConditionStage, ExpectedStage, ExpectedSequenceStage, SelectedStage, SelectedSequenceStage {
+public sealed interface AwaitCondition permits ConditionStage, ExpectedStage, ExpectedSequenceStage, NarrowingStage,
+        SelectedStage, SelectedSequenceStage {
 }

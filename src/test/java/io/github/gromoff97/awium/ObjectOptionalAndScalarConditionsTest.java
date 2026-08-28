@@ -5,6 +5,7 @@ import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.NarrowingStage;
 import io.github.gromoff97.awium.conditioning.conditions.OptionalConditions;
 import io.github.gromoff97.awium.conditioning.conditions.StringConditions;
 import io.github.gromoff97.awium.sources.Source;
@@ -212,6 +213,11 @@ class ObjectOptionalAndScalarConditionsTest {
     }
 
     private static <S, T extends S> void assertStatus(ExpectedStage<T> condition, S actual,
+            io.github.gromoff97.awium.conditioning.Evaluation.Status expected) throws Exception {
+        assertEquals(expected, evaluate(condition, actual).status());
+    }
+
+    private static <S, R> void assertStatus(NarrowingStage<R> condition, S actual,
             io.github.gromoff97.awium.conditioning.Evaluation.Status expected) throws Exception {
         assertEquals(expected, evaluate(condition, actual).status());
     }

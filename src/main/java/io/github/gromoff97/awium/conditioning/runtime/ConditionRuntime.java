@@ -7,6 +7,8 @@ import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedCondi
 import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedSequenceCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedSequenceStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.NarrowingCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.NarrowingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
@@ -61,6 +63,11 @@ public final class ConditionRuntime {
     public record RuntimeExpectedSequenceCondition<T>(String description, String explanation,
             Supplier<? extends Function<? super Object, ? extends Evaluation<? extends List<Object>>>> evaluatorFactory)
             implements ExpectedSequenceCondition<T>, RuntimeStage<Object, List<Object>> {
+    }
+
+    public record RuntimeNarrowingCondition<R>(String description, String explanation,
+            Supplier<? extends Function<? super Object, ? extends Evaluation<? extends R>>> evaluatorFactory)
+            implements NarrowingCondition<R>, RuntimeStage<Object, R> {
     }
 
     public record RuntimeSelectedCondition<S, F extends Source<?>>(String description, String explanation,
@@ -163,6 +170,11 @@ public final class ConditionRuntime {
         return new RuntimeExpectedCondition<>(nonBlank(description, "description"), null, () -> evaluator);
     }
 
+    public static <R> NarrowingCondition<R> narrowing(String description, Function<Object, Evaluation<R>> evaluator) {
+        requireNonNull(evaluator, "evaluation must not be null");
+        return new RuntimeNarrowingCondition<>(nonBlank(description, "description"), null, () -> evaluator);
+    }
+
     public static <S, F extends Source<?>> SelectedCondition<S, F> selected(String description,
             Function<? super S, ? extends Evaluation<?>> evaluator) {
         requireNonNull(evaluator, "evaluation must not be null");
@@ -201,6 +213,15 @@ public final class ConditionRuntime {
                 ConditionRuntime.<Object, List<Object>>runtime(condition).newEvaluator();
     }
 
+    public static <S, R> Function<S, Evaluation<R>> narrowingEvaluator(NarrowingStage<R> condition) {
+        Function<? super Object, ? extends Evaluation<? extends R>> evaluator =
+                ConditionRuntime.<Object, R>runtime(condition).newEvaluator();
+        return actual -> {
+            Evaluation<? extends R> evaluation = evaluator.apply(actual);
+            return evaluation == null ? null : evaluation.continueIfSatisfied(Evaluation::satisfied);
+        };
+    }
+
     public static <S, R> ResultStage<S, R> explained(Condition<S, R> condition,
             String explanation) {
         RuntimeStage<S, R> runtime = runtime(condition);
@@ -220,6 +241,11 @@ public final class ConditionRuntime {
     public static <T> ExpectedSequenceStage<T> explained(ExpectedSequenceCondition<T> condition, String explanation) {
         RuntimeStage<Object, List<Object>> runtime = runtime(condition);
         return new RuntimeExpectedSequenceCondition<>(runtime.description(), nonBlank(explanation, "explanation"), runtime.evaluatorFactory());
+    }
+
+    public static <R> NarrowingStage<R> explained(NarrowingCondition<R> condition, String explanation) {
+        RuntimeStage<Object, R> runtime = runtime(condition);
+        return new RuntimeNarrowingCondition<>(runtime.description(), nonBlank(explanation, "explanation"), runtime.evaluatorFactory());
     }
 
     public static <S, F extends Source<?>> SelectedStage<S, F> explained(SelectedCondition<S, F> condition, String explanation) {

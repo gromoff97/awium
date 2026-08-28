@@ -6,6 +6,7 @@ import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingSta
 import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedSequenceCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSequenceCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
@@ -24,6 +25,7 @@ import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preserving;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.expected;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.narrowing;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.equal;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAny;
 import static java.util.Arrays.asList;
@@ -117,17 +119,17 @@ public final class Conditions {
                 ? satisfied(actual) : unsatisfied("value was the same instance"));
     }
 
-    public static <R> Condition<Object, R> instanceOf(Class<R> type) {
+    public static <R> NarrowingCondition<R> instanceOf(Class<R> type) {
         requireNonNull(type, "type must not be null");
-        return condition("value is an instance of " + type.getTypeName(), actual ->
+        return narrowing("value is an instance of " + type.getTypeName(), actual ->
                 actual != null && type.isInstance(actual)
                         ? satisfied(type.cast(actual))
                         : unsatisfied("value was not an instance of " + type.getTypeName()));
     }
 
-    public static <R> Condition<Object, R> exactInstanceOf(Class<R> type) {
+    public static <R> NarrowingCondition<R> exactInstanceOf(Class<R> type) {
         requireNonNull(type, "type must not be null");
-        return condition("value is exactly an instance of " + type.getTypeName(), actual ->
+        return narrowing("value is exactly an instance of " + type.getTypeName(), actual ->
                 actual != null && actual.getClass() == type
                         ? satisfied(type.cast(actual))
                         : unsatisfied("value was not exactly an instance of " + type.getTypeName()));

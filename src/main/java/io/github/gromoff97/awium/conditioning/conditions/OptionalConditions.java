@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.NarrowingStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
 import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
@@ -51,7 +52,7 @@ public final class OptionalConditions {
         return selected("optional value matches", "optional value did not match", predicate);
     }
 
-    public static <R> Condition<Optional<?>, R> containsInstanceOf(Class<R> type) {
+    public static <T, R extends T> Condition<Optional<T>, R> containsInstanceOf(Class<R> type) {
         requireNonNull(type, "type must not be null");
         return condition("optional contains an instance of " + type.getTypeName(), actual -> present(actual)
                 .continueIfSatisfied(value -> type.isInstance(value)
@@ -72,6 +73,13 @@ public final class OptionalConditions {
     public static <S, T extends S> Condition<Optional<S>, S> hasValue(ExpectedStage<T> nested) {
         return ConditionRuntime.condition("optional value " + ConditionRuntime.description(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<S>expectedEvaluator(nested);
+            return actual -> present(actual).continueIfSatisfied(nestedEvaluator);
+        });
+    }
+
+    public static <T, R extends T> Condition<Optional<T>, R> hasValue(NarrowingStage<R> nested) {
+        return ConditionRuntime.condition("optional value " + ConditionRuntime.description(nested), () -> {
+            var nestedEvaluator = ConditionRuntime.<T, R>narrowingEvaluator(nested);
             return actual -> present(actual).continueIfSatisfied(nestedEvaluator);
         });
     }

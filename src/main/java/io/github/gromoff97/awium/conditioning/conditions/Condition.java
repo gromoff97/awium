@@ -69,6 +69,20 @@ public sealed interface Condition<S, R> extends ResultStage<S, R> permits Condit
         }
     }
 
+    public sealed interface NarrowingStage<R> extends AwaitCondition permits NarrowingCondition {
+    }
+
+    public sealed interface NarrowingCondition<R> extends NarrowingStage<R> permits ConditionRuntime.RuntimeNarrowingCondition {
+
+        default NarrowingStage<R> because(String explanation) {
+            return ConditionRuntime.explained(this, explanation);
+        }
+
+        default NarrowingStage<R> because(String format, Object... arguments) {
+            return ConditionRuntime.explained(this, formattedExplanation(format, arguments));
+        }
+    }
+
     public sealed interface SelectedStage<S, F extends Source<?>> extends AwaitCondition permits SelectedCondition {
     }
 

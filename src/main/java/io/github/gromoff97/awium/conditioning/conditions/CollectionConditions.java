@@ -102,7 +102,7 @@ public final class CollectionConditions {
         return condition("collection has a single matching element", actual -> selectSingle(actual, predicate));
     }
 
-    public static <R> Condition<Collection<?>, R> singleElementOfType(Class<R> type) {
+    public static <E, R extends E> Condition<Collection<E>, R> singleElementOfType(Class<R> type) {
         requireNonNull(type, "type must not be null");
         return condition("collection has a single element of type " + type.getTypeName(), actual ->
                 selectSingle(actual, type::isInstance)

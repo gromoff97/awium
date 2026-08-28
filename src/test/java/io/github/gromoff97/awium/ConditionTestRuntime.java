@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.AwaitCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.NarrowingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
@@ -23,6 +24,10 @@ final class ConditionTestRuntime {
 
     static <S, T extends S> Evaluation<S> evaluate(ExpectedStage<T> condition, S actual) {
         return ConditionRuntime.<S>expectedEvaluator(condition).apply(actual);
+    }
+
+    static <S, R> Evaluation<R> evaluate(NarrowingStage<R> condition, S actual) {
+        return ConditionRuntime.<S, R>narrowingEvaluator(condition).apply(actual);
     }
 
     static <S, R, F extends Source<?>> Evaluation<R> evaluate(
