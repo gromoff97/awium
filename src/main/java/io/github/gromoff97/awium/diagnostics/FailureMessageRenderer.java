@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.diagnostics;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
-import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitCompletion;
 
@@ -149,7 +148,7 @@ final class FailureMessageRenderer {
     }
 
     private static void sequence(StringBuilder out, AttemptDiagnostic diagnostic) {
-        ConditionEvaluation.Context.Sequence sequence = diagnostic.sequence();
+        AwaitAttempt.Context.Sequence sequence = diagnostic.sequence();
         if (sequence == null) {
             return;
         }
@@ -242,8 +241,8 @@ final class FailureMessageRenderer {
         }
     }
 
-    private static ConditionEvaluation.Context.Sequence sequence(ConditionEvaluation.Context context) {
-        return context instanceof ConditionEvaluation.Context.Sequence value ? value : null;
+    private static AwaitAttempt.Context.Sequence sequence(AwaitAttempt.Context context) {
+        return context instanceof AwaitAttempt.Context.Sequence value ? value : null;
     }
 
     static AttemptDiagnostic diagnostic(AwaitAttempt<?, ?> attempt) {
@@ -273,7 +272,7 @@ final class FailureMessageRenderer {
     }
 
     private static AttemptDiagnostic uncontrolled(Object observed,
-            ConditionEvaluation.Context.Sequence sequence, Throwable failure,
+            AwaitAttempt.Context.Sequence sequence, Throwable failure,
             String interruptedHeading, String failureHeading) {
         return new AttemptDiagnostic(observed, null, sequence, failure,
                 failure instanceof InterruptedException ? interruptedHeading : failureHeading);
@@ -310,7 +309,7 @@ final class FailureMessageRenderer {
     }
 
     record AttemptDiagnostic(Object observed, String mismatch,
-            ConditionEvaluation.Context.Sequence sequence, Throwable failure,
+            AwaitAttempt.Context.Sequence sequence, Throwable failure,
             String heading) {}
 
     private record ThrowableDiagnostic(String type, String message) {}

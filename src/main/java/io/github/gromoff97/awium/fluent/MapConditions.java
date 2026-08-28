@@ -16,6 +16,7 @@ import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.engine.ConditionAssessment.continueIfSatisfied;
 import static io.github.gromoff97.awium.fluent.ConditionSupport.nonEmpty;
 import static io.github.gromoff97.awium.fluent.ConditionSupport.preserve;
 import static io.github.gromoff97.awium.fluent.ConditionSupport.preservingNonNull;
@@ -28,6 +29,7 @@ import static io.github.gromoff97.awium.fluent.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.fluent.ValueMatching.sameDistinctElements;
 import static io.github.gromoff97.awium.fluent.Conditions.condition;
 import static io.github.gromoff97.awium.fluent.ConditionRuntime.selected;
+import static io.github.gromoff97.awium.fluent.ConditionRuntime.assessedCondition;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
@@ -155,10 +157,10 @@ public final class MapConditions {
 
     public static <K, V, R> Condition<Map<K, V>, R> valueFor(K key,
             ResultStage<? super V, ? extends R> nested) {
-        return ConditionRuntime.condition("map value " + ConditionRuntime.description(nested), () -> {
+        return assessedCondition("map value " + ConditionRuntime.description(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<V, R>evaluator(nested);
-            return actual -> findEntry(actual, key)
-                    .continueIfSatisfied(entry -> nestedEvaluator.apply(entry.getValue()));
+            return actual -> continueIfSatisfied(findEntry(actual, key),
+                    entry -> nestedEvaluator.apply(entry.getValue()));
         });
     }
 
@@ -168,18 +170,18 @@ public final class MapConditions {
     }
 
     public static <K, V, T extends V> Condition<Map<K, V>, V> valueFor(K key, ExpectedStage<T> nested) {
-        return ConditionRuntime.condition("map value " + ConditionRuntime.description(nested), () -> {
+        return assessedCondition("map value " + ConditionRuntime.description(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<V>expectedEvaluator(nested);
-            return actual -> findEntry(actual, key)
-                    .continueIfSatisfied(entry -> nestedEvaluator.apply(entry.getValue()));
+            return actual -> continueIfSatisfied(findEntry(actual, key),
+                    entry -> nestedEvaluator.apply(entry.getValue()));
         });
     }
 
     public static <K, V, R extends V> Condition<Map<K, V>, R> valueFor(K key, NarrowingStage<R> nested) {
-        return ConditionRuntime.condition("map value " + ConditionRuntime.description(nested), () -> {
+        return assessedCondition("map value " + ConditionRuntime.description(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<V, R>narrowingEvaluator(nested);
-            return actual -> findEntry(actual, key)
-                    .continueIfSatisfied(entry -> nestedEvaluator.apply(entry.getValue()));
+            return actual -> continueIfSatisfied(findEntry(actual, key),
+                    entry -> nestedEvaluator.apply(entry.getValue()));
         });
     }
 

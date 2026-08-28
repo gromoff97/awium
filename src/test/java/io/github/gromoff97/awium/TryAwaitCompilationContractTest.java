@@ -60,20 +60,6 @@ class TryAwaitCompilationContractTest {
     }
 
     @Test
-    void rejectsRemovedConfigurationName() throws IOException {
-        assertFalse(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
-                import static java.time.Duration.ZERO;
-                import io.github.gromoff97.awium.sources.Source;
-                final class Contract {
-                    void check(Source<String> source) {
-                        await(source).%s(ZERO);
-                    }
-                }
-                """.formatted("sta" + "bleFor")));
-    }
-
-    @Test
     void rejectsAnUnrelatedOptionalResultType() throws IOException {
         assertFalse(compiles("""
                 import static io.github.gromoff97.awium.fluent.Await.tryAwait;

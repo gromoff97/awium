@@ -7,6 +7,7 @@ import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.assertion
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.uncontrolled;
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.engine.ConditionAssessment.plain;
 import static io.github.gromoff97.awium.engine.WaitCompletion.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
@@ -51,7 +52,7 @@ class WaitEngineTest {
                 () -> engine.waitFor(() -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, actual -> satisfied(actual)));
+                }, actual -> plain(satisfied(actual))));
 
         assertEquals(0, clockCalls[0]);
         assertEquals(0, sourceCalls[0]);
@@ -557,7 +558,7 @@ class WaitEngineTest {
             LongConsumer parker,
             Source<S> source,
             Function<S, ConditionEvaluation<R>> condition) {
-        return new WaitEngine(config, time, parker).waitFor(source, condition);
+        return new WaitEngine(config, time, parker).waitFor(source, actual -> plain(condition.apply(actual)));
     }
 
     private static long completed(AwaitAttempt<?, ?> attempt) {

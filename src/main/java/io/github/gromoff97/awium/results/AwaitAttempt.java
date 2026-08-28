@@ -1,7 +1,5 @@
 package io.github.gromoff97.awium.results;
 
-import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
-
 import java.time.Duration;
 
 import static java.util.Objects.requireNonNull;
@@ -28,6 +26,23 @@ public record AwaitAttempt<Observed, Result>(long number, Phase phase,
 
     public enum Phase { ACQUISITION, PERSISTENCE }
 
+    public sealed interface Context {
+
+        enum Plain implements Context { INSTANCE }
+
+        record Sequence(int capturedStages, int totalStages, int evaluatedStageNumber,
+                String expectation, String importance) implements Context {
+
+            public Sequence {
+                if (capturedStages < 0 || capturedStages > totalStages
+                        || evaluatedStageNumber <= 0 || evaluatedStageNumber > totalStages) {
+                    throw new IllegalArgumentException("invalid sequence progress");
+                }
+                requireNonNull(expectation, "expectation must not be null");
+            }
+        }
+    }
+
     public sealed interface Outcome<Observed, Result> {
 
         Timing timing();
@@ -42,7 +57,7 @@ public record AwaitAttempt<Observed, Result>(long number, Phase phase,
 
         record Unsatisfied<Observed, Result>(Timing.AfterObservation timing, Observed observed,
                 String mismatch, AssertionError assertion,
-                ConditionEvaluation.Context context) implements Outcome<Observed, Result> {
+                Context context) implements Outcome<Observed, Result> {
 
             public Unsatisfied {
                 requireNonNull(timing, "timing must not be null");
@@ -80,7 +95,7 @@ public record AwaitAttempt<Observed, Result>(long number, Phase phase,
 
         record ConditionEvaluationFailed<Observed, Result>(Timing.AfterObservation timing,
                 Observed observed, Throwable failure,
-                ConditionEvaluation.Context context) implements Outcome<Observed, Result> {
+                Context context) implements Outcome<Observed, Result> {
 
             public ConditionEvaluationFailed {
                 requireNonNull(timing, "timing must not be null");

@@ -19,6 +19,7 @@ import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.uncontrolled;
+import static io.github.gromoff97.awium.engine.ConditionAssessment.plain;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -48,7 +49,7 @@ class ObservationEvaluatorTest {
             return actual;
         }, value -> {
             time.advanceNanos(3);
-            return satisfied(result);
+            return plain(satisfied(result));
         });
 
         AwaitAttempt<Object, Object> attempt = terminal.attempt();
@@ -303,7 +304,7 @@ class ObservationEvaluatorTest {
         return new WaitEngine(config(1, 2, 0), time, time).waitFor(source, actual -> {
             ConditionEvaluation<R> evaluation = condition.apply(actual);
             time.advanceNanos(2);
-            return evaluation;
+            return plain(evaluation);
         }).attempt();
     }
 

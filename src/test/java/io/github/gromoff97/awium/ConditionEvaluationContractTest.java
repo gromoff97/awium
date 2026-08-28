@@ -11,13 +11,19 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.reflect.RecordComponent;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class ConditionEvaluationContractTest {
 
     @Test
-    void evaluationStatesFormASealedHierarchy() {
-        assertTrue(ConditionEvaluation.class.isSealed());
+    void evaluationStatesCarryOnlyConditionData() {
+        assertEquals(List.of("result"), componentNames(ConditionEvaluation.Satisfied.class));
+        assertEquals(List.of("mismatch"), componentNames(ConditionEvaluation.Unsatisfied.class));
+        assertEquals(List.of("mismatch", "cause"), componentNames(ConditionEvaluation.AssertionUnsatisfied.class));
+        assertEquals(List.of("cause"), componentNames(ConditionEvaluation.Uncontrolled.class));
     }
 
     @Test
@@ -64,6 +70,10 @@ class ConditionEvaluationContractTest {
         assertThrows(NullPointerException.class,
                 () -> assertionUnsatisfied("failed", null));
         assertThrows(NullPointerException.class, () -> uncontrolled(null));
+    }
+
+    private static List<String> componentNames(Class<?> record) {
+        return Arrays.stream(record.getRecordComponents()).map(RecordComponent::getName).toList();
     }
 
 }

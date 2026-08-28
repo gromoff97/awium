@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.fluent;
 
-import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
+import io.github.gromoff97.awium.engine.ConditionAssessment;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
 import io.github.gromoff97.awium.results.AwaitResult;
@@ -53,14 +53,14 @@ abstract class AbstractAwait<Observed, Self> {
 
     abstract Self reconfigured(WaitConfiguration configuration);
 
-    protected final <Result> Result complete(Function<? super Observed, ? extends ConditionEvaluation<? extends Result>> evaluator,
+    protected final <Result> Result complete(Function<? super Observed, ? extends ConditionAssessment<? extends Result>> evaluator,
             AwaitCondition condition) {
         return FailureFactory.complete(engine.waitFor(source, evaluator), description(condition), explanation(condition),
                 engine.configuration());
     }
 
     protected final <Result> AwaitResult<Observed, Result> capture(Function<? super Observed,
-            ? extends ConditionEvaluation<? extends Result>> evaluator,
+            ? extends ConditionAssessment<? extends Result>> evaluator,
             AwaitCondition condition) {
         return FailureFactory.capture(engine.recordedWaitFor(source, evaluator), description(condition), explanation(condition),
                 engine.configuration());

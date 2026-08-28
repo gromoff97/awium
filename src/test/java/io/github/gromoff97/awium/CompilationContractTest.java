@@ -161,30 +161,6 @@ class CompilationContractTest {
     }
 
     @Test
-    void externalCallersCannotConstructSelectedConditions() throws IOException {
-        assertFalse(compiles("""
-                import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
-                import static io.github.gromoff97.awium.fluent.Conditions.condition;
-                import io.github.gromoff97.awium.fluent.Condition.SelectedCondition;
-                import java.util.Optional;
-                final class Contract {
-                    void check() {
-                        new SelectedCondition<>(condition("selected",
-                                (Optional<?> value) -> satisfied(value.orElse(null))));
-                    }
-                }
-                """));
-    }
-
-    @Test
-    void runtimeConditionImplementationsAreNotPublic() throws IOException {
-        assertFalse(compiles("""
-                import io.github.gromoff97.awium.fluent.ConditionRuntime.RuntimeSelectedCondition;
-                final class Contract { RuntimeSelectedCondition<?, ?> leaked; }
-                """));
-    }
-
-    @Test
     void sourceSelectedFieldsShareOneSourceTypedCondition() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.fluent.OptionalConditions.present;

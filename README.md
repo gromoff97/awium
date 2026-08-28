@@ -173,6 +173,13 @@ Receipt receipt = await(paymentRepository::load).until(condition(
                 : satisfied(payment.receipt())));
 ```
 
+`condition(...)` reuses the supplied callback. For a stateful evaluator that
+must start fresh for each wait, supply its construction through
+`conditionFactory(...)` instead. Use `preserving(...)` when a custom condition
+returns the observed type, or `preservingFactory(...)` when it is both
+preserving and stateful. This also lets `captured(...)` recognize it as a
+preserving stage.
+
 ## Condition catalogues
 
 Import only the catalogue used by a test. Shared names such as `empty`,
@@ -180,7 +187,7 @@ Import only the catalogue used by a test. Shared names such as `empty`,
 
 | Provider | Conditions | Successful result |
 | --- | --- | --- |
-| `Conditions` | `condition`, `asserted`, `yields`, `captured`, object equality and identity, type checks, `matches`, and comparable ranges | observed, narrowed, transformed, or captured value |
+| `Conditions` | custom condition and preserving factories, `asserted`, `yields`, `captured`, object equality and identity, type checks, `matches`, and comparable ranges | observed, narrowed, transformed, or captured value |
 | `OptionalConditions` | `present`, `absent`, `hasValue`, `doesNotHaveValue`, `containsInstanceOf` | contained, transformed, or narrowed value; `Void` for `absent` |
 | `StringConditions` | empty/blank checks, content, prefix, suffix, regex, case-insensitive equality, and `length...` | observed string |
 | `CollectionConditions` | `single`, empty/null/duplicate checks, quantifiers, membership, exact content, sequences, `first`, `last`, `element`, `sorted`, and `size...` | observed collection or selected element |
@@ -210,8 +217,10 @@ await(source).until(absent);
 ```
 
 `until(...)` starts the wait. Success never invokes the source again merely to
-obtain the return value. A retained stage may be reused sequentially; each wait
-gets fresh timing and condition state.
+obtain the return value. A retained stage may be reused sequentially; every
+wait gets fresh timing. Built-in and factory-backed conditions also get fresh
+evaluation state. State in a callback passed directly to `condition(...)` or
+`preserving(...)` remains owned by the caller.
 
 ## Diagnostic waits
 

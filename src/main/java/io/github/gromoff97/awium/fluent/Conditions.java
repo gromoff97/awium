@@ -16,12 +16,12 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
 import static io.github.gromoff97.awium.fluent.ConditionSupport.nonEmpty;
-import static io.github.gromoff97.awium.fluent.ConditionSupport.preserving;
 import static io.github.gromoff97.awium.fluent.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.fluent.ConditionRuntime.expected;
 import static io.github.gromoff97.awium.fluent.ConditionRuntime.narrowing;
@@ -34,7 +34,7 @@ public final class Conditions {
 
     public static final Condition<Object, Void> isNull = condition("value is null",
             actual -> actual == null ? satisfied(null) : unsatisfied("value was not null"));
-    public static final PreservingCondition<Object> isNotNull = preserving("value is not null",
+    public static final PreservingCondition<Object> isNotNull = ConditionSupport.preserving("value is not null",
             "value was null", actual -> actual != null);
 
     private Conditions() {
@@ -42,8 +42,23 @@ public final class Conditions {
     }
 
     public static <Observed, Result> Condition<Observed, Result> condition(String description,
-            Function<? super Observed, ConditionEvaluation<Result>> evaluation) {
+            Function<? super Observed, ? extends ConditionEvaluation<? extends Result>> evaluation) {
         return ConditionRuntime.condition(description, evaluation);
+    }
+
+    public static <Observed, Result> Condition<Observed, Result> conditionFactory(String description,
+            Supplier<? extends Function<? super Observed, ? extends ConditionEvaluation<? extends Result>>> evaluatorFactory) {
+        return ConditionRuntime.conditionFactory(description, evaluatorFactory);
+    }
+
+    public static <Observed> PreservingCondition<Observed> preserving(String description,
+            Function<? super Observed, ? extends ConditionEvaluation<? extends Observed>> evaluation) {
+        return ConditionRuntime.preserving(description, evaluation);
+    }
+
+    public static <Observed> PreservingCondition<Observed> preservingFactory(String description,
+            Supplier<? extends Function<? super Observed, ? extends ConditionEvaluation<? extends Observed>>> evaluatorFactory) {
+        return ConditionRuntime.preserving(description, evaluatorFactory);
     }
 
     @SafeVarargs
@@ -152,7 +167,7 @@ public final class Conditions {
 
     public static <Observed> PreservingCondition<Observed> matches(Predicate<? super Observed> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return preserving("value matches", "value did not match", predicate);
+        return ConditionSupport.preserving("value matches", "value did not match", predicate);
     }
 
     public static <Value extends Comparable<? super Value>> PreservingCondition<Value> greaterThan(Value bound) {

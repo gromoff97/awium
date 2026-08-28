@@ -651,7 +651,7 @@ class DiagnosticsSnapshotTest {
         return new AwaitAttempt<>(number, ACQUISITION,
                 new AwaitAttempt.Outcome.Unsatisfied<>(
                         afterObservation(completedNanos), observed, mismatch, null,
-                        ConditionEvaluation.Context.Plain.INSTANCE));
+                        AwaitAttempt.Context.Plain.INSTANCE));
     }
 
     private static <S> AwaitAttempt<S, Object> assertionUnsatisfiedAttempt(
@@ -660,7 +660,7 @@ class DiagnosticsSnapshotTest {
         return new AwaitAttempt<>(number, ACQUISITION,
                 new AwaitAttempt.Outcome.Unsatisfied<>(
                         afterObservation(completedNanos), observed, mismatch, assertion,
-                        ConditionEvaluation.Context.Plain.INSTANCE));
+                        AwaitAttempt.Context.Plain.INSTANCE));
     }
 
     private static WaitCompletion<Object, Object> sourceFailure(
@@ -684,7 +684,7 @@ class DiagnosticsSnapshotTest {
         return new Uncontrolled<>(new AwaitAttempt<>(number, ACQUISITION,
                 new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(
                         afterObservation(completedNanos), observed, failure,
-                        ConditionEvaluation.Context.Plain.INSTANCE)));
+                        AwaitAttempt.Context.Plain.INSTANCE)));
     }
 
     private static AwaitAttempt.Timing.AfterObservation afterObservation(

@@ -14,7 +14,9 @@ import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.engine.ConditionAssessment.continueIfSatisfied;
 import static io.github.gromoff97.awium.fluent.ConditionSupport.preserve;
+import static io.github.gromoff97.awium.fluent.ConditionRuntime.assessedCondition;
 import static io.github.gromoff97.awium.fluent.ValueMatching.equal;
 import static io.github.gromoff97.awium.fluent.Conditions.condition;
 import static java.util.Objects.requireNonNull;
@@ -59,9 +61,9 @@ public final class OptionalConditions {
     }
 
     public static <Value, Result> Condition<Optional<Value>, Result> hasValue(ResultStage<? super Value, ? extends Result> nested) {
-        return ConditionRuntime.condition("optional value " + ConditionRuntime.description(nested), () -> {
+        return assessedCondition("optional value " + ConditionRuntime.description(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<Value, Result>evaluator(nested);
-            return actual -> present(actual).continueIfSatisfied(nestedEvaluator);
+            return actual -> continueIfSatisfied(present(actual), nestedEvaluator);
         });
     }
 
@@ -70,16 +72,16 @@ public final class OptionalConditions {
     }
 
     public static <Observed, Value extends Observed> Condition<Optional<Observed>, Observed> hasValue(ExpectedStage<Value> nested) {
-        return ConditionRuntime.condition("optional value " + ConditionRuntime.description(nested), () -> {
+        return assessedCondition("optional value " + ConditionRuntime.description(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<Observed>expectedEvaluator(nested);
-            return actual -> present(actual).continueIfSatisfied(nestedEvaluator);
+            return actual -> continueIfSatisfied(present(actual), nestedEvaluator);
         });
     }
 
     public static <Value, Result extends Value> Condition<Optional<Value>, Result> hasValue(NarrowingStage<Result> nested) {
-        return ConditionRuntime.condition("optional value " + ConditionRuntime.description(nested), () -> {
+        return assessedCondition("optional value " + ConditionRuntime.description(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<Value, Result>narrowingEvaluator(nested);
-            return actual -> present(actual).continueIfSatisfied(nestedEvaluator);
+            return actual -> continueIfSatisfied(present(actual), nestedEvaluator);
         });
     }
 

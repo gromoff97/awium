@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.fluent;
 
-import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+import io.github.gromoff97.awium.engine.ConditionAssessment;
 import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
 import io.github.gromoff97.awium.fluent.Condition.SelectedSequenceStage;
 import io.github.gromoff97.awium.fluent.Condition.SelectedStage;
@@ -21,7 +21,7 @@ class ConditionSessionTest {
 
     @Test
     void everyConditionFamilyUsesTheTypedStageContract() {
-        ConditionStage<Integer, Integer> ordinary = ConditionRuntime.condition(
+        ConditionStage<Integer, Integer> ordinary = ConditionRuntime.conditionFactory(
                 "counted", () -> {
                     int[] calls = {0};
                     return ignored -> satisfied(++calls[0]);
@@ -34,14 +34,14 @@ class ConditionSessionTest {
 
         assertEquals("counted", ConditionRuntime.description(ordinary));
         assertNull(ConditionRuntime.explanation(ordinary));
-        Function<? super Integer, ? extends ConditionEvaluation<? extends Integer>> first =
+        Function<? super Integer, ? extends ConditionAssessment<? extends Integer>> first =
                 ConditionRuntime.evaluator(ordinary);
-        Function<? super Integer, ? extends ConditionEvaluation<? extends Integer>> second =
+        Function<? super Integer, ? extends ConditionAssessment<? extends Integer>> second =
                 ConditionRuntime.evaluator(ordinary);
 
-        assertEquals(1, result(first.apply(0)));
-        assertEquals(2, result(first.apply(0)));
-        assertEquals(1, result(second.apply(0)));
+        assertEquals(1, result(first.apply(0).evaluation()));
+        assertEquals(2, result(first.apply(0).evaluation()));
+        assertEquals(1, result(second.apply(0).evaluation()));
         assertNotNull(preserving);
         assertNotNull(selected);
         assertNotNull(sequence);

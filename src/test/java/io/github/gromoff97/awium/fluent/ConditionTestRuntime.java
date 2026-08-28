@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium.fluent;
 
+import io.github.gromoff97.awium.engine.ConditionAssessment;
 import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
 import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
 import io.github.gromoff97.awium.fluent.Condition.ExpectedStage;
@@ -12,25 +13,24 @@ public final class ConditionTestRuntime {
 
     public static <S, R> ConditionEvaluation<R> evaluate(
             ResultStage<? super S, ? extends R> condition, S actual) {
-        ConditionEvaluation<? extends R> evaluation = ConditionRuntime.<S, R>evaluator(condition).apply(actual);
-        return evaluation == null ? null : evaluation.continueIfSatisfied(ConditionEvaluation::satisfied);
+        return evaluation(ConditionRuntime.<S, R>evaluator(condition).apply(actual));
     }
 
     public static <S> ConditionEvaluation<S> evaluate(PreservingStage<? super S> condition, S actual) {
-        return ConditionRuntime.<S>preservingEvaluator(condition).apply(actual);
+        return evaluation(ConditionRuntime.<S>preservingEvaluator(condition).apply(actual));
     }
 
     public static <S, T extends S> ConditionEvaluation<S> evaluate(ExpectedStage<T> condition, S actual) {
-        return ConditionRuntime.<S>expectedEvaluator(condition).apply(actual);
+        return evaluation(ConditionRuntime.<S>expectedEvaluator(condition).apply(actual));
     }
 
     public static <S, R> ConditionEvaluation<R> evaluate(NarrowingStage<R> condition, S actual) {
-        return ConditionRuntime.<S, R>narrowingEvaluator(condition).apply(actual);
+        return evaluation(ConditionRuntime.<S, R>narrowingEvaluator(condition).apply(actual));
     }
 
     public static <S, R, F extends Source<?>> ConditionEvaluation<R> evaluate(
             SelectedStage<? super S, F> condition, S actual) {
-        return ConditionRuntime.<S, R>selectedEvaluator(condition).apply(actual);
+        return evaluation(ConditionRuntime.<S, R>selectedEvaluator(condition).apply(actual));
     }
 
     public static String description(AwaitCondition condition) {
@@ -54,6 +54,13 @@ public final class ConditionTestRuntime {
             case ConditionEvaluation.AssertionUnsatisfied<?> unsatisfied -> unsatisfied.mismatch();
             default -> throw new AssertionError("evaluation is not unsatisfied: " + evaluation);
         };
+    }
+
+    private static <R> ConditionEvaluation<R> evaluation(ConditionAssessment<? extends R> assessment) {
+        if (assessment == null || assessment.evaluation() == null) {
+            return null;
+        }
+        return assessment.evaluation().continueIfSatisfied(ConditionEvaluation::satisfied);
     }
 
     private ConditionTestRuntime() {

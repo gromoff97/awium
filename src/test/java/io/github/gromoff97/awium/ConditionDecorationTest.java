@@ -3,9 +3,12 @@ package io.github.gromoff97.awium;
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.*;
 import static io.github.gromoff97.awium.fluent.Conditions.*;
 import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.explanation;
+import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedAwait;
 
 import io.github.gromoff97.awium.evaluation.*;
 import io.github.gromoff97.awium.fluent.*;
+import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -14,7 +17,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.IllegalFormatException;
+import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -22,6 +27,50 @@ class ConditionDecorationTest {
 
     @TempDir
     Path temporaryDirectory;
+
+    @Test
+    void customConditionFactoryCreatesFreshEvaluatorForEveryWait() {
+        var factories = new AtomicInteger();
+        Condition<String, String> condition = conditionFactory("first evaluation succeeds", () -> {
+            factories.incrementAndGet();
+            var evaluations = new AtomicInteger();
+            return actual -> evaluations.incrementAndGet() == 1
+                    ? satisfied(actual) : unsatisfied("evaluation was repeated");
+        });
+        var time = new FakeTime(0);
+
+        assertEquals("ready", timedAwait(() -> "ready", defaults(), time, time).until(condition));
+        assertEquals("ready", timedAwait(() -> "ready", defaults(), time, time).until(condition));
+        assertEquals(2, factories.get());
+    }
+
+    @Test
+    void customPreservingConditionParticipatesInPreservingSequences() {
+        PreservingCondition<String> custom = preserving("value is ready", actual -> actual.equals("ready")
+                ? satisfied(actual) : unsatisfied("value was not ready"));
+        var time = new FakeTime(0);
+
+        List<String> captured = timedAwait(() -> "ready", defaults(), time, time)
+                .until(captured(custom, matches(actual -> actual.equals("ready"))));
+
+        assertEquals(List.of("ready", "ready"), captured);
+    }
+
+    @Test
+    void customPreservingFactoryCreatesFreshEvaluatorForEveryWait() {
+        var factories = new AtomicInteger();
+        PreservingCondition<String> condition = preservingFactory("first evaluation succeeds", () -> {
+            factories.incrementAndGet();
+            var evaluations = new AtomicInteger();
+            return actual -> evaluations.incrementAndGet() == 1
+                    ? satisfied(actual) : unsatisfied("evaluation was repeated");
+        });
+        var time = new FakeTime(0);
+
+        assertEquals("ready", timedAwait(() -> "ready", defaults(), time, time).until(condition));
+        assertEquals("ready", timedAwait(() -> "ready", defaults(), time, time).until(condition));
+        assertEquals(2, factories.get());
+    }
 
     @Test
     void plainAndExplainedConditionsShareOneNonDecoratableStage() throws IOException {
