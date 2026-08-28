@@ -94,7 +94,7 @@ class ConditionDecorationTest {
                         condition("condition", ConditionEvaluation::satisfied).because("first").because("second");
                     }
                 }
-                """));
+                """, "because"));
     }
 
     @Test
@@ -184,5 +184,11 @@ class ConditionDecorationTest {
 
     private boolean compiles(String source) throws IOException {
         return CompilationSupport.compiles(temporaryDirectory, source);
+    }
+
+    private boolean compiles(String source, String expectedMissingMethod)
+            throws IOException {
+        return CompilationSupport.compiles(temporaryDirectory, source,
+                expectedMissingMethod);
     }
 }

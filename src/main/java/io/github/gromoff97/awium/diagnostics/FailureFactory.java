@@ -62,6 +62,7 @@ public final class FailureFactory {
         try {
             rendered = FailureMessageRenderer.render(outcome, description, explanation, reference,
                     configuration, diagnostic);
+            restoreInterrupt |= rendered.failure() instanceof InterruptedException;
         } finally {
             if (restoreInterrupt) {
                 currentThread().interrupt();

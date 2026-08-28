@@ -23,6 +23,16 @@ class CompilationContractTest {
                 import missing.Type;
                 final class Contract {}
                 """));
+        assertThrows(AssertionError.class, () -> compiles("""
+                import static io.github.gromoff97.awium.fluent.Await.await;
+                import io.github.gromoff97.awium.sources.Source;
+
+                final class Contract {
+                    void check(Source<String> source) {
+                        await(source).utnil();
+                    }
+                }
+                """));
     }
 
     @Test
@@ -610,7 +620,7 @@ class CompilationContractTest {
                             %s.because("first").because("second");
                         }
                     }
-                    """.formatted(condition)), condition);
+                    """.formatted(condition), "because"), condition);
         }
     }
 
@@ -622,17 +632,25 @@ class CompilationContractTest {
                 "CollectionConditions.single()",
                 "CollectionConditions.first()", "CollectionConditions.last()",
                 "MapConditions.singleEntry()")) {
+            String method = condition.substring(condition.lastIndexOf('.') + 1,
+                    condition.indexOf('('));
             assertFalse(compiles("""
                     import io.github.gromoff97.awium.fluent.CollectionConditions;
                     import io.github.gromoff97.awium.fluent.MapConditions;
                     final class Contract {
                         void check() { Object condition = %s; }
                     }
-                    """.formatted(condition)), condition);
+                    """.formatted(condition), method), condition);
         }
     }
 
     private boolean compiles(String source) throws IOException {
         return CompilationSupport.compiles(temporaryDirectory, source);
+    }
+
+    private boolean compiles(String source, String expectedMissingMethod)
+            throws IOException {
+        return CompilationSupport.compiles(temporaryDirectory, source,
+                expectedMissingMethod);
     }
 }

@@ -193,7 +193,7 @@ class CapturedCompilationContractTest {
                         captured(first, last).because("first").because("second");
                     }
                 }
-                """));
+                """, "because"));
     }
 
     @Test
@@ -267,5 +267,11 @@ class CapturedCompilationContractTest {
 
     private boolean compiles(String source) throws IOException {
         return CompilationSupport.compiles(temporaryDirectory, source);
+    }
+
+    private boolean compiles(String source, String expectedMissingMethod)
+            throws IOException {
+        return CompilationSupport.compiles(temporaryDirectory, source,
+                expectedMissingMethod);
     }
 }

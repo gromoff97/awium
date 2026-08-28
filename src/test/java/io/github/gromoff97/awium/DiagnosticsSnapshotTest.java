@@ -517,6 +517,29 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
+    void diagnosticRenderingInterruptionRestoresTheInterruptFlag() {
+        var interruption = new InterruptedException("diagnostics interrupted");
+        Object actual = new Object() {
+            @Override
+            public String toString() {
+                throwUnchecked(interruption);
+                return "unreachable";
+            }
+        };
+
+        try {
+            AwaitUnhandledException failure = assertThrows(AwaitUnhandledException.class,
+                    () -> complete(new LateTimeout<>(unsatisfiedAttempt(actual, "not ready", 1, 2)),
+                            "condition", null, config(1, 2, 0)));
+
+            assertSame(interruption, failure.getCause());
+            assertTrue(currentThread().isInterrupted());
+        } finally {
+            interrupted();
+        }
+    }
+
+    @Test
     void expectedOperandRenderingFailureKeepsItsOriginalCause() {
         var time = new FakeTime(0);
         var cause = new IllegalArgumentException("expected toString failed");
@@ -764,6 +787,12 @@ class DiagnosticsSnapshotTest {
                     () -> "missing diagnostic fragment: " + fragment
                             + "\n" + failure.getMessage());
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <Failure extends Throwable> void throwUnchecked(Throwable failure)
+            throws Failure {
+        throw (Failure) failure;
     }
 
     private static final class ThrowingValue {
