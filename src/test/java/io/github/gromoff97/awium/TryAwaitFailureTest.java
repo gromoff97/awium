@@ -11,14 +11,14 @@ import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
-import static io.github.gromoff97.awium.await.TryAwait.tryAwait;
+import static io.github.gromoff97.awium.await.Await.tryAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.uncontrolled;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.asserted;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
-import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.isNotNull;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.asserted;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.isNotNull;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;

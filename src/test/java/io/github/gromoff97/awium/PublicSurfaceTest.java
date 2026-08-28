@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
+import io.github.gromoff97.awium.await.Await;
 import io.github.gromoff97.awium.await.AwaitAttempt;
 import io.github.gromoff97.awium.await.AwaitResult;
 import io.github.gromoff97.awium.sources.Source;
@@ -85,8 +86,10 @@ class PublicSurfaceTest {
 
     private static void assertNoExcludedApiSurface(Collection<Class<?>> types) {
         Set<String> forbiddenNames = Set.of("map", "flatMap", "not", "allOf",
-                "anyOf", "execute", "start", "result",
+                "anyOf", "execute", "start", "result", "caught", "tryAwait",
                 "singleKey", "singleValue",
+                "ObjectCondition", "ComparableCondition", "CollectionCondition",
+                "MapCondition", "OptionalCondition", "StringCondition",
                 "ExecutableSource", "FutureSource", "IterableSource");
 
         for (Class<?> type : types) {
@@ -142,7 +145,8 @@ class PublicSurfaceTest {
     }
 
     private static boolean explicitlyAllowedForbiddenMethod(Class<?> owner, Method method) {
-        return method.getName().equals("result")
+        return method.getName().equals("tryAwait") && owner == Await.class
+                || method.getName().equals("result")
                 && (owner == Evaluation.class
                 || owner == AwaitResult.Satisfied.class
                 || owner == AwaitAttempt.Outcome.Satisfied.class);

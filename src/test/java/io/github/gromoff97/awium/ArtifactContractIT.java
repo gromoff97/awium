@@ -35,15 +35,14 @@ class ArtifactContractIT {
             throws Exception {
         assertTrue(compiles(directory, """
                 import static io.github.gromoff97.awium.await.Await.await;
-                import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
-                import static io.github.gromoff97.awium.conditioning.conditions.ComparableCondition.*;
-                import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.*;
-                import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
-                import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
-                import static io.github.gromoff97.awium.conditioning.conditions.StringCondition.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.MapConditions.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.*;
+                import static io.github.gromoff97.awium.conditioning.conditions.StringConditions.*;
 
-                import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
-                import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
+                import io.github.gromoff97.awium.conditioning.conditions.CollectionConditions;
+                import io.github.gromoff97.awium.conditioning.conditions.MapConditions;
 
                 import java.util.List;
                 import java.util.Map;
@@ -57,13 +56,13 @@ class ArtifactContractIT {
                         return await(this::loadOptional).until(present);
                     }
                     List<String> collection() {
-                        return await(this::loadCollection).until(CollectionCondition.nonEmpty);
+                        return await(this::loadCollection).until(CollectionConditions.nonEmpty);
                     }
                     String single() {
                         return await(this::loadCollection).until(single);
                     }
                     Map<String, Integer> map() {
-                        return await(this::loadMap).until(MapCondition.nonEmpty);
+                        return await(this::loadMap).until(MapConditions.nonEmpty);
                     }
                     Map.Entry<String, Integer> singleEntry() {
                         return await(this::loadMap).until(singleEntry);

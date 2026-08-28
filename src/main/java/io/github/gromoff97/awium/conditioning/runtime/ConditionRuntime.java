@@ -10,7 +10,7 @@ import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSeque
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
-import io.github.gromoff97.awium.conditioning.conditions.ObjectCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Conditions;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.util.Arrays;
@@ -56,51 +56,51 @@ public final class ConditionRuntime {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <S> Condition<S, List<S>> caught(Predicate<? super S> first,
+    public static <S> Condition<S, List<S>> captured(Predicate<? super S> first,
             Predicate<? super S> second, Predicate<? super S>... rest) {
-        return caughtPreserving(stages("predicate", first, second, rest).stream()
-                .map(predicate -> ObjectCondition.<S>matches(predicate)).toList());
+        return capturedPreserving(stages("predicate", first, second, rest).stream()
+                .map(predicate -> Conditions.<S>matches(predicate)).toList());
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <S> Condition<S, List<S>> caught(PreservingStage<? super S> first,
+    public static <S> Condition<S, List<S>> captured(PreservingStage<? super S> first,
             PreservingStage<? super S> second, PreservingStage<? super S>... rest) {
-        return caughtPreserving(stages("condition", first, second, rest));
+        return capturedPreserving(stages("condition", first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <S, R> Condition<S, List<R>> caught(ResultStage<S, R> first,
+    public static <S, R> Condition<S, List<R>> captured(ResultStage<S, R> first,
             ResultStage<S, R> second, ResultStage<S, R>... rest) {
         List<ResultStage<S, R>> stages = stages("condition", first, second, rest);
         return condition("conditions are satisfied in order", () ->
-                new CaughtEvaluator<>(stages.stream()
-                        .map(stage -> caughtStage(stage, stage.newEvaluator())).toList()));
+                new CapturedEvaluator<>(stages.stream()
+                        .map(stage -> capturedStage(stage, stage.newEvaluator())).toList()));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <S, F extends Source<?>> SelectedSequenceCondition<S, F> caught(SelectedStage<? super S, F> first,
+    public static <S, F extends Source<?>> SelectedSequenceCondition<S, F> captured(SelectedStage<? super S, F> first,
             SelectedStage<? super S, F> second,
             SelectedStage<? super S, F>... rest) {
         List<SelectedStage<? super S, F>> stages =
                 stages("condition", first, second, rest);
         return new RuntimeSelectedSequenceCondition<>("conditions are satisfied in order", null,
-                () -> new CaughtEvaluator<>(stages.stream()
-                        .map(stage -> caughtStage(stage, stage.newEvaluator())).toList()));
+                () -> new CapturedEvaluator<>(stages.stream()
+                        .map(stage -> capturedStage(stage, stage.newEvaluator())).toList()));
     }
 
-    private static <S> Condition<S, List<S>> caughtPreserving(List<? extends PreservingStage<? super S>> stages) {
+    private static <S> Condition<S, List<S>> capturedPreserving(List<? extends PreservingStage<? super S>> stages) {
         return condition("conditions are satisfied in order", () ->
-                new CaughtEvaluator<>(stages.stream()
-                        .map(stage -> caughtStage(stage,
+                new CapturedEvaluator<>(stages.stream()
+                        .map(stage -> capturedStage(stage,
                                 ConditionRuntime.<S>preservingEvaluator(stage))).toList()));
     }
 
-    private static <S, R> CaughtEvaluator.Stage<S, R> caughtStage(ConditionStage<?, ?> stage,
+    private static <S, R> CapturedEvaluator.Stage<S, R> capturedStage(ConditionStage<?, ?> stage,
             Function<? super S, ? extends Evaluation<? extends R>> evaluator) {
-        return new CaughtEvaluator.Stage<>(evaluator, stage.description(), stage.explanation());
+        return new CapturedEvaluator.Stage<>(evaluator, stage.description(), stage.explanation());
     }
 
     private static <T> List<T> stages(String name, T first, T second, T[] rest) {

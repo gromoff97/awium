@@ -4,8 +4,8 @@ import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
-import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
-import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
+import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.*;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;

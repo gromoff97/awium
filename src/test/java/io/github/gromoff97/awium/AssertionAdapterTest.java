@@ -2,7 +2,7 @@ package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
@@ -12,6 +12,7 @@ import static java.time.Duration.ofNanos;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
+import io.github.gromoff97.awium.conditioning.conditions.Conditions;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.sources.Source;
 
@@ -31,7 +32,7 @@ class AssertionAdapterTest {
     @Test
     void namedConditionDelegatesOnceAndSuppliesItsDescription() throws Exception {
         var invocations = new int[1];
-        var condition = Condition.<String, Long>condition(
+        var condition = Conditions.<String, Long>condition(
                 "payment id", value -> {
                     invocations[0]++;
                     return satisfied(parseLong(value));
@@ -61,7 +62,7 @@ class AssertionAdapterTest {
                 () -> condition("payment", null))
                 .getMessage().contains("evaluation"));
 
-        var condition = Condition.<String, String>condition(
+        var condition = Conditions.<String, String>condition(
                 "nullable evaluation", value -> null);
         assertNull(evaluate(condition, "42"));
     }
@@ -70,7 +71,7 @@ class AssertionAdapterTest {
     void assertedWithoutResultReturnsTheExactActualAndInvokesItsCallbackOnce() throws Exception {
         var invocations = new int[1];
         var actual = new String("42");
-        var condition = Condition.<String>asserted(value -> {
+        var condition = Conditions.<String>asserted(value -> {
             invocations[0]++;
         });
 
@@ -85,7 +86,7 @@ class AssertionAdapterTest {
     @Test
     void yieldsMayReturnNullAndInvokesItsCallbackOnce() throws Exception {
         var invocations = new int[1];
-        var condition = Condition.<String, String>yields(value -> {
+        var condition = Conditions.<String, String>yields(value -> {
             invocations[0]++;
             return null;
         });
@@ -112,7 +113,7 @@ class AssertionAdapterTest {
                 (Source<String>) () -> "42",
                 defaults().withEvery(ofNanos(1))
                         .withUpTo(ofNanos(10)), time, time).until(
-                        Condition.<String, Long>yields(value -> {
+                        Conditions.<String, Long>yields(value -> {
                             invocations[0]++;
                             throw assertion;
                         }).because("payment selection")));
@@ -126,7 +127,7 @@ class AssertionAdapterTest {
     @Test
     void runtimeExceptionEscapesYieldsUnchanged() {
         var failure = new RuntimeException("runtime");
-        var condition = Condition.<String, Long>yields(value -> {
+        var condition = Conditions.<String, Long>yields(value -> {
             throw failure;
         });
 
@@ -138,7 +139,7 @@ class AssertionAdapterTest {
     void nonAssertionErrorEscapesYieldsUnchanged() {
         var failure = new LinkageError("error");
 
-        var condition = Condition.<String, Long>yields(value -> {
+        var condition = Conditions.<String, Long>yields(value -> {
             throw failure;
         });
 

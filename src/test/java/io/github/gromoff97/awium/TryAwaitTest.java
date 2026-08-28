@@ -11,11 +11,11 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
-import static io.github.gromoff97.awium.await.TryAwait.tryAwait;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.yields;
-import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.isNotNull;
-import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.isNull;
-import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.present;
+import static io.github.gromoff97.awium.await.Await.tryAwait;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.yields;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.isNotNull;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.isNull;
+import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.present;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;

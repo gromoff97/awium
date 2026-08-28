@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.*;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -25,7 +25,7 @@ class ConditionDecorationTest {
     @Test
     void plainAndExplainedConditionsShareOneNonDecoratableStage() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
                 import io.github.gromoff97.awium.conditioning.Evaluation;
                 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
                 final class Contract {
@@ -37,7 +37,7 @@ class ConditionDecorationTest {
                 }
                 """));
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+                import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
                 import io.github.gromoff97.awium.conditioning.Evaluation;
                 final class Contract {
                     void check() {
@@ -52,7 +52,7 @@ class ConditionDecorationTest {
         Condition<Object, Object> condition = condition(
                 "custom condition", Evaluation::satisfied);
         var preserving = asserted(actual -> {});
-        var selected = OptionalCondition.present;
+        var selected = OptionalConditions.present;
 
         assertEquals("the value must be ready",
                 condition.because("the value must be ready").explanation());
@@ -63,13 +63,13 @@ class ConditionDecorationTest {
         assertEquals("selected value",
                 selected.because("selected %s", "value").explanation());
         assertEquals("collection value",
-                CollectionCondition.nonEmpty.because("collection %s", "value").explanation());
+                CollectionConditions.nonEmpty.because("collection %s", "value").explanation());
         assertEquals("single element",
-                CollectionCondition.single.because("single %s", "element").explanation());
+                CollectionConditions.single.because("single %s", "element").explanation());
         assertEquals("map value",
-                MapCondition.nonEmpty.because("map %s", "value").explanation());
+                MapConditions.nonEmpty.because("map %s", "value").explanation());
         assertEquals("single entry",
-                MapCondition.singleEntry.because("single %s", "entry").explanation());
+                MapConditions.singleEntry.because("single %s", "entry").explanation());
     }
 
     @Test

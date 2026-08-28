@@ -15,13 +15,13 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preserve;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.equal;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
 import static java.util.Objects.requireNonNull;
 
-public final class OptionalCondition {
+public final class OptionalConditions {
 
     public static final SelectedCondition<Optional<?>, OptionalSource<?>> present =
-            ConditionRuntime.selected("optional is present", OptionalCondition::present);
+            ConditionRuntime.selected("optional is present", OptionalConditions::present);
     public static final Condition<Optional<?>, Void> absent = condition("optional is absent", actual -> {
         if (actual == null) {
             return unsatisfied("optional was null");
@@ -29,7 +29,7 @@ public final class OptionalCondition {
         return actual.isEmpty() ? satisfied(null) : unsatisfied("optional was present");
     });
 
-    private OptionalCondition() {
+    private OptionalConditions() {
         throw new AssertionError("Utility class");
     }
 

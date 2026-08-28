@@ -18,17 +18,17 @@ import static io.github.gromoff97.awium.await.AwaitTestAccess.timedOptionalAwait
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.caught;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
-import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.matches;
-import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.present;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.matches;
+import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.present;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class CaughtConditionTest {
+class CapturedConditionTest {
 
     private record Payment(Status status, String detail) {}
 
@@ -42,7 +42,7 @@ class CaughtConditionTest {
         List<Integer> result = timedAwait(() -> {
             calls[0]++;
             return 1;
-        }, config(1, 10, 0), time, time).until(caught(
+        }, config(1, 10, 0), time, time).until(captured(
                 value -> value == 1,
                 value -> value == 1,
                 value -> value == 1));
@@ -60,7 +60,7 @@ class CaughtConditionTest {
             time.advanceNanos(2);
             return "observed";
         }, config(1, 2, 0), time, time).until(
-                caught(value -> true, value -> true));
+                captured(value -> true, value -> true));
         var outcome = assertInstanceOf(AwaitAttempt.Outcome.Unsatisfied.class,
                 result.attempts().getFirst().outcome());
 
@@ -77,7 +77,7 @@ class CaughtConditionTest {
         int[] next = {0};
 
         List<Payment> result = timedAwait(() -> observations[next[0]++],
-                config(1, 10, 0), time, time).until(caught(
+                config(1, 10, 0), time, time).until(captured(
                 payment -> payment.status() == Status.CREATED,
                 payment -> payment.status() == Status.PENDING,
                 payment -> payment.status() == Status.FINISHED));
@@ -97,7 +97,7 @@ class CaughtConditionTest {
         int[] finalStageCalls = {0};
 
         List<String> result = timedAwait(() -> observations[sourceCalls[0]++],
-                config(1, 10, 2), time, time).until(caught(
+                config(1, 10, 2), time, time).until(captured(
                 value -> {
                     earlyStageCalls[0]++;
                     return value == early;
@@ -127,7 +127,7 @@ class CaughtConditionTest {
         int[] sourceCalls = {0};
 
         List<String> result = timedAwait(() -> observations[sourceCalls[0]++],
-                config(1, 10, 2), time, time).until(caught(
+                config(1, 10, 2), time, time).until(captured(
                 value -> value == early,
                 value -> value != early));
 
@@ -148,7 +148,7 @@ class CaughtConditionTest {
 
         assertThrows(AwaitPersistenceException.class, () -> timedAwait(
                 () -> observations[sourceCalls[0]++], config(1, 10, 10), time, time)
-                .until(caught(value -> value == early,
+                .until(captured(value -> value == early,
                         value -> value != rejectedFinal)));
 
         assertEquals(3, sourceCalls[0]);
@@ -164,7 +164,7 @@ class CaughtConditionTest {
 
         assertThrows(AwaitTimeoutException.class, () -> timedAwait(() ->
                 calls[0]++ == 0 ? created : finished,
-                config(1, 3, 0), time, time).until(caught(
+                config(1, 3, 0), time, time).until(captured(
                 payment -> payment.status() == Status.CREATED,
                 payment -> payment.status() == Status.PENDING,
                 payment -> payment.status() == Status.FINISHED)));
@@ -179,7 +179,7 @@ class CaughtConditionTest {
         int[] next = {0};
 
         List<Integer> result = timedAwait(() -> observations[next[0]++],
-                config(1, 10, 0), time, time).until(caught(
+                config(1, 10, 0), time, time).until(captured(
                 condition("length 1", value -> value.length() == 1
                         ? satisfied(value.length()) : unsatisfied("length was not 1")),
                 condition("length 2", value -> value.length() == 2
@@ -195,7 +195,7 @@ class CaughtConditionTest {
         int[] next = {0};
 
         List<String> result = timedAwait(() -> observations[next[0]++],
-                config(1, 10, 0), time, time).until(caught(
+                config(1, 10, 0), time, time).until(captured(
                 matches((String value) -> value.startsWith("a")),
                 matches((String value) -> value.endsWith("a")).because("final state")));
 
@@ -210,21 +210,21 @@ class CaughtConditionTest {
                 value -> satisfied(value.length()));
 
         assertThrows(NullPointerException.class,
-                () -> caught((Predicate<String>) null, predicate));
+                () -> captured((Predicate<String>) null, predicate));
         assertThrows(NullPointerException.class,
-                () -> caught(predicate, (Predicate<String>) null));
+                () -> captured(predicate, (Predicate<String>) null));
         assertThrows(NullPointerException.class,
-                () -> caught(predicate, predicate, (Predicate<String>) null));
+                () -> captured(predicate, predicate, (Predicate<String>) null));
         assertThrows(NullPointerException.class,
-                () -> caught(predicate, predicate, (Predicate<String>[]) null));
+                () -> captured(predicate, predicate, (Predicate<String>[]) null));
         assertThrows(NullPointerException.class,
-                () -> caught((PreservingStage<String>) null, preserving));
+                () -> captured((PreservingStage<String>) null, preserving));
         assertThrows(NullPointerException.class,
-                () -> caught(preserving, preserving, (PreservingStage<String>) null));
+                () -> captured(preserving, preserving, (PreservingStage<String>) null));
         assertThrows(NullPointerException.class,
-                () -> caught((ResultStage<String, Integer>) null, transforming));
+                () -> captured((ResultStage<String, Integer>) null, transforming));
         assertThrows(NullPointerException.class,
-                () -> caught(transforming, transforming,
+                () -> captured(transforming, transforming,
                         (ResultStage<String, Integer>) null));
     }
 
@@ -233,7 +233,7 @@ class CaughtConditionTest {
         var time = new FakeTime(0);
 
         List<String> result = timedAwait(() -> "observed", config(1, 10, 0),
-                time, time).until(caught(
+                time, time).until(captured(
                 condition("first null", value -> satisfied((String) null)),
                 condition("second null", value -> satisfied((String) null))));
 
@@ -249,7 +249,7 @@ class CaughtConditionTest {
         Predicate<Integer> matchesOne = value -> value == 1;
         @SuppressWarnings("unchecked")
         Predicate<Integer>[] rest = (Predicate<Integer>[]) new Predicate<?>[]{matchesOne};
-        Condition<Integer, List<Integer>> sequence = caught(
+        Condition<Integer, List<Integer>> sequence = captured(
                 matchesOne, matchesOne, rest);
         rest[0] = value -> false;
 
@@ -267,14 +267,14 @@ class CaughtConditionTest {
         int[] next = {0};
 
         List<String> result = timedOptionalAwait(() -> observations.get(next[0]++),
-                config(1, 10, 0), time, time).until(caught(present, present));
+                config(1, 10, 0), time, time).until(captured(present, present));
 
         assertEquals(List.of("first", "second"), result);
     }
 
     @Test
     void reusesOneSequenceDefinitionAcrossExecutions() {
-        var lifecycle = caught(
+        var lifecycle = captured(
                 (Payment value) -> value.status() == Status.CREATED,
                 value -> value.status() == Status.FINISHED);
         var created = new Payment(Status.CREATED, "accepted");
@@ -289,7 +289,7 @@ class CaughtConditionTest {
 
     @Test
     void timeoutDoesNotAdvanceTheNextExecution() {
-        var lifecycle = caught(
+        var lifecycle = captured(
                 (Payment value) -> value.status() == Status.CREATED,
                 value -> value.status() == Status.FINISHED);
         var created = new Payment(Status.CREATED, "accepted");

@@ -3,6 +3,7 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
+import io.github.gromoff97.awium.conditioning.conditions.Conditions;
 import io.github.gromoff97.awium.await.AwaitAttempt;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
@@ -22,8 +23,8 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatis
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.uncontrolled;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.caught;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
 import static io.github.gromoff97.awium.engine.WaitOutcome.*;
 import static io.github.gromoff97.awium.await.AwaitAttempt.Phase.ACQUISITION;
 import static java.lang.Thread.currentThread;
@@ -45,7 +46,7 @@ class DiagnosticsSnapshotTest {
     private static final long MILLISECOND = 1_000_000L;
 
     @Test
-    void caughtAcquisitionTimeoutRendersTheCurrentStage() {
+    void capturedAcquisitionTimeoutRendersTheCurrentStage() {
         var time = new FakeTime(0);
 
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
@@ -61,7 +62,7 @@ class DiagnosticsSnapshotTest {
                 Attempt: 2
                     Actual: created
 
-                Sequence (caught 1 of 3):
+                Sequence (captured 1 of 3):
                     Expectation: payment status is pending
                     Importance: processing must begin before completion
                     Mismatch: payment status was created
@@ -74,7 +75,7 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void caughtPersistenceFailureKeepsTheFinalStage() {
+    void capturedPersistenceFailureKeepsTheFinalStage() {
         var time = new FakeTime(0);
         String[] statuses = {"created", "pending", "completed", "created"};
         int[] next = {0};
@@ -94,7 +95,7 @@ class DiagnosticsSnapshotTest {
                 Attempt: 4
                     Actual: created
 
-                Sequence (caught 2 of 3):
+                Sequence (captured 2 of 3):
                     Expectation: payment status is completed
                     Importance: completion must remain stable
                     Mismatch: payment status was created
@@ -108,13 +109,13 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void caughtNestedAssertionRetainsCauseAndStack() {
+    void capturedNestedAssertionRetainsCauseAndStack() {
         var time = new FakeTime(0);
         var assertion = new AssertionError("pending assertion failed");
         var frame = new StackTraceElement("Payments", "verifyPending",
                 "Payments.java", 42);
         assertion.setStackTrace(new StackTraceElement[]{frame});
-        ResultStage<String, String> assertedPending = Condition.<String, String>condition(
+        ResultStage<String, String> assertedPending = Conditions.<String, String>condition(
                 "payment status is pending", value -> assertionUnsatisfied(
                         "payment status was created", assertion))
                 .because("processing must begin before completion");
@@ -132,7 +133,7 @@ class DiagnosticsSnapshotTest {
                 Attempt: 2
                     Actual: created
 
-                Sequence (caught 1 of 3):
+                Sequence (captured 1 of 3):
                     Expectation: payment status is pending
                     Importance: processing must begin before completion
                     Mismatch: payment status was created
@@ -150,10 +151,10 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void caughtNestedUncontrolledRetainsCauseAndStage() {
+    void capturedNestedUncontrolledRetainsCauseAndStage() {
         var time = new FakeTime(0);
         var cause = new IllegalStateException("status callback failed");
-        ResultStage<String, String> brokenPending = Condition.<String, String>condition(
+        ResultStage<String, String> brokenPending = Conditions.<String, String>condition(
                 "payment status is pending", value -> {
                     throw cause;
                 }).because("processing must begin before completion");
@@ -172,7 +173,7 @@ class DiagnosticsSnapshotTest {
                 Attempt: 2
                     Actual: created
 
-                Sequence (caught 1 of 3):
+                Sequence (captured 1 of 3):
                     Expectation: payment status is pending
                     Importance: processing must begin before completion
 
@@ -386,7 +387,7 @@ class DiagnosticsSnapshotTest {
     @Test
     void explicitUncontrolledRetainsInterruptFlagAfterDiagnosticsClearIt() {
         var cause = new IllegalStateException("condition failed");
-        Condition<Object, Object> condition = Condition.condition("condition", actual -> {
+        Condition<Object, Object> condition = Conditions.condition("condition", actual -> {
             currentThread().interrupt();
             return uncontrolled(cause);
         });
@@ -616,7 +617,7 @@ class DiagnosticsSnapshotTest {
     private static ResultStage<String, java.util.List<String>> lifecycle(
             ResultStage<String, String> pending,
             ResultStage<String, String> completed) {
-        return caught(status("created", "payment status is created", null),
+        return captured(status("created", "payment status is created", null),
                 pending, completed).because("payment must complete its lifecycle");
     }
 

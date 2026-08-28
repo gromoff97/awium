@@ -19,8 +19,8 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatis
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.caught;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -101,15 +101,15 @@ class TryAwaitHistoryTest {
     }
 
     @Test
-    void caughtStageTransitionsAreNotCompressedWhenDiagnosticsMatch() {
+    void capturedStageTransitionsAreNotCompressedWhenDiagnosticsMatch() {
         var time = new FakeTime(0);
         var actual = new Object();
-        var nested = caught(
+        var nested = captured(
                 condition("inner stage 1", value -> satisfied(value)),
                 condition("inner stage 2", value -> satisfied(value)));
 
         var result = timedTryAwait(() -> actual, config(1, 10, 0), time, time)
-                .until(caught(
+                .until(captured(
                         condition("conditions are satisfied in order",
                                 value -> satisfied(List.of(value))),
                         nested));

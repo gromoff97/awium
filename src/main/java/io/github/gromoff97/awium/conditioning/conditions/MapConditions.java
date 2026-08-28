@@ -25,13 +25,13 @@ import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.ex
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.sameDistinctElements;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
 import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.selected;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("varargs")
-public final class MapCondition {
+public final class MapConditions {
 
     public static final SelectedCondition<Map<?, ?>, MapSource<?>> singleEntry = selected("map has a single entry", actual -> {
         if (actual == null) {
@@ -46,7 +46,7 @@ public final class MapCondition {
     public static final PreservingCondition<Map<?, ?>> nonEmpty = sized(0, size -> size > 0,
             "map is not empty");
 
-    private MapCondition() {
+    private MapConditions() {
         throw new AssertionError("Utility class");
     }
 
@@ -163,7 +163,7 @@ public final class MapCondition {
 
     public static <K, V> Condition<Map<K, V>, V> valueFor(K key,
             PreservingStage<? super V> nested) {
-        return MapCondition.<K, V, V>valueFor(key, preserve(nested));
+        return MapConditions.<K, V, V>valueFor(key, preserve(nested));
     }
 
     public static <K, V> Condition<Map<K, V>, Map.Entry<K, V>> entryFor(K key) {
@@ -253,14 +253,14 @@ public final class MapCondition {
         Map<? extends K, ? extends V> entries = nonEmpty(expected, "expected entries");
         return preserving("map contains all expected entries", "map did not contain all expected entries",
                 actual -> containsAll(actual.entrySet(), entries.entrySet(),
-                        MapCondition::entryMatches));
+                        MapConditions::entryMatches));
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainAllEntriesOf(Map<? extends K, ? extends V> unexpected) {
         Map<? extends K, ? extends V> entries = nonEmpty(unexpected, "expected entries");
         return preserving("map does not contain all expected entries", "map contained all expected entries",
                 actual -> !containsAll(actual.entrySet(), entries.entrySet(),
-                        MapCondition::entryMatches));
+                        MapConditions::entryMatches));
     }
 
     public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsAnyEntriesOf(Map<? extends K, ? extends V> expected) {
@@ -322,7 +322,7 @@ public final class MapCondition {
 
     private static boolean exactContent(Map<?, ?> actual, Map<?, ?> expected) {
         return actual.size() == expected.size()
-                && exactly(actual.entrySet().iterator(), expected.entrySet(), MapCondition::entryMatches);
+                && exactly(actual.entrySet().iterator(), expected.entrySet(), MapConditions::entryMatches);
     }
 
     private static boolean entryMatches(Map.Entry<?, ?> actual, Map.Entry<?, ?> expected) {

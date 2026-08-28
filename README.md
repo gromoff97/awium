@@ -1,16 +1,13 @@
 # Awium
 
-Awium is a Java 21 await-and-assert library with no compile or runtime
-dependencies. It polls a checked source in the calling thread and returns the
-natural result from the same successful observation.
+Awium is a zero-dependency Java 21 library that waits for a condition in the
+calling thread and returns the result from the same successful observation.
 
 ```java
 import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.present;
+import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.present;
 
-import java.time.Duration;
-
-Payment payment = await(paymentRepository::findById).every(Duration.ofMillis(100)).upTo(Duration.ofSeconds(10)).persisting(Duration.ofSeconds(5)).until(
+Payment payment = await(() -> paymentRepository.findById(order.paymentId())).until(
         present.because("Checkout cannot continue without the payment"));
 ```
 
@@ -22,220 +19,238 @@ dependencies {
 }
 ```
 
-The library requires Java 21. Its published compile and runtime dependency
-graphs are empty; JUnit and OpenRewrite are used only to test Awium itself.
+Awium has no compile or runtime dependencies. JUnit and OpenRewrite are used
+only to test the library itself.
 
-Examples below assume:
+## The four condition forms
 
-```java
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
-import static io.github.gromoff97.awium.conditioning.conditions.ComparableCondition.*;
-import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.*;
-import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
-import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
-import static io.github.gromoff97.awium.conditioning.conditions.StringCondition.*;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
+The condition supplied to `until(...)` determines both success and the
+terminal result type.
 
-import io.github.gromoff97.awium.conditioning.Evaluation;
-import io.github.gromoff97.awium.sources.Source.OptionalSource;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-```
+### Preserve the observed value
 
-## Sources and timing
-
-`await(...)` accepts a repeatedly invokable source, never a direct value.
-Concrete-return lambdas and method references normally select the right
-category. The checked-exception-capable `Source<T>`, `Source.OptionalSource<T>`,
-`Source.CollectionSource<C>`, and `Source.MapSource<M>` interfaces are needed only to type an
-otherwise ambiguous source explicitly:
+Most built-in conditions return the exact object obtained from the source:
 
 ```java
-OptionalSource<Payment> source = () -> null;
-await(source).until(absent);
-```
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.equalTo;
 
-`every`, `upTo`, and `persisting` are optional and may be called in any order or
-repeated. Each call returns a new immutable stage; the last value supplied for a
-setting is used by `until(...)`. Defaults are:
-
-- `every`: 100 milliseconds
-- `upTo`: 10 seconds
-- `persisting`: zero (disabled)
-
-Each duration is validated when supplied. The final `every < upTo` relationship
-is validated by `until(...)` before polling, so a temporarily conflicting
-intermediate configuration may be repaired by a later call.
-
-The first observation is immediate. `every` is a fixed delay from the end of
-one observation to the start of the next. `upTo` limits acquisition only. Once
-the condition first succeeds, a configured `persisting` period may extend the
-total call beyond `upTo`; success then returns the final satisfied boundary
-observation. A stability mismatch fails immediately instead of restarting
-acquisition.
-
-`until(...)` starts the wait. The source runs once per observation, and success
-never invokes it again just to obtain the return value. A retained stage may be
-used for multiple sequential waits; each call gets fresh timing and attempt
-state while retaining the caller-owned source and condition objects.
-
-## Result typing and conditions
-
-The condition determines the terminal result type:
-
-- preserving conditions such as `equalTo`, `nonEmpty`, and `containsEntry`
-  return the exact observed source value;
-- `single` and `singleEntry` are fields, so no parentheses are needed;
-  they return the sole collection element or map entry with its inferred type;
-- `present` returns the contained `T` from `Optional<T>`;
-- custom `Condition<S, R>` instances return their selected `R`;
-- `isNull` and `absent` return `Void` and are normally used as statements.
-
-```java
 Payment payment = await(paymentRepository::load).until(equalTo(expectedPayment));
-
-Receipt receipt = await(paymentRepository::load).until(condition("payment has a receipt", payment ->
-        payment.receipt() == null
-                ? Evaluation.unsatisfied("receipt was absent")
-                : Evaluation.satisfied(payment.receipt())));
 ```
 
-Every raw condition form supports one eager `because(...)` explanation. It is
-included in terminal diagnostics without changing evaluation or result typing.
-`because` states why the business requires the condition; it should not merely
-repeat what the condition checks:
+Collection, map, string, and comparable conditions preserve their source in
+the same way.
+
+### Select a value
+
+Selection conditions return a value contained in the observation:
 
 ```java
-// Avoid: repeats nonEmpty.
-nonEmpty.because("The collection must not be empty");
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.single;
+import static io.github.gromoff97.awium.conditioning.conditions.MapConditions.singleEntry;
+import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.present;
 
-// Prefer: states the business consequence.
-nonEmpty.because("Settlement requires at least one eligible payment");
-
-await(paymentRepository::load).until(equalTo(expectedPayment).because(
-        "Refund processing requires payment %s in the replica", paymentId));
+Payment payment = await(paymentRepository::find).until(present);
+Payment onlyPayment = await(paymentRepository::findAll).until(single);
+Map.Entry<String, Payment> entry = await(paymentRepository::index).until(singleEntry);
 ```
 
-Sources may throw checked exceptions. Public callbacks and predicates use JDK
-functional interfaces, so callers must handle or convert checked callback
-failures themselves. `asserted(...)` preserves the observed source and treats
-`AssertionError` as unsatisfied so polling continues.
-`yields(...)` selects its callback result; an `AssertionError` from it is an
-uncontrolled condition failure and stops polling immediately:
+`present`, `single`, `first`, `last`, and `singleEntry` are fields, so they do
+not need parentheses. `isNull` and `absent` return `Void` and are normally used
+as statements.
+
+### Assert or transform
+
+`asserted(...)` preserves the observed value. An `AssertionError` means that
+the condition is currently unsatisfied, so polling continues:
 
 ```java
-Payment payment = await(paymentRepository::loadChecked).until(asserted(actual -> {
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.asserted;
+
+Payment payment = await(paymentRepository::load).until(asserted(actual -> {
     if (!actual.isComplete()) {
         throw new AssertionError("payment was not complete");
     }
 }));
-
-Receipt receipt = await(paymentRepository::loadChecked).until(yields(Payment::receipt));
 ```
 
-Other unchecked callback failures also stop immediately and preserve the
-original cause.
-
-## Ordered capture
-
-`caught(...)` captures at least two stages in strict order. It evaluates only
-the current stage on each poll, captures at most one result, and returns the
-captured results as a list:
+`yields(...)` returns the callback result instead:
 
 ```java
-List<Payment> lifecycle = await(paymentRepository::load).until(caught(
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.yields;
+
+Receipt receipt = await(paymentRepository::load).until(yields(Payment::receipt));
+```
+
+Public callbacks use JDK functional interfaces. Callers must handle or convert
+checked callback exceptions themselves. Unchecked callback failures are
+uncontrolled failures and stop polling immediately.
+
+### Capture ordered states
+
+`captured(...)` accepts at least two predicates or compatible conditions. It
+evaluates one stage at a time and returns one captured result per stage:
+
+```java
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
+
+List<Payment> lifecycle = await(paymentRepository::load).until(captured(
         payment -> payment.status() == CREATED,
+        payment -> payment.status() == PENDING,
         payment -> payment.status() == FINISHED));
 ```
 
-With `persisting(...)`, only the final stage is re-evaluated after acquisition;
-earlier captures remain unchanged. Predicate stages infer their parameter type
-without annotations. When `matches(...)` is chained immediately to
-`because(...)`, type its generic lambda parameter explicitly:
+With `persisting(...)`, only the final stage is re-evaluated. Earlier captured
+values remain unchanged.
+
+## Timing
+
+`every`, `upTo`, and `persisting` are optional, accept `Duration`, may appear in
+any order, and may be repeated. The last supplied value wins:
+
+```java
+Payment payment = await(source).every(POLL_INTERVAL).upTo(TIMEOUT)
+        .persisting(STABILITY).until(present);
+```
+
+Defaults are:
+
+- `every`: 100 milliseconds
+- `upTo`: 10 seconds
+- `persisting`: zero, which disables persistence checking
+
+The first observation starts immediately. `every` is the delay from the end of
+one observation to the start of the next. `upTo` limits acquisition: an
+observation may start at or before its deadline and finish afterwards. Once the
+condition first succeeds, `persisting` may extend the total call beyond
+`upTo`. Any persistence mismatch fails immediately.
+
+Each duration is validated when supplied. The final `every < upTo`
+relationship is validated by `until(...)` before polling.
+
+## Business importance
+
+Every raw condition supports one `because(...)`. It adds diagnostic business
+importance without changing evaluation or result typing:
+
+```java
+// Avoid: repeats the condition.
+nonEmpty.because("The collection must not be empty");
+
+// Prefer: explains the business consequence.
+nonEmpty.because("Settlement requires at least one eligible payment");
+```
+
+The formatting overload is eager and uses `Locale.ROOT`:
+
+```java
+await(paymentRepository::load).until(equalTo(expectedPayment).because(
+        "Refund processing requires payment %s in the replica", paymentId));
+```
+
+Java does not propagate a target type through a chained generic factory call.
+When `matches(...)` is followed immediately by `because(...)`, declare the
+lambda parameter type:
 
 ```java
 var finished = matches((Payment payment) -> payment.status() == FINISHED).because(
         "Settlement requires a finished payment");
 ```
 
-## Built-in condition catalogue
+## Custom conditions
 
-Names stay close to AssertJ but omit redundant suffixes such as `Matching`.
-Predicate overloads use the JDK `Predicate` type.
+Use `condition(...)` when neither a predicate, `asserted(...)`, nor
+`yields(...)` describes the result:
 
-| Domain | Conditions | Successful result |
+```java
+import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
+import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
+
+Receipt receipt = await(paymentRepository::load).until(condition(
+        "payment has a receipt",
+        payment -> payment.receipt() == null
+                ? unsatisfied("receipt was absent")
+                : satisfied(payment.receipt())));
+```
+
+## Condition catalogues
+
+Import only the catalogue used by a test. Shared names such as `empty`,
+`nonEmpty`, `contains`, and `size` are intentionally domain-specific.
+
+| Provider | Conditions | Successful result |
 | --- | --- | --- |
-| Object | `isNull`, `isNotNull`, `equalTo`, `notEqualTo`, `sameAs`, `notSameAs`, `instanceOf`, `exactInstanceOf`, `in`, `notIn`, `matches`, `extracting` | source value, narrowed type, or extracted value |
-| Optional | `present`, `absent`, `hasValue`, `doesNotHaveValue`, `containsInstanceOf` | contained, transformed, or narrowed value; `Void` for `absent` |
-| Comparable | `greaterThan`, `atLeast`, `lessThan`, `atMost`, `between`, `strictlyBetween` | source value |
-| String | `empty`, `nonEmpty`, `blank`, `nonBlank`, `contains`, `doesNotContain`, `containsIgnoringCase`, `startsWith`, `doesNotStartWith`, `endsWith`, `doesNotEndWith`, `matchesRegex`, `doesNotMatchRegex`, `equalToIgnoringCase`, `notEqualToIgnoringCase`, and the `length...` family | source string |
-| Collection | `single`, `empty`, `nonEmpty`, null and duplicate checks, `all`, `any`, `none`, membership and exact-content checks, prefixes, suffixes, sequences, subsequences, `first`, `last`, `element`, `sorted`, and the `size...` family | collection, or the selected element |
-| Map | `singleEntry`, `empty`, `nonEmpty`, `allEntries`, `anyEntry`, `noEntry`, key/value quantifiers, key/value/entry membership, exact content, `valueFor`, `entryFor`, `onlyValueFor`, `singleKey`, `singleValue`, and the `size...` family | map, selected entry, key, or value |
+| `Conditions` | `condition`, `asserted`, `yields`, `captured`, object equality and identity, type checks, `matches`, `extracting`, and comparable ranges | observed, narrowed, transformed, or captured value |
+| `OptionalConditions` | `present`, `absent`, `hasValue`, `doesNotHaveValue`, `containsInstanceOf` | contained, transformed, or narrowed value; `Void` for `absent` |
+| `StringConditions` | empty/blank checks, content, prefix, suffix, regex, case-insensitive equality, and `length...` | observed string |
+| `CollectionConditions` | `single`, empty/null/duplicate checks, quantifiers, membership, exact content, sequences, `first`, `last`, `element`, `sorted`, and `size...` | observed collection or selected element |
+| `MapConditions` | `singleEntry`, empty checks, entry/key/value quantifiers and membership, exact content, `valueFor`, `entryFor`, `onlyValueFor`, and `size...` | observed map, selected entry, or value |
 
-Condition providers deliberately share domain vocabulary such as `empty`,
-`nonEmpty`, and `size`. Qualify the provider class when wildcard imports make a
-call ambiguous.
-
-## Collection and Map examples
-
-Collection state and membership conditions preserve the concrete collection:
+Qualify a provider when a test genuinely needs colliding catalogues:
 
 ```java
-List<Payment> payments = await(paymentRepository::findAll).until(nonEmpty.because(
-        "Settlement requires at least one eligible payment"));
-
-Payment onlyPayment = await(paymentRepository::findAll).until(single);
-
-List<Payment> exact = await(paymentRepository::findAll).until(
-        containsExactly(firstPayment, secondPayment));
-
-Set<Payment> accepted = await(paymentRepository::findAccepted).until(
-        contains(firstPayment, secondPayment));
+await(paymentRepository::findAll).until(CollectionConditions.nonEmpty);
+await(paymentRepository::index).until(MapConditions.nonEmpty);
 ```
 
-Ordered exactness is available only when the source return type is a Java 21
-`SequencedCollection`. General collections provide membership and any-order
-exactness through conditions such as `containsExactlyInAnyOrder(...)`.
+## Sources
 
-Map conditions likewise return the concrete map:
+`await(...)` accepts a repeatedly invokable source, never a direct value.
+Sources may throw checked exceptions. Concrete-return lambdas and method
+references normally select the right source category automatically.
+
+The marker interfaces are an escape hatch for an otherwise ambiguous source,
+such as one that only returns `null`:
 
 ```java
-Map<String, Payment> populated = await(paymentRepository::index).until(MapCondition.nonEmpty);
+import io.github.gromoff97.awium.sources.Source.OptionalSource;
 
-Map.Entry<String, Payment> onlyEntry = await(paymentRepository::index).until(singleEntry);
-
-Map<String, Payment> indexed = await(paymentRepository::index).until(
-        containsEntry(paymentId, expectedPayment));
-
-Map<String, Payment> completeIndex = await(paymentRepository::index).until(
-        containsExactlyEntriesOf(expectedIndex).because(
-                "Reconciliation requires the complete payment index"));
+OptionalSource<Payment> source = () -> null;
+await(source).until(absent);
 ```
+
+`until(...)` starts the wait. Success never invokes the source again merely to
+obtain the return value. A retained stage may be reused sequentially; each wait
+gets fresh timing and condition state.
+
+## Diagnostic waits
+
+`tryAwait(...)` has the same fluent grammar and evaluation semantics as
+`await(...)`, but returns one `AwaitResult<S, R>` for both success and failure:
+
+```java
+import static io.github.gromoff97.awium.await.Await.tryAwait;
+
+AwaitResult<Optional<Payment>, Payment> result =
+        tryAwait(paymentRepository::find).upTo(TIMEOUT).until(present);
+```
+
+`AwaitResult.Satisfied` contains the terminal result. `AwaitResult.Failed`
+contains the failure. Both expose retained `AwaitAttempt` history and the total
+attempt count; repeated equivalent attempts may be compacted from the retained
+list without changing their attempt numbers.
 
 ## Threading and interruption
 
-Polling, source retrieval, and condition evaluation all run on the exact
-platform or virtual thread that calls `until(...)`. Awium creates no
-worker, executor, scheduler, or virtual thread, so caller `ThreadLocal` values
-remain visible.
+Polling, source retrieval, and condition evaluation run on the exact platform
+or virtual thread that calls `until(...)`. Awium creates no worker, executor,
+scheduler, or virtual thread, so caller `ThreadLocal` values remain visible.
 
-This first release supports one-thread use only. Another thread may interrupt
-the caller as an external cancellation controller, but it must not access or
-mutate the stage, source, condition, expected values, or observed in-memory
-objects. Awium restores the interrupt flag and throws
-`AwaitInterruptedException`. Because callbacks run in the caller, Awium
-cannot preempt a source or condition that blocks indefinitely.
+This release supports one-thread use only. Another thread may interrupt the
+caller as an external cancellation controller, but it must not access or mutate
+the stage, source, condition, expected values, or observed objects. Awium
+restores the interrupt flag and throws `AwaitInterruptedException`. Because
+callbacks run in the caller, Awium cannot preempt a source or condition that
+blocks indefinitely.
 
 ## Failures
 
-Expected completed waits are assertion failures:
+Expected unsuccessful waits are assertion failures:
 
 ```text
 AwaitFailure extends AssertionError
 ├── AwaitTimeoutException
-└── AwaitStabilizationException
+└── AwaitPersistenceException
 ```
 
 Broken execution is unchecked and preserves the exact cause:

@@ -153,7 +153,7 @@ final class FailureMessageRenderer {
         if (sequence == null) {
             return;
         }
-        out.append('\n').append("Sequence (caught ").append(sequence.caught())
+        out.append('\n').append("Sequence (captured ").append(sequence.captured())
                 .append(" of ").append(sequence.total()).append("):\n");
         field(out, "Expectation", sequence.expectation());
         if (sequence.importance() != null) {

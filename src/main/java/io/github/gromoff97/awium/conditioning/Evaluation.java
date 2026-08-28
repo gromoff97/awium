@@ -91,11 +91,11 @@ public final class Evaluation<R> {
 
         enum Plain implements Context { INSTANCE }
 
-        record Sequence(int caught, int total, int evaluatedStage,
+        record Sequence(int captured, int total, int evaluatedStage,
                 String expectation, String importance) implements Context {
 
             public Sequence {
-                if (caught < 0 || caught > total
+                if (captured < 0 || captured > total
                         || evaluatedStage <= 0 || evaluatedStage > total) {
                     throw new IllegalArgumentException("invalid sequence progress");
                 }

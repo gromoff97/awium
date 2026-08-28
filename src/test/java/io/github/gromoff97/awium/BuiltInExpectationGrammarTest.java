@@ -1,16 +1,15 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
-import static io.github.gromoff97.awium.conditioning.conditions.MapCondition.*;
-import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
-import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.*;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
+import static io.github.gromoff97.awium.conditioning.conditions.MapConditions.*;
+import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.description;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
-import io.github.gromoff97.awium.conditioning.conditions.MapCondition;
-import io.github.gromoff97.awium.conditioning.conditions.OptionalCondition;
+import io.github.gromoff97.awium.conditioning.conditions.CollectionConditions;
+import io.github.gromoff97.awium.conditioning.conditions.MapConditions;
+import io.github.gromoff97.awium.conditioning.conditions.OptionalConditions;
 
 import java.util.List;
 import java.util.Map;
@@ -78,21 +77,21 @@ class BuiltInExpectationGrammarTest {
                         description(notEqualTo("unexpected")),
                         description(present),
                         description(absent),
-                        description(OptionalCondition.hasValue("expected")),
+                        description(OptionalConditions.hasValue("expected")),
                         description(doesNotHaveValue("unexpected")),
                         description(asserted(value -> {})),
                         description(yields(value -> {
                             return value;
                         })),
-                        description(CollectionCondition.single),
-                        description(CollectionCondition.empty),
-                        description(CollectionCondition.nonEmpty),
-                        description(CollectionCondition.size(2)),
-                        description(CollectionCondition.sizeIsNot(2)),
-                        description(CollectionCondition.sizeGreaterThan(2)),
-                        description(CollectionCondition.sizeAtLeast(2)),
-                        description(CollectionCondition.sizeLessThan(2)),
-                        description(CollectionCondition.sizeAtMost(2)),
+                        description(CollectionConditions.single),
+                        description(CollectionConditions.empty),
+                        description(CollectionConditions.nonEmpty),
+                        description(CollectionConditions.size(2)),
+                        description(CollectionConditions.sizeIsNot(2)),
+                        description(CollectionConditions.sizeGreaterThan(2)),
+                        description(CollectionConditions.sizeAtLeast(2)),
+                        description(CollectionConditions.sizeLessThan(2)),
+                        description(CollectionConditions.sizeAtMost(2)),
                         description(contains("expected")),
                         description(doesNotContain("expected")),
                         description(contains("first", "second")),
@@ -103,15 +102,15 @@ class BuiltInExpectationGrammarTest {
                         description(doesNotContainExactly("expected")),
                         description(containsExactlyInAnyOrder("expected")),
                         description(doesNotContainExactlyInAnyOrder("expected")),
-                        description(MapCondition.singleEntry),
-                        description(MapCondition.empty),
-                        description(MapCondition.nonEmpty),
-                        description(MapCondition.size(2)),
-                        description(MapCondition.sizeIsNot(2)),
-                        description(MapCondition.sizeGreaterThan(2)),
-                        description(MapCondition.sizeAtLeast(2)),
-                        description(MapCondition.sizeLessThan(2)),
-                        description(MapCondition.sizeAtMost(2)),
+                        description(MapConditions.singleEntry),
+                        description(MapConditions.empty),
+                        description(MapConditions.nonEmpty),
+                        description(MapConditions.size(2)),
+                        description(MapConditions.sizeIsNot(2)),
+                        description(MapConditions.sizeGreaterThan(2)),
+                        description(MapConditions.sizeAtLeast(2)),
+                        description(MapConditions.sizeLessThan(2)),
+                        description(MapConditions.sizeAtMost(2)),
                         description(containsKey("expected")),
                         description(doesNotContainKey("expected")),
                         description(containsValue("expected")),

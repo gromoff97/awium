@@ -2,8 +2,8 @@ package io.github.gromoff97.awium.conditioning.runtime;
 
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
-import io.github.gromoff97.awium.conditioning.conditions.CollectionCondition;
-import io.github.gromoff97.awium.conditioning.conditions.ObjectCondition;
+import io.github.gromoff97.awium.conditioning.conditions.CollectionConditions;
+import io.github.gromoff97.awium.conditioning.conditions.Conditions;
 
 import java.util.Collection;
 import java.util.List;
@@ -12,7 +12,7 @@ import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.caught;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.captured;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -27,10 +27,10 @@ class ConditionSessionTest {
                     return ignored -> satisfied(++calls[0]);
                 });
         ConditionStage<Integer, Integer> preserving =
-                ObjectCondition.matches(value -> value > 0);
-        ConditionStage<Collection<?>, Object> selected = CollectionCondition.single;
+                Conditions.matches(value -> value > 0);
+        ConditionStage<Collection<?>, Object> selected = CollectionConditions.single;
         ConditionStage<Collection<?>, List<Object>> sequence =
-                caught(CollectionCondition.single, CollectionCondition.single);
+                captured(CollectionConditions.single, CollectionConditions.single);
 
         assertEquals("counted", ordinary.description());
         assertNull(ordinary.explanation());

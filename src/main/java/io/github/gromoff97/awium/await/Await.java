@@ -41,6 +41,22 @@ public final class Await<S, E, F extends Source<?>>
         return new Await<>(source);
     }
 
+    public static <T> TryAwait<T, T, Source<?>> tryAwait(Source<T> source) {
+        return new TryAwait<>(source);
+    }
+
+    public static <T> TryAwait<Optional<T>, T, OptionalSource<?>> tryAwait(OptionalSource<T> source) {
+        return new TryAwait<>(source);
+    }
+
+    public static <E, C extends Collection<E>> TryAwait<C, E, CollectionSource<?>> tryAwait(CollectionSource<C> source) {
+        return new TryAwait<>(source);
+    }
+
+    public static <K, V, M extends Map<K, V>> TryAwait<M, Map.Entry<K, V>, MapSource<?>> tryAwait(MapSource<M> source) {
+        return new TryAwait<>(source);
+    }
+
     Await(Source<? extends S> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         super(source, configuration, clock, parker);

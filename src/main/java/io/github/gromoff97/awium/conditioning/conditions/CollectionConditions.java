@@ -23,13 +23,13 @@ import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.sa
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.nonEmpty;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.validateRange;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.condition;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.condition;
 import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.selected;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("varargs")
-public final class CollectionCondition {
+public final class CollectionConditions {
 
     public static final SelectedCondition<Collection<?>, CollectionSource<?>> single = selected("collection has a single element", actual -> {
         if (actual == null) {
@@ -51,9 +51,9 @@ public final class CollectionCondition {
             "collection did not contain only nulls",
             actual -> !actual.isEmpty() && matchesAll(actual, value -> value == null));
     public static final PreservingCondition<Collection<?>> hasNoDuplicates = preserving("collection has no duplicates",
-            "collection contained duplicates", CollectionCondition::hasUniqueElements);
+            "collection contained duplicates", CollectionConditions::hasUniqueElements);
 
-    private CollectionCondition() {
+    private CollectionConditions() {
         throw new AssertionError("Utility class");
     }
 

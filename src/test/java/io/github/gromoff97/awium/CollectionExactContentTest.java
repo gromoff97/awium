@@ -15,7 +15,7 @@ import static io.github.gromoff97.awium.ProbeContainers.GreedyValue;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.conditioning.Evaluation.Status.*;
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;

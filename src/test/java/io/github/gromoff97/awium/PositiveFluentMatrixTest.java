@@ -1,9 +1,8 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.conditioning.conditions.CollectionCondition.*;
-import static io.github.gromoff97.awium.conditioning.conditions.Condition.*;
-import static io.github.gromoff97.awium.conditioning.conditions.ObjectCondition.*;
-import static io.github.gromoff97.awium.conditioning.conditions.OptionalCondition.*;
+import static io.github.gromoff97.awium.conditioning.conditions.CollectionConditions.*;
+import static io.github.gromoff97.awium.conditioning.conditions.Conditions.*;
+import static io.github.gromoff97.awium.conditioning.conditions.OptionalConditions.*;
 
 import io.github.gromoff97.awium.conditioning.*;
 import io.github.gromoff97.awium.conditioning.conditions.*;
@@ -86,8 +85,8 @@ class PositiveFluentMatrixTest {
         var actual = new LinkedHashMap<>(java.util.Map.of("key", "value"));
         MapSource<LinkedHashMap<String, String>> source = () -> actual;
 
-        LinkedHashMap<String, String> raw = await(source).until(MapCondition.nonEmpty);
-        LinkedHashMap<String, String> selected = await(source).every(EVERY).upTo(UP_TO).persisting(ZERO).until(MapCondition.nonEmpty.because("map full chain"));
+        LinkedHashMap<String, String> raw = await(source).until(MapConditions.nonEmpty);
+        LinkedHashMap<String, String> selected = await(source).every(EVERY).upTo(UP_TO).persisting(ZERO).until(MapConditions.nonEmpty.because("map full chain"));
 
         assertSame(actual, raw);
         assertSame(actual, selected);
