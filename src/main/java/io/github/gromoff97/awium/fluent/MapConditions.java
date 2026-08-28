@@ -16,7 +16,7 @@ import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.engine.ConditionAssessment.continueIfSatisfied;
+import static io.github.gromoff97.awium.engine.ConditionAssessment.plain;
 import static io.github.gromoff97.awium.fluent.ConditionSupport.nonEmpty;
 import static io.github.gromoff97.awium.fluent.ConditionSupport.preserve;
 import static io.github.gromoff97.awium.fluent.ConditionSupport.preservingNonNull;
@@ -159,8 +159,7 @@ public final class MapConditions {
             ResultStage<? super V, ? extends R> nested) {
         return assessedCondition("map value " + ConditionRuntime.description(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<V, R>evaluator(nested);
-            return actual -> continueIfSatisfied(findEntry(actual, key),
-                    entry -> nestedEvaluator.apply(entry.getValue()));
+            return actual -> plain(findEntry(actual, key)).flatMap(entry -> nestedEvaluator.apply(entry.getValue()));
         });
     }
 
@@ -172,16 +171,14 @@ public final class MapConditions {
     public static <K, V, T extends V> Condition<Map<K, V>, V> valueFor(K key, ExpectedStage<T> nested) {
         return assessedCondition("map value " + ConditionRuntime.description(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<V>expectedEvaluator(nested);
-            return actual -> continueIfSatisfied(findEntry(actual, key),
-                    entry -> nestedEvaluator.apply(entry.getValue()));
+            return actual -> plain(findEntry(actual, key)).flatMap(entry -> nestedEvaluator.apply(entry.getValue()));
         });
     }
 
     public static <K, V, R extends V> Condition<Map<K, V>, R> valueFor(K key, NarrowingStage<R> nested) {
         return assessedCondition("map value " + ConditionRuntime.description(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<V, R>narrowingEvaluator(nested);
-            return actual -> continueIfSatisfied(findEntry(actual, key),
-                    entry -> nestedEvaluator.apply(entry.getValue()));
+            return actual -> plain(findEntry(actual, key)).flatMap(entry -> nestedEvaluator.apply(entry.getValue()));
         });
     }
 

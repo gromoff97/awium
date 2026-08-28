@@ -9,6 +9,7 @@ import java.util.function.Function;
 import java.util.function.LongSupplier;
 
 import static java.lang.Thread.currentThread;
+import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("removal")
 record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
@@ -39,7 +40,7 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
 
         ConditionAssessment<? extends Result> assessment;
         try {
-            assessment = evaluator.apply(actual);
+            assessment = requireNonNull(evaluator.apply(actual), "condition returned null ConditionAssessment");
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
         } catch (Throwable failure) {
@@ -50,7 +51,7 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
                     retrievalStarted, observed, actual, failure);
         }
 
-        ConditionEvaluation<? extends Result> evaluation = assessment == null ? null : assessment.evaluation();
+        ConditionEvaluation<? extends Result> evaluation = assessment.evaluation();
         if (!(evaluation instanceof ConditionEvaluation.Uncontrolled<?>)
                 && interruptRaised()) {
             var interruption = new InterruptedException("caller thread interrupt flag was set");
@@ -61,12 +62,6 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
         long completed = clock.getAsLong();
         AwaitAttempt.Timing.AfterObservation timing = afterObservation(attemptStarted,
                 retrievalStarted, observed, completed);
-        if (assessment == null) {
-            return new AwaitAttempt<>(number, phase,
-                    new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(timing, actual,
-                            new NullPointerException("condition returned null ConditionAssessment"),
-                            AwaitAttempt.Context.Plain.INSTANCE));
-        }
         if (evaluation == null) {
             return new AwaitAttempt<>(number, phase,
                     new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(timing, actual,

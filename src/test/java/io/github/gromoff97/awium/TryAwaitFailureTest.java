@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.results.AwaitResult;
 import io.github.gromoff97.awium.fluent.Condition;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
+import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.sources.Source;
 
 import org.junit.jupiter.api.AfterEach;
@@ -17,6 +18,7 @@ import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.uncontrolled;
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
 import static io.github.gromoff97.awium.fluent.Conditions.asserted;
+import static io.github.gromoff97.awium.fluent.Conditions.captured;
 import static io.github.gromoff97.awium.fluent.Conditions.condition;
 import static io.github.gromoff97.awium.fluent.Conditions.isNotNull;
 import static java.lang.Thread.currentThread;
@@ -162,6 +164,27 @@ class TryAwaitFailureTest {
                 nullEvaluation.attempts().getLast().outcome());
         assertEquals(1, diagnostics.failure().getSuppressed().length);
         assertInstanceOf(AssertionError.class, diagnostics.failure().getSuppressed()[0]);
+    }
+
+    @Test
+    void capturedNullEvaluationWinsOverInterruptWithSequenceContext() {
+        var time = new FakeTime(0);
+
+        var result = failed(timedTryAwait(() -> "actual", config(1, 2, 0), time, time).until(captured(
+                condition("first stage", actual -> {
+                    currentThread().interrupt();
+                    return null;
+                }),
+                condition("second stage", actual -> satisfied(actual)))));
+        var outcome = assertInstanceOf(AwaitAttempt.Outcome.ConditionEvaluationFailed.class,
+                result.attempts().getFirst().outcome());
+        var context = assertInstanceOf(AwaitAttempt.Context.Sequence.class, outcome.context());
+
+        assertInstanceOf(AwaitConditionEvaluationException.class, result.failure());
+        assertEquals(NullPointerException.class, outcome.failure().getClass());
+        assertEquals("condition returned null ConditionEvaluation", outcome.failure().getMessage());
+        assertEquals(1, context.evaluatedStageNumber());
+        assertEquals("first stage", context.expectation());
     }
 
     @Test

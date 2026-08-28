@@ -14,7 +14,7 @@ import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.engine.ConditionAssessment.continueIfSatisfied;
+import static io.github.gromoff97.awium.engine.ConditionAssessment.plain;
 import static io.github.gromoff97.awium.fluent.ConditionSupport.preserve;
 import static io.github.gromoff97.awium.fluent.ConditionRuntime.assessedCondition;
 import static io.github.gromoff97.awium.fluent.ValueMatching.equal;
@@ -63,7 +63,7 @@ public final class OptionalConditions {
     public static <Value, Result> Condition<Optional<Value>, Result> hasValue(ResultStage<? super Value, ? extends Result> nested) {
         return assessedCondition("optional value " + ConditionRuntime.description(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<Value, Result>evaluator(nested);
-            return actual -> continueIfSatisfied(present(actual), nestedEvaluator);
+            return actual -> plain(present(actual)).flatMap(nestedEvaluator);
         });
     }
 
@@ -74,14 +74,14 @@ public final class OptionalConditions {
     public static <Observed, Value extends Observed> Condition<Optional<Observed>, Observed> hasValue(ExpectedStage<Value> nested) {
         return assessedCondition("optional value " + ConditionRuntime.description(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<Observed>expectedEvaluator(nested);
-            return actual -> continueIfSatisfied(present(actual), nestedEvaluator);
+            return actual -> plain(present(actual)).flatMap(nestedEvaluator);
         });
     }
 
     public static <Value, Result extends Value> Condition<Optional<Value>, Result> hasValue(NarrowingStage<Result> nested) {
         return assessedCondition("optional value " + ConditionRuntime.description(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<Value, Result>narrowingEvaluator(nested);
-            return actual -> continueIfSatisfied(present(actual), nestedEvaluator);
+            return actual -> plain(present(actual)).flatMap(nestedEvaluator);
         });
     }
 

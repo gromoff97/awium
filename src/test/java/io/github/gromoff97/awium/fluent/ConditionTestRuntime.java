@@ -57,7 +57,7 @@ public final class ConditionTestRuntime {
     }
 
     private static <R> ConditionEvaluation<R> evaluation(ConditionAssessment<? extends R> assessment) {
-        if (assessment == null || assessment.evaluation() == null) {
+        if (assessment.evaluation() == null) {
             return null;
         }
         return assessment.evaluation().continueIfSatisfied(ConditionEvaluation::satisfied);

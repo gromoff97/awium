@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.uncontrolled;
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
@@ -36,26 +35,13 @@ final class CapturedEvaluator<Observed, Result> implements Function<Observed, Co
         } catch (Throwable failure) {
             return assessed(uncontrolled(failure), contextFor(evaluatedStageIndex));
         }
-        if (assessment == null) {
-            return assessed(uncontrolled(new NullPointerException("condition returned null ConditionAssessment")),
-                    contextFor(evaluatedStageIndex));
+        var context = contextFor(evaluatedStageIndex);
+        if (assessment.evaluation() == null) {
+            return assessed(uncontrolled(new NullPointerException("condition returned null ConditionEvaluation")), context);
         }
-        ConditionEvaluation<? extends Result> evaluation = assessment.evaluation();
-        if (evaluation == null) {
-            return assessed(uncontrolled(new NullPointerException("condition returned null ConditionEvaluation")),
-                    contextFor(evaluatedStageIndex));
-        }
-        return switch (evaluation) {
-            case ConditionEvaluation.Satisfied<? extends Result> value -> sequenceComplete
-                    ? refreshFinalResult(value.result(), evaluatedStageIndex)
-                    : captureStageResult(value.result(), evaluatedStageIndex);
-            case ConditionEvaluation.Unsatisfied<?> value ->
-                    assessed(unsatisfied(value.mismatch()), contextFor(evaluatedStageIndex));
-            case ConditionEvaluation.AssertionUnsatisfied<?> value ->
-                    assessed(assertionUnsatisfied(value.mismatch(), value.cause()), contextFor(evaluatedStageIndex));
-            case ConditionEvaluation.Uncontrolled<?> value ->
-                    assessed(uncontrolled(value.cause()), contextFor(evaluatedStageIndex));
-        };
+        return assessment.withContext(context).flatMap(value -> sequenceComplete
+                ? refreshFinalResult(value, evaluatedStageIndex)
+                : captureStageResult(value, evaluatedStageIndex));
     }
 
     private ConditionAssessment<List<Result>> captureStageResult(Result result, int evaluatedStageIndex) {

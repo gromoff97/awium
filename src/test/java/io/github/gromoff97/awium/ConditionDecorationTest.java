@@ -50,8 +50,8 @@ class ConditionDecorationTest {
                 ? satisfied(actual) : unsatisfied("value was not ready"));
         var time = new FakeTime(0);
 
-        List<String> captured = timedAwait(() -> "ready", defaults(), time, time)
-                .until(captured(custom, matches(actual -> actual.equals("ready"))));
+        List<String> captured = timedAwait(() -> "ready", defaults(), time, time).until(captured(custom,
+                matches(actual -> actual.equals("ready"))));
 
         assertEquals(List.of("ready", "ready"), captured);
     }

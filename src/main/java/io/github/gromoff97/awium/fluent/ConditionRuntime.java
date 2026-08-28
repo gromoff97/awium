@@ -38,7 +38,8 @@ final class ConditionRuntime {
         Supplier<? extends Function<? super Observed, ? extends ConditionAssessment<? extends Result>>> evaluatorFactory();
 
         default Function<? super Observed, ? extends ConditionAssessment<? extends Result>> newEvaluator() {
-            return requireNonNull(evaluatorFactory().get(), "evaluator must not be null");
+            var evaluator = requireNonNull(evaluatorFactory().get(), "evaluator must not be null");
+            return actual -> requireNonNull(evaluator.apply(actual), "condition returned null ConditionAssessment");
         }
     }
 
@@ -197,18 +198,12 @@ final class ConditionRuntime {
 
     static <Observed> Function<Observed, ConditionAssessment<Observed>> preservingEvaluator(PreservingStage<? super Observed> condition) {
         Function<? super Observed, ? extends ConditionAssessment<?>> evaluator = ConditionRuntime.<Observed, Observed>runtime(condition).newEvaluator();
-        return actual -> {
-            ConditionAssessment<?> assessment = evaluator.apply(actual);
-            return assessment == null ? null : assessment.continueIfSatisfied(ignored -> satisfied(actual));
-        };
+        return actual -> evaluator.apply(actual).mapEvaluation(ignored -> satisfied(actual));
     }
 
     static <Observed> Function<Observed, ConditionAssessment<Observed>> expectedEvaluator(ExpectedStage<?> condition) {
         Function<? super Object, ? extends ConditionAssessment<?>> evaluator = ConditionRuntime.<Object, Object>runtime(condition).newEvaluator();
-        return actual -> {
-            ConditionAssessment<?> assessment = evaluator.apply(actual);
-            return assessment == null ? null : assessment.continueIfSatisfied(ignored -> satisfied(actual));
-        };
+        return actual -> evaluator.apply(actual).mapEvaluation(ignored -> satisfied(actual));
     }
 
     @SuppressWarnings("unchecked")
@@ -220,10 +215,7 @@ final class ConditionRuntime {
     static <Observed, Result> Function<Observed, ConditionAssessment<Result>> narrowingEvaluator(NarrowingStage<Result> condition) {
         Function<? super Object, ? extends ConditionAssessment<? extends Result>> evaluator =
                 ConditionRuntime.<Object, Result>runtime(condition).newEvaluator();
-        return actual -> {
-            ConditionAssessment<? extends Result> assessment = evaluator.apply(actual);
-            return assessment == null ? null : assessment.continueIfSatisfied(ConditionEvaluation::satisfied);
-        };
+        return actual -> evaluator.apply(actual).mapEvaluation(ConditionEvaluation::satisfied);
     }
 
     static <Observed, Result> ResultStage<Observed, Result> explained(Condition<Observed, Result> condition,
