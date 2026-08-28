@@ -18,7 +18,6 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.assertionUnsatis
 import static io.github.gromoff97.awium.conditioning.Evaluation.satisfied;
 import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.nonEmpty;
-import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preserve;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preserving;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.equal;
@@ -138,20 +137,6 @@ public final class Conditions {
     public static <S> PreservingCondition<S> matches(Predicate<? super S> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("value matches", "value did not match", predicate);
-    }
-
-    public static <S, T, R> Condition<S, R> extracting(Function<? super S, ? extends T> extractor,
-            ResultStage<? super T, ? extends R> nested) {
-        requireNonNull(extractor, "extractor must not be null");
-        return ConditionRuntime.condition("extracted " + nested.description(), () -> {
-            var nestedEvaluator = nested.newEvaluator();
-            return actual -> nestedEvaluator.apply(extractor.apply(actual));
-        });
-    }
-
-    public static <S, T> Condition<S, T> extracting(Function<? super S, ? extends T> extractor,
-            PreservingStage<? super T> nested) {
-        return extracting(extractor, preserve(nested));
     }
 
     public static <T extends Comparable<? super T>> PreservingCondition<T> greaterThan(T bound) {

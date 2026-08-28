@@ -455,7 +455,6 @@ class CompilationContractTest {
                         await(text).until(matchesRegex("x"));
                         await(text).until(StringConditions.length(1));
                         await(object).until(matches(value -> true));
-                        await(object).until(extracting(Object::toString, equalTo("x")));
                         await(optional).until(hasValue("x"));
                         await(collection).until(CollectionConditions.nonEmpty);
                         await(collection).until(single);

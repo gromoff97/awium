@@ -87,7 +87,7 @@ class PublicSurfaceTest {
     private static void assertNoExcludedApiSurface(Collection<Class<?>> types) {
         Set<String> forbiddenNames = Set.of("map", "flatMap", "not", "allOf",
                 "anyOf", "execute", "start", "result", "caught", "tryAwait",
-                "singleKey", "singleValue",
+                "singleKey", "singleValue", "extracting",
                 "ObjectCondition", "ComparableCondition", "CollectionCondition",
                 "MapCondition", "OptionalCondition", "StringCondition",
                 "ExecutableSource", "FutureSource", "IterableSource");

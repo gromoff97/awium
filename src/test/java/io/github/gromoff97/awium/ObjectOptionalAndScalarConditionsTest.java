@@ -4,7 +4,6 @@ import io.github.gromoff97.awium.conditioning.conditions.Conditions;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
-import io.github.gromoff97.awium.conditioning.conditions.Conditions;
 import io.github.gromoff97.awium.conditioning.conditions.OptionalConditions;
 import io.github.gromoff97.awium.conditioning.conditions.StringConditions;
 import io.github.gromoff97.awium.sources.Source;
@@ -26,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class ObjectOptionalAndScalarConditionsTest {
 
     @Test
-    void objectConditionsPreserveNarrowAndExtractTypes() throws Exception {
+    void objectConditionsPreserveAndNarrowTypes() throws Exception {
         var actual = new Child("ready");
         Source<Parent> source = () -> actual;
 
@@ -38,12 +37,9 @@ class ObjectOptionalAndScalarConditionsTest {
 
         Child child = await(source).until(Conditions.instanceOf(Child.class));
         Child exact = await(source).until(Conditions.exactInstanceOf(Child.class));
-        String status = await(source).until(Conditions.extracting(
-                value -> ((Child) value).status(), Conditions.equalTo("ready")));
 
         assertSame(actual, child);
         assertSame(actual, exact);
-        assertEquals("ready", status);
         assertEquals(UNSATISFIED, evaluate(
                 Conditions.exactInstanceOf(Parent.class), actual).status());
     }
