@@ -5,10 +5,14 @@ import io.github.gromoff97.awium.await.Await;
 import io.github.gromoff97.awium.await.AwaitAttempt;
 import io.github.gromoff97.awium.await.AwaitResult;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedSequenceStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.NarrowingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSequenceStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
+import io.github.gromoff97.awium.conditioning.conditions.Conditions;
 import io.github.gromoff97.awium.sources.Source;
 
 import static java.lang.reflect.Modifier.isAbstract;
@@ -19,6 +23,7 @@ import static java.util.Arrays.stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.module.ModuleFinder;
 import java.lang.reflect.Constructor;
@@ -93,12 +98,29 @@ class PublicSurfaceTest {
     void publicConditionStagesDoNotExposeRuntimeMechanicsOrFictitiousResults() {
         Set<String> runtimeMethods = Set.of("description", "explanation", "evaluatorFactory", "newEvaluator");
         for (Class<?> stage : List.of(ConditionStage.class, ResultStage.class, PreservingStage.class,
+                ExpectedStage.class, ExpectedSequenceStage.class, NarrowingStage.class,
                 SelectedStage.class, SelectedSequenceStage.class)) {
             stream(stage.getMethods()).forEach(method -> assertFalse(runtimeMethods.contains(method.getName()),
                     method.toGenericString()));
         }
         assertFalse(ConditionStage.class.isAssignableFrom(SelectedStage.class));
         assertFalse(ConditionStage.class.isAssignableFrom(SelectedSequenceStage.class));
+    }
+
+    @Test
+    void expectedValueFactoriesExposeGenericOperandsInsteadOfObject() {
+        Set<String> names = Set.of("equalTo", "notEqualTo", "sameAs", "notSameAs", "in", "notIn");
+        List<Method> factories = stream(Conditions.class.getDeclaredMethods())
+                .filter(method -> names.contains(method.getName())).toList();
+
+        assertEquals(names.size(), factories.size());
+        for (Method factory : factories) {
+            assertEquals(1, factory.getTypeParameters().length, factory.toGenericString());
+            Type operand = factory.getGenericParameterTypes()[0];
+            assertFalse(operand == Object.class, factory.toGenericString());
+            assertTrue(operand instanceof TypeVariable<?> || operand instanceof GenericArrayType,
+                    factory.toGenericString());
+        }
     }
 
     private static void assertNoExcludedApiSurface(Collection<Class<?>> types) {
