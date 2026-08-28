@@ -10,7 +10,9 @@ import io.github.gromoff97.awium.fluent.Condition.SelectedSequenceStage;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
+import io.github.gromoff97.awium.sources.Source.CollectionViewSource;
 import io.github.gromoff97.awium.sources.Source.MapSource;
+import io.github.gromoff97.awium.sources.Source.MapViewSource;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 
 import java.util.Collection;
@@ -45,7 +47,17 @@ public final class Await<Observed, Element, Family extends Source<?>> extends Ab
         return new Await<>(source);
     }
 
+    public static <Element, Values extends Collection<? extends Element>>
+            Await<Values, Element, CollectionSource<?>> await(CollectionViewSource<Element, Values> source) {
+        return new Await<>(source);
+    }
+
     public static <Key, Value, Entries extends Map<Key, Value>> Await<Entries, Map.Entry<Key, Value>, MapSource<?>> await(MapSource<Entries> source) {
+        return new Await<>(source);
+    }
+
+    public static <Key, Value, Entries extends Map<? extends Key, ? extends Value>>
+            Await<Entries, Map.Entry<? extends Key, ? extends Value>, MapSource<?>> await(MapViewSource<Key, Value, Entries> source) {
         return new Await<>(source);
     }
 
@@ -61,7 +73,17 @@ public final class Await<Observed, Element, Family extends Source<?>> extends Ab
         return new TryAwait<>(source);
     }
 
+    public static <Element, Values extends Collection<? extends Element>>
+            TryAwait<Values, Element, CollectionSource<?>> tryAwait(CollectionViewSource<Element, Values> source) {
+        return new TryAwait<>(source);
+    }
+
     public static <Key, Value, Entries extends Map<Key, Value>> TryAwait<Entries, Map.Entry<Key, Value>, MapSource<?>> tryAwait(MapSource<Entries> source) {
+        return new TryAwait<>(source);
+    }
+
+    public static <Key, Value, Entries extends Map<? extends Key, ? extends Value>>
+            TryAwait<Entries, Map.Entry<? extends Key, ? extends Value>, MapSource<?>> tryAwait(MapViewSource<Key, Value, Entries> source) {
         return new TryAwait<>(source);
     }
 

@@ -157,7 +157,7 @@ public final class MapConditions {
 
     public static <K, V, R> Condition<Map<K, V>, R> valueFor(K key,
             ResultStage<? super V, ? extends R> nested) {
-        return assessedCondition("map value " + ConditionRuntime.description(nested), () -> {
+        return assessedCondition("map value " + ConditionRuntime.description(nested), ConditionRuntime.explanation(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<V, R>evaluator(nested);
             return actual -> plain(findEntry(actual, key)).flatMap(entry -> nestedEvaluator.apply(entry.getValue()));
         });
@@ -169,14 +169,14 @@ public final class MapConditions {
     }
 
     public static <K, V, T extends V> Condition<Map<K, V>, V> valueFor(K key, ExpectedStage<T> nested) {
-        return assessedCondition("map value " + ConditionRuntime.description(nested), () -> {
+        return assessedCondition("map value " + ConditionRuntime.description(nested), ConditionRuntime.explanation(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<V>expectedEvaluator(nested);
             return actual -> plain(findEntry(actual, key)).flatMap(entry -> nestedEvaluator.apply(entry.getValue()));
         });
     }
 
     public static <K, V, R extends V> Condition<Map<K, V>, R> valueFor(K key, NarrowingStage<R> nested) {
-        return assessedCondition("map value " + ConditionRuntime.description(nested), () -> {
+        return assessedCondition("map value " + ConditionRuntime.description(nested), ConditionRuntime.explanation(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<V, R>narrowingEvaluator(nested);
             return actual -> plain(findEntry(actual, key)).flatMap(entry -> nestedEvaluator.apply(entry.getValue()));
         });

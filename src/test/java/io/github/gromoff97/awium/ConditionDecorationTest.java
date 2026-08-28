@@ -123,6 +123,14 @@ class ConditionDecorationTest {
     }
 
     @Test
+    void nestedConditionsRetainTheirExplanation() {
+        var nested = matches((String actual) -> true).because("business reason");
+
+        assertEquals("business reason", explanation(OptionalConditions.hasValue(nested)));
+        assertEquals("business reason", explanation(MapConditions.valueFor("key", nested)));
+    }
+
+    @Test
     void explanationValidationHappensBeforeEvaluation() {
         Condition<Object, Object> condition = condition("custom condition",
                 actual -> {

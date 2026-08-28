@@ -288,6 +288,50 @@ class CompilationContractTest {
     }
 
     @Test
+    void wildcardStructuredSourcesRetainSelectedTypes() throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.fluent.Await.tryAwait;
+                import static io.github.gromoff97.awium.fluent.CollectionConditions.single;
+                import static io.github.gromoff97.awium.fluent.MapConditions.singleEntry;
+                import io.github.gromoff97.awium.results.AwaitResult;
+                import io.github.gromoff97.awium.sources.Source.CollectionViewSource;
+                import io.github.gromoff97.awium.sources.Source.MapViewSource;
+                import java.util.List;
+                import java.util.Map;
+
+                final class Contract {
+                    static List<? extends Number> collection() {
+                        return List.of(1);
+                    }
+                    static Map<? extends Number, ? extends CharSequence> map() {
+                        return Map.of(1, "one");
+                    }
+
+                    void create() {
+                        check(new CollectionViewSource<Number,
+                                        List<? extends Number>>(Contract::collection),
+                                new MapViewSource<Number, CharSequence,
+                                        Map<? extends Number, ? extends CharSequence>>(Contract::map));
+                    }
+
+                    void check(CollectionViewSource<Number, List<? extends Number>> collection,
+                            MapViewSource<Number, CharSequence,
+                                    Map<? extends Number, ? extends CharSequence>> map) {
+                        Number element = await(collection).until(single);
+                        AwaitResult<List<? extends Number>, Number> collectionResult =
+                                tryAwait(collection).until(single);
+                        Map.Entry<? extends Number, ? extends CharSequence> entry =
+                                await(map).until(singleEntry);
+                        AwaitResult<Map<? extends Number, ? extends CharSequence>,
+                                Map.Entry<? extends Number, ? extends CharSequence>> mapResult =
+                                tryAwait(map).until(singleEntry);
+                    }
+                }
+                """));
+    }
+
+    @Test
     void singleElementIsBothAFieldAndAnOverloadedSelector() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.fluent.Await.await;

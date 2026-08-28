@@ -61,7 +61,7 @@ public final class OptionalConditions {
     }
 
     public static <Value, Result> Condition<Optional<Value>, Result> hasValue(ResultStage<? super Value, ? extends Result> nested) {
-        return assessedCondition("optional value " + ConditionRuntime.description(nested), () -> {
+        return assessedCondition("optional value " + ConditionRuntime.description(nested), ConditionRuntime.explanation(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<Value, Result>evaluator(nested);
             return actual -> plain(present(actual)).flatMap(nestedEvaluator);
         });
@@ -72,14 +72,14 @@ public final class OptionalConditions {
     }
 
     public static <Observed, Value extends Observed> Condition<Optional<Observed>, Observed> hasValue(ExpectedStage<Value> nested) {
-        return assessedCondition("optional value " + ConditionRuntime.description(nested), () -> {
+        return assessedCondition("optional value " + ConditionRuntime.description(nested), ConditionRuntime.explanation(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<Observed>expectedEvaluator(nested);
             return actual -> plain(present(actual)).flatMap(nestedEvaluator);
         });
     }
 
     public static <Value, Result extends Value> Condition<Optional<Value>, Result> hasValue(NarrowingStage<Result> nested) {
-        return assessedCondition("optional value " + ConditionRuntime.description(nested), () -> {
+        return assessedCondition("optional value " + ConditionRuntime.description(nested), ConditionRuntime.explanation(nested), () -> {
             var nestedEvaluator = ConditionRuntime.<Value, Result>narrowingEvaluator(nested);
             return actual -> plain(present(actual)).flatMap(nestedEvaluator);
         });

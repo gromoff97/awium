@@ -14,6 +14,7 @@ import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied
 import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
 import static io.github.gromoff97.awium.fluent.ConditionRuntime.assessedCondition;
 import static io.github.gromoff97.awium.fluent.ConditionRuntime.description;
+import static io.github.gromoff97.awium.fluent.ConditionRuntime.explanation;
 import static io.github.gromoff97.awium.fluent.ConditionRuntime.preservingEvaluator;
 import static java.util.Objects.requireNonNull;
 
@@ -24,7 +25,7 @@ final class ConditionSupport {
     }
 
     static <Observed> Condition<Observed, Observed> preserve(PreservingStage<? super Observed> nested) {
-        return assessedCondition(description(nested), () -> preservingEvaluator(nested));
+        return assessedCondition(description(nested), explanation(nested), () -> preservingEvaluator(nested));
     }
 
     static <Observed> PreservingCondition<Observed> preserving(String description, String mismatch,

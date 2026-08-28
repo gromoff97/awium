@@ -2,7 +2,6 @@ package io.github.gromoff97.awium.fluent;
 
 import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
 
-import java.util.Locale;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -35,10 +34,10 @@ public final class StringConditions {
     }
 
     public static PreservingCondition<String> containsIgnoringCase(String expected) {
-        String fragment = requireNonNull(expected, "expected string must not be null").toLowerCase(Locale.ROOT);
+        String fragment = requireNonNull(expected, "expected string must not be null");
         return matching("string contains expected string ignoring case",
                 "string did not contain expected string ignoring case",
-                actual -> actual.toLowerCase(Locale.ROOT).contains(fragment));
+                actual -> containsIgnoringCase(actual, fragment));
     }
 
     public static PreservingCondition<String> startsWith(String prefix) {
@@ -144,6 +143,15 @@ public final class StringConditions {
     private static PreservingCondition<String> matching(String description, String mismatch,
             Predicate<String> matches) {
         return preservingNonNull("string", description, mismatch, matches);
+    }
+
+    private static boolean containsIgnoringCase(String actual, String expected) {
+        for (int index = 0; index <= actual.length() - expected.length(); index++) {
+            if (actual.regionMatches(true, index, expected, 0, expected.length())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String[] nonEmpty(String[] values, String name) {

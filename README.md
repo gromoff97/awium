@@ -120,9 +120,10 @@ Defaults are:
 
 The first observation starts immediately. `every` is the delay from the end of
 one observation to the start of the next. `upTo` limits acquisition: an
-observation may start at or before its deadline and finish afterwards. Once the
-condition first succeeds, `persisting` may extend the total call beyond
-`upTo`. Any persistence mismatch fails immediately.
+observation must start and complete strictly before its deadline. A late
+observation is retained for diagnostics but cannot satisfy the wait. Once the
+condition first succeeds, `persisting` may extend the total call beyond `upTo`.
+Any persistence mismatch fails immediately.
 
 Each duration is validated when supplied. The final `every < upTo`
 relationship is validated by `until(...)` before polling.

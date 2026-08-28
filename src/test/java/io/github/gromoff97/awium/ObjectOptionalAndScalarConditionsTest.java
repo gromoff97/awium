@@ -159,6 +159,7 @@ class ObjectOptionalAndScalarConditionsTest {
         assertPreserving(StringConditions.contains("a", "b"), "abc", "ac");
         assertPreserving(StringConditions.doesNotContain("x", "y"), "abc", "ayc");
         assertPreserving(StringConditions.containsIgnoringCase("READY"), "ready", "failed");
+        assertStatus(StringConditions.containsIgnoringCase("ς"), "Σ", SATISFIED);
         assertPreserving(StringConditions.startsWith("re"), "ready", "already");
         assertPreserving(StringConditions.doesNotStartWith("fail"), "ready", "failed");
         assertPreserving(StringConditions.endsWith("dy"), "ready", "read");

@@ -80,7 +80,12 @@ final class ConditionRuntime {
 
     static <Observed, Result> Condition<Observed, Result> assessedCondition(String description,
             Supplier<? extends Function<? super Observed, ? extends ConditionAssessment<? extends Result>>> evaluatorFactory) {
-        return new RuntimeCondition<>(nonBlank(description, "description"), null,
+        return assessedCondition(description, null, evaluatorFactory);
+    }
+
+    static <Observed, Result> Condition<Observed, Result> assessedCondition(String description, String explanation,
+            Supplier<? extends Function<? super Observed, ? extends ConditionAssessment<? extends Result>>> evaluatorFactory) {
+        return new RuntimeCondition<>(nonBlank(description, "description"), explanation,
                 requireNonNull(evaluatorFactory, "evaluator factory must not be null"));
     }
 
