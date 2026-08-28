@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.conditioning.conditions.Conditions;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.OptionalConditions;
 import io.github.gromoff97.awium.conditioning.conditions.StringConditions;
 import io.github.gromoff97.awium.sources.Source;
@@ -96,12 +97,12 @@ class ObjectOptionalAndScalarConditionsTest {
         assertStatus(Conditions.isNull, null, SATISFIED);
         assertStatus(Conditions.isNull, actual, UNSATISFIED);
         assertPreserving(Conditions.isNotNull, actual, null);
-        assertPreserving(Conditions.equalTo(equal), actual, "other");
-        assertPreserving(Conditions.notEqualTo(equal), "other", actual);
-        assertPreserving(Conditions.sameAs(actual), actual, equal);
-        assertPreserving(Conditions.notSameAs(equal), actual, equal);
-        assertPreserving(Conditions.in("other", equal), actual, new Object());
-        assertPreserving(Conditions.notIn("other"), actual, "other");
+        assertExpected(Conditions.equalTo(equal), actual, "other");
+        assertExpected(Conditions.notEqualTo(equal), "other", actual);
+        assertExpected(Conditions.sameAs(actual), actual, equal);
+        assertExpected(Conditions.notSameAs(equal), actual, equal);
+        assertExpected(Conditions.in("other", equal), actual, new Object());
+        assertExpected(Conditions.notIn("other"), actual, "other");
         assertPreserving(Conditions.matches(value -> value.toString().startsWith("r")), actual, "failed");
         assertStatus(Conditions.instanceOf(String.class), actual, SATISFIED);
         assertStatus(Conditions.instanceOf(Integer.class), actual, UNSATISFIED);
@@ -195,12 +196,22 @@ class ObjectOptionalAndScalarConditionsTest {
         assertStatus(condition, mismatching, UNSATISFIED);
     }
 
+    private static <S, T extends S> void assertExpected(ExpectedStage<T> condition, S matching, S mismatching) throws Exception {
+        assertStatus(condition, matching, SATISFIED);
+        assertStatus(condition, mismatching, UNSATISFIED);
+    }
+
     private static <S> void assertStatus(Condition<? super S, ?> condition, S actual,
             io.github.gromoff97.awium.conditioning.Evaluation.Status expected) throws Exception {
         assertEquals(expected, evaluate(condition, actual).status());
     }
 
     private static <S> void assertStatus(PreservingStage<? super S> condition, S actual,
+            io.github.gromoff97.awium.conditioning.Evaluation.Status expected) throws Exception {
+        assertEquals(expected, evaluate(condition, actual).status());
+    }
+
+    private static <S, T extends S> void assertStatus(ExpectedStage<T> condition, S actual,
             io.github.gromoff97.awium.conditioning.Evaluation.Status expected) throws Exception {
         assertEquals(expected, evaluate(condition, actual).status());
     }

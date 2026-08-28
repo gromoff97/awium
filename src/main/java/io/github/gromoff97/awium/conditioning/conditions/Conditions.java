@@ -3,6 +3,7 @@ package io.github.gromoff97.awium.conditioning.conditions;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSequenceCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
@@ -20,6 +21,7 @@ import static io.github.gromoff97.awium.conditioning.Evaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.nonEmpty;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preserving;
 import static io.github.gromoff97.awium.conditioning.conditions.ConditionSupport.preservingNonNull;
+import static io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime.expected;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.equal;
 import static io.github.gromoff97.awium.conditioning.conditions.ValueMatching.matchesAny;
 import static java.util.Arrays.asList;
@@ -86,24 +88,24 @@ public final class Conditions {
         return condition("callback yields a result", actual -> satisfied(callback.apply(actual)));
     }
 
-    public static PreservingCondition<Object> equalTo(Object expected) {
-        return preserving("value equals expected", "value was not equal",
-                actual -> equal(actual, expected));
+    public static <T> ExpectedCondition<T> equalTo(T expected) {
+        return expected("value equals expected", actual -> equal(actual, expected)
+                ? satisfied(actual) : unsatisfied("value was not equal"));
     }
 
-    public static PreservingCondition<Object> notEqualTo(Object unexpected) {
-        return preserving("value does not equal unexpected", "value was equal",
-                actual -> !equal(actual, unexpected));
+    public static <T> ExpectedCondition<T> notEqualTo(T unexpected) {
+        return expected("value does not equal unexpected", actual -> !equal(actual, unexpected)
+                ? satisfied(actual) : unsatisfied("value was equal"));
     }
 
-    public static PreservingCondition<Object> sameAs(Object expected) {
-        return preserving("value is the same instance", "value was a different instance",
-                actual -> actual == expected);
+    public static <T> ExpectedCondition<T> sameAs(T expected) {
+        return expected("value is the same instance", actual -> actual == expected
+                ? satisfied(actual) : unsatisfied("value was a different instance"));
     }
 
-    public static PreservingCondition<Object> notSameAs(Object unexpected) {
-        return preserving("value is not the same instance", "value was the same instance",
-                actual -> actual != unexpected);
+    public static <T> ExpectedCondition<T> notSameAs(T unexpected) {
+        return expected("value is not the same instance", actual -> actual != unexpected
+                ? satisfied(actual) : unsatisfied("value was the same instance"));
     }
 
     public static <R> Condition<Object, R> instanceOf(Class<R> type) {
@@ -122,16 +124,20 @@ public final class Conditions {
                         : unsatisfied("value was not exactly an instance of " + type.getTypeName()));
     }
 
-    public static PreservingCondition<Object> in(Object... expected) {
-        List<Object> values = asList(nonEmpty(expected, "expected values"));
-        return preserving("value is in the expected values", "value was not in the expected values",
-                actual -> matchesAny(values, candidate -> equal(actual, candidate)));
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <T> ExpectedCondition<T> in(T... expected) {
+        List<T> values = asList(nonEmpty(expected, "expected values"));
+        return expected("value is in the expected values", actual -> matchesAny(values, candidate -> equal(actual, candidate))
+                ? satisfied(actual) : unsatisfied("value was not in the expected values"));
     }
 
-    public static PreservingCondition<Object> notIn(Object... unexpected) {
-        List<Object> values = asList(nonEmpty(unexpected, "unexpected values"));
-        return preserving("value is not in the unexpected values", "value was in the unexpected values",
-                actual -> !matchesAny(values, candidate -> equal(actual, candidate)));
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <T> ExpectedCondition<T> notIn(T... unexpected) {
+        List<T> values = asList(nonEmpty(unexpected, "unexpected values"));
+        return expected("value is not in the unexpected values", actual -> !matchesAny(values, candidate -> equal(actual, candidate))
+                ? satisfied(actual) : unsatisfied("value was in the unexpected values"));
     }
 
     public static <S> PreservingCondition<S> matches(Predicate<? super S> predicate) {

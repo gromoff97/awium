@@ -3,6 +3,8 @@ package io.github.gromoff97.awium.conditioning.runtime;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.AwaitCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedCondition;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
@@ -47,6 +49,11 @@ public final class ConditionRuntime {
     public record RuntimePreservingCondition<S>(String description, String explanation,
             Supplier<? extends Function<? super S, ? extends Evaluation<? extends S>>> evaluatorFactory)
             implements PreservingCondition<S>, RuntimeStage<S, S> {
+    }
+
+    public record RuntimeExpectedCondition<T>(String description, String explanation,
+            Supplier<? extends Function<? super Object, ? extends Evaluation<? extends Object>>> evaluatorFactory)
+            implements ExpectedCondition<T>, RuntimeStage<Object, Object> {
     }
 
     public record RuntimeSelectedCondition<S, F extends Source<?>>(String description, String explanation,
@@ -134,6 +141,11 @@ public final class ConditionRuntime {
         return new RuntimePreservingCondition<>(nonBlank(description, "description"), null, () -> evaluator);
     }
 
+    public static <T> ExpectedCondition<T> expected(String description, Function<Object, Evaluation<Object>> evaluator) {
+        requireNonNull(evaluator, "evaluation must not be null");
+        return new RuntimeExpectedCondition<>(nonBlank(description, "description"), null, () -> evaluator);
+    }
+
     public static <S, F extends Source<?>> SelectedCondition<S, F> selected(String description,
             Function<? super S, ? extends Evaluation<?>> evaluator) {
         requireNonNull(evaluator, "evaluation must not be null");
@@ -158,6 +170,14 @@ public final class ConditionRuntime {
         };
     }
 
+    public static <S> Function<S, Evaluation<S>> expectedEvaluator(ExpectedStage<?> condition) {
+        Function<? super Object, ? extends Evaluation<?>> evaluator = ConditionRuntime.<Object, Object>runtime(condition).newEvaluator();
+        return actual -> {
+            Evaluation<?> evaluation = evaluator.apply(actual);
+            return evaluation == null ? null : evaluation.continueIfSatisfied(ignored -> satisfied(actual));
+        };
+    }
+
     public static <S, R> ResultStage<S, R> explained(Condition<S, R> condition,
             String explanation) {
         RuntimeStage<S, R> runtime = runtime(condition);
@@ -167,6 +187,11 @@ public final class ConditionRuntime {
     public static <S> PreservingStage<S> explained(PreservingCondition<S> condition, String explanation) {
         RuntimeStage<S, S> runtime = runtime(condition);
         return new RuntimePreservingCondition<>(runtime.description(), nonBlank(explanation, "explanation"), runtime.evaluatorFactory());
+    }
+
+    public static <T> ExpectedStage<T> explained(ExpectedCondition<T> condition, String explanation) {
+        RuntimeStage<Object, Object> runtime = runtime(condition);
+        return new RuntimeExpectedCondition<>(runtime.description(), nonBlank(explanation, "explanation"), runtime.evaluatorFactory());
     }
 
     public static <S, F extends Source<?>> SelectedStage<S, F> explained(SelectedCondition<S, F> condition, String explanation) {

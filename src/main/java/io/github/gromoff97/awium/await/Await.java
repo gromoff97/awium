@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.await;
 
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedSequenceStage;
@@ -73,6 +74,10 @@ public final class Await<S, E, F extends Source<?>>
 
     public S until(PreservingStage<? super S> condition) {
         return complete(ConditionRuntime.preservingEvaluator(condition), condition);
+    }
+
+    public <T extends S> S until(ExpectedStage<T> condition) {
+        return complete(ConditionRuntime.expectedEvaluator(condition), condition);
     }
 
     public <R> R until(ResultStage<? super S, ? extends R> condition) {

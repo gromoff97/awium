@@ -3,6 +3,7 @@ package io.github.gromoff97.awium.conditioning.conditions;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
 import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
@@ -66,6 +67,13 @@ public final class OptionalConditions {
 
     public static <T> Condition<Optional<T>, T> hasValue(PreservingStage<? super T> nested) {
         return hasValue(preserve(nested));
+    }
+
+    public static <S, T extends S> Condition<Optional<S>, S> hasValue(ExpectedStage<T> nested) {
+        return ConditionRuntime.condition("optional value " + ConditionRuntime.description(nested), () -> {
+            var nestedEvaluator = ConditionRuntime.<S>expectedEvaluator(nested);
+            return actual -> present(actual).continueIfSatisfied(nestedEvaluator);
+        });
     }
 
     private static <T> Condition<Optional<T>, T> selected(String description, String mismatch,

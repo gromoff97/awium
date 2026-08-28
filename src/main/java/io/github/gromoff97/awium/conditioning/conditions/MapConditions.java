@@ -3,6 +3,7 @@ package io.github.gromoff97.awium.conditioning.conditions;
 import io.github.gromoff97.awium.conditioning.Evaluation;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.PreservingStage;
+import io.github.gromoff97.awium.conditioning.conditions.Condition.ExpectedStage;
 import io.github.gromoff97.awium.conditioning.conditions.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.conditioning.conditions.Condition.SelectedCondition;
 import io.github.gromoff97.awium.conditioning.runtime.ConditionRuntime;
@@ -164,6 +165,14 @@ public final class MapConditions {
     public static <K, V> Condition<Map<K, V>, V> valueFor(K key,
             PreservingStage<? super V> nested) {
         return MapConditions.<K, V, V>valueFor(key, preserve(nested));
+    }
+
+    public static <K, V, T extends V> Condition<Map<K, V>, V> valueFor(K key, ExpectedStage<T> nested) {
+        return ConditionRuntime.condition("map value " + ConditionRuntime.description(nested), () -> {
+            var nestedEvaluator = ConditionRuntime.<V>expectedEvaluator(nested);
+            return actual -> findEntry(actual, key)
+                    .continueIfSatisfied(entry -> nestedEvaluator.apply(entry.getValue()));
+        });
     }
 
     public static <K, V> Condition<Map<K, V>, Map.Entry<K, V>> entryFor(K key) {
