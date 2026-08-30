@@ -6,7 +6,6 @@ import static java.time.Duration.*;
 
 import io.github.gromoff97.awium.condition.*;
 import io.github.gromoff97.awium.fluent.*;
-import io.github.gromoff97.awium.condition.*;
 import io.github.gromoff97.awium.conditions.*;
 import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
 import io.github.gromoff97.awium.condition.Condition.PreservingStage;

@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.internal.condition;
 
 import io.github.gromoff97.awium.condition.AwaitCondition;
-import io.github.gromoff97.awium.internal.condition.ConditionAssessment;
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
 import io.github.gromoff97.awium.condition.Condition.PreservingStage;
 import io.github.gromoff97.awium.condition.Condition.ExpectedStage;

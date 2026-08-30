@@ -2,7 +2,6 @@ package io.github.gromoff97.awium.internal.condition;
 
 import io.github.gromoff97.awium.conditions.CollectionConditions;
 import io.github.gromoff97.awium.conditions.Conditions;
-import io.github.gromoff97.awium.internal.condition.ConditionAssessment;
 import io.github.gromoff97.awium.condition.Condition.PreservingStage;
 import io.github.gromoff97.awium.condition.Condition.SelectedSequenceStage;
 import io.github.gromoff97.awium.condition.Condition.SelectedStage;

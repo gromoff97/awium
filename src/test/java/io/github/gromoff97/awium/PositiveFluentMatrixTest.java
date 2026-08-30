@@ -6,7 +6,6 @@ import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
 
 import io.github.gromoff97.awium.condition.*;
 import io.github.gromoff97.awium.fluent.*;
-import io.github.gromoff97.awium.condition.*;
 import io.github.gromoff97.awium.conditions.*;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;

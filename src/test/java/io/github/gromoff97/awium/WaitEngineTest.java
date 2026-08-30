@@ -14,7 +14,6 @@ import static java.lang.Thread.interrupted;
 
 import io.github.gromoff97.awium.condition.*;
 import io.github.gromoff97.awium.fluent.*;
-import io.github.gromoff97.awium.condition.*;
 import io.github.gromoff97.awium.conditions.*;
 import io.github.gromoff97.awium.engine.*;
 import io.github.gromoff97.awium.exceptions.AwaitConfigurationConflictException;

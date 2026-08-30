@@ -12,14 +12,12 @@ import static java.time.Duration.ofNanos;
 
 import io.github.gromoff97.awium.condition.*;
 import io.github.gromoff97.awium.fluent.*;
-import io.github.gromoff97.awium.condition.*;
 import io.github.gromoff97.awium.conditions.*;
 import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
 
 import io.github.gromoff97.awium.exceptions.*;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
-import io.github.gromoff97.awium.fluent.Await;
 import io.github.gromoff97.awium.results.AwaitResult;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;

@@ -12,7 +12,6 @@ import static java.lang.Long.parseLong;
 import static java.time.Duration.ofNanos;
 
 import io.github.gromoff97.awium.condition.*;
-import io.github.gromoff97.awium.condition.Condition;
 import io.github.gromoff97.awium.conditions.Conditions;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.sources.Source;

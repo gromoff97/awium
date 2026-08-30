@@ -3,9 +3,6 @@ package io.github.gromoff97.awium.internal.condition;
 import io.github.gromoff97.awium.condition.AwaitCondition;
 import io.github.gromoff97.awium.condition.Condition;
 import io.github.gromoff97.awium.condition.ConditionStage;
-import io.github.gromoff97.awium.conditions.Conditions;
-import io.github.gromoff97.awium.condition.Condition;
-import io.github.gromoff97.awium.internal.condition.ConditionAssessment;
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
 import io.github.gromoff97.awium.condition.Condition.ExpectedCondition;
 import io.github.gromoff97.awium.condition.Condition.ExpectedSequenceCondition;
@@ -134,7 +131,7 @@ public final class ConditionRuntime {
     public static <Observed> Condition<Observed, List<Observed>> captured(Predicate<? super Observed> first,
             Predicate<? super Observed> second, Predicate<? super Observed>... rest) {
         return capturedPreserving(stages("predicate", first, second, rest).stream()
-                .map(predicate -> Conditions.<Observed>matches(predicate)).toList());
+                .map(predicate -> ConditionSupport.preserving("value matches", "value did not match", predicate)).toList());
     }
 
     @SafeVarargs
