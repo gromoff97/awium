@@ -2,7 +2,7 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.sources.Source;
 
-import static io.github.gromoff97.awium.fluent.Await.await;
+import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditions.Conditions.condition;

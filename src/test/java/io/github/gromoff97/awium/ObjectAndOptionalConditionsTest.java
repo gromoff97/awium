@@ -10,7 +10,7 @@ import static io.github.gromoff97.awium.conditions.Conditions.*;
 import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
 
 import io.github.gromoff97.awium.condition.*;
-import io.github.gromoff97.awium.fluent.*;
+import io.github.gromoff97.awium.await.*;
 import io.github.gromoff97.awium.conditions.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

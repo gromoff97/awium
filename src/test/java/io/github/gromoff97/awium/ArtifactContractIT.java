@@ -28,7 +28,15 @@ class ArtifactContractIT {
         ModuleReference module = ModuleFinder.of(JAR)
                 .find("io.github.gromoff97.awium").orElseThrow();
         assertFalse(module.descriptor().isAutomatic());
-        assertFalse(module.descriptor().exports().isEmpty());
+        assertEquals(Set.of(
+                        "io.github.gromoff97.awium.await",
+                        "io.github.gromoff97.awium.condition",
+                        "io.github.gromoff97.awium.conditions",
+                        "io.github.gromoff97.awium.exceptions",
+                        "io.github.gromoff97.awium.results",
+                        "io.github.gromoff97.awium.sources"),
+                Set.copyOf(module.descriptor().exports().stream()
+                        .map(export -> export.source()).toList()));
         assertEquals(Set.of("java.base"),
                 Set.copyOf(module.descriptor().requires().stream()
                         .map(require -> require.name()).toList()));
@@ -38,7 +46,7 @@ class ArtifactContractIT {
     void packagedJarCompilesDirectMethodReferences(@TempDir Path directory)
             throws Exception {
         assertTrue(compiles(directory, """
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
                 import static io.github.gromoff97.awium.conditions.Conditions.*;
                 import static io.github.gromoff97.awium.conditions.MapConditions.*;
@@ -90,7 +98,7 @@ class ArtifactContractIT {
                 """, """
                 package consumer;
 
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditions.Conditions.isNotNull;
 
                 final class Contract {

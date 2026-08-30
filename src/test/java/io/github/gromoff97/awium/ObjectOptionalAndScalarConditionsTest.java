@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-import static io.github.gromoff97.awium.fluent.Await.await;
+import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.mismatch;

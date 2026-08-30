@@ -24,7 +24,7 @@ class CompilationContractTest {
                 final class Contract {}
                 """));
         assertThrows(AssertionError.class, () -> compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import io.github.gromoff97.awium.sources.Source;
 
                 final class Contract {
@@ -38,7 +38,7 @@ class CompilationContractTest {
     @Test
     void exposesOneEntryPointAndFocusedConditionCatalogues() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.*;
+                import static io.github.gromoff97.awium.await.Await.*;
                 import static io.github.gromoff97.awium.conditions.Conditions.*;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
                 import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
@@ -106,7 +106,7 @@ class CompilationContractTest {
                 "java.util.function.Supplier<String> source = () -> \"value\";"
         }) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.fluent.Await.await;
+                    import static io.github.gromoff97.awium.await.Await.await;
                     final class Contract {
                         void check() {
                             %s
@@ -120,15 +120,15 @@ class CompilationContractTest {
     @Test
     void ambiguousNullSourcesAndConditionsDoNotCompile() throws IOException {
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 final class Contract { void check() { await(() -> null); } }
                 """));
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 final class Contract { void check() { await(null); } }
                 """));
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import io.github.gromoff97.awium.sources.Source;
                 final class Contract {
                     void check(Source<String> source) {
@@ -145,9 +145,9 @@ class CompilationContractTest {
                 "SelectedCondition<java.util.Collection<?>, Source.CollectionSource<?>>",
                 "SelectedCondition<java.util.Map<?, ?>, Source.MapSource<?>>")) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.fluent.Await.await;
+                    import static io.github.gromoff97.awium.await.Await.await;
                     import io.github.gromoff97.awium.sources.Source;
-                    import io.github.gromoff97.awium.fluent.*;
+                    import io.github.gromoff97.awium.await.*;
                     import io.github.gromoff97.awium.condition.*;
                     import io.github.gromoff97.awium.conditions.*;
                     import io.github.gromoff97.awium.condition.Condition.SelectedCondition;
@@ -164,7 +164,7 @@ class CompilationContractTest {
     void plainSourcesRejectSelectedConditionCategoryEscapes() throws IOException {
         for (String condition : List.of("present", "single", "first", "last", "singleEntry")) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.fluent.Await.await;
+                    import static io.github.gromoff97.awium.await.Await.await;
                     import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
                     import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
                     import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
@@ -204,7 +204,7 @@ class CompilationContractTest {
     @Test
     void collectionAndMapConditionsCannotBeMixed() throws IOException {
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import io.github.gromoff97.awium.conditions.MapConditions;
                 import io.github.gromoff97.awium.sources.Source.CollectionSource;
                 import java.util.List;
@@ -215,7 +215,7 @@ class CompilationContractTest {
                 }
                 """));
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import io.github.gromoff97.awium.conditions.CollectionConditions;
                 import io.github.gromoff97.awium.sources.Source.MapSource;
                 import java.util.Map;
@@ -226,7 +226,7 @@ class CompilationContractTest {
                 }
                 """));
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import io.github.gromoff97.awium.conditions.MapConditions;
                 import io.github.gromoff97.awium.sources.Source.CollectionSource;
                 import java.util.List;
@@ -237,7 +237,7 @@ class CompilationContractTest {
                 }
                 """));
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import io.github.gromoff97.awium.conditions.CollectionConditions;
                 import io.github.gromoff97.awium.sources.Source.MapSource;
                 import java.util.Map;
@@ -252,7 +252,7 @@ class CompilationContractTest {
     @Test
     void singleTerminalsInferElementKeyAndValueTypes() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import io.github.gromoff97.awium.conditions.CollectionConditions;
                 import io.github.gromoff97.awium.conditions.MapConditions;
                 import java.time.Duration;
@@ -275,7 +275,7 @@ class CompilationContractTest {
                 }
                 """));
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
                 import java.util.List;
                 final class Contract {
@@ -290,7 +290,7 @@ class CompilationContractTest {
     @Test
     void specializedSourcesRetainSelectedResultTypes() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.first;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
                 import static io.github.gromoff97.awium.conditions.Conditions.isNull;
@@ -316,8 +316,8 @@ class CompilationContractTest {
     @Test
     void wildcardStructuredSourcesRetainSelectedTypes() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
-                import static io.github.gromoff97.awium.fluent.Await.tryAwait;
+                import static io.github.gromoff97.awium.await.Await.await;
+                import static io.github.gromoff97.awium.await.Await.tryAwait;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
                 import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
                 import io.github.gromoff97.awium.results.AwaitResult;
@@ -360,7 +360,7 @@ class CompilationContractTest {
     @Test
     void singleElementIsBothAFieldAndAnOverloadedSelector() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElementOfType;
                 import io.github.gromoff97.awium.conditions.MapConditions;
@@ -386,7 +386,7 @@ class CompilationContractTest {
     @Test
     void firstAndLastAreTypedFieldsWithPredicateOverloads() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.first;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.last;
                 import io.github.gromoff97.awium.sources.Source.CollectionSource;
@@ -401,7 +401,7 @@ class CompilationContractTest {
                 }
                 """));
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.first;
                 import io.github.gromoff97.awium.sources.Source.CollectionSource;
                 import java.util.List;
@@ -412,7 +412,7 @@ class CompilationContractTest {
                 }
                 """));
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.first;
                 import io.github.gromoff97.awium.sources.Source.CollectionSource;
                 import java.util.HashSet;
@@ -427,7 +427,7 @@ class CompilationContractTest {
     @Test
     void collectionElementAndAggregateFactoriesAreUnambiguous() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
                 import java.util.List;
 
@@ -450,7 +450,7 @@ class CompilationContractTest {
     @Test
     void optionalOverloadsAllowExplicitCallbackValues() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
                 import static io.github.gromoff97.awium.conditions.Conditions.yields;
                 import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
@@ -483,7 +483,7 @@ class CompilationContractTest {
     @Test
     void wildcardImportedNamespacesAllowQualifiedNameCollisions() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
                 import static io.github.gromoff97.awium.conditions.Conditions.*;
                 import static io.github.gromoff97.awium.conditions.MapConditions.*;
@@ -531,7 +531,7 @@ class CompilationContractTest {
     void collectionExactFactoriesRespectOrderedSourceTyping()
             throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
                 import io.github.gromoff97.awium.sources.Source.CollectionSource;
                 import java.util.*;
@@ -562,7 +562,7 @@ class CompilationContractTest {
     @Test
     void orderedExactFactoriesRejectCollectionOnlySources() throws IOException {
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
                 import io.github.gromoff97.awium.sources.Source.CollectionSource;
                 import java.util.*;
@@ -578,7 +578,7 @@ class CompilationContractTest {
     @Test
     void callbackFactoriesPreserveTheirResultTypesAndMayBeDecoratedOnce() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditions.Conditions.*;
 
                 final class Contract {

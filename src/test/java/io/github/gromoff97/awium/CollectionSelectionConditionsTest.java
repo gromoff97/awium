@@ -12,9 +12,9 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-import static io.github.gromoff97.awium.fluent.Await.await;
+import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedCollectionAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.UNSATISFIED;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.first;

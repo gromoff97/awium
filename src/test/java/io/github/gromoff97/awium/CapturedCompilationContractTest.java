@@ -18,7 +18,7 @@ class CapturedCompilationContractTest {
     @Test
     void predicateAndConditionSequencesInferTypedLists() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.condition.ConditionEvaluation.*;
                 import static io.github.gromoff97.awium.conditions.Conditions.*;
                 import io.github.gromoff97.awium.sources.Source;
@@ -48,7 +48,7 @@ class CapturedCompilationContractTest {
     @Test
     void expectedSequencesReturnObservedSourceValues() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.*;
+                import static io.github.gromoff97.awium.await.Await.*;
                 import static io.github.gromoff97.awium.conditions.Conditions.*;
                 import io.github.gromoff97.awium.results.AwaitResult;
                 import io.github.gromoff97.awium.sources.Source;
@@ -71,7 +71,7 @@ class CapturedCompilationContractTest {
                 "captured(equalTo(1), equalTo(2))",
                 "captured(equalTo(\"ready\"), isNotNull)")) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.fluent.Await.await;
+                    import static io.github.gromoff97.awium.await.Await.await;
                     import static io.github.gromoff97.awium.conditions.Conditions.*;
                     import io.github.gromoff97.awium.sources.Source;
 
@@ -87,8 +87,8 @@ class CapturedCompilationContractTest {
     @Test
     void selectedSequencesInferFacadeElementLists() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
-                import static io.github.gromoff97.awium.fluent.Await.tryAwait;
+                import static io.github.gromoff97.awium.await.Await.await;
+                import static io.github.gromoff97.awium.await.Await.tryAwait;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
                 import static io.github.gromoff97.awium.conditions.Conditions.captured;
                 import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
@@ -120,7 +120,7 @@ class CapturedCompilationContractTest {
                 "await(map).until(captured(first, last))",
                 "await(collection).until(captured(singleEntry, singleEntry))")) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.fluent.Await.await;
+                    import static io.github.gromoff97.awium.await.Await.await;
                     import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
                     import static io.github.gromoff97.awium.conditions.Conditions.captured;
                     import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
@@ -141,7 +141,7 @@ class CapturedCompilationContractTest {
     @Test
     void plainSourcesRejectSelectedSequences() throws IOException {
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
                 import static io.github.gromoff97.awium.conditions.Conditions.captured;
                 import io.github.gromoff97.awium.sources.Source;

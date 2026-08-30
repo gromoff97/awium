@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
-import io.github.gromoff97.awium.fluent.Await;
+import io.github.gromoff97.awium.await.Await;
 import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
@@ -14,7 +14,7 @@ import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedCollectionAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.*;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
 import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaults;
@@ -137,7 +137,7 @@ class CollectionMembershipTest {
     void ordinaryConsumerCallsAreWarningFree()
             throws IOException {
         assertTrue(compiles(temporaryDirectory, """
-                import static io.github.gromoff97.awium.fluent.Await.await;
+                import static io.github.gromoff97.awium.await.Await.await;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
                 import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
                 import io.github.gromoff97.awium.sources.Source.CollectionSource;

@@ -17,7 +17,7 @@ class TryAwaitCompilationContractTest {
     @Test
     void infersEverySourceAndConditionResult() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.tryAwait;
+                import static io.github.gromoff97.awium.await.Await.tryAwait;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.first;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.last;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
@@ -62,7 +62,7 @@ class TryAwaitCompilationContractTest {
     @Test
     void rejectsAnUnrelatedOptionalResultType() throws IOException {
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.tryAwait;
+                import static io.github.gromoff97.awium.await.Await.tryAwait;
                 import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
                 import io.github.gromoff97.awium.results.AwaitResult;
                 import io.github.gromoff97.awium.sources.Source.OptionalSource;
@@ -78,7 +78,7 @@ class TryAwaitCompilationContractTest {
     @Test
     void specializedSourcesRetainSelectedResultTypes() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Await.tryAwait;
+                import static io.github.gromoff97.awium.await.Await.tryAwait;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.first;
                 import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
                 import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;

@@ -12,8 +12,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import static io.github.gromoff97.awium.fluent.Await.await;
-import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedCollectionAwait;
+import static io.github.gromoff97.awium.await.Await.await;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.mismatch;

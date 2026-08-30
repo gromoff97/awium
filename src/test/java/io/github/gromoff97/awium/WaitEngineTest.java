@@ -13,7 +13,7 @@ import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 
 import io.github.gromoff97.awium.condition.*;
-import io.github.gromoff97.awium.fluent.*;
+import io.github.gromoff97.awium.await.*;
 import io.github.gromoff97.awium.conditions.*;
 import io.github.gromoff97.awium.internal.engine.*;
 import io.github.gromoff97.awium.exceptions.AwaitConfigurationConflictException;

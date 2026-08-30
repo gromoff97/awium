@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static io.github.gromoff97.awium.fluent.Await.await;
+import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.UNSATISFIED;

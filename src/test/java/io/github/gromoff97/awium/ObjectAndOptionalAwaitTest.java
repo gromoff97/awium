@@ -1,17 +1,17 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.fluent.Await.await;
-import static io.github.gromoff97.awium.fluent.Await.tryAwait;
+import static io.github.gromoff97.awium.await.Await.await;
+import static io.github.gromoff97.awium.await.Await.tryAwait;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditions.Conditions.*;
 import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
 import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaults;
-import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
 import static java.time.Duration.ofNanos;
 
 import io.github.gromoff97.awium.condition.*;
-import io.github.gromoff97.awium.fluent.*;
+import io.github.gromoff97.awium.await.*;
 import io.github.gromoff97.awium.conditions.*;
 import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
 

@@ -20,7 +20,7 @@ import static io.github.gromoff97.awium.condition.ConditionEvaluation.assertionU
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
 import static io.github.gromoff97.awium.internal.condition.ConditionAssessment.plain;
-import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedTryAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
 import static io.github.gromoff97.awium.conditions.Conditions.captured;
 import static io.github.gromoff97.awium.conditions.Conditions.condition;
 import static org.junit.jupiter.api.Assertions.assertEquals;

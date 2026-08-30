@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.fluent;
+package io.github.gromoff97.awium.await;
 
 import io.github.gromoff97.awium.internal.condition.ConditionRuntime;
 import io.github.gromoff97.awium.condition.Condition.PreservingStage;

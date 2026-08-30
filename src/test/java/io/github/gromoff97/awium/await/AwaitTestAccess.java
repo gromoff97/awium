@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.fluent;
+package io.github.gromoff97.awium.await;
 
 import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;

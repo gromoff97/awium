@@ -14,9 +14,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 
-import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedOptionalAwait;
-import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedTryAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedOptionalAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditions.Conditions.captured;

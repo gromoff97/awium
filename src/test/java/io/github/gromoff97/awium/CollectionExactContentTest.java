@@ -7,7 +7,7 @@ import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitCond
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 
-import static io.github.gromoff97.awium.fluent.Await.await;
+import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.result;
@@ -15,7 +15,7 @@ import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ExpectedValue;
 import static io.github.gromoff97.awium.ProbeContainers.GreedyValue;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedCollectionAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.*;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
 import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaults;

@@ -11,9 +11,9 @@ import io.github.gromoff97.awium.sources.Source;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedTryAwait;
-import static io.github.gromoff97.awium.fluent.Await.tryAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
+import static io.github.gromoff97.awium.await.Await.tryAwait;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.uncontrolled;

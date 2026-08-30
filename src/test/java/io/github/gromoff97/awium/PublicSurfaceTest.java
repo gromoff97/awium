@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.module.ModuleFinder;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
@@ -26,6 +27,21 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class PublicSurfaceTest {
+
+    @Test
+    void moduleExportsOnlyThePublicApiPackages() {
+        assertEquals(Set.of(
+                        "io.github.gromoff97.awium.await",
+                        "io.github.gromoff97.awium.condition",
+                        "io.github.gromoff97.awium.conditions",
+                        "io.github.gromoff97.awium.exceptions",
+                        "io.github.gromoff97.awium.results",
+                        "io.github.gromoff97.awium.sources"),
+                Set.copyOf(ModuleFinder.of(ArtifactContractIT.JAR)
+                        .find("io.github.gromoff97.awium").orElseThrow()
+                        .descriptor().exports().stream()
+                        .map(export -> export.source()).toList()));
+    }
 
     @Test
     void sourceRemainsASingleCheckedOperation() {

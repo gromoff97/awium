@@ -11,8 +11,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static io.github.gromoff97.awium.fluent.Await.await;
-import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedMapAwait;
+import static io.github.gromoff97.awium.await.Await.await;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedMapAwait;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.mismatch;

@@ -4,7 +4,7 @@ Awium is a zero-dependency Java 21 library that waits for a condition in the
 calling thread and returns the result from the same successful observation.
 
 ```java
-import static io.github.gromoff97.awium.fluent.Await.await;
+import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
 
 Payment payment = await(() -> paymentRepository.findById(order.paymentId())).until(present.because("Checkout cannot continue without the payment"));
@@ -272,7 +272,7 @@ evaluation state. State in a callback passed directly to `condition(...)` or
 `await(...)`, but returns one `AwaitResult<S, R>` for both success and failure:
 
 ```java
-import static io.github.gromoff97.awium.fluent.Await.tryAwait;
+import static io.github.gromoff97.awium.await.Await.tryAwait;
 
 AwaitResult<Optional<Payment>, Payment> result =
         tryAwait(paymentRepository::find).upTo(TIMEOUT).until(present);

@@ -4,10 +4,10 @@ import static io.github.gromoff97.awium.condition.ConditionEvaluation.*;
 import static io.github.gromoff97.awium.conditions.Conditions.*;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.explanation;
 import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaults;
-import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
 
 import io.github.gromoff97.awium.condition.*;
-import io.github.gromoff97.awium.fluent.*;
+import io.github.gromoff97.awium.await.*;
 import io.github.gromoff97.awium.conditions.*;
 import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;

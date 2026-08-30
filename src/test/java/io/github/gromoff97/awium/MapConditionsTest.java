@@ -7,14 +7,14 @@ import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitCond
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.MapSource;
 
-import static io.github.gromoff97.awium.fluent.Await.await;
+import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedMapAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedMapAwait;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.*;
 import static io.github.gromoff97.awium.conditions.MapConditions.*;
 import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaults;
