@@ -1,11 +1,13 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.fluent.CollectionConditions.*;
-import static io.github.gromoff97.awium.fluent.Conditions.*;
-import static io.github.gromoff97.awium.fluent.OptionalConditions.*;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
+import static io.github.gromoff97.awium.conditions.Conditions.*;
+import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
 
-import io.github.gromoff97.awium.evaluation.*;
+import io.github.gromoff97.awium.condition.*;
 import io.github.gromoff97.awium.fluent.*;
+import io.github.gromoff97.awium.condition.*;
+import io.github.gromoff97.awium.conditions.*;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 import io.github.gromoff97.awium.sources.Source.MapSource;

@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.fluent;
+package io.github.gromoff97.awium.internal.condition;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -10,13 +10,13 @@ import java.util.function.Predicate;
 
 import static java.util.Objects.deepEquals;
 
-final class ValueMatching {
+public final class ValueMatching {
 
     private ValueMatching() {
         throw new AssertionError("Utility class");
     }
 
-    static <Value> boolean matchesAny(Iterable<Value> values, Predicate<? super Value> matches) {
+    public static <Value> boolean matchesAny(Iterable<Value> values, Predicate<? super Value> matches) {
         for (Value value : values) {
             if (matches.test(value)) {
                 return true;
@@ -25,7 +25,7 @@ final class ValueMatching {
         return false;
     }
 
-    static <Value> boolean matchesAll(Iterable<Value> values, Predicate<? super Value> matches) {
+    public static <Value> boolean matchesAll(Iterable<Value> values, Predicate<? super Value> matches) {
         for (Value value : values) {
             if (!matches.test(value)) {
                 return false;
@@ -34,7 +34,7 @@ final class ValueMatching {
         return true;
     }
 
-    static <Actual, Expected> boolean containsAll(Iterable<Actual> actual, Collection<Expected> expected,
+    public static <Actual, Expected> boolean containsAll(Iterable<Actual> actual, Collection<Expected> expected,
             BiPredicate<? super Actual, ? super Expected> matches) {
         var remainingExpected = new ArrayList<>(expected);
         if (remainingExpected.isEmpty()) {
@@ -54,7 +54,7 @@ final class ValueMatching {
         return false;
     }
 
-    static <Actual, Expected> boolean exactly(Iterator<Actual> actual, Collection<Expected> expected,
+    public static <Actual, Expected> boolean exactly(Iterator<Actual> actual, Collection<Expected> expected,
             BiPredicate<? super Actual, ? super Expected> matches) {
         var remainingExpected = new ArrayList<>(expected);
         while (actual.hasNext()) {
@@ -75,12 +75,12 @@ final class ValueMatching {
         return remainingExpected.isEmpty();
     }
 
-    static boolean sameDistinctElements(Collection<?> actual, Collection<?> expected) {
+    public static boolean sameDistinctElements(Collection<?> actual, Collection<?> expected) {
         return matchesAll(actual, value -> matchesAny(expected, candidate -> equal(value, candidate)))
                 && matchesAll(expected, value -> matchesAny(actual, candidate -> equal(candidate, value)));
     }
 
-    static boolean equal(Object actual, Object expected) {
+    public static boolean equal(Object actual, Object expected) {
         record ValuePair(Object actual, Object expected) {}
 
         var pending = new ArrayDeque<ValuePair>();

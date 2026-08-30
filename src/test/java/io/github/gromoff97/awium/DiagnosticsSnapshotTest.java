@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
-import io.github.gromoff97.awium.fluent.Condition;
-import io.github.gromoff97.awium.fluent.ConditionStage.ResultStage;
-import io.github.gromoff97.awium.fluent.Conditions;
+import io.github.gromoff97.awium.condition.ConditionEvaluation;
+import io.github.gromoff97.awium.condition.Condition;
+import io.github.gromoff97.awium.condition.ConditionStage.ResultStage;
+import io.github.gromoff97.awium.conditions.Conditions;
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
@@ -19,13 +19,13 @@ import io.github.gromoff97.awium.sources.Source;
 
 import static io.github.gromoff97.awium.fluent.Await.await;
 import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.assertionUnsatisfied;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.uncontrolled;
-import static io.github.gromoff97.awium.fluent.Conditions.captured;
-import static io.github.gromoff97.awium.fluent.Conditions.condition;
-import static io.github.gromoff97.awium.fluent.Conditions.equalTo;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.assertionUnsatisfied;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.uncontrolled;
+import static io.github.gromoff97.awium.conditions.Conditions.captured;
+import static io.github.gromoff97.awium.conditions.Conditions.condition;
+import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
 import static io.github.gromoff97.awium.engine.WaitCompletion.*;
 import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.ACQUISITION;
 import static java.lang.Thread.currentThread;

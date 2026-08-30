@@ -1,15 +1,15 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.fluent.CollectionConditions.*;
-import static io.github.gromoff97.awium.fluent.Conditions.*;
-import static io.github.gromoff97.awium.fluent.MapConditions.*;
-import static io.github.gromoff97.awium.fluent.OptionalConditions.*;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
+import static io.github.gromoff97.awium.conditions.Conditions.*;
+import static io.github.gromoff97.awium.conditions.MapConditions.*;
+import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.description;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.github.gromoff97.awium.fluent.CollectionConditions;
-import io.github.gromoff97.awium.fluent.MapConditions;
-import io.github.gromoff97.awium.fluent.OptionalConditions;
+import io.github.gromoff97.awium.conditions.CollectionConditions;
+import io.github.gromoff97.awium.conditions.MapConditions;
+import io.github.gromoff97.awium.conditions.OptionalConditions;
 
 import java.util.List;
 import java.util.Map;

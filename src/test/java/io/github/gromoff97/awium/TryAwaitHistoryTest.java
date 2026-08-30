@@ -2,8 +2,8 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.results.AwaitResult;
-import io.github.gromoff97.awium.engine.ConditionAssessment;
-import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+import io.github.gromoff97.awium.internal.condition.ConditionAssessment;
+import io.github.gromoff97.awium.condition.ConditionEvaluation;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
 
@@ -16,13 +16,13 @@ import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.PERSISTENCE;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.assertionUnsatisfied;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.engine.ConditionAssessment.plain;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.assertionUnsatisfied;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.internal.condition.ConditionAssessment.plain;
 import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedTryAwait;
-import static io.github.gromoff97.awium.fluent.Conditions.captured;
-import static io.github.gromoff97.awium.fluent.Conditions.condition;
+import static io.github.gromoff97.awium.conditions.Conditions.captured;
+import static io.github.gromoff97.awium.conditions.Conditions.condition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -132,7 +132,7 @@ class TryAwaitHistoryTest {
 
     private static WaitEngine.RecordedWait<Object, Object> recordUnsatisfied(
             io.github.gromoff97.awium.sources.Source<Object> source,
-            java.util.function.IntFunction<io.github.gromoff97.awium.evaluation.ConditionEvaluation<Object>> evaluation) {
+            java.util.function.IntFunction<io.github.gromoff97.awium.condition.ConditionEvaluation<Object>> evaluation) {
         var time = new FakeTime(0);
         int[] calls = {0};
         return new WaitEngine(config(1, 2, 0), time, time)

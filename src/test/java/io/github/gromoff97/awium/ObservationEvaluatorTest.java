@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
-import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+import io.github.gromoff97.awium.condition.ConditionEvaluation;
 import io.github.gromoff97.awium.engine.WaitConfiguration;
 import io.github.gromoff97.awium.engine.WaitEngine;
 import io.github.gromoff97.awium.engine.WaitCompletion;
@@ -16,10 +16,10 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.ACQUISITION;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.assertionUnsatisfied;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.uncontrolled;
-import static io.github.gromoff97.awium.engine.ConditionAssessment.plain;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.assertionUnsatisfied;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.uncontrolled;
+import static io.github.gromoff97.awium.internal.condition.ConditionAssessment.plain;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;

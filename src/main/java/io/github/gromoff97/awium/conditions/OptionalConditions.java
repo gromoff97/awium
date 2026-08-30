@@ -1,28 +1,30 @@
-package io.github.gromoff97.awium.fluent;
+package io.github.gromoff97.awium.conditions;
 
-import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
-import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
-import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
-import io.github.gromoff97.awium.fluent.Condition.ExpectedStage;
-import io.github.gromoff97.awium.fluent.Condition.NarrowingStage;
-import io.github.gromoff97.awium.fluent.ConditionStage.ResultStage;
-import io.github.gromoff97.awium.fluent.Condition.SelectedCondition;
+import io.github.gromoff97.awium.condition.Condition;
+import io.github.gromoff97.awium.internal.condition.ConditionRuntime;
+import io.github.gromoff97.awium.condition.ConditionEvaluation;
+import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
+import io.github.gromoff97.awium.condition.Condition.PreservingStage;
+import io.github.gromoff97.awium.condition.Condition.ExpectedStage;
+import io.github.gromoff97.awium.condition.Condition.NarrowingStage;
+import io.github.gromoff97.awium.condition.ConditionStage.ResultStage;
+import io.github.gromoff97.awium.condition.Condition.SelectedCondition;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
 
 import java.util.Optional;
 import java.util.function.Predicate;
 
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.engine.ConditionAssessment.plain;
-import static io.github.gromoff97.awium.fluent.ConditionSupport.preserve;
-import static io.github.gromoff97.awium.fluent.ConditionRuntime.assessedCondition;
-import static io.github.gromoff97.awium.fluent.ConditionRuntime.expectedReference;
-import static io.github.gromoff97.awium.fluent.ConditionRuntime.reference;
-import static io.github.gromoff97.awium.fluent.ConditionRuntime.unexpectedReference;
-import static io.github.gromoff97.awium.fluent.ValueMatching.equal;
-import static io.github.gromoff97.awium.fluent.Conditions.condition;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.internal.condition.ConditionAssessment.plain;
+import static io.github.gromoff97.awium.internal.condition.ConditionSupport.preserve;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.assessedCondition;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.expectedReference;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.reference;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.unexpectedReference;
+import static io.github.gromoff97.awium.internal.condition.ValueMatching.equal;
+import static io.github.gromoff97.awium.conditions.Conditions.condition;
 import static java.util.Objects.requireNonNull;
 
 public final class OptionalConditions {

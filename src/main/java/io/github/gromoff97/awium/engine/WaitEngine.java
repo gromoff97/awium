@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium.engine;
 
+import io.github.gromoff97.awium.internal.condition.ConditionAssessment;
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.sources.Source;
 

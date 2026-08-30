@@ -1,16 +1,16 @@
-package io.github.gromoff97.awium.fluent;
+package io.github.gromoff97.awium.internal.condition;
 
-import io.github.gromoff97.awium.engine.ConditionAssessment;
-import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+import io.github.gromoff97.awium.internal.condition.ConditionAssessment;
+import io.github.gromoff97.awium.condition.ConditionEvaluation;
 import io.github.gromoff97.awium.results.AwaitAttempt;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.uncontrolled;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.uncontrolled;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("removal")

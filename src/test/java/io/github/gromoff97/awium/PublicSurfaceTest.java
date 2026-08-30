@@ -1,14 +1,14 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.fluent.Condition.ExpectedSequenceStage;
-import io.github.gromoff97.awium.fluent.Condition.ExpectedStage;
-import io.github.gromoff97.awium.fluent.Condition.NarrowingStage;
-import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
-import io.github.gromoff97.awium.fluent.Condition.SelectedSequenceStage;
-import io.github.gromoff97.awium.fluent.Condition.SelectedStage;
-import io.github.gromoff97.awium.fluent.ConditionStage;
-import io.github.gromoff97.awium.fluent.ConditionStage.ResultStage;
-import io.github.gromoff97.awium.fluent.Conditions;
+import io.github.gromoff97.awium.condition.Condition.ExpectedSequenceStage;
+import io.github.gromoff97.awium.condition.Condition.ExpectedStage;
+import io.github.gromoff97.awium.condition.Condition.NarrowingStage;
+import io.github.gromoff97.awium.condition.Condition.PreservingStage;
+import io.github.gromoff97.awium.condition.Condition.SelectedSequenceStage;
+import io.github.gromoff97.awium.condition.Condition.SelectedStage;
+import io.github.gromoff97.awium.condition.ConditionStage;
+import io.github.gromoff97.awium.condition.ConditionStage.ResultStage;
+import io.github.gromoff97.awium.conditions.Conditions;
 import io.github.gromoff97.awium.sources.Source;
 
 import static java.lang.reflect.Modifier.isAbstract;

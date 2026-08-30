@@ -1,22 +1,22 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
-import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
+import io.github.gromoff97.awium.condition.ConditionEvaluation;
+import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.MapSource;
 
 import static io.github.gromoff97.awium.fluent.Await.await;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.description;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.mismatch;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.mismatch;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedMapAwait;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.*;
-import static io.github.gromoff97.awium.fluent.MapConditions.*;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.*;
+import static io.github.gromoff97.awium.conditions.MapConditions.*;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;

@@ -1,10 +1,10 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+import io.github.gromoff97.awium.condition.ConditionEvaluation;
 
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.*;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.UNCONTROLLED;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.UNSATISFIED;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.*;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.UNCONTROLLED;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.UNSATISFIED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;

@@ -1,12 +1,13 @@
-package io.github.gromoff97.awium.fluent;
+package io.github.gromoff97.awium.internal.condition;
 
-import io.github.gromoff97.awium.engine.ConditionAssessment;
-import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
-import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
-import io.github.gromoff97.awium.fluent.Condition.ExpectedStage;
-import io.github.gromoff97.awium.fluent.Condition.NarrowingStage;
-import io.github.gromoff97.awium.fluent.Condition.SelectedStage;
-import io.github.gromoff97.awium.fluent.ConditionStage.ResultStage;
+import io.github.gromoff97.awium.condition.AwaitCondition;
+import io.github.gromoff97.awium.internal.condition.ConditionAssessment;
+import io.github.gromoff97.awium.condition.ConditionEvaluation;
+import io.github.gromoff97.awium.condition.Condition.PreservingStage;
+import io.github.gromoff97.awium.condition.Condition.ExpectedStage;
+import io.github.gromoff97.awium.condition.Condition.NarrowingStage;
+import io.github.gromoff97.awium.condition.Condition.SelectedStage;
+import io.github.gromoff97.awium.condition.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.sources.Source;
 
 public final class ConditionTestRuntime {

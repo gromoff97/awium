@@ -1,8 +1,12 @@
-package io.github.gromoff97.awium.fluent;
+package io.github.gromoff97.awium.conditions;
 
-import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
-import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
-import io.github.gromoff97.awium.fluent.Condition.SelectedCondition;
+import io.github.gromoff97.awium.condition.Condition;
+import io.github.gromoff97.awium.internal.condition.ConditionRuntime;
+import io.github.gromoff97.awium.internal.condition.ConditionSupport;
+import io.github.gromoff97.awium.internal.condition.ValueMatching;
+import io.github.gromoff97.awium.condition.ConditionEvaluation;
+import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
+import io.github.gromoff97.awium.condition.Condition.SelectedCondition;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
 
@@ -14,20 +18,20 @@ import java.util.List;
 import java.util.SequencedCollection;
 import java.util.function.Predicate;
 
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.fluent.ValueMatching.equal;
-import static io.github.gromoff97.awium.fluent.ValueMatching.exactly;
-import static io.github.gromoff97.awium.fluent.ValueMatching.matchesAll;
-import static io.github.gromoff97.awium.fluent.ValueMatching.matchesAny;
-import static io.github.gromoff97.awium.fluent.ValueMatching.sameDistinctElements;
-import static io.github.gromoff97.awium.fluent.ConditionSupport.nonEmpty;
-import static io.github.gromoff97.awium.fluent.ConditionSupport.preservingNonNull;
-import static io.github.gromoff97.awium.fluent.ConditionSupport.validateRange;
-import static io.github.gromoff97.awium.fluent.Conditions.condition;
-import static io.github.gromoff97.awium.fluent.ConditionRuntime.selected;
-import static io.github.gromoff97.awium.fluent.ConditionRuntime.expectedReference;
-import static io.github.gromoff97.awium.fluent.ConditionRuntime.unexpectedReference;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.internal.condition.ValueMatching.equal;
+import static io.github.gromoff97.awium.internal.condition.ValueMatching.exactly;
+import static io.github.gromoff97.awium.internal.condition.ValueMatching.matchesAll;
+import static io.github.gromoff97.awium.internal.condition.ValueMatching.matchesAny;
+import static io.github.gromoff97.awium.internal.condition.ValueMatching.sameDistinctElements;
+import static io.github.gromoff97.awium.internal.condition.ConditionSupport.nonEmpty;
+import static io.github.gromoff97.awium.internal.condition.ConditionSupport.preservingNonNull;
+import static io.github.gromoff97.awium.internal.condition.ConditionSupport.validateRange;
+import static io.github.gromoff97.awium.conditions.Conditions.condition;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.selected;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.expectedReference;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.unexpectedReference;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 

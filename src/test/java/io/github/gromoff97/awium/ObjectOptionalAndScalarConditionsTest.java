@@ -1,13 +1,13 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.fluent.Conditions;
-import io.github.gromoff97.awium.fluent.Condition;
-import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
-import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
-import io.github.gromoff97.awium.fluent.Condition.ExpectedStage;
-import io.github.gromoff97.awium.fluent.Condition.NarrowingStage;
-import io.github.gromoff97.awium.fluent.OptionalConditions;
-import io.github.gromoff97.awium.fluent.StringConditions;
+import io.github.gromoff97.awium.conditions.Conditions;
+import io.github.gromoff97.awium.condition.Condition;
+import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
+import io.github.gromoff97.awium.condition.Condition.PreservingStage;
+import io.github.gromoff97.awium.condition.Condition.ExpectedStage;
+import io.github.gromoff97.awium.condition.Condition.NarrowingStage;
+import io.github.gromoff97.awium.conditions.OptionalConditions;
+import io.github.gromoff97.awium.conditions.StringConditions;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 import org.junit.jupiter.api.Test;
@@ -16,11 +16,11 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 import static io.github.gromoff97.awium.fluent.Await.await;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.description;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.mismatch;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.SATISFIED;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.UNSATISFIED;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.mismatch;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.SATISFIED;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.UNSATISFIED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -209,22 +209,22 @@ class ObjectOptionalAndScalarConditionsTest {
     }
 
     private static <S> void assertStatus(Condition<? super S, ?> condition, S actual,
-            io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status expected) throws Exception {
+            io.github.gromoff97.awium.condition.ConditionEvaluation.Status expected) throws Exception {
         assertEquals(expected, evaluate(condition, actual).status());
     }
 
     private static <S> void assertStatus(PreservingStage<? super S> condition, S actual,
-            io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status expected) throws Exception {
+            io.github.gromoff97.awium.condition.ConditionEvaluation.Status expected) throws Exception {
         assertEquals(expected, evaluate(condition, actual).status());
     }
 
     private static <S, T extends S> void assertStatus(ExpectedStage<T> condition, S actual,
-            io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status expected) throws Exception {
+            io.github.gromoff97.awium.condition.ConditionEvaluation.Status expected) throws Exception {
         assertEquals(expected, evaluate(condition, actual).status());
     }
 
     private static <S, R> void assertStatus(NarrowingStage<R> condition, S actual,
-            io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status expected) throws Exception {
+            io.github.gromoff97.awium.condition.ConditionEvaluation.Status expected) throws Exception {
         assertEquals(expected, evaluate(condition, actual).status());
     }
 

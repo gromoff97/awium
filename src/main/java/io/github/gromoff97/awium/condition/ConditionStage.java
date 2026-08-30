@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.fluent;
+package io.github.gromoff97.awium.condition;
 
 /**
  * A terminal condition shape with an explicit observed-to-result relationship.

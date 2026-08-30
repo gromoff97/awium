@@ -1,8 +1,9 @@
-package io.github.gromoff97.awium.fluent;
+package io.github.gromoff97.awium.internal.condition;
 
-import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
-import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
-import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
+import io.github.gromoff97.awium.condition.Condition;
+import io.github.gromoff97.awium.condition.ConditionEvaluation;
+import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
+import io.github.gromoff97.awium.condition.Condition.PreservingStage;
 import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
 
 import java.util.Collection;
@@ -11,49 +12,49 @@ import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.fluent.ConditionRuntime.assessedCondition;
-import static io.github.gromoff97.awium.fluent.ConditionRuntime.description;
-import static io.github.gromoff97.awium.fluent.ConditionRuntime.explanation;
-import static io.github.gromoff97.awium.fluent.ConditionRuntime.preservingEvaluator;
-import static io.github.gromoff97.awium.fluent.ConditionRuntime.reference;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.assessedCondition;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.description;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.explanation;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.preservingEvaluator;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.reference;
 import static java.util.Objects.requireNonNull;
 
-final class ConditionSupport {
+public final class ConditionSupport {
 
     private ConditionSupport() {
         throw new AssertionError("Utility class");
     }
 
-    static <Observed> Condition<Observed, Observed> preserve(PreservingStage<? super Observed> nested) {
+    public static <Observed> Condition<Observed, Observed> preserve(PreservingStage<? super Observed> nested) {
         return assessedCondition(description(nested), explanation(nested), reference(nested), () -> preservingEvaluator(nested));
     }
 
-    static <Observed> PreservingCondition<Observed> preserving(String description, String mismatch,
+    public static <Observed> PreservingCondition<Observed> preserving(String description, String mismatch,
             Predicate<? super Observed> matches) {
         return preserving(description, mismatch, null, matches);
     }
 
-    static <Observed> PreservingCondition<Observed> preserving(String description, String mismatch,
+    public static <Observed> PreservingCondition<Observed> preserving(String description, String mismatch,
             Reference<?> reference, Predicate<? super Observed> matches) {
         return ConditionRuntime.preserving(description, reference, actual -> matches.test(actual)
                 ? satisfied(actual) : unsatisfied(mismatch));
     }
 
-    static <Observed> PreservingCondition<Observed> preservingNonNull(String subject, String description,
+    public static <Observed> PreservingCondition<Observed> preservingNonNull(String subject, String description,
             String mismatch, Predicate<? super Observed> matches) {
         return preservingNonNull(subject, description, mismatch, null, matches);
     }
 
-    static <Observed> PreservingCondition<Observed> preservingNonNull(String subject, String description,
+    public static <Observed> PreservingCondition<Observed> preservingNonNull(String subject, String description,
             String mismatch, Reference<?> reference, Predicate<? super Observed> matches) {
         return ConditionRuntime.preserving(description, reference, actual -> actual == null
                 ? unsatisfied(subject + " was null")
                 : matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch));
     }
 
-    static <Observed> PreservingCondition<Observed> sized(String subject, int bound, IntPredicate matches,
+    public static <Observed> PreservingCondition<Observed> sized(String subject, int bound, IntPredicate matches,
             String description, ToIntFunction<? super Observed> sizeOf) {
         if (bound < 0) {
             throw new IllegalArgumentException("size must be non-negative");
@@ -67,7 +68,7 @@ final class ConditionSupport {
         });
     }
 
-    static <Element> ConditionEvaluation<Element> selectSingle(Iterable<Element> values,
+    public static <Element> ConditionEvaluation<Element> selectSingle(Iterable<Element> values,
             Predicate<? super Element> matches,
             String noneMatched, String multipleMatched) {
         Element selected = null;
@@ -85,13 +86,13 @@ final class ConditionSupport {
         return found ? satisfied(selected) : unsatisfied(noneMatched);
     }
 
-    static void validateRange(int lowerBound, int upperBound, String measure) {
+    public static void validateRange(int lowerBound, int upperBound, String measure) {
         if (lowerBound < 0 || upperBound < lowerBound) {
             throw new IllegalArgumentException(measure + " range must be non-negative and ordered");
         }
     }
 
-    static <Element> Element[] nonEmpty(Element[] values, String name) {
+    public static <Element> Element[] nonEmpty(Element[] values, String name) {
         requireNonNull(values, name + " must not be null");
         if (values.length == 0) {
             throw new IllegalArgumentException(name + " must not be empty");
@@ -99,7 +100,7 @@ final class ConditionSupport {
         return values;
     }
 
-    static <CollectionType extends Collection<?>> CollectionType nonEmpty(CollectionType values, String name) {
+    public static <CollectionType extends Collection<?>> CollectionType nonEmpty(CollectionType values, String name) {
         requireNonNull(values, name + " must not be null");
         if (values.isEmpty()) {
             throw new IllegalArgumentException(name + " must not be empty");
@@ -107,7 +108,7 @@ final class ConditionSupport {
         return values;
     }
 
-    static <MapType extends Map<?, ?>> MapType nonEmpty(MapType values, String name) {
+    public static <MapType extends Map<?, ?>> MapType nonEmpty(MapType values, String name) {
         requireNonNull(values, name + " must not be null");
         if (values.isEmpty()) {
             throw new IllegalArgumentException(name + " must not be empty");

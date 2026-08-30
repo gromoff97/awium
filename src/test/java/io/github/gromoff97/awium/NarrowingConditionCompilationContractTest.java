@@ -18,10 +18,10 @@ class NarrowingConditionCompilationContractTest {
     void narrowingConditionsReturnCompatibleSubtypes() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.fluent.Await.*;
-                import static io.github.gromoff97.awium.fluent.CollectionConditions.singleElementOfType;
-                import static io.github.gromoff97.awium.fluent.Conditions.*;
-                import static io.github.gromoff97.awium.fluent.MapConditions.valueFor;
-                import static io.github.gromoff97.awium.fluent.OptionalConditions.*;
+                import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElementOfType;
+                import static io.github.gromoff97.awium.conditions.Conditions.*;
+                import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
+                import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
                 import io.github.gromoff97.awium.results.AwaitResult;
                 import io.github.gromoff97.awium.sources.Source;
                 import io.github.gromoff97.awium.sources.Source.*;
@@ -54,10 +54,10 @@ class NarrowingConditionCompilationContractTest {
                 "await(collection).until(singleElementOfType(Integer.class))")) {
             assertFalse(compiles("""
                     import static io.github.gromoff97.awium.fluent.Await.await;
-                    import static io.github.gromoff97.awium.fluent.CollectionConditions.singleElementOfType;
-                    import static io.github.gromoff97.awium.fluent.Conditions.instanceOf;
-                    import static io.github.gromoff97.awium.fluent.MapConditions.valueFor;
-                    import static io.github.gromoff97.awium.fluent.OptionalConditions.*;
+                    import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElementOfType;
+                    import static io.github.gromoff97.awium.conditions.Conditions.instanceOf;
+                    import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
+                    import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
                     import io.github.gromoff97.awium.sources.Source;
                     import io.github.gromoff97.awium.sources.Source.*;
                     import java.util.*;

@@ -12,10 +12,10 @@ import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedTryAwait;
 import static io.github.gromoff97.awium.fluent.Await.tryAwait;
-import static io.github.gromoff97.awium.fluent.Conditions.yields;
-import static io.github.gromoff97.awium.fluent.Conditions.isNotNull;
-import static io.github.gromoff97.awium.fluent.Conditions.isNull;
-import static io.github.gromoff97.awium.fluent.OptionalConditions.present;
+import static io.github.gromoff97.awium.conditions.Conditions.yields;
+import static io.github.gromoff97.awium.conditions.Conditions.isNotNull;
+import static io.github.gromoff97.awium.conditions.Conditions.isNull;
+import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;

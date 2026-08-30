@@ -1,18 +1,20 @@
-package io.github.gromoff97.awium.fluent;
+package io.github.gromoff97.awium.internal.condition;
 
-import io.github.gromoff97.awium.engine.ConditionAssessment;
-import io.github.gromoff97.awium.fluent.Condition.PreservingStage;
-import io.github.gromoff97.awium.fluent.Condition.SelectedSequenceStage;
-import io.github.gromoff97.awium.fluent.Condition.SelectedStage;
-import io.github.gromoff97.awium.fluent.ConditionStage;
+import io.github.gromoff97.awium.conditions.CollectionConditions;
+import io.github.gromoff97.awium.conditions.Conditions;
+import io.github.gromoff97.awium.internal.condition.ConditionAssessment;
+import io.github.gromoff97.awium.condition.Condition.PreservingStage;
+import io.github.gromoff97.awium.condition.Condition.SelectedSequenceStage;
+import io.github.gromoff97.awium.condition.Condition.SelectedStage;
+import io.github.gromoff97.awium.condition.ConditionStage;
 import java.util.Collection;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.fluent.Conditions.captured;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.conditions.Conditions.captured;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.result;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;

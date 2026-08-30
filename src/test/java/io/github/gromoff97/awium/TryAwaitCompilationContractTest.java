@@ -18,13 +18,13 @@ class TryAwaitCompilationContractTest {
     void infersEverySourceAndConditionResult() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.fluent.Await.tryAwait;
-                import static io.github.gromoff97.awium.fluent.CollectionConditions.first;
-                import static io.github.gromoff97.awium.fluent.CollectionConditions.last;
-                import static io.github.gromoff97.awium.fluent.CollectionConditions.single;
-                import static io.github.gromoff97.awium.fluent.Conditions.yields;
-                import static io.github.gromoff97.awium.fluent.MapConditions.singleEntry;
-                import static io.github.gromoff97.awium.fluent.Conditions.isNotNull;
-                import static io.github.gromoff97.awium.fluent.OptionalConditions.present;
+                import static io.github.gromoff97.awium.conditions.CollectionConditions.first;
+                import static io.github.gromoff97.awium.conditions.CollectionConditions.last;
+                import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
+                import static io.github.gromoff97.awium.conditions.Conditions.yields;
+                import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
+                import static io.github.gromoff97.awium.conditions.Conditions.isNotNull;
+                import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
                 import static java.time.Duration.ZERO;
                 import static java.time.Duration.ofMillis;
                 import static java.time.Duration.ofSeconds;
@@ -63,7 +63,7 @@ class TryAwaitCompilationContractTest {
     void rejectsAnUnrelatedOptionalResultType() throws IOException {
         assertFalse(compiles("""
                 import static io.github.gromoff97.awium.fluent.Await.tryAwait;
-                import static io.github.gromoff97.awium.fluent.OptionalConditions.present;
+                import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
                 import io.github.gromoff97.awium.results.AwaitResult;
                 import io.github.gromoff97.awium.sources.Source.OptionalSource;
                 import java.util.Optional;
@@ -79,10 +79,10 @@ class TryAwaitCompilationContractTest {
     void specializedSourcesRetainSelectedResultTypes() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.fluent.Await.tryAwait;
-                import static io.github.gromoff97.awium.fluent.CollectionConditions.first;
-                import static io.github.gromoff97.awium.fluent.CollectionConditions.single;
-                import static io.github.gromoff97.awium.fluent.MapConditions.singleEntry;
-                import static io.github.gromoff97.awium.fluent.OptionalConditions.present;
+                import static io.github.gromoff97.awium.conditions.CollectionConditions.first;
+                import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
+                import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
+                import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
                 import io.github.gromoff97.awium.results.AwaitResult;
                 import io.github.gromoff97.awium.sources.Source.*;
                 import java.util.*;

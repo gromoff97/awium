@@ -1,14 +1,16 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.*;
-import static io.github.gromoff97.awium.fluent.Conditions.*;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.explanation;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.*;
+import static io.github.gromoff97.awium.conditions.Conditions.*;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.explanation;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedAwait;
 
-import io.github.gromoff97.awium.evaluation.*;
+import io.github.gromoff97.awium.condition.*;
 import io.github.gromoff97.awium.fluent.*;
-import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
+import io.github.gromoff97.awium.condition.*;
+import io.github.gromoff97.awium.conditions.*;
+import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -75,9 +77,9 @@ class ConditionDecorationTest {
     @Test
     void plainAndExplainedConditionsShareOneNonDecoratableStage() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.fluent.Conditions.condition;
-                import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
-                import io.github.gromoff97.awium.fluent.ConditionStage;
+                import static io.github.gromoff97.awium.conditions.Conditions.condition;
+                import io.github.gromoff97.awium.condition.ConditionEvaluation;
+                import io.github.gromoff97.awium.condition.ConditionStage;
                 final class Contract {
                     void check() {
                         accept(condition("plain", ConditionEvaluation::satisfied));
@@ -87,8 +89,8 @@ class ConditionDecorationTest {
                 }
                 """));
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.fluent.Conditions.condition;
-                import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
+                import static io.github.gromoff97.awium.conditions.Conditions.condition;
+                import io.github.gromoff97.awium.condition.ConditionEvaluation;
                 final class Contract {
                     void check() {
                         condition("condition", ConditionEvaluation::satisfied).because("first").because("second");

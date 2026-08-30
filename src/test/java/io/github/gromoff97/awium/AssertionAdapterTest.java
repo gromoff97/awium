@@ -1,19 +1,19 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.SATISFIED;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.fluent.Conditions.*;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.description;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.SATISFIED;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.conditions.Conditions.*;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
 import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedAwait;
 import static java.lang.Long.parseLong;
 import static java.time.Duration.ofNanos;
 
-import io.github.gromoff97.awium.evaluation.*;
-import io.github.gromoff97.awium.fluent.Condition;
-import io.github.gromoff97.awium.fluent.Conditions;
+import io.github.gromoff97.awium.condition.*;
+import io.github.gromoff97.awium.condition.Condition;
+import io.github.gromoff97.awium.conditions.Conditions;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.sources.Source;
 

@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.evaluation.ConditionEvaluation;
-import io.github.gromoff97.awium.fluent.CollectionConditions;
+import io.github.gromoff97.awium.condition.ConditionEvaluation;
+import io.github.gromoff97.awium.conditions.CollectionConditions;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import org.junit.jupiter.api.Test;
@@ -13,12 +13,12 @@ import java.util.LinkedHashSet;
 import java.util.List;
 
 import static io.github.gromoff97.awium.fluent.Await.await;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedCollectionAwait;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.SATISFIED;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.UNSATISFIED;
-import static io.github.gromoff97.awium.fluent.CollectionConditions.first;
-import static io.github.gromoff97.awium.fluent.CollectionConditions.last;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.SATISFIED;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.UNSATISFIED;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.first;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.last;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;

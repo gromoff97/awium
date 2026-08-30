@@ -1,16 +1,18 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.description;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.mismatch;
-import static io.github.gromoff97.awium.fluent.ConditionTestRuntime.result;
-import static io.github.gromoff97.awium.evaluation.ConditionEvaluation.Status.*;
-import static io.github.gromoff97.awium.fluent.Conditions.*;
-import static io.github.gromoff97.awium.fluent.OptionalConditions.*;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.mismatch;
+import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.*;
+import static io.github.gromoff97.awium.conditions.Conditions.*;
+import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
 
-import io.github.gromoff97.awium.evaluation.*;
+import io.github.gromoff97.awium.condition.*;
 import io.github.gromoff97.awium.fluent.*;
+import io.github.gromoff97.awium.condition.*;
+import io.github.gromoff97.awium.conditions.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;

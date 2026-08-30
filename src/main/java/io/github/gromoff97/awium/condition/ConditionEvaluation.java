@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.evaluation;
+package io.github.gromoff97.awium.condition;
 
 import java.util.function.Function;
 

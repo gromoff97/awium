@@ -1,15 +1,16 @@
-package io.github.gromoff97.awium.fluent;
+package io.github.gromoff97.awium.conditions;
 
-import io.github.gromoff97.awium.fluent.Condition.PreservingCondition;
+import io.github.gromoff97.awium.internal.condition.ConditionSupport;
+import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
 import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
 
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
-import static io.github.gromoff97.awium.fluent.ConditionSupport.preservingNonNull;
-import static io.github.gromoff97.awium.fluent.ConditionSupport.validateRange;
-import static io.github.gromoff97.awium.fluent.ConditionRuntime.expectedReference;
-import static io.github.gromoff97.awium.fluent.ConditionRuntime.unexpectedReference;
+import static io.github.gromoff97.awium.internal.condition.ConditionSupport.preservingNonNull;
+import static io.github.gromoff97.awium.internal.condition.ConditionSupport.validateRange;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.expectedReference;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.unexpectedReference;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
