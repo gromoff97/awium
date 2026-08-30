@@ -30,7 +30,7 @@ import static io.github.gromoff97.awium.conditions.MapConditions.sizeBetween;
 import static io.github.gromoff97.awium.conditions.MapConditions.sizeGreaterThan;
 import static io.github.gromoff97.awium.conditions.MapConditions.sizeIsNot;
 import static io.github.gromoff97.awium.conditions.MapConditions.sizeLessThan;
-import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;

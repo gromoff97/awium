@@ -8,14 +8,14 @@ import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.uncontrolled;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
 import static io.github.gromoff97.awium.internal.condition.ConditionAssessment.plain;
-import static io.github.gromoff97.awium.engine.WaitCompletion.*;
+import static io.github.gromoff97.awium.internal.engine.WaitCompletion.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 
 import io.github.gromoff97.awium.condition.*;
 import io.github.gromoff97.awium.fluent.*;
 import io.github.gromoff97.awium.conditions.*;
-import io.github.gromoff97.awium.engine.*;
+import io.github.gromoff97.awium.internal.engine.*;
 import io.github.gromoff97.awium.exceptions.AwaitConfigurationConflictException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

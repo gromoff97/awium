@@ -30,7 +30,7 @@ import static io.github.gromoff97.awium.conditions.CollectionConditions.size;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.sizeGreaterThan;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.sizeLessThan;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.sizeIsNot;
-import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;

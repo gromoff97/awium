@@ -17,7 +17,7 @@ import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedMapAwait;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.*;
 import static io.github.gromoff97.awium.conditions.MapConditions.*;
-import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 

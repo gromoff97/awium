@@ -1,10 +1,10 @@
 package io.github.gromoff97.awium.fluent;
 
 import io.github.gromoff97.awium.condition.AwaitCondition;
-import io.github.gromoff97.awium.diagnostics.FailureFactory;
+import io.github.gromoff97.awium.internal.diagnostics.FailureFactory;
 import io.github.gromoff97.awium.internal.condition.ConditionAssessment;
-import io.github.gromoff97.awium.engine.WaitConfiguration;
-import io.github.gromoff97.awium.engine.WaitEngine;
+import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
+import io.github.gromoff97.awium.internal.engine.WaitEngine;
 import io.github.gromoff97.awium.results.AwaitResult;
 import io.github.gromoff97.awium.sources.Source;
 
@@ -14,7 +14,7 @@ import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
-import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaults;
 import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.description;
 import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.explanation;
 import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.reference;

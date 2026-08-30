@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.engine;
+package io.github.gromoff97.awium.internal.engine;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
 

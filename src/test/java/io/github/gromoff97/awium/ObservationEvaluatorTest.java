@@ -2,9 +2,9 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
-import io.github.gromoff97.awium.engine.WaitConfiguration;
-import io.github.gromoff97.awium.engine.WaitEngine;
-import io.github.gromoff97.awium.engine.WaitCompletion;
+import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
+import io.github.gromoff97.awium.internal.engine.WaitEngine;
+import io.github.gromoff97.awium.internal.engine.WaitCompletion;
 import io.github.gromoff97.awium.sources.Source;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;

@@ -197,7 +197,7 @@ class CollectionSelectionConditionsTest {
         FakeTime time = new FakeTime(0);
 
         assertEquals(3, timedCollectionAwait(source,
-                new io.github.gromoff97.awium.engine.WaitConfiguration(1, 5, 2), time, time).until(last));
+                new io.github.gromoff97.awium.internal.engine.WaitConfiguration(1, 5, 2), time, time).until(last));
     }
 
     @Test
@@ -207,7 +207,7 @@ class CollectionSelectionConditionsTest {
 
         AwaitTimeoutException failure = assertThrows(AwaitTimeoutException.class,
                 () -> timedCollectionAwait(source,
-                        new io.github.gromoff97.awium.engine.WaitConfiguration(1, 3, 0),
+                        new io.github.gromoff97.awium.internal.engine.WaitConfiguration(1, 3, 0),
                         time, time).until(first.because("a first result is required")));
 
         assertTrue(failure.getMessage().contains("Condition: collection has a first element"));

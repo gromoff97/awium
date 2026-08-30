@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.fluent;
 
-import io.github.gromoff97.awium.engine.WaitConfiguration;
+import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.util.Collection;

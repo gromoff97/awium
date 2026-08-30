@@ -5,7 +5,7 @@ import io.github.gromoff97.awium.condition.Condition;
 import io.github.gromoff97.awium.conditions.Conditions;
 import io.github.gromoff97.awium.condition.Condition.PreservingStage;
 import io.github.gromoff97.awium.condition.ConditionStage.ResultStage;
-import io.github.gromoff97.awium.engine.WaitConfiguration;
+import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitPersistenceException;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import org.junit.jupiter.api.Test;

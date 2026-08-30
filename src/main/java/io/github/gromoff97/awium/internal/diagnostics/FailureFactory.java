@@ -1,11 +1,11 @@
-package io.github.gromoff97.awium.diagnostics;
+package io.github.gromoff97.awium.internal.diagnostics;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.results.AwaitResult;
 import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
-import io.github.gromoff97.awium.engine.WaitConfiguration;
-import io.github.gromoff97.awium.engine.WaitEngine;
-import io.github.gromoff97.awium.engine.WaitCompletion;
+import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
+import io.github.gromoff97.awium.internal.engine.WaitEngine;
+import io.github.gromoff97.awium.internal.engine.WaitCompletion;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitPersistenceException;
 import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
@@ -13,7 +13,7 @@ import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitInte
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitSourceRetrievalException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitUnhandledException;
 
-import static io.github.gromoff97.awium.diagnostics.FailureMessageRenderer.addSuppressed;
+import static io.github.gromoff97.awium.internal.diagnostics.FailureMessageRenderer.addSuppressed;
 import static java.lang.Thread.currentThread;
 
 @SuppressWarnings("removal")

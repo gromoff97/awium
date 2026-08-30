@@ -8,7 +8,7 @@ import io.github.gromoff97.awium.condition.Condition.NarrowingStage;
 import io.github.gromoff97.awium.condition.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.condition.Condition.SelectedStage;
 import io.github.gromoff97.awium.condition.Condition.SelectedSequenceStage;
-import io.github.gromoff97.awium.engine.WaitConfiguration;
+import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 import io.github.gromoff97.awium.sources.Source.CollectionViewSource;

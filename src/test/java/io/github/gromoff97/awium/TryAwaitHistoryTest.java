@@ -4,8 +4,8 @@ import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.results.AwaitResult;
 import io.github.gromoff97.awium.internal.condition.ConditionAssessment;
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
-import io.github.gromoff97.awium.engine.WaitConfiguration;
-import io.github.gromoff97.awium.engine.WaitEngine;
+import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
+import io.github.gromoff97.awium.internal.engine.WaitEngine;
 
 import java.util.Arrays;
 import java.util.List;

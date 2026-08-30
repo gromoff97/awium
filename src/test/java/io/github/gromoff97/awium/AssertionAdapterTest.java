@@ -6,7 +6,7 @@ import static io.github.gromoff97.awium.conditions.Conditions.*;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.internal.condition.ConditionTestRuntime.result;
-import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaults;
 import static io.github.gromoff97.awium.fluent.AwaitTestAccess.timedAwait;
 import static java.lang.Long.parseLong;
 import static java.time.Duration.ofNanos;

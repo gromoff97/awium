@@ -1,10 +1,10 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.engine.*;
+import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
 
 import io.github.gromoff97.awium.exceptions.*;
 
-import static io.github.gromoff97.awium.engine.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaults;
 import static java.time.Duration.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;

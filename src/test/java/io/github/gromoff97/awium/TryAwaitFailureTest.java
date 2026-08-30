@@ -3,7 +3,7 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.results.AwaitResult;
 import io.github.gromoff97.awium.condition.Condition;
-import io.github.gromoff97.awium.engine.WaitConfiguration;
+import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
 import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitInterruptedException;
 import io.github.gromoff97.awium.sources.Source;

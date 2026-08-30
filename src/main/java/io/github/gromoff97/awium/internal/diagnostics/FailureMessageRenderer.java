@@ -1,11 +1,11 @@
-package io.github.gromoff97.awium.diagnostics;
+package io.github.gromoff97.awium.internal.diagnostics;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
-import io.github.gromoff97.awium.engine.WaitConfiguration;
-import io.github.gromoff97.awium.engine.WaitCompletion;
+import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
+import io.github.gromoff97.awium.internal.engine.WaitCompletion;
 
-import static io.github.gromoff97.awium.engine.WaitConfiguration.duration;
+import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.duration;
 import static java.util.Arrays.deepToString;
 import static java.util.Objects.requireNonNull;
 

@@ -2,7 +2,7 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.results.AwaitResult;
-import io.github.gromoff97.awium.engine.WaitConfiguration;
+import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.util.List;
