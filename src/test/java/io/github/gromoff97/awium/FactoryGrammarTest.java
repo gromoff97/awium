@@ -1,12 +1,10 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.conditions.Conditions.*;
+import static io.github.gromoff97.awium.condition.Await.await;
+import static io.github.gromoff97.awium.condition.Conditions.*;
 import static java.time.Duration.*;
 
 import io.github.gromoff97.awium.condition.*;
-import io.github.gromoff97.awium.await.*;
-import io.github.gromoff97.awium.conditions.*;
 import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
 import io.github.gromoff97.awium.condition.Condition.PreservingStage;
 import io.github.gromoff97.awium.condition.Condition.SelectedCondition;

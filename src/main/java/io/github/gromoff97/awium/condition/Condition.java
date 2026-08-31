@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.condition;
 
-import io.github.gromoff97.awium.internal.condition.ConditionRuntime;
 import io.github.gromoff97.awium.condition.ConditionStage.ResultStage;
+
 import io.github.gromoff97.awium.sources.Source;
 
 import java.util.Locale;

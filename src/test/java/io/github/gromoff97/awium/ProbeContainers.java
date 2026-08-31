@@ -8,22 +8,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-final class ProbeContainers {
+public final class ProbeContainers {
 
     private ProbeContainers() {
         throw new AssertionError("Utility class");
     }
 
-    static final class ProbeCollection<E> extends AbstractCollection<E> {
+    public static final class ProbeCollection<E> extends AbstractCollection<E> {
         private final int reportedSize;
         private final RuntimeException sizeFailure;
-        int sizeCalls;
+        public int sizeCalls;
 
-        ProbeCollection(int reportedSize) {
+        public ProbeCollection(int reportedSize) {
             this(reportedSize, null);
         }
 
-        ProbeCollection(RuntimeException sizeFailure) {
+        public ProbeCollection(RuntimeException sizeFailure) {
             this(0, sizeFailure);
         }
 
@@ -53,15 +53,15 @@ final class ProbeContainers {
         }
     }
 
-    static final class ProbeMap<K, V> extends AbstractMap<K, V> {
+    public static final class ProbeMap<K, V> extends AbstractMap<K, V> {
         private final RuntimeException sizeFailure;
-        int sizeCalls;
+        public int sizeCalls;
 
-        ProbeMap() {
+        public ProbeMap() {
             this(null);
         }
 
-        ProbeMap(RuntimeException sizeFailure) {
+        public ProbeMap(RuntimeException sizeFailure) {
             this.sizeFailure = sizeFailure;
         }
 
@@ -85,16 +85,16 @@ final class ProbeContainers {
         }
     }
 
-    static final class MembershipCollection<E> extends AbstractCollection<E> {
+    public static final class MembershipCollection<E> extends AbstractCollection<E> {
         private final List<E> elements;
         private final RuntimeException iteratorFailure;
-        int iteratorCalls;
+        public int iteratorCalls;
 
-        MembershipCollection(List<E> elements) {
+        public MembershipCollection(List<E> elements) {
             this(elements, null);
         }
 
-        MembershipCollection(RuntimeException iteratorFailure) {
+        public MembershipCollection(RuntimeException iteratorFailure) {
             this(List.of(), iteratorFailure);
         }
 
@@ -124,12 +124,12 @@ final class ProbeContainers {
         }
     }
 
-    static final class EntryMap<K, V> extends AbstractMap<K, V> {
+    public static final class EntryMap<K, V> extends AbstractMap<K, V> {
         private final List<Entry<K, V>> entries;
-        RuntimeException entrySetFailure;
-        int entrySetCalls;
+        public RuntimeException entrySetFailure;
+        public int entrySetCalls;
 
-        EntryMap(List<Entry<K, V>> entries) {
+        public EntryMap(List<Entry<K, V>> entries) {
             this.entries = entries;
         }
 
@@ -163,7 +163,7 @@ final class ProbeContainers {
         }
     }
 
-    record ProbeEntry<K, V>(K key, V value) implements Map.Entry<K, V> {
+    public record ProbeEntry<K, V>(K key, V value) implements Map.Entry<K, V> {
 
         @Override
         public K getKey() {
@@ -191,11 +191,11 @@ final class ProbeContainers {
         }
     }
 
-    static final class Directional {
+    public static final class Directional {
         private final boolean result;
-        int equalsCalls;
+        public int equalsCalls;
 
-        Directional(boolean result) {
+        public Directional(boolean result) {
             this.result = result;
         }
 
@@ -211,7 +211,7 @@ final class ProbeContainers {
         }
     }
 
-    record GreedyValue(Set<String> matches) {
+    public record GreedyValue(Set<String> matches) {
         @Override
         public boolean equals(Object other) {
             return other instanceof ExpectedValue expected
@@ -224,9 +224,9 @@ final class ProbeContainers {
         }
     }
 
-    record ExpectedValue(String value) {}
+    public record ExpectedValue(String value) {}
 
-    record ThrowingEquals(RuntimeException failure) {
+    public record ThrowingEquals(RuntimeException failure) {
         @Override
         public boolean equals(Object other) {
             if (failure != null) {

@@ -16,7 +16,7 @@ import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaFileObject;
 
-final class CompilationSupport {
+public final class CompilationSupport {
 
     private static final Set<String> TYPE_REJECTION_CODES = Set.of(
             "compiler.err.cant.apply.symbol",
@@ -29,18 +29,18 @@ final class CompilationSupport {
             "compiler.err.cant.resolve.location",
             "compiler.err.cant.resolve.location.args");
 
-    static boolean compiles(Path directory, String source) throws IOException {
+    public static boolean compiles(Path directory, String source) throws IOException {
         return compiles(directory, source,
                 Path.of(System.getProperty("java.class.path")));
     }
 
-    static boolean compiles(Path directory, String source,
+    public static boolean compiles(Path directory, String source,
             String expectedMissingMethod) throws IOException {
         return compiles(directory, source,
                 Path.of(System.getProperty("java.class.path")), expectedMissingMethod);
     }
 
-    static boolean compiles(Path directory, String source, Path classpath)
+    public static boolean compiles(Path directory, String source, Path classpath)
             throws IOException {
         return compiles(directory, source, classpath, null);
     }
@@ -55,7 +55,7 @@ final class CompilationSupport {
                 expectedMissingMethod, sourceFile);
     }
 
-    static boolean compilesModule(Path directory, String descriptor,
+    public static boolean compilesModule(Path directory, String descriptor,
             String source, Path modulePath) throws IOException {
         Path moduleFile = directory.resolve("module-info.java");
         Path sourceFile = directory.resolve("Contract.java");

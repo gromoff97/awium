@@ -1,0 +1,194 @@
+package io.github.gromoff97.awium.condition;
+
+import io.github.gromoff97.awium.CompilationSupport;
+import io.github.gromoff97.awium.FakeTime;
+import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
+import static io.github.gromoff97.awium.condition.ConditionEvaluation.*;
+import static io.github.gromoff97.awium.condition.Conditions.*;
+import static io.github.gromoff97.awium.condition.ConditionTestRuntime.explanation;
+import static io.github.gromoff97.awium.condition.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.condition.AwaitTestAccess.timedAwait;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.IllegalFormatException;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+class ConditionDecorationTest {
+
+    @TempDir
+    Path temporaryDirectory;
+
+    @Test
+    void customConditionFactoryCreatesFreshEvaluatorForEveryWait() {
+        var factories = new AtomicInteger();
+        Condition<String, String> condition = conditionFactory("first evaluation succeeds", () -> {
+            factories.incrementAndGet();
+            var evaluations = new AtomicInteger();
+            return actual -> evaluations.incrementAndGet() == 1
+                    ? satisfied(actual) : unsatisfied("evaluation was repeated");
+        });
+        var time = new FakeTime(0);
+
+        assertEquals("ready", timedAwait(() -> "ready", defaults(), time, time).until(condition));
+        assertEquals("ready", timedAwait(() -> "ready", defaults(), time, time).until(condition));
+        assertEquals(2, factories.get());
+    }
+
+    @Test
+    void customPreservingConditionParticipatesInPreservingSequences() {
+        PreservingCondition<String> custom = preserving("value is ready", actual -> actual.equals("ready")
+                ? satisfied(actual) : unsatisfied("value was not ready"));
+        var time = new FakeTime(0);
+
+        List<String> captured = timedAwait(() -> "ready", defaults(), time, time).until(captured(custom,
+                matches(actual -> actual.equals("ready"))));
+
+        assertEquals(List.of("ready", "ready"), captured);
+    }
+
+    @Test
+    void customPreservingFactoryCreatesFreshEvaluatorForEveryWait() {
+        var factories = new AtomicInteger();
+        PreservingCondition<String> condition = preservingFactory("first evaluation succeeds", () -> {
+            factories.incrementAndGet();
+            var evaluations = new AtomicInteger();
+            return actual -> evaluations.incrementAndGet() == 1
+                    ? satisfied(actual) : unsatisfied("evaluation was repeated");
+        });
+        var time = new FakeTime(0);
+
+        assertEquals("ready", timedAwait(() -> "ready", defaults(), time, time).until(condition));
+        assertEquals("ready", timedAwait(() -> "ready", defaults(), time, time).until(condition));
+        assertEquals(2, factories.get());
+    }
+
+    @Test
+    void plainAndExplainedConditionsShareOneNonDecoratableStage() throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.condition.Conditions.condition;
+                import io.github.gromoff97.awium.condition.ConditionEvaluation;
+                import io.github.gromoff97.awium.condition.ConditionStage;
+                final class Contract {
+                    void check() {
+                        accept(condition("plain", ConditionEvaluation::satisfied));
+                        accept(condition("explained", ConditionEvaluation::satisfied).because("reason"));
+                    }
+                    void accept(ConditionStage<Object, Object> condition) {}
+                }
+                """));
+        assertFalse(compiles("""
+                import static io.github.gromoff97.awium.condition.Conditions.condition;
+                import io.github.gromoff97.awium.condition.ConditionEvaluation;
+                final class Contract {
+                    void check() {
+                        condition("condition", ConditionEvaluation::satisfied).because("first").because("second");
+                    }
+                }
+                """, "because"));
+    }
+
+    @Test
+    void everyConditionKindFormatsItsExplanationEagerly() {
+        Condition<Object, Object> condition = condition(
+                "custom condition", ConditionEvaluation::satisfied);
+        var preserving = asserted(actual -> {});
+        var selected = OptionalConditions.present;
+
+        assertEquals("the value must be ready",
+                explanation(condition.because("the value must be ready")));
+        assertEquals("attempt 3",
+                explanation(condition.because("attempt %d", 3)));
+        assertEquals("preserving",
+                explanation(preserving.because("preserving")));
+        assertEquals("selected value",
+                explanation(selected.because("selected %s", "value")));
+        assertEquals("collection value",
+                explanation(CollectionConditions.nonEmpty.because("collection %s", "value")));
+        assertEquals("single element",
+                explanation(CollectionConditions.single.because("single %s", "element")));
+        assertEquals("map value",
+                explanation(MapConditions.nonEmpty.because("map %s", "value")));
+        assertEquals("single entry",
+                explanation(MapConditions.singleEntry.because("single %s", "entry")));
+    }
+
+    @Test
+    void nestedConditionsRetainTheirExplanation() {
+        var nested = matches((String actual) -> true).because("business reason");
+
+        assertEquals("business reason", explanation(OptionalConditions.hasValue(nested)));
+        assertEquals("business reason", explanation(MapConditions.valueFor("key", nested)));
+    }
+
+    @Test
+    void explanationValidationHappensBeforeEvaluation() {
+        Condition<Object, Object> condition = condition("custom condition",
+                actual -> {
+                    throw new AssertionError("condition evaluated");
+                });
+
+        assertValidation("explanation", NullPointerException.class,
+                () -> condition.because((String) null));
+        assertValidation("explanation", IllegalArgumentException.class,
+                () -> condition.because(" \n "));
+        assertValidation("format", NullPointerException.class,
+                () -> condition.because(null, 1));
+        assertValidation("arguments", NullPointerException.class,
+                () -> condition.because("%s", (Object[]) null));
+        assertValidation("explanation", IllegalArgumentException.class,
+                () -> condition.because("%s", " "));
+        assertThrows(IllegalFormatException.class, () -> condition.because("%q", 1));
+        assertThrows(IllegalStateException.class,
+                () -> condition.because("%s", new Object() {
+                    @Override
+                    public String toString() {
+                        throw new IllegalStateException();
+                    }
+                }));
+    }
+
+    @Test
+    void specializedConditionsCannotBypassExplanationValidation() {
+        assertValidation("explanation", IllegalArgumentException.class,
+                () -> asserted((Object actual) -> {}).because(" \n "));
+        assertValidation("explanation", NullPointerException.class,
+                () -> asserted((Object actual) -> {}).because((String) null));
+    }
+
+    @Test
+    void formattedExplanationsUseRootLocale() {
+        Locale original = Locale.getDefault(Locale.Category.FORMAT);
+        Locale.setDefault(Locale.Category.FORMAT, Locale.GERMANY);
+        try {
+            assertEquals("1.5",
+                    explanation(asserted((Object actual) -> {}).because("%.1f", 1.5)));
+        } finally {
+            Locale.setDefault(Locale.Category.FORMAT, original);
+        }
+    }
+
+    private static <T extends Throwable> void assertValidation(String context,
+            Class<T> type, org.junit.jupiter.api.function.Executable action) {
+        assertTrue(assertThrows(type, action).getMessage().contains(context));
+    }
+
+    private boolean compiles(String source) throws IOException {
+        return CompilationSupport.compiles(temporaryDirectory, source);
+    }
+
+    private boolean compiles(String source, String expectedMissingMethod)
+            throws IOException {
+        return CompilationSupport.compiles(temporaryDirectory, source,
+                expectedMissingMethod);
+    }
+}
