@@ -1,13 +1,13 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.condition.Conditions;
+import io.github.gromoff97.awium.conditions.Conditions;
 import io.github.gromoff97.awium.condition.Condition;
 import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
 import io.github.gromoff97.awium.condition.Condition.PreservingStage;
 import io.github.gromoff97.awium.condition.Condition.ExpectedStage;
 import io.github.gromoff97.awium.condition.Condition.NarrowingStage;
-import io.github.gromoff97.awium.condition.OptionalConditions;
-import io.github.gromoff97.awium.condition.StringConditions;
+import io.github.gromoff97.awium.conditions.OptionalConditions;
+import io.github.gromoff97.awium.conditions.StringConditions;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 import org.junit.jupiter.api.Test;
@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-import static io.github.gromoff97.awium.condition.Await.await;
+import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.mismatch;

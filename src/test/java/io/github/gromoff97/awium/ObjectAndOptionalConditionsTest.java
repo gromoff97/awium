@@ -6,8 +6,8 @@ import static io.github.gromoff97.awium.condition.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.*;
-import static io.github.gromoff97.awium.condition.Conditions.*;
-import static io.github.gromoff97.awium.condition.OptionalConditions.*;
+import static io.github.gromoff97.awium.conditions.Conditions.*;
+import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
 
 import io.github.gromoff97.awium.condition.*;
 

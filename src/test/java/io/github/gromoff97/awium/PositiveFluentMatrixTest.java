@@ -1,16 +1,17 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.condition.CollectionConditions.*;
-import static io.github.gromoff97.awium.condition.Conditions.*;
-import static io.github.gromoff97.awium.condition.OptionalConditions.*;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
+import static io.github.gromoff97.awium.conditions.Conditions.*;
+import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
 
 import io.github.gromoff97.awium.condition.*;
+import io.github.gromoff97.awium.conditions.MapConditions;
 import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 import io.github.gromoff97.awium.sources.Source.MapSource;
 import io.github.gromoff97.awium.sources.Source.OptionalSource;
 
-import static io.github.gromoff97.awium.condition.Await.await;
+import static io.github.gromoff97.awium.await.Await.await;
 import static java.time.Duration.*;
 import static org.junit.jupiter.api.Assertions.assertSame;
 

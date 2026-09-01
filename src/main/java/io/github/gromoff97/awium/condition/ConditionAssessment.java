@@ -10,23 +10,24 @@ import static io.github.gromoff97.awium.condition.ConditionEvaluation.uncontroll
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
 
 /**
- * Condition outcome paired with engine diagnostics that do not belong to the public condition API.
+ * Condition outcome paired with diagnostics used while executing and composing conditions.
  *
  * @param <Result> value produced by a satisfied condition
  * @param evaluation condition outcome, or {@code null} when a broken evaluator returned {@code null}
  * @param context attempt diagnostics
  */
-record ConditionAssessment<Result>(ConditionEvaluation<? extends Result> evaluation, AwaitAttempt.Context context) {
+public record ConditionAssessment<Result>(ConditionEvaluation<? extends Result> evaluation,
+        AwaitAttempt.Context context) {
 
-    ConditionAssessment {
+    public ConditionAssessment {
         requireNonNull(context, "context must not be null");
     }
 
-    static <Result> ConditionAssessment<Result> plain(ConditionEvaluation<? extends Result> evaluation) {
+    public static <Result> ConditionAssessment<Result> plain(ConditionEvaluation<? extends Result> evaluation) {
         return new ConditionAssessment<>(evaluation, AwaitAttempt.Context.Plain.INSTANCE);
     }
 
-    <Next> ConditionAssessment<Next> flatMap(Function<? super Result,
+    public <Next> ConditionAssessment<Next> flatMap(Function<? super Result,
             ? extends ConditionAssessment<? extends Next>> continuation) {
         requireNonNull(continuation, "continuation must not be null");
         return switch (evaluation) {

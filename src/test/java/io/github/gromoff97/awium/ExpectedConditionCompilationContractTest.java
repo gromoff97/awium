@@ -17,8 +17,8 @@ class ExpectedConditionCompilationContractTest {
     @Test
     void expectedConditionsRetainCompatibleSourceTypes() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.condition.Await.*;
-                import static io.github.gromoff97.awium.condition.Conditions.*;
+                import static io.github.gromoff97.awium.await.Await.*;
+                import static io.github.gromoff97.awium.conditions.Conditions.*;
                 import io.github.gromoff97.awium.results.AwaitResult;
                 import io.github.gromoff97.awium.sources.Source;
 
@@ -48,8 +48,8 @@ class ExpectedConditionCompilationContractTest {
                 "await(strings).until(notIn(1, 2))",
                 "await(children).until(equalTo(new Parent()))")) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.condition.Await.await;
-                    import static io.github.gromoff97.awium.condition.Conditions.*;
+                    import static io.github.gromoff97.awium.await.Await.await;
+                    import static io.github.gromoff97.awium.conditions.Conditions.*;
                     import io.github.gromoff97.awium.sources.Source;
 
                     final class Contract {
@@ -67,10 +67,10 @@ class ExpectedConditionCompilationContractTest {
     @Test
     void nestedExpectedConditionsRetainContainerValueTypes() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.condition.Await.await;
-                import static io.github.gromoff97.awium.condition.Conditions.equalTo;
-                import static io.github.gromoff97.awium.condition.MapConditions.valueFor;
-                import static io.github.gromoff97.awium.condition.OptionalConditions.hasValue;
+                import static io.github.gromoff97.awium.await.Await.await;
+                import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
+                import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
+                import static io.github.gromoff97.awium.conditions.OptionalConditions.hasValue;
                 import io.github.gromoff97.awium.sources.Source.MapSource;
                 import io.github.gromoff97.awium.sources.Source.OptionalSource;
                 import java.util.Map;
@@ -87,10 +87,10 @@ class ExpectedConditionCompilationContractTest {
                 "await(optional).until(hasValue(equalTo(42)))",
                 "await(map).until(valueFor(\"answer\", equalTo(42)))")) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.condition.Await.await;
-                    import static io.github.gromoff97.awium.condition.Conditions.equalTo;
-                    import static io.github.gromoff97.awium.condition.MapConditions.valueFor;
-                    import static io.github.gromoff97.awium.condition.OptionalConditions.hasValue;
+                    import static io.github.gromoff97.awium.await.Await.await;
+                    import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
+                    import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
+                    import static io.github.gromoff97.awium.conditions.OptionalConditions.hasValue;
                     import io.github.gromoff97.awium.sources.Source.MapSource;
                     import io.github.gromoff97.awium.sources.Source.OptionalSource;
                     import java.util.Map;

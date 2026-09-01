@@ -8,7 +8,7 @@ import io.github.gromoff97.awium.condition.Condition.SelectedSequenceStage;
 import io.github.gromoff97.awium.condition.Condition.SelectedStage;
 import io.github.gromoff97.awium.condition.ConditionStage;
 import io.github.gromoff97.awium.condition.ConditionStage.ResultStage;
-import io.github.gromoff97.awium.condition.Conditions;
+import io.github.gromoff97.awium.conditions.Conditions;
 import io.github.gromoff97.awium.sources.Source;
 
 import static java.lang.reflect.Modifier.isAbstract;
@@ -32,7 +32,9 @@ class PublicSurfaceTest {
     @Test
     void moduleExportsOnlyThePublicApiPackages() {
         assertEquals(Set.of(
+                        "io.github.gromoff97.awium.await",
                         "io.github.gromoff97.awium.condition",
+                        "io.github.gromoff97.awium.conditions",
                         "io.github.gromoff97.awium.exceptions",
                         "io.github.gromoff97.awium.results",
                         "io.github.gromoff97.awium.sources"),
@@ -43,12 +45,14 @@ class PublicSurfaceTest {
     }
 
     @Test
-    void conditionRuntimeTypesRemainPackagePrivate() throws ClassNotFoundException {
-        for (String type : List.of("AbstractAwait", "CapturedEvaluator", "ConditionAssessment", "ConditionRuntime",
-                "ConditionSupport", "FailureFactory", "FailureMessageRenderer", "ObservationEvaluator", "ValueMatching",
-                "WaitCompletion", "WaitConfiguration", "WaitEngine")) {
-            Class<?> runtimeType = Class.forName("io.github.gromoff97.awium.condition." + type);
-            assertFalse(isPublic(runtimeType.getModifiers()), runtimeType.getName());
+    void helpersInExportedPackagesRemainPackagePrivate() throws ClassNotFoundException {
+        for (String type : List.of(
+                "io.github.gromoff97.awium.await.AbstractAwait",
+                "io.github.gromoff97.awium.condition.CapturedEvaluator",
+                "io.github.gromoff97.awium.conditions.ConditionSupport",
+                "io.github.gromoff97.awium.conditions.ValueMatching")) {
+            Class<?> helper = Class.forName(type);
+            assertFalse(isPublic(helper.getModifiers()), helper.getName());
         }
     }
 

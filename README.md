@@ -4,8 +4,8 @@ Awium is a zero-dependency Java 21 library that waits for a condition in the
 calling thread and returns the result from the same successful observation.
 
 ```java
-import static io.github.gromoff97.awium.condition.Await.await;
-import static io.github.gromoff97.awium.condition.OptionalConditions.present;
+import static io.github.gromoff97.awium.await.Await.await;
+import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
 
 Payment payment = await(() -> paymentRepository.findById(order.paymentId())).until(present.because("Checkout cannot continue without the payment"));
 ```
@@ -40,7 +40,7 @@ terminal result type.
 Most built-in conditions return the exact object obtained from the source:
 
 ```java
-import static io.github.gromoff97.awium.condition.Conditions.equalTo;
+import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
 
 Payment payment = await(paymentRepository::load).until(equalTo(expectedPayment));
 ```
@@ -53,9 +53,9 @@ the same way.
 Selection conditions return a value contained in the observation:
 
 ```java
-import static io.github.gromoff97.awium.condition.CollectionConditions.single;
-import static io.github.gromoff97.awium.condition.MapConditions.singleEntry;
-import static io.github.gromoff97.awium.condition.OptionalConditions.present;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
+import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
+import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
 
 Payment payment = await(paymentRepository::find).until(present);
 Payment onlyPayment = await(paymentRepository::findAll).until(single);
@@ -72,7 +72,7 @@ as statements.
 the condition is currently unsatisfied, so polling continues:
 
 ```java
-import static io.github.gromoff97.awium.condition.Conditions.asserted;
+import static io.github.gromoff97.awium.conditions.Conditions.asserted;
 
 Payment payment = await(paymentRepository::load).until(asserted(actual -> {
     if (!actual.isComplete()) {
@@ -84,7 +84,7 @@ Payment payment = await(paymentRepository::load).until(asserted(actual -> {
 `yields(...)` returns the callback result instead:
 
 ```java
-import static io.github.gromoff97.awium.condition.Conditions.yields;
+import static io.github.gromoff97.awium.conditions.Conditions.yields;
 
 Receipt receipt = await(paymentRepository::load).until(yields(Payment::receipt));
 ```
@@ -99,7 +99,7 @@ uncontrolled failures and stop polling immediately.
 evaluates one stage at a time and returns one captured result per stage:
 
 ```java
-import static io.github.gromoff97.awium.condition.Conditions.captured;
+import static io.github.gromoff97.awium.conditions.Conditions.captured;
 
 List<Payment> lifecycle = await(paymentRepository::load).until(captured(
         payment -> payment.status() == CREATED,
@@ -174,7 +174,7 @@ Use `condition(...)` when neither a predicate, `asserted(...)`, nor
 ```java
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.condition.Conditions.condition;
+import static io.github.gromoff97.awium.conditions.Conditions.condition;
 
 Receipt receipt = await(paymentRepository::load).until(condition(
         "payment has a receipt",
@@ -272,7 +272,7 @@ evaluation state. State in a callback passed directly to `condition(...)` or
 `await(...)`, but returns one `AwaitResult<S, R>` for both success and failure:
 
 ```java
-import static io.github.gromoff97.awium.condition.Await.tryAwait;
+import static io.github.gromoff97.awium.await.Await.tryAwait;
 
 AwaitResult<Optional<Payment>, Payment> result =
         tryAwait(paymentRepository::find).upTo(TIMEOUT).until(present);

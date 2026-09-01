@@ -1,6 +1,8 @@
 package io.github.gromoff97.awium.condition;
 
 import io.github.gromoff97.awium.FakeTime;
+import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
+import io.github.gromoff97.awium.conditions.Conditions;
 import io.github.gromoff97.awium.condition.Condition.PreservingStage;
 import io.github.gromoff97.awium.condition.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.results.AwaitAttempt;
@@ -12,15 +14,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 
-import static io.github.gromoff97.awium.condition.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.condition.AwaitTestAccess.timedOptionalAwait;
-import static io.github.gromoff97.awium.condition.AwaitTestAccess.timedTryAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedOptionalAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.condition.Conditions.captured;
-import static io.github.gromoff97.awium.condition.Conditions.condition;
-import static io.github.gromoff97.awium.condition.Conditions.matches;
-import static io.github.gromoff97.awium.condition.OptionalConditions.present;
+import static io.github.gromoff97.awium.conditions.Conditions.captured;
+import static io.github.gromoff97.awium.conditions.Conditions.condition;
+import static io.github.gromoff97.awium.conditions.Conditions.matches;
+import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;

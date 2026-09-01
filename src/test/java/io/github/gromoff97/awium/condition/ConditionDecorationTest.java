@@ -3,11 +3,14 @@ package io.github.gromoff97.awium.condition;
 import io.github.gromoff97.awium.CompilationSupport;
 import io.github.gromoff97.awium.FakeTime;
 import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
+import io.github.gromoff97.awium.conditions.CollectionConditions;
+import io.github.gromoff97.awium.conditions.MapConditions;
+import io.github.gromoff97.awium.conditions.OptionalConditions;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.*;
-import static io.github.gromoff97.awium.condition.Conditions.*;
+import static io.github.gromoff97.awium.conditions.Conditions.*;
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.explanation;
-import static io.github.gromoff97.awium.condition.WaitConfiguration.defaults;
-import static io.github.gromoff97.awium.condition.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -75,7 +78,7 @@ class ConditionDecorationTest {
     @Test
     void plainAndExplainedConditionsShareOneNonDecoratableStage() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.condition.Conditions.condition;
+                import static io.github.gromoff97.awium.conditions.Conditions.condition;
                 import io.github.gromoff97.awium.condition.ConditionEvaluation;
                 import io.github.gromoff97.awium.condition.ConditionStage;
                 final class Contract {
@@ -87,7 +90,7 @@ class ConditionDecorationTest {
                 }
                 """));
         assertFalse(compiles("""
-                import static io.github.gromoff97.awium.condition.Conditions.condition;
+                import static io.github.gromoff97.awium.conditions.Conditions.condition;
                 import io.github.gromoff97.awium.condition.ConditionEvaluation;
                 final class Contract {
                     void check() {

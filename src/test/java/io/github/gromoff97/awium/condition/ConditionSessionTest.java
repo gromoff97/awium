@@ -3,6 +3,8 @@ package io.github.gromoff97.awium.condition;
 import io.github.gromoff97.awium.condition.Condition.PreservingStage;
 import io.github.gromoff97.awium.condition.Condition.SelectedSequenceStage;
 import io.github.gromoff97.awium.condition.Condition.SelectedStage;
+import io.github.gromoff97.awium.conditions.CollectionConditions;
+import io.github.gromoff97.awium.conditions.Conditions;
 
 import java.util.Collection;
 import java.util.function.Function;
@@ -10,7 +12,7 @@ import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.condition.Conditions.captured;
+import static io.github.gromoff97.awium.conditions.Conditions.captured;
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.result;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

@@ -28,7 +28,11 @@ import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
 import static java.util.Objects.requireNonNull;
 
-final class ConditionRuntime {
+/**
+ * Low-level construction and execution support shared by the await facade and condition catalogs.
+ * Most consumers should use {@link io.github.gromoff97.awium.conditions.Conditions} instead.
+ */
+public final class ConditionRuntime {
 
     private interface RuntimeStage<Observed, Result> {
 
@@ -91,42 +95,42 @@ final class ConditionRuntime {
             implements SelectedSequenceCondition<Observed, Family>, RuntimeStage<Observed, List<Object>> {
     }
 
-    static <Observed, Result> Condition<Observed, Result> assessedCondition(String description,
+    public static <Observed, Result> Condition<Observed, Result> assessedCondition(String description,
             Supplier<? extends Function<? super Observed, ? extends ConditionAssessment<? extends Result>>> evaluatorFactory) {
         return assessedCondition(description, null, evaluatorFactory);
     }
 
-    static <Observed, Result> Condition<Observed, Result> assessedCondition(String description, String explanation,
+    public static <Observed, Result> Condition<Observed, Result> assessedCondition(String description, String explanation,
             Supplier<? extends Function<? super Observed, ? extends ConditionAssessment<? extends Result>>> evaluatorFactory) {
         return assessedCondition(description, explanation, null, evaluatorFactory);
     }
 
-    static <Observed, Result> Condition<Observed, Result> assessedCondition(String description, String explanation,
+    public static <Observed, Result> Condition<Observed, Result> assessedCondition(String description, String explanation,
             Reference<?> reference,
             Supplier<? extends Function<? super Observed, ? extends ConditionAssessment<? extends Result>>> evaluatorFactory) {
         return new RuntimeCondition<>(nonBlank(description, "description"), explanation, reference,
                 requireNonNull(evaluatorFactory, "evaluator factory must not be null"));
     }
 
-    static <Observed, Result> Condition<Observed, Result> condition(String description,
+    public static <Observed, Result> Condition<Observed, Result> condition(String description,
             Function<? super Observed, ? extends ConditionEvaluation<? extends Result>> evaluation) {
         return condition(description, null, evaluation);
     }
 
-    static <Observed, Result> Condition<Observed, Result> condition(String description, Reference<?> reference,
+    public static <Observed, Result> Condition<Observed, Result> condition(String description, Reference<?> reference,
             Function<? super Observed, ? extends ConditionEvaluation<? extends Result>> evaluation) {
         return new RuntimeCondition<>(nonBlank(description, "description"), null, reference,
                 assessments(evaluation));
     }
 
-    static <Observed, Result> Condition<Observed, Result> conditionFactory(String description,
+    public static <Observed, Result> Condition<Observed, Result> conditionFactory(String description,
             Supplier<? extends Function<? super Observed, ? extends ConditionEvaluation<? extends Result>>> evaluatorFactory) {
         return new RuntimeCondition<>(nonBlank(description, "description"), null, null, assessments(evaluatorFactory));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <Observed> Condition<Observed, List<Observed>> captured(Predicate<? super Observed> first,
+    public static <Observed> Condition<Observed, List<Observed>> captured(Predicate<? super Observed> first,
             Predicate<? super Observed> second, Predicate<? super Observed>... rest) {
         return capturedPreserving(stages("predicate", first, second, rest).stream()
                 .map(predicate -> ConditionRuntime.<Observed>preserving("value matches", actual -> predicate.test(actual)
@@ -135,14 +139,14 @@ final class ConditionRuntime {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <Observed> Condition<Observed, List<Observed>> captured(PreservingStage<? super Observed> first,
+    public static <Observed> Condition<Observed, List<Observed>> captured(PreservingStage<? super Observed> first,
             PreservingStage<? super Observed> second, PreservingStage<? super Observed>... rest) {
         return capturedPreserving(stages("condition", first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <Observed, Result> Condition<Observed, List<Result>> captured(ResultStage<Observed, Result> first,
+    public static <Observed, Result> Condition<Observed, List<Result>> captured(ResultStage<Observed, Result> first,
             ResultStage<Observed, Result> second, ResultStage<Observed, Result>... rest) {
         List<ResultStage<Observed, Result>> stages = stages("condition", first, second, rest);
         return assessedCondition("conditions are satisfied in order", () ->
@@ -152,7 +156,7 @@ final class ConditionRuntime {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <Expected> ExpectedSequenceCondition<Expected> captured(ExpectedStage<? extends Expected> first,
+    public static <Expected> ExpectedSequenceCondition<Expected> captured(ExpectedStage<? extends Expected> first,
             ExpectedStage<? extends Expected> second, ExpectedStage<? extends Expected>... rest) {
         List<ExpectedStage<? extends Expected>> stages = stages("condition", first, second, rest);
         return new RuntimeExpectedSequenceCondition<>("conditions are satisfied in order", null, null,
@@ -162,7 +166,7 @@ final class ConditionRuntime {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <Observed, Family extends Source<?>> SelectedSequenceCondition<Observed, Family> captured(SelectedStage<? super Observed, Family> first,
+    public static <Observed, Family extends Source<?>> SelectedSequenceCondition<Observed, Family> captured(SelectedStage<? super Observed, Family> first,
             SelectedStage<? super Observed, Family> second,
             SelectedStage<? super Observed, Family>... rest) {
         List<SelectedStage<? super Observed, Family>> stages =
@@ -191,73 +195,73 @@ final class ConditionRuntime {
                 .toList();
     }
 
-    static <Observed> PreservingCondition<Observed> preserving(String description,
+    public static <Observed> PreservingCondition<Observed> preserving(String description,
             Function<? super Observed, ? extends ConditionEvaluation<? extends Observed>> evaluator) {
         return preserving(description, null, evaluator);
     }
 
-    static <Observed> PreservingCondition<Observed> preserving(String description, Reference<?> reference,
+    public static <Observed> PreservingCondition<Observed> preserving(String description, Reference<?> reference,
             Function<? super Observed, ? extends ConditionEvaluation<? extends Observed>> evaluator) {
         return new RuntimePreservingCondition<>(nonBlank(description, "description"), null, reference,
                 assessments(evaluator));
     }
 
-    static <Observed> PreservingCondition<Observed> preserving(String description,
+    public static <Observed> PreservingCondition<Observed> preserving(String description,
             Supplier<? extends Function<? super Observed, ? extends ConditionEvaluation<? extends Observed>>> evaluatorFactory) {
         return new RuntimePreservingCondition<>(nonBlank(description, "description"), null, null, assessments(evaluatorFactory));
     }
 
-    static <Expected> ExpectedCondition<Expected> expected(String description, Function<Object, ConditionEvaluation<Object>> evaluator) {
+    public static <Expected> ExpectedCondition<Expected> expected(String description, Function<Object, ConditionEvaluation<Object>> evaluator) {
         return expected(description, null, evaluator);
     }
 
-    static <Expected> ExpectedCondition<Expected> expected(String description, Reference<?> reference,
+    public static <Expected> ExpectedCondition<Expected> expected(String description, Reference<?> reference,
             Function<Object, ConditionEvaluation<Object>> evaluator) {
         return new RuntimeExpectedCondition<>(nonBlank(description, "description"), null, reference, assessments(evaluator));
     }
 
-    static <Result> NarrowingCondition<Result> narrowing(String description, Function<Object, ConditionEvaluation<Result>> evaluator) {
+    public static <Result> NarrowingCondition<Result> narrowing(String description, Function<Object, ConditionEvaluation<Result>> evaluator) {
         return new RuntimeNarrowingCondition<>(nonBlank(description, "description"), null, null, assessments(evaluator));
     }
 
-    static <Observed, Family extends Source<?>> SelectedCondition<Observed, Family> selected(String description,
+    public static <Observed, Family extends Source<?>> SelectedCondition<Observed, Family> selected(String description,
             Function<? super Observed, ? extends ConditionEvaluation<?>> evaluator) {
         return selected(description, null, evaluator);
     }
 
-    static <Observed, Family extends Source<?>> SelectedCondition<Observed, Family> selected(String description,
+    public static <Observed, Family extends Source<?>> SelectedCondition<Observed, Family> selected(String description,
             Reference<?> reference, Function<? super Observed, ? extends ConditionEvaluation<?>> evaluator) {
         return new RuntimeSelectedCondition<>(nonBlank(description, "description"), null, reference, assessments(evaluator));
     }
 
     @SuppressWarnings("unchecked")
-    static <Observed, Result> Function<Observed, ConditionAssessment<Result>> selectedEvaluator(AwaitCondition condition) {
+    public static <Observed, Result> Function<Observed, ConditionAssessment<Result>> selectedEvaluator(AwaitCondition condition) {
         return (Function<Observed, ConditionAssessment<Result>>) (Function<?, ?>)
                 ConditionRuntime.<Observed, Result>runtime(condition).newEvaluator();
     }
 
-    static <Observed, Result> Function<? super Observed, ? extends ConditionAssessment<? extends Result>> evaluator(ConditionStage<? super Observed,
+    public static <Observed, Result> Function<? super Observed, ? extends ConditionAssessment<? extends Result>> evaluator(ConditionStage<? super Observed,
             ? extends Result> condition) {
         return ConditionRuntime.<Observed, Result>runtime(condition).newEvaluator();
     }
 
-    static <Observed> Function<Observed, ConditionAssessment<Observed>> preservingEvaluator(PreservingStage<? super Observed> condition) {
+    public static <Observed> Function<Observed, ConditionAssessment<Observed>> preservingEvaluator(PreservingStage<? super Observed> condition) {
         Function<? super Observed, ? extends ConditionAssessment<?>> evaluator = ConditionRuntime.<Observed, Observed>runtime(condition).newEvaluator();
         return actual -> evaluator.apply(actual).mapEvaluation(ignored -> satisfied(actual));
     }
 
-    static <Observed> Function<Observed, ConditionAssessment<Observed>> expectedEvaluator(ExpectedStage<?> condition) {
+    public static <Observed> Function<Observed, ConditionAssessment<Observed>> expectedEvaluator(ExpectedStage<?> condition) {
         Function<? super Object, ? extends ConditionAssessment<?>> evaluator = ConditionRuntime.<Object, Object>runtime(condition).newEvaluator();
         return actual -> evaluator.apply(actual).mapEvaluation(ignored -> satisfied(actual));
     }
 
     @SuppressWarnings("unchecked")
-    static <Observed> Function<Observed, ConditionAssessment<List<Observed>>> expectedSequenceEvaluator(ExpectedSequenceStage<?> condition) {
+    public static <Observed> Function<Observed, ConditionAssessment<List<Observed>>> expectedSequenceEvaluator(ExpectedSequenceStage<?> condition) {
         return (Function<Observed, ConditionAssessment<List<Observed>>>) (Function<?, ?>)
                 ConditionRuntime.<Object, List<Object>>runtime(condition).newEvaluator();
     }
 
-    static <Observed, Result> Function<Observed, ConditionAssessment<Result>> narrowingEvaluator(NarrowingStage<Result> condition) {
+    public static <Observed, Result> Function<Observed, ConditionAssessment<Result>> narrowingEvaluator(NarrowingStage<Result> condition) {
         Function<? super Object, ? extends ConditionAssessment<? extends Result>> evaluator =
                 ConditionRuntime.<Object, Result>runtime(condition).newEvaluator();
         return actual -> evaluator.apply(actual).mapEvaluation(ConditionEvaluation::satisfied);
@@ -304,23 +308,23 @@ final class ConditionRuntime {
                 runtime.reference(), runtime.evaluatorFactory());
     }
 
-    static String description(AwaitCondition condition) {
+    public static String description(AwaitCondition condition) {
         return runtime(condition).description();
     }
 
-    static String explanation(AwaitCondition condition) {
+    public static String explanation(AwaitCondition condition) {
         return runtime(condition).explanation();
     }
 
-    static Reference<?> reference(AwaitCondition condition) {
+    public static Reference<?> reference(AwaitCondition condition) {
         return runtime(condition).reference();
     }
 
-    static <Value> Reference<Value> expectedReference(Value value) {
+    public static <Value> Reference<Value> expectedReference(Value value) {
         return new Reference<>("Expected", value);
     }
 
-    static <Value> Reference<Value> unexpectedReference(Value value) {
+    public static <Value> Reference<Value> unexpectedReference(Value value) {
         return new Reference<>("Unexpected", value);
     }
 

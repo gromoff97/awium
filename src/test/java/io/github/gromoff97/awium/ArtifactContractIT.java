@@ -36,7 +36,9 @@ class ArtifactContractIT {
                 .find("io.github.gromoff97.awium").orElseThrow();
         assertFalse(module.descriptor().isAutomatic());
         assertEquals(Set.of(
+                        "io.github.gromoff97.awium.await",
                         "io.github.gromoff97.awium.condition",
+                        "io.github.gromoff97.awium.conditions",
                         "io.github.gromoff97.awium.exceptions",
                         "io.github.gromoff97.awium.results",
                         "io.github.gromoff97.awium.sources"),
@@ -65,15 +67,15 @@ class ArtifactContractIT {
     void packagedJarCompilesDirectMethodReferences(@TempDir Path directory)
             throws Exception {
         assertTrue(compiles(directory, """
-                import static io.github.gromoff97.awium.condition.Await.await;
-                import static io.github.gromoff97.awium.condition.CollectionConditions.*;
-                import static io.github.gromoff97.awium.condition.Conditions.*;
-                import static io.github.gromoff97.awium.condition.MapConditions.*;
-                import static io.github.gromoff97.awium.condition.OptionalConditions.*;
-                import static io.github.gromoff97.awium.condition.StringConditions.*;
+                import static io.github.gromoff97.awium.await.Await.await;
+                import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
+                import static io.github.gromoff97.awium.conditions.Conditions.*;
+                import static io.github.gromoff97.awium.conditions.MapConditions.*;
+                import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
+                import static io.github.gromoff97.awium.conditions.StringConditions.*;
 
-                import io.github.gromoff97.awium.condition.CollectionConditions;
-                import io.github.gromoff97.awium.condition.MapConditions;
+                import io.github.gromoff97.awium.conditions.CollectionConditions;
+                import io.github.gromoff97.awium.conditions.MapConditions;
 
                 import java.util.List;
                 import java.util.Map;
@@ -117,8 +119,8 @@ class ArtifactContractIT {
                 """, """
                 package consumer;
 
-                import static io.github.gromoff97.awium.condition.Await.await;
-                import static io.github.gromoff97.awium.condition.Conditions.isNotNull;
+                import static io.github.gromoff97.awium.await.Await.await;
+                import static io.github.gromoff97.awium.conditions.Conditions.isNotNull;
 
                 final class Contract {
                     String value() {
