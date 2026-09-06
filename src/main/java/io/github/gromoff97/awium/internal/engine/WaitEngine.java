@@ -5,7 +5,6 @@ import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.sources.Source;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -22,9 +21,6 @@ import static java.lang.Thread.currentThread;
 public record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
         LongConsumer parker) {
 
-    // ponytail: fixed cap; make it configurable only if consumers need longer diagnostic histories.
-    private static final int MAX_RETAINED_ATTEMPTS = 256;
-
     public <Observed, Result> WaitCompletion<Observed, Result> waitFor(Source<? extends Observed> source,
             Function<? super Observed, ? extends ConditionEvaluation<? extends Result>> evaluator) {
         return waitFor(source, evaluator, ignored -> {});
@@ -32,24 +28,14 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
 
     public <Observed, Result> RecordedWait<Observed, Result> recordedWaitFor(Source<? extends Observed> source,
             Function<? super Observed, ? extends ConditionEvaluation<? extends Result>> evaluator) {
-        var attempts = new ArrayList<AwaitAttempt<Observed, Result>>();
-        WaitCompletion<Observed, Result> outcome = waitFor(source, evaluator, attempt -> {
-            if (attempts.isEmpty() || !equivalent(attempts.getLast(), attempt)) {
-                if (attempts.size() == MAX_RETAINED_ATTEMPTS) {
-                    attempts.remove(1);
-                }
-                attempts.add(attempt);
-            } else {
-                attempts.set(attempts.size() - 1, attempt);
-            }
-        });
-        return new RecordedWait<>(outcome, attempts);
+        var history = new AttemptHistory<Observed, Result>();
+        WaitCompletion<Observed, Result> outcome = waitFor(source, evaluator, history);
+        return new RecordedWait<>(outcome, history.snapshot());
     }
 
     private <Observed, Result> WaitCompletion<Observed, Result> waitFor(Source<? extends Observed> source,
             Function<? super Observed, ? extends ConditionEvaluation<? extends Result>> evaluator,
             Consumer<AwaitAttempt<Observed, Result>> recorder) {
-        configuration.validatePair();
         long started = clock.getAsLong();
         ObservationEvaluator<Observed, Result> observations = new ObservationEvaluator<>(source, evaluator, clock, started);
         WaitCompletion<Observed, Result> acquisition = acquire(observations, recorder, started);
@@ -222,24 +208,5 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
         public RecordedWait {
             attempts = List.copyOf(attempts);
         }
-    }
-
-    private static boolean equivalent(AwaitAttempt<?, ?> left,
-            AwaitAttempt<?, ?> right) {
-        if (left.phase() != right.phase()) {
-            return false;
-        }
-        return switch (left.outcome()) {
-            case AwaitAttempt.Outcome.Satisfied<?, ?> value
-                    when right.outcome() instanceof AwaitAttempt.Outcome.Satisfied<?, ?> other ->
-                    value.observed() == other.observed() && value.result() == other.result();
-            case AwaitAttempt.Outcome.Unsatisfied<?, ?> value
-                    when right.outcome() instanceof AwaitAttempt.Outcome.Unsatisfied<?, ?> other ->
-                    value.observed() == other.observed()
-                            && value.mismatch().equals(other.mismatch())
-                            && value.assertion() == other.assertion()
-                            && value.context().equals(other.context());
-            default -> false;
-        };
     }
 }

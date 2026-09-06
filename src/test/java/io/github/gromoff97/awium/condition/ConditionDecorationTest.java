@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium.condition;
 
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.captured;
+
 import io.github.gromoff97.awium.CompilationSupport;
 import io.github.gromoff97.awium.FakeTime;
 import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
@@ -13,7 +15,7 @@ import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaul
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -53,8 +55,8 @@ class ConditionDecorationTest {
                 ? satisfied(actual) : unsatisfied("value was not ready"));
         var time = new FakeTime(0);
 
-        List<String> captured = timedAwait(() -> "ready", defaults(), time, time).until(captured(custom,
-                matches(actual -> actual.equals("ready"))));
+        List<String> captured = timedAwait(() -> "ready", defaults(), time, time).until(custom,
+                matches(actual -> actual.equals("ready")));
 
         assertEquals(List.of("ready", "ready"), captured);
     }
@@ -76,20 +78,20 @@ class ConditionDecorationTest {
     }
 
     @Test
-    void plainAndExplainedConditionsShareOneNonDecoratableStage() throws IOException {
+    void plainAndExplainedConditionsKeepTheSameType() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.conditions.Conditions.condition;
                 import io.github.gromoff97.awium.condition.ConditionEvaluation;
-                import io.github.gromoff97.awium.condition.ConditionStage;
+                import io.github.gromoff97.awium.condition.Condition;
                 final class Contract {
                     void check() {
                         accept(condition("plain", ConditionEvaluation::satisfied));
                         accept(condition("explained", ConditionEvaluation::satisfied).because("reason"));
                     }
-                    void accept(ConditionStage<Object, Object> condition) {}
+                    void accept(Condition<Object, Object> condition) {}
                 }
                 """));
-        assertFalse(compiles("""
+        assertTrue(compiles("""
                 import static io.github.gromoff97.awium.conditions.Conditions.condition;
                 import io.github.gromoff97.awium.condition.ConditionEvaluation;
                 final class Contract {
@@ -97,7 +99,7 @@ class ConditionDecorationTest {
                         condition("condition", ConditionEvaluation::satisfied).because("first").because("second");
                     }
                 }
-                """, "because"));
+                """));
     }
 
     @Test
@@ -123,6 +125,30 @@ class ConditionDecorationTest {
                 explanation(MapConditions.nonEmpty.because("map %s", "value")));
         assertEquals("single entry",
                 explanation(MapConditions.singleEntry.because("single %s", "entry")));
+    }
+
+    @Test
+    void replacingAnExplanationLeavesTheOriginalAndConstantsUnchanged() {
+        var conditions = List.<AwaitCondition>of(
+                condition("custom", ConditionEvaluation::satisfied),
+                isNotNull, equalTo("ready"), instanceOf(String.class),
+                OptionalConditions.present, captured(equalTo("first"), equalTo("last")),
+                captured(CollectionConditions.first, CollectionConditions.last));
+        var replacements = List.<AwaitCondition>of(
+                condition("custom", ConditionEvaluation::satisfied).because("old").because("new %d", 42),
+                isNotNull.because("old").because("new %d", 42),
+                equalTo("ready").because("old").because("new %d", 42),
+                instanceOf(String.class).because("old").because("new %d", 42),
+                OptionalConditions.present.because("old").because("new %d", 42),
+                captured(equalTo("first"), equalTo("last")).because("old").because("new %d", 42),
+                captured(CollectionConditions.first, CollectionConditions.last).because("old").because("new %d", 42));
+
+        for (var condition : conditions) assertNull(explanation(condition));
+        for (var replacement : replacements) assertEquals("new 42", explanation(replacement));
+        var first = OptionalConditions.present.because("first");
+        var second = first.because("second");
+        assertEquals("first", explanation(first));
+        assertEquals("second", explanation(second));
     }
 
     @Test
@@ -189,9 +215,4 @@ class ConditionDecorationTest {
         return CompilationSupport.compiles(temporaryDirectory, source);
     }
 
-    private boolean compiles(String source, String expectedMissingMethod)
-            throws IOException {
-        return CompilationSupport.compiles(temporaryDirectory, source,
-                expectedMissingMethod);
-    }
 }

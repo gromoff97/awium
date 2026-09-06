@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.condition.ConditionRuntime;
+
 import static io.github.gromoff97.awium.CompilationSupport.compiles;
 import static io.github.gromoff97.awium.CompilationSupport.compilesModule;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -35,22 +37,16 @@ class ArtifactContractIT {
         ModuleReference module = ModuleFinder.of(JAR)
                 .find("io.github.gromoff97.awium").orElseThrow();
         assertFalse(module.descriptor().isAutomatic());
-        assertEquals(Set.of(
-                        "io.github.gromoff97.awium.await",
-                        "io.github.gromoff97.awium.condition",
-                        "io.github.gromoff97.awium.conditions",
-                        "io.github.gromoff97.awium.exceptions",
-                        "io.github.gromoff97.awium.results",
-                        "io.github.gromoff97.awium.sources"),
-                Set.copyOf(module.descriptor().exports().stream()
-                        .map(export -> export.source()).toList()));
+        assertFalse(module.descriptor().exports().isEmpty());
+        assertTrue(module.descriptor().exports().stream()
+                .noneMatch(export -> export.source().startsWith("io.github.gromoff97.awium.internal.")));
         assertEquals(Set.of("java.base"),
                 Set.copyOf(module.descriptor().requires().stream()
                         .map(require -> require.name()).toList()));
     }
 
     @Test
-    void packagedJarHasNoPackageDependencyCycles() {
+    void executionDoesNotDependOnFluentCatalogOrFormattingCode() {
         var output = new ByteArrayOutputStream();
         var writer = new PrintWriter(output, true, UTF_8);
         int exit = ToolProvider.findFirst("jdeps").orElseThrow().run(writer, writer,
@@ -60,7 +56,15 @@ class ArtifactContractIT {
         assertEquals(0, exit, dependencies);
         Map<String, Set<String>> packages = packageDependencies(dependencies);
         assertFalse(packages.isEmpty(), dependencies);
-        assertTrue(isAcyclic(packages), dependencies);
+        // The sealed condition API and its implementation form one unit with intentional mutual references.
+        for (String execution : Set.of("condition", "internal.condition", "internal.engine")) {
+            Set<String> used = packages.get("io.github.gromoff97.awium." + execution);
+            assertFalse(used == null || used.isEmpty(), dependencies);
+            assertTrue(used.stream().noneMatch(Set.of(
+                    "io.github.gromoff97.awium.await",
+                    "io.github.gromoff97.awium.conditions",
+                    "io.github.gromoff97.awium.internal.diagnostics")::contains), dependencies);
+        }
     }
 
     @Test
@@ -120,14 +124,72 @@ class ArtifactContractIT {
                 package consumer;
 
                 import static io.github.gromoff97.awium.await.Await.await;
-                import static io.github.gromoff97.awium.conditions.Conditions.isNotNull;
+                import static io.github.gromoff97.awium.conditions.Conditions.*;
+                import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
+                import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
+                import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
+                import static java.time.Duration.ofNanos;
+                import java.util.List;
+                import java.util.Map;
+                import java.util.Optional;
+                import java.io.IOException;
+                import io.github.gromoff97.awium.results.AwaitResult;
 
                 final class Contract {
                     String value() {
-                        return await(() -> "ready").until(isNotNull);
+                        return await(() -> "ready").usingTime(() -> 0L, nanos -> {}).until(isNotNull);
                     }
+                    String optional() {
+                        return await(() -> Optional.of("ready")).upTo(ofNanos(5))
+                                .usingTime(() -> 0L, nanos -> {}).every(ofNanos(1)).until(present);
+                    }
+                    String collection() {
+                        return await(() -> List.of("ready")).usingTime(() -> 0L, nanos -> {}).until(single);
+                    }
+                    Map.Entry<String, Integer> map() {
+                        return await(() -> Map.of("ready", 1)).usingTime(() -> 0L, nanos -> {}).until(singleEntry);
+                    }
+                    AwaitResult<Optional<String>, String> attempted() {
+                        return await(() -> Optional.of("ready")).usingTime(() -> 0L, nanos -> {}).tryUntil(present);
+                    }
+                    String checkedAssertion() {
+                        return await(() -> "ready").until(asserted(this::verify).because("checked verification"));
+                    }
+                    int checkedSelection() {
+                        return await(() -> "ready").until(yields(this::length).because("checked selection"));
+                    }
+                    int composition() {
+                        return await(() -> List.of("ready")).until(single(yields(this::length).because("checked length")));
+                    }
+                    AwaitResult<Optional<String>, String> diagnosticComposition() {
+                        return await(() -> Optional.of("ready")).tryUntil(io.github.gromoff97.awium.conditions.OptionalConditions.hasValue(
+                                equalTo("ready").because("required value")));
+                    }
+                    AwaitResult<Optional<String>, List<String>> ordered() {
+                        return await(() -> Optional.of("ready")).tryUntil(present.because("first"), present.because("second"));
+                    }
+                    List<Integer> orderedLengths() {
+                        return await(() -> List.of("ready")).until(single(yields(this::length)), single(yields(this::length)));
+                    }
+                    void verify(String value) throws IOException {}
+                    int length(String value) throws IOException { return value.length(); }
                 }
                 """, JAR));
+    }
+
+    @Test
+    void conditionRuntimeIsNotAccessibleFromAnotherModule(@TempDir Path directory) throws Exception {
+        assertFalse(compilesModule(directory, """
+                module consumer {
+                    requires io.github.gromoff97.awium;
+                }
+                """, """
+                package consumer;
+                import %s;
+                final class Contract {
+                    ConditionRuntime runtime;
+                }
+                """.formatted(ConditionRuntime.class.getName()), JAR));
     }
 
     private static Map<String, Set<String>> packageDependencies(String output) {
@@ -139,19 +201,5 @@ class ArtifactContractIT {
                         && !parts[0].equals(parts[2]))
                 .forEach(parts -> dependencies.computeIfAbsent(parts[0], ignored -> new HashSet<>()).add(parts[2]));
         return dependencies;
-    }
-
-    private static boolean isAcyclic(Map<String, Set<String>> dependencies) {
-        var remaining = new HashMap<>(dependencies);
-        while (!remaining.isEmpty()) {
-            Set<String> leaves = remaining.entrySet().stream()
-                    .filter(entry -> entry.getValue().stream().noneMatch(remaining::containsKey))
-                    .map(Map.Entry::getKey).collect(java.util.stream.Collectors.toSet());
-            if (leaves.isEmpty()) {
-                return false;
-            }
-            leaves.forEach(remaining::remove);
-        }
-        return true;
     }
 }

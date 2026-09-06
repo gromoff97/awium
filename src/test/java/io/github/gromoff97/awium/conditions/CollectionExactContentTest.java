@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium.conditions;
 
+import io.github.gromoff97.awium.condition.ConditionEvaluation.Satisfied;
+import io.github.gromoff97.awium.condition.ConditionEvaluation.Unsatisfied;
 import io.github.gromoff97.awium.FakeTime;
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
 import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
@@ -17,7 +19,6 @@ import static io.github.gromoff97.awium.ProbeContainers.ExpectedValue;
 import static io.github.gromoff97.awium.ProbeContainers.GreedyValue;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.*;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
 import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
@@ -47,12 +48,12 @@ class CollectionExactContentTest {
     void orderedAndAnyOrderFormsKeepTheirDistinctSemantics()
             throws Exception {
         assertStatus(containsExactly("a", "b"), List.of("b", "a"),
-                UNSATISFIED);
+                Unsatisfied.class);
         assertStatus(containsExactlyInAnyOrder("a", "b"),
-                List.of("b", "a"), SATISFIED);
-        assertStatus(containsExactly(), List.of(), SATISFIED);
+                List.of("b", "a"), Satisfied.class);
+        assertStatus(containsExactly(), List.of(), Satisfied.class);
         assertStatus(containsExactly("a", "a"), List.of("a", "a"),
-                SATISFIED);
+                Satisfied.class);
     }
 
     @Test
@@ -61,17 +62,17 @@ class CollectionExactContentTest {
         Directional actual = new Directional(true);
         Directional expected = new Directional(false);
         assertStatus(containsExactlyInAnyOrder(expected), List.of(actual),
-                SATISFIED);
+                Satisfied.class);
         assertEquals(1, actual.equalsCalls);
 
         String nil = null;
-        assertStatus(containsExactly(nil), asList((String) null), SATISFIED);
+        assertStatus(containsExactly(nil), asList((String) null), Satisfied.class);
         assertStatus(containsExactly(new int[] {1, 2}),
-                List.<Object>of(new int[] {1, 2}), SATISFIED);
+                List.<Object>of(new int[] {1, 2}), Satisfied.class);
 
         Directional onlyActual = new Directional(true);
         Directional onlyExpected = new Directional(false);
-        assertStatus(containsOnly(onlyExpected), List.of(onlyActual), SATISFIED);
+        assertStatus(containsOnly(onlyExpected), List.of(onlyActual), Satisfied.class);
         assertEquals(2, onlyActual.equalsCalls);
         assertEquals(0, onlyExpected.equalsCalls);
     }
@@ -84,9 +85,9 @@ class CollectionExactContentTest {
         ExpectedValue y = new ExpectedValue("y");
 
         assertStatus(containsExactlyInAnyOrder(x, y),
-                List.of(first, second), UNSATISFIED);
+                List.of(first, second), Unsatisfied.class);
         assertStatus(containsExactlyInAnyOrder(y, x),
-                List.of(first, second), SATISFIED);
+                List.of(first, second), Satisfied.class);
     }
 
     @Test
@@ -96,17 +97,18 @@ class CollectionExactContentTest {
         PreservingCondition<? super List<String>> arrayCondition =
                 containsExactly(array);
         array[0] = "after";
-        assertStatus(arrayCondition, List.of("after"), SATISFIED);
+        assertStatus(arrayCondition, List.of("after"), Satisfied.class);
 
         List<String> expected = new ArrayList<>(List.of("before"));
         PreservingCondition<? super List<String>> collectionCondition =
                 containsExactlyElementsOf(expected);
         expected.set(0, "after");
-        assertStatus(collectionCondition, List.of("after"), SATISFIED);
+        assertStatus(collectionCondition, List.of("after"), Satisfied.class);
     }
 
     @Test
     void negativeExactConditionsDoNotHideTraversalOrEqualityFailures() {
+        var pollingTime = new FakeTime(0);
         var iteratorCause = new IllegalStateException("iterator failed");
         var equalityCause = new IllegalStateException("equals failed");
         var brokenIterator = new ProbeList<>(List.of("a"), iteratorCause);
@@ -117,17 +119,17 @@ class CollectionExactContentTest {
 
         assertSame(iteratorCause, assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> await(iteratorSource).until(doesNotContainExactly("a"))).getCause());
+                () -> await(iteratorSource).usingTime(pollingTime, pollingTime).until(doesNotContainExactly("a"))).getCause());
         assertSame(equalityCause, assertThrows(
                 AwaitConditionEvaluationException.class,
-                () -> await(equalitySource).until(doesNotContainExactly(new ThrowingEquals(null)))).getCause());
+                () -> await(equalitySource).usingTime(pollingTime, pollingTime).until(doesNotContainExactly(new ThrowingEquals(null)))).getCause());
     }
 
     @Test
     void nullActualIsUnsatisfiedAndNullAggregateIsRejected() throws Exception {
         ConditionEvaluation<?> evaluation = evaluate(
                 containsExactlyElementsOf(List.of("a")), null);
-        assertEquals(UNSATISFIED, evaluation.status());
+        assertEquals(Unsatisfied.class, evaluation.getClass());
         assertFalse(mismatch(evaluation).isBlank());
         assertTrue(!assertThrows(NullPointerException.class,
                 () -> containsExactly((Object[]) null)).getMessage().isBlank());
@@ -153,19 +155,19 @@ class CollectionExactContentTest {
             boolean positiveSatisfied) throws Exception {
         ConditionEvaluation<?> positive = evaluate(pair.positive(), actual);
         ConditionEvaluation<?> negative = evaluate(pair.negative(), actual);
-        assertEquals(positiveSatisfied ? SATISFIED : UNSATISFIED,
-                positive.status(), pair.name());
-        assertNotEquals(positive.status(), negative.status(), pair.name());
+        assertEquals(positiveSatisfied ? Satisfied.class : Unsatisfied.class,
+                positive.getClass(), pair.name());
+        assertNotEquals(positive.getClass(), negative.getClass(), pair.name());
         assertSame(actual, result(positiveSatisfied ? positive : negative));
         assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank());
     }
 
     private static <E> void assertStatus(
             PreservingCondition<? super List<E>> condition,
-            List<? extends E> elements, ConditionEvaluation.Status status)
+            List<? extends E> elements, Class<?> status)
             throws Exception {
         List<E> actual = new ArrayList<>(elements);
-        assertEquals(status, evaluate(condition, actual).status());
+        assertEquals(status, evaluate(condition, actual).getClass());
     }
 
     private static List<Pair> pairs() {

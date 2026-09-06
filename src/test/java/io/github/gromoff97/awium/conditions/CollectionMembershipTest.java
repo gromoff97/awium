@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium.conditions;
 
+import io.github.gromoff97.awium.condition.ConditionEvaluation.Satisfied;
+import io.github.gromoff97.awium.condition.ConditionEvaluation.Unsatisfied;
 import io.github.gromoff97.awium.FakeTime;
 import io.github.gromoff97.awium.ProbeContainers;
 import io.github.gromoff97.awium.await.Await;
@@ -17,7 +19,6 @@ import static io.github.gromoff97.awium.condition.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedCollectionAwait;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.*;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
 import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
@@ -81,8 +82,8 @@ class CollectionMembershipTest {
         expected.clear();
 
         for (Collection<String> actual : List.of(List.<String>of(), List.of("actual"))) {
-            assertEquals(SATISFIED, evaluate(positive, actual).status());
-            assertEquals(UNSATISFIED, evaluate(negative, actual).status());
+            assertEquals(Satisfied.class, evaluate(positive, actual).getClass());
+            assertEquals(Unsatisfied.class, evaluate(negative, actual).getClass());
         }
     }
 
@@ -170,15 +171,14 @@ class CollectionMembershipTest {
         ConditionEvaluation<?> positive = evaluate(pair.positive(), actual);
         ConditionEvaluation<?> negative = evaluate(pair.negative(), actual);
 
-        assertEquals(positiveSatisfied ? SATISFIED : UNSATISFIED,
-                positive.status(), pair.name());
-        assertNotEquals(positive.status(), negative.status(), pair.name());
+        assertEquals(positiveSatisfied ? Satisfied.class : Unsatisfied.class,
+                positive.getClass(), pair.name());
+        assertNotEquals(positive.getClass(), negative.getClass(), pair.name());
         assertSame(actual, result(positiveSatisfied ? positive : negative));
         assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank());
     }
 
     private static void assertUnsatisfied(ConditionEvaluation<?> evaluation) {
-        assertEquals(UNSATISFIED, evaluation.status());
         assertInstanceOf(ConditionEvaluation.Unsatisfied.class, evaluation);
         assertFalse(mismatch(evaluation).isBlank());
     }
@@ -192,8 +192,9 @@ class CollectionMembershipTest {
             ProbeContainers.MembershipCollection<E> actual,
             PreservingCondition<? super ProbeContainers.MembershipCollection<E>>
                     condition) {
+        var time = new FakeTime(0);
         return Await.await((CollectionSource<ProbeContainers.MembershipCollection<E>>)
-                () -> actual).until(condition);
+                () -> actual).usingTime(time, time).until(condition);
     }
 
     private static List<Pair> pairs() {

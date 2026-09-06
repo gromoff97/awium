@@ -13,8 +13,6 @@ import static io.github.gromoff97.awium.internal.engine.WaitCompletion.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 
-import io.github.gromoff97.awium.exceptions.AwaitConfigurationConflictException;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -36,25 +34,6 @@ class WaitEngineTest {
     @AfterEach
     void clearInterruptFlag() {
         interrupted();
-    }
-
-    @Test
-    void rejectsConflictingConfigurationBeforeStartingTheEngine() {
-        var clockCalls = new int[1];
-        var sourceCalls = new int[1];
-        var engine = new WaitEngine(config(2, 1, 0), () -> {
-            clockCalls[0]++;
-            return 0;
-        }, ignored -> {});
-
-        assertThrows(AwaitConfigurationConflictException.class,
-                () -> engine.waitFor(() -> {
-                    sourceCalls[0]++;
-                    return "actual";
-                }, actual -> satisfied(actual)));
-
-        assertEquals(0, clockCalls[0]);
-        assertEquals(0, sourceCalls[0]);
     }
 
     @Test

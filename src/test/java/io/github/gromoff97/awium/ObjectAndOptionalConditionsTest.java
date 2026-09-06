@@ -1,11 +1,12 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.condition.ConditionEvaluation.Satisfied;
+
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.result;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.*;
 import static io.github.gromoff97.awium.conditions.Conditions.*;
 import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
 
@@ -49,7 +50,7 @@ class ObjectAndOptionalConditionsTest {
         assertSatisfied(evaluate(equalTo(null), null), null);
         ConditionEvaluation<?> arrays = evaluate(equalTo(
                 new int[]{1, 2}), new int[]{1, 2});
-        assertEquals(SATISFIED, arrays.status());
+        assertEquals(Satisfied.class, arrays.getClass());
         assertEquals(int[].class, result(arrays).getClass());
     }
 
@@ -60,11 +61,11 @@ class ObjectAndOptionalConditionsTest {
         Optional<String> presentValue = Optional.of("value");
 
         assertTrue(!description(present).isBlank());
-        assertUnsatisfied(evaluatePresent(null));
+        assertUnsatisfied(evaluate(present, null));
         assertUnsatisfied(evaluate(absent, null));
-        assertUnsatisfied(evaluatePresent(empty));
+        assertUnsatisfied(evaluate(present, empty));
         assertSatisfied(evaluate(absent, empty), null);
-        assertSatisfied(evaluatePresent(presentValue), "value");
+        assertSatisfied(evaluate(present, presentValue), "value");
         assertUnsatisfied(evaluate(absent, presentValue));
     }
 
@@ -109,19 +110,12 @@ class ObjectAndOptionalConditionsTest {
                 .contains("unexpected"));
     }
 
-    private static ConditionEvaluation<?> evaluatePresent(Optional<?> actual)
-            throws Exception {
-        return evaluate(present, actual);
-    }
-
     private static void assertSatisfied(ConditionEvaluation<?> evaluation, Object result) {
-        assertEquals(SATISFIED, evaluation.status());
         assertInstanceOf(ConditionEvaluation.Satisfied.class, evaluation);
         assertSame(result, result(evaluation));
     }
 
     private static void assertUnsatisfied(ConditionEvaluation<?> evaluation) {
-        assertEquals(UNSATISFIED, evaluation.status());
         assertInstanceOf(ConditionEvaluation.Unsatisfied.class, evaluation);
         assertTrue(!mismatch(evaluation).isBlank());
     }

@@ -52,7 +52,7 @@ public final class CompilationSupport {
         return compile(List.of("--release", "21", "-Xlint:all",
                         "-Werror", "-proc:none", "-classpath",
                         classpath.toString(), "-d", directory.toString()),
-                expectedMissingMethod, sourceFile);
+                expectedMissingMethod, TYPE_REJECTION_CODES, sourceFile);
     }
 
     public static boolean compilesModule(Path directory, String descriptor,
@@ -63,11 +63,12 @@ public final class CompilationSupport {
         writeString(sourceFile, source);
         return compile(List.of("--release", "21", "-Xlint:all", "-Werror",
                         "-proc:none", "--module-path", modulePath.toString(),
-                        "-d", directory.toString()), null, moduleFile, sourceFile);
+                        "-d", directory.toString()), null, Set.of("compiler.err.package.not.visible"),
+                moduleFile, sourceFile);
     }
 
     private static boolean compile(List<String> options, String expectedMissingMethod,
-            Path... sourceFiles) throws IOException {
+            Set<String> rejectionCodes, Path... sourceFiles) throws IOException {
         var compiler = requireNonNull(getSystemJavaCompiler(), "system compiler unavailable");
         var diagnostics = new DiagnosticCollector<JavaFileObject>();
         try (var files = compiler.getStandardFileManager(diagnostics, Locale.ROOT, UTF_8)) {
@@ -75,19 +76,19 @@ public final class CompilationSupport {
                     diagnostics, options, null,
                     files.getJavaFileObjectsFromPaths(List.of(sourceFiles))).call());
             if (!compiled) {
-                requireTypeRejection(diagnostics.getDiagnostics(), expectedMissingMethod);
+                requireExpectedRejection(diagnostics.getDiagnostics(), expectedMissingMethod, rejectionCodes);
             }
             return compiled;
         }
     }
 
-    private static void requireTypeRejection(List<Diagnostic<? extends JavaFileObject>> diagnostics,
-            String expectedMissingMethod) {
+    private static void requireExpectedRejection(List<Diagnostic<? extends JavaFileObject>> diagnostics,
+            String expectedMissingMethod, Set<String> rejectionCodes) {
         List<Diagnostic<? extends JavaFileObject>> errors = diagnostics.stream()
                 .filter(diagnostic -> diagnostic.getKind() == ERROR)
                 .toList();
         if (errors.isEmpty() || errors.stream()
-                .anyMatch(error -> !isExpectedRejection(error, expectedMissingMethod))) {
+                .anyMatch(error -> !isExpectedRejection(error, expectedMissingMethod, rejectionCodes))) {
             String details = diagnostics.stream()
                     .map(diagnostic -> diagnostic.getCode() + ": "
                             + diagnostic.getMessage(Locale.ROOT))
@@ -97,8 +98,8 @@ public final class CompilationSupport {
     }
 
     private static boolean isExpectedRejection(Diagnostic<? extends JavaFileObject> error,
-            String expectedMissingMethod) {
-        return TYPE_REJECTION_CODES.contains(error.getCode())
+            String expectedMissingMethod, Set<String> rejectionCodes) {
+        return rejectionCodes.contains(error.getCode())
                 || expectedMissingMethod != null
                 && MISSING_METHOD_CODES.contains(error.getCode())
                 && error.getMessage(Locale.ROOT).contains("method " + expectedMissingMethod + "(");

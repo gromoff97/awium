@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium.conditions;
 
+import io.github.gromoff97.awium.condition.ConditionEvaluation.Satisfied;
 import io.github.gromoff97.awium.FakeTime;
 import io.github.gromoff97.awium.ProbeContainers;
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
@@ -19,8 +20,6 @@ import static io.github.gromoff97.awium.condition.ConditionTestRuntime.descripti
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.result;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.SATISFIED;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.UNSATISFIED;
 import static io.github.gromoff97.awium.conditions.MapConditions.empty;
 import static io.github.gromoff97.awium.conditions.MapConditions.sameSizeAs;
 import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
@@ -48,14 +47,15 @@ class MapSizeConditionsTest {
 
     @Test
     void hasSingleEntryReturnsTheTypedEntry() throws Exception {
+        var pollingTime = new FakeTime(0);
         MapSource<LinkedHashMap<String, Integer>> source = () -> {
             var map = new LinkedHashMap<String, Integer>();
             map.put("key", 42);
             return map;
         };
 
-        Map.Entry<String, Integer> selected = await(source).until(singleEntry);
-        Map.Entry<String, Integer> explained = await(source).until(singleEntry.because("exactly one result is required"));
+        Map.Entry<String, Integer> selected = await(source).usingTime(pollingTime, pollingTime).until(singleEntry);
+        Map.Entry<String, Integer> explained = await(source).usingTime(pollingTime, pollingTime).until(singleEntry.because("exactly one result is required"));
 
         assertEquals("key", selected.getKey());
         assertEquals(42, selected.getValue());
@@ -74,7 +74,7 @@ class MapSizeConditionsTest {
             Map<Integer, Integer> mismatching = mapWithSize(testCase.mismatchingSize());
 
             ConditionEvaluation<?> satisfied = evaluate(testCase.condition(), matching);
-            assertEquals(SATISFIED, satisfied.status());
+            assertEquals(Satisfied.class, satisfied.getClass());
             assertSame(matching, result(satisfied));
             assertUnsatisfied(evaluate(testCase.condition(), mismatching));
             assertFalse(description(testCase.condition()).isBlank());
@@ -113,12 +113,13 @@ class MapSizeConditionsTest {
 
     @Test
     void throwingSizeIsTheExactFailFastConditionCause() {
+        var pollingTime = new FakeTime(0);
         var cause = new IllegalStateException("map size failed");
         var map = new ProbeContainers.ProbeMap<Object, Object>(cause);
 
         assertSame(cause, assertThrows(AwaitConditionEvaluationException.class,
                 () -> await((MapSource<ProbeContainers.ProbeMap<Object, Object>>)
-                        () -> map).until(nonEmpty)).getCause());
+                        () -> map).usingTime(pollingTime, pollingTime).until(nonEmpty)).getCause());
         assertEquals(1, map.sizeCalls);
     }
 
@@ -133,8 +134,8 @@ class MapSizeConditionsTest {
 
     @Test
     void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() throws Exception {
-        assertEquals(SATISFIED, evaluate(sizeBetween(2, 4), mapWithSize(2)).status());
-        assertEquals(SATISFIED, evaluate(sizeBetween(2, 4), mapWithSize(4)).status());
+        assertEquals(Satisfied.class, evaluate(sizeBetween(2, 4), mapWithSize(2)).getClass());
+        assertEquals(Satisfied.class, evaluate(sizeBetween(2, 4), mapWithSize(4)).getClass());
         assertUnsatisfied(evaluate(sizeBetween(2, 4), mapWithSize(1)));
         assertUnsatisfied(evaluate(sizeBetween(2, 4), mapWithSize(5)));
     }
@@ -146,7 +147,7 @@ class MapSizeConditionsTest {
         expected.put(2, 2);
 
         assertUnsatisfied(evaluate(condition, Map.of(1, 1)));
-        assertEquals(SATISFIED, evaluate(condition, Map.of(1, 1, 2, 2)).status());
+        assertEquals(Satisfied.class, evaluate(condition, Map.of(1, 1, 2, 2)).getClass());
     }
 
     @Test
@@ -165,7 +166,6 @@ class MapSizeConditionsTest {
     }
 
     private static void assertUnsatisfied(ConditionEvaluation<?> evaluation) {
-        assertEquals(UNSATISFIED, evaluation.status());
         assertInstanceOf(ConditionEvaluation.Unsatisfied.class, evaluation);
         assertFalse(mismatch(evaluation).isBlank());
     }

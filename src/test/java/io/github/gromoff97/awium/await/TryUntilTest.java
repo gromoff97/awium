@@ -11,8 +11,8 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
-import static io.github.gromoff97.awium.await.Await.tryAwait;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.await.Await.await;
 import static io.github.gromoff97.awium.conditions.Conditions.yields;
 import static io.github.gromoff97.awium.conditions.Conditions.isNotNull;
 import static io.github.gromoff97.awium.conditions.Conditions.isNull;
@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-class TryAwaitTest {
+class TryUntilTest {
 
     @Test
     void returnsTheLastPersistenceResultAndBothPhases() {
@@ -29,8 +29,8 @@ class TryAwaitTest {
         var results = List.of("acquired", "persisting", "boundary");
         int[] calls = {0};
 
-        AwaitResult<String, String> result = timedTryAwait(() -> "actual",
-                config(2, 10, 3), time, time).until(yields(actual -> results.get(calls[0]++)));
+        AwaitResult<String, String> result = timedAwait(() -> "actual",
+                config(2, 10, 3), time, time).tryUntil(yields(actual -> results.get(calls[0]++)));
 
         var success = satisfied(result);
         assertEquals("boundary", success.result());
@@ -42,10 +42,11 @@ class TryAwaitTest {
 
     @Test
     void retainsLegitimateNullAndSelectedOptionalValue() {
-        AwaitResult<String, String> nullable = tryAwait((Source<String>) () -> "actual").until(yields(actual -> null));
-        AwaitResult<String, Void> nullSource = tryAwait((Source<String>) () -> null).until(isNull);
+        var pollingTime = new FakeTime(0);
+        AwaitResult<String, String> nullable = await((Source<String>) () -> "actual").usingTime(pollingTime, pollingTime).tryUntil(yields(actual -> null));
+        AwaitResult<String, Void> nullSource = await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(isNull);
         AwaitResult<Optional<String>, String> selected =
-                tryAwait((Source.OptionalSource<String>) () -> Optional.of("payment")).until(present);
+                await((Source.OptionalSource<String>) () -> Optional.of("payment")).usingTime(pollingTime, pollingTime).tryUntil(present);
 
         assertNull(satisfied(nullable).result());
         assertNull(satisfied(nullSource).result());
@@ -58,10 +59,10 @@ class TryAwaitTest {
     @Test
     void everyExecutionStartsWithFreshHistory() {
         var time = new FakeTime(0);
-        var stage = timedTryAwait(() -> "actual", config(1, 2, 0), time, time);
+        var stage = timedAwait(() -> "actual", config(1, 2, 0), time, time);
 
-        var first = satisfied(stage.until(isNotNull));
-        var second = satisfied(stage.until(isNotNull));
+        var first = satisfied(stage.tryUntil(isNotNull));
+        var second = satisfied(stage.tryUntil(isNotNull));
 
         assertEquals(List.of(1L), first.attempts().stream().map(AwaitAttempt::number).toList());
         assertEquals(List.of(1L), second.attempts().stream().map(AwaitAttempt::number).toList());

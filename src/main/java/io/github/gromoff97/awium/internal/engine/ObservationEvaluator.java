@@ -71,13 +71,10 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
 
         AwaitAttempt.Outcome<Observed, Result> outcome = switch (evaluation) {
             case ConditionEvaluation.Satisfied<? extends Result> satisfied ->
-                    new AwaitAttempt.Outcome.Satisfied<>(timing, actual, satisfied.result());
+                    new AwaitAttempt.Outcome.Satisfied<>(timing, actual, satisfied.result(), satisfied.context());
             case ConditionEvaluation.Unsatisfied<?> unsatisfied ->
                     new AwaitAttempt.Outcome.Unsatisfied<>(timing, actual,
-                            unsatisfied.mismatch(), null, unsatisfied.context());
-            case ConditionEvaluation.AssertionUnsatisfied<?> unsatisfied ->
-                    new AwaitAttempt.Outcome.Unsatisfied<>(timing, actual,
-                            unsatisfied.mismatch(), unsatisfied.cause(), unsatisfied.context());
+                            unsatisfied.mismatch(), unsatisfied.assertion(), unsatisfied.context());
             case ConditionEvaluation.Uncontrolled<?> failure ->
                     uncontrolled(timing, actual, failure.cause(), failure.context());
         };

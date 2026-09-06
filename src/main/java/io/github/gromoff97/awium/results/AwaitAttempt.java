@@ -30,6 +30,15 @@ public record AwaitAttempt<Observed, Result>(long number, Phase phase,
 
         enum Plain implements Context { INSTANCE }
 
+        record Expectation(String description, Reference<?> reference) implements Context {
+
+            public Expectation {
+                if (requireNonNull(description, "description must not be null").isBlank()) {
+                    throw new IllegalArgumentException("description must not be blank");
+                }
+            }
+        }
+
         record Sequence(int capturedStages, int totalStages, int evaluatedStageNumber,
                 String expectation, String importance, Reference<?> reference) implements Context {
 
@@ -57,10 +66,11 @@ public record AwaitAttempt<Observed, Result>(long number, Phase phase,
         Timing timing();
 
         record Satisfied<Observed, Result>(Timing.AfterObservation timing,
-                Observed observed, Result result) implements Outcome<Observed, Result> {
+                Observed observed, Result result, Context context) implements Outcome<Observed, Result> {
 
             public Satisfied {
                 requireNonNull(timing, "timing must not be null");
+                requireNonNull(context, "context must not be null");
             }
         }
 

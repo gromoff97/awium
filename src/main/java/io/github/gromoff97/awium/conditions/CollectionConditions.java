@@ -4,6 +4,9 @@ import io.github.gromoff97.awium.condition.Condition;
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
 import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
 import io.github.gromoff97.awium.condition.Condition.SelectedCondition;
+import io.github.gromoff97.awium.condition.Condition.ExpectedCondition;
+import io.github.gromoff97.awium.condition.Condition.NarrowingCondition;
+import io.github.gromoff97.awium.internal.condition.ConditionRuntime;
 
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
 import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
@@ -27,9 +30,9 @@ import static io.github.gromoff97.awium.conditions.ConditionSupport.nonEmpty;
 import static io.github.gromoff97.awium.conditions.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.conditions.ConditionSupport.validateRange;
 import static io.github.gromoff97.awium.conditions.Conditions.condition;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.selected;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.expectedReference;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.unexpectedReference;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.selected;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.expectedReference;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.unexpectedReference;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
@@ -110,11 +113,24 @@ public final class CollectionConditions {
         return condition("collection has a single matching element", actual -> selectSingle(actual, predicate));
     }
 
-    public static <E, R extends E> Condition<Collection<E>, R> singleElementOfType(Class<R> type) {
-        requireNonNull(type, "type must not be null");
-        return condition("collection has a single element of type " + type.getTypeName(), actual ->
-                selectSingle(actual, type::isInstance)
-                        .continueIfSatisfied(value -> satisfied(type.cast(value))));
+    public static <E> Condition<Collection<E>, E> single(PreservingCondition<? super E> nested) {
+        return ConditionSupport.single("collection", nested, actual -> actual,
+                () -> ConditionRuntime.<E>preservingEvaluator(nested));
+    }
+
+    public static <E, Expected extends E> Condition<Collection<E>, E> single(ExpectedCondition<Expected> nested) {
+        return ConditionSupport.single("collection", nested, actual -> actual,
+                () -> ConditionRuntime.<E>preservingEvaluator(nested));
+    }
+
+    public static <E, Result extends E> Condition<Collection<E>, Result> single(NarrowingCondition<Result> nested) {
+        return ConditionSupport.single("collection", nested, actual -> actual,
+                () -> ConditionRuntime.<E, Result>evaluator(nested));
+    }
+
+    public static <E, Result> Condition<Collection<E>, Result> single(Condition<? super E, ? extends Result> nested) {
+        return ConditionSupport.single("collection", nested, actual -> actual,
+                () -> ConditionRuntime.<E, Result>evaluator(nested));
     }
 
     public static <E> PreservingCondition<Collection<E>> all(Predicate<? super E> predicate) {
@@ -343,8 +359,8 @@ public final class CollectionConditions {
         return preserving("collection is sorted", "collection was not sorted", actual -> isSorted(actual, comparator));
     }
 
-    private static <E> ConditionEvaluation<E> selectSingle(Collection<E> actual,
-            Predicate<? super E> predicate) {
+    private static <E> ConditionEvaluation<? extends E> selectSingle(Collection<E> actual,
+            Predicate<? super E> predicate) throws InterruptedException {
         if (actual == null) {
             return unsatisfied("collection was null");
         }

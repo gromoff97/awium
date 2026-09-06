@@ -1,25 +1,24 @@
 package io.github.gromoff97.awium.conditions;
 
 import io.github.gromoff97.awium.condition.Condition;
+import io.github.gromoff97.awium.condition.AwaitCondition;
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
-import io.github.gromoff97.awium.condition.ConditionRuntime;
+import io.github.gromoff97.awium.internal.condition.ConditionRuntime;
 import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
-import io.github.gromoff97.awium.condition.Condition.PreservingStage;
 
 import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.function.IntPredicate;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.description;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.explanation;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.preservingEvaluator;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.reference;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.metadata;
 import static java.util.Objects.requireNonNull;
 
 final class ConditionSupport {
@@ -28,9 +27,13 @@ final class ConditionSupport {
         throw new AssertionError("Utility class");
     }
 
-    static <Observed> Condition<Observed, Observed> preserve(PreservingStage<? super Observed> nested) {
-        return ConditionRuntime.conditionFactory(description(nested), explanation(nested), reference(nested),
-                () -> preservingEvaluator(nested));
+    static <Observed, Value, Result> Condition<Observed, Result> compose(String prefix, AwaitCondition nested,
+            Function<? super Observed, ? extends ConditionEvaluation<Value>> extract,
+            Supplier<? extends Function<? super Value, ? extends ConditionEvaluation<? extends Result>>> evaluatorFactory) {
+        return ConditionRuntime.conditionFactory(metadata(nested).prefixed(prefix), () -> {
+            var evaluator = evaluatorFactory.get();
+            return actual -> extract.apply(actual).continueIfSatisfied(evaluator);
+        });
     }
 
     static <Observed> PreservingCondition<Observed> preserving(String description, String mismatch,
@@ -70,22 +73,39 @@ final class ConditionSupport {
         });
     }
 
-    static <Element> ConditionEvaluation<Element> selectSingle(Iterable<Element> values,
+    static <Element> ConditionEvaluation<? extends Element> selectSingle(Iterable<Element> values,
             Predicate<? super Element> matches,
-            String noneMatched, String multipleMatched) {
-        Element selected = null;
-        boolean found = false;
+            String noneMatched, String multipleMatched) throws InterruptedException {
+        return evaluateSingle(values, value -> matches.test(value) ? satisfied(value) : unsatisfied(noneMatched),
+                noneMatched, multipleMatched);
+    }
+
+    static <Observed, Element, Result> Condition<Observed, Result> single(String subject, AwaitCondition nested,
+            Function<? super Observed, ? extends Iterable<Element>> elements,
+            Supplier<? extends Function<? super Element, ? extends ConditionEvaluation<? extends Result>>> evaluatorFactory) {
+        return ConditionRuntime.conditionFactory(metadata(nested).prefixed(subject + " has a single matching value: "), () -> {
+            var evaluator = evaluatorFactory.get();
+            return actual -> actual == null ? unsatisfied(subject + " was null")
+                    : evaluateSingle(elements.apply(actual), evaluator, "no value matched", "more than one value matched");
+        });
+    }
+
+    private static <Element, Result> ConditionEvaluation<? extends Result> evaluateSingle(Iterable<Element> values,
+            Function<? super Element, ? extends ConditionEvaluation<? extends Result>> evaluator,
+            String noneMatched, String multipleMatched) throws InterruptedException {
+        ConditionEvaluation<? extends Result> result = unsatisfied(noneMatched);
         for (Element value : values) {
-            if (!matches.test(value)) {
-                continue;
+            if (Thread.currentThread().isInterrupted()) throw new InterruptedException("caller thread interrupt flag was set");
+            var evaluated = requireNonNull(evaluator.apply(value), "condition returned null ConditionEvaluation");
+            if (evaluated instanceof ConditionEvaluation.Uncontrolled<?>) return evaluated;
+            if (evaluated instanceof ConditionEvaluation.Satisfied<?>
+                    && result instanceof ConditionEvaluation.Satisfied<?>) return unsatisfied(multipleMatched);
+            // Keep the first match, otherwise the last mismatch.
+            if (!(result instanceof ConditionEvaluation.Satisfied<?>)) {
+                result = evaluated;
             }
-            if (found) {
-                return unsatisfied(multipleMatched);
-            }
-            selected = value;
-            found = true;
         }
-        return found ? satisfied(selected) : unsatisfied(noneMatched);
+        return result;
     }
 
     static void validateRange(int lowerBound, int upperBound, String measure) {

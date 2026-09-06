@@ -2,16 +2,15 @@ package io.github.gromoff97.awium.conditions;
 
 import io.github.gromoff97.awium.condition.Condition;
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
-import io.github.gromoff97.awium.condition.ConditionRuntime;
-import io.github.gromoff97.awium.condition.Condition.ExpectedStage;
-import io.github.gromoff97.awium.condition.Condition.NarrowingStage;
+import io.github.gromoff97.awium.internal.condition.ConditionRuntime;
+import io.github.gromoff97.awium.condition.Condition.ExpectedCondition;
+import io.github.gromoff97.awium.condition.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
-import io.github.gromoff97.awium.condition.Condition.PreservingStage;
 import io.github.gromoff97.awium.condition.Condition.SelectedCondition;
-import io.github.gromoff97.awium.condition.ConditionStage.ResultStage;
 
 import io.github.gromoff97.awium.sources.Source.MapSource;
 import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
+import io.github.gromoff97.awium.results.AwaitAttempt.Context;
 
 import java.util.List;
 import java.util.Map;
@@ -21,7 +20,7 @@ import java.util.function.Predicate;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditions.ConditionSupport.nonEmpty;
-import static io.github.gromoff97.awium.conditions.ConditionSupport.preserve;
+import static io.github.gromoff97.awium.conditions.ConditionSupport.compose;
 import static io.github.gromoff97.awium.conditions.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.conditions.ConditionSupport.validateRange;
 import static io.github.gromoff97.awium.conditions.ValueMatching.containsAll;
@@ -31,10 +30,9 @@ import static io.github.gromoff97.awium.conditions.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.conditions.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.conditions.ValueMatching.sameDistinctElements;
 import static io.github.gromoff97.awium.conditions.Conditions.condition;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.selected;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.expectedReference;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.reference;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.unexpectedReference;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.selected;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.expectedReference;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.unexpectedReference;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
@@ -107,6 +105,26 @@ public final class MapConditions {
         return condition("map has a single matching entry", actual -> selectSingle(actual, matches));
     }
 
+    public static <K, V> Condition<Map<K, V>, Map.Entry<K, V>> singleEntry(PreservingCondition<? super Map.Entry<K, V>> nested) {
+        return ConditionSupport.single("map", nested, Map::entrySet,
+                () -> ConditionRuntime.<Map.Entry<K, V>>preservingEvaluator(nested));
+    }
+
+    public static <K, V, Expected extends Map.Entry<K, V>> Condition<Map<K, V>, Map.Entry<K, V>> singleEntry(ExpectedCondition<Expected> nested) {
+        return ConditionSupport.single("map", nested, Map::entrySet,
+                () -> ConditionRuntime.<Map.Entry<K, V>>preservingEvaluator(nested));
+    }
+
+    public static <K, V, Result extends Map.Entry<K, V>> Condition<Map<K, V>, Result> singleEntry(NarrowingCondition<Result> nested) {
+        return ConditionSupport.single("map", nested, Map::entrySet,
+                () -> ConditionRuntime.<Map.Entry<K, V>, Result>evaluator(nested));
+    }
+
+    public static <K, V, Result> Condition<Map<K, V>, Result> singleEntry(Condition<? super Map.Entry<K, V>, ? extends Result> nested) {
+        return ConditionSupport.single("map", nested, Map::entrySet,
+                () -> ConditionRuntime.<Map.Entry<K, V>, Result>evaluator(nested));
+    }
+
     public static <K, V> PreservingCondition<Map<K, V>> allEntries(BiPredicate<? super K, ? super V> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all map entries match", "not all map entries matched",
@@ -159,41 +177,29 @@ public final class MapConditions {
     }
 
     public static <K, V> Condition<Map<K, V>, V> valueFor(K key) {
-        return ConditionRuntime.condition("map contains the expected key", expectedReference(key), actual -> findEntry(actual, key)
-                .continueIfSatisfied(entry -> satisfied(entry.getValue())));
+        return ConditionRuntime.condition("map contains the expected key", expectedReference(key), actual -> value(actual, key));
     }
 
     public static <K, V, R> Condition<Map<K, V>, R> valueFor(K key,
-            ResultStage<? super V, ? extends R> nested) {
-        return ConditionRuntime.conditionFactory("map value " + ConditionRuntime.description(nested),
-                ConditionRuntime.explanation(nested), reference(nested), () -> {
-            var nestedEvaluator = ConditionRuntime.<V, R>evaluator(nested);
-            return actual -> findEntry(actual, key)
-                    .continueIfSatisfied(entry -> nestedEvaluator.apply(entry.getValue()));
-        });
+            Condition<? super V, ? extends R> nested) {
+        return compose("map value ", nested, actual -> value(actual, key),
+                () -> ConditionRuntime.<V, R>evaluator(nested));
     }
 
     public static <K, V> Condition<Map<K, V>, V> valueFor(K key,
-            PreservingStage<? super V> nested) {
-        return MapConditions.<K, V, V>valueFor(key, preserve(nested));
+            PreservingCondition<? super V> nested) {
+        return compose("map value ", nested, actual -> value(actual, key),
+                () -> ConditionRuntime.<V>preservingEvaluator(nested));
     }
 
-    public static <K, V, T extends V> Condition<Map<K, V>, V> valueFor(K key, ExpectedStage<T> nested) {
-        return ConditionRuntime.conditionFactory("map value " + ConditionRuntime.description(nested),
-                ConditionRuntime.explanation(nested), reference(nested), () -> {
-            var nestedEvaluator = ConditionRuntime.<V>expectedEvaluator(nested);
-            return actual -> findEntry(actual, key)
-                    .continueIfSatisfied(entry -> nestedEvaluator.apply(entry.getValue()));
-        });
+    public static <K, V, T extends V> Condition<Map<K, V>, V> valueFor(K key, ExpectedCondition<T> nested) {
+        return compose("map value ", nested, actual -> value(actual, key),
+                () -> ConditionRuntime.<V>preservingEvaluator(nested));
     }
 
-    public static <K, V, R extends V> Condition<Map<K, V>, R> valueFor(K key, NarrowingStage<R> nested) {
-        return ConditionRuntime.conditionFactory("map value " + ConditionRuntime.description(nested),
-                ConditionRuntime.explanation(nested), reference(nested), () -> {
-            var nestedEvaluator = ConditionRuntime.<V, R>narrowingEvaluator(nested);
-            return actual -> findEntry(actual, key)
-                    .continueIfSatisfied(entry -> nestedEvaluator.apply(entry.getValue()));
-        });
+    public static <K, V, R extends V> Condition<Map<K, V>, R> valueFor(K key, NarrowingCondition<R> nested) {
+        return compose("map value ", nested, actual -> value(actual, key),
+                () -> ConditionRuntime.<V, R>evaluator(nested));
     }
 
     public static <K, V> Condition<Map<K, V>, Map.Entry<K, V>> entryFor(K key) {
@@ -319,8 +325,8 @@ public final class MapConditions {
                 actual -> !exactContent(actual, entries));
     }
 
-    private static <K, V> ConditionEvaluation<Map.Entry<K, V>> selectSingle(Map<K, V> actual,
-            Predicate<? super Map.Entry<K, V>> predicate) {
+    private static <K, V> ConditionEvaluation<? extends Map.Entry<K, V>> selectSingle(Map<K, V> actual,
+            Predicate<? super Map.Entry<K, V>> predicate) throws InterruptedException {
         if (actual == null) {
             return unsatisfied("map was null");
         }
@@ -328,16 +334,20 @@ public final class MapConditions {
                 "no map entry matched", "more than one map entry matched");
     }
 
+    private static <K, V> ConditionEvaluation<V> value(Map<K, V> actual, K key) {
+        return findEntry(actual, key).mapSatisfied(Map.Entry::getValue);
+    }
+
     private static <K, V> ConditionEvaluation<Map.Entry<K, V>> findEntry(Map<K, V> actual, K key) {
-        if (actual == null) {
-            return unsatisfied("map was null");
-        }
-        for (Map.Entry<K, V> entry : actual.entrySet()) {
-            if (equal(entry.getKey(), key)) {
-                return satisfied(entry);
+        if (actual != null) {
+            for (Map.Entry<K, V> entry : actual.entrySet()) {
+                if (equal(entry.getKey(), key)) {
+                    return satisfied(entry);
+                }
             }
         }
-        return unsatisfied("map did not contain the expected key");
+        return ConditionEvaluation.<Map.Entry<K, V>>unsatisfied(actual == null ? "map was null" : "map did not contain the expected key")
+                .withContext(new Context.Expectation("map contains the expected key", expectedReference(key)));
     }
 
     private static PreservingCondition<Map<?, ?>> sized(int bound, java.util.function.IntPredicate matches,

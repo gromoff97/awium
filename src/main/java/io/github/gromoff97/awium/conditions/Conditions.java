@@ -2,35 +2,28 @@ package io.github.gromoff97.awium.conditions;
 
 import io.github.gromoff97.awium.condition.Condition;
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
-import io.github.gromoff97.awium.condition.ConditionRuntime;
+import io.github.gromoff97.awium.condition.CheckedConsumer;
+import io.github.gromoff97.awium.condition.CheckedFunction;
+import io.github.gromoff97.awium.internal.condition.ConditionRuntime;
 import io.github.gromoff97.awium.condition.Condition.ExpectedCondition;
-import io.github.gromoff97.awium.condition.Condition.ExpectedSequenceCondition;
-import io.github.gromoff97.awium.condition.Condition.ExpectedStage;
 import io.github.gromoff97.awium.condition.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
-import io.github.gromoff97.awium.condition.Condition.PreservingStage;
-import io.github.gromoff97.awium.condition.Condition.SelectedSequenceCondition;
-import io.github.gromoff97.awium.condition.Condition.SelectedStage;
-import io.github.gromoff97.awium.condition.ConditionStage.ResultStage;
 
-import io.github.gromoff97.awium.sources.Source;
 import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
 
 import java.util.List;
-import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.concurrent.Callable;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditions.ConditionSupport.nonEmpty;
 import static io.github.gromoff97.awium.conditions.ConditionSupport.preservingNonNull;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.expected;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.expectedReference;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.narrowing;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.unexpectedReference;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.expected;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.expectedReference;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.narrowing;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.unexpectedReference;
 import static io.github.gromoff97.awium.conditions.ValueMatching.equal;
 import static io.github.gromoff97.awium.conditions.ValueMatching.matchesAny;
 import static java.util.Arrays.asList;
@@ -48,61 +41,26 @@ public final class Conditions {
     }
 
     public static <Observed, Result> Condition<Observed, Result> condition(String description,
-            Function<? super Observed, ? extends ConditionEvaluation<? extends Result>> evaluation) {
+            CheckedFunction<? super Observed, ? extends ConditionEvaluation<? extends Result>> evaluation) {
         return ConditionRuntime.condition(description, evaluation);
     }
 
     public static <Observed, Result> Condition<Observed, Result> conditionFactory(String description,
-            Supplier<? extends Function<? super Observed, ? extends ConditionEvaluation<? extends Result>>> evaluatorFactory) {
+            Callable<? extends CheckedFunction<? super Observed, ? extends ConditionEvaluation<? extends Result>>> evaluatorFactory) {
         return ConditionRuntime.conditionFactory(description, evaluatorFactory);
     }
 
     public static <Observed> PreservingCondition<Observed> preserving(String description,
-            Function<? super Observed, ? extends ConditionEvaluation<? extends Observed>> evaluation) {
+            CheckedFunction<? super Observed, ? extends ConditionEvaluation<? extends Observed>> evaluation) {
         return ConditionRuntime.preserving(description, evaluation);
     }
 
     public static <Observed> PreservingCondition<Observed> preservingFactory(String description,
-            Supplier<? extends Function<? super Observed, ? extends ConditionEvaluation<? extends Observed>>> evaluatorFactory) {
+            Callable<? extends CheckedFunction<? super Observed, ? extends ConditionEvaluation<? extends Observed>>> evaluatorFactory) {
         return ConditionRuntime.preserving(description, evaluatorFactory);
     }
 
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    public static <Observed> Condition<Observed, List<Observed>> captured(Predicate<? super Observed> first,
-            Predicate<? super Observed> second, Predicate<? super Observed>... rest) {
-        return ConditionRuntime.captured(first, second, rest);
-    }
-
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    public static <Observed> Condition<Observed, List<Observed>> captured(PreservingStage<? super Observed> first,
-            PreservingStage<? super Observed> second, PreservingStage<? super Observed>... rest) {
-        return ConditionRuntime.captured(first, second, rest);
-    }
-
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    public static <Observed, Result> Condition<Observed, List<Result>> captured(ResultStage<Observed, Result> first,
-            ResultStage<Observed, Result> second, ResultStage<Observed, Result>... rest) {
-        return ConditionRuntime.captured(first, second, rest);
-    }
-
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    public static <Value> ExpectedSequenceCondition<Value> captured(ExpectedStage<? extends Value> first,
-            ExpectedStage<? extends Value> second, ExpectedStage<? extends Value>... rest) {
-        return ConditionRuntime.captured(first, second, rest);
-    }
-
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    public static <Observed, Family extends Source<?>> SelectedSequenceCondition<Observed, Family> captured(SelectedStage<? super Observed, Family> first,
-            SelectedStage<? super Observed, Family> second, SelectedStage<? super Observed, Family>... rest) {
-        return ConditionRuntime.captured(first, second, rest);
-    }
-
-    public static <Observed> PreservingCondition<Observed> asserted(Consumer<? super Observed> assertion) {
+    public static <Observed> PreservingCondition<Observed> asserted(CheckedConsumer<? super Observed> assertion) {
         requireNonNull(assertion, "assertion must not be null");
         return ConditionRuntime.preserving("value satisfies assertion", actual -> {
             try {
@@ -114,7 +72,7 @@ public final class Conditions {
         });
     }
 
-    public static <Observed, Result> Condition<Observed, Result> yields(Function<? super Observed, ? extends Result> callback) {
+    public static <Observed, Result> Condition<Observed, Result> yields(CheckedFunction<? super Observed, ? extends Result> callback) {
         requireNonNull(callback, "callback must not be null");
         return condition("callback yields a result", actual -> satisfied(callback.apply(actual)));
     }

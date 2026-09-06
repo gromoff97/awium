@@ -1,43 +1,44 @@
 package io.github.gromoff97.awium.condition;
 
-import io.github.gromoff97.awium.condition.Condition.ExpectedStage;
-import io.github.gromoff97.awium.condition.Condition.NarrowingStage;
-import io.github.gromoff97.awium.condition.Condition.PreservingStage;
-import io.github.gromoff97.awium.condition.Condition.SelectedStage;
-import io.github.gromoff97.awium.condition.ConditionStage.ResultStage;
+import io.github.gromoff97.awium.internal.condition.ConditionRuntime;
+import io.github.gromoff97.awium.condition.Condition.ExpectedCondition;
+import io.github.gromoff97.awium.condition.Condition.NarrowingCondition;
+import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
+import io.github.gromoff97.awium.condition.Condition.SelectedCondition;
+import io.github.gromoff97.awium.condition.Condition;
 
 import io.github.gromoff97.awium.sources.Source;
 
 public final class ConditionTestRuntime {
 
     public static <S, R> ConditionEvaluation<R> evaluate(
-            ResultStage<? super S, ? extends R> condition, S actual) {
-        return evaluation(ConditionRuntime.<S, R>evaluator(condition).apply(actual));
+            Condition<? super S, ? extends R> condition, S actual) {
+        return ConditionRuntime.<S, R>evaluator(condition).apply(actual);
     }
 
-    public static <S> ConditionEvaluation<S> evaluate(PreservingStage<? super S> condition, S actual) {
-        return evaluation(ConditionRuntime.<S>preservingEvaluator(condition).apply(actual));
+    public static <S> ConditionEvaluation<S> evaluate(PreservingCondition<? super S> condition, S actual) {
+        return ConditionRuntime.<S>preservingEvaluator(condition).apply(actual);
     }
 
-    public static <S, T extends S> ConditionEvaluation<S> evaluate(ExpectedStage<T> condition, S actual) {
-        return evaluation(ConditionRuntime.<S>expectedEvaluator(condition).apply(actual));
+    public static <S, T extends S> ConditionEvaluation<S> evaluate(ExpectedCondition<T> condition, S actual) {
+        return ConditionRuntime.<S>preservingEvaluator(condition).apply(actual);
     }
 
-    public static <S, R> ConditionEvaluation<R> evaluate(NarrowingStage<R> condition, S actual) {
-        return evaluation(ConditionRuntime.<S, R>narrowingEvaluator(condition).apply(actual));
+    public static <S, R> ConditionEvaluation<R> evaluate(NarrowingCondition<R> condition, S actual) {
+        return ConditionRuntime.<S, R>evaluator(condition).apply(actual);
     }
 
     public static <S, R, F extends Source<?>> ConditionEvaluation<R> evaluate(
-            SelectedStage<? super S, F> condition, S actual) {
-        return evaluation(ConditionRuntime.<S, R>selectedEvaluator(condition).apply(actual));
+            SelectedCondition<? super S, F> condition, S actual) {
+        return ConditionRuntime.<S, R>evaluator(condition).apply(actual);
     }
 
     public static String description(AwaitCondition condition) {
-        return ConditionRuntime.description(condition);
+        return ConditionRuntime.metadata(condition).description();
     }
 
     public static String explanation(AwaitCondition condition) {
-        return ConditionRuntime.explanation(condition);
+        return ConditionRuntime.metadata(condition).explanation();
     }
 
     public static Object result(ConditionEvaluation<?> evaluation) {
@@ -50,16 +51,8 @@ public final class ConditionTestRuntime {
     public static String mismatch(ConditionEvaluation<?> evaluation) {
         return switch (evaluation) {
             case ConditionEvaluation.Unsatisfied<?> unsatisfied -> unsatisfied.mismatch();
-            case ConditionEvaluation.AssertionUnsatisfied<?> unsatisfied -> unsatisfied.mismatch();
             default -> throw new AssertionError("evaluation is not unsatisfied: " + evaluation);
         };
-    }
-
-    private static <R> ConditionEvaluation<R> evaluation(ConditionEvaluation<? extends R> evaluation) {
-        if (evaluation == null) {
-            return null;
-        }
-        return evaluation.mapSatisfied(result -> result);
     }
 
     private ConditionTestRuntime() {

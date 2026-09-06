@@ -4,31 +4,18 @@ import io.github.gromoff97.awium.condition.ConditionEvaluation;
 import io.github.gromoff97.awium.results.AwaitAttempt;
 
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.*;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.UNCONTROLLED;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.UNSATISFIED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.lang.reflect.RecordComponent;
-import java.util.Arrays;
-import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class ConditionEvaluationContractTest {
 
     private static final AwaitAttempt.Context.Sequence SEQUENCE =
             new AwaitAttempt.Context.Sequence(1, 2, 1, "second stage", "business reason", null);
-
-    @Test
-    void evaluationStatesCarryConditionDataAndAttemptContext() {
-        assertEquals(List.of("result", "context"), componentNames(ConditionEvaluation.Satisfied.class));
-        assertEquals(List.of("mismatch", "context"), componentNames(ConditionEvaluation.Unsatisfied.class));
-        assertEquals(List.of("mismatch", "cause", "context"), componentNames(ConditionEvaluation.AssertionUnsatisfied.class));
-        assertEquals(List.of("cause", "context"), componentNames(ConditionEvaluation.Uncontrolled.class));
-    }
 
     @Test
     void satisfiedEvaluationContinuesWithAnotherResultType() throws Exception {
@@ -54,13 +41,11 @@ class ConditionEvaluationContractTest {
                     throw new AssertionError("continuation must not run");
                 });
 
-        var assertionFailure = assertInstanceOf(ConditionEvaluation.AssertionUnsatisfied.class, unsatisfied);
-        assertEquals(UNSATISFIED, assertionFailure.status());
+        var assertionFailure = assertInstanceOf(ConditionEvaluation.Unsatisfied.class, unsatisfied);
         assertEquals("mismatch", assertionFailure.mismatch());
-        assertSame(assertion, assertionFailure.cause());
+        assertSame(assertion, assertionFailure.assertion());
         assertSame(SEQUENCE, assertionFailure.context());
         var uncontrolledFailure = assertInstanceOf(ConditionEvaluation.Uncontrolled.class, uncontrolled);
-        assertEquals(UNCONTROLLED, uncontrolledFailure.status());
         assertSame(cause, uncontrolledFailure.cause());
     }
 
@@ -84,13 +69,11 @@ class ConditionEvaluationContractTest {
 
     @Test
     void internalOutcomesRejectNullCauses() {
+        assertEquals("mismatch must not be null", assertThrows(NullPointerException.class,
+                () -> assertionUnsatisfied(null, null)).getMessage());
         assertThrows(NullPointerException.class,
                 () -> assertionUnsatisfied("failed", null));
         assertThrows(NullPointerException.class, () -> uncontrolled(null));
-    }
-
-    private static List<String> componentNames(Class<?> record) {
-        return Arrays.stream(record.getRecordComponents()).map(RecordComponent::getName).toList();
     }
 
 }

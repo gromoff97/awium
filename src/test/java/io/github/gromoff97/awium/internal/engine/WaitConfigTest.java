@@ -1,8 +1,6 @@
 package io.github.gromoff97.awium.internal.engine;
 
 
-import io.github.gromoff97.awium.exceptions.*;
-
 import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaults;
 import static java.time.Duration.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,12 +24,11 @@ class WaitConfigTest {
     }
 
     @Test
-    void acceptsTheSmallestStrictlyValidDurationPair() {
-        WaitConfiguration config = defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2));
+    void acceptsTheSmallestPositiveDurations() {
+        WaitConfiguration config = defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(1));
 
         assertEquals(1, config.everyNanos());
-        assertEquals(2, config.upToNanos());
-        config.validatePair();
+        assertEquals(1, config.upToNanos());
     }
 
     @Test
@@ -106,34 +103,9 @@ class WaitConfigTest {
     }
 
     @Test
-    void equalIntervalAndTimeoutConflictOnlyWhenValidated() {
-        WaitConfiguration equal = defaults()
-                .withUpTo(ofMillis(100));
-
-        String message = assertThrows(AwaitConfigurationConflictException.class,
-                equal::validatePair).getMessage();
-        assertTrue(message.contains("polling interval"));
-        assertTrue(message.contains("acquisition timeout"));
-        assertTrue(message.contains("100 milliseconds"));
-    }
-
-    @Test
     void durationFormattingUsesReadableExactUnits() {
-        assertEquals(
-                "polling interval (1 nanosecond) must be shorter than acquisition timeout (1 nanosecond)",
-                conflictMessage(1));
-        assertEquals(
-                "polling interval (1 minute 30 seconds) must be shorter than acquisition timeout (1 minute 30 seconds)",
-                conflictMessage(ofSeconds(90).toNanos()));
-        assertEquals(
-                "polling interval (1 second 1 millisecond 1 microsecond 1 nanosecond) must be shorter than "
-                        + "acquisition timeout (1 second 1 millisecond 1 microsecond 1 nanosecond)",
-                conflictMessage(1_001_001_001));
-    }
-
-    private static String conflictMessage(long nanos) {
-        return assertThrows(AwaitConfigurationConflictException.class,
-                () -> new WaitConfiguration(nanos, nanos, 0).validatePair())
-                .getMessage();
+        assertEquals("1 nanosecond", WaitConfiguration.duration(1));
+        assertEquals("1 minute 30 seconds", WaitConfiguration.duration(ofSeconds(90).toNanos()));
+        assertEquals("1 second 1 millisecond 1 microsecond 1 nanosecond", WaitConfiguration.duration(1_001_001_001));
     }
 }

@@ -9,8 +9,8 @@ import java.util.regex.Pattern;
 
 import static io.github.gromoff97.awium.conditions.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.conditions.ConditionSupport.validateRange;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.expectedReference;
-import static io.github.gromoff97.awium.condition.ConditionRuntime.unexpectedReference;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.expectedReference;
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.unexpectedReference;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 

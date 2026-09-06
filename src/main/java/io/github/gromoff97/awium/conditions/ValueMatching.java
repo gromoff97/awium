@@ -41,12 +41,7 @@ final class ValueMatching {
             return true;
         }
         for (Actual value : actual) {
-            Iterator<Expected> candidates = remainingExpected.iterator();
-            while (candidates.hasNext()) {
-                if (matches.test(value, candidates.next())) {
-                    candidates.remove();
-                }
-            }
+            remainingExpected.removeIf(candidate -> matches.test(value, candidate));
             if (remainingExpected.isEmpty()) {
                 return true;
             }

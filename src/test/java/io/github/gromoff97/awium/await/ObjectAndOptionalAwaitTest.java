@@ -6,7 +6,6 @@ import io.github.gromoff97.awium.condition.ConditionEvaluation;
 import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
 import io.github.gromoff97.awium.conditions.Conditions;
 import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.await.Await.tryAwait;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
 import static io.github.gromoff97.awium.conditions.Conditions.*;
@@ -36,34 +35,38 @@ class ObjectAndOptionalAwaitTest {
 
     @Test
     void awaitReturnsTheObservationFromABroadPreservingCondition() {
+        var pollingTime = new FakeTime(0);
         Source<String> source = () -> "observed";
 
-        assertEquals("observed", await(source).until(broadPreservingCondition()));
+        assertEquals("observed", await(source).usingTime(pollingTime, pollingTime).until(broadPreservingCondition()));
     }
 
     @Test
-    void tryAwaitReturnsTheObservationFromABroadPreservingCondition() {
+    void tryUntilReturnsTheObservationFromABroadPreservingCondition() {
+        var pollingTime = new FakeTime(0);
         Source<String> source = () -> "observed";
 
-        AwaitResult<String, String> result = tryAwait(source).until(broadPreservingCondition());
+        AwaitResult<String, String> result = await(source).usingTime(pollingTime, pollingTime).tryUntil(broadPreservingCondition());
         assertInstanceOf(AwaitResult.Satisfied.class, result);
         assertEquals("observed", ((AwaitResult.Satisfied<?, ?>) result).result());
     }
 
     @Test
     void voidAndNullableSelectingTerminalsReturnNullOnSuccess() {
-        assertNull(await((Source<Object>) () -> null).until(isNull));
-        assertNull(await((Source<String>) () -> "value").until(yields(value -> {
+        var pollingTime = new FakeTime(0);
+        assertNull(await((Source<Object>) () -> null).usingTime(pollingTime, pollingTime).until(isNull));
+        assertNull(await((Source<String>) () -> "value").usingTime(pollingTime, pollingTime).until(yields(value -> {
             return null;
         }).because("nullable property")));
     }
 
     @Test
     void optionalValueConditionsReturnTheContainedValueThroughUntil() {
+        var pollingTime = new FakeTime(0);
         var equalValue = new Object();
 
         assertSame(equalValue, await((OptionalSource<Object>)
-                () -> Optional.of(equalValue)).until(hasValue(equalValue)));
+                () -> Optional.of(equalValue)).usingTime(pollingTime, pollingTime).until(hasValue(equalValue)));
     }
 
     @Test

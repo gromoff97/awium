@@ -2,10 +2,13 @@ package io.github.gromoff97.awium.internal.diagnostics;
 
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.results.AwaitAttempt.Reference;
+import io.github.gromoff97.awium.internal.condition.ConditionMetadata;
+import io.github.gromoff97.awium.internal.diagnostics.FailureFactory.AttemptDiagnostic;
 import io.github.gromoff97.awium.internal.engine.WaitCompletion;
 import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
 
 import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.duration;
+import static io.github.gromoff97.awium.internal.diagnostics.FailureFactory.addSuppressed;
 import static java.util.Arrays.deepToString;
 import static java.util.Objects.requireNonNull;
 
@@ -19,11 +22,9 @@ final class FailureMessageRenderer {
         throw new AssertionError("Utility class");
     }
 
-    static Result render(WaitCompletion<?, ?> outcome, String description,
-            String explanation, Reference<?> reference, WaitConfiguration configuration,
+    static Result render(WaitCompletion<?, ?> outcome, ConditionMetadata metadata, WaitConfiguration configuration,
             AttemptDiagnostic diagnostic) {
-        Context context = new Context(outcome, description, explanation, reference,
-                configuration, diagnostic);
+        Context context = new Context(outcome, metadata, configuration, diagnostic);
         Throwable outcomeCause = diagnostic.failure();
         try {
             return new Result(format(context), null);
@@ -141,10 +142,10 @@ final class FailureMessageRenderer {
     }
 
     private static void condition(StringBuilder out, Context context, boolean emergency) {
-        field(out, "", "Condition", context.description);
-        reference(out, context, context.reference, false, emergency);
-        if (context.explanation != null) {
-            field(out, "Importance", context.explanation);
+        field(out, "", "Condition", context.metadata.description());
+        reference(out, context, context.metadata.reference(), false, emergency);
+        if (context.metadata.explanation() != null) {
+            field(out, "Importance", context.metadata.explanation());
         }
     }
 
@@ -247,57 +248,12 @@ final class FailureMessageRenderer {
         }
     }
 
-    static void addSuppressed(Throwable failure, Throwable cause) {
-        if (cause != null && cause != failure) {
-            failure.addSuppressed(cause);
-        }
-    }
-
-    private static AwaitAttempt.Context.Sequence sequence(AwaitAttempt.Context context) {
-        return context instanceof AwaitAttempt.Context.Sequence value ? value : null;
-    }
-
-    static AttemptDiagnostic diagnostic(AwaitAttempt<?, ?> attempt) {
-        return switch (attempt.outcome()) {
-            case AwaitAttempt.Outcome.Satisfied<?, ?> value ->
-                    new AttemptDiagnostic(value.observed(), null, null, null, null);
-            case AwaitAttempt.Outcome.Unsatisfied<?, ?> value ->
-                    new AttemptDiagnostic(value.observed(), value.mismatch(),
-                            sequence(value.context()), value.assertion(), null);
-            case AwaitAttempt.Outcome.WaitingFailed<?, ?> value ->
-                    uncontrolled(null, null, value.failure(),
-                            "Caller thread was interrupted while waiting",
-                            "Waiting before the next attempt failed");
-            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> value ->
-                    uncontrolled(null, null, value.failure(),
-                            "Caller thread was interrupted during source retrieval",
-                            "Source retrieval failed");
-            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> value ->
-                    uncontrolled(value.observed(), null, value.failure(),
-                            "Caller thread was interrupted during source retrieval",
-                            "Source retrieval failed");
-            case AwaitAttempt.Outcome.ConditionEvaluationFailed<?, ?> value ->
-                    uncontrolled(value.observed(), sequence(value.context()), value.failure(),
-                            "Caller thread was interrupted during condition evaluation",
-                            "Condition evaluation failed");
-        };
-    }
-
-    private static AttemptDiagnostic uncontrolled(Object observed,
-            AwaitAttempt.Context.Sequence sequence, Throwable failure,
-            String interruptedHeading, String failureHeading) {
-        return new AttemptDiagnostic(observed, null, sequence, failure,
-                failure instanceof InterruptedException ? interruptedHeading : failureHeading);
-    }
-
     record Result(String message, Throwable failure) {}
 
     private static final class Context {
 
         private final WaitCompletion<?, ?> outcome;
-        private final String description;
-        private final String explanation;
-        private final Reference<?> reference;
+        private final ConditionMetadata metadata;
         private final WaitConfiguration configuration;
         private final AttemptDiagnostic diagnostic;
 
@@ -306,14 +262,10 @@ final class FailureMessageRenderer {
         private String sequenceReference;
 
         private Context(WaitCompletion<?, ?> outcome,
-                String description, String explanation,
-                Reference<?> reference,
+                ConditionMetadata metadata,
                 WaitConfiguration configuration, AttemptDiagnostic diagnostic) {
             this.outcome = requireNonNull(outcome, "outcome must not be null");
-            this.description = requireNonNull(description,
-                    "condition description must not be null");
-            this.explanation = explanation;
-            this.reference = reference;
+            this.metadata = requireNonNull(metadata, "metadata must not be null");
             this.configuration = requireNonNull(configuration,
                     "configuration must not be null");
             this.diagnostic = requireNonNull(diagnostic,
@@ -334,10 +286,6 @@ final class FailureMessageRenderer {
             return rendered;
         }
     }
-
-    record AttemptDiagnostic(Object observed, String mismatch,
-            AwaitAttempt.Context.Sequence sequence, Throwable failure,
-            String heading) {}
 
     private record ThrowableDiagnostic(String type, String message) {}
 }

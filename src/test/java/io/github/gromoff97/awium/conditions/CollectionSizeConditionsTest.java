@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium.conditions;
 
+import io.github.gromoff97.awium.condition.ConditionEvaluation.Satisfied;
 import io.github.gromoff97.awium.FakeTime;
 import io.github.gromoff97.awium.ProbeContainers;
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
@@ -20,8 +21,6 @@ import static io.github.gromoff97.awium.condition.ConditionTestRuntime.descripti
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.result;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.SATISFIED;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.UNSATISFIED;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.empty;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.nonEmpty;
@@ -49,13 +48,14 @@ class CollectionSizeConditionsTest {
 
     @Test
     void hasSingleElementReturnsTheTypedElement() throws Exception {
+        var pollingTime = new FakeTime(0);
         String element = new String("element");
         CollectionSource<ArrayList<String>> source = () -> new ArrayList<>(List.of(element));
 
-        String selected = await(source).until(single);
-        String explained = await(source).until(single.because("exactly one result is required"));
+        String selected = await(source).usingTime(pollingTime, pollingTime).until(single);
+        String explained = await(source).usingTime(pollingTime, pollingTime).until(single.because("exactly one result is required"));
         String nullElement = await((CollectionSource<List<String>>)
-                () -> Collections.singletonList(null)).until(single);
+                () -> Collections.singletonList(null)).usingTime(pollingTime, pollingTime).until(single);
 
         assertSame(element, selected);
         assertSame(element, explained);
@@ -74,7 +74,7 @@ class CollectionSizeConditionsTest {
             var mismatching = new ProbeContainers.ProbeCollection<Object>(testCase.mismatchingSize());
 
             ConditionEvaluation<?> satisfied = evaluate(testCase.condition(), matching);
-            assertEquals(SATISFIED, satisfied.status());
+            assertEquals(Satisfied.class, satisfied.getClass());
             assertSame(matching, result(satisfied));
             assertUnsatisfied(evaluate(testCase.condition(), mismatching));
             assertFalse(description(testCase.condition()).isBlank());
@@ -115,12 +115,13 @@ class CollectionSizeConditionsTest {
 
     @Test
     void throwingSizeIsTheExactFailFastConditionCause() {
+        var pollingTime = new FakeTime(0);
         var cause = new IllegalStateException("collection size failed");
         var collection = new ProbeContainers.ProbeCollection<Object>(cause);
 
         assertSame(cause, assertThrows(AwaitConditionEvaluationException.class,
                 () -> await((CollectionSource<ProbeContainers.ProbeCollection<Object>>)
-                        () -> collection).until(nonEmpty)).getCause());
+                        () -> collection).usingTime(pollingTime, pollingTime).until(nonEmpty)).getCause());
         assertEquals(1, collection.sizeCalls);
     }
 
@@ -136,9 +137,9 @@ class CollectionSizeConditionsTest {
 
     @Test
     void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() throws Exception {
-        assertEquals(SATISFIED, evaluate(sizeBetween(2, 4), List.of(1, 2)).status());
-        assertEquals(SATISFIED,
-                evaluate(sizeBetween(2, 4), List.of(1, 2, 3, 4)).status());
+        assertEquals(Satisfied.class, evaluate(sizeBetween(2, 4), List.of(1, 2)).getClass());
+        assertEquals(Satisfied.class,
+                evaluate(sizeBetween(2, 4), List.of(1, 2, 3, 4)).getClass());
         assertUnsatisfied(evaluate(sizeBetween(2, 4), List.of(1)));
         assertUnsatisfied(evaluate(sizeBetween(2, 4), List.of(1, 2, 3, 4, 5)));
     }
@@ -159,7 +160,6 @@ class CollectionSizeConditionsTest {
     }
 
     private static void assertUnsatisfied(ConditionEvaluation<?> evaluation) {
-        assertEquals(UNSATISFIED, evaluation.status());
         assertInstanceOf(ConditionEvaluation.Unsatisfied.class, evaluation);
         assertFalse(mismatch(evaluation).isBlank());
     }

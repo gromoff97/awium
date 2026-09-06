@@ -1,5 +1,6 @@
-package io.github.gromoff97.awium.condition;
+package io.github.gromoff97.awium.internal.condition;
 
+import io.github.gromoff97.awium.condition.ConditionEvaluation;
 import io.github.gromoff97.awium.results.AwaitAttempt;
 
 import java.util.ArrayList;
@@ -38,9 +39,14 @@ final class CapturedEvaluator<Observed, Result> implements Function<Observed, Co
                     new NullPointerException("condition returned null ConditionEvaluation"))
                     .withContext(contextFor(evaluatedStageIndex));
         }
-        AwaitAttempt.Context context = evaluation instanceof ConditionEvaluation.Satisfied<?>
-                || !(evaluation.context() instanceof AwaitAttempt.Context.Sequence)
-                ? contextFor(evaluatedStageIndex) : evaluation.context();
+        AwaitAttempt.Context context = evaluation.context();
+        if (context instanceof AwaitAttempt.Context.Expectation expectation) {
+            context = new AwaitAttempt.Context.Sequence(evaluatedStageIndex, stages.size(), evaluatedStageIndex + 1,
+                    expectation.description(), stages.get(evaluatedStageIndex).metadata().explanation(), expectation.reference());
+        } else if (evaluation instanceof ConditionEvaluation.Satisfied<?>
+                || !(context instanceof AwaitAttempt.Context.Sequence)) {
+            context = contextFor(evaluatedStageIndex);
+        }
         return evaluation.withContext(context).continueIfSatisfied(value -> sequenceComplete
                 ? refreshFinalResult(value, evaluatedStageIndex)
                 : captureStageResult(value, evaluatedStageIndex));
@@ -53,12 +59,12 @@ final class CapturedEvaluator<Observed, Result> implements Function<Observed, Co
                     "waiting for sequence stage " + (results.size() + 1))
                     .withContext(contextFor(results.size(), evaluatedStageIndex));
         }
-        return satisfied(capturedResults()).withContext(contextFor(evaluatedStageIndex));
+        return satisfied(capturedResults()).withContext(contextFor(results.size(), evaluatedStageIndex));
     }
 
     private ConditionEvaluation<List<Result>> refreshFinalResult(Result result, int evaluatedStageIndex) {
         results.set(results.size() - 1, result);
-        return satisfied(capturedResults()).withContext(contextFor(evaluatedStageIndex));
+        return satisfied(capturedResults()).withContext(contextFor(results.size(), evaluatedStageIndex));
     }
 
     private List<Result> capturedResults() {
@@ -69,19 +75,19 @@ final class CapturedEvaluator<Observed, Result> implements Function<Observed, Co
         return contextFor(stageIndex, stageIndex);
     }
 
-    private AwaitAttempt.Context.Sequence contextFor(int waitingStageIndex, int evaluatedStageIndex) {
-        Stage<Observed, Result> waitingStage = stages.get(waitingStageIndex);
-        return new AwaitAttempt.Context.Sequence(waitingStageIndex, stages.size(), evaluatedStageIndex + 1,
-                waitingStage.expectation(), waitingStage.importance(), waitingStage.reference());
+    private AwaitAttempt.Context.Sequence contextFor(int capturedStages, int evaluatedStageIndex) {
+        ConditionMetadata metadata = stages.get(Math.min(capturedStages, stages.size() - 1)).metadata();
+        return new AwaitAttempt.Context.Sequence(capturedStages, stages.size(), evaluatedStageIndex + 1,
+                metadata.description(), metadata.explanation(), metadata.reference());
     }
 
     record Stage<Observed, Result>(Function<? super Observed,
             ? extends ConditionEvaluation<? extends Result>> evaluator,
-            String expectation, String importance, AwaitAttempt.Reference<?> reference) {
+            ConditionMetadata metadata) {
 
         public Stage {
             requireNonNull(evaluator, "evaluator must not be null");
-            requireNonNull(expectation, "expectation must not be null");
+            requireNonNull(metadata, "metadata must not be null");
         }
     }
 }

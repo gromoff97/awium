@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium.conditions;
 
+import io.github.gromoff97.awium.condition.ConditionEvaluation.Satisfied;
 import io.github.gromoff97.awium.FakeTime;
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
 
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.SATISFIED;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.conditions.Conditions.*;
 import static io.github.gromoff97.awium.condition.ConditionTestRuntime.description;
@@ -24,8 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.function.Consumer;
-import java.util.function.Function;
+import io.github.gromoff97.awium.condition.CheckedConsumer;
+import io.github.gromoff97.awium.condition.CheckedFunction;
 import org.junit.jupiter.api.Test;
 
 class AssertionAdapterTest {
@@ -41,7 +41,7 @@ class AssertionAdapterTest {
 
         ConditionEvaluation<Long> evaluation = evaluate(condition, "42");
 
-        assertEquals(SATISFIED, evaluation.status());
+        assertEquals(Satisfied.class, evaluation.getClass());
         assertEquals(42L, result(evaluation));
         assertEquals(1, invocations[0]);
         assertEquals("payment id", description(condition));
@@ -78,7 +78,7 @@ class AssertionAdapterTest {
 
         ConditionEvaluation<String> evaluation = evaluate(condition, actual);
 
-        assertEquals(SATISFIED, evaluation.status());
+        assertEquals(Satisfied.class, evaluation.getClass());
         assertSame(actual, result(evaluation));
         assertEquals(1, invocations[0]);
         assertTrue(!description(condition).isBlank());
@@ -94,7 +94,7 @@ class AssertionAdapterTest {
 
         ConditionEvaluation<String> evaluation = evaluate(condition, "42");
 
-        assertEquals(SATISFIED, evaluation.status());
+        assertEquals(Satisfied.class, evaluation.getClass());
         assertNull(result(evaluation));
         assertEquals(1, invocations[0]);
         assertTrue(!description(condition).isBlank());
@@ -149,10 +149,10 @@ class AssertionAdapterTest {
     @Test
     void callbackFactoriesRejectNullCallbacks() {
         assertTrue(assertThrows(NullPointerException.class,
-                () -> asserted((Consumer<String>) null))
+                () -> asserted((CheckedConsumer<String>) null))
                 .getMessage().contains("assertion"));
         assertTrue(assertThrows(NullPointerException.class,
-                () -> yields((Function<String, String>) null))
+                () -> yields((CheckedFunction<String, String>) null))
                 .getMessage().contains("callback"));
     }
 }

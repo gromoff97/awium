@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium.conditions;
 
+import io.github.gromoff97.awium.condition.ConditionEvaluation.Satisfied;
+import io.github.gromoff97.awium.condition.ConditionEvaluation.Unsatisfied;
 import io.github.gromoff97.awium.FakeTime;
 import io.github.gromoff97.awium.ProbeContainers;
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
@@ -17,7 +19,6 @@ import static io.github.gromoff97.awium.condition.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedMapAwait;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.*;
 import static io.github.gromoff97.awium.conditions.MapConditions.*;
 import static io.github.gromoff97.awium.internal.engine.WaitConfiguration.defaults;
 import static java.time.Duration.ofNanos;
@@ -42,12 +43,12 @@ class MapConditionsTest {
     void exactAndAggregateConditionsKeepSetLikeEntrySemantics()
             throws Exception {
         assertStatus(containsAllEntriesOf(map("a", "1")),
-                map("a", "1"), SATISFIED);
+                map("a", "1"), Satisfied.class);
         assertStatus(containsExactlyEntriesOf(map("a", "1", "b", "2")),
-                map("b", "2", "a", "1"), SATISFIED);
-        assertStatus(containsExactlyEntriesOf(Map.of()), Map.of(), SATISFIED);
+                map("b", "2", "a", "1"), Satisfied.class);
+        assertStatus(containsExactlyEntriesOf(Map.of()), Map.of(), Satisfied.class);
         assertStatus(containsExactlyEntriesOf(map("a", "1")),
-                map("a", "1", "b", "2"), UNSATISFIED);
+                map("a", "1", "b", "2"), Unsatisfied.class);
     }
 
     @Test
@@ -55,23 +56,23 @@ class MapConditionsTest {
         Directional actualKey = new Directional(true);
         Directional expectedKey = new Directional(false);
         var actual = entryMap(entry(actualKey, "value"));
-        assertStatus(containsKey(expectedKey), actual, SATISFIED);
+        assertStatus(containsKey(expectedKey), actual, Satisfied.class);
         assertEquals(1, actualKey.equalsCalls);
 
         var arrayActual = entryMap(entry(new int[] {1}, new int[] {2}));
         assertStatus(containsEntry(new int[] {1}, new int[] {2}),
-                arrayActual, SATISFIED);
+                arrayActual, Satisfied.class);
 
         var valueFailure = new IllegalStateException("value equals");
         var keyMismatch = entryMap(entry("actual",
                 new ThrowingEquals(valueFailure)));
         assertStatus(containsEntry("expected", new ThrowingEquals(null)),
-                keyMismatch, UNSATISFIED);
+                keyMismatch, Unsatisfied.class);
 
         Directional onlyActual = new Directional(true);
         Directional onlyExpected = new Directional(false);
         assertStatus(containsOnlyKeys(onlyExpected),
-                entryMap(entry(onlyActual, "value")), SATISFIED);
+                entryMap(entry(onlyActual, "value")), Satisfied.class);
         assertEquals(2, onlyActual.equalsCalls);
         assertEquals(0, onlyExpected.equalsCalls);
     }
@@ -79,10 +80,10 @@ class MapConditionsTest {
     @Test
     void nullKeysAndValuesUseScanSemantics() throws Exception {
         var actual = entryMap(entry(null, "value"), entry("key", null));
-        assertStatus(containsKey(null), actual, SATISFIED);
-        assertStatus(containsValue(null), actual, SATISFIED);
-        assertStatus(containsEntry(null, "value"), actual, SATISFIED);
-        assertStatus(containsEntry("key", null), actual, SATISFIED);
+        assertStatus(containsKey(null), actual, Satisfied.class);
+        assertStatus(containsValue(null), actual, Satisfied.class);
+        assertStatus(containsEntry(null, "value"), actual, Satisfied.class);
+        assertStatus(containsEntry("key", null), actual, Satisfied.class);
     }
 
     @Test
@@ -95,8 +96,8 @@ class MapConditionsTest {
                 containsExactlyEntriesOf(expected);
         expected.put("a", "after");
 
-        assertStatus(membership, map("a", "after", "b", "other"), SATISFIED);
-        assertStatus(exact, map("a", "after"), SATISFIED);
+        assertStatus(membership, map("a", "after", "b", "other"), Satisfied.class);
+        assertStatus(exact, map("a", "after"), Satisfied.class);
     }
 
     @Test
@@ -108,8 +109,8 @@ class MapConditionsTest {
         expected.clear();
 
         for (Map<String, String> actual : List.of(Map.<String, String>of(), map("actual", "value"))) {
-            assertStatus(positive, actual, SATISFIED);
-            assertStatus(negative, actual, UNSATISFIED);
+            assertStatus(positive, actual, Satisfied.class);
+            assertStatus(negative, actual, Unsatisfied.class);
         }
     }
 
@@ -143,7 +144,7 @@ class MapConditionsTest {
             throws Exception {
         ConditionEvaluation<?> evaluation = evaluate(
                 containsAllEntriesOf(map("a", "1")), null);
-        assertEquals(UNSATISFIED, evaluation.status());
+        assertEquals(Unsatisfied.class, evaluation.getClass());
         assertFalse(mismatch(evaluation).isBlank());
 
         assertValidation(NullPointerException.class,
@@ -172,10 +173,11 @@ class MapConditionsTest {
 
     @Test
     void mapFactoriesPreserveConcreteResultTypes() {
+        var pollingTime = new FakeTime(0);
         var actual = map("a", "1");
         MapSource<LinkedHashMap<String, String>> source = () -> actual;
 
-        LinkedHashMap<String, String> result = await(source).until(containsEntry("a", "1"));
+        LinkedHashMap<String, String> result = await(source).usingTime(pollingTime, pollingTime).until(containsEntry("a", "1"));
 
         assertSame(actual, result);
     }
@@ -185,25 +187,26 @@ class MapConditionsTest {
             throws Exception {
         ConditionEvaluation<?> positive = evaluate(pair.positive(), actual);
         ConditionEvaluation<?> negative = evaluate(pair.negative(), actual);
-        assertEquals(positiveSatisfied ? SATISFIED : UNSATISFIED,
-                positive.status(), pair.name());
-        assertNotEquals(positive.status(), negative.status(), pair.name());
+        assertEquals(positiveSatisfied ? Satisfied.class : Unsatisfied.class,
+                positive.getClass(), pair.name());
+        assertNotEquals(positive.getClass(), negative.getClass(), pair.name());
         assertSame(actual, result(positiveSatisfied ? positive : negative));
         assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank());
     }
 
     private static <K, V, M extends Map<K, V>> void assertStatus(
             PreservingCondition<? super M> condition, M actual,
-            ConditionEvaluation.Status status) throws Exception {
+            Class<?> status) throws Exception {
         assertFalse(description(condition).isBlank());
-        assertEquals(status, evaluate(condition, actual).status());
+        assertEquals(status, evaluate(condition, actual).getClass());
     }
 
     private static <K, V> ProbeContainers.EntryMap<K, V> awaitMap(
             ProbeContainers.EntryMap<K, V> actual,
             PreservingCondition<? super ProbeContainers.EntryMap<K, V>>
                     condition) {
-        return await((MapSource<ProbeContainers.EntryMap<K, V>>) () -> actual).until(condition);
+        var pollingTime = new FakeTime(0);
+        return await((MapSource<ProbeContainers.EntryMap<K, V>>) () -> actual).usingTime(pollingTime, pollingTime).until(condition);
     }
 
     private static void assertValidation(Class<? extends Throwable> type,

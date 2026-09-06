@@ -89,26 +89,39 @@ import static io.github.gromoff97.awium.conditions.Conditions.yields;
 Receipt receipt = await(paymentRepository::load).until(yields(Payment::receipt));
 ```
 
-Public callbacks use JDK functional interfaces. Callers must handle or convert
-checked callback exceptions themselves. Unchecked callback failures are
-uncontrolled failures and stop polling immediately.
+`asserted(...)` accepts a `CheckedConsumer`; `yields(...)`, `condition(...)`,
+and `preserving(...)` accept a `CheckedFunction`. These callbacks may throw
+checked exceptions, so existing methods declaring `throws Exception` can be
+passed directly. Callback failures stop polling immediately and retain the
+original cause; only `AssertionError` inside `asserted(...)` means retry.
+Interruption retains its normal cancellation semantics.
 
-### Capture ordered states
+For callbacks already stored in JDK `Function` or `Consumer` variables, pass
+`function::apply` or `consumer::accept`. Predicates still use the JDK interfaces.
 
-`captured(...)` accepts at least two predicates or compatible conditions. It
-evaluates one stage at a time and returns one captured result per stage:
+### Ordered states
+
+Pass several compatible conditions to `until(...)` to wait for them in order.
+Each stage captures a value from a separate observation; the result is a list
+in stage order. `tryUntil(...)` returns the same list inside `AwaitResult`:
 
 ```java
-import static io.github.gromoff97.awium.conditions.Conditions.captured;
-
-List<Payment> lifecycle = await(paymentRepository::load).until(captured(
+List<Payment> payments = await(paymentRepository::load).until(
         payment -> payment.status() == CREATED,
         payment -> payment.status() == PENDING,
-        payment -> payment.status() == FINISHED));
+        payment -> payment.status() == FINISHED);
+
+AwaitResult<String, List<String>> statuses = await(paymentRepository::status).tryUntil(
+        equalTo("created").because("The order must be created"),
+        equalTo("paid").because("Payment must complete"));
 ```
 
 With `persisting(...)`, only the final stage is re-evaluated. Earlier captured
-values remain unchanged.
+values remain unchanged. Each factory-backed stage gets its own fresh evaluator
+for every terminal call. One condition still returns one value; zero conditions
+are invalid. A comma between terminal arguments always means ordered capture.
+The stages must belong to a compatible condition family; a selection followed
+by a value check belongs inside the selection condition instead.
 
 ## Timing
 
@@ -134,13 +147,34 @@ but cannot satisfy the wait. Once the condition first succeeds, `persisting`
 may extend the total call beyond `upTo`. Any persistence mismatch fails
 immediately.
 
-Each duration is validated when supplied. The final `every < upTo`
-relationship is validated by `until(...)` before polling.
+Each duration is validated when supplied. The interval may equal or exceed
+the timeout: the first observation still runs immediately, and an unsatisfied
+observation waits only for the remaining acquisition time before timing out.
+For example, `upTo(Duration.ofMillis(50))` works with the default interval.
+
+`usingTime(clock, parker)` replaces the monotonic nanosecond clock and the
+wait operation for one fluent configuration. It works with both `until` and
+`tryUntil`, preserves source/result types, and leaves earlier configurations
+independent:
+
+```java
+var nanos = new java.util.concurrent.atomic.AtomicLong();
+Payment payment = await(source).usingTime(nanos::get, delay -> nanos.addAndGet(delay)).until(present);
+```
+
+The example advances virtual time instead of sleeping. The clock and wait
+operation must use the same time base; the clock must be monotonic and return
+normally. The wait operation receives a duration in nanoseconds and may return
+early. Custom waiting failures use the normal waiting-failure handling; clock
+failures propagate directly. Defaults remain `System.nanoTime` and
+`LockSupport.parkNanos`.
 
 ## Business importance
 
-Every raw condition supports one `because(...)`. It adds diagnostic business
-importance without changing evaluation or result typing:
+Every condition supports `because(...)`. It returns an immutable copy with
+diagnostic business importance, preserving the condition's type and evaluation.
+A repeated `because(...)` replaces the reason; the original condition and shared
+constants remain unchanged:
 
 ```java
 // Avoid: repeats the condition.
@@ -162,8 +196,48 @@ When `matches(...)` is followed immediately by `because(...)`, declare the
 lambda parameter type:
 
 ```java
-var finished = matches((Payment payment) -> payment.status() == FINISHED).because(
-        "Settlement requires a finished payment");
+await(paymentRepository::load).until(matches((Payment payment) -> payment.status() == FINISHED).because(
+        "Settlement requires a finished payment"));
+```
+
+## Selection and checking
+
+Put a predicate or nested condition inside the selection:
+
+```java
+Payment payment = await(paymentRepository::findAll).until(single(Payment::paid));
+Payment paid = await(paymentRepository::findAll).until(single(Payment::paid).because(
+        "Settlement requires a paid payment"));
+String status = await(paymentRepository::find).until(hasValue(yields(Payment::status)));
+```
+
+`single` requires a collection containing exactly one element. `single(predicate)`
+and `single(condition)` require exactly one matching element among all elements;
+other elements may be present. No matches or several matches cause a retry.
+The source is read once per attempt. `singleEntry(...)` applies the same rule to
+map entries; `hasValue(...)` checks an optional value.
+
+The nested condition can preserve the selected value (`matches`, `asserted`),
+compare it with an expected value (`equalTo`), narrow its type (`instanceOf`),
+or transform it (`yields`, `condition`). Its explanation and expected value are
+retained in diagnostics. Callback failures stop evaluation and retain their
+original cause. If a callback sets the thread's interrupt flag, selection stops
+before invoking the next callback. A nested factory initializes lazily on the first candidate and
+keeps its state across candidates and retries within that stage.
+
+Type selection uses the same composition:
+
+```java
+Payment payment = await(repository::findAll).until(single(instanceOf(Payment.class)));
+Payment found = await(repository::find).until(hasValue(instanceOf(Payment.class)));
+```
+
+To collect selected values in order, pass several selections to the terminal:
+
+```java
+List<Payment> payments = await(paymentRepository::findAll).until(
+        single(Payment::created).because("Creation"),
+        single(Payment::paid).because("Payment"));
 ```
 
 ## Custom conditions
@@ -187,8 +261,13 @@ Receipt receipt = await(paymentRepository::load).until(condition(
 must start fresh for each wait, supply its construction through
 `conditionFactory(...)` instead. Use `preserving(...)` when a custom condition
 returns the observed type, or `preservingFactory(...)` when it is both
-preserving and stateful. This also lets `captured(...)` recognize it as a
-preserving stage.
+preserving and stateful. It can then participate in an ordered wait alongside
+other preserving conditions.
+
+Both factories accept a JDK `Callable` returning a `CheckedFunction`, so
+creating the evaluator may also throw a checked exception. Creation is lazy,
+once per wait when the condition is first evaluated; a creation failure uses
+the same failure handling as an evaluation failure.
 
 ## Condition catalogues
 
@@ -197,8 +276,8 @@ Import only the catalogue used by a test. Shared names such as `empty`,
 
 | Provider | Conditions | Successful result |
 | --- | --- | --- |
-| `Conditions` | custom condition and preserving factories, `asserted`, `yields`, `captured`, object equality and identity, type checks, `matches`, and comparable ranges | observed, narrowed, transformed, or captured value |
-| `OptionalConditions` | `present`, `absent`, `hasValue`, `doesNotHaveValue`, `containsInstanceOf` | contained, transformed, or narrowed value; `Void` for `absent` |
+| `Conditions` | custom condition and preserving factories, `asserted`, `yields`, object equality and identity, type checks, `matches`, and comparable ranges | observed, narrowed, or transformed value |
+| `OptionalConditions` | `present`, `absent`, `hasValue`, `doesNotHaveValue` | contained, transformed, or narrowed value; `Void` for `absent` |
 | `StringConditions` | empty/blank checks, content, prefix, suffix, regex, case-insensitive equality, and `length...` | observed string |
 | `CollectionConditions` | `single`, empty/null/duplicate checks, quantifiers, membership, exact content, sequences, `first`, `last`, `element`, `sorted`, and `size...` | observed collection or selected element |
 | `MapConditions` | `singleEntry`, empty checks, entry/key/value quantifiers and membership, exact content, `valueFor`, `entryFor`, `onlyValueFor`, and `size...` | observed map, selected entry, or value |
@@ -233,7 +312,17 @@ await(source).until(isNull);
 
 A variable declared as plain `Source<List<Payment>>` or
 `Source<Map<String, Payment>>` does not retain its selected element family.
-Use the corresponding marker when selection is needed:
+Pass its method reference to recover the family without another source type:
+
+```java
+Source<Optional<Payment>> payment = paymentRepository::find;
+Source<List<Payment>> payments = paymentRepository::findAll;
+
+Payment found = await(payment::get).until(present.because("The payment is required"));
+Payment onlyPayment = await(payments::get).until(single);
+```
+
+Alternatively, declare the corresponding marker when selection is needed:
 
 ```java
 import io.github.gromoff97.awium.sources.Source.CollectionSource;
@@ -260,7 +349,7 @@ Payment payment = await(payments).until(single);
 Map.Entry<? extends String, ? extends Payment> entry = await(index).until(singleEntry);
 ```
 
-`until(...)` starts the wait. Success never invokes the source again merely to
+`until(...)` or `tryUntil(...)` starts the wait. Success never invokes the source again merely to
 obtain the return value. A retained stage may be reused sequentially; every
 wait gets fresh timing. Built-in and factory-backed conditions also get fresh
 evaluation state. State in a callback passed directly to `condition(...)` or
@@ -268,14 +357,14 @@ evaluation state. State in a callback passed directly to `condition(...)` or
 
 ## Diagnostic waits
 
-`tryAwait(...)` has the same fluent grammar and evaluation semantics as
-`await(...)`, but returns one `AwaitResult<S, R>` for both success and failure:
+Finish the same `await(...)` chain with `tryUntil(...)` to return an
+`AwaitResult<S, R>` for both success and failure:
 
 ```java
-import static io.github.gromoff97.awium.await.Await.tryAwait;
+import static io.github.gromoff97.awium.await.Await.await;
 
 AwaitResult<Optional<Payment>, Payment> result =
-        tryAwait(paymentRepository::find).upTo(TIMEOUT).until(present);
+        await(paymentRepository::find).upTo(TIMEOUT).tryUntil(present);
 ```
 
 `AwaitResult.Satisfied` contains the terminal result. `AwaitResult.Failed`
@@ -292,14 +381,14 @@ complete uncompressed count.
 ## Threading and interruption
 
 Polling, source retrieval, and condition evaluation run on the exact platform
-or virtual thread that calls `until(...)`. Awium creates no worker, executor,
+or virtual thread that calls `until(...)` or `tryUntil(...)`. Awium creates no worker, executor,
 scheduler, or virtual thread, so caller `ThreadLocal` values remain visible.
 
 This release supports one-thread use only. Another thread may interrupt the
 caller as an external cancellation controller, but it must not access or mutate
 the stage, source, condition, expected values, or observed objects. Awium
-restores the interrupt flag. `await(...)` throws `AwaitInterruptedException`;
-`tryAwait(...)` returns it in `AwaitResult.Failed`. Because callbacks run in the
+restores the interrupt flag. `until(...)` throws `AwaitInterruptedException`;
+`tryUntil(...)` returns it in `AwaitResult.Failed`. Because callbacks run in the
 caller, Awium cannot preempt a source or condition that blocks indefinitely.
 
 ## Failures
@@ -322,8 +411,32 @@ AwaitUncontrolledException extends RuntimeException
 └── AwaitUnhandledException
 ```
 
-Invalid sources, conditions, durations, and cross-field timing configuration
-fail before polling. `VirtualMachineError` and `ThreadDeath` are rethrown
+Invalid sources, conditions, and durations fail before polling.
+`VirtualMachineError` and `ThreadDeath` are rethrown
 unchanged.
+
+## Development
+
+Run `./gradlew check` for behavior, fluent compilation, and packaged-module
+checks; `./gradlew pitest` runs mutation testing.
+
+`internal.condition` owns condition construction, per-wait evaluation state,
+and shared diagnostic metadata. Its references to the sealed condition API
+are intentional. `WaitEngine` owns timing, `ObservationEvaluator` owns source
+and callback execution, and `AttemptHistory` owns history retention and
+compression. `FailureFactory` interprets outcomes and prepares diagnostic
+data; `FailureMessageRenderer` formats it.
+
+Condition composition shares extraction and per-wait session creation in
+`ConditionSupport`. Failed extraction carries its own expectation, so missing
+map keys remain distinguishable from mismatches in nested conditions. Successful
+attempts retain diagnostic context too: a late success can still time out.
+
+Catalog and fluent behavior tests use virtual time; dedicated real-time and
+virtual-thread integration tests exercise the platform wait operation.
+
+Internal packages are not exported by JPMS. On the classpath they remain
+implementation details; custom conditions should use the factories in
+`Conditions`.
 
 Awium is licensed under the [Apache License 2.0](LICENSE).

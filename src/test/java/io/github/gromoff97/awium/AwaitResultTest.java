@@ -22,7 +22,7 @@ class AwaitResultTest {
                 new AwaitAttempt.Outcome.Satisfied<>(
                         new AwaitAttempt.Timing.AfterObservation(
                                 Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ZERO),
-                        null, null));
+                        null, null, AwaitAttempt.Context.Plain.INSTANCE));
         var mutable = new ArrayList<>(List.of(attempt));
 
         var result = new AwaitResult.Satisfied<>(mutable, 1, null);
@@ -52,5 +52,11 @@ class AwaitResultTest {
         assertEquals("total attempts must be non-negative", assertThrows(
                 IllegalArgumentException.class,
                 () -> new AwaitResult.Satisfied<>(List.of(), -1, null)).getMessage());
+    }
+
+    @Test
+    void dynamicExpectationsRejectDescriptionsThatCannotBeRendered() {
+        assertThrows(NullPointerException.class, () -> new AwaitAttempt.Context.Expectation(null, null));
+        assertThrows(IllegalArgumentException.class, () -> new AwaitAttempt.Context.Expectation(" \n", null));
     }
 }

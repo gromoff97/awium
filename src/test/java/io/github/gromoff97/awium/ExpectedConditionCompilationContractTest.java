@@ -17,22 +17,15 @@ class ExpectedConditionCompilationContractTest {
     @Test
     void expectedConditionsRetainCompatibleSourceTypes() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.await.Await.*;
-                import static io.github.gromoff97.awium.conditions.Conditions.*;
-                import io.github.gromoff97.awium.results.AwaitResult;
-                import io.github.gromoff97.awium.sources.Source;
+                static class Parent {}
+                static final class Child extends Parent {}
 
-                final class Contract {
-                    static class Parent {}
-                    static final class Child extends Parent {}
-
-                    void check(Source<Number> numbers, Source<Parent> parents, Source<Object> objects) {
-                        Number number = await(numbers).until(equalTo(42));
-                        Parent child = await(parents).until(equalTo(new Child()).because("business identity"));
-                        Object anything = await(objects).until(in(42, "ready"));
-                        Number absent = await(numbers).until(equalTo(null));
-                        AwaitResult<Number, Number> attempted = tryAwait(numbers).until(notEqualTo(0));
-                    }
+                void check(Source<Number> numbers, Source<Parent> parents, Source<Object> objects) {
+                    Number number = await(numbers).until(equalTo(42));
+                    Parent child = await(parents).until(equalTo(new Child()).because("business identity"));
+                    Object anything = await(objects).until(in(42, "ready"));
+                    Number absent = await(numbers).until(equalTo(null));
+                    AwaitResult<Number, Number> attempted = await(numbers).tryUntil(notEqualTo(0));
                 }
                 """));
     }
@@ -48,17 +41,11 @@ class ExpectedConditionCompilationContractTest {
                 "await(strings).until(notIn(1, 2))",
                 "await(children).until(equalTo(new Parent()))")) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.await.Await.await;
-                    import static io.github.gromoff97.awium.conditions.Conditions.*;
-                    import io.github.gromoff97.awium.sources.Source;
+                    static class Parent {}
+                    static final class Child extends Parent {}
 
-                    final class Contract {
-                        static class Parent {}
-                        static final class Child extends Parent {}
-
-                        void check(Source<String> strings, Source<Child> children) {
-                            %s;
-                        }
+                    void check(Source<String> strings, Source<Child> children) {
+                        %s;
                     }
                     """.formatted(invocation)), invocation);
         }
@@ -67,19 +54,9 @@ class ExpectedConditionCompilationContractTest {
     @Test
     void nestedExpectedConditionsRetainContainerValueTypes() throws IOException {
         assertTrue(compiles("""
-                import static io.github.gromoff97.awium.await.Await.await;
-                import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
-                import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
-                import static io.github.gromoff97.awium.conditions.OptionalConditions.hasValue;
-                import io.github.gromoff97.awium.sources.Source.MapSource;
-                import io.github.gromoff97.awium.sources.Source.OptionalSource;
-                import java.util.Map;
-
-                final class Contract {
-                    void check(OptionalSource<Number> optional, MapSource<Map<String, Number>> map) {
-                        Number optionalValue = await(optional).until(hasValue(equalTo(42)));
-                        Number mapValue = await(map).until(valueFor("answer", equalTo(42)));
-                    }
+                void check(OptionalSource<Number> optional, MapSource<Map<String, Number>> map) {
+                    Number optionalValue = await(optional).until(hasValue(equalTo(42)));
+                    Number mapValue = await(map).until(valueFor("answer", equalTo(42)));
                 }
                 """));
 
@@ -87,24 +64,27 @@ class ExpectedConditionCompilationContractTest {
                 "await(optional).until(hasValue(equalTo(42)))",
                 "await(map).until(valueFor(\"answer\", equalTo(42)))")) {
             assertFalse(compiles("""
-                    import static io.github.gromoff97.awium.await.Await.await;
-                    import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
-                    import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
-                    import static io.github.gromoff97.awium.conditions.OptionalConditions.hasValue;
-                    import io.github.gromoff97.awium.sources.Source.MapSource;
-                    import io.github.gromoff97.awium.sources.Source.OptionalSource;
-                    import java.util.Map;
-
-                    final class Contract {
-                        void check(OptionalSource<String> optional, MapSource<Map<String, String>> map) {
-                            %s;
-                        }
+                    void check(OptionalSource<String> optional, MapSource<Map<String, String>> map) {
+                        %s;
                     }
                     """.formatted(invocation)), invocation);
         }
     }
 
     private boolean compiles(String source) throws IOException {
-        return CompilationSupport.compiles(temporaryDirectory, source);
+        return CompilationSupport.compiles(temporaryDirectory, """
+                import static io.github.gromoff97.awium.await.Await.*;
+                import static io.github.gromoff97.awium.conditions.Conditions.*;
+                import io.github.gromoff97.awium.results.AwaitResult;
+                import io.github.gromoff97.awium.sources.Source;
+                import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
+                import static io.github.gromoff97.awium.conditions.OptionalConditions.hasValue;
+                import io.github.gromoff97.awium.sources.Source.MapSource;
+                import io.github.gromoff97.awium.sources.Source.OptionalSource;
+                import java.util.Map;
+                final class Contract {
+                    %s
+                }
+                """.formatted(source));
     }
 }

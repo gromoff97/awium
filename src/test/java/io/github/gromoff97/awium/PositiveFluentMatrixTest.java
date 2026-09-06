@@ -30,36 +30,38 @@ class PositiveFluentMatrixTest {
 
     @Test
     void objectFacadeExecutesEveryValidConfigurationPath() {
+        var pollingTime = new FakeTime(0);
         var actual = new Object();
         Source<Object> source = () -> actual;
 
         assertAllSame(actual,
-                await(source).until(isNotNull),
-                await(source).every(EVERY).until(isNotNull.because("object every")),
-                await(source).upTo(UP_TO).until(isNotNull),
-                await(source).persisting(ZERO).until(isNotNull.because("object must remain available")),
-                await(source).every(EVERY).upTo(UP_TO).until(isNotNull),
-                await(source).every(EVERY).persisting(ZERO).until(isNotNull.because("object must remain available")),
-                await(source).upTo(UP_TO).persisting(ZERO).until(isNotNull),
-                await(source).every(EVERY).upTo(UP_TO).persisting(ZERO).until(isNotNull.because("object all")),
-                await(source).persisting(ZERO).upTo(UP_TO).every(EVERY).until(isNotNull),
-                await(source).every(EVERY).upTo(UP_TO).persisting(ZERO).every(EVERY).upTo(UP_TO).persisting(ZERO).until(isNotNull));
+                await(source).usingTime(pollingTime, pollingTime).until(isNotNull),
+                await(source).usingTime(pollingTime, pollingTime).every(EVERY).until(isNotNull.because("object every")),
+                await(source).usingTime(pollingTime, pollingTime).upTo(UP_TO).until(isNotNull),
+                await(source).usingTime(pollingTime, pollingTime).persisting(ZERO).until(isNotNull.because("object must remain available")),
+                await(source).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).until(isNotNull),
+                await(source).usingTime(pollingTime, pollingTime).every(EVERY).persisting(ZERO).until(isNotNull.because("object must remain available")),
+                await(source).usingTime(pollingTime, pollingTime).upTo(UP_TO).persisting(ZERO).until(isNotNull),
+                await(source).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).until(isNotNull.because("object all")),
+                await(source).usingTime(pollingTime, pollingTime).persisting(ZERO).upTo(UP_TO).every(EVERY).until(isNotNull),
+                await(source).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).every(EVERY).upTo(UP_TO).persisting(ZERO).until(isNotNull));
 
         Condition<Object, Object> selecting = condition(
                 "select actual", ConditionEvaluation::satisfied);
-        assertSame(actual, await(source).until(selecting));
-        assertSame(actual, await(source).until(selecting.because("selected object")));
-        Void nil = await((Source<Object>) () -> null).until(isNull);
+        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(selecting));
+        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(selecting.because("selected object")));
+        Void nil = await((Source<Object>) () -> null).usingTime(pollingTime, pollingTime).until(isNull);
         assertSame(null, nil);
     }
 
     @Test
     void optionalFacadeExecutesCanonicalFullChain() {
+        var pollingTime = new FakeTime(0);
         var value = new String("value");
         OptionalSource<String> source = () -> Optional.of(value);
 
-        String selected = await(source).every(EVERY).upTo(UP_TO).persisting(ZERO).until(present.because("optional full chain"));
-        Void absentValue = await((OptionalSource<String>) Optional::empty).until(absent);
+        String selected = await(source).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).until(present.because("optional full chain"));
+        Void absentValue = await((OptionalSource<String>) Optional::empty).usingTime(pollingTime, pollingTime).until(absent);
 
         assertSame(value, selected);
         assertSame(null, absentValue);
@@ -67,14 +69,15 @@ class PositiveFluentMatrixTest {
 
     @Test
     void collectionFacadeExecutesCanonicalFullChain() {
+        var pollingTime = new FakeTime(0);
         var actual = new ArrayList<>(List.of("value"));
         CollectionSource<ArrayList<String>> source = () -> actual;
 
         Condition.PreservingCondition<Collection<?>> collectionCondition = nonEmpty;
-        Condition.PreservingStage<Collection<?>> explained =
+        Condition.PreservingCondition<Collection<?>> explained =
                 collectionCondition.because("collection full chain");
-        ArrayList<String> raw = await(source).until(collectionCondition);
-        ArrayList<String> selected = await(source).every(EVERY).upTo(UP_TO).persisting(ZERO).until(explained);
+        ArrayList<String> raw = await(source).usingTime(pollingTime, pollingTime).until(collectionCondition);
+        ArrayList<String> selected = await(source).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).until(explained);
 
         assertSame(actual, raw);
         assertSame(actual, selected);
@@ -82,11 +85,12 @@ class PositiveFluentMatrixTest {
 
     @Test
     void mapFacadeExecutesCanonicalFullChain() {
+        var pollingTime = new FakeTime(0);
         var actual = new LinkedHashMap<>(java.util.Map.of("key", "value"));
         MapSource<LinkedHashMap<String, String>> source = () -> actual;
 
-        LinkedHashMap<String, String> raw = await(source).until(MapConditions.nonEmpty);
-        LinkedHashMap<String, String> selected = await(source).every(EVERY).upTo(UP_TO).persisting(ZERO).until(MapConditions.nonEmpty.because("map full chain"));
+        LinkedHashMap<String, String> raw = await(source).usingTime(pollingTime, pollingTime).until(MapConditions.nonEmpty);
+        LinkedHashMap<String, String> selected = await(source).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).until(MapConditions.nonEmpty.because("map full chain"));
 
         assertSame(actual, raw);
         assertSame(actual, selected);

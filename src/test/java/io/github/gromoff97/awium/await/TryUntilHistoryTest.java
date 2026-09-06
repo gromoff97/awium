@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium.await;
 
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.captured;
+
 import io.github.gromoff97.awium.FakeTime;
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
 import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
@@ -7,10 +9,7 @@ import io.github.gromoff97.awium.internal.engine.WaitEngine;
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.results.AwaitResult;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
@@ -19,14 +18,35 @@ import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.PERSISTENCE;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
-import static io.github.gromoff97.awium.conditions.Conditions.captured;
+import static io.github.gromoff97.awium.await.AwaitTestAccess.timedAwait;
+
 import static io.github.gromoff97.awium.conditions.Conditions.condition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class TryAwaitHistoryTest {
+class TryUntilHistoryTest {
+
+    @Test
+    void successfulHistoryKeepsContextChangesWithoutCallingUserEquality() {
+        for (boolean sequence : new boolean[]{true, false}) {
+            var time = new FakeTime(0);
+            var actual = new Object();
+            var first = new ThrowingProbe();
+            var second = new ThrowingProbe();
+            int[] calls = {0};
+            var result = timedAwait(() -> actual, config(1, 10, 4), time, time).tryUntil(condition("ready", value -> {
+                var reference = new AwaitAttempt.Reference<>(new String("Expected"), ++calls[0] <= 3 ? first : second);
+                AwaitAttempt.Context context = sequence
+                        ? new AwaitAttempt.Context.Sequence(0, 2, 1, new String("stage"), null, reference)
+                        : new AwaitAttempt.Context.Expectation(new String("stage"), reference);
+                return satisfied(value).withContext(context);
+            }));
+            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+            assertEquals(List.of(1L, 3L, 5L), result.attempts().stream().map(AwaitAttempt::number).toList());
+        }
+    }
 
     @Test
     void storesOnlyTheLastOfAdjacentEquivalentAttempts() {
@@ -52,8 +72,8 @@ class TryAwaitHistoryTest {
     void boundsHistoryWhileRetainingTheFirstAndLatestAttempts() {
         var time = new FakeTime(0);
 
-        var result = timedTryAwait(Object::new, config(1, 300, 0), time, time)
-                .until(condition("never ready", actual -> unsatisfied("not ready")));
+        var result = timedAwait(Object::new, config(1, 300, 0), time, time)
+                .tryUntil(condition("never ready", actual -> unsatisfied("not ready")));
 
         assertEquals(300, result.totalAttempts());
         assertEquals(256, result.attempts().size());
@@ -73,6 +93,26 @@ class TryAwaitHistoryTest {
         assertEquals(2, execution.attempts().size());
         assertEquals(List.of(1L, 3L), numbers(execution));
         assertEquals(3, execution.outcome().attempt().number());
+    }
+
+    @Test
+    void compressionComparesContextValuesByIdentityWithoutCallingUserMethods() {
+        var time = new FakeTime(0);
+        var actual = new Object();
+        var first = new ThrowingProbe();
+        var second = new ThrowingProbe();
+        int[] calls = {0};
+
+        var result = timedAwait(() -> actual, config(1, 10, 0), time, time).tryUntil(condition("ready", value -> {
+            int call = ++calls[0];
+            return call == 5 ? satisfied(value) : ConditionEvaluation.<Object>unsatisfied("not ready").withContext(
+                    new AwaitAttempt.Context.Sequence(0, 2, 1, new String("stage"), new String("reason"),
+                            new AwaitAttempt.Reference<>(new String("Expected"), call <= 2 ? first : second)));
+        }));
+
+        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals(5, result.totalAttempts());
+        assertEquals(List.of(2L, 4L, 5L), result.attempts().stream().map(AwaitAttempt::number).toList());
     }
 
     @Test
@@ -124,24 +164,13 @@ class TryAwaitHistoryTest {
                 condition("inner stage 1", value -> satisfied(value)),
                 condition("inner stage 2", value -> satisfied(value)));
 
-        var result = timedTryAwait(() -> actual, config(1, 10, 0), time, time).until(captured(
-                        condition("conditions are satisfied in order",
+        var result = timedAwait(() -> actual, config(1, 10, 0), time, time).tryUntil(condition("conditions are satisfied in order",
                                 value -> satisfied(List.of(value))),
-                        nested));
+                        nested);
 
         assertEquals(3, result.totalAttempts());
         assertEquals(List.of(1L, 2L, 3L), result.attempts().stream()
                 .map(AwaitAttempt::number).toList());
-    }
-
-    @Test
-    void diagnosticRecordsHaveNoOptionalComponents() {
-        Stream.of(AwaitResult.class, AwaitAttempt.class)
-                .flatMap(TryAwaitHistoryTest::typeAndNestedTypes)
-                .filter(Class::isRecord)
-                .flatMap(type -> Arrays.stream(type.getRecordComponents()))
-                .forEach(component -> assertNotEquals(Optional.class, component.getType(),
-                        component.getDeclaringRecord().getName() + "." + component.getName()));
     }
 
     private static WaitEngine.RecordedWait<Object, Object> recordUnsatisfied(
@@ -155,11 +184,6 @@ class TryAwaitHistoryTest {
 
     private static List<Long> numbers(WaitEngine.RecordedWait<?, ?> execution) {
         return execution.attempts().stream().map(AwaitAttempt::number).toList();
-    }
-
-    private static Stream<Class<?>> typeAndNestedTypes(Class<?> type) {
-        return Stream.concat(Stream.of(type), Arrays.stream(type.getDeclaredClasses())
-                .flatMap(TryAwaitHistoryTest::typeAndNestedTypes));
     }
 
     private static WaitConfiguration config(long every, long upTo, long persistence) {

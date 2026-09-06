@@ -1,8 +1,10 @@
 package io.github.gromoff97.awium.internal.diagnostics;
 
+import static io.github.gromoff97.awium.internal.condition.ConditionRuntime.captured;
+
+import io.github.gromoff97.awium.internal.condition.ConditionMetadata;
 import io.github.gromoff97.awium.FakeTime;
 import io.github.gromoff97.awium.condition.Condition;
-import io.github.gromoff97.awium.condition.ConditionStage.ResultStage;
 import io.github.gromoff97.awium.conditions.Conditions;
 import io.github.gromoff97.awium.internal.engine.WaitCompletion;
 import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
@@ -22,7 +24,7 @@ import static io.github.gromoff97.awium.condition.ConditionEvaluation.assertionU
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.uncontrolled;
-import static io.github.gromoff97.awium.conditions.Conditions.captured;
+
 import static io.github.gromoff97.awium.conditions.Conditions.condition;
 import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
 import static io.github.gromoff97.awium.internal.engine.WaitCompletion.*;
@@ -141,7 +143,7 @@ class DiagnosticsSnapshotTest {
         var frame = new StackTraceElement("Payments", "verifyPending",
                 "Payments.java", 42);
         assertion.setStackTrace(new StackTraceElement[]{frame});
-        ResultStage<String, String> assertedPending = Conditions.<String, String>condition(
+        Condition<String, String> assertedPending = Conditions.<String, String>condition(
                 "payment status is pending", value -> assertionUnsatisfied(
                         "payment status was created", assertion))
                 .because("processing must begin before completion");
@@ -179,7 +181,7 @@ class DiagnosticsSnapshotTest {
     void capturedNestedUncontrolledRetainsCauseAndStage() {
         var time = new FakeTime(0);
         var cause = new IllegalStateException("status callback failed");
-        ResultStage<String, String> brokenPending = Conditions.<String, String>condition(
+        Condition<String, String> brokenPending = Conditions.<String, String>condition(
                 "payment status is pending", value -> {
                     throw cause;
                 }).because("processing must begin before completion");
@@ -399,7 +401,7 @@ class DiagnosticsSnapshotTest {
             AwaitInterruptedException failure = assertThrows(
                     AwaitInterruptedException.class,
                     () -> FailureFactory.complete(waitingFailure(interruption, 1, 0),
-                            "condition", null, null, config(1, 2, 0)));
+                            new ConditionMetadata("condition", null, null), config(1, 2, 0)));
 
             assertSame(interruption, failure.getCause());
             assertTrue(currentThread().isInterrupted());
@@ -410,6 +412,7 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void explicitUncontrolledRetainsInterruptFlagAfterDiagnosticsClearIt() {
+        var pollingTime = new FakeTime(0);
         var cause = new IllegalStateException("condition failed");
         Condition<Object, Object> condition = Conditions.condition("condition", actual -> {
             currentThread().interrupt();
@@ -419,7 +422,7 @@ class DiagnosticsSnapshotTest {
         try {
             AwaitConditionEvaluationException failure = assertThrows(
                     AwaitConditionEvaluationException.class,
-                    () -> await((Source<Object>) Object::new).until(condition));
+                    () -> await((Source<Object>) Object::new).usingTime(pollingTime, pollingTime).until(condition));
 
             assertSame(cause, failure.getCause());
             assertTrue(currentThread().isInterrupted());
@@ -659,8 +662,7 @@ class DiagnosticsSnapshotTest {
                 assertionUnsatisfiedAttempt(new ThrowingValue(diagnosticCause),
                         "not ready", engineCause, 1, 2));
         InternalError thrown = assertThrows(InternalError.class,
-                () -> FailureFactory.complete(outcome, "condition", null,
-                        null, config(1, 2, 0)));
+                () -> FailureFactory.complete(outcome, new ConditionMetadata("condition", null, null), config(1, 2, 0)));
 
         assertSame(fatal, thrown);
         assertEquals(2, thrown.getSuppressed().length);
@@ -693,27 +695,27 @@ class DiagnosticsSnapshotTest {
 
     private static <S, R> R complete(WaitCompletion<S, R> outcome, String description,
             String explanation, WaitConfiguration configuration) {
-        return FailureFactory.complete(outcome, description, explanation, null, configuration);
+        return FailureFactory.complete(outcome, new ConditionMetadata(description, explanation, null), configuration);
     }
 
-    private static ResultStage<String, java.util.List<String>> lifecycle(
-            ResultStage<String, String> pending,
-            ResultStage<String, String> completed) {
+    private static Condition<String, java.util.List<String>> lifecycle(
+            Condition<String, String> pending,
+            Condition<String, String> completed) {
         return captured(status("created", "payment status is created", null),
                 pending, completed).because("payment must complete its lifecycle");
     }
 
-    private static ResultStage<String, String> pending() {
+    private static Condition<String, String> pending() {
         return status("pending", "payment status is pending",
                 "processing must begin before completion");
     }
 
-    private static ResultStage<String, String> completed() {
+    private static Condition<String, String> completed() {
         return status("completed", "payment status is completed",
                 "completion must remain stable");
     }
 
-    private static ResultStage<String, String> status(String expected,
+    private static Condition<String, String> status(String expected,
             String description, String importance) {
         Condition<String, String> condition = condition(description,
                 value -> value.equals(expected)
@@ -725,7 +727,7 @@ class DiagnosticsSnapshotTest {
             S observed, R result, long number, long completedNanos) {
         return new AwaitAttempt<>(number, ACQUISITION,
                 new AwaitAttempt.Outcome.Satisfied<>(
-                        afterObservation(completedNanos), observed, result));
+                        afterObservation(completedNanos), observed, result, AwaitAttempt.Context.Plain.INSTANCE));
     }
 
     private static <S> AwaitAttempt<S, Object> unsatisfiedAttempt(
