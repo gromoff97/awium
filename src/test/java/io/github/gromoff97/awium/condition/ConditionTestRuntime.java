@@ -55,11 +55,11 @@ public final class ConditionTestRuntime {
         };
     }
 
-    private static <R> ConditionEvaluation<R> evaluation(ConditionAssessment<? extends R> assessment) {
-        if (assessment.evaluation() == null) {
+    private static <R> ConditionEvaluation<R> evaluation(ConditionEvaluation<? extends R> evaluation) {
+        if (evaluation == null) {
             return null;
         }
-        return assessment.evaluation().continueIfSatisfied(ConditionEvaluation::satisfied);
+        return evaluation.mapSatisfied(result -> result);
     }
 
     private ConditionTestRuntime() {

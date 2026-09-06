@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.internal.engine;
 
-import io.github.gromoff97.awium.condition.ConditionAssessment;
+import io.github.gromoff97.awium.condition.ConditionEvaluation;
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.sources.Source;
 
@@ -26,12 +26,12 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
     private static final int MAX_RETAINED_ATTEMPTS = 256;
 
     public <Observed, Result> WaitCompletion<Observed, Result> waitFor(Source<? extends Observed> source,
-            Function<? super Observed, ? extends ConditionAssessment<? extends Result>> evaluator) {
+            Function<? super Observed, ? extends ConditionEvaluation<? extends Result>> evaluator) {
         return waitFor(source, evaluator, ignored -> {});
     }
 
     public <Observed, Result> RecordedWait<Observed, Result> recordedWaitFor(Source<? extends Observed> source,
-            Function<? super Observed, ? extends ConditionAssessment<? extends Result>> evaluator) {
+            Function<? super Observed, ? extends ConditionEvaluation<? extends Result>> evaluator) {
         var attempts = new ArrayList<AwaitAttempt<Observed, Result>>();
         WaitCompletion<Observed, Result> outcome = waitFor(source, evaluator, attempt -> {
             if (attempts.isEmpty() || !equivalent(attempts.getLast(), attempt)) {
@@ -47,7 +47,7 @@ public record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
     }
 
     private <Observed, Result> WaitCompletion<Observed, Result> waitFor(Source<? extends Observed> source,
-            Function<? super Observed, ? extends ConditionAssessment<? extends Result>> evaluator,
+            Function<? super Observed, ? extends ConditionEvaluation<? extends Result>> evaluator,
             Consumer<AwaitAttempt<Observed, Result>> recorder) {
         configuration.validatePair();
         long started = clock.getAsLong();

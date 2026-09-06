@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
+import io.github.gromoff97.awium.results.AwaitAttempt;
 
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.*;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.Status.UNCONTROLLED;
@@ -18,27 +19,32 @@ import org.junit.jupiter.api.Test;
 
 class ConditionEvaluationContractTest {
 
+    private static final AwaitAttempt.Context.Sequence SEQUENCE =
+            new AwaitAttempt.Context.Sequence(1, 2, 1, "second stage", "business reason", null);
+
     @Test
-    void evaluationStatesCarryOnlyConditionData() {
-        assertEquals(List.of("result"), componentNames(ConditionEvaluation.Satisfied.class));
-        assertEquals(List.of("mismatch"), componentNames(ConditionEvaluation.Unsatisfied.class));
-        assertEquals(List.of("mismatch", "cause"), componentNames(ConditionEvaluation.AssertionUnsatisfied.class));
-        assertEquals(List.of("cause"), componentNames(ConditionEvaluation.Uncontrolled.class));
+    void evaluationStatesCarryConditionDataAndAttemptContext() {
+        assertEquals(List.of("result", "context"), componentNames(ConditionEvaluation.Satisfied.class));
+        assertEquals(List.of("mismatch", "context"), componentNames(ConditionEvaluation.Unsatisfied.class));
+        assertEquals(List.of("mismatch", "cause", "context"), componentNames(ConditionEvaluation.AssertionUnsatisfied.class));
+        assertEquals(List.of("cause", "context"), componentNames(ConditionEvaluation.Uncontrolled.class));
     }
 
     @Test
     void satisfiedEvaluationContinuesWithAnotherResultType() throws Exception {
         ConditionEvaluation<String> continued = satisfied(42)
-                .continueIfSatisfied(value -> satisfied("value=" + value));
+                .continueIfSatisfied(value -> satisfied("value=" + value).withContext(SEQUENCE));
 
         var result = assertInstanceOf(ConditionEvaluation.Satisfied.class, continued);
         assertEquals("value=42", result.result());
+        assertSame(SEQUENCE, result.context());
     }
 
     @Test
     void nonSatisfiedEvaluationSkipsContinuationAndKeepsDiagnostics() throws Exception {
         var assertion = new AssertionError("assertion");
         ConditionEvaluation<String> unsatisfied = ConditionEvaluation.<Integer>assertionUnsatisfied("mismatch", assertion)
+                .withContext(SEQUENCE)
                 .continueIfSatisfied(value -> {
                     throw new AssertionError("continuation must not run");
                 });
@@ -52,9 +58,20 @@ class ConditionEvaluationContractTest {
         assertEquals(UNSATISFIED, assertionFailure.status());
         assertEquals("mismatch", assertionFailure.mismatch());
         assertSame(assertion, assertionFailure.cause());
+        assertSame(SEQUENCE, assertionFailure.context());
         var uncontrolledFailure = assertInstanceOf(ConditionEvaluation.Uncontrolled.class, uncontrolled);
         assertEquals(UNCONTROLLED, uncontrolledFailure.status());
         assertSame(cause, uncontrolledFailure.cause());
+    }
+
+    @Test
+    void mappingSatisfiedResultKeepsItsAttemptContext() {
+        ConditionEvaluation<String> mapped = satisfied(42).withContext(SEQUENCE)
+                .mapSatisfied(Object::toString);
+
+        var result = assertInstanceOf(ConditionEvaluation.Satisfied.class, mapped);
+        assertEquals("42", result.result());
+        assertSame(SEQUENCE, result.context());
     }
 
     @Test

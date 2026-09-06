@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.await;
 
 import io.github.gromoff97.awium.FakeTime;
-import io.github.gromoff97.awium.condition.ConditionAssessment;
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
 import io.github.gromoff97.awium.internal.engine.WaitConfiguration;
 import io.github.gromoff97.awium.internal.engine.WaitEngine;
@@ -20,7 +19,6 @@ import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.PERSISTENCE;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.assertionUnsatisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.condition.ConditionAssessment.plain;
 import static io.github.gromoff97.awium.await.AwaitTestAccess.timedTryAwait;
 import static io.github.gromoff97.awium.conditions.Conditions.captured;
 import static io.github.gromoff97.awium.conditions.Conditions.condition;
@@ -40,7 +38,7 @@ class TryAwaitHistoryTest {
 
         var execution = new WaitEngine(config(1, 10, 3), time, time).recordedWaitFor(
                 () -> actual,
-                value -> plain(satisfied(calls[0]++ < 3 ? firstResult : finalResult)));
+                value -> satisfied(calls[0]++ < 3 ? firstResult : finalResult));
 
         assertEquals(4, execution.outcome().attempt().number());
         assertEquals(List.of(1L, 3L, 4L), execution.attempts().stream()
@@ -70,7 +68,7 @@ class TryAwaitHistoryTest {
         var probe = new ThrowingProbe();
 
         var execution = new WaitEngine(config(1, 10, 2), time, time)
-                .recordedWaitFor(() -> probe, actual -> plain(satisfied(probe)));
+                .recordedWaitFor(() -> probe, actual -> satisfied(probe));
 
         assertEquals(2, execution.attempts().size());
         assertEquals(List.of(1L, 3L), numbers(execution));
@@ -103,8 +101,9 @@ class TryAwaitHistoryTest {
         var execution = new WaitEngine(config(1, 3, 0), time, time)
                 .recordedWaitFor(() -> actual, value -> {
                     int current = ++stage[0];
-                    return new ConditionAssessment<>(ConditionEvaluation.<Object>unsatisfied("same mismatch"),
-                            new AwaitAttempt.Context.Sequence(current - 1, 3, current, "stage " + current, null, null));
+                    return ConditionEvaluation.<Object>unsatisfied("same mismatch").withContext(
+                            new AwaitAttempt.Context.Sequence(current - 1, 3, current,
+                                    "stage " + current, null, null));
                 });
 
         assertEquals(List.of(1L, 2L, 3L), numbers(execution));
@@ -151,7 +150,7 @@ class TryAwaitHistoryTest {
         var time = new FakeTime(0);
         int[] calls = {0};
         return new WaitEngine(config(1, 2, 0), time, time)
-                .recordedWaitFor(source, actual -> plain(evaluation.apply(calls[0]++)));
+                .recordedWaitFor(source, actual -> evaluation.apply(calls[0]++));
     }
 
     private static List<Long> numbers(WaitEngine.RecordedWait<?, ?> execution) {

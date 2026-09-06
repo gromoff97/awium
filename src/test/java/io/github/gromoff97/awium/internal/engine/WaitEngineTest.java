@@ -9,7 +9,6 @@ import static io.github.gromoff97.awium.condition.ConditionEvaluation.assertionU
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.uncontrolled;
 import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.condition.ConditionAssessment.plain;
 import static io.github.gromoff97.awium.internal.engine.WaitCompletion.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
@@ -52,7 +51,7 @@ class WaitEngineTest {
                 () -> engine.waitFor(() -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, actual -> plain(satisfied(actual))));
+                }, actual -> satisfied(actual)));
 
         assertEquals(0, clockCalls[0]);
         assertEquals(0, sourceCalls[0]);
@@ -185,7 +184,7 @@ class WaitEngineTest {
                 ignored -> {}).waitFor(() -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, actual -> plain(satisfied(actual)));
+                }, actual -> satisfied(actual));
 
         assertInstanceOf(LateTimeout.class, outcome);
         assertEquals(1, sourceCalls[0]);
@@ -577,7 +576,7 @@ class WaitEngineTest {
             LongConsumer parker,
             Source<S> source,
             Function<S, ConditionEvaluation<R>> condition) {
-        return new WaitEngine(config, time, parker).waitFor(source, actual -> plain(condition.apply(actual)));
+        return new WaitEngine(config, time, parker).waitFor(source, actual -> condition.apply(actual));
     }
 
     private static long completed(AwaitAttempt<?, ?> attempt) {

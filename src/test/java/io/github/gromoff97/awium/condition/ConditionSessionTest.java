@@ -35,14 +35,14 @@ class ConditionSessionTest {
 
         assertEquals("counted", ConditionRuntime.description(ordinary));
         assertNull(ConditionRuntime.explanation(ordinary));
-        Function<? super Integer, ? extends ConditionAssessment<? extends Integer>> first =
+        Function<? super Integer, ? extends ConditionEvaluation<? extends Integer>> first =
                 ConditionRuntime.evaluator(ordinary);
-        Function<? super Integer, ? extends ConditionAssessment<? extends Integer>> second =
+        Function<? super Integer, ? extends ConditionEvaluation<? extends Integer>> second =
                 ConditionRuntime.evaluator(ordinary);
 
-        assertEquals(1, result(first.apply(0).evaluation()));
-        assertEquals(2, result(first.apply(0).evaluation()));
-        assertEquals(1, result(second.apply(0).evaluation()));
+        assertEquals(1, result(first.apply(0)));
+        assertEquals(2, result(first.apply(0)));
+        assertEquals(1, result(second.apply(0)));
         assertNotNull(preserving);
         assertNotNull(selected);
         assertNotNull(sequence);

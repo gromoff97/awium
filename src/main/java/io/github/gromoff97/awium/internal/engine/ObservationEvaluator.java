@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium.internal.engine;
 
-import io.github.gromoff97.awium.condition.ConditionAssessment;
 import io.github.gromoff97.awium.condition.ConditionEvaluation;
 import io.github.gromoff97.awium.results.AwaitAttempt;
 import io.github.gromoff97.awium.sources.Source;
@@ -10,11 +9,10 @@ import java.util.function.Function;
 import java.util.function.LongSupplier;
 
 import static java.lang.Thread.currentThread;
-import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("removal")
 record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
-        Function<? super Observed, ? extends ConditionAssessment<? extends Result>> evaluator,
+        Function<? super Observed, ? extends ConditionEvaluation<? extends Result>> evaluator,
         LongSupplier clock, long executionStarted) {
 
     AwaitAttempt<Observed, Result> evaluate(AwaitAttempt.Phase phase, long number,
@@ -39,9 +37,9 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
                     retrievalStarted, observed, actual, interruption);
         }
 
-        ConditionAssessment<? extends Result> assessment;
+        ConditionEvaluation<? extends Result> evaluation;
         try {
-            assessment = requireNonNull(evaluator.apply(actual), "condition returned null ConditionAssessment");
+            evaluation = evaluator.apply(actual);
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
         } catch (Throwable failure) {
@@ -53,13 +51,12 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
                     AwaitAttempt.Context.Plain.INSTANCE);
         }
 
-        ConditionEvaluation<? extends Result> evaluation = assessment.evaluation();
         if (!(evaluation instanceof ConditionEvaluation.Uncontrolled<?>)
                 && interruptRaised()) {
             var interruption = new InterruptedException("caller thread interrupt flag was set");
             return afterConditionFailure(phase, number, attemptStarted,
                     retrievalStarted, observed, actual, interruption,
-                    assessment.context());
+                    contextOf(evaluation));
         }
 
         long completed = clock.getAsLong();
@@ -69,7 +66,7 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
             return new AwaitAttempt<>(number, phase,
                     new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(timing, actual,
                             new NullPointerException("condition returned null ConditionEvaluation"),
-                            assessment.context()));
+                            AwaitAttempt.Context.Plain.INSTANCE));
         }
 
         AwaitAttempt.Outcome<Observed, Result> outcome = switch (evaluation) {
@@ -77,12 +74,12 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
                     new AwaitAttempt.Outcome.Satisfied<>(timing, actual, satisfied.result());
             case ConditionEvaluation.Unsatisfied<?> unsatisfied ->
                     new AwaitAttempt.Outcome.Unsatisfied<>(timing, actual,
-                            unsatisfied.mismatch(), null, assessment.context());
+                            unsatisfied.mismatch(), null, unsatisfied.context());
             case ConditionEvaluation.AssertionUnsatisfied<?> unsatisfied ->
                     new AwaitAttempt.Outcome.Unsatisfied<>(timing, actual,
-                            unsatisfied.mismatch(), unsatisfied.cause(), assessment.context());
+                            unsatisfied.mismatch(), unsatisfied.cause(), unsatisfied.context());
             case ConditionEvaluation.Uncontrolled<?> failure ->
-                    uncontrolled(timing, actual, failure.cause(), assessment.context());
+                    uncontrolled(timing, actual, failure.cause(), failure.context());
         };
         return new AwaitAttempt<>(number, phase, outcome);
     }
@@ -127,6 +124,10 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
             restoreInterrupt();
         }
         return new AwaitAttempt.Outcome.ConditionEvaluationFailed<>(timing, actual, failure, context);
+    }
+
+    private static AwaitAttempt.Context contextOf(ConditionEvaluation<?> evaluation) {
+        return evaluation == null ? AwaitAttempt.Context.Plain.INSTANCE : evaluation.context();
     }
 
     private AwaitAttempt.Timing.AfterObservation afterObservation(long attemptStarted, long retrievalStarted,
