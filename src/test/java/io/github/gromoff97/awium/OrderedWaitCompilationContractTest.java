@@ -86,7 +86,7 @@ class OrderedWaitCompilationContractTest {
         assertFalse(compiles("await(Contract::text).tryUntil();"));
         assertFalse(compiles("await(Contract::text).until((String value) -> true);"));
         assertFalse(CompilationSupport.compiles(directory,
-                source("io.github.gromoff97.awium.conditions.Conditions.captured(isNotNull, isNotNull);"), "captured"));
+                source("io.github.gromoff97.awium.Conditions.captured(isNotNull, isNotNull);"), "captured"));
     }
 
     private boolean compiles(String body) throws IOException {
@@ -96,15 +96,15 @@ class OrderedWaitCompilationContractTest {
     private static String source(String body) {
         return """
                 import java.util.*;
-                import io.github.gromoff97.awium.condition.Condition;
-                import io.github.gromoff97.awium.results.AwaitResult;
-                import io.github.gromoff97.awium.sources.Source;
-                import static io.github.gromoff97.awium.await.Await.await;
-                import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
-                import static io.github.gromoff97.awium.conditions.Conditions.*;
-                import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
-                import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
-                import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
+                import io.github.gromoff97.awium.Condition;
+                import io.github.gromoff97.awium.AwaitResult;
+                import io.github.gromoff97.awium.Source;
+                import static io.github.gromoff97.awium.Await.await;
+                import static io.github.gromoff97.awium.ConditionResult.satisfied;
+                import static io.github.gromoff97.awium.Conditions.*;
+                import static io.github.gromoff97.awium.CollectionConditions.*;
+                import static io.github.gromoff97.awium.OptionalConditions.present;
+                import static io.github.gromoff97.awium.MapConditions.singleEntry;
                 final class Contract {
                     static String text() { return "ready"; }
                     static Optional<String> optional() { return Optional.of("ready"); }

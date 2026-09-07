@@ -1,16 +1,16 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.condition.ConditionEvaluation.Satisfied;
+import io.github.gromoff97.awium.ConditionResult.Satisfied;
 
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
-import static io.github.gromoff97.awium.condition.ConditionTestRuntime.description;
-import static io.github.gromoff97.awium.condition.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.condition.ConditionTestRuntime.mismatch;
-import static io.github.gromoff97.awium.condition.ConditionTestRuntime.result;
-import static io.github.gromoff97.awium.conditions.Conditions.*;
-import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
+import static io.github.gromoff97.awium.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
+import static io.github.gromoff97.awium.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.Conditions.*;
+import static io.github.gromoff97.awium.OptionalConditions.*;
 
-import io.github.gromoff97.awium.condition.*;
+import io.github.gromoff97.awium.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -48,7 +48,7 @@ class ObjectAndOptionalConditionsTest {
         assertSatisfied(evaluate(notEqualTo(expected), differentActual),
                 differentActual);
         assertSatisfied(evaluate(equalTo(null), null), null);
-        ConditionEvaluation<?> arrays = evaluate(equalTo(
+        ConditionResult<?> arrays = evaluate(equalTo(
                 new int[]{1, 2}), new int[]{1, 2});
         assertEquals(Satisfied.class, arrays.getClass());
         assertEquals(int[].class, result(arrays).getClass());
@@ -110,13 +110,13 @@ class ObjectAndOptionalConditionsTest {
                 .contains("unexpected"));
     }
 
-    private static void assertSatisfied(ConditionEvaluation<?> evaluation, Object result) {
-        assertInstanceOf(ConditionEvaluation.Satisfied.class, evaluation);
+    private static void assertSatisfied(ConditionResult<?> evaluation, Object result) {
+        assertInstanceOf(ConditionResult.Satisfied.class, evaluation);
         assertSame(result, result(evaluation));
     }
 
-    private static void assertUnsatisfied(ConditionEvaluation<?> evaluation) {
-        assertInstanceOf(ConditionEvaluation.Unsatisfied.class, evaluation);
+    private static void assertUnsatisfied(ConditionResult<?> evaluation) {
+        assertInstanceOf(ConditionResult.Unsatisfied.class, evaluation);
         assertTrue(!mismatch(evaluation).isBlank());
     }
 }

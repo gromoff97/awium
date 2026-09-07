@@ -1,11 +1,11 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.condition.ConditionEvaluation.Satisfied;
+import io.github.gromoff97.awium.ConditionResult.Satisfied;
 
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.condition.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.Conditions.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

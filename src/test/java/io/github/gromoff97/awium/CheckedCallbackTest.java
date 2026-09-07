@@ -1,10 +1,9 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.condition.Condition;
-import io.github.gromoff97.awium.condition.ConditionEvaluation;
-import io.github.gromoff97.awium.results.AwaitAttempt;
-import io.github.gromoff97.awium.results.AwaitResult;
-import io.github.gromoff97.awium.sources.Source;
+import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
+
+import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -14,13 +13,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.conditions.Conditions.*;
-import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
-import static io.github.gromoff97.awium.conditions.OptionalConditions.hasValue;
-import static io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitConditionEvaluationException;
-import static io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitInterruptedException;
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.Conditions.*;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.OptionalConditions.hasValue;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -61,9 +58,9 @@ class CheckedCallbackTest {
             for (var callback : callbacks.entrySet()) {
                 calls[0] = 0;
                 try {
-                    RuntimeException failure = cause instanceof InterruptedException
-                            ? assertThrows(AwaitInterruptedException.class, callback.getValue(), callback.getKey())
-                            : assertThrows(AwaitConditionEvaluationException.class, callback.getValue(), callback.getKey());
+                    Throwable failure = cause instanceof InterruptedException
+                            ? assertFailure(INTERRUPTED, callback.getValue())
+                            : assertFailure(CONDITION_FAILED, callback.getValue());
                     assertSame(cause, failure.getCause(), callback.getKey());
                     assertEquals(cause instanceof InterruptedException, Thread.currentThread().isInterrupted());
                     assertEquals(1, calls[0], callback.getKey());
@@ -96,11 +93,12 @@ class CheckedCallbackTest {
         var sequence = await(() -> "ready").usingTime(time, time).every(ofNanos(1)).tryUntil(yields(String::trim), nested);
         for (AwaitResult<?, ?> result : List.of(optional, map, sequence)) {
             var failure = assertInstanceOf(AwaitResult.Failed.class, result);
-            assertSame(cause, failure.failure().getCause());
-            assertTrue(failure.failure().getMessage().contains("receipt is needed"));
+            assertSame(cause, failure.failure().cause());
+            assertTrue(failure.failure().message().contains("receipt is needed"));
         }
-        var outcome = assertInstanceOf(AwaitAttempt.Outcome.ConditionEvaluationFailed.class, sequence.attempts().getLast().outcome());
-        var context = assertInstanceOf(AwaitAttempt.Context.Sequence.class, outcome.context());
+        var outcome = assertInstanceOf(ConditionResult.Uncontrolled.class,
+                assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, sequence.attempts().getLast().outcome()).evaluation());
+        var context = assertInstanceOf(ConditionResult.Context.Sequence.class, outcome.context());
         assertEquals(1, context.capturedStages());
         assertEquals(2, context.evaluatedStageNumber());
     }
@@ -113,7 +111,7 @@ class CheckedCallbackTest {
         return actual.length();
     }
 
-    private static ConditionEvaluation<String> evaluate(String actual) throws IOException {
+    private static ConditionResult<String> evaluate(String actual) throws IOException {
         return satisfied(actual);
     }
 

@@ -1,17 +1,15 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.sources.Source;
-
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditions.Conditions.condition;
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.Conditions.condition;
 import static java.lang.System.nanoTime;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.ofPlatform;
 import static java.lang.Thread.State.*;
 import static java.time.Duration.*;
 import static java.util.concurrent.locks.LockSupport.parkNanos;
-import io.github.gromoff97.awium.exceptions.AwaitUncontrolledException.AwaitInterruptedException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,8 +40,9 @@ class RealTimeIntegrationTest {
         caller.join(2_000);
 
         assertSame(TERMINATED, caller.getState());
-        AwaitInterruptedException failure = assertInstanceOf(
-                AwaitInterruptedException.class, terminal[0]);
+        var failure = assertInstanceOf(
+                AwaitExecutionException.class, terminal[0]);
+        assertEquals(AwaitFailure.Reason.INTERRUPTED, failure.failure().reason());
         assertInstanceOf(InterruptedException.class, failure.getCause());
         assertTrue(failure.getMessage().startsWith(
                 "Caller thread was interrupted while waiting"));

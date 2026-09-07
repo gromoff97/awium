@@ -52,11 +52,11 @@ class NestedSelectionCompilationContractTest {
     private boolean compiles(String body) throws IOException {
         return CompilationSupport.compiles(directory, """
                 import java.util.*;
-                import io.github.gromoff97.awium.results.AwaitResult;
-                import static io.github.gromoff97.awium.await.Await.await;
-                import static io.github.gromoff97.awium.conditions.Conditions.*;
-                import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
-                import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
+                import io.github.gromoff97.awium.AwaitResult;
+                import static io.github.gromoff97.awium.Await.await;
+                import static io.github.gromoff97.awium.Conditions.*;
+                import static io.github.gromoff97.awium.CollectionConditions.single;
+                import static io.github.gromoff97.awium.MapConditions.singleEntry;
                 final class Contract {
                     record Payment(int id, boolean paid) {}
                     static List<Payment> payments() { return List.of(new Payment(1, true)); }

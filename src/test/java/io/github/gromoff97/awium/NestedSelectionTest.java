@@ -1,9 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.condition.Condition;
-import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
-import io.github.gromoff97.awium.results.AwaitAttempt;
-import io.github.gromoff97.awium.results.AwaitResult;
+import io.github.gromoff97.awium.Condition.PreservingCondition;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -13,12 +10,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
-import static io.github.gromoff97.awium.conditions.Conditions.*;
-import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.CollectionConditions.single;
+import static io.github.gromoff97.awium.Conditions.*;
+import static io.github.gromoff97.awium.MapConditions.singleEntry;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -54,8 +51,8 @@ class NestedSelectionTest {
         assertEquals(3, attempts.get());
         var failed = await(() -> List.of(1, 2)).usingTime(time, time).upTo(ofNanos(1)).tryUntil(single(equalTo(42).because("required answer")));
         var failure = assertInstanceOf(AwaitResult.Failed.class, failed);
-        assertTrue(failure.failure().getMessage().contains("required answer"));
-        assertTrue(failure.failure().getMessage().contains("42"));
+        assertTrue(failure.failure().message().contains("required answer"));
+        assertTrue(failure.failure().message().contains("42"));
     }
 
     @Test
@@ -73,8 +70,9 @@ class NestedSelectionTest {
         var result = await(() -> List.of(pending)).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).tryUntil(
                 single(matches((Payment value) -> !value.paid()).because("creation")),
                 single(matches(Payment::paid).because("payment")));
-        var outcome = assertInstanceOf(AwaitAttempt.Outcome.Unsatisfied.class, result.attempts().getLast().outcome());
-        var context = assertInstanceOf(AwaitAttempt.Context.Sequence.class, outcome.context());
+        var outcome = assertInstanceOf(ConditionResult.Unsatisfied.class,
+                assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, result.attempts().getLast().outcome()).evaluation());
+        var context = assertInstanceOf(ConditionResult.Context.Sequence.class, outcome.context());
         assertEquals(1, context.capturedStages());
         assertEquals("payment", context.importance());
     }
@@ -109,8 +107,8 @@ class NestedSelectionTest {
                     throw (Exception) cause;
                 }).because("reason")));
                 var failure = assertInstanceOf(AwaitResult.Failed.class, result);
-                assertSame(cause, failure.failure().getCause());
-                assertTrue(failure.failure().getMessage().contains("reason"));
+                assertSame(cause, failure.failure().cause());
+                assertTrue(failure.failure().message().contains("reason"));
                 assertEquals(1, checks.get());
                 assertTrue(time.parkRequests.isEmpty());
                 assertEquals(cause instanceof InterruptedException, Thread.currentThread().isInterrupted());
@@ -138,7 +136,7 @@ class NestedSelectionTest {
                         return matching;
                     });
                     var failure = assertInstanceOf(AwaitResult.Failed.class, result);
-                    assertInstanceOf(InterruptedException.class, failure.failure().getCause());
+                    assertInstanceOf(InterruptedException.class, failure.failure().cause());
                     assertTrue(Thread.currentThread().isInterrupted());
                     assertEquals(1, calls.get());
                 } finally {
@@ -150,10 +148,11 @@ class NestedSelectionTest {
 
     @Test
     void invalidCallbacksAreValidatedAndFatalErrorsEscape() {
-        assertThrows(NullPointerException.class, () -> single((PreservingCondition<String>) null));
+        assertEquals("condition must not be null",
+                assertThrows(NullPointerException.class, () -> single((PreservingCondition<String>) null)).getMessage());
         var time = new FakeTime(0);
         var invalid = await(() -> List.of("ready")).usingTime(time, time).tryUntil(single(condition("invalid", (String value) -> null)));
-        assertInstanceOf(NullPointerException.class, assertInstanceOf(AwaitResult.Failed.class, invalid).failure().getCause());
+        assertInstanceOf(NullPointerException.class, assertInstanceOf(AwaitResult.Failed.class, invalid).failure().cause());
         var fatal = new OutOfMemoryError("fatal");
         assertSame(fatal, assertThrows(OutOfMemoryError.class,
                 () -> await(() -> List.of("ready")).usingTime(time, time).tryUntil(single(yields(value -> { throw fatal; })))));

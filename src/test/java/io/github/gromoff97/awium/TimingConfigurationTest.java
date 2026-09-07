@@ -1,17 +1,16 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import io.github.gromoff97.awium.exceptions.AwaitFailure.AwaitTimeoutException;
-import io.github.gromoff97.awium.results.AwaitResult;
-import io.github.gromoff97.awium.sources.Source;
 
 import java.util.List;
 
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.conditions.Conditions.isNotNull;
-import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.isNotNull;
+import static io.github.gromoff97.awium.Conditions.equalTo;
 import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,7 +31,7 @@ class TimingConfigurationTest {
         var result = await(() -> ++calls[0]).usingTime(time, time).upTo(timeout).tryUntil(equalTo(2));
 
         var failure = assertInstanceOf(AwaitResult.Failed.class, result);
-        assertInstanceOf(AwaitTimeoutException.class, failure.failure());
+        assertEquals(TIMEOUT, failure.failure().reason());
         assertEquals(1, calls[0]);
         assertEquals(1, result.totalAttempts());
         assertEquals(1, result.attempts().size());

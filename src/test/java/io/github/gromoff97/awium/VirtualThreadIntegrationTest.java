@@ -1,11 +1,9 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.sources.Source;
-
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditions.Conditions.condition;
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.Conditions.condition;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.ofVirtual;
 import static java.time.Duration.*;

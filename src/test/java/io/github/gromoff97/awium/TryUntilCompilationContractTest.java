@@ -66,20 +66,20 @@ class TryUntilCompilationContractTest {
 
     private boolean compiles(String source) throws IOException {
         return CompilationSupport.compiles(temporaryDirectory, """
-                import static io.github.gromoff97.awium.await.Await.await;
-                import static io.github.gromoff97.awium.conditions.CollectionConditions.first;
-                import static io.github.gromoff97.awium.conditions.CollectionConditions.last;
-                import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
-                import static io.github.gromoff97.awium.conditions.Conditions.yields;
-                import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
-                import static io.github.gromoff97.awium.conditions.Conditions.isNotNull;
-                import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
+                import static io.github.gromoff97.awium.Await.await;
+                import static io.github.gromoff97.awium.CollectionConditions.first;
+                import static io.github.gromoff97.awium.CollectionConditions.last;
+                import static io.github.gromoff97.awium.CollectionConditions.single;
+                import static io.github.gromoff97.awium.Conditions.yields;
+                import static io.github.gromoff97.awium.MapConditions.singleEntry;
+                import static io.github.gromoff97.awium.Conditions.isNotNull;
+                import static io.github.gromoff97.awium.OptionalConditions.present;
                 import static java.time.Duration.ZERO;
                 import static java.time.Duration.ofMillis;
                 import static java.time.Duration.ofSeconds;
-                import io.github.gromoff97.awium.results.AwaitResult;
-                import io.github.gromoff97.awium.sources.Source;
-                import io.github.gromoff97.awium.sources.Source.*;
+                import io.github.gromoff97.awium.AwaitResult;
+                import io.github.gromoff97.awium.Source;
+                import io.github.gromoff97.awium.Source.*;
                 import java.util.*;
                 final class Contract {
                     %s

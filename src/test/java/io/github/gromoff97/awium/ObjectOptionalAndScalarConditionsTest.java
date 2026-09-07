@@ -1,26 +1,21 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.condition.ConditionEvaluation.Satisfied;
-import io.github.gromoff97.awium.condition.ConditionEvaluation.Unsatisfied;
-import io.github.gromoff97.awium.conditions.Conditions;
-import io.github.gromoff97.awium.condition.Condition;
-import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
-import io.github.gromoff97.awium.condition.Condition.ExpectedCondition;
-import io.github.gromoff97.awium.condition.Condition.NarrowingCondition;
-import io.github.gromoff97.awium.conditions.OptionalConditions;
-import io.github.gromoff97.awium.conditions.StringConditions;
-import io.github.gromoff97.awium.sources.Source;
-import io.github.gromoff97.awium.sources.Source.OptionalSource;
+import io.github.gromoff97.awium.ConditionResult.Satisfied;
+import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
+import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.Condition.ExpectedCondition;
+import io.github.gromoff97.awium.Condition.NarrowingCondition;
+import io.github.gromoff97.awium.Source.OptionalSource;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.condition.ConditionTestRuntime.description;
-import static io.github.gromoff97.awium.condition.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.condition.ConditionTestRuntime.mismatch;
-import static io.github.gromoff97.awium.conditions.Conditions.instanceOf;
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
+import static io.github.gromoff97.awium.Conditions.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertSame;

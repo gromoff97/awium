@@ -1,14 +1,12 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.results.AwaitAttempt;
-import io.github.gromoff97.awium.results.AwaitResult;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.github.gromoff97.awium.results.AwaitAttempt.Phase.ACQUISITION;
+import static io.github.gromoff97.awium.AwaitAttempt.Phase.ACQUISITION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -19,10 +17,9 @@ class AwaitResultTest {
     @Test
     void successRetainsLegitimateNullAndCopiesHistory() {
         var attempt = new AwaitAttempt<String, String>(1, ACQUISITION,
-                new AwaitAttempt.Outcome.Satisfied<>(
-                        new AwaitAttempt.Timing.AfterObservation(
-                                Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ZERO),
-                        null, null, AwaitAttempt.Context.Plain.INSTANCE));
+                new AwaitAttempt.Outcome.Evaluated<>(new AwaitAttempt.Timing.AfterObservation(
+                                Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ZERO), null,
+                        new ConditionResult.Satisfied<>(null, ConditionResult.Context.Plain.INSTANCE)));
         var mutable = new ArrayList<>(List.of(attempt));
 
         var result = new AwaitResult.Satisfied<>(mutable, 1, null);
@@ -35,8 +32,9 @@ class AwaitResultTest {
     }
 
     @Test
-    void failureRequiresItsCauseAndCopiesHistory() {
-        var failure = new IllegalStateException("failed");
+    void failedResultRequiresStructuredFailure() {
+        var failure = new AwaitFailure(AwaitFailure.Reason.SOURCE_FAILED, "failed",
+                new IllegalStateException("failed"), List.of());
         var result = new AwaitResult.Failed<String, String>(List.of(), 0, failure);
 
         assertSame(failure, result.failure());
@@ -56,7 +54,7 @@ class AwaitResultTest {
 
     @Test
     void dynamicExpectationsRejectDescriptionsThatCannotBeRendered() {
-        assertThrows(NullPointerException.class, () -> new AwaitAttempt.Context.Expectation(null, null));
-        assertThrows(IllegalArgumentException.class, () -> new AwaitAttempt.Context.Expectation(" \n", null));
+        assertThrows(NullPointerException.class, () -> new ConditionResult.Context.Expectation(null, null));
+        assertThrows(IllegalArgumentException.class, () -> new ConditionResult.Context.Expectation(" \n", null));
     }
 }

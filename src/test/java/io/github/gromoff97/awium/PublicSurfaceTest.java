@@ -1,12 +1,9 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.condition.Condition.ExpectedCondition;
-import io.github.gromoff97.awium.condition.Condition.NarrowingCondition;
-import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
-import io.github.gromoff97.awium.condition.Condition.SelectedCondition;
-import io.github.gromoff97.awium.condition.Condition;
-import io.github.gromoff97.awium.conditions.Conditions;
-import io.github.gromoff97.awium.sources.Source;
+import io.github.gromoff97.awium.Condition.ExpectedCondition;
+import io.github.gromoff97.awium.Condition.NarrowingCondition;
+import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.Condition.SelectedCondition;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.util.Arrays.stream;
@@ -35,7 +32,7 @@ class PublicSurfaceTest {
 
     @Test
     void conditionStagesDoNotExposeRuntimeMechanicsOrFictitiousResults() {
-        Set<String> runtimeMethods = Set.of("description", "explanation", "evaluatorFactory", "newEvaluator");
+        Set<String> runtimeMethods = Set.of("description", "explanation", "evaluatorFactory", "newEvaluator", "newSession", "preservingSession", "selectionSession");
         for (Class<?> stage : List.of(Condition.class, PreservingCondition.class,
                 ExpectedCondition.class, NarrowingCondition.class, SelectedCondition.class)) {
             stream(stage.getMethods()).forEach(method ->

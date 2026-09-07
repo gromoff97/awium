@@ -52,14 +52,14 @@ class NarrowingConditionCompilationContractTest {
 
     private boolean compiles(String source) throws IOException {
         return CompilationSupport.compiles(temporaryDirectory, """
-                import static io.github.gromoff97.awium.await.Await.*;
-                import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
-                import static io.github.gromoff97.awium.conditions.Conditions.*;
-                import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
-                import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
-                import io.github.gromoff97.awium.results.AwaitResult;
-                import io.github.gromoff97.awium.sources.Source;
-                import io.github.gromoff97.awium.sources.Source.*;
+                import static io.github.gromoff97.awium.Await.*;
+                import static io.github.gromoff97.awium.CollectionConditions.single;
+                import static io.github.gromoff97.awium.Conditions.*;
+                import static io.github.gromoff97.awium.MapConditions.valueFor;
+                import static io.github.gromoff97.awium.OptionalConditions.*;
+                import io.github.gromoff97.awium.AwaitResult;
+                import io.github.gromoff97.awium.Source;
+                import io.github.gromoff97.awium.Source.*;
                 import java.util.*;
                 final class Contract {
                     %s

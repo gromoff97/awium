@@ -1,19 +1,21 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.conditions.Conditions.*;
+import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
+
+import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
+
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.*;
 import static java.time.Duration.*;
 
-import io.github.gromoff97.awium.condition.*;
-import io.github.gromoff97.awium.condition.Condition.PreservingCondition;
-import io.github.gromoff97.awium.condition.Condition.SelectedCondition;
-import io.github.gromoff97.awium.condition.Condition;
-import io.github.gromoff97.awium.sources.Source;
-import io.github.gromoff97.awium.sources.Source.CollectionSource;
-import io.github.gromoff97.awium.sources.Source.MapSource;
-import io.github.gromoff97.awium.sources.Source.OptionalSource;
+import io.github.gromoff97.awium.*;
+import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.Condition.SelectedCondition;
+import io.github.gromoff97.awium.Source.CollectionSource;
+import io.github.gromoff97.awium.Source.MapSource;
+import io.github.gromoff97.awium.Source.OptionalSource;
 
-import io.github.gromoff97.awium.exceptions.*;
+import io.github.gromoff97.awium.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -50,7 +52,7 @@ class FactoryGrammarTest {
 
         assertEquals("v2", repaired.until(equalTo("v2")));
         assertEquals(ofMillis(1).toNanos(), pollingTime.getAsLong());
-        assertThrows(AwaitFailure.AwaitTimeoutException.class,
+        assertFailure(TIMEOUT,
                 () -> slow.until(equalTo("never")));
         assertEquals(3, calls[0]);
         assertEquals(ofSeconds(10).plusMillis(1).toNanos(), pollingTime.getAsLong());

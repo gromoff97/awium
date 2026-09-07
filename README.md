@@ -4,8 +4,8 @@ Awium is a zero-dependency Java 21 library that waits for a condition in the
 calling thread and returns the result from the same successful observation.
 
 ```java
-import static io.github.gromoff97.awium.await.Await.await;
-import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.OptionalConditions.present;
 
 Payment payment = await(() -> paymentRepository.findById(order.paymentId())).until(present.because("Checkout cannot continue without the payment"));
 ```
@@ -28,7 +28,7 @@ dependencies {
 ```
 
 Awium has no compile or runtime dependencies. JUnit is used only to test the
-library itself.
+library itself. All public types are in `io.github.gromoff97.awium`.
 
 ## The four condition forms
 
@@ -40,7 +40,7 @@ terminal result type.
 Most built-in conditions return the exact object obtained from the source:
 
 ```java
-import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
+import static io.github.gromoff97.awium.Conditions.equalTo;
 
 Payment payment = await(paymentRepository::load).until(equalTo(expectedPayment));
 ```
@@ -53,9 +53,9 @@ the same way.
 Selection conditions return a value contained in the observation:
 
 ```java
-import static io.github.gromoff97.awium.conditions.CollectionConditions.single;
-import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
-import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
+import static io.github.gromoff97.awium.CollectionConditions.single;
+import static io.github.gromoff97.awium.MapConditions.singleEntry;
+import static io.github.gromoff97.awium.OptionalConditions.present;
 
 Payment payment = await(paymentRepository::find).until(present);
 Payment onlyPayment = await(paymentRepository::findAll).until(single);
@@ -72,7 +72,7 @@ as statements.
 the condition is currently unsatisfied, so polling continues:
 
 ```java
-import static io.github.gromoff97.awium.conditions.Conditions.asserted;
+import static io.github.gromoff97.awium.Conditions.asserted;
 
 Payment payment = await(paymentRepository::load).until(asserted(actual -> {
     if (!actual.isComplete()) {
@@ -84,7 +84,7 @@ Payment payment = await(paymentRepository::load).until(asserted(actual -> {
 `yields(...)` returns the callback result instead:
 
 ```java
-import static io.github.gromoff97.awium.conditions.Conditions.yields;
+import static io.github.gromoff97.awium.Conditions.yields;
 
 Receipt receipt = await(paymentRepository::load).until(yields(Payment::receipt));
 ```
@@ -246,9 +246,9 @@ Use `condition(...)` when neither a predicate, `asserted(...)`, nor
 `yields(...)` describes the result:
 
 ```java
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.condition.ConditionEvaluation.unsatisfied;
-import static io.github.gromoff97.awium.conditions.Conditions.condition;
+import static io.github.gromoff97.awium.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.Conditions.condition;
 
 Receipt receipt = await(paymentRepository::load).until(condition(
         "payment has a receipt",
@@ -304,7 +304,7 @@ The marker interfaces are an escape hatch for an otherwise ambiguous source,
 such as one that only returns `null`:
 
 ```java
-import io.github.gromoff97.awium.sources.Source.OptionalSource;
+import io.github.gromoff97.awium.Source.OptionalSource;
 
 OptionalSource<Payment> source = () -> null;
 await(source).until(isNull);
@@ -325,8 +325,8 @@ Payment onlyPayment = await(payments::get).until(single);
 Alternatively, declare the corresponding marker when selection is needed:
 
 ```java
-import io.github.gromoff97.awium.sources.Source.CollectionSource;
-import io.github.gromoff97.awium.sources.Source.MapSource;
+import io.github.gromoff97.awium.Source.CollectionSource;
+import io.github.gromoff97.awium.Source.MapSource;
 
 CollectionSource<List<Payment>> payments = paymentRepository::findAll;
 MapSource<Map<String, Payment>> index = paymentRepository::index;
@@ -339,8 +339,8 @@ Covariant containers use the explicit view wrappers so the selected wildcard
 types remain safe:
 
 ```java
-import io.github.gromoff97.awium.sources.Source.CollectionViewSource;
-import io.github.gromoff97.awium.sources.Source.MapViewSource;
+import io.github.gromoff97.awium.Source.CollectionViewSource;
+import io.github.gromoff97.awium.Source.MapViewSource;
 
 var payments = new CollectionViewSource<Payment, List<? extends Payment>>(paymentRepository::findAllView);
 var index = new MapViewSource<String, Payment, Map<? extends String, ? extends Payment>>(paymentRepository::indexView);
@@ -361,16 +361,32 @@ Finish the same `await(...)` chain with `tryUntil(...)` to return an
 `AwaitResult<S, R>` for both success and failure:
 
 ```java
-import static io.github.gromoff97.awium.await.Await.await;
+import static io.github.gromoff97.awium.Await.await;
 
 AwaitResult<Optional<Payment>, Payment> result =
         await(paymentRepository::find).upTo(TIMEOUT).tryUntil(present);
 ```
 
 `AwaitResult.Satisfied` contains the terminal result. `AwaitResult.Failed`
-contains the failure. Both expose retained `AwaitAttempt` history and the total
-attempt count. Each adjacent run of equivalent attempts is represented by its
-latest attempt, retaining the endpoint number and timing without retaining the
+contains an `AwaitFailure` with `reason()`, `message()`, the original `cause()`
+and immutable `suppressed()` causes. It does not construct a wrapper exception:
+
+```java
+if (result instanceof AwaitResult.Failed<?, ?> failed) {
+    switch (failed.failure().reason()) {
+        case TIMEOUT -> reportTimeout(failed.failure().message());
+        default -> reportFailure(failed.failure());
+    }
+}
+```
+
+Both results expose retained `AwaitAttempt` history and the total attempt count.
+`AwaitAttempt.Outcome.Evaluated` holds the observed value and its `evaluation()`:
+`ConditionResult.Satisfied`, `Unsatisfied`, or `Uncontrolled`. Attempts that fail
+before evaluation keep their own outcome (waiting, source retrieval, or source
+interruption), so absent observations are distinct from legitimate `null` values.
+
+Each adjacent run of equivalent attempts is represented by its latest attempt, retaining the endpoint number and timing without retaining the
 whole run. Equivalence is deliberately identity-based for observed and result
 objects (plus equal built-in diagnostic text and context); Awium never invokes
 user equality merely to compress history. Fresh value-equal objects therefore
@@ -387,29 +403,26 @@ scheduler, or virtual thread, so caller `ThreadLocal` values remain visible.
 This release supports one-thread use only. Another thread may interrupt the
 caller as an external cancellation controller, but it must not access or mutate
 the stage, source, condition, expected values, or observed objects. Awium
-restores the interrupt flag. `until(...)` throws `AwaitInterruptedException`;
-`tryUntil(...)` returns it in `AwaitResult.Failed`. Because callbacks run in the
-caller, Awium cannot preempt a source or condition that blocks indefinitely.
+restores the interrupt flag. `until(...)` throws `AwaitExecutionException` with
+`failure().reason() == INTERRUPTED`; `tryUntil(...)` returns that reason in
+`AwaitResult.Failed`. Because callbacks run in the caller, Awium cannot preempt
+a source or condition that blocks indefinitely.
 
 ## Failures
 
-Expected unsuccessful waits are assertion failures:
+`until(...)` throws one of two final types. Both expose `failure()` with the
+same structured data returned by `tryUntil(...)`:
 
-```text
-AwaitFailure extends AssertionError
-├── AwaitTimeoutException
-└── AwaitPersistenceException
-```
+| Exception | Failure reasons |
+| --- | --- |
+| `AwaitAssertionError extends AssertionError` | `TIMEOUT`, `PERSISTENCE_FAILED` |
+| `AwaitExecutionException extends RuntimeException` | `SOURCE_FAILED`, `CONDITION_FAILED`, `INTERRUPTED`, `WAIT_FAILED`, `DIAGNOSTICS_FAILED` |
 
-Broken execution is unchecked and preserves the exact cause:
-
-```text
-AwaitUncontrolledException extends RuntimeException
-├── AwaitSourceRetrievalException
-├── AwaitConditionEvaluationException
-├── AwaitInterruptedException
-└── AwaitUnhandledException
-```
+The exception's message and cause come from `AwaitFailure`. Ordinary mismatches
+may have no cause; assertion mismatches retain the original assertion. If
+formatting fails, the reason is `DIAGNOSTICS_FAILED`, the formatting throwable
+becomes the cause, and a distinct original cause is retained in `suppressed()`
+(and `getSuppressed()` on the thrown exception).
 
 Invalid sources, conditions, and durations fail before polling.
 `VirtualMachineError` and `ThreadDeath` are rethrown
@@ -420,23 +433,27 @@ unchanged.
 Run `./gradlew check` for behavior, fluent compilation, and packaged-module
 checks; `./gradlew pitest` runs mutation testing.
 
-`internal.condition` owns condition construction, per-wait evaluation state,
-and shared diagnostic metadata. Its references to the sealed condition API
-are intentional. `WaitEngine` owns timing, `ObservationEvaluator` owns source
-and callback execution, and `AttemptHistory` owns history retention and
-compression. `FailureFactory` interprets outcomes and prepares diagnostic
-data; `FailureMessageRenderer` formats it.
+Conditions are immutable definitions. Each terminal call creates fresh
+`ConditionSession` instances, whose callbacks initialize lazily. Ordered waits
+use the same sessions for their stages; `CapturedEvaluator` owns progress and
+captured values. Condition families preserve the fluent API's result types.
 
-Condition composition shares extraction and per-wait session creation in
+`ConditionResult` owns the result of one check and its diagnostic `Context`
+and `Reference`. `WaitEngine` owns timing, `ObservationEvaluator` owns source
+and callback execution, and `AttemptHistory` owns history retention and
+compression. `FailureFactory` interprets wait outcomes; `FailureMessageRenderer`
+formats diagnostics and durations. A successful check can still finish too late.
+
+Condition composition shares extraction and session creation in
 `ConditionSupport`. Failed extraction carries its own expectation, so missing
-map keys remain distinguishable from mismatches in nested conditions. Successful
-attempts retain diagnostic context too: a late success can still time out.
+map keys remain distinguishable from mismatches in nested conditions.
 
 Catalog and fluent behavior tests use virtual time; dedicated real-time and
 virtual-thread integration tests exercise the platform wait operation.
 
-Internal packages are not exported by JPMS. On the classpath they remain
-implementation details; custom conditions should use the factories in
-`Conditions`.
+The module exports one package. Implementation types are package-private on
+both the module path and the classpath; custom conditions use the factories in
+`Conditions`. Artifact checks also verify that execution classes do not depend
+on the fluent facade, condition catalogs, or diagnostic formatting.
 
 Awium is licensed under the [Apache License 2.0](LICENSE).
