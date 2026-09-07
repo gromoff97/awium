@@ -49,11 +49,10 @@ class TryUntilHistoryTest {
         var finalResult = new Object();
         int[] calls = {0};
 
-        var execution = new WaitEngine(config(1, 10, 3), time, time).recordedWaitFor(
-                () -> actual,
-                value -> satisfied(calls[0]++ < 3 ? firstResult : finalResult));
+        var execution = timedAwait(() -> actual, config(1, 10, 3), time, time).tryUntil(condition("ready",
+                value -> satisfied(calls[0]++ < 3 ? firstResult : finalResult)));
 
-        assertEquals(4, execution.outcome().attempt().number());
+        assertEquals(4, execution.totalAttempts());
         assertEquals(List.of(1L, 3L, 4L), execution.attempts().stream()
                 .map(AwaitAttempt::number).toList());
         assertEquals(List.of(ACQUISITION, PERSISTENCE, PERSISTENCE),
@@ -80,12 +79,11 @@ class TryUntilHistoryTest {
         var time = new FakeTime(0);
         var probe = new ThrowingProbe();
 
-        var execution = new WaitEngine(config(1, 10, 2), time, time)
-                .recordedWaitFor(() -> probe, actual -> satisfied(probe));
+        var execution = timedAwait(() -> probe, config(1, 10, 2), time, time).tryUntil(condition("ready", actual -> satisfied(probe)));
 
         assertEquals(2, execution.attempts().size());
         assertEquals(List.of(1L, 3L), numbers(execution));
-        assertEquals(3, execution.outcome().attempt().number());
+        assertEquals(3, execution.totalAttempts());
     }
 
     @Test
@@ -131,13 +129,12 @@ class TryUntilHistoryTest {
         var actual = new Object();
         int[] stage = {0};
 
-        var execution = new WaitEngine(config(1, 3, 0), time, time)
-                .recordedWaitFor(() -> actual, value -> {
-                    int current = ++stage[0];
-                    return ConditionResult.<Object>unsatisfied("same mismatch").withContext(
-                            new ConditionResult.Context.Sequence(current - 1, 3, current,
-                                    "stage " + current, null, null));
-                });
+        var execution = timedAwait(() -> actual, config(1, 3, 0), time, time).tryUntil(condition("sequence", value -> {
+            int current = ++stage[0];
+            return ConditionResult.<Object>unsatisfied("same mismatch").withContext(
+                    new ConditionResult.Context.Sequence(current - 1, 3, current,
+                            "stage " + current, null, null));
+        }));
 
         assertEquals(List.of(1L, 2L, 3L), numbers(execution));
         assertEquals(List.of(1, 2, 3), execution.attempts().stream()
@@ -166,16 +163,15 @@ class TryUntilHistoryTest {
                 .map(AwaitAttempt::number).toList());
     }
 
-    private static WaitEngine.RecordedWait<Object, Object> recordUnsatisfied(
+    private static AwaitResult<Object, Object> recordUnsatisfied(
             io.github.gromoff97.awium.Source<Object> source,
             java.util.function.IntFunction<io.github.gromoff97.awium.ConditionResult<Object>> evaluation) {
         var time = new FakeTime(0);
         int[] calls = {0};
-        return new WaitEngine(config(1, 2, 0), time, time)
-                .recordedWaitFor(source, actual -> evaluation.apply(calls[0]++));
+        return timedAwait(source, config(1, 2, 0), time, time).tryUntil(condition("not ready", actual -> evaluation.apply(calls[0]++)));
     }
 
-    private static List<Long> numbers(WaitEngine.RecordedWait<?, ?> execution) {
+    private static List<Long> numbers(AwaitResult<?, ?> execution) {
         return execution.attempts().stream().map(AwaitAttempt::number).toList();
     }
 

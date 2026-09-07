@@ -16,12 +16,37 @@ import static io.github.gromoff97.awium.ConditionResult.satisfied;
 
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static io.github.gromoff97.awium.Await.await;
 import static java.time.Duration.ofNanos;
 
 class ConditionSessionTest {
+
+    @Test
+    void preservingFactoryIsLazyIndependentAndReturnsTheOriginalObservation() {
+        int[] factories = {0};
+        var actual = new Object();
+        var replacement = new Object();
+        var condition = Conditions.<Object>preservingFactory("two observations", () -> {
+            factories[0]++;
+            int[] calls = {0};
+            return ignored -> ++calls[0] == 2 ? satisfied(replacement) : ConditionResult.unsatisfied("first observation");
+        }).because("the original observation is needed");
+        var time = new FakeTime(0);
+        var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
+
+        assertEquals(0, factories[0]);
+        assertSame(actual, waiting.until(condition));
+        assertEquals(1, factories[0]);
+
+        var result = waiting.tryUntil(condition);
+        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals(2, result.totalAttempts());
+        assertEquals(2, factories[0]);
+    }
 
     @Test
     void mapAndOptionalCompositionCreateOneIndependentSessionPerWait() {
