@@ -18,6 +18,26 @@ final class FailureMessageRenderer {
     private static final int CAUSE_MESSAGE_LIMIT = 160;
     private static final String STACK_TRACE_HINT = "… <see stack trace>";
 
+    private final WaitCompletion<?, ?> outcome;
+    private final ConditionMetadata metadata;
+    private final WaitConfiguration configuration;
+    private final AttemptDiagnostic diagnostic;
+
+    private String actual;
+    private String referenceValue;
+    private String sequenceReference;
+
+    private FailureMessageRenderer(WaitCompletion<?, ?> outcome,
+            ConditionMetadata metadata,
+            WaitConfiguration configuration, AttemptDiagnostic diagnostic) {
+        this.outcome = requireNonNull(outcome, "outcome must not be null");
+        this.metadata = requireNonNull(metadata, "metadata must not be null");
+        this.configuration = requireNonNull(configuration,
+                "configuration must not be null");
+        this.diagnostic = requireNonNull(diagnostic,
+                "attempt diagnostic must not be null");
+    }
+
     static String duration(long nanos) {
         StringJoiner result = new StringJoiner(" ");
         for (int index = 0; index < UNIT_NANOS.length; index++) {
@@ -30,22 +50,21 @@ final class FailureMessageRenderer {
         return result.length() == 0 ? "0 nanoseconds" : result.toString();
     }
 
-    private FailureMessageRenderer() {
-        throw new AssertionError("Utility class");
-    }
-
     static Result render(WaitCompletion<?, ?> outcome, ConditionMetadata metadata, WaitConfiguration configuration,
             AttemptDiagnostic diagnostic) {
-        Context context = new Context(outcome, metadata, configuration, diagnostic);
+        return new FailureMessageRenderer(outcome, metadata, configuration, diagnostic).render();
+    }
+
+    private Result render() {
         Throwable outcomeCause = diagnostic.failure();
         try {
-            return new Result(format(context), null);
+            return new Result(format(), null);
         } catch (VirtualMachineError | ThreadDeath fatal) {
             addSuppressed(fatal, outcomeCause);
             throw fatal;
         } catch (Throwable failure) {
             try {
-                return new Result(emergency(context, failure), failure);
+                return new Result(emergency(failure), failure);
             } catch (VirtualMachineError | ThreadDeath fatal) {
                 addSuppressed(fatal, failure);
                 if (outcomeCause != failure) {
@@ -56,65 +75,65 @@ final class FailureMessageRenderer {
         }
     }
 
-    private static String format(Context context) {
-        return switch (context.outcome) {
+    private String format() {
+        return switch (outcome) {
             case WaitCompletion.TimeoutBetweenObservations<?, ?> ignored ->
-                    message(context, "Acquisition deadline elapsed before the next attempt");
-            case WaitCompletion.LateTimeout<?, ?> value -> message(context,
+                    message("Acquisition deadline elapsed before the next attempt");
+            case WaitCompletion.LateTimeout<?, ?> value -> message(
                     value.attempt().outcome() instanceof AwaitAttempt.Outcome.Evaluated<?, ?> evaluated
                             && evaluated.evaluation() instanceof ConditionResult.Satisfied<?>
                             ? "Condition became satisfied at or after the acquisition deadline"
                             : "Condition remained unsatisfied at or after the acquisition deadline");
             case WaitCompletion.PersistenceFailure<?, ?> ignored ->
-                    message(context, "Condition did not persist for the required duration");
+                    message("Condition did not persist for the required duration");
             case WaitCompletion.Uncontrolled<?, ?> ignored ->
-                    message(context, context.diagnostic.heading());
+                    message(diagnostic.heading());
             case WaitCompletion.Satisfied<?, ?> ignored ->
                     throw new IllegalArgumentException("successful outcomes have no failure diagnostics");
         };
     }
 
-    private static String emergency(Context context, Throwable failure) {
+    private String emergency(Throwable failure) {
         StringBuilder out = heading("Failure diagnostics could not be formatted");
-        condition(out, context, true);
-        AwaitAttempt<?, ?> attempt = context.outcome.attempt();
+        condition(out, true);
+        AwaitAttempt<?, ?> attempt = outcome.attempt();
         String actual = attempt.outcome().timing() instanceof AwaitAttempt.Timing.AfterObservation
-                ? context.actual == null
-                        ? "<value unavailable: diagnostics failed>" : context.actual
+                ? this.actual == null
+                        ? "<value unavailable: diagnostics failed>" : this.actual
                 : null;
         attempt(out, attempt.number(), actual,
-                context.diagnostic.sequence() == null ? context.diagnostic.mismatch() : null);
-        sequence(out, context, true);
-        timing(out, context);
+                diagnostic.sequence() == null ? diagnostic.mismatch() : null);
+        sequence(out, true);
+        timing(out);
         cause(out, emergencyDiagnostic(failure));
         return finish(out);
     }
 
-    private static String message(Context context, String title) {
-        AwaitAttempt<?, ?> attempt = context.outcome.attempt();
+    private String message(String title) {
+        AwaitAttempt<?, ?> attempt = outcome.attempt();
         StringBuilder out = heading(title);
-        condition(out, context, false);
+        condition(out, false);
         String actual = attempt.outcome().timing() instanceof AwaitAttempt.Timing.AfterObservation
-                ? context.actualValue() : null;
+                ? actualValue() : null;
         attempt(out, attempt.number(), actual,
-                context.diagnostic.sequence() == null ? context.diagnostic.mismatch() : null);
-        sequence(out, context, false);
-        if (!(context.outcome instanceof WaitCompletion.Uncontrolled<?, ?>)) {
-            timing(out, context);
+                diagnostic.sequence() == null ? diagnostic.mismatch() : null);
+        sequence(out, false);
+        if (!(outcome instanceof WaitCompletion.Uncontrolled<?, ?>)) {
+            timing(out);
         }
-        Throwable failure = context.diagnostic.failure();
+        Throwable failure = diagnostic.failure();
         if (failure != null) {
             cause(out, throwableDiagnostic(failure));
         }
         return finish(out);
     }
 
-    private static void timing(StringBuilder out, Context context) {
+    private void timing(StringBuilder out) {
         out.append('\n').append("Timing:\n");
         field(out, "Acquisition timeout",
-                duration(context.configuration.upToNanos()));
-        long completedAfter = context.outcome.attempt().outcome().timing().completionOffset().toNanos();
-        switch (context.outcome) {
+                duration(configuration.upToNanos()));
+        long completedAfter = outcome.attempt().outcome().timing().completionOffset().toNanos();
+        switch (outcome) {
             case WaitCompletion.TimeoutBetweenObservations<?, ?> outcome -> {
                 field(out, "Last attempt completed after", duration(completedAfter));
                 field(out, "Elapsed", duration(outcome.elapsedNanos()));
@@ -125,14 +144,14 @@ final class FailureMessageRenderer {
                 long acquiredAfter = outcome.acquiredAfterNanos();
                 field(out, "Acquired after", duration(acquiredAfter));
                 field(out, "Required persistence",
-                        duration(context.configuration.persistenceNanos()));
+                        duration(configuration.persistenceNanos()));
                 field(out, "Failure detected after", duration(completedAfter - acquiredAfter));
             }
             case WaitCompletion.Uncontrolled<?, ?> ignored -> {}
             case WaitCompletion.Satisfied<?, ?> ignored -> {}
         }
         field(out, "Polling interval",
-                duration(context.configuration.everyNanos()));
+                duration(configuration.everyNanos()));
     }
 
     private static void attempt(StringBuilder out, long number, String actual,
@@ -154,38 +173,38 @@ final class FailureMessageRenderer {
         }
     }
 
-    private static void condition(StringBuilder out, Context context, boolean emergency) {
-        field(out, "", "Condition", context.metadata.description());
-        reference(out, context, context.metadata.reference(), false, emergency);
-        if (context.metadata.explanation() != null) {
-            field(out, "Importance", context.metadata.explanation());
+    private void condition(StringBuilder out, boolean emergency) {
+        field(out, "", "Condition", metadata.description());
+        reference(out, metadata.reference(), false, emergency);
+        if (metadata.explanation() != null) {
+            field(out, "Importance", metadata.explanation());
         }
     }
 
-    private static void sequence(StringBuilder out, Context context, boolean emergency) {
-        ConditionResult.Context.Sequence sequence = context.diagnostic.sequence();
+    private void sequence(StringBuilder out, boolean emergency) {
+        ConditionResult.Context.Sequence sequence = diagnostic.sequence();
         if (sequence == null) {
             return;
         }
         out.append('\n').append("Sequence (captured ").append(sequence.capturedStages())
                 .append(" of ").append(sequence.totalStages()).append("):\n");
         field(out, "Expectation", sequence.expectation());
-        reference(out, context, sequence.reference(), true, emergency);
+        reference(out, sequence.reference(), true, emergency);
         if (sequence.importance() != null) {
             field(out, "Importance", sequence.importance());
         }
-        if (context.diagnostic.mismatch() != null) {
-            field(out, "Mismatch", context.diagnostic.mismatch());
+        if (diagnostic.mismatch() != null) {
+            field(out, "Mismatch", diagnostic.mismatch());
         }
     }
 
-    private static void reference(StringBuilder out, Context context, Reference<?> reference,
+    private void reference(StringBuilder out, Reference<?> reference,
             boolean sequence, boolean emergency) {
         if (reference != null) {
-            String cached = sequence ? context.sequenceReference : context.referenceValue;
+            String cached = sequence ? sequenceReference : referenceValue;
             field(out, reference.label(), emergency
                     ? cached == null ? "<value unavailable: diagnostics failed>" : cached
-                    : context.referenceValue(reference, sequence));
+                    : referenceValue(reference, sequence));
         }
     }
 
@@ -261,44 +280,21 @@ final class FailureMessageRenderer {
         }
     }
 
-    record Result(String message, Throwable failure) {}
-
-    private static final class Context {
-
-        private final WaitCompletion<?, ?> outcome;
-        private final ConditionMetadata metadata;
-        private final WaitConfiguration configuration;
-        private final AttemptDiagnostic diagnostic;
-
-        private String actual;
-        private String referenceValue;
-        private String sequenceReference;
-
-        private Context(WaitCompletion<?, ?> outcome,
-                ConditionMetadata metadata,
-                WaitConfiguration configuration, AttemptDiagnostic diagnostic) {
-            this.outcome = requireNonNull(outcome, "outcome must not be null");
-            this.metadata = requireNonNull(metadata, "metadata must not be null");
-            this.configuration = requireNonNull(configuration,
-                    "configuration must not be null");
-            this.diagnostic = requireNonNull(diagnostic,
-                    "attempt diagnostic must not be null");
-        }
-
-        private String actualValue() {
-            return actual = renderValue(diagnostic.observed());
-        }
-
-        private String referenceValue(Reference<?> value, boolean sequence) {
-            String rendered = renderValue(value.value());
-            if (sequence) {
-                sequenceReference = rendered;
-            } else {
-                referenceValue = rendered;
-            }
-            return rendered;
-        }
+    private String actualValue() {
+        return actual = renderValue(diagnostic.observed());
     }
+
+    private String referenceValue(Reference<?> value, boolean sequence) {
+        String rendered = renderValue(value.value());
+        if (sequence) {
+            sequenceReference = rendered;
+        } else {
+            referenceValue = rendered;
+        }
+        return rendered;
+    }
+
+    record Result(String message, Throwable failure) {}
 
     private record ThrowableDiagnostic(String type, String message) {}
 }

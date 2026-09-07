@@ -25,10 +25,12 @@ abstract sealed class ConditionDefinition<Observed, Result>
     }
 
     final <Actual extends Observed> ConditionSession<Actual, Actual> preservingSession() {
-        var session = newSession();
-        return new ConditionSession<>(metadata, () -> actual -> {
-            var result = session.apply(actual);
-            return result == null ? null : result.mapSatisfied(ignored -> actual);
+        return new ConditionSession<>(metadata, () -> {
+            var evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
+            return actual -> {
+                var result = evaluator.apply(actual);
+                return result == null ? null : result.mapSatisfied(ignored -> actual);
+            };
         });
     }
 

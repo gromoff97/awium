@@ -205,6 +205,8 @@ public final class Await<Observed, Element, Family extends Source<?>> {
     }
 
     private <Result> AwaitResult<Observed, Result> capture(ConditionSession<? super Observed, ? extends Result> session) {
-        return FailureFactory.capture(engine.recordedWaitFor(source, session), session.metadata, engine.configuration());
+        var history = new AttemptHistory<Observed, Result>();
+        var outcome = engine.waitFor(source, session, history);
+        return FailureFactory.capture(outcome, history.snapshot(), session.metadata, engine.configuration());
     }
 }

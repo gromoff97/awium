@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.LongConsumer;
@@ -22,14 +21,7 @@ record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
         return waitFor(source, evaluator, ignored -> {});
     }
 
-    <Observed, Result> RecordedWait<Observed, Result> recordedWaitFor(Source<? extends Observed> source,
-            Function<? super Observed, ? extends ConditionResult<? extends Result>> evaluator) {
-        var history = new AttemptHistory<Observed, Result>();
-        WaitCompletion<Observed, Result> outcome = waitFor(source, evaluator, history);
-        return new RecordedWait<>(outcome, history.snapshot());
-    }
-
-    private <Observed, Result> WaitCompletion<Observed, Result> waitFor(Source<? extends Observed> source,
+    <Observed, Result> WaitCompletion<Observed, Result> waitFor(Source<? extends Observed> source,
             Function<? super Observed, ? extends ConditionResult<? extends Result>> evaluator,
             Consumer<AwaitAttempt<Observed, Result>> recorder) {
         long started = clock.getAsLong();
@@ -198,13 +190,5 @@ record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
 
     private static long remaining(long now, long deadline) {
         return max(deadline - now, 0);
-    }
-
-    record RecordedWait<Observed, Result>(WaitCompletion<Observed, Result> outcome,
-            List<AwaitAttempt<Observed, Result>> attempts) {
-
-        RecordedWait {
-            attempts = List.copyOf(attempts);
-        }
     }
 }

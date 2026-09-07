@@ -24,14 +24,15 @@ final class FailureFactory {
         }
     }
 
-    static <Observed, Result> AwaitResult<Observed, Result> capture(WaitEngine.RecordedWait<Observed, Result> execution,
+    static <Observed, Result> AwaitResult<Observed, Result> capture(WaitCompletion<Observed, Result> outcome,
+            List<AwaitAttempt<Observed, Result>> attempts,
             ConditionMetadata metadata, WaitConfiguration configuration) {
-        if (execution.outcome() instanceof WaitCompletion.Satisfied<Observed, Result> success) {
-            return new AwaitResult.Satisfied<>(execution.attempts(), success.attempt().number(),
+        if (outcome instanceof WaitCompletion.Satisfied<Observed, Result> success) {
+            return new AwaitResult.Satisfied<>(attempts, success.attempt().number(),
                     satisfied(success.attempt()).result());
         }
-        return new AwaitResult.Failed<>(execution.attempts(), execution.outcome().attempt().number(),
-                failure(execution.outcome(), metadata, configuration));
+        return new AwaitResult.Failed<>(attempts, outcome.attempt().number(),
+                failure(outcome, metadata, configuration));
     }
 
     private static <Observed, Result> AwaitFailure failure(WaitCompletion<Observed, Result> outcome,
