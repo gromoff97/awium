@@ -102,9 +102,10 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
-    void sameSizeAsReadsTheExpectedCollectionWhenEvaluated() throws Exception {
+    void sameSizeAsReadsTheCurrentExpectedSizeOnEachEvaluation() throws Exception {
         var expected = new ArrayList<>(List.of(1));
         var condition = CollectionConditions.sameSizeAs(expected);
+        assertEquals(Satisfied.class, evaluate(condition, List.of(1)).getClass());
         expected.add(2);
 
         assertEquals(Unsatisfied.class, evaluate(condition, List.of(1)).getClass());

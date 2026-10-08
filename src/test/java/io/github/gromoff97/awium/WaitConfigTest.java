@@ -103,8 +103,8 @@ class WaitConfigTest {
 
     @Test
     void durationFormattingUsesReadableExactUnits() {
-        assertEquals("1 nanosecond", FailureMessageRenderer.duration(1));
-        assertEquals("1 minute 30 seconds", FailureMessageRenderer.duration(ofSeconds(90).toNanos()));
-        assertEquals("1 second 1 millisecond 1 microsecond 1 nanosecond", FailureMessageRenderer.duration(1_001_001_001));
+        assertEquals("1 nanosecond", FailureDiagnostics.duration(1));
+        assertEquals("1 minute 30 seconds", FailureDiagnostics.duration(ofSeconds(90).toNanos()));
+        assertEquals("1 second 1 millisecond 1 microsecond 1 nanosecond", FailureDiagnostics.duration(1_001_001_001));
     }
 }

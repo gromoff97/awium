@@ -93,9 +93,7 @@ public sealed interface ConditionResult<Result> {
         record Expectation(String description, Reference<?> reference) implements Context {
 
             public Expectation {
-                if (requireNonNull(description, "description must not be null").isBlank()) {
-                    throw new IllegalArgumentException("description must not be blank");
-                }
+                description = nonBlank(description, "description");
             }
         }
 
@@ -115,9 +113,7 @@ public sealed interface ConditionResult<Result> {
     record Reference<Value>(String label, Value value) {
 
         public Reference {
-            if (requireNonNull(label, "reference label must not be null").isBlank()) {
-                throw new IllegalArgumentException("reference label must not be blank");
-            }
+            label = nonBlank(label, "reference label");
         }
     }
 

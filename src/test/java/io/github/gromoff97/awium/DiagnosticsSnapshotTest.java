@@ -1,10 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 
-import static io.github.gromoff97.awium.ConditionFactories.captured;
+import static io.github.gromoff97.awium.CapturedEvaluator.captured;
 
 import io.github.gromoff97.awium.*;
 
@@ -379,7 +380,7 @@ class DiagnosticsSnapshotTest {
 
         try {
             var failure = assertFailure(INTERRUPTED,
-                    () -> FailureFactory.complete(waitingFailure(interruption, 1, 0),
+                    () -> Await.complete(waitingFailure(interruption, 1, 0),
                             new ConditionMetadata("condition", null, null), config(1, 2, 0)));
 
             assertSame(interruption, failure.getCause());
@@ -634,7 +635,7 @@ class DiagnosticsSnapshotTest {
                 assertionUnsatisfiedAttempt(new ThrowingValue(diagnosticCause),
                         "not ready", engineCause, 1, 2));
         InternalError thrown = assertThrows(InternalError.class,
-                () -> FailureFactory.complete(outcome, new ConditionMetadata("condition", null, null), config(1, 2, 0)));
+                () -> Await.complete(outcome, new ConditionMetadata("condition", null, null), config(1, 2, 0)));
 
         assertSame(fatal, thrown);
         assertEquals(2, thrown.getSuppressed().length);
@@ -665,7 +666,7 @@ class DiagnosticsSnapshotTest {
 
     private static <S, R> R complete(WaitCompletion<S, R> outcome, String description,
             String explanation, WaitConfiguration configuration) {
-        return FailureFactory.complete(outcome, new ConditionMetadata(description, explanation, null), configuration);
+        return Await.complete(outcome, new ConditionMetadata(description, explanation, null), configuration);
     }
 
     private static Condition<String, java.util.List<String>> lifecycle(
@@ -742,11 +743,6 @@ class DiagnosticsSnapshotTest {
             long completedNanos) {
         return new AwaitAttempt.Timing.AfterObservation(Duration.ZERO,
                 Duration.ZERO, Duration.ZERO, Duration.ofNanos(completedNanos));
-    }
-
-    private static WaitConfiguration config(long every, long upTo,
-            long persistence) {
-        return new WaitConfiguration(every, upTo, persistence);
     }
 
     private static void assertMessage(Throwable failure, String... fragments) {

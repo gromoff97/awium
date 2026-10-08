@@ -90,19 +90,21 @@ class CollectionExactContentTest {
     }
 
     @Test
-    void exactConditionsObserveUserOwnedExpectedValuesAtEvaluationTime()
+    void exactConditionsSnapshotExpectedValuesAtConstruction()
             throws Exception {
         String[] array = {"before"};
         PreservingCondition<? super List<String>> arrayCondition =
                 containsExactly(array);
         array[0] = "after";
-        assertStatus(arrayCondition, List.of("after"), Satisfied.class);
+        assertStatus(arrayCondition, List.of("before"), Satisfied.class);
+        assertStatus(arrayCondition, List.of("after"), Unsatisfied.class);
 
         List<String> expected = new ArrayList<>(List.of("before"));
         PreservingCondition<? super List<String>> collectionCondition =
                 containsExactlyElementsOf(expected);
         expected.set(0, "after");
-        assertStatus(collectionCondition, List.of("after"), Satisfied.class);
+        assertStatus(collectionCondition, List.of("before"), Satisfied.class);
+        assertStatus(collectionCondition, List.of("after"), Unsatisfied.class);
     }
 
     @Test

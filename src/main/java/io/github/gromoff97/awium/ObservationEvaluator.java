@@ -20,14 +20,14 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
             throw fatal;
         } catch (Throwable failure) {
             if (failure instanceof InterruptedException) {
-                restoreInterrupt();
+                currentThread().interrupt();
             }
             return beforeObservation(phase, number, attemptStarted,
                     retrievalStarted, failure);
         }
 
         long observed = clock.getAsLong();
-        if (interruptRaised()) {
+        if (currentThread().isInterrupted()) {
             var interruption = new InterruptedException("caller thread interrupt flag was set");
             return afterSourceInterruption(phase, number, attemptStarted,
                     retrievalStarted, observed, actual, interruption);
@@ -40,7 +40,7 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
             throw fatal;
         } catch (Throwable failure) {
             if (failure instanceof InterruptedException) {
-                restoreInterrupt();
+                currentThread().interrupt();
             }
             return afterConditionFailure(phase, number, attemptStarted,
                     retrievalStarted, observed, actual, failure,
@@ -48,11 +48,11 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
         }
 
         if (!(evaluation instanceof ConditionResult.Uncontrolled<?>)
-                && interruptRaised()) {
+                && currentThread().isInterrupted()) {
             var interruption = new InterruptedException("caller thread interrupt flag was set");
             return afterConditionFailure(phase, number, attemptStarted,
                     retrievalStarted, observed, actual, interruption,
-                    contextOf(evaluation));
+                    evaluation == null ? ConditionResult.Context.Plain.INSTANCE : evaluation.context());
         }
 
         long completed = clock.getAsLong();
@@ -69,7 +69,7 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
                 throw fatal;
             }
             if (failure instanceof InterruptedException) {
-                restoreInterrupt();
+                currentThread().interrupt();
             }
         }
         return new AwaitAttempt<>(number, phase,
@@ -89,7 +89,7 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
     private AwaitAttempt<Observed, Result> afterSourceInterruption(AwaitAttempt.Phase phase, long number,
             long attemptStarted, long retrievalStarted, long observed,
             Observed actual, InterruptedException interruption) {
-        restoreInterrupt();
+        currentThread().interrupt();
         long completed = clock.getAsLong();
         var timing = afterObservation(attemptStarted, retrievalStarted, observed, completed);
         return new AwaitAttempt<>(number, phase,
@@ -106,10 +106,6 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
                         new ConditionResult.Uncontrolled<>(failure, context)));
     }
 
-    private static ConditionResult.Context contextOf(ConditionResult<?> evaluation) {
-        return evaluation == null ? ConditionResult.Context.Plain.INSTANCE : evaluation.context();
-    }
-
     private AwaitAttempt.Timing.AfterObservation afterObservation(long attemptStarted, long retrievalStarted,
             long observed, long completed) {
         return new AwaitAttempt.Timing.AfterObservation(offset(executionStarted, attemptStarted),
@@ -122,11 +118,4 @@ record ObservationEvaluator<Observed, Result>(Source<? extends Observed> source,
         return Duration.ofNanos(stageNanos - executionStarted);
     }
 
-    private static void restoreInterrupt() {
-        currentThread().interrupt();
-    }
-
-    private static boolean interruptRaised() {
-        return currentThread().isInterrupted();
-    }
 }

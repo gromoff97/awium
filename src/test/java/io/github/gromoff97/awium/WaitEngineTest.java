@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.uncontrolled;
@@ -523,10 +524,6 @@ class WaitEngineTest {
                 assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, uncontrolled.attempt().outcome()).evaluation());
         assertSame(failure, attempt.cause());
         assertEquals(2, uncontrolled.attempt().number());
-    }
-
-    private static WaitConfiguration config(long every, long upTo, long persistence) {
-        return new WaitConfiguration(every, upTo, persistence);
     }
 
     @SuppressWarnings("unchecked")

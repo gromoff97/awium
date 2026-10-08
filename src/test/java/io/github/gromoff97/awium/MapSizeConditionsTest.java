@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
@@ -34,7 +35,6 @@ import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -139,9 +139,10 @@ class MapSizeConditionsTest {
     }
 
     @Test
-    void sameSizeAsReadsTheExpectedMapWhenEvaluated() throws Exception {
+    void sameSizeAsReadsTheCurrentExpectedSizeOnEachEvaluation() throws Exception {
         var expected = new LinkedHashMap<>(Map.of(1, 1));
         var condition = sameSizeAs(expected);
+        assertEquals(Satisfied.class, evaluate(condition, Map.of(1, 1)).getClass());
         expected.put(2, 2);
 
         assertUnsatisfied(evaluate(condition, Map.of(1, 1)));
@@ -161,11 +162,6 @@ class MapSizeConditionsTest {
                 () -> timedMapAwait(source, defaults(), time, time).until((PreservingCondition<Map<String, String>>) null))
                 .getMessage().contains("condition"));
         assertEquals(0, sourceCalls[0]);
-    }
-
-    private static void assertUnsatisfied(ConditionResult<?> evaluation) {
-        assertInstanceOf(ConditionResult.Unsatisfied.class, evaluation);
-        assertFalse(mismatch(evaluation).isBlank());
     }
 
     private static Map<Integer, Integer> mapWithSize(int size) {

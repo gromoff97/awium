@@ -71,7 +71,7 @@ public final class Condition<Observed, Result> extends ConditionDefinition<Obser
         }
     }
 
-    public static final class SelectedCondition<Observed, Family extends Source<?>> extends ConditionDefinition<Observed, Object> {
+    public static final class SelectedCondition<Observed, Family> extends ConditionDefinition<Observed, Object> {
 
         SelectedCondition(ConditionMetadata metadata,
                 Callable<? extends CheckedFunction<? super Observed, ? extends ConditionResult<? extends Object>>> evaluatorFactory) {

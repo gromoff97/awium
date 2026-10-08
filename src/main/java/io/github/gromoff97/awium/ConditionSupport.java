@@ -25,7 +25,7 @@ final class ConditionSupport {
     static <Observed, Value, Result> Condition<Observed, Result> compose(String prefix, ConditionDefinition<?, ?> nested,
             Function<? super Observed, ? extends ConditionResult<Value>> extract,
             Supplier<? extends Function<? super Value, ? extends ConditionResult<? extends Result>>> evaluatorFactory) {
-        return ConditionFactories.conditionFactory(ConditionDefinition.required(nested).metadata.prefixed(prefix), () -> {
+        return new Condition<>(ConditionDefinition.required(nested).metadata.prefixed(prefix), () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> extract.apply(actual).continueIfSatisfied(evaluator);
         });
@@ -33,12 +33,7 @@ final class ConditionSupport {
 
     static <Observed> PreservingCondition<Observed> preserving(String description, String mismatch,
             Predicate<? super Observed> matches) {
-        return preserving(description, mismatch, null, matches);
-    }
-
-    static <Observed> PreservingCondition<Observed> preserving(String description, String mismatch,
-            Reference<?> reference, Predicate<? super Observed> matches) {
-        return ConditionFactories.preserving(description, reference, actual -> matches.test(actual)
+        return ConditionFactories.preserving(description, actual -> matches.test(actual)
                 ? satisfied(actual) : unsatisfied(mismatch));
     }
 
@@ -78,7 +73,7 @@ final class ConditionSupport {
     static <Observed, Element, Result> Condition<Observed, Result> single(String subject, ConditionDefinition<?, ?> nested,
             Function<? super Observed, ? extends Iterable<Element>> elements,
             Supplier<? extends Function<? super Element, ? extends ConditionResult<? extends Result>>> evaluatorFactory) {
-        return ConditionFactories.conditionFactory(ConditionDefinition.required(nested).metadata.prefixed(subject + " has a single matching value: "), () -> {
+        return new Condition<>(ConditionDefinition.required(nested).metadata.prefixed(subject + " has a single matching value: "), () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> actual == null ? unsatisfied(subject + " was null")
                     : evaluateSingle(elements.apply(actual), evaluator, "no value matched", "more than one value matched");

@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 
 import io.github.gromoff97.awium.ConditionResult.Reference;
 
+import java.util.List;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -11,7 +12,6 @@ import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
 import static io.github.gromoff97.awium.ConditionFactories.expectedReference;
 import static io.github.gromoff97.awium.ConditionFactories.unexpectedReference;
-import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
 public final class StringConditions {
@@ -26,15 +26,15 @@ public final class StringConditions {
     }
 
     public static PreservingCondition<String> contains(String... expected) {
-        String[] values = nonEmpty(expected, "expected strings");
+        List<String> values = nonEmpty(expected, "expected strings");
         return matching("string contains all expected strings", "string did not contain all expected strings", expectedReference(values),
-                actual -> stream(values).allMatch(actual::contains));
+                actual -> values.stream().allMatch(actual::contains));
     }
 
     public static PreservingCondition<String> doesNotContain(String... unexpected) {
-        String[] values = nonEmpty(unexpected, "unexpected strings");
+        List<String> values = nonEmpty(unexpected, "unexpected strings");
         return matching("string does not contain unexpected strings", "string contained an unexpected string", unexpectedReference(values),
-                actual -> stream(values).noneMatch(actual::contains));
+                actual -> values.stream().noneMatch(actual::contains));
     }
 
     public static PreservingCondition<String> containsIgnoringCase(String expected) {
@@ -163,11 +163,11 @@ public final class StringConditions {
         return false;
     }
 
-    private static String[] nonEmpty(String[] values, String name) {
+    private static List<String> nonEmpty(String[] values, String name) {
         ConditionSupport.nonEmpty(values, name);
         for (String value : values) {
             requireNonNull(value, name + " must not contain null");
         }
-        return values;
+        return List.of(values);
     }
 }

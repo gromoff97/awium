@@ -282,10 +282,24 @@ Import only the catalogue used by a test. Shared names such as `empty`,
 | `CollectionConditions` | `single`, empty/null/duplicate checks, quantifiers, membership, exact content, sequences, `first`, `last`, `element`, `sorted`, and `size...` | observed collection or selected element |
 | `MapConditions` | `singleEntry`, empty checks, entry/key/value quantifiers and membership, exact content, `valueFor`, `entryFor`, `onlyValueFor`, and `size...` | observed map, selected entry, or value |
 
-Expected objects and aggregates remain caller-owned: conditions retain their
-references and read their current contents on every evaluation. Optional value
-conditions, including negative ones such as `doesNotHaveValue`, require a
-present `Optional`; use `absent` when emptiness itself is the expectation.
+Factories accepting collections of expected elements, maps of expected entries,
+or varargs candidates take a shallow snapshot when the condition is created.
+Changing the original container afterwards does not change the condition or its
+diagnostic reference. Encounter order, duplicates and supported nulls are retained.
+Reading these inputs happens during construction; a failure to read them is
+thrown there, before polling starts.
+
+`sameSizeAs(other)` retains `other` and reads both current sizes on every
+evaluation. Use `size(n)` for a fixed expected size. The two reads are not
+atomic: this condition does not provide a consistent snapshot of containers
+being changed concurrently. Their synchronization remains the caller's responsibility.
+
+Elements, keys, values, and callbacks remain caller-owned; they are not deeply
+copied. Single-value operands such as `equalTo(value)`, `sameAs(value)`, and
+`hasValue(value)` retain the supplied object, even if it is itself a container.
+Observed values and successful results also retain their original identity.
+Optional value conditions, including negative ones such as `doesNotHaveValue`,
+require a present `Optional`; use `absent` when emptiness itself is the expectation.
 
 Qualify a provider when a test genuinely needs colliding catalogues:
 
@@ -435,14 +449,16 @@ checks; `./gradlew pitest` runs mutation testing.
 
 Conditions are immutable definitions. Each terminal call creates fresh
 `ConditionSession` instances, whose callbacks initialize lazily. Ordered waits
-use the same sessions for their stages; `CapturedEvaluator` owns progress and
-captured values. Condition families preserve the fluent API's result types.
+use the same sessions for their stages; `CapturedEvaluator` owns their construction,
+progress, and captured values. Condition families preserve the fluent API's result
+types. A selection condition's `Family` is an opaque compatibility marker;
+`Await` binds it to the source family.
 
 `ConditionResult` owns the result of one check and its diagnostic `Context`
 and `Reference`. `WaitEngine` owns timing, `ObservationEvaluator` owns source
 and callback execution, and `AttemptHistory` owns history retention and
-compression. `FailureFactory` interprets wait outcomes; `FailureMessageRenderer`
-formats diagnostics and durations. A successful check can still finish too late.
+compression. `FailureDiagnostics` interprets wait outcomes and formats
+diagnostics and durations. A successful check can still finish too late.
 
 Condition composition shares extraction and session creation in
 `ConditionSupport`. Failed extraction carries its own expectation, so missing

@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.config;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -60,10 +62,6 @@ class TryUntilTest {
 
         assertEquals(List.of(1L), first.attempts().stream().map(AwaitAttempt::number).toList());
         assertEquals(List.of(1L), second.attempts().stream().map(AwaitAttempt::number).toList());
-    }
-
-    private static WaitConfiguration config(long every, long upTo, long persistence) {
-        return new WaitConfiguration(every, upTo, persistence);
     }
 
     @SuppressWarnings("unchecked")

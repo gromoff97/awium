@@ -1,10 +1,11 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 
-import static io.github.gromoff97.awium.ConditionFactories.captured;
+import static io.github.gromoff97.awium.CapturedEvaluator.captured;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import org.junit.jupiter.api.Test;
@@ -325,10 +326,5 @@ class CapturedConditionTest {
         int[] next = {0};
         return timedAwait(() -> observations[Math.min(next[0]++, observations.length - 1)],
                 config(1, timeout, 0), time, time).until(lifecycle);
-    }
-
-    private static WaitConfiguration config(long every, long upTo,
-            long persistence) {
-        return new WaitConfiguration(every, upTo, persistence);
     }
 }

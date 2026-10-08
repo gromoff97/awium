@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.config;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -336,9 +338,5 @@ class ObservationEvaluatorTest {
             time.advanceNanos(2);
             return evaluation;
         }).attempt();
-    }
-
-    private static WaitConfiguration config(long every, long upTo, long persistence) {
-        return new WaitConfiguration(every, upTo, persistence);
     }
 }

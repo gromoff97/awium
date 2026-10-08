@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
@@ -34,7 +35,6 @@ import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -155,11 +155,6 @@ class CollectionSizeConditionsTest {
                 () -> timedCollectionAwait(source, defaults(), time, time).until((PreservingCondition<Collection<String>>) null))
                 .getMessage().contains("condition"));
         assertEquals(0, sourceCalls[0]);
-    }
-
-    private static void assertUnsatisfied(ConditionResult<?> evaluation) {
-        assertInstanceOf(ConditionResult.Unsatisfied.class, evaluation);
-        assertFalse(mismatch(evaluation).isBlank());
     }
 
     private static List<Case> cases() {

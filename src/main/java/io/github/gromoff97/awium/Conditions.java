@@ -4,8 +4,6 @@ import io.github.gromoff97.awium.Condition.ExpectedCondition;
 import io.github.gromoff97.awium.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 
-import io.github.gromoff97.awium.ConditionResult.Reference;
-
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Predicate;
@@ -21,7 +19,7 @@ import static io.github.gromoff97.awium.ConditionFactories.narrowing;
 import static io.github.gromoff97.awium.ConditionFactories.unexpectedReference;
 import static io.github.gromoff97.awium.ValueMatching.equal;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
-import static java.util.Arrays.asList;
+import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
 public final class Conditions {
@@ -37,7 +35,7 @@ public final class Conditions {
 
     public static <Observed, Result> Condition<Observed, Result> condition(String description,
             CheckedFunction<? super Observed, ? extends ConditionResult<? extends Result>> evaluation) {
-        return ConditionFactories.condition(description, evaluation);
+        return ConditionFactories.condition(description, null, evaluation);
     }
 
     public static <Observed, Result> Condition<Observed, Result> conditionFactory(String description,
@@ -52,7 +50,7 @@ public final class Conditions {
 
     public static <Observed> PreservingCondition<Observed> preservingFactory(String description,
             Callable<? extends CheckedFunction<? super Observed, ? extends ConditionResult<? extends Observed>>> evaluatorFactory) {
-        return ConditionFactories.preserving(description, evaluatorFactory);
+        return new PreservingCondition<>(new ConditionMetadata(description, null, null), evaluatorFactory);
     }
 
     public static <Observed> PreservingCondition<Observed> asserted(CheckedConsumer<? super Observed> assertion) {
@@ -111,7 +109,7 @@ public final class Conditions {
     @SafeVarargs
     @SuppressWarnings("varargs")
     public static <Value> ExpectedCondition<Value> in(Value... expected) {
-        List<Value> values = asList(nonEmpty(expected, "expected values"));
+        List<Value> values = stream(nonEmpty(expected, "expected values")).toList();
         return expected("value is in the expected values", expectedReference(values),
                 actual -> matchesAny(values, candidate -> equal(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was not in the expected values"));
@@ -120,7 +118,7 @@ public final class Conditions {
     @SafeVarargs
     @SuppressWarnings("varargs")
     public static <Value> ExpectedCondition<Value> notIn(Value... unexpected) {
-        List<Value> values = asList(nonEmpty(unexpected, "unexpected values"));
+        List<Value> values = stream(nonEmpty(unexpected, "unexpected values")).toList();
         return expected("value is not in the unexpected values", unexpectedReference(values),
                 actual -> !matchesAny(values, candidate -> equal(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was in the unexpected values"));
@@ -149,14 +147,14 @@ public final class Conditions {
 
     public static <Value extends Comparable<? super Value>> PreservingCondition<Value> between(Value lowerBound, Value upperBound) {
         validateRange(lowerBound, upperBound);
-        return comparable("value is between the inclusive bounds", "value was outside the inclusive range",
+        return preservingNonNull("value", "value is between the inclusive bounds", "value was outside the inclusive range",
                 expectedReference(List.of(lowerBound, upperBound)),
                 actual -> actual.compareTo(lowerBound) >= 0 && actual.compareTo(upperBound) <= 0);
     }
 
     public static <Value extends Comparable<? super Value>> PreservingCondition<Value> strictlyBetween(Value lowerBound, Value upperBound) {
         validateRange(lowerBound, upperBound);
-        return comparable("value is strictly between the bounds", "value was outside the exclusive range",
+        return preservingNonNull("value", "value is strictly between the bounds", "value was outside the exclusive range",
                 expectedReference(List.of(lowerBound, upperBound)),
                 actual -> actual.compareTo(lowerBound) > 0 && actual.compareTo(upperBound) < 0);
     }
@@ -164,13 +162,8 @@ public final class Conditions {
     private static <Value extends Comparable<? super Value>> PreservingCondition<Value> comparing(String relation, Value bound,
             Predicate<? super Value> matches) {
         requireNonNull(bound, "bound must not be null");
-        return comparable("value is " + relation + " the bound",
+        return preservingNonNull("value", "value is " + relation + " the bound",
                 "value was not " + relation + " the bound", expectedReference(bound), matches);
-    }
-
-    private static <Value> PreservingCondition<Value> comparable(String description, String mismatch,
-            Reference<?> reference, Predicate<? super Value> matches) {
-        return preservingNonNull("value", description, mismatch, reference, matches);
     }
 
     private static <Value extends Comparable<? super Value>> void validateRange(Value lowerBound, Value upperBound) {

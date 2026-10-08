@@ -1,16 +1,17 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.ConditionResult.Reference;
-import io.github.gromoff97.awium.FailureFactory.AttemptDiagnostic;
 
+import java.util.List;
 import java.util.StringJoiner;
 
-import static io.github.gromoff97.awium.FailureFactory.addSuppressed;
+import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
+import static java.lang.Thread.currentThread;
 import static java.util.Arrays.deepToString;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("removal")
-final class FailureMessageRenderer {
+final class FailureDiagnostics {
 
     private static final long[] UNIT_NANOS = {86_400_000_000_000L, 3_600_000_000_000L, 60_000_000_000L, 1_000_000_000L, 1_000_000L, 1_000L, 1L};
     private static final String[] UNIT_NAMES = {"day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond"};
@@ -21,21 +22,43 @@ final class FailureMessageRenderer {
     private final WaitCompletion<?, ?> outcome;
     private final ConditionMetadata metadata;
     private final WaitConfiguration configuration;
-    private final AttemptDiagnostic diagnostic;
+    private final Object observed;
+    private final String mismatch;
+    private final Throwable cause;
+    private final ConditionResult.Context.Sequence sequence;
 
     private String actual;
     private String referenceValue;
     private String sequenceReference;
 
-    private FailureMessageRenderer(WaitCompletion<?, ?> outcome,
-            ConditionMetadata metadata,
-            WaitConfiguration configuration, AttemptDiagnostic diagnostic) {
+    private FailureDiagnostics(WaitCompletion<?, ?> outcome,
+            ConditionMetadata metadata, WaitConfiguration configuration) {
         this.outcome = requireNonNull(outcome, "outcome must not be null");
-        this.metadata = requireNonNull(metadata, "metadata must not be null");
-        this.configuration = requireNonNull(configuration,
-                "configuration must not be null");
-        this.diagnostic = requireNonNull(diagnostic,
-                "attempt diagnostic must not be null");
+        this.configuration = requireNonNull(configuration, "configuration must not be null");
+        requireNonNull(metadata, "metadata must not be null");
+        var attempt = outcome.attempt().outcome();
+        var evaluation = attempt instanceof AwaitAttempt.Outcome.Evaluated<?, ?> value ? value.evaluation() : null;
+        observed = switch (attempt) {
+            case AwaitAttempt.Outcome.Evaluated<?, ?> value -> value.observed();
+            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> value -> value.observed();
+            default -> null;
+        };
+        mismatch = evaluation instanceof ConditionResult.Unsatisfied<?> value ? value.mismatch() : null;
+        cause = switch (attempt) {
+            case AwaitAttempt.Outcome.WaitingFailed<?, ?> value -> value.failure();
+            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> value -> value.failure();
+            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> value -> value.failure();
+            case AwaitAttempt.Outcome.Evaluated<?, ?> value -> switch (value.evaluation()) {
+                case ConditionResult.Satisfied<?> ignored -> null;
+                case ConditionResult.Unsatisfied<?> result -> result.assertion();
+                case ConditionResult.Uncontrolled<?> result -> result.cause();
+            };
+        };
+        var context = evaluation == null ? null : evaluation.context();
+        sequence = context instanceof ConditionResult.Context.Sequence value ? value : null;
+        this.metadata = context instanceof ConditionResult.Context.Expectation expectation
+                ? new ConditionMetadata(expectation.description(), metadata.explanation(), expectation.reference())
+                : metadata;
     }
 
     static String duration(long nanos) {
@@ -50,28 +73,74 @@ final class FailureMessageRenderer {
         return result.length() == 0 ? "0 nanoseconds" : result.toString();
     }
 
-    static Result render(WaitCompletion<?, ?> outcome, ConditionMetadata metadata, WaitConfiguration configuration,
-            AttemptDiagnostic diagnostic) {
-        return new FailureMessageRenderer(outcome, metadata, configuration, diagnostic).render();
+    static AwaitFailure failure(WaitCompletion<?, ?> outcome, ConditionMetadata metadata, WaitConfiguration configuration) {
+        return new FailureDiagnostics(outcome, metadata, configuration).failure();
     }
 
-    private Result render() {
-        Throwable outcomeCause = diagnostic.failure();
-        try {
-            return new Result(format(), null);
-        } catch (VirtualMachineError | ThreadDeath fatal) {
-            addSuppressed(fatal, outcomeCause);
+    private AwaitFailure failure() {
+        if (cause instanceof Error fatal
+                && (fatal instanceof VirtualMachineError || fatal instanceof ThreadDeath)) {
             throw fatal;
-        } catch (Throwable failure) {
+        }
+        boolean restoreInterrupt = currentThread().isInterrupted() || cause instanceof InterruptedException;
+        try {
+            String message;
             try {
-                return new Result(emergency(failure), failure);
+                message = format();
             } catch (VirtualMachineError | ThreadDeath fatal) {
-                addSuppressed(fatal, failure);
-                if (outcomeCause != failure) {
-                    addSuppressed(fatal, outcomeCause);
-                }
+                addSuppressed(fatal, cause);
                 throw fatal;
+            } catch (Throwable failure) {
+                try {
+                    message = emergency(failure);
+                } catch (VirtualMachineError | ThreadDeath fatal) {
+                    addSuppressed(fatal, failure);
+                    if (cause != failure) {
+                        addSuppressed(fatal, cause);
+                    }
+                    throw fatal;
+                }
+                restoreInterrupt |= failure instanceof InterruptedException;
+                return new AwaitFailure(DIAGNOSTICS_FAILED, message, failure,
+                        cause == null || cause == failure ? List.of() : List.of(cause));
             }
+            return new AwaitFailure(reason(), message, cause, List.of());
+        } finally {
+            if (restoreInterrupt) {
+                currentThread().interrupt();
+            }
+        }
+    }
+
+    private AwaitFailure.Reason reason() {
+        return switch (outcome) {
+            case WaitCompletion.PersistenceFailure<?, ?> ignored -> PERSISTENCE_FAILED;
+            case WaitCompletion.Uncontrolled<?, ?> ignored -> cause instanceof InterruptedException
+                    ? INTERRUPTED : switch (outcome.attempt().outcome()) {
+                        case AwaitAttempt.Outcome.WaitingFailed<?, ?> value -> WAIT_FAILED;
+                        case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> value -> SOURCE_FAILED;
+                        case AwaitAttempt.Outcome.Evaluated<?, ?> value -> CONDITION_FAILED;
+                        default -> throw new IllegalArgumentException("attempt is not uncontrolled");
+                    };
+            default -> TIMEOUT;
+        };
+    }
+
+    private String uncontrolledHeading() {
+        boolean interrupted = cause instanceof InterruptedException;
+        return switch (outcome.attempt().outcome()) {
+            case AwaitAttempt.Outcome.WaitingFailed<?, ?> ignored -> interrupted
+                    ? "Caller thread was interrupted while waiting" : "Waiting before the next attempt failed";
+            case AwaitAttempt.Outcome.Evaluated<?, ?> ignored -> interrupted
+                    ? "Caller thread was interrupted during condition evaluation" : "Condition evaluation failed";
+            default -> interrupted
+                    ? "Caller thread was interrupted during source retrieval" : "Source retrieval failed";
+        };
+    }
+
+    private static void addSuppressed(Throwable failure, Throwable cause) {
+        if (cause != null && cause != failure) {
+            failure.addSuppressed(cause);
         }
     }
 
@@ -87,7 +156,7 @@ final class FailureMessageRenderer {
             case WaitCompletion.PersistenceFailure<?, ?> ignored ->
                     message("Condition did not persist for the required duration");
             case WaitCompletion.Uncontrolled<?, ?> ignored ->
-                    message(diagnostic.heading());
+                    message(uncontrolledHeading());
             case WaitCompletion.Satisfied<?, ?> ignored ->
                     throw new IllegalArgumentException("successful outcomes have no failure diagnostics");
         };
@@ -102,7 +171,7 @@ final class FailureMessageRenderer {
                         ? "<value unavailable: diagnostics failed>" : this.actual
                 : null;
         attempt(out, attempt.number(), actual,
-                diagnostic.sequence() == null ? diagnostic.mismatch() : null);
+                sequence == null ? mismatch : null);
         sequence(out, true);
         timing(out);
         cause(out, emergencyDiagnostic(failure));
@@ -116,12 +185,12 @@ final class FailureMessageRenderer {
         String actual = attempt.outcome().timing() instanceof AwaitAttempt.Timing.AfterObservation
                 ? actualValue() : null;
         attempt(out, attempt.number(), actual,
-                diagnostic.sequence() == null ? diagnostic.mismatch() : null);
+                sequence == null ? mismatch : null);
         sequence(out, false);
         if (!(outcome instanceof WaitCompletion.Uncontrolled<?, ?>)) {
             timing(out);
         }
-        Throwable failure = diagnostic.failure();
+        Throwable failure = cause;
         if (failure != null) {
             cause(out, throwableDiagnostic(failure));
         }
@@ -182,7 +251,6 @@ final class FailureMessageRenderer {
     }
 
     private void sequence(StringBuilder out, boolean emergency) {
-        ConditionResult.Context.Sequence sequence = diagnostic.sequence();
         if (sequence == null) {
             return;
         }
@@ -193,8 +261,8 @@ final class FailureMessageRenderer {
         if (sequence.importance() != null) {
             field(out, "Importance", sequence.importance());
         }
-        if (diagnostic.mismatch() != null) {
-            field(out, "Mismatch", diagnostic.mismatch());
+        if (mismatch != null) {
+            field(out, "Mismatch", mismatch);
         }
     }
 
@@ -281,7 +349,7 @@ final class FailureMessageRenderer {
     }
 
     private String actualValue() {
-        return actual = renderValue(diagnostic.observed());
+        return actual = renderValue(observed);
     }
 
     private String referenceValue(Reference<?> value, boolean sequence) {
@@ -293,8 +361,6 @@ final class FailureMessageRenderer {
         }
         return rendered;
     }
-
-    record Result(String message, Throwable failure) {}
 
     private record ThrowableDiagnostic(String type, String message) {}
 }

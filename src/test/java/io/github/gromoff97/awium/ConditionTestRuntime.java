@@ -1,5 +1,8 @@
 package io.github.gromoff97.awium;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+
 import io.github.gromoff97.awium.Condition.ExpectedCondition;
 import io.github.gromoff97.awium.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
@@ -37,18 +40,16 @@ public final class ConditionTestRuntime {
         return condition.metadata.explanation();
     }
 
+    public static void assertUnsatisfied(ConditionResult<?> evaluation) {
+        assertFalse(mismatch(evaluation).isBlank());
+    }
+
     public static Object result(ConditionResult<?> evaluation) {
-        return switch (evaluation) {
-            case ConditionResult.Satisfied<?> satisfied -> satisfied.result();
-            default -> throw new AssertionError("evaluation is not satisfied: " + evaluation);
-        };
+        return assertInstanceOf(ConditionResult.Satisfied.class, evaluation).result();
     }
 
     public static String mismatch(ConditionResult<?> evaluation) {
-        return switch (evaluation) {
-            case ConditionResult.Unsatisfied<?> unsatisfied -> unsatisfied.mismatch();
-            default -> throw new AssertionError("evaluation is not unsatisfied: " + evaluation);
-        };
+        return assertInstanceOf(ConditionResult.Unsatisfied.class, evaluation).mismatch();
     }
 
     private ConditionTestRuntime() {

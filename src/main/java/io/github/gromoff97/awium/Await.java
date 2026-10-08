@@ -143,70 +143,86 @@ public final class Await<Observed, Element, Family extends Source<?>> {
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final List<Observed> until(Predicate<? super Observed> first, Predicate<? super Observed> second, Predicate<? super Observed>... rest) {
-        return until(ConditionFactories.<Observed>captured(first, second, rest));
+        return until(CapturedEvaluator.<Observed>captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final List<Observed> until(PreservingCondition<? super Observed> first, PreservingCondition<? super Observed> second, PreservingCondition<? super Observed>... rest) {
-        return until(ConditionFactories.<Observed>captured(first, second, rest));
+        return until(CapturedEvaluator.<Observed>captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final <Result> List<Result> until(Condition<? super Observed, ? extends Result> first, Condition<? super Observed, ? extends Result> second, Condition<? super Observed, ? extends Result>... rest) {
-        return until(ConditionFactories.<Observed, Result>captured(first, second, rest));
+        return until(CapturedEvaluator.<Observed, Result>captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final <Expected extends Observed> List<Observed> until(ExpectedCondition<? extends Expected> first, ExpectedCondition<? extends Expected> second, ExpectedCondition<? extends Expected>... rest) {
-        return until(ConditionFactories.<Observed, Expected>captured(first, second, rest));
+        return until(CapturedEvaluator.<Observed, Expected>captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final List<Element> until(SelectedCondition<? super Observed, Family> first, SelectedCondition<? super Observed, Family> second, SelectedCondition<? super Observed, Family>... rest) {
-        return until(ConditionFactories.<Observed, Element, Family>captured(first, second, rest));
+        return until(CapturedEvaluator.<Observed, Element, Family>captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final AwaitResult<Observed, List<Observed>> tryUntil(Predicate<? super Observed> first, Predicate<? super Observed> second, Predicate<? super Observed>... rest) {
-        return tryUntil(ConditionFactories.<Observed>captured(first, second, rest));
+        return tryUntil(CapturedEvaluator.<Observed>captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final AwaitResult<Observed, List<Observed>> tryUntil(PreservingCondition<? super Observed> first, PreservingCondition<? super Observed> second, PreservingCondition<? super Observed>... rest) {
-        return tryUntil(ConditionFactories.<Observed>captured(first, second, rest));
+        return tryUntil(CapturedEvaluator.<Observed>captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final <Result> AwaitResult<Observed, List<Result>> tryUntil(Condition<? super Observed, ? extends Result> first, Condition<? super Observed, ? extends Result> second, Condition<? super Observed, ? extends Result>... rest) {
-        return tryUntil(ConditionFactories.<Observed, Result>captured(first, second, rest));
+        return tryUntil(CapturedEvaluator.<Observed, Result>captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final <Expected extends Observed> AwaitResult<Observed, List<Observed>> tryUntil(ExpectedCondition<? extends Expected> first, ExpectedCondition<? extends Expected> second, ExpectedCondition<? extends Expected>... rest) {
-        return tryUntil(ConditionFactories.<Observed, Expected>captured(first, second, rest));
+        return tryUntil(CapturedEvaluator.<Observed, Expected>captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final AwaitResult<Observed, List<Element>> tryUntil(SelectedCondition<? super Observed, Family> first, SelectedCondition<? super Observed, Family> second, SelectedCondition<? super Observed, Family>... rest) {
-        return tryUntil(ConditionFactories.<Observed, Element, Family>captured(first, second, rest));
+        return tryUntil(CapturedEvaluator.<Observed, Element, Family>captured(first, second, rest));
     }
 
     private <Result> Result complete(ConditionSession<? super Observed, ? extends Result> session) {
-        return FailureFactory.complete(engine.waitFor(source, session), session.metadata, engine.configuration());
+        return complete(engine.waitFor(source, session), session.metadata, engine.configuration());
+    }
+
+    static <Observed, Result> Result complete(WaitCompletion<Observed, Result> outcome,
+            ConditionMetadata metadata, WaitConfiguration configuration) {
+        if (outcome instanceof WaitCompletion.Satisfied<Observed, Result> success) {
+            return success.result();
+        }
+        AwaitFailure failure = FailureDiagnostics.failure(outcome, metadata, configuration);
+        switch (failure.reason()) {
+            case TIMEOUT, PERSISTENCE_FAILED -> throw new AwaitAssertionError(failure);
+            default -> throw new AwaitExecutionException(failure);
+        }
     }
 
     private <Result> AwaitResult<Observed, Result> capture(ConditionSession<? super Observed, ? extends Result> session) {
         var history = new AttemptHistory<Observed, Result>();
         var outcome = engine.waitFor(source, session, history);
-        return FailureFactory.capture(outcome, history.snapshot(), session.metadata, engine.configuration());
+        if (outcome instanceof WaitCompletion.Satisfied<Observed, Result> success) {
+            return new AwaitResult.Satisfied<>(history.snapshot(), success.attempt().number(), success.result());
+        }
+        return new AwaitResult.Failed<>(history.snapshot(), outcome.attempt().number(),
+                FailureDiagnostics.failure(outcome, session.metadata, engine.configuration()));
     }
 }

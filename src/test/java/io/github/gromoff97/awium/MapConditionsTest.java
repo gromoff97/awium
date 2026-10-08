@@ -85,7 +85,7 @@ class MapConditionsTest {
     }
 
     @Test
-    void mapConditionsObserveUserOwnedExpectedValuesAtEvaluationTime()
+    void mapConditionsSnapshotExpectedValuesAtConstruction()
             throws Exception {
         Map<String, String> expected = new LinkedHashMap<>(map("a", "before"));
         PreservingCondition<? super Map<String, String>> membership =
@@ -94,12 +94,14 @@ class MapConditionsTest {
                 containsExactlyEntriesOf(expected);
         expected.put("a", "after");
 
-        assertStatus(membership, map("a", "after", "b", "other"), Satisfied.class);
-        assertStatus(exact, map("a", "after"), Satisfied.class);
+        assertStatus(membership, map("a", "before", "b", "other"), Satisfied.class);
+        assertStatus(exact, map("a", "before"), Satisfied.class);
+        assertStatus(membership, map("a", "after"), Unsatisfied.class);
+        assertStatus(exact, map("a", "after"), Unsatisfied.class);
     }
 
     @Test
-    void clearedLiveExpectedMapUsesEmptyContainmentSemantics()
+    void clearingExpectedMapDoesNotChangeContainment()
             throws Exception {
         var expected = new LinkedHashMap<>(map("expected", "value"));
         var positive = containsAllEntriesOf(expected);
@@ -107,8 +109,8 @@ class MapConditionsTest {
         expected.clear();
 
         for (Map<String, String> actual : List.of(Map.<String, String>of(), map("actual", "value"))) {
-            assertStatus(positive, actual, Satisfied.class);
-            assertStatus(negative, actual, Unsatisfied.class);
+            assertStatus(positive, actual, Unsatisfied.class);
+            assertStatus(negative, actual, Satisfied.class);
         }
     }
 
@@ -126,9 +128,8 @@ class MapConditionsTest {
 
         assertSame(actualCause, assertFailure(CONDITION_FAILED,
                 () -> awaitMap(brokenActual, doesNotContainKey("a"))).getCause());
-        assertSame(expectedCause, assertFailure(CONDITION_FAILED,
-                () -> awaitMap(entryMap(entry("a", "1")),
-                        containsNoEntriesOf(brokenExpected))).getCause());
+        assertSame(expectedCause, assertThrows(IllegalStateException.class,
+                () -> containsNoEntriesOf(brokenExpected)));
         assertSame(equalityCause, assertFailure(CONDITION_FAILED,
                 () -> awaitMap(brokenEquality,
                         doesNotContainKey(new ThrowingEquals(null)))).getCause());

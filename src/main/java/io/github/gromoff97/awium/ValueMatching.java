@@ -26,12 +26,7 @@ final class ValueMatching {
     }
 
     static <Value> boolean matchesAll(Iterable<Value> values, Predicate<? super Value> matches) {
-        for (Value value : values) {
-            if (!matches.test(value)) {
-                return false;
-            }
-        }
-        return true;
+        return !matchesAny(values, value -> !matches.test(value));
     }
 
     static <Actual, Expected> boolean containsAll(Iterable<Actual> actual, Collection<Expected> expected,

@@ -10,7 +10,13 @@ sealed interface WaitCompletion<Observed, Result> {
 
     AwaitAttempt<Observed, Result> attempt();
 
-    record Satisfied<Observed, Result>(AwaitAttempt<Observed, Result> attempt) implements WaitCompletion<Observed, Result> {}
+    record Satisfied<Observed, Result>(AwaitAttempt<Observed, Result> attempt) implements WaitCompletion<Observed, Result> {
+
+        Result result() {
+            var evaluated = (AwaitAttempt.Outcome.Evaluated<Observed, Result>) attempt.outcome();
+            return ((ConditionResult.Satisfied<? extends Result>) evaluated.evaluation()).result();
+        }
+    }
 
     record Uncontrolled<Observed, Result>(AwaitAttempt<Observed, Result> attempt) implements WaitCompletion<Observed, Result> {}
 

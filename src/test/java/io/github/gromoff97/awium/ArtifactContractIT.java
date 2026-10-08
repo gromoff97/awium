@@ -55,7 +55,7 @@ class ArtifactContractIT {
         Map<String, Set<String>> classes = classDependencies(dependencies);
         assertFalse(classes.isEmpty(), dependencies);
         Set<String> facade = Set.of("Await", "Conditions", "CollectionConditions", "MapConditions",
-                "OptionalConditions", "StringConditions", "FailureFactory", "FailureMessageRenderer");
+                "OptionalConditions", "StringConditions", "FailureDiagnostics");
         for (String execution : Set.of("Condition", "ConditionDefinition", "ConditionSession", "ConditionFactories",
                 "ConditionResult", "ConditionMetadata", "CapturedEvaluator", "WaitEngine",
                 "ObservationEvaluator", "AttemptHistory", "WaitCompletion", "WaitConfiguration")) {
@@ -67,6 +67,14 @@ class ArtifactContractIT {
             assertTrue(classes.get(condition).stream().noneMatch(Set.of("AwaitAttempt", "AwaitResult")::contains),
                     condition + " -> " + classes.get(condition));
         }
+        // Ordinary condition construction is independent of source protocols and ordered execution.
+        Set<String> factories = classes.get("ConditionFactories");
+        assertTrue(factories.stream().noneMatch(Set.of("Source", "CapturedEvaluator", "ConditionSession")::contains),
+                "ConditionFactories -> " + factories);
+        // Diagnostics describe failures; only the fluent facade chooses a terminal result or throws.
+        Set<String> terminals = Set.of("Await", "AwaitResult", "AwaitAssertionError", "AwaitExecutionException");
+        Set<String> diagnostics = classes.get("FailureDiagnostics");
+        assertTrue(diagnostics.stream().noneMatch(terminals::contains), "FailureDiagnostics -> " + diagnostics);
     }
 
     @Test
@@ -223,7 +231,7 @@ class ArtifactContractIT {
         for (Class<?> internal : List.of(ConditionFactories.class, ConditionDefinition.class, ConditionSession.class,
                 ConditionMetadata.class, CapturedEvaluator.class, WaitEngine.class, WaitConfiguration.class,
                 WaitCompletion.class, ObservationEvaluator.class, AttemptHistory.class,
-                FailureFactory.class, FailureMessageRenderer.class, ConditionSupport.class, ValueMatching.class)) {
+                FailureDiagnostics.class, ConditionSupport.class, ValueMatching.class)) {
             assertFalse(java.lang.reflect.Modifier.isPublic(internal.getModifiers()), internal.getName());
         }
         for (boolean modulePath : List.of(false, true)) {

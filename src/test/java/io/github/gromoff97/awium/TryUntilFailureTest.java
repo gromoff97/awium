@@ -1,7 +1,10 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -251,16 +254,16 @@ class TryUntilFailureTest {
     }
 
     private static AwaitResult.Failed<?, ?> assertParity(
-            Ordinary ordinary, Diagnostic diagnostic) {
+            Consumer<FakeTime> ordinary, Function<FakeTime, AwaitResult<?, ?>> diagnostic) {
         Throwable thrown;
         try {
-            thrown = assertThrows(Throwable.class, () -> ordinary.run(new FakeTime(0)));
+            thrown = assertThrows(Throwable.class, () -> ordinary.accept(new FakeTime(0)));
         } finally {
             interrupted();
         }
 
         try {
-            var captured = failed(diagnostic.run(new FakeTime(0)));
+            var captured = failed(diagnostic.apply(new FakeTime(0)));
             assertSameFailure(thrown, captured.failure());
             return captured;
         } finally {
@@ -361,19 +364,5 @@ class TryUntilFailureTest {
     private static Condition<Object, Object> brokenDiagnostics() {
         return condition("condition", actual ->
                 assertionUnsatisfied("not ready", new AssertionError("engine")));
-    }
-
-    private static WaitConfiguration config(long every, long upTo, long persistence) {
-        return new WaitConfiguration(every, upTo, persistence);
-    }
-
-    @FunctionalInterface
-    private interface Ordinary {
-        void run(FakeTime time);
-    }
-
-    @FunctionalInterface
-    private interface Diagnostic {
-        AwaitResult<?, ?> run(FakeTime time);
     }
 }

@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.ConditionFactories.captured;
+import static io.github.gromoff97.awium.CapturedEvaluator.captured;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;

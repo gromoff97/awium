@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
@@ -71,7 +72,7 @@ class CollectionMembershipTest {
     }
 
     @Test
-    void clearedLiveExpectedCollectionUsesEmptyContainmentSemantics()
+    void clearingExpectedCollectionDoesNotChangeContainment()
             throws Exception {
         var expected = new ArrayList<>(List.of("expected"));
         var positive = containsAll(expected);
@@ -79,8 +80,8 @@ class CollectionMembershipTest {
         expected.clear();
 
         for (Collection<String> actual : List.of(List.<String>of(), List.of("actual"))) {
-            assertEquals(Satisfied.class, evaluate(positive, actual).getClass());
-            assertEquals(Unsatisfied.class, evaluate(negative, actual).getClass());
+            assertEquals(Unsatisfied.class, evaluate(positive, actual).getClass());
+            assertEquals(Satisfied.class, evaluate(negative, actual).getClass());
         }
     }
 
@@ -171,11 +172,6 @@ class CollectionMembershipTest {
         assertNotEquals(positive.getClass(), negative.getClass(), pair.name());
         assertSame(actual, result(positiveSatisfied ? positive : negative));
         assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank());
-    }
-
-    private static void assertUnsatisfied(ConditionResult<?> evaluation) {
-        assertInstanceOf(ConditionResult.Unsatisfied.class, evaluation);
-        assertFalse(mismatch(evaluation).isBlank());
     }
 
     private static void assertValidation(Class<? extends Throwable> type,

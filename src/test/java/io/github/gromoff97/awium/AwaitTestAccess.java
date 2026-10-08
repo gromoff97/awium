@@ -14,6 +14,10 @@ public final class AwaitTestAccess {
         throw new AssertionError("Utility class");
     }
 
+    public static WaitConfiguration config(long every, long upTo, long persistence) {
+        return new WaitConfiguration(every, upTo, persistence);
+    }
+
     public static <S> Await<S, S, Source<?>> timedAwait(Source<? extends S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {

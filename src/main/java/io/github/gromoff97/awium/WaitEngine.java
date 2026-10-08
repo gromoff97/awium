@@ -37,7 +37,7 @@ record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
     private <Observed, Result> WaitCompletion<Observed, Result> acquire(ObservationEvaluator<Observed, Result> observations,
             Consumer<AwaitAttempt<Observed, Result>> recorder,
             long started) {
-        long deadline = after(started, configuration.upToNanos());
+        long deadline = started + configuration.upToNanos();
         AwaitAttempt<Observed, Result> lastUnsatisfied = null;
         long completed = started;
 
@@ -79,7 +79,7 @@ record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
             long started,
             WaitCompletion.Satisfied<Observed, Result> acquired) {
         long acquiredAt = completedNanos(started, acquired.attempt());
-        long deadline = after(acquiredAt, configuration.persistenceNanos());
+        long deadline = acquiredAt + configuration.persistenceNanos();
         long completed = acquiredAt;
 
         for (long number = acquired.attempt().number() + 1;; number++) {
@@ -112,7 +112,7 @@ record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
     private <Observed, Result> AwaitAttempt<Observed, Result> waitBeforeAttempt(long delay,
             AwaitAttempt.Phase phase, long number, long started,
             long attemptStarted) {
-        AwaitAttempt<Observed, Result> failure = parkUntil(after(attemptStarted, delay),
+        AwaitAttempt<Observed, Result> failure = parkUntil(attemptStarted + delay,
                 phase, number, started, attemptStarted);
         return failure != null
                 ? failure
@@ -178,10 +178,6 @@ record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
 
     private static Duration offset(long started, long stage) {
         return Duration.ofNanos(stage - started);
-    }
-
-    private static long after(long now, long durationNanos) {
-        return now + durationNanos;
     }
 
     private static boolean reached(long now, long deadline) {

@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.ConditionFactories.captured;
+import static io.github.gromoff97.awium.AwaitTestAccess.config;
+import static io.github.gromoff97.awium.CapturedEvaluator.captured;
 
 import java.util.List;
 
@@ -173,10 +174,6 @@ class TryUntilHistoryTest {
 
     private static List<Long> numbers(AwaitResult<?, ?> execution) {
         return execution.attempts().stream().map(AwaitAttempt::number).toList();
-    }
-
-    private static WaitConfiguration config(long every, long upTo, long persistence) {
-        return new WaitConfiguration(every, upTo, persistence);
     }
 
     private static final class ThrowingProbe {
