@@ -553,6 +553,34 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
+    void emergencyDiagnosticsReuseTheActualRenderedBeforeASequenceReferenceFails() {
+        int[] calls = {0};
+        Object actual = new Object() {
+            @Override
+            public String toString() {
+                calls[0]++;
+                return "observed value";
+            }
+        };
+        var cause = new IllegalStateException("expected toString failed");
+        var expected = new ThrowingValue(cause);
+        var context = new ConditionResult.Context.Sequence(1, 2, 2, "second stage", null,
+                new ConditionResult.Reference<>("Expected", expected));
+        var attempt = new AwaitAttempt<>(2, ACQUISITION,
+                new AwaitAttempt.Outcome.Evaluated<>(afterObservation(2), actual,
+                        new ConditionResult.Unsatisfied<>("not ready", null, context)));
+
+        var failure = assertFailure(DIAGNOSTICS_FAILED,
+                () -> complete(new LateTimeout<>(attempt), "ordered conditions", null, config(1, 2, 0)));
+
+        assertSame(cause, failure.getCause());
+        assertMessage(failure, "Actual: observed value", "Sequence (captured 1 of 2)",
+                "Expected: <value unavailable: diagnostics failed>", "Mismatch: not ready");
+        assertEquals(1, calls[0]);
+        assertEquals(1, expected.calls);
+    }
+
+    @Test
     void diagnosticRenderingFailureRetainsTheEngineCauseAsSuppressed() {
         var diagnosticCause = new IllegalStateException("toString failed");
         var engineCause = new AssertionError("assertion failed");

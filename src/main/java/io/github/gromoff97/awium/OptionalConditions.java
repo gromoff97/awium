@@ -14,8 +14,8 @@ import java.util.function.Predicate;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
-import static io.github.gromoff97.awium.ConditionFactories.expectedReference;
-import static io.github.gromoff97.awium.ConditionFactories.unexpectedReference;
+import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
+import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ValueMatching.equal;
 import static io.github.gromoff97.awium.Conditions.condition;
 import static java.util.Objects.requireNonNull;
@@ -23,7 +23,7 @@ import static java.util.Objects.requireNonNull;
 public final class OptionalConditions {
 
     public static final SelectedCondition<Optional<?>, OptionalSource<?>> present =
-            ConditionFactories.selected("optional is present", OptionalConditions::present);
+            ConditionSupport.selected("optional is present", OptionalConditions::present);
     public static final Condition<Optional<?>, Void> absent = condition("optional is absent", actual -> {
         if (actual == null) {
             return unsatisfied("optional was null");
@@ -31,9 +31,7 @@ public final class OptionalConditions {
         return actual.isEmpty() ? satisfied(null) : unsatisfied("optional was present");
     });
 
-    private OptionalConditions() {
-        throw new AssertionError("Utility class");
-    }
+    private OptionalConditions() {}
 
     public static <Value> Condition<Optional<Value>, Value> hasValue(Value expected) {
         requireNonNull(expected, "expected must not be null");
@@ -49,7 +47,7 @@ public final class OptionalConditions {
 
     public static <Value> Condition<Optional<Value>, Value> hasValue(Predicate<? super Value> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return selected("optional value matches", "optional value did not match", predicate);
+        return selected("optional value matches", "optional value did not match", null, predicate);
     }
 
     public static <Value, Result> Condition<Optional<Value>, Result> hasValue(Condition<? super Value, ? extends Result> nested) {
@@ -73,14 +71,9 @@ public final class OptionalConditions {
     }
 
     private static <Value> Condition<Optional<Value>, Value> selected(String description, String mismatch,
-            Predicate<? super Value> predicate) {
-        return selected(description, mismatch, null, predicate);
-    }
-
-    private static <Value> Condition<Optional<Value>, Value> selected(String description, String mismatch,
             Reference<?> reference,
             Predicate<? super Value> predicate) {
-        return ConditionFactories.condition(description, reference, actual -> present(actual)
+        return ConditionSupport.condition(description, reference, actual -> present(actual)
                 .continueIfSatisfied(value -> predicate.test(value)
                         ? satisfied(value) : unsatisfied(mismatch)));
     }

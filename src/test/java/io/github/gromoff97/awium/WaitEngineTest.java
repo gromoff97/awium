@@ -155,11 +155,11 @@ class WaitEngineTest {
         int[] sourceCalls = {0};
         LongSupplier clock = () -> clockCalls[0]++ == 0 ? 0 : 10;
 
-        WaitCompletion<?, String> outcome = new WaitEngine(config(1, 10, 0), clock,
-                ignored -> {}).waitFor(() -> {
+        WaitCompletion<?, String> outcome = new WaitEngine<String, String>(config(1, 10, 0), clock,
+                ignored -> {}, () -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, actual -> satisfied(actual));
+                }, Conditions.<String, String>condition("test condition", actual -> satisfied(actual)).newSession()).waitFor();
 
         assertInstanceOf(LateTimeout.class, outcome);
         assertEquals(1, sourceCalls[0]);
@@ -546,7 +546,8 @@ class WaitEngineTest {
             LongConsumer parker,
             Source<S> source,
             Function<S, ConditionResult<R>> condition) {
-        return new WaitEngine(config, time, parker).waitFor(source, actual -> condition.apply(actual));
+        return new WaitEngine<S, R>(config, time, parker, source,
+                Conditions.<S, R>condition("test condition", condition::apply).newSession()).waitFor();
     }
 
     private static long completed(AwaitAttempt<?, ?> attempt) {

@@ -6,7 +6,8 @@ import java.util.function.Function;
 import static io.github.gromoff97.awium.ConditionResult.uncontrolled;
 import static java.util.Objects.requireNonNull;
 
-/** One execution of a condition, also used as an ordered sequence stage. */
+/** Lazily executes a condition, converting nonfatal callback failures into uncontrolled results. */
+@SuppressWarnings("removal")
 final class ConditionSession<Observed, Result> implements Function<Observed, ConditionResult<? extends Result>> {
 
     final ConditionMetadata metadata;
@@ -26,9 +27,9 @@ final class ConditionSession<Observed, Result> implements Function<Observed, Con
                 evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
             }
             return evaluator.apply(actual);
-        } catch (RuntimeException failure) {
-            throw failure;
-        } catch (Exception failure) {
+        } catch (VirtualMachineError | ThreadDeath fatal) {
+            throw fatal;
+        } catch (Throwable failure) {
             return uncontrolled(failure);
         }
     }

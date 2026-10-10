@@ -36,11 +36,13 @@ import static io.github.gromoff97.awium.ConditionDefinition.required;
 public final class Await<Observed, Element, Family extends Source<?>> {
 
     private final Source<? extends Observed> source;
-    private final WaitEngine engine;
+    private final WaitConfiguration configuration;
+    private final LongSupplier clock;
+    private final LongConsumer parker;
 
     private Await(Source<? extends Observed> source) {
         this(requireNonNull(source, "source must not be null"),
-                new WaitEngine(defaults(), System::nanoTime, LockSupport::parkNanos));
+                defaults(), System::nanoTime, LockSupport::parkNanos);
     }
 
     public static <Value> Await<Value, Value, Source<?>> await(Source<Value> source) {
@@ -69,21 +71,24 @@ public final class Await<Observed, Element, Family extends Source<?>> {
         return new Await<>(source);
     }
 
-    private Await(Source<? extends Observed> source, WaitEngine engine) {
+    private Await(Source<? extends Observed> source, WaitConfiguration configuration,
+            LongSupplier clock, LongConsumer parker) {
         this.source = source;
-        this.engine = engine;
+        this.configuration = configuration;
+        this.clock = clock;
+        this.parker = parker;
     }
 
     public Await<Observed, Element, Family> every(Duration interval) {
-        return reconfigured(engine.configuration().withEvery(interval));
+        return reconfigured(configuration.withEvery(interval));
     }
 
     public Await<Observed, Element, Family> upTo(Duration timeout) {
-        return reconfigured(engine.configuration().withUpTo(timeout));
+        return reconfigured(configuration.withUpTo(timeout));
     }
 
     public Await<Observed, Element, Family> persisting(Duration persistence) {
-        return reconfigured(engine.configuration().withPersistence(persistence));
+        return reconfigured(configuration.withPersistence(persistence));
     }
 
     /**
@@ -91,13 +96,13 @@ public final class Await<Observed, Element, Family extends Source<?>> {
      * Both operations must share the same time base; a wait may return early.
      */
     public Await<Observed, Element, Family> usingTime(LongSupplier clock, LongConsumer parker) {
-        return new Await<>(source, new WaitEngine(engine.configuration(),
+        return new Await<>(source, configuration,
                 requireNonNull(clock, "clock must not be null"),
-                requireNonNull(parker, "parker must not be null")));
+                requireNonNull(parker, "parker must not be null"));
     }
 
     private Await<Observed, Element, Family> reconfigured(WaitConfiguration configuration) {
-        return new Await<>(source, new WaitEngine(configuration, engine.clock(), engine.parker()));
+        return new Await<>(source, configuration, clock, parker);
     }
 
     public Observed until(PreservingCondition<? super Observed> condition) {
@@ -201,7 +206,8 @@ public final class Await<Observed, Element, Family extends Source<?>> {
     }
 
     private <Result> Result complete(ConditionSession<? super Observed, ? extends Result> session) {
-        return complete(engine.waitFor(source, session), session.metadata, engine.configuration());
+        return complete(new WaitEngine<Observed, Result>(configuration, clock, parker, source, session).waitFor(),
+                session.metadata, configuration);
     }
 
     static <Observed, Result> Result complete(WaitCompletion<Observed, Result> outcome,
@@ -218,11 +224,11 @@ public final class Await<Observed, Element, Family extends Source<?>> {
 
     private <Result> AwaitResult<Observed, Result> capture(ConditionSession<? super Observed, ? extends Result> session) {
         var history = new AttemptHistory<Observed, Result>();
-        var outcome = engine.waitFor(source, session, history);
+        var outcome = new WaitEngine<Observed, Result>(configuration, clock, parker, source, session).waitFor(history);
         if (outcome instanceof WaitCompletion.Satisfied<Observed, Result> success) {
             return new AwaitResult.Satisfied<>(history.snapshot(), success.attempt().number(), success.result());
         }
         return new AwaitResult.Failed<>(history.snapshot(), outcome.attempt().number(),
-                FailureDiagnostics.failure(outcome, session.metadata, engine.configuration()));
+                FailureDiagnostics.failure(outcome, session.metadata, configuration));
     }
 }

@@ -1,11 +1,14 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.ExpectedCondition;
+import io.github.gromoff97.awium.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-
+import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.ConditionResult.Reference;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.function.IntPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -16,10 +19,61 @@ import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static java.util.Objects.requireNonNull;
 
+/** Creates conditions and shares checks and composition across catalogs. */
 final class ConditionSupport {
 
-    private ConditionSupport() {
-        throw new AssertionError("Utility class");
+    private ConditionSupport() {}
+
+    static <Observed, Result> Condition<Observed, Result> condition(String description, Reference<?> reference,
+            CheckedFunction<? super Observed, ? extends ConditionResult<? extends Result>> evaluation) {
+        var metadata = new ConditionMetadata(description, null, reference);
+        requireNonNull(evaluation, "evaluation must not be null");
+        return new Condition<>(metadata, () -> evaluation);
+    }
+
+    static <Observed, Result> Condition<Observed, Result> conditionFactory(String description,
+            Callable<? extends CheckedFunction<? super Observed, ? extends ConditionResult<? extends Result>>> evaluatorFactory) {
+        return new Condition<>(new ConditionMetadata(description, null, null), evaluatorFactory);
+    }
+
+    static <Observed> PreservingCondition<Observed> preserving(String description,
+            CheckedFunction<? super Observed, ? extends ConditionResult<? extends Observed>> evaluator) {
+        return preserving(description, null, evaluator);
+    }
+
+    static <Observed> PreservingCondition<Observed> preserving(String description, Reference<?> reference,
+            CheckedFunction<? super Observed, ? extends ConditionResult<? extends Observed>> evaluator) {
+        var metadata = new ConditionMetadata(description, null, reference);
+        requireNonNull(evaluator, "evaluation must not be null");
+        return new PreservingCondition<>(metadata, () -> evaluator);
+    }
+
+    static <Expected> ExpectedCondition<Expected> expected(String description, Reference<?> reference,
+            CheckedFunction<Object, ConditionResult<Object>> evaluator) {
+        var metadata = new ConditionMetadata(description, null, reference);
+        requireNonNull(evaluator, "evaluation must not be null");
+        return new ExpectedCondition<>(metadata, () -> evaluator);
+    }
+
+    static <Result> NarrowingCondition<Result> narrowing(String description, CheckedFunction<Object, ConditionResult<Result>> evaluator) {
+        var metadata = new ConditionMetadata(description, null, null);
+        requireNonNull(evaluator, "evaluation must not be null");
+        return new NarrowingCondition<>(metadata, () -> evaluator);
+    }
+
+    static <Observed, Family> SelectedCondition<Observed, Family> selected(String description,
+            CheckedFunction<? super Observed, ? extends ConditionResult<?>> evaluator) {
+        var metadata = new ConditionMetadata(description, null, null);
+        requireNonNull(evaluator, "evaluation must not be null");
+        return new SelectedCondition<>(metadata, () -> evaluator);
+    }
+
+    static <Value> Reference<Value> expectedReference(Value value) {
+        return new Reference<>("Expected", value);
+    }
+
+    static <Value> Reference<Value> unexpectedReference(Value value) {
+        return new Reference<>("Unexpected", value);
     }
 
     static <Observed, Value, Result> Condition<Observed, Result> compose(String prefix, ConditionDefinition<?, ?> nested,
@@ -33,7 +87,7 @@ final class ConditionSupport {
 
     static <Observed> PreservingCondition<Observed> preserving(String description, String mismatch,
             Predicate<? super Observed> matches) {
-        return ConditionFactories.preserving(description, actual -> matches.test(actual)
+        return preserving(description, actual -> matches.test(actual)
                 ? satisfied(actual) : unsatisfied(mismatch));
     }
 
@@ -44,7 +98,7 @@ final class ConditionSupport {
 
     static <Observed> PreservingCondition<Observed> preservingNonNull(String subject, String description,
             String mismatch, Reference<?> reference, Predicate<? super Observed> matches) {
-        return ConditionFactories.preserving(description, reference, actual -> actual == null
+        return preserving(description, reference, actual -> actual == null
                 ? unsatisfied(subject + " was null")
                 : matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch));
     }
@@ -54,7 +108,7 @@ final class ConditionSupport {
         if (bound < 0) {
             throw new IllegalArgumentException("size must be non-negative");
         }
-        return ConditionFactories.preserving(description, actual -> {
+        return preserving(description, actual -> {
             if (actual == null) {
                 return unsatisfied(subject + " was null");
             }

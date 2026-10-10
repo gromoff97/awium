@@ -448,20 +448,22 @@ Run `./gradlew check` for behavior, fluent compilation, and packaged-module
 checks; `./gradlew pitest` runs mutation testing.
 
 Conditions are immutable definitions. Each terminal call creates fresh
-`ConditionSession` instances, whose callbacks initialize lazily. Ordered waits
+`ConditionSession` instances, which initialize callbacks lazily and convert
+nonfatal callback failures into uncontrolled results. Ordered waits
 use the same sessions for their stages; `CapturedEvaluator` owns their construction,
 progress, and captured values. Condition families preserve the fluent API's result
 types. A selection condition's `Family` is an opaque compatibility marker;
 `Await` binds it to the source family.
 
 `ConditionResult` owns the result of one check and its diagnostic `Context`
-and `Reference`. `WaitEngine` owns timing, `ObservationEvaluator` owns source
-and callback execution, and `AttemptHistory` owns history retention and
-compression. `FailureDiagnostics` interprets wait outcomes and formats
+and `Reference`. `Await` retains immutable configuration; each terminal call
+creates a `WaitEngine` that owns polling, source retrieval, and attempt timing.
+`AttemptHistory` owns history retention and compression.
+`FailureDiagnostics` interprets wait outcomes and formats
 diagnostics and durations. A successful check can still finish too late.
 
-Condition composition shares extraction and session creation in
-`ConditionSupport`. Failed extraction carries its own expectation, so missing
+`ConditionSupport` owns condition construction, shared checks, extraction, and
+session composition. Failed extraction carries its own expectation, so missing
 map keys remain distinguishable from mismatches in nested conditions.
 
 Catalog and fluent behavior tests use virtual time; dedicated real-time and

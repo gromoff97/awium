@@ -121,26 +121,26 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void runtimeExceptionEscapesYieldsUnchanged() {
+    void runtimeExceptionIsRetainedAsYieldsFailure() {
         var failure = new RuntimeException("runtime");
         var condition = Conditions.<String, Long>yields(value -> {
             throw failure;
         });
 
-        assertSame(failure, assertThrows(RuntimeException.class,
-                () -> evaluate(condition, "42")));
+        assertSame(failure, org.junit.jupiter.api.Assertions.assertInstanceOf(
+                ConditionResult.Uncontrolled.class, evaluate(condition, "42")).cause());
     }
 
     @Test
-    void nonAssertionErrorEscapesYieldsUnchanged() {
+    void nonAssertionErrorIsRetainedAsYieldsFailure() {
         var failure = new LinkageError("error");
 
         var condition = Conditions.<String, Long>yields(value -> {
             throw failure;
         });
 
-        assertSame(failure, assertThrows(LinkageError.class,
-                () -> evaluate(condition, "42")));
+        assertSame(failure, org.junit.jupiter.api.Assertions.assertInstanceOf(
+                ConditionResult.Uncontrolled.class, evaluate(condition, "42")).cause());
     }
 
     @Test

@@ -13,10 +13,10 @@ import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.nonEmpty;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
-import static io.github.gromoff97.awium.ConditionFactories.expected;
-import static io.github.gromoff97.awium.ConditionFactories.expectedReference;
-import static io.github.gromoff97.awium.ConditionFactories.narrowing;
-import static io.github.gromoff97.awium.ConditionFactories.unexpectedReference;
+import static io.github.gromoff97.awium.ConditionSupport.expected;
+import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
+import static io.github.gromoff97.awium.ConditionSupport.narrowing;
+import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ValueMatching.equal;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static java.util.Arrays.stream;
@@ -29,23 +29,21 @@ public final class Conditions {
     public static final PreservingCondition<Object> isNotNull = ConditionSupport.preserving("value is not null",
             "value was null", actual -> actual != null);
 
-    private Conditions() {
-        throw new AssertionError("Utility class");
-    }
+    private Conditions() {}
 
     public static <Observed, Result> Condition<Observed, Result> condition(String description,
             CheckedFunction<? super Observed, ? extends ConditionResult<? extends Result>> evaluation) {
-        return ConditionFactories.condition(description, null, evaluation);
+        return ConditionSupport.condition(description, null, evaluation);
     }
 
     public static <Observed, Result> Condition<Observed, Result> conditionFactory(String description,
             Callable<? extends CheckedFunction<? super Observed, ? extends ConditionResult<? extends Result>>> evaluatorFactory) {
-        return ConditionFactories.conditionFactory(description, evaluatorFactory);
+        return ConditionSupport.conditionFactory(description, evaluatorFactory);
     }
 
     public static <Observed> PreservingCondition<Observed> preserving(String description,
             CheckedFunction<? super Observed, ? extends ConditionResult<? extends Observed>> evaluation) {
-        return ConditionFactories.preserving(description, evaluation);
+        return ConditionSupport.preserving(description, evaluation);
     }
 
     public static <Observed> PreservingCondition<Observed> preservingFactory(String description,
@@ -55,7 +53,7 @@ public final class Conditions {
 
     public static <Observed> PreservingCondition<Observed> asserted(CheckedConsumer<? super Observed> assertion) {
         requireNonNull(assertion, "assertion must not be null");
-        return ConditionFactories.preserving("value satisfies assertion", actual -> {
+        return ConditionSupport.preserving("value satisfies assertion", actual -> {
             try {
                 assertion.accept(actual);
                 return satisfied(actual);

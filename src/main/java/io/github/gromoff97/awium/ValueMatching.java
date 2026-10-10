@@ -12,9 +12,7 @@ import static java.util.Objects.deepEquals;
 
 final class ValueMatching {
 
-    private ValueMatching() {
-        throw new AssertionError("Utility class");
-    }
+    private ValueMatching() {}
 
     static <Value> boolean matchesAny(Iterable<Value> values, Predicate<? super Value> matches) {
         for (Value value : values) {

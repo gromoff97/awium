@@ -71,7 +71,7 @@ class ConditionSessionTest {
 
     @Test
     void conditionFamiliesKeepMetadataAndIndependentEvaluators() {
-        Condition<Integer, Integer> ordinary = ConditionFactories.conditionFactory(
+        Condition<Integer, Integer> ordinary = ConditionSupport.conditionFactory(
                 "counted", () -> {
                     int[] calls = {0};
                     return ignored -> satisfied(++calls[0]);

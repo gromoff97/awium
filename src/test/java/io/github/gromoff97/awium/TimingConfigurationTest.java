@@ -55,6 +55,37 @@ class TimingConfigurationTest {
     }
 
     @Test
+    void reusedAwaitStartsTimingAndConditionStateAtEachTerminalCall() {
+        var time = new FakeTime(100);
+        int[] clockReads = {0};
+        int[] factories = {0};
+        var condition = Conditions.<String, String>conditionFactory("second observation", () -> {
+            factories[0]++;
+            int[] calls = {0};
+            return actual -> ++calls[0] == 2
+                    ? ConditionResult.satisfied(actual) : ConditionResult.unsatisfied("first observation");
+        });
+        var waiting = await(() -> "ready").usingTime(() -> {
+            clockReads[0]++;
+            return time.getAsLong();
+        }, time).every(ofNanos(2)).upTo(ofNanos(10));
+
+        assertEquals(0, clockReads[0]);
+        assertEquals(0, factories[0]);
+        time.advanceNanos(1000);
+        assertEquals("ready", waiting.until(condition));
+        assertEquals(1, factories[0]);
+
+        time.advanceNanos(1000);
+        var result = waiting.tryUntil(condition);
+        assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals(2, factories[0]);
+        assertEquals(2, result.totalAttempts());
+        assertEquals(ofNanos(0), result.attempts().getFirst().outcome().timing().startOffset());
+        assertEquals(ofNanos(2), result.attempts().getLast().outcome().timing().completionOffset());
+    }
+
+    @Test
     void rejectsMissingTimeOperationsBeforePolling() {
         var time = new FakeTime(0);
         assertThrows(NullPointerException.class, () -> await((Source<String>) () -> {

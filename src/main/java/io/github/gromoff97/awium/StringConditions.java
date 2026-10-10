@@ -10,8 +10,8 @@ import java.util.regex.Pattern;
 
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
-import static io.github.gromoff97.awium.ConditionFactories.expectedReference;
-import static io.github.gromoff97.awium.ConditionFactories.unexpectedReference;
+import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
+import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static java.util.Objects.requireNonNull;
 
 public final class StringConditions {
@@ -21,9 +21,7 @@ public final class StringConditions {
     public static final PreservingCondition<String> blank = matching("string is blank", "string was not blank", String::isBlank);
     public static final PreservingCondition<String> nonBlank = matching("string is not blank", "string was blank", value -> !value.isBlank());
 
-    private StringConditions() {
-        throw new AssertionError("Utility class");
-    }
+    private StringConditions() {}
 
     public static PreservingCondition<String> contains(String... expected) {
         List<String> values = nonEmpty(expected, "expected strings");

@@ -2,7 +2,6 @@ package io.github.gromoff97.awium;
 
 import java.time.Duration;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
@@ -12,31 +11,31 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Thread.currentThread;
 
+/** One wait execution, including its observations, timing, and condition session. */
 @SuppressWarnings("removal")
-record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
-        LongConsumer parker) {
+record WaitEngine<Observed, Result>(WaitConfiguration configuration, LongSupplier clock,
+        LongConsumer parker, Source<? extends Observed> source,
+        ConditionSession<? super Observed, ? extends Result> evaluator, long started) {
 
-    <Observed, Result> WaitCompletion<Observed, Result> waitFor(Source<? extends Observed> source,
-            Function<? super Observed, ? extends ConditionResult<? extends Result>> evaluator) {
-        return waitFor(source, evaluator, ignored -> {});
+    WaitEngine(WaitConfiguration configuration, LongSupplier clock, LongConsumer parker,
+            Source<? extends Observed> source, ConditionSession<? super Observed, ? extends Result> evaluator) {
+        this(configuration, clock, parker, source, evaluator, clock.getAsLong());
     }
 
-    <Observed, Result> WaitCompletion<Observed, Result> waitFor(Source<? extends Observed> source,
-            Function<? super Observed, ? extends ConditionResult<? extends Result>> evaluator,
-            Consumer<AwaitAttempt<Observed, Result>> recorder) {
-        long started = clock.getAsLong();
-        ObservationEvaluator<Observed, Result> observations = new ObservationEvaluator<>(source, evaluator, clock, started);
-        WaitCompletion<Observed, Result> acquisition = acquire(observations, recorder, started);
+    WaitCompletion<Observed, Result> waitFor() {
+        return waitFor(ignored -> {});
+    }
+
+    WaitCompletion<Observed, Result> waitFor(Consumer<AwaitAttempt<Observed, Result>> recorder) {
+        WaitCompletion<Observed, Result> acquisition = acquire(recorder);
         if (!(acquisition instanceof WaitCompletion.Satisfied<Observed, Result> acquired)
                 || configuration.persistenceNanos() == 0) {
             return acquisition;
         }
-        return persist(observations, recorder, started, acquired);
+        return persist(recorder, acquired);
     }
 
-    private <Observed, Result> WaitCompletion<Observed, Result> acquire(ObservationEvaluator<Observed, Result> observations,
-            Consumer<AwaitAttempt<Observed, Result>> recorder,
-            long started) {
+    private WaitCompletion<Observed, Result> acquire(Consumer<AwaitAttempt<Observed, Result>> recorder) {
         long deadline = started + configuration.upToNanos();
         AwaitAttempt<Observed, Result> lastUnsatisfied = null;
         long completed = started;
@@ -44,9 +43,9 @@ record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
         for (long number = 1;; number++) {
             long attemptStarted = completed;
             AwaitAttempt<Observed, Result> preparationFailure = number == 1
-                    ? interruptedBefore(ACQUISITION, number, started, attemptStarted)
+                    ? interruptedBefore(ACQUISITION, number, attemptStarted)
                     : waitBeforeAttempt(min(configuration.everyNanos(), remaining(completed, deadline)),
-                            ACQUISITION, number, started, attemptStarted);
+                            ACQUISITION, number, attemptStarted);
             if (preparationFailure != null) {
                 recorder.accept(preparationFailure);
                 return new WaitCompletion.Uncontrolled<>(preparationFailure);
@@ -57,9 +56,9 @@ record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
                 return new WaitCompletion.TimeoutBetweenObservations<>(retrievalStarted - started, lastUnsatisfied);
             }
 
-            AwaitAttempt<Observed, Result> attempt = observations.evaluate(ACQUISITION,
+            AwaitAttempt<Observed, Result> attempt = evaluate(ACQUISITION,
                     number, attemptStarted, retrievalStarted);
-            completed = completedNanos(started, attempt);
+            completed = completedNanos(attempt);
             recorder.accept(attempt);
             if (failed(attempt)) {
                 return new WaitCompletion.Uncontrolled<>(attempt);
@@ -74,11 +73,9 @@ record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
         }
     }
 
-    private <Observed, Result> WaitCompletion<Observed, Result> persist(ObservationEvaluator<Observed, Result> observations,
-            Consumer<AwaitAttempt<Observed, Result>> recorder,
-            long started,
+    private WaitCompletion<Observed, Result> persist(Consumer<AwaitAttempt<Observed, Result>> recorder,
             WaitCompletion.Satisfied<Observed, Result> acquired) {
-        long acquiredAt = completedNanos(started, acquired.attempt());
+        long acquiredAt = completedNanos(acquired.attempt());
         long deadline = acquiredAt + configuration.persistenceNanos();
         long completed = acquiredAt;
 
@@ -86,16 +83,16 @@ record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
             long attemptStarted = completed;
             long delay = min(configuration.everyNanos(), remaining(completed, deadline));
             AwaitAttempt<Observed, Result> preparationFailure = waitBeforeAttempt(delay,
-                    PERSISTENCE, number, started, attemptStarted);
+                    PERSISTENCE, number, attemptStarted);
             if (preparationFailure != null) {
                 recorder.accept(preparationFailure);
                 return new WaitCompletion.Uncontrolled<>(preparationFailure);
             }
 
             long retrievalStarted = clock.getAsLong();
-            AwaitAttempt<Observed, Result> attempt = observations.evaluate(PERSISTENCE,
+            AwaitAttempt<Observed, Result> attempt = evaluate(PERSISTENCE,
                     number, attemptStarted, retrievalStarted);
-            completed = completedNanos(started, attempt);
+            completed = completedNanos(attempt);
             recorder.accept(attempt);
             if (failed(attempt)) {
                 return new WaitCompletion.Uncontrolled<>(attempt);
@@ -109,19 +106,90 @@ record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
         }
     }
 
-    private <Observed, Result> AwaitAttempt<Observed, Result> waitBeforeAttempt(long delay,
-            AwaitAttempt.Phase phase, long number, long started,
-            long attemptStarted) {
-        AwaitAttempt<Observed, Result> failure = parkUntil(attemptStarted + delay,
-                phase, number, started, attemptStarted);
-        return failure != null
-                ? failure
-                : interruptedBefore(phase, number, started, attemptStarted);
+    private AwaitAttempt<Observed, Result> evaluate(AwaitAttempt.Phase phase, long number,
+            long attemptStarted, long retrievalStarted) {
+        Observed actual;
+        try {
+            actual = source.get();
+        } catch (VirtualMachineError | ThreadDeath fatal) {
+            throw fatal;
+        } catch (Throwable failure) {
+            if (failure instanceof InterruptedException) {
+                currentThread().interrupt();
+            }
+            return beforeObservation(phase, number, attemptStarted,
+                    retrievalStarted, failure);
+        }
+
+        long observed = clock.getAsLong();
+        if (currentThread().isInterrupted()) {
+            var interruption = new InterruptedException("caller thread interrupt flag was set");
+            return afterSourceInterruption(phase, number, attemptStarted,
+                    retrievalStarted, observed, actual, interruption);
+        }
+
+        ConditionResult<? extends Result> evaluation = evaluator.apply(actual);
+
+        if (!(evaluation instanceof ConditionResult.Uncontrolled<?>)
+                && currentThread().isInterrupted()) {
+            var interruption = new InterruptedException("caller thread interrupt flag was set");
+            evaluation = new ConditionResult.Uncontrolled<>(interruption,
+                    evaluation == null ? ConditionResult.Context.Plain.INSTANCE : evaluation.context());
+        }
+
+        long completed = clock.getAsLong();
+        AwaitAttempt.Timing.AfterObservation timing = afterObservation(attemptStarted,
+                retrievalStarted, observed, completed);
+        if (evaluation == null) {
+            evaluation = ConditionResult.uncontrolled(
+                    new NullPointerException("condition returned null ConditionResult"));
+        }
+        if (evaluation instanceof ConditionResult.Uncontrolled<?> uncontrolled) {
+            Throwable failure = uncontrolled.cause();
+            if (failure instanceof Error fatal
+                    && (fatal instanceof VirtualMachineError || fatal instanceof ThreadDeath)) {
+                throw fatal;
+            }
+            if (failure instanceof InterruptedException) {
+                currentThread().interrupt();
+            }
+        }
+        return new AwaitAttempt<>(number, phase,
+                new AwaitAttempt.Outcome.Evaluated<>(timing, actual, evaluation));
     }
 
-    private <Observed, Result> AwaitAttempt<Observed, Result> parkUntil(long deadline,
-            AwaitAttempt.Phase phase, long number, long started,
+    private AwaitAttempt<Observed, Result> beforeObservation(AwaitAttempt.Phase phase,
+            long number, long attemptStarted,
+            long retrievalStarted, Throwable failure) {
+        long completed = clock.getAsLong();
+        var timing = new AwaitAttempt.Timing.BeforeObservation(offset(attemptStarted),
+                offset(retrievalStarted), offset(completed));
+        return new AwaitAttempt<>(number, phase,
+                new AwaitAttempt.Outcome.SourceRetrievalFailed<>(timing, failure));
+    }
+
+    private AwaitAttempt<Observed, Result> afterSourceInterruption(AwaitAttempt.Phase phase, long number,
+            long attemptStarted, long retrievalStarted, long observed,
+            Observed actual, InterruptedException interruption) {
+        currentThread().interrupt();
+        long completed = clock.getAsLong();
+        var timing = afterObservation(attemptStarted, retrievalStarted, observed, completed);
+        return new AwaitAttempt<>(number, phase,
+                new AwaitAttempt.Outcome.SourceInterrupted<>(timing, actual, interruption));
+    }
+
+    private AwaitAttempt.Timing.AfterObservation afterObservation(long attemptStarted, long retrievalStarted,
+            long observed, long completed) {
+        return new AwaitAttempt.Timing.AfterObservation(offset(attemptStarted),
+                offset(retrievalStarted),
+                offset(observed),
+                offset(completed));
+    }
+
+    private AwaitAttempt<Observed, Result> waitBeforeAttempt(long delay,
+            AwaitAttempt.Phase phase, long number,
             long attemptStarted) {
+        long deadline = attemptStarted + delay;
         long remaining;
         while ((remaining = remaining(clock.getAsLong(), deadline)) > 0) {
             try {
@@ -129,32 +197,32 @@ record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
             } catch (VirtualMachineError | ThreadDeath fatal) {
                 throw fatal;
             } catch (Throwable failure) {
-                return waitingFailure(phase, number, started, attemptStarted, failure);
+                return waitingFailure(phase, number, attemptStarted, failure);
             }
-            AwaitAttempt<Observed, Result> interrupted = interruptedBefore(phase, number, started, attemptStarted);
+            AwaitAttempt<Observed, Result> interrupted = interruptedBefore(phase, number, attemptStarted);
             if (interrupted != null) {
                 return interrupted;
             }
         }
-        return null;
+        return interruptedBefore(phase, number, attemptStarted);
     }
 
-    private <Observed, Result> AwaitAttempt<Observed, Result> interruptedBefore(AwaitAttempt.Phase phase, long number, long started,
+    private AwaitAttempt<Observed, Result> interruptedBefore(AwaitAttempt.Phase phase, long number,
             long attemptStarted) {
         if (!currentThread().isInterrupted()) {
             return null;
         }
-        return waitingFailure(phase, number, started, attemptStarted,
+        return waitingFailure(phase, number, attemptStarted,
                 new InterruptedException("caller thread interrupt flag was set"));
     }
 
-    private <Observed, Result> AwaitAttempt<Observed, Result> waitingFailure(AwaitAttempt.Phase phase, long number, long started,
+    private AwaitAttempt<Observed, Result> waitingFailure(AwaitAttempt.Phase phase, long number,
             long attemptStarted, Throwable failure) {
         if (failure instanceof InterruptedException) {
             currentThread().interrupt();
         }
         long completed = clock.getAsLong();
-        var timing = new AwaitAttempt.Timing.BeforeRetrieval(offset(started, attemptStarted), offset(started, completed));
+        var timing = new AwaitAttempt.Timing.BeforeRetrieval(offset(attemptStarted), offset(completed));
         return new AwaitAttempt<>(number, phase, new AwaitAttempt.Outcome.WaitingFailed<>(timing, failure));
     }
 
@@ -172,11 +240,11 @@ record WaitEngine(WaitConfiguration configuration, LongSupplier clock,
         return !satisfied(attempt) && !unsatisfied(attempt);
     }
 
-    private static long completedNanos(long started, AwaitAttempt<?, ?> attempt) {
+    private long completedNanos(AwaitAttempt<?, ?> attempt) {
         return started + attempt.outcome().timing().completionOffset().toNanos();
     }
 
-    private static Duration offset(long started, long stage) {
+    private Duration offset(long stage) {
         return Duration.ofNanos(stage - started);
     }
 

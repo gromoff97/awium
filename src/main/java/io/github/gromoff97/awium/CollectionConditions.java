@@ -27,9 +27,9 @@ import static io.github.gromoff97.awium.ConditionSupport.nonEmpty;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
 import static io.github.gromoff97.awium.Conditions.condition;
-import static io.github.gromoff97.awium.ConditionFactories.selected;
-import static io.github.gromoff97.awium.ConditionFactories.expectedReference;
-import static io.github.gromoff97.awium.ConditionFactories.unexpectedReference;
+import static io.github.gromoff97.awium.ConditionSupport.selected;
+import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
+import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
@@ -59,9 +59,7 @@ public final class CollectionConditions {
     public static final PreservingCondition<Collection<?>> hasNoDuplicates = preserving("collection has no duplicates",
             "collection contained duplicates", CollectionConditions::hasUniqueElements);
 
-    private CollectionConditions() {
-        throw new AssertionError("Utility class");
-    }
+    private CollectionConditions() {}
 
     public static PreservingCondition<Collection<?>> size(int expected) {
         return sized(expected, actual -> actual == expected,

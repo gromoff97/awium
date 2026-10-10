@@ -86,13 +86,13 @@ final class FailureDiagnostics {
         try {
             String message;
             try {
-                message = format();
+                message = message(title(), null);
             } catch (VirtualMachineError | ThreadDeath fatal) {
                 addSuppressed(fatal, cause);
                 throw fatal;
             } catch (Throwable failure) {
                 try {
-                    message = emergency(failure);
+                    message = message("Failure diagnostics could not be formatted", failure);
                 } catch (VirtualMachineError | ThreadDeath fatal) {
                     addSuppressed(fatal, failure);
                     if (cause != failure) {
@@ -144,57 +144,47 @@ final class FailureDiagnostics {
         }
     }
 
-    private String format() {
+    private String title() {
         return switch (outcome) {
             case WaitCompletion.TimeoutBetweenObservations<?, ?> ignored ->
-                    message("Acquisition deadline elapsed before the next attempt");
-            case WaitCompletion.LateTimeout<?, ?> value -> message(
+                    "Acquisition deadline elapsed before the next attempt";
+            case WaitCompletion.LateTimeout<?, ?> value ->
                     value.attempt().outcome() instanceof AwaitAttempt.Outcome.Evaluated<?, ?> evaluated
                             && evaluated.evaluation() instanceof ConditionResult.Satisfied<?>
                             ? "Condition became satisfied at or after the acquisition deadline"
-                            : "Condition remained unsatisfied at or after the acquisition deadline");
+                            : "Condition remained unsatisfied at or after the acquisition deadline";
             case WaitCompletion.PersistenceFailure<?, ?> ignored ->
-                    message("Condition did not persist for the required duration");
+                    "Condition did not persist for the required duration";
             case WaitCompletion.Uncontrolled<?, ?> ignored ->
-                    message(uncontrolledHeading());
+                    uncontrolledHeading();
             case WaitCompletion.Satisfied<?, ?> ignored ->
                     throw new IllegalArgumentException("successful outcomes have no failure diagnostics");
         };
     }
 
-    private String emergency(Throwable failure) {
-        StringBuilder out = heading("Failure diagnostics could not be formatted");
-        condition(out, true);
+    private String message(String title, Throwable diagnosticFailure) {
+        boolean emergency = diagnosticFailure != null;
         AwaitAttempt<?, ?> attempt = outcome.attempt();
-        String actual = attempt.outcome().timing() instanceof AwaitAttempt.Timing.AfterObservation
-                ? this.actual == null
-                        ? "<value unavailable: diagnostics failed>" : this.actual
-                : null;
-        attempt(out, attempt.number(), actual,
+        StringBuilder out = new StringBuilder(title).append("\n\n");
+        condition(out, emergency);
+        String renderedActual = null;
+        if (attempt.outcome().timing() instanceof AwaitAttempt.Timing.AfterObservation) {
+            if (!emergency) {
+                actual = renderValue(observed);
+            }
+            renderedActual = actual == null ? "<value unavailable: diagnostics failed>" : actual;
+        }
+        attempt(out, attempt.number(), renderedActual,
                 sequence == null ? mismatch : null);
-        sequence(out, true);
-        timing(out);
-        cause(out, emergencyDiagnostic(failure));
-        return finish(out);
-    }
-
-    private String message(String title) {
-        AwaitAttempt<?, ?> attempt = outcome.attempt();
-        StringBuilder out = heading(title);
-        condition(out, false);
-        String actual = attempt.outcome().timing() instanceof AwaitAttempt.Timing.AfterObservation
-                ? actualValue() : null;
-        attempt(out, attempt.number(), actual,
-                sequence == null ? mismatch : null);
-        sequence(out, false);
-        if (!(outcome instanceof WaitCompletion.Uncontrolled<?, ?>)) {
+        sequence(out, emergency);
+        if (emergency || !(outcome instanceof WaitCompletion.Uncontrolled<?, ?>)) {
             timing(out);
         }
-        Throwable failure = cause;
+        Throwable failure = emergency ? diagnosticFailure : cause;
         if (failure != null) {
-            cause(out, throwableDiagnostic(failure));
+            cause(out, emergency ? emergencyDiagnostic(failure) : throwableDiagnostic(failure));
         }
-        return finish(out);
+        return out.deleteCharAt(out.length() - 1).toString();
     }
 
     private void timing(StringBuilder out) {
@@ -297,14 +287,6 @@ final class FailureDiagnostics {
         }
     }
 
-    private static StringBuilder heading(String value) {
-        return new StringBuilder(value).append("\n\n");
-    }
-
-    private static String finish(StringBuilder out) {
-        return out.deleteCharAt(out.length() - 1).toString();
-    }
-
     private static String renderValue(Object value) {
         if (value != null && value.getClass().isArray()) {
             String array = deepToString(new Object[]{value});
@@ -346,10 +328,6 @@ final class FailureDiagnostics {
         } catch (Throwable ignored) {
             return new ThrowableDiagnostic(typeName(failure), null);
         }
-    }
-
-    private String actualValue() {
-        return actual = renderValue(observed);
     }
 
     private String referenceValue(Reference<?> value, boolean sequence) {

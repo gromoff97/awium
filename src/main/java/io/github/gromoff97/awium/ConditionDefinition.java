@@ -1,15 +1,12 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.*;
-
 import java.util.Locale;
 import java.util.concurrent.Callable;
 
 import static java.util.Objects.requireNonNull;
 
 /** Immutable definition; each session owns its lazy callback and execution state. */
-abstract sealed class ConditionDefinition<Observed, Result>
-        permits Condition, PreservingCondition, ExpectedCondition, NarrowingCondition, SelectedCondition {
+abstract class ConditionDefinition<Observed, Result> {
 
     final ConditionMetadata metadata;
     final Callable<? extends CheckedFunction<? super Observed, ? extends ConditionResult<? extends Result>>> evaluatorFactory;

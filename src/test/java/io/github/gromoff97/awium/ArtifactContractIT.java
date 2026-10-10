@@ -56,21 +56,23 @@ class ArtifactContractIT {
         assertFalse(classes.isEmpty(), dependencies);
         Set<String> facade = Set.of("Await", "Conditions", "CollectionConditions", "MapConditions",
                 "OptionalConditions", "StringConditions", "FailureDiagnostics");
-        for (String execution : Set.of("Condition", "ConditionDefinition", "ConditionSession", "ConditionFactories",
+        for (String execution : Set.of("Condition", "ConditionDefinition", "ConditionSession", "ConditionSupport",
                 "ConditionResult", "ConditionMetadata", "CapturedEvaluator", "WaitEngine",
-                "ObservationEvaluator", "AttemptHistory", "WaitCompletion", "WaitConfiguration")) {
+                "AttemptHistory", "WaitCompletion", "WaitConfiguration")) {
             Set<String> used = classes.getOrDefault(execution, Set.of());
             assertTrue(used.stream().noneMatch(facade::contains), execution + " -> " + used);
         }
         for (String condition : Set.of("Condition", "ConditionDefinition", "ConditionSession", "ConditionResult",
-                "ConditionMetadata", "ConditionFactories", "CapturedEvaluator")) {
+                "ConditionMetadata", "ConditionSupport", "CapturedEvaluator")) {
             assertTrue(classes.get(condition).stream().noneMatch(Set.of("AwaitAttempt", "AwaitResult")::contains),
                     condition + " -> " + classes.get(condition));
         }
-        // Ordinary condition construction is independent of source protocols and ordered execution.
-        Set<String> factories = classes.get("ConditionFactories");
-        assertTrue(factories.stream().noneMatch(Set.of("Source", "CapturedEvaluator", "ConditionSession")::contains),
-                "ConditionFactories -> " + factories);
+        assertFalse(classes.get("ConditionDefinition").contains("Condition"),
+                "ConditionDefinition must not depend on its concrete families");
+        // Shared condition construction and composition are independent of source protocols and ordered execution.
+        Set<String> support = classes.get("ConditionSupport");
+        assertTrue(support.stream().noneMatch(Set.of("Source", "CapturedEvaluator", "ConditionSession")::contains),
+                "ConditionSupport -> " + support);
         // Diagnostics describe failures; only the fluent facade chooses a terminal result or throws.
         Set<String> terminals = Set.of("Await", "AwaitResult", "AwaitAssertionError", "AwaitExecutionException");
         Set<String> diagnostics = classes.get("FailureDiagnostics");
@@ -228,10 +230,10 @@ class ArtifactContractIT {
 
     @Test
     void implementationTypesAreNotAccessibleToConsumers(@TempDir Path directory) throws Exception {
-        for (Class<?> internal : List.of(ConditionFactories.class, ConditionDefinition.class, ConditionSession.class,
+        for (Class<?> internal : List.of(ConditionSupport.class, ConditionDefinition.class, ConditionSession.class,
                 ConditionMetadata.class, CapturedEvaluator.class, WaitEngine.class, WaitConfiguration.class,
-                WaitCompletion.class, ObservationEvaluator.class, AttemptHistory.class,
-                FailureDiagnostics.class, ConditionSupport.class, ValueMatching.class)) {
+                WaitCompletion.class, AttemptHistory.class,
+                FailureDiagnostics.class, ValueMatching.class)) {
             assertFalse(java.lang.reflect.Modifier.isPublic(internal.getModifiers()), internal.getName());
         }
         for (boolean modulePath : List.of(false, true)) {

@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SuppressWarnings("removal")
-class ObservationEvaluatorTest {
+class ObservationTest {
 
     @AfterEach
     void clearInterruptFlag() {
@@ -39,13 +39,13 @@ class ObservationEvaluatorTest {
         var actual = new Object();
         var result = new Object();
 
-        WaitCompletion<Object, Object> terminal = new WaitEngine(config(1, 20, 0), time, time).waitFor(() -> {
+        WaitCompletion<Object, Object> terminal = new WaitEngine<Object, Object>(config(1, 20, 0), time, time, () -> {
             time.advanceNanos(2);
             return actual;
-        }, value -> {
+        }, Conditions.<Object, Object>condition("test condition", value -> {
             time.advanceNanos(3);
             return satisfied(result);
-        });
+        }).newSession()).waitFor();
 
         AwaitAttempt<Object, Object> attempt = terminal.attempt();
         var observation = assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, attempt.outcome());
@@ -104,7 +104,7 @@ class ObservationEvaluatorTest {
     @ParameterizedTest
     @MethodSource("nonFatalThrowables")
     void classifiesEveryOtherSourceThrowableBeforeObservation(Throwable failure) {
-        var attempt = attempt(() -> throwFailure(failure), ObservationEvaluatorTest::failIfCalled);
+        var attempt = attempt(() -> throwFailure(failure), ObservationTest::failIfCalled);
 
         var outcome = assertInstanceOf(AwaitAttempt.Outcome.SourceRetrievalFailed.class, attempt.outcome());
         assertSame(failure, outcome.failure());
@@ -179,7 +179,7 @@ class ObservationEvaluatorTest {
         var interruption = new InterruptedException("source stopped");
         var attempt = attempt(() -> {
             throw interruption;
-        }, ObservationEvaluatorTest::failIfCalled);
+        }, ObservationTest::failIfCalled);
 
         var outcome = assertInstanceOf(AwaitAttempt.Outcome.SourceRetrievalFailed.class, attempt.outcome());
         assertSame(interruption, outcome.failure());
@@ -206,7 +206,7 @@ class ObservationEvaluatorTest {
         var attempt = attempt(() -> {
             currentThread().interrupt();
             return actual;
-        }, ObservationEvaluatorTest::failIfCalled);
+        }, ObservationTest::failIfCalled);
 
         var outcome = assertInstanceOf(AwaitAttempt.Outcome.SourceInterrupted.class, attempt.outcome());
         assertSame(actual, outcome.observed());
@@ -236,7 +236,7 @@ class ObservationEvaluatorTest {
         var attempt = attempt(() -> {
             currentThread().interrupt();
             return throwFailure(failure);
-        }, ObservationEvaluatorTest::failIfCalled);
+        }, ObservationTest::failIfCalled);
 
         var outcome = assertInstanceOf(AwaitAttempt.Outcome.SourceRetrievalFailed.class, attempt.outcome());
         assertSame(failure, outcome.failure());
@@ -264,7 +264,7 @@ class ObservationEvaluatorTest {
     @MethodSource("fatalSignals")
     void fatalSignalsFromSourceEscapeRawAndSkipCondition(Error fatal) {
         assertSame(fatal, assertThrows(fatal.getClass(),
-                () -> attempt(() -> throwFailure(fatal), ObservationEvaluatorTest::failIfCalled)));
+                () -> attempt(() -> throwFailure(fatal), ObservationTest::failIfCalled)));
     }
 
     @ParameterizedTest
@@ -290,7 +290,7 @@ class ObservationEvaluatorTest {
         assertSame(sourceFatal, assertThrows(InternalError.class, () -> attempt(() -> {
             currentThread().interrupt();
             throw sourceFatal;
-        }, ObservationEvaluatorTest::failIfCalled)));
+        }, ObservationTest::failIfCalled)));
         assertTrue(currentThread().isInterrupted());
         interrupted();
 
@@ -333,10 +333,10 @@ class ObservationEvaluatorTest {
     private static <R> AwaitAttempt<Object, R> attempt(Source<Object> source,
             Function<Object, ConditionResult<R>> condition) {
         var time = new FakeTime(0);
-        return new WaitEngine(config(1, 2, 0), time, time).waitFor(source, actual -> {
+        return new WaitEngine<Object, R>(config(1, 2, 0), time, time, source, Conditions.<Object, R>condition("test condition", actual -> {
             ConditionResult<R> evaluation = condition.apply(actual);
             time.advanceNanos(2);
             return evaluation;
-        }).attempt();
+        }).newSession()).waitFor().attempt();
     }
 }

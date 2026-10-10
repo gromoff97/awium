@@ -28,9 +28,9 @@ import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
 import static io.github.gromoff97.awium.Conditions.condition;
-import static io.github.gromoff97.awium.ConditionFactories.selected;
-import static io.github.gromoff97.awium.ConditionFactories.expectedReference;
-import static io.github.gromoff97.awium.ConditionFactories.unexpectedReference;
+import static io.github.gromoff97.awium.ConditionSupport.selected;
+import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
+import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
@@ -51,9 +51,7 @@ public final class MapConditions {
     public static final PreservingCondition<Map<?, ?>> nonEmpty = sized(0, size -> size > 0,
             "map is not empty");
 
-    private MapConditions() {
-        throw new AssertionError("Utility class");
-    }
+    private MapConditions() {}
 
     public static PreservingCondition<Map<?, ?>> size(int expected) {
         return sized(expected, actual -> actual == expected,
@@ -176,7 +174,7 @@ public final class MapConditions {
     }
 
     public static <K, V> Condition<Map<K, V>, V> valueFor(K key) {
-        return ConditionFactories.condition("map contains the expected key", expectedReference(key), actual -> value(actual, key));
+        return ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> value(actual, key));
     }
 
     public static <K, V, R> Condition<Map<K, V>, R> valueFor(K key,
@@ -202,11 +200,11 @@ public final class MapConditions {
     }
 
     public static <K, V> Condition<Map<K, V>, Map.Entry<K, V>> entryFor(K key) {
-        return ConditionFactories.condition("map contains the expected key", expectedReference(key), actual -> findEntry(actual, key));
+        return ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> findEntry(actual, key));
     }
 
     public static <K, V> Condition<Map<K, V>, V> onlyValueFor(K key) {
-        return ConditionFactories.condition("map contains only the expected key", expectedReference(key), actual -> {
+        return ConditionSupport.condition("map contains only the expected key", expectedReference(key), actual -> {
             if (actual == null) {
                 return unsatisfied("map was null");
             }
