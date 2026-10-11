@@ -582,6 +582,66 @@ class CompilationContractTest {
     }
 
     @Test
+    void conditionNamesAcceptEvaluatorsFactoriesAndMethodReferences() throws IOException {
+        assertTrue(compiles("""
+                import static io.github.gromoff97.awium.Await.await;
+                import static io.github.gromoff97.awium.Conditions.*;
+                import io.github.gromoff97.awium.CheckedFunction;
+                import io.github.gromoff97.awium.ConditionResult;
+                import io.github.gromoff97.awium.Source;
+                import java.util.List;
+                import java.util.concurrent.Callable;
+
+                final class Contract {
+                    static CheckedFunction<String, ConditionResult<String>> evaluator() {
+                        return ConditionResult::satisfied;
+                    }
+                    void check(Source<String> source,
+                            Callable<CheckedFunction<String, ConditionResult<Integer>>> factory,
+                            Callable<CheckedFunction<CharSequence, ConditionResult<CharSequence>>> broadFactory) {
+                        String direct = await(source).until(condition("direct", ConditionResult::satisfied));
+                        String created = await(source).until(condition("created", Contract::evaluator));
+                        Integer transformed = await(source).until(condition("transformed", factory));
+                        String preserved = await(source).until(preserving("preserved", Contract::evaluator));
+                        String concrete = await(source).until(preserving("broad", broadFactory));
+                        String explained = await(source).until(condition("explained", Contract::evaluator).because("ready"));
+                        List<String> captured = await(source).until(condition("first", Contract::evaluator),
+                                condition("second", Contract::evaluator));
+                        String stateful = await(source).until(condition("stateful", () -> {
+                            int[] attempts = {0};
+                            return (String value) -> ++attempts[0] == 2
+                                    ? ConditionResult.satisfied(value) : ConditionResult.unsatisfied("not yet");
+                        }));
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void lazyConditionsRejectAnIncompatibleObservedType() throws IOException {
+        for (String terminal : List.of("until", "tryUntil")) {
+            for (String factory : List.of("condition", "preserving")) {
+                assertFalse(compiles("""
+                        import static io.github.gromoff97.awium.Await.await;
+                        import static io.github.gromoff97.awium.Conditions.*;
+                        import io.github.gromoff97.awium.CheckedFunction;
+                        import io.github.gromoff97.awium.ConditionResult;
+                        import io.github.gromoff97.awium.Source;
+
+                        final class Contract {
+                            static CheckedFunction<String, ConditionResult<String>> evaluator() {
+                                return ConditionResult::satisfied;
+                            }
+                            void check(Source<Integer> source) {
+                                await(source).%s(%s("typed", Contract::evaluator));
+                            }
+                        }
+                        """.formatted(terminal, factory)), terminal + ": " + factory);
+            }
+        }
+    }
+
+    @Test
     void collectionExactFactoriesRespectOrderedSourceTyping()
             throws IOException {
         assertTrue(compiles("""

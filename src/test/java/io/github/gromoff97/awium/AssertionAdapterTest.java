@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
@@ -47,14 +48,17 @@ class AssertionAdapterTest {
                 () -> condition(null, payment -> satisfied(payment)))
                 .getMessage().contains("description"));
         assertTrue(assertThrows(NullPointerException.class,
-                () -> condition(null, null))
+                () -> condition(null, (CheckedFunction<Object, ConditionResult<Object>>) null))
                 .getMessage().contains("description"));
         assertTrue(assertThrows(IllegalArgumentException.class,
                 () -> condition(" \n ", payment -> satisfied(payment)))
                 .getMessage().contains("description"));
         assertTrue(assertThrows(NullPointerException.class,
-                () -> condition("payment", null))
+                () -> condition("payment", (CheckedFunction<Object, ConditionResult<Object>>) null))
                 .getMessage().contains("evaluation"));
+        assertTrue(assertThrows(NullPointerException.class,
+                () -> condition("payment", (Callable<CheckedFunction<Object, ConditionResult<Object>>>) null))
+                .getMessage().contains("evaluator factory"));
 
         var condition = Conditions.<String, String>condition(
                 "nullable evaluation", value -> null);

@@ -35,9 +35,9 @@ public final class Conditions {
         return ConditionSupport.condition(description, null, evaluation);
     }
 
-    public static <Observed, Result> Condition<Observed, Result> conditionFactory(String description,
+    public static <Observed, Result> Condition<Observed, Result> condition(String description,
             Callable<? extends CheckedFunction<? super Observed, ? extends ConditionResult<? extends Result>>> evaluatorFactory) {
-        return ConditionSupport.conditionFactory(description, evaluatorFactory);
+        return ConditionSupport.condition(description, evaluatorFactory);
     }
 
     public static <Observed> PreservingCondition<Observed> preserving(String description,
@@ -45,7 +45,7 @@ public final class Conditions {
         return ConditionSupport.preserving(description, evaluation);
     }
 
-    public static <Observed> PreservingCondition<Observed> preservingFactory(String description,
+    public static <Observed> PreservingCondition<Observed> preserving(String description,
             Callable<? extends CheckedFunction<? super Observed, ? extends ConditionResult<? extends Observed>>> evaluatorFactory) {
         return new PreservingCondition<>(new ConditionMetadata(description, null, null), evaluatorFactory);
     }

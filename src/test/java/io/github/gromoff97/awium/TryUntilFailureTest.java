@@ -16,7 +16,6 @@ import static io.github.gromoff97.awium.ConditionResult.uncontrolled;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.asserted;
 import static io.github.gromoff97.awium.Conditions.condition;
-import static io.github.gromoff97.awium.Conditions.conditionFactory;
 import static io.github.gromoff97.awium.Conditions.isNotNull;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static java.lang.Thread.currentThread;
@@ -332,13 +331,13 @@ class TryUntilFailureTest {
     }
 
     private static Condition<Object, Object> failingFactory() {
-        return conditionFactory("condition succeeds", () -> {
+        return condition("condition succeeds", () -> {
             throw new IllegalStateException("condition factory failed");
         });
     }
 
     private static Condition<Object, Object> nullFactory() {
-        return conditionFactory("condition succeeds", () -> null);
+        return condition("condition succeeds", () -> null);
     }
 
     private static Condition<Object, Object> assertionThrowingCondition() {

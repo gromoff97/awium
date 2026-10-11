@@ -26,7 +26,7 @@ class ConditionSessionTest {
         int[] factories = {0};
         var actual = new Object();
         var replacement = new Object();
-        var condition = Conditions.<Object>preservingFactory("two observations", () -> {
+        var condition = Conditions.<Object>preserving("two observations", () -> {
             factories[0]++;
             int[] calls = {0};
             return ignored -> ++calls[0] == 2 ? satisfied(replacement) : ConditionResult.unsatisfied("first observation");
@@ -47,7 +47,7 @@ class ConditionSessionTest {
     @Test
     void mapAndOptionalCompositionCreateOneIndependentSessionPerWait() {
         int[] factories = {0};
-        var nested = Conditions.conditionFactory("two observations", () -> {
+        var nested = Conditions.condition("two observations", () -> {
             factories[0]++;
             int[] calls = {0};
             return (String value) -> ++calls[0] == 2 ? satisfied(value) : ConditionResult.unsatisfied("first observation");
@@ -67,7 +67,7 @@ class ConditionSessionTest {
 
     @Test
     void conditionFamiliesKeepMetadataAndIndependentEvaluators() {
-        Condition<Integer, Integer> ordinary = ConditionSupport.conditionFactory(
+        Condition<Integer, Integer> ordinary = ConditionSupport.condition(
                 "counted", () -> {
                     int[] calls = {0};
                     return ignored -> satisfied(++calls[0]);

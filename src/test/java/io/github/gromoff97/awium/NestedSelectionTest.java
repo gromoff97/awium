@@ -76,7 +76,7 @@ class NestedSelectionTest {
     @Test
     void eachTerminalAndSequenceStageGetsAFreshLazyCallback() {
         var factories = new AtomicInteger();
-        Condition<String, Integer> length = conditionFactory("length after retry", () -> {
+        Condition<String, Integer> length = condition("length after retry", () -> {
             factories.incrementAndGet();
             var calls = new AtomicInteger();
             return value -> calls.incrementAndGet() == 2 ? satisfied(value.length()) : unsatisfied("retry");

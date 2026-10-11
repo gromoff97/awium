@@ -10,7 +10,7 @@ import java.util.stream.Stream;
 
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
-import static io.github.gromoff97.awium.ConditionSupport.conditionFactory;
+import static io.github.gromoff97.awium.ConditionSupport.condition;
 import static java.util.Objects.requireNonNull;
 
 /** Creates ordered conditions and owns the captured values of one execution. */
@@ -28,7 +28,7 @@ final class CapturedEvaluator<Observed, Result> implements CheckedFunction<Obser
     static <Observed, Result> Condition<Observed, List<Result>> captured(Condition<? super Observed, ? extends Result> first,
             Condition<? super Observed, ? extends Result> second, Condition<? super Observed, ? extends Result>... rest) {
         List<Condition<? super Observed, ? extends Result>> stages = stages(first, second, rest);
-        return conditionFactory("conditions are satisfied in order", () ->
+        return condition("conditions are satisfied in order", () ->
                 new CapturedEvaluator<Observed, Result>(stages.stream()
                         .map(stage -> stage.newSession()).toList()));
     }
@@ -47,13 +47,13 @@ final class CapturedEvaluator<Observed, Result> implements CheckedFunction<Obser
             SelectedCondition<? super Observed, Family>... rest) {
         List<SelectedCondition<? super Observed, Family>> stages =
                 stages(first, second, rest);
-        return conditionFactory("conditions are satisfied in order",
+        return condition("conditions are satisfied in order",
                 () -> new CapturedEvaluator<>(stages.stream()
                         .map(stage -> stage.<Element>selectionSession()).toList()));
     }
 
     private static <Observed> Condition<Observed, List<Observed>> capturedPreserving(List<? extends ConditionDefinition<? super Observed, ?>> stages) {
-        return conditionFactory("conditions are satisfied in order", () ->
+        return condition("conditions are satisfied in order", () ->
                 new CapturedEvaluator<>(stages.stream()
                         .map(stage -> stage.<Observed>preservingSession()).toList()));
     }

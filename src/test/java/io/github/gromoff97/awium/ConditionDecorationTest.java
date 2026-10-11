@@ -29,7 +29,7 @@ class ConditionDecorationTest {
     @Test
     void customConditionFactoryCreatesFreshEvaluatorForEveryWait() {
         var factories = new AtomicInteger();
-        Condition<String, String> condition = conditionFactory("first evaluation succeeds", () -> {
+        Condition<String, String> condition = condition("first evaluation succeeds", () -> {
             factories.incrementAndGet();
             var evaluations = new AtomicInteger();
             return actual -> evaluations.incrementAndGet() == 1
@@ -57,7 +57,7 @@ class ConditionDecorationTest {
     @Test
     void customPreservingFactoryCreatesFreshEvaluatorForEveryWait() {
         var factories = new AtomicInteger();
-        PreservingCondition<String> condition = preservingFactory("first evaluation succeeds", () -> {
+        PreservingCondition<String> condition = preserving("first evaluation succeeds", () -> {
             factories.incrementAndGet();
             var evaluations = new AtomicInteger();
             return actual -> evaluations.incrementAndGet() == 1

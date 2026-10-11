@@ -16,7 +16,6 @@ import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.uncontrolled;
 import static io.github.gromoff97.awium.Conditions.condition;
-import static io.github.gromoff97.awium.Conditions.conditionFactory;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -364,7 +363,7 @@ class ObservationTest {
                         failed[0] = true;
                         return uncontrolled(interruption);
                     });
-                    default -> conditionFactory("interruption", () -> {
+                    default -> condition("interruption", () -> {
                         failed[0] = true;
                         throw interruption;
                     });

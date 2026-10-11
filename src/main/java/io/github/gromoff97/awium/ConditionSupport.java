@@ -29,7 +29,7 @@ final class ConditionSupport {
         return new Condition<>(metadata, () -> evaluation);
     }
 
-    static <Observed, Result> Condition<Observed, Result> conditionFactory(String description,
+    static <Observed, Result> Condition<Observed, Result> condition(String description,
             Callable<? extends CheckedFunction<? super Observed, ? extends ConditionResult<? extends Result>>> evaluatorFactory) {
         return new Condition<>(new ConditionMetadata(description, null, null), evaluatorFactory);
     }

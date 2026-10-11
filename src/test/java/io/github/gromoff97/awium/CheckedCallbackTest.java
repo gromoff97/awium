@@ -58,10 +58,10 @@ class CheckedCallbackTest {
                     "yields", () -> waiting.until(yields(actual -> { throw cause; })),
                     "condition", () -> waiting.until(condition("checked", actual -> { throw cause; })),
                     "preserving", () -> waiting.until(preserving("checked", actual -> { throw cause; })),
-                    "condition factory evaluator", () -> waiting.until(conditionFactory("checked", () -> actual -> { throw cause; })),
-                    "preserving factory evaluator", () -> waiting.until(preservingFactory("checked", () -> actual -> { throw cause; })),
-                    "condition factory creation", () -> waiting.until(conditionFactory("checked", () -> { throw cause; })),
-                    "preserving factory creation", () -> waiting.until(preservingFactory("checked", () -> { throw cause; })));
+                    "condition factory evaluator", () -> waiting.until(condition("checked", () -> actual -> { throw cause; })),
+                    "preserving factory evaluator", () -> waiting.until(preserving("checked", () -> actual -> { throw cause; })),
+                    "condition factory creation", () -> waiting.until(condition("checked", () -> { throw cause; })),
+                    "preserving factory creation", () -> waiting.until(preserving("checked", () -> { throw cause; })));
 
             for (var callback : callbacks.entrySet()) {
                 calls[0] = 0;
@@ -93,12 +93,12 @@ class CheckedCallbackTest {
     @Test
     void interruptionDuringFactoryCreationSkipsItsEvaluator() {
         List<Function<Callable<CheckedFunction<String, ConditionResult<String>>>, AwaitResult<?, ?>>> waits = List.of(
-                factory -> await(() -> "ready").tryUntil(conditionFactory("lazy", factory)),
-                factory -> await(() -> "ready").tryUntil(preservingFactory("lazy", factory)),
-                factory -> await(() -> Optional.of("ready")).tryUntil(hasValue(conditionFactory("lazy", factory))),
-                factory -> await(() -> Optional.of("ready")).tryUntil(hasValue(preservingFactory("lazy", factory))),
-                factory -> await(() -> "ready").tryUntil(conditionFactory("lazy", factory), yields(String::trim)),
-                factory -> await(() -> "ready").tryUntil(preservingFactory("lazy", factory), matches(value -> true)));
+                factory -> await(() -> "ready").tryUntil(condition("lazy", factory)),
+                factory -> await(() -> "ready").tryUntil(preserving("lazy", factory)),
+                factory -> await(() -> Optional.of("ready")).tryUntil(hasValue(condition("lazy", factory))),
+                factory -> await(() -> Optional.of("ready")).tryUntil(hasValue(preserving("lazy", factory))),
+                factory -> await(() -> "ready").tryUntil(condition("lazy", factory), yields(String::trim)),
+                factory -> await(() -> "ready").tryUntil(preserving("lazy", factory), matches(value -> true)));
         for (var wait : waits) {
             int[] factoryCalls = {0};
             int[] evaluatorCalls = {0};
@@ -132,7 +132,7 @@ class CheckedCallbackTest {
         var actual = new ProbeContainers.EntryMap<String, String>(List.of(entry));
         int[] factoryCalls = {0};
         int[] evaluatorCalls = {0};
-        var result = await(() -> actual).tryUntil(valueFor("key", conditionFactory("nested", () -> {
+        var result = await(() -> actual).tryUntil(valueFor("key", condition("nested", () -> {
             factoryCalls[0]++;
             return value -> { evaluatorCalls[0]++; return satisfied(value); };
         })));
@@ -343,6 +343,6 @@ class CheckedCallbackTest {
     }
 
     private static Condition<String, String> failing(IOException cause) {
-        return conditionFactory("checked receipt", () -> actual -> { throw cause; });
+        return condition("checked receipt", () -> actual -> { throw cause; });
     }
 }
