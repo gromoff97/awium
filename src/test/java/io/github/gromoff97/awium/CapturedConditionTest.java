@@ -37,6 +37,55 @@ class CapturedConditionTest {
     }
 
     @Test
+    void interruptedStageIsNotCapturedAfterANormalCallbackReturn() {
+        for (boolean capture : List.of(false, true)) {
+            for (int stage : new int[] {1, 2}) {
+                for (boolean matching : List.of(false, true)) {
+                    var time = new FakeTime(0);
+                    int[] sources = {0};
+                    var waiting = timedAwait(() -> {
+                        sources[0]++;
+                        return "ready";
+                    }, config(1, 3, 0), time, time);
+                    var first = Conditions.<String>matches(value -> {
+                        if (stage == 1) {
+                            Thread.currentThread().interrupt();
+                            return matching;
+                        }
+                        return true;
+                    }).because("first stage");
+                    var second = Conditions.<String>matches(value -> {
+                        Thread.currentThread().interrupt();
+                        return matching;
+                    }).because("second stage");
+                    try {
+                        AwaitFailure failure;
+                        if (capture) {
+                            var result = waiting.tryUntil(first, second);
+                            failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+                            var evaluation = assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class,
+                                    result.attempts().getLast().outcome()).evaluation();
+                            var context = assertInstanceOf(ConditionResult.Context.Sequence.class, evaluation.context());
+                            assertEquals(stage - 1, context.capturedStages());
+                            assertEquals(stage, context.evaluatedStageNumber());
+                        } else {
+                            failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(first, second)).failure();
+                        }
+                        assertEquals(INTERRUPTED, failure.reason());
+                        assertInstanceOf(InterruptedException.class, failure.cause());
+                        assertTrue(failure.message().contains("Sequence (captured " + (stage - 1) + " of 2)"));
+                        assertTrue(failure.message().contains("Importance: " + (stage == 1 ? "first" : "second") + " stage"));
+                        assertEquals(stage, sources[0]);
+                        assertTrue(Thread.currentThread().isInterrupted());
+                    } finally {
+                        Thread.interrupted();
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     void lateSuccessfulSequenceKeepsTheFinalStageDiagnostics() {
         for (long delay : new long[]{4, 5}) {
             var time = new FakeTime(0);

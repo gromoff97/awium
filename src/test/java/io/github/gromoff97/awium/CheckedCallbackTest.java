@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -320,6 +321,68 @@ class CheckedCallbackTest {
                 } finally {
                     Thread.interrupted();
                 }
+            }
+        }
+    }
+
+    @Test
+    void signalledCallbacksStopBeforeTheIteratorIsReadAgain() {
+        int[] laterReads = {0};
+        var calls = new AtomicInteger();
+        var actual = new ArrayList<>(List.of("first", "second")) {
+            @Override
+            public Iterator<String> iterator() {
+                Iterator<String> delegate = super.iterator();
+                return new Iterator<>() {
+                    @Override
+                    public boolean hasNext() {
+                        if (Thread.currentThread().isInterrupted()) {
+                            laterReads[0]++;
+                            throw new IllegalStateException("iterator called after interruption");
+                        }
+                        return delegate.hasNext();
+                    }
+
+                    @Override
+                    public String next() { return delegate.next(); }
+                };
+            }
+
+            @Override
+            public String toString() { return "interruptible list"; }
+        };
+        Predicate<String> matching = value -> {
+            calls.incrementAndGet();
+            Thread.currentThread().interrupt();
+            return true;
+        };
+        Predicate<String> mismatching = matching.negate();
+        List<Supplier<AwaitResult<?, ?>>> waits = List.of(
+                () -> await(() -> actual).tryUntil(single(matches(matching))),
+                () -> await(() -> actual).tryUntil(single(yields((String value) -> {
+                    matching.test(value);
+                    return value.length();
+                }))),
+                () -> await(() -> actual).tryUntil(CollectionConditions.any(mismatching)),
+                () -> await(() -> actual).tryUntil(CollectionConditions.all(matching)),
+                () -> await(() -> actual).tryUntil(CollectionConditions.none(mismatching)),
+                () -> await(() -> actual).tryUntil(CollectionConditions.first(mismatching)),
+                () -> await(() -> actual).tryUntil(CollectionConditions.sorted((left, right) -> {
+                    matching.test(left);
+                    return 0;
+                })));
+        for (var wait : waits) {
+            calls.set(0);
+            laterReads[0] = 0;
+            try {
+                var failure = assertInstanceOf(AwaitResult.Failed.class, wait.get()).failure();
+                assertEquals(INTERRUPTED, failure.reason());
+                assertInstanceOf(InterruptedException.class, failure.cause());
+                assertEquals(1, calls.get());
+                assertEquals(0, laterReads[0]);
+                assertTrue(Thread.currentThread().isInterrupted());
+            } finally {
+                Thread.interrupted();
             }
         }
     }

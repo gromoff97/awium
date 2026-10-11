@@ -233,8 +233,9 @@ class TryUntilFailureTest {
         var context = assertInstanceOf(ConditionResult.Context.Sequence.class, outcome.context());
 
         assertEquals(INTERRUPTED, result.failure().reason());
+        assertEquals(0, context.capturedStages());
         assertEquals(1, context.evaluatedStageNumber());
-        assertEquals("second stage", context.expectation());
+        assertEquals("first stage", context.expectation());
         assertTrue(currentThread().isInterrupted());
     }
 

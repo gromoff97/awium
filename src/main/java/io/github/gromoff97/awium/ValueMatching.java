@@ -20,7 +20,9 @@ final class ValueMatching {
     static <Value> boolean matchesAny(Iterable<Value> values, CheckedFunction<? super Value, Boolean> matches) throws Exception {
         for (Value value : values) {
             checkInterruption();
-            if (matches.apply(value)) {
+            boolean matching = matches.apply(value);
+            checkInterruption();
+            if (matching) {
                 return true;
             }
         }

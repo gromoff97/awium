@@ -33,13 +33,22 @@ final class ConditionSession<Observed, Result> implements Function<Observed, Con
             if (result instanceof ConditionResult.Uncontrolled<?> failure) {
                 rethrowFatalOrRestoreInterrupt(failure.cause());
             }
-            return result;
+            return result == null ? null : withInterruption(result);
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
         } catch (Throwable failure) {
             rethrowFatalOrRestoreInterrupt(failure);
             return uncontrolled(failure);
         }
+    }
+
+    static <Result> ConditionResult<? extends Result> withInterruption(ConditionResult<? extends Result> result) {
+        if (!(result instanceof ConditionResult.Uncontrolled<?>) && Thread.currentThread().isInterrupted()) {
+            var interruption = new InterruptedException("caller thread interrupt flag was set");
+            return new ConditionResult.Uncontrolled<>(interruption,
+                    result == null ? ConditionResult.Context.Plain.INSTANCE : result.context());
+        }
+        return result;
     }
 
     private static void rethrowFatalOrRestoreInterrupt(Throwable failure) {

@@ -135,12 +135,7 @@ record WaitEngine<Observed, Result>(WaitConfiguration configuration, LongSupplie
         ConditionResult<? extends Result> evaluation = evaluator.apply(actual);
         long completed = now(clock);
 
-        if (!(evaluation instanceof ConditionResult.Uncontrolled<?>)
-                && currentThread().isInterrupted()) {
-            var interruption = new InterruptedException("caller thread interrupt flag was set");
-            evaluation = new ConditionResult.Uncontrolled<>(interruption,
-                    evaluation == null ? ConditionResult.Context.Plain.INSTANCE : evaluation.context());
-        }
+        evaluation = ConditionSession.withInterruption(evaluation);
 
         AwaitAttempt.Timing.AfterObservation timing = afterObservation(attemptStarted,
                 retrievalStarted, observed, completed);

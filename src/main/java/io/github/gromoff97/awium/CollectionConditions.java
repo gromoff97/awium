@@ -357,7 +357,9 @@ public final class CollectionConditions {
         }
         for (E value : actual) {
             ValueMatching.checkInterruption();
-            if (predicate.test(value)) {
+            boolean matching = predicate.test(value);
+            ValueMatching.checkInterruption();
+            if (matching) {
                 return satisfied(value);
             }
         }
@@ -465,7 +467,9 @@ public final class CollectionConditions {
         while (values.hasNext()) {
             E next = values.next();
             ValueMatching.checkInterruption();
-            if (comparator.compare(previous, next) > 0) {
+            int comparison = comparator.compare(previous, next);
+            ValueMatching.checkInterruption();
+            if (comparison > 0) {
                 return false;
             }
             previous = next;
