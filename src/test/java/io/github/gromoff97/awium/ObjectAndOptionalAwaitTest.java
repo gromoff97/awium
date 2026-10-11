@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test;
 class ObjectAndOptionalAwaitTest {
 
     @Test
-    void singlePredicatesRetryAndReturnTheExactSuccessfulObservationInBothTerminals() {
+    void matchingConditionsRetryAndReturnTheExactSuccessfulObservationInBothTerminals() {
         var time = new FakeTime(0);
         var first = new Object();
         var ready = new Object();
@@ -38,8 +38,8 @@ class ObjectAndOptionalAwaitTest {
         int[] calls = {0};
         var waiting = await(() -> observations[calls[0]++]).usingTime(time, time).every(ofNanos(2)).upTo(ofNanos(5));
 
-        assertSame(ready, waiting.until(actual -> actual == ready));
-        var result = waiting.tryUntil(ready::equals);
+        assertSame(ready, waiting.until(matches(actual -> actual == ready)));
+        var result = waiting.tryUntil(matches(ready::equals));
 
         assertSame(ready, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
         assertEquals(2, result.totalAttempts());
@@ -69,7 +69,7 @@ class ObjectAndOptionalAwaitTest {
     void voidAndNullableSelectingTerminalsReturnNullOnSuccess() {
         var pollingTime = new FakeTime(0);
         assertNull(await((Source<Object>) () -> null).usingTime(pollingTime, pollingTime).until(isNull));
-        assertNull(await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).until(actual -> actual == null));
+        assertNull(await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).until(matches(actual -> actual == null)));
         assertNull(await((Source<String>) () -> "value").usingTime(pollingTime, pollingTime).until(yields(value -> {
             return null;
         }).because("nullable property")));

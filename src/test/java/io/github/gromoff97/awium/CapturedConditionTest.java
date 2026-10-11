@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedOptionalAwait;
@@ -71,9 +70,8 @@ class CapturedConditionTest {
         List<Integer> result = timedAwait(() -> {
             calls[0]++;
             return 1;
-        }, config(1, 10, 0), time, time).until(value -> value == 1,
-                value -> value == 1,
-                value -> value == 1);
+        }, config(1, 10, 0), time, time).until(matches(value -> value == 1),
+                matches(value -> value == 1), matches(value -> value == 1));
 
         assertEquals(List.of(1, 1, 1), result);
         assertEquals(3, calls[0]);
@@ -87,7 +85,7 @@ class CapturedConditionTest {
         var result = timedAwait(() -> {
             time.advanceNanos(2);
             return "observed";
-        }, config(1, 2, 0), time, time).tryUntil(value -> true, value -> true);
+        }, config(1, 2, 0), time, time).tryUntil(matches(value -> true), matches(value -> true));
         var outcome = assertInstanceOf(ConditionResult.Unsatisfied.class,
                 assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, result.attempts().getFirst().outcome()).evaluation());
 
@@ -104,9 +102,9 @@ class CapturedConditionTest {
         int[] next = {0};
 
         List<Payment> result = timedAwait(() -> observations[next[0]++],
-                config(1, 10, 0), time, time).until(payment -> payment.status() == Status.CREATED,
-                payment -> payment.status() == Status.PENDING,
-                payment -> payment.status() == Status.FINISHED);
+                config(1, 10, 0), time, time).until(matches(payment -> payment.status() == Status.CREATED),
+                matches(payment -> payment.status() == Status.PENDING),
+                matches(payment -> payment.status() == Status.FINISHED));
 
         assertEquals(List.of(created, pending, finished), result);
     }
@@ -124,14 +122,13 @@ class CapturedConditionTest {
         int[] finalStageCalls = {0};
 
         List<String> result = timedAwait(() -> observations[sourceCalls[0]++],
-                config(1, 10, 2), time, time).until(value -> {
+                config(1, 10, 2), time, time).until(matches(value -> {
                     earlyStageCalls[0]++;
                     return value == early;
-                },
-                value -> {
+                }), matches(value -> {
                     finalStageCalls[0]++;
                     return value != early;
-                });
+                }));
 
         assertSame(early, result.get(0));
         assertSame(persistedFinal, result.get(1));
@@ -151,8 +148,8 @@ class CapturedConditionTest {
         int[] sourceCalls = {0};
 
         assertFailure(PERSISTENCE_FAILED, () -> timedAwait(
-                () -> observations[sourceCalls[0]++], config(1, 10, 10), time, time).until(value -> value == early,
-                        value -> value != rejectedFinal));
+                () -> observations[sourceCalls[0]++], config(1, 10, 10), time, time).until(matches(value -> value == early),
+                        matches(value -> value != rejectedFinal)));
 
         assertEquals(3, sourceCalls[0]);
         assertEquals(List.of(1L, 1L), time.parkRequests);
@@ -167,9 +164,9 @@ class CapturedConditionTest {
 
         assertFailure(TIMEOUT, () -> timedAwait(() ->
                 calls[0]++ == 0 ? created : finished,
-                config(1, 3, 0), time, time).until(payment -> payment.status() == Status.CREATED,
-                payment -> payment.status() == Status.PENDING,
-                payment -> payment.status() == Status.FINISHED));
+                config(1, 3, 0), time, time).until(matches(payment -> payment.status() == Status.CREATED),
+                matches(payment -> payment.status() == Status.PENDING),
+                matches(payment -> payment.status() == Status.FINISHED)));
 
         assertEquals(3, calls[0]);
     }
@@ -223,23 +220,18 @@ class CapturedConditionTest {
 
     @Test
     void validatesEveryStageBeforeEvaluation() {
-        Predicate<String> predicate = value -> true;
-        PreservingCondition<String> preserving = matches(predicate);
+        PreservingCondition<String> preserving = matches(value -> true);
         Condition<String, Integer> transforming = condition("length",
                 value -> satisfied(value.length()));
 
         assertThrows(NullPointerException.class,
-                () -> captured((Predicate<String>) null, predicate));
-        assertThrows(NullPointerException.class,
-                () -> captured(predicate, (Predicate<String>) null));
-        assertThrows(NullPointerException.class,
-                () -> captured(predicate, predicate, (Predicate<String>) null));
-        assertThrows(NullPointerException.class,
-                () -> captured(predicate, predicate, (Predicate<String>[]) null));
-        assertThrows(NullPointerException.class,
                 () -> captured((PreservingCondition<String>) null, preserving));
         assertThrows(NullPointerException.class,
+                () -> captured(preserving, (PreservingCondition<String>) null));
+        assertThrows(NullPointerException.class,
                 () -> captured(preserving, preserving, (PreservingCondition<String>) null));
+        assertThrows(NullPointerException.class,
+                () -> captured(preserving, preserving, (PreservingCondition<String>[]) null));
         assertThrows(NullPointerException.class,
                 () -> captured((Condition<String, Integer>) null, transforming));
         assertThrows(NullPointerException.class,
@@ -264,12 +256,12 @@ class CapturedConditionTest {
     @Test
     void capturesTheVarargsTailDefensively() {
         var time = new FakeTime(0);
-        Predicate<Integer> matchesOne = value -> value == 1;
+        PreservingCondition<Integer> matchesOne = matches(value -> value == 1);
         @SuppressWarnings("unchecked")
-        Predicate<Integer>[] rest = (Predicate<Integer>[]) new Predicate<?>[]{matchesOne};
+        PreservingCondition<Integer>[] rest = (PreservingCondition<Integer>[]) new PreservingCondition<?>[]{matchesOne};
         Condition<Integer, List<Integer>> sequence = captured(
                 matchesOne, matchesOne, rest);
-        rest[0] = value -> false;
+        rest[0] = matches(value -> false);
 
         List<Integer> result = timedAwait(() -> 1, config(1, 10, 0),
                 time, time).until(sequence);
@@ -292,9 +284,8 @@ class CapturedConditionTest {
 
     @Test
     void reusesOneSequenceDefinitionAcrossExecutions() {
-        var lifecycle = captured(
-                (Payment value) -> value.status() == Status.CREATED,
-                value -> value.status() == Status.FINISHED);
+        Condition<Payment, List<Payment>> lifecycle = captured(matches(value -> value.status() == Status.CREATED),
+                matches(value -> value.status() == Status.FINISHED));
         var created = new Payment(Status.CREATED, "accepted");
         var firstFinished = new Payment(Status.FINISHED, "first");
         var secondFinished = new Payment(Status.FINISHED, "second");
@@ -307,9 +298,8 @@ class CapturedConditionTest {
 
     @Test
     void timeoutDoesNotAdvanceTheNextExecution() {
-        var lifecycle = captured(
-                (Payment value) -> value.status() == Status.CREATED,
-                value -> value.status() == Status.FINISHED);
+        Condition<Payment, List<Payment>> lifecycle = captured(matches(value -> value.status() == Status.CREATED),
+                matches(value -> value.status() == Status.FINISHED));
         var created = new Payment(Status.CREATED, "accepted");
         var pending = new Payment(Status.PENDING, "waiting");
         var finished = new Payment(Status.FINISHED, "paid");

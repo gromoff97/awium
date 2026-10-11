@@ -12,6 +12,7 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Conditions.yields;
 import static io.github.gromoff97.awium.Conditions.isNotNull;
 import static io.github.gromoff97.awium.Conditions.isNull;
+import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.OptionalConditions.present;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -41,7 +42,7 @@ class TryUntilTest {
         var pollingTime = new FakeTime(0);
         AwaitResult<String, String> nullable = await((Source<String>) () -> "actual").usingTime(pollingTime, pollingTime).tryUntil(yields(actual -> null));
         AwaitResult<String, Void> nullSource = await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(isNull);
-        AwaitResult<String, String> nullPredicate = await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(actual -> actual == null);
+        AwaitResult<String, String> nullPredicate = await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(matches(actual -> actual == null));
         AwaitResult<Optional<String>, String> selected =
                 await((Source.OptionalSource<String>) () -> Optional.of("payment")).usingTime(pollingTime, pollingTime).tryUntil(present);
 

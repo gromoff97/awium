@@ -60,8 +60,8 @@ class CompilationContractTest {
                         Payment presentPayment = await(optional).until(present);
                         Payment onlyPayment = await(collection).until(single);
                         Map.Entry<String, Payment> onlyEntry = await(map).until(singleEntry);
-                        List<Payment> lifecycle = await(payment).until(value -> value.status().equals("created"),
-                                value -> value.status().equals("finished"));
+                        List<Payment> lifecycle = await(payment).until(matches(value -> value.status().equals("created")),
+                                matches(value -> value.status().equals("finished")));
                         AwaitResult<String, String> diagnostic = await(text).tryUntil(nonBlank);
                         await(number).until(atLeast(1));
                         await(payment).until(asserted(value -> {}));

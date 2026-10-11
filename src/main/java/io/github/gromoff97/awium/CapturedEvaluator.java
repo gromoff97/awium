@@ -7,7 +7,6 @@ import io.github.gromoff97.awium.Condition.SelectedCondition;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static io.github.gromoff97.awium.ConditionSupport.conditionFactory;
@@ -20,24 +19,16 @@ final class CapturedEvaluator<Observed, Result> implements CheckedFunction<Obser
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <Observed> Condition<Observed, List<Observed>> captured(Predicate<? super Observed> first,
-            Predicate<? super Observed> second, Predicate<? super Observed>... rest) {
-        return capturedPreserving(stages("predicate", first, second, rest).stream()
-                .map(predicate -> ConditionSupport.<Observed>preserving("value matches", "value did not match", predicate)).toList());
-    }
-
-    @SafeVarargs
-    @SuppressWarnings("varargs")
     static <Observed> Condition<Observed, List<Observed>> captured(PreservingCondition<? super Observed> first,
             PreservingCondition<? super Observed> second, PreservingCondition<? super Observed>... rest) {
-        return capturedPreserving(stages("condition", first, second, rest));
+        return capturedPreserving(stages(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     static <Observed, Result> Condition<Observed, List<Result>> captured(Condition<? super Observed, ? extends Result> first,
             Condition<? super Observed, ? extends Result> second, Condition<? super Observed, ? extends Result>... rest) {
-        List<Condition<? super Observed, ? extends Result>> stages = stages("condition", first, second, rest);
+        List<Condition<? super Observed, ? extends Result>> stages = stages(first, second, rest);
         return conditionFactory("conditions are satisfied in order", () ->
                 new CapturedEvaluator<Observed, Result>(stages.stream()
                         .map(stage -> stage.newSession()).toList()));
@@ -47,7 +38,7 @@ final class CapturedEvaluator<Observed, Result> implements CheckedFunction<Obser
     @SuppressWarnings("varargs")
     static <Observed, Expected extends Observed> Condition<Observed, List<Observed>> captured(ExpectedCondition<? extends Expected> first,
             ExpectedCondition<? extends Expected> second, ExpectedCondition<? extends Expected>... rest) {
-        return capturedPreserving(stages("condition", first, second, rest));
+        return capturedPreserving(stages(first, second, rest));
     }
 
     @SafeVarargs
@@ -56,7 +47,7 @@ final class CapturedEvaluator<Observed, Result> implements CheckedFunction<Obser
             SelectedCondition<? super Observed, Family> second,
             SelectedCondition<? super Observed, Family>... rest) {
         List<SelectedCondition<? super Observed, Family>> stages =
-                stages("condition", first, second, rest);
+                stages(first, second, rest);
         return conditionFactory("conditions are satisfied in order",
                 () -> new CapturedEvaluator<>(stages.stream()
                         .map(stage -> stage.<Element>selectionSession()).toList()));
@@ -68,10 +59,10 @@ final class CapturedEvaluator<Observed, Result> implements CheckedFunction<Obser
                         .map(stage -> stage.<Observed>preservingSession()).toList()));
     }
 
-    private static <Stage> List<Stage> stages(String name, Stage first, Stage second, Stage[] rest) {
+    private static <Stage> List<Stage> stages(Stage first, Stage second, Stage[] rest) {
         return Stream.concat(Stream.of(first, second),
-                        Arrays.stream(requireNonNull(rest, name + "s must not be null")))
-                .map(stage -> requireNonNull(stage, name + " must not be null"))
+                        Arrays.stream(requireNonNull(rest, "conditions must not be null")))
+                .map(stage -> requireNonNull(stage, "condition must not be null"))
                 .toList();
     }
 

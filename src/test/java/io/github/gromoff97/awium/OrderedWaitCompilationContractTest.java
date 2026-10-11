@@ -18,19 +18,19 @@ class OrderedWaitCompilationContractTest {
     Path directory;
 
     @Test
-    void singlePredicatesPreserveObservedTypesWithLambdasAndMethodReferences() throws IOException {
+    void matchingConditionsPreserveObservedTypesWithLambdasAndMethodReferences() throws IOException {
         assertTrue(compiles("""
                 Predicate<Object> broad = Objects::nonNull;
-                String lambda = await(Contract::text).until(value -> !value.isBlank());
-                String methodReference = await(Contract::text).until(String::isBlank);
-                ArrayList<String> collection = await(() -> new ArrayList<String>()).until(broad);
-                LinkedHashMap<String, Integer> map = await(() -> new LinkedHashMap<String, Integer>()).until(Map::isEmpty);
-                Optional<String> optional = await(Contract::optional).until(Optional::isPresent);
-                AwaitResult<String, String> diagnostic = await(Contract::text).tryUntil(String::isBlank);
+                String lambda = await(Contract::text).until(matches(value -> !value.isBlank()));
+                String methodReference = await(Contract::text).until(matches(String::isBlank));
+                ArrayList<String> collection = await(() -> new ArrayList<String>()).until(matches(broad));
+                LinkedHashMap<String, Integer> map = await(() -> new LinkedHashMap<String, Integer>()).until(matches(Map::isEmpty));
+                Optional<String> optional = await(Contract::optional).until(matches(Optional::isPresent));
+                AwaitResult<String, String> diagnostic = await(Contract::text).tryUntil(matches(String::isBlank));
                 AwaitResult<ArrayList<String>, ArrayList<String>> diagnosticCollection =
-                        await(() -> new ArrayList<String>()).every(java.time.Duration.ofMillis(1)).tryUntil(broad);
+                        await(() -> new ArrayList<String>()).every(java.time.Duration.ofMillis(1)).tryUntil(matches(broad));
                 AwaitResult<Optional<String>, Optional<String>> diagnosticOptional =
-                        await(Contract::optional).tryUntil(value -> value.isPresent());
+                        await(Contract::optional).tryUntil(matches(value -> value.isPresent()));
                 """));
     }
 
@@ -38,7 +38,7 @@ class OrderedWaitCompilationContractTest {
     void oneConditionReturnsAValueAndSeveralReturnTypedOrderedLists() throws IOException {
         assertTrue(compiles("""
                 String one = await(Contract::text).until(isNotNull);
-                List<String> predicates = await(Contract::text).until(value -> value.startsWith("a"), value -> value.endsWith("z"));
+                List<String> predicates = await(Contract::text).until(matches(value -> value.startsWith("a")), matches(value -> value.endsWith("z")));
                 List<String> preserving = await(Contract::text).until(isNotNull, matches(String::isBlank).because("final"));
                 List<String> expected = await(Contract::text).until(equalTo("created").because("creation"), equalTo("paid").because("payment"));
                 List<String> many = await(Contract::text).until(equalTo("created"), equalTo("paid"), equalTo("finished"));
@@ -57,7 +57,7 @@ class OrderedWaitCompilationContractTest {
     void diagnosticSequencesPreserveTheSourceAndCapturedResultTypes() throws IOException {
         assertTrue(compiles("""
                 AwaitResult<String, String> one = await(Contract::text).tryUntil(isNotNull);
-                AwaitResult<String, List<String>> predicates = await(Contract::text).tryUntil(value -> true, value -> false);
+                AwaitResult<String, List<String>> predicates = await(Contract::text).tryUntil(matches(value -> true), matches(value -> false));
                 AwaitResult<String, List<String>> preserving = await(Contract::text).tryUntil(isNotNull, matches(String::isBlank));
                 AwaitResult<String, List<String>> expected = await(Contract::text).tryUntil(equalTo("created"), equalTo("paid"));
                 AwaitResult<String, List<Integer>> transformed = await(Contract::text).tryUntil(yields(String::length), yields(String::length));
@@ -69,10 +69,18 @@ class OrderedWaitCompilationContractTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"until", "tryUntil"})
+    void predicatesMustBeExpressedThroughConditions(String terminal) throws IOException {
+        for (String arguments : List.of("value -> true", "String::isBlank", "value -> true, value -> false")) {
+            assertFalse(compiles("await(Contract::text).%s(%s);".formatted(terminal, arguments)), arguments);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"until", "tryUntil"})
     void rejectsIncompatibleOperandsAndMixedConditionFamilies(String terminal) throws IOException {
         for (String expression : List.of(
-                "await(Contract::text).%s((Integer value) -> true);",
-                "await(Contract::text).%s(value -> value.length());",
+                "await(Contract::text).%s(matches((Integer value) -> true));",
+                "await(Contract::text).%s(matches(value -> value.length()));",
                 "await(Contract::text).%s(equalTo(1), equalTo(2));",
                 "await(Contract::optional).%s(first, last);",
                 "await(Contract::collection).%s(present, present);",
@@ -81,7 +89,6 @@ class OrderedWaitCompilationContractTest {
                 "await(Contract::collection).%s(single, isNotNull);",
                 "await(Contract::optional).%s(present, matches((Optional<String> value) -> true));",
                 "await(Contract::text).%s(equalTo(\"ready\"), isNotNull);",
-                "await(Contract::text).%s((String value) -> true, matches((String value) -> true));",
                 "await(Contract::text).%s(isNotNull, yields(String::length));",
                 "Source<List<String>> source = Contract::collection; await(source).%s(first, last);")) {
             assertFalse(compiles(expression.formatted(terminal)), expression);

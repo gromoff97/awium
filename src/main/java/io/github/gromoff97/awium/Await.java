@@ -19,12 +19,10 @@ import java.time.Duration;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
-import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.WaitConfiguration.defaults;
 import static java.util.Objects.requireNonNull;
 import static io.github.gromoff97.awium.ConditionDefinition.required;
-import static io.github.gromoff97.awium.Conditions.matches;
 
 /**
  * Fluent await facade. One condition returns one value; several compatible conditions capture a list
@@ -106,10 +104,6 @@ public final class Await<Observed, Element, Family extends Source<?>> {
         return new Await<>(source, configuration, clock, parker);
     }
 
-    public Observed until(Predicate<? super Observed> predicate) {
-        return until(matches(predicate));
-    }
-
     public Observed until(PreservingCondition<? super Observed> condition) {
         return complete(required(condition).preservingSession());
     }
@@ -128,10 +122,6 @@ public final class Await<Observed, Element, Family extends Source<?>> {
 
     public Element until(SelectedCondition<? super Observed, Family> condition) {
         return complete(required(condition).<Element>selectionSession());
-    }
-
-    public AwaitResult<Observed, Observed> tryUntil(Predicate<? super Observed> predicate) {
-        return tryUntil(matches(predicate));
     }
 
     public AwaitResult<Observed, Observed> tryUntil(PreservingCondition<? super Observed> condition) {
@@ -156,12 +146,6 @@ public final class Await<Observed, Element, Family extends Source<?>> {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final List<Observed> until(Predicate<? super Observed> first, Predicate<? super Observed> second, Predicate<? super Observed>... rest) {
-        return until(CapturedEvaluator.<Observed>captured(first, second, rest));
-    }
-
-    @SafeVarargs
-    @SuppressWarnings("varargs")
     public final List<Observed> until(PreservingCondition<? super Observed> first, PreservingCondition<? super Observed> second, PreservingCondition<? super Observed>... rest) {
         return until(CapturedEvaluator.<Observed>captured(first, second, rest));
     }
@@ -182,12 +166,6 @@ public final class Await<Observed, Element, Family extends Source<?>> {
     @SuppressWarnings("varargs")
     public final List<Element> until(SelectedCondition<? super Observed, Family> first, SelectedCondition<? super Observed, Family> second, SelectedCondition<? super Observed, Family>... rest) {
         return until(CapturedEvaluator.<Observed, Element, Family>captured(first, second, rest));
-    }
-
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    public final AwaitResult<Observed, List<Observed>> tryUntil(Predicate<? super Observed> first, Predicate<? super Observed> second, Predicate<? super Observed>... rest) {
-        return tryUntil(CapturedEvaluator.<Observed>captured(first, second, rest));
     }
 
     @SafeVarargs
