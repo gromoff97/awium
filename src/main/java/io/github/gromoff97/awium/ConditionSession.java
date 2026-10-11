@@ -17,8 +17,8 @@ final class ConditionSession<Observed, Result> implements Function<Observed, Con
 
     ConditionSession(ConditionMetadata metadata,
             Callable<? extends CheckedFunction<? super Observed, ? extends ConditionResult<? extends Result>>> evaluatorFactory) {
-        this.metadata = requireNonNull(metadata, "metadata must not be null");
-        this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
+        this.metadata = metadata;
+        this.evaluatorFactory = evaluatorFactory;
     }
 
     @Override
