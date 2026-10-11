@@ -5,12 +5,11 @@ import io.github.gromoff97.awium.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.ConditionResult.Reference;
-
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.function.IntPredicate;
 import java.util.function.Function;
+import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;

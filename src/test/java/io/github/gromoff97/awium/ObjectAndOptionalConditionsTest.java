@@ -1,25 +1,21 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
+import java.util.Optional;
+import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.OptionalConditions.*;
-
-import io.github.gromoff97.awium.*;
-
+import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.Optional;
-import org.junit.jupiter.api.Test;
 
 class ObjectAndOptionalConditionsTest {
 

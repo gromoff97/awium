@@ -1,20 +1,5 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.config;
-import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
-import static io.github.gromoff97.awium.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.ConditionResult.uncontrolled;
-import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
-import static io.github.gromoff97.awium.WaitCompletion.*;
-import static java.lang.Thread.currentThread;
-import static java.lang.Thread.interrupted;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -24,6 +9,20 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import static io.github.gromoff97.awium.AwaitTestAccess.config;
+import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
+import static io.github.gromoff97.awium.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.ConditionResult.uncontrolled;
+import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.WaitCompletion.*;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WaitEngineTest {
 

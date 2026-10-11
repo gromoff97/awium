@@ -1,10 +1,9 @@
 package io.github.gromoff97.awium;
 
-import org.junit.jupiter.api.Test;
-
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.AwaitAttempt.Phase.ACQUISITION;
 import static org.junit.jupiter.api.Assertions.assertEquals;

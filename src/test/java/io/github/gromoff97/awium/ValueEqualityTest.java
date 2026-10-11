@@ -1,16 +1,15 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
+import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.ProbeContainers.Directional;
-import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.Conditions.equalTo;
+import static io.github.gromoff97.awium.ProbeContainers.Directional;
+import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import org.junit.jupiter.api.Test;
 
 class ValueEqualityTest {
 

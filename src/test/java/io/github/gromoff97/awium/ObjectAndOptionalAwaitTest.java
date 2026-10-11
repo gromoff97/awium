@@ -1,31 +1,26 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
-
-import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-
 import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.Source.OptionalSource;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.Test;
+
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
+import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.*;
+import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.OptionalConditions.*;
 import static io.github.gromoff97.awium.WaitConfiguration.defaults;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static java.time.Duration.ofNanos;
-
-import io.github.gromoff97.awium.*;
-import io.github.gromoff97.awium.Source.OptionalSource;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import java.util.List;
-import java.util.Optional;
-import org.junit.jupiter.api.Test;
 
 class ObjectAndOptionalAwaitTest {
 

@@ -1,25 +1,20 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.config;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
-
-import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-
-import static io.github.gromoff97.awium.CapturedEvaluator.captured;
-
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import org.junit.jupiter.api.Test;
-
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
+import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedOptionalAwait;
+import static io.github.gromoff97.awium.CapturedEvaluator.captured;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
-
 import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.Conditions.matches;
+import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.OptionalConditions.present;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;

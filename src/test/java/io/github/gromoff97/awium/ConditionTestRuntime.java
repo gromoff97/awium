@@ -1,12 +1,12 @@
 package io.github.gromoff97.awium;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-
 import io.github.gromoff97.awium.Condition.ExpectedCondition;
 import io.github.gromoff97.awium.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 public final class ConditionTestRuntime {
 

@@ -1,15 +1,14 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.ConditionResult.Satisfied;
-import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
-import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.ExpectedCondition;
 import io.github.gromoff97.awium.Condition.NarrowingCondition;
+import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.ConditionResult.Satisfied;
+import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
 import io.github.gromoff97.awium.Source.OptionalSource;
-import org.junit.jupiter.api.Test;
-
 import java.util.Optional;
 import java.util.regex.Pattern;
+import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.description;
@@ -17,8 +16,8 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ObjectOptionalAndScalarConditionsTest {
 

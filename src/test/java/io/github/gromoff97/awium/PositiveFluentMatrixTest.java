@@ -1,18 +1,8 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.CollectionConditions.*;
-import static io.github.gromoff97.awium.Conditions.*;
-import static io.github.gromoff97.awium.OptionalConditions.*;
-
-import io.github.gromoff97.awium.*;
 import io.github.gromoff97.awium.Source.CollectionSource;
 import io.github.gromoff97.awium.Source.MapSource;
 import io.github.gromoff97.awium.Source.OptionalSource;
-
-import static io.github.gromoff97.awium.Await.await;
-import static java.time.Duration.*;
-import static org.junit.jupiter.api.Assertions.assertSame;
-
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -20,6 +10,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.CollectionConditions.*;
+import static io.github.gromoff97.awium.Conditions.*;
+import static io.github.gromoff97.awium.OptionalConditions.*;
+import static java.time.Duration.*;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class PositiveFluentMatrixTest {
 

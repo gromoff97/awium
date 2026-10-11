@@ -1,10 +1,9 @@
 package io.github.gromoff97.awium;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Conditions.asserted;

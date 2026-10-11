@@ -1,18 +1,16 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.config;
-
 import java.util.List;
 import java.util.Optional;
-
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.Conditions.yields;
+import static io.github.gromoff97.awium.AwaitTestAccess.config;
+import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.Conditions.isNotNull;
 import static io.github.gromoff97.awium.Conditions.isNull;
 import static io.github.gromoff97.awium.Conditions.matches;
+import static io.github.gromoff97.awium.Conditions.yields;
 import static io.github.gromoff97.awium.OptionalConditions.present;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;

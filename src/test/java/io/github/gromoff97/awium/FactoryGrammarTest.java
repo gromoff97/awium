@@ -1,26 +1,10 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
-
-import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-
-import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.Conditions.*;
-import static java.time.Duration.*;
-
-import io.github.gromoff97.awium.*;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Source.CollectionSource;
 import io.github.gromoff97.awium.Source.MapSource;
 import io.github.gromoff97.awium.Source.OptionalSource;
-
-import io.github.gromoff97.awium.*;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +12,15 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
+import static io.github.gromoff97.awium.Conditions.*;
+import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
+import static java.time.Duration.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FactoryGrammarTest {
 

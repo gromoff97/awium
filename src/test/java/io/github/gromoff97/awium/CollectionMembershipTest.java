@@ -1,28 +1,9 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
-
-import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-
+import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
-import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Source.CollectionSource;
-
-import static io.github.gromoff97.awium.CompilationSupport.compiles;
-import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
-import static io.github.gromoff97.awium.ConditionTestRuntime.result;
-import static io.github.gromoff97.awium.ProbeContainers.Directional;
-import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
-import static io.github.gromoff97.awium.CollectionConditions.*;
-import static io.github.gromoff97.awium.WaitConfiguration.defaults;
-import static java.time.Duration.ofNanos;
-import static java.util.Arrays.asList;
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -30,6 +11,22 @@ import java.util.Collection;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
+import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
+import static io.github.gromoff97.awium.CollectionConditions.*;
+import static io.github.gromoff97.awium.CompilationSupport.compiles;
+import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
+import static io.github.gromoff97.awium.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
+import static io.github.gromoff97.awium.ProbeContainers.Directional;
+import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
+import static io.github.gromoff97.awium.WaitConfiguration.defaults;
+import static java.time.Duration.ofNanos;
+import static java.util.Arrays.asList;
+import static org.junit.jupiter.api.Assertions.*;
 
 class CollectionMembershipTest {
 

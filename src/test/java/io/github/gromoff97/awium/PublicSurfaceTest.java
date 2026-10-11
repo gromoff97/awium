@@ -4,13 +4,6 @@ import io.github.gromoff97.awium.Condition.ExpectedCondition;
 import io.github.gromoff97.awium.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
-
-import static java.lang.reflect.Modifier.isAbstract;
-import static java.util.Arrays.stream;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
@@ -18,6 +11,12 @@ import java.lang.reflect.TypeVariable;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+
+import static java.lang.reflect.Modifier.isAbstract;
+import static java.util.Arrays.stream;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PublicSurfaceTest {
 

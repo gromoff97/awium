@@ -1,13 +1,13 @@
 package io.github.gromoff97.awium;
 
+import org.junit.jupiter.api.Test;
+
 import static io.github.gromoff97.awium.ConditionResult.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import org.junit.jupiter.api.Test;
 
 class ConditionResultContractTest {
 

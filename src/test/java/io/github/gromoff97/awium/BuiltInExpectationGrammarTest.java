@@ -1,15 +1,15 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.CollectionConditions.*;
-import static io.github.gromoff97.awium.Conditions.*;
-import static io.github.gromoff97.awium.MapConditions.*;
-import static io.github.gromoff97.awium.OptionalConditions.*;
-import static io.github.gromoff97.awium.ConditionTestRuntime.description;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+
+import static io.github.gromoff97.awium.CollectionConditions.*;
+import static io.github.gromoff97.awium.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.Conditions.*;
+import static io.github.gromoff97.awium.MapConditions.*;
+import static io.github.gromoff97.awium.OptionalConditions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BuiltInExpectationGrammarTest {
 

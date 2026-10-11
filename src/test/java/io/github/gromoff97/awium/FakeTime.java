@@ -1,12 +1,12 @@
 package io.github.gromoff97.awium;
 
-import static java.lang.Math.min;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
+
+import static java.lang.Math.min;
 
 public final class FakeTime implements LongSupplier, LongConsumer {
 

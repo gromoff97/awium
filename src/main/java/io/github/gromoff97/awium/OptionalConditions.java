@@ -4,9 +4,7 @@ import io.github.gromoff97.awium.Condition.ExpectedCondition;
 import io.github.gromoff97.awium.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
-
 import io.github.gromoff97.awium.Source.OptionalSource;
-
 import java.util.Optional;
 
 import static io.github.gromoff97.awium.ConditionResult.satisfied;

@@ -2,7 +2,6 @@ package io.github.gromoff97.awium;
 
 import java.io.IOException;
 import java.nio.file.Path;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

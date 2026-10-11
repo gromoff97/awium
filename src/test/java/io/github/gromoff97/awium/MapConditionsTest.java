@@ -1,31 +1,28 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
-
-import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-
+import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
-import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Source.MapSource;
-
-import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.ConditionTestRuntime.description;
-import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
-import static io.github.gromoff97.awium.ConditionTestRuntime.result;
-import static io.github.gromoff97.awium.ProbeContainers.Directional;
-import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedMapAwait;
-import static io.github.gromoff97.awium.MapConditions.*;
-import static io.github.gromoff97.awium.WaitConfiguration.defaults;
-import static java.time.Duration.ofNanos;
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
+import static io.github.gromoff97.awium.AwaitTestAccess.timedMapAwait;
+import static io.github.gromoff97.awium.ConditionTestRuntime.description;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
+import static io.github.gromoff97.awium.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
+import static io.github.gromoff97.awium.MapConditions.*;
+import static io.github.gromoff97.awium.ProbeContainers.Directional;
+import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
+import static io.github.gromoff97.awium.WaitConfiguration.defaults;
+import static java.time.Duration.ofNanos;
+import static org.junit.jupiter.api.Assertions.*;
 
 class MapConditionsTest {
 

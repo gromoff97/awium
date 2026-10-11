@@ -4,25 +4,23 @@ import io.github.gromoff97.awium.Condition.ExpectedCondition;
 import io.github.gromoff97.awium.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
-
 import io.github.gromoff97.awium.Source.CollectionSource;
 import io.github.gromoff97.awium.Source.CollectionViewSource;
 import io.github.gromoff97.awium.Source.MapSource;
 import io.github.gromoff97.awium.Source.MapViewSource;
 import io.github.gromoff97.awium.Source.OptionalSource;
-
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.time.Duration;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
+import static io.github.gromoff97.awium.ConditionDefinition.required;
 import static io.github.gromoff97.awium.WaitConfiguration.defaults;
 import static java.util.Objects.requireNonNull;
-import static io.github.gromoff97.awium.ConditionDefinition.required;
 
 /**
  * Fluent await facade. One condition returns one value; several compatible conditions capture a list

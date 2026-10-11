@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.ConditionResult.Reference;
-
 import java.util.List;
 import java.util.StringJoiner;
 

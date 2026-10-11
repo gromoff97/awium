@@ -1,19 +1,16 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.config;
-import static io.github.gromoff97.awium.CapturedEvaluator.captured;
-
 import java.util.List;
-
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.AwaitAttempt.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.AwaitAttempt.Phase.PERSISTENCE;
+import static io.github.gromoff97.awium.AwaitTestAccess.config;
+import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.CapturedEvaluator.captured;
 import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
-
 import static io.github.gromoff97.awium.Conditions.condition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;

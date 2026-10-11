@@ -1,17 +1,15 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.config;
-
+import java.time.Duration;
+import java.util.function.Function;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.time.Duration;
-import java.util.function.Function;
-import java.util.stream.Stream;
-
 import static io.github.gromoff97.awium.AwaitAttempt.Phase.ACQUISITION;
+import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.uncontrolled;

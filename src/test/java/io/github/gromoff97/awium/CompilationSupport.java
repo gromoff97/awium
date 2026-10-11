@@ -1,12 +1,5 @@
 package io.github.gromoff97.awium;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.nio.file.Files.writeString;
-import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.joining;
-import static javax.tools.Diagnostic.Kind.ERROR;
-import static javax.tools.ToolProvider.getSystemJavaCompiler;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -15,6 +8,13 @@ import java.util.Set;
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaFileObject;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.nio.file.Files.writeString;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
+import static javax.tools.Diagnostic.Kind.ERROR;
+import static javax.tools.ToolProvider.getSystemJavaCompiler;
 
 public final class CompilationSupport {
 

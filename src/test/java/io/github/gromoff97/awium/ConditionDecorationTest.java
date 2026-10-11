@@ -1,19 +1,6 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.CapturedEvaluator.captured;
-
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import static io.github.gromoff97.awium.ConditionResult.*;
-import static io.github.gromoff97.awium.Conditions.*;
-import static io.github.gromoff97.awium.ConditionTestRuntime.explanation;
-import static io.github.gromoff97.awium.WaitConfiguration.defaults;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.IllegalFormatException;
@@ -22,6 +9,17 @@ import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.CapturedEvaluator.captured;
+import static io.github.gromoff97.awium.ConditionResult.*;
+import static io.github.gromoff97.awium.ConditionTestRuntime.explanation;
+import static io.github.gromoff97.awium.Conditions.*;
+import static io.github.gromoff97.awium.WaitConfiguration.defaults;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConditionDecorationTest {
 

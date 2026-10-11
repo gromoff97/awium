@@ -1,13 +1,11 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Condition.ExpectedCondition;
 import io.github.gromoff97.awium.Condition.NarrowingCondition;
-
-import io.github.gromoff97.awium.Source.CollectionSource;
+import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.ConditionResult.Reference;
-
+import io.github.gromoff97.awium.Source.CollectionSource;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -18,18 +16,18 @@ import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
+import static io.github.gromoff97.awium.ConditionSupport.nonEmpty;
+import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
+import static io.github.gromoff97.awium.ConditionSupport.selected;
+import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
+import static io.github.gromoff97.awium.ConditionSupport.validateRange;
+import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.ValueMatching.equal;
 import static io.github.gromoff97.awium.ValueMatching.exactly;
 import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
-import static io.github.gromoff97.awium.ConditionSupport.nonEmpty;
-import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
-import static io.github.gromoff97.awium.ConditionSupport.validateRange;
-import static io.github.gromoff97.awium.Conditions.condition;
-import static io.github.gromoff97.awium.ConditionSupport.selected;
-import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
-import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;

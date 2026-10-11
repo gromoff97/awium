@@ -1,5 +1,9 @@
 package io.github.gromoff97.awium;
 
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
@@ -7,14 +11,9 @@ import static io.github.gromoff97.awium.Conditions.condition;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.ofVirtual;
 import static java.time.Duration.*;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.ArrayList;
-import java.util.List;
-import org.junit.jupiter.api.Test;
 
 class VirtualThreadIntegrationTest {
 

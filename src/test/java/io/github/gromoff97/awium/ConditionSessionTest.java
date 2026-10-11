@@ -1,27 +1,23 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.CapturedEvaluator.captured;
-
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
-
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
-
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.CapturedEvaluator.captured;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
-
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
+import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static io.github.gromoff97.awium.Await.await;
-import static java.time.Duration.ofNanos;
 
 class ConditionSessionTest {
 

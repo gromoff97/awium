@@ -3,15 +3,14 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.Condition.ExpectedCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
-import static io.github.gromoff97.awium.ConditionSupport.conditionFactory;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.ConditionSupport.conditionFactory;
 import static java.util.Objects.requireNonNull;
 
 /** Creates ordered conditions and owns the captured values of one execution. */

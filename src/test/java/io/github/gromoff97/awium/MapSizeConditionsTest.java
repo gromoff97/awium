@@ -1,28 +1,26 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
-
-import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-
-import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.Source.MapSource;
-
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedMapAwait;
+import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.empty;
+import static io.github.gromoff97.awium.MapConditions.nonEmpty;
 import static io.github.gromoff97.awium.MapConditions.sameSizeAs;
 import static io.github.gromoff97.awium.MapConditions.singleEntry;
-import static io.github.gromoff97.awium.MapConditions.nonEmpty;
 import static io.github.gromoff97.awium.MapConditions.size;
 import static io.github.gromoff97.awium.MapConditions.sizeAtLeast;
 import static io.github.gromoff97.awium.MapConditions.sizeAtMost;
@@ -38,8 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import org.junit.jupiter.api.Test;
 
 class MapSizeConditionsTest {
 

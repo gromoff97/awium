@@ -1,17 +1,15 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-
 import io.github.gromoff97.awium.ConditionResult.Reference;
-
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
-import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
-import static io.github.gromoff97.awium.ConditionSupport.validateRange;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
+import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
+import static io.github.gromoff97.awium.ConditionSupport.validateRange;
 import static java.util.Objects.requireNonNull;
 
 public final class StringConditions {
