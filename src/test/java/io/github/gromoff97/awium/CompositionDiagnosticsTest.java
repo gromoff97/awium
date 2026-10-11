@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -10,19 +9,20 @@ import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static java.time.Duration.ofNanos;
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CompositionDiagnosticsTest {
 
     @Test
     void missingKeyAndNestedMismatchReportTheirOwnExpectedValues() {
-        for (Map<String, String> actual : List.of(Map.<String, String>of(), Map.of("customerId", "Alice"))) {
+        for (Map<String, String> actual : asList(null, Map.<String, String>of(), Map.of("customerId", "Alice"))) {
             var time = new FakeTime(0);
             var result = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
                     .tryUntil(valueFor("customerId", equalTo("Bob")).because("customer is required"));
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
             assertEquals(TIMEOUT, failure.reason());
-            assertTrue(failure.message().contains("Expected: " + (actual.isEmpty() ? "customerId" : "Bob")), failure.message());
+            assertTrue(failure.message().contains("Expected: " + (actual == null || actual.isEmpty() ? "customerId" : "Bob")), failure.message());
             assertTrue(failure.message().contains("Importance: customer is required"), failure.message());
             assertEquals(1, result.attempts().size());
             assertEquals(3, result.totalAttempts());

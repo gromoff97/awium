@@ -269,6 +269,65 @@ class CheckedCallbackTest {
     }
 
     @Test
+    void interruptionDuringEntryIterationSkipsEveryEntryGetter() {
+        int[] reads = {0, 0};
+        var entry = new AbstractMap.SimpleImmutableEntry<String, String>("key", "ready") {
+            @Override
+            public String getKey() {
+                reads[0]++;
+                Thread.interrupted();
+                return super.getKey();
+            }
+
+            @Override
+            public String getValue() {
+                reads[1]++;
+                Thread.interrupted();
+                return super.getValue();
+            }
+        };
+        var entries = new ArrayList<Map.Entry<String, String>>(List.of(entry)) {
+            @Override
+            public Iterator<Map.Entry<String, String>> iterator() {
+                var delegate = super.iterator();
+                return new Iterator<>() {
+                    @Override
+                    public boolean hasNext() { return delegate.hasNext(); }
+
+                    @Override
+                    public Map.Entry<String, String> next() {
+                        Thread.currentThread().interrupt();
+                        return delegate.next();
+                    }
+                };
+            }
+        };
+        var actual = new ProbeContainers.EntryMap<>(entries);
+        var expected = Map.of("key", "ready");
+        var time = new FakeTime(0);
+        var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
+        List<Supplier<AwaitResult<?, ?>>> waits = List.of(
+                () -> waiting.tryUntil(MapConditions.containsEntries(expected)),
+                () -> waiting.tryUntil(MapConditions.doesNotContainAllEntries(expected)),
+                () -> waiting.tryUntil(MapConditions.containsExactlyEntries(expected)),
+                () -> waiting.tryUntil(MapConditions.doesNotContainExactlyEntries(expected)),
+                () -> waiting.tryUntil(MapConditions.containsAnyEntries(expected)),
+                () -> waiting.tryUntil(MapConditions.doesNotContainEntries(expected)));
+        for (var wait : waits) {
+            reads[0] = reads[1] = 0;
+            try {
+                var failure = assertInstanceOf(AwaitResult.Failed.class, wait.get()).failure();
+                assertEquals(INTERRUPTED, failure.reason());
+                assertInstanceOf(InterruptedException.class, failure.cause());
+                assertArrayEquals(new int[]{0, 0}, reads);
+                assertTrue(Thread.currentThread().isInterrupted());
+            } finally {
+                Thread.interrupted();
+            }
+        }
+    }
+
+    @Test
     void interruptionDuringEntryExtractionSkipsEveryEntryPredicate() {
         for (boolean key : List.of(false, true)) {
             int[] valueReads = {0};

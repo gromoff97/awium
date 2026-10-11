@@ -462,6 +462,33 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
+    void blankCauseMessagesAreOmittedAndReadOnlyOnce() {
+        for (boolean capture : List.of(false, true)) {
+            for (String message : new String[]{null, "", " \r\n\t"}) {
+                int[] reads = {0};
+                var cause = new IllegalStateException(message) {
+                    @Override
+                    public String getMessage() {
+                        reads[0]++;
+                        return super.getMessage();
+                    }
+                };
+                var time = new FakeTime(0);
+                Source<Object> source = () -> { throw cause; };
+                var waiting = await(source).usingTime(time, time);
+                AwaitFailure failure = capture
+                        ? ((AwaitResult.Failed<?, ?>) waiting.tryUntil(Conditions.isNotNull)).failure()
+                        : assertThrows(AwaitExecutionException.class, () -> waiting.until(Conditions.isNotNull)).failure();
+
+                assertEquals(SOURCE_FAILED, failure.reason());
+                assertSame(cause, failure.cause());
+                assertFalse(failure.message().contains("Message:"), failure.message());
+                assertEquals(1, reads[0]);
+            }
+        }
+    }
+
+    @Test
     void diagnosticRenderingFailuresAreUnhandledWithTheirOriginalCause() {
         var valueCause = new IllegalArgumentException("toString failed");
         var actual = new ThrowingValue(valueCause);

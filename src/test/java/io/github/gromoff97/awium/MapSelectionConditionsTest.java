@@ -107,8 +107,10 @@ class MapSelectionConditionsTest {
         assertNull(await((MapSource<LinkedHashMap<String, String>>) () -> actual).usingTime(pollingTime, pollingTime).until(MapConditions.valueFor("nullable")));
         assertEquals(Satisfied.class,
                 evaluate(MapConditions.<String, String>valueFor("nullable"), actual).getClass());
-        assertEquals(Unsatisfied.class,
-                evaluate(MapConditions.<String, String>valueFor("missing"), actual).getClass());
+        assertEquals("map did not contain the expected key",
+                ((Unsatisfied<?>) evaluate(MapConditions.<String, String>valueFor("missing"), actual)).mismatch());
+        assertEquals("map was null",
+                ((Unsatisfied<?>) evaluate(MapConditions.<String, String>valueFor("missing"), null)).mismatch());
     }
 
     @Test
