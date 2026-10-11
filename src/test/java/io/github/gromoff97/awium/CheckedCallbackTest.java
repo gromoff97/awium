@@ -2,12 +2,14 @@ package io.github.gromoff97.awium;
 
 import java.io.IOException;
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -141,6 +143,64 @@ class CheckedCallbackTest {
         assertEquals(0, factoryCalls[0]);
         assertEquals(0, evaluatorCalls[0]);
         assertTrue(Thread.currentThread().isInterrupted());
+    }
+
+    @Test
+    void interruptionDuringIndexedExtractionSkipsThePredicate() {
+        var actual = new ArrayList<>(List.of("ready")) {
+            @Override
+            public String get(int index) {
+                Thread.currentThread().interrupt();
+                return super.get(index);
+            }
+        };
+        int[] calls = {0};
+        var result = await(() -> actual).tryUntil(CollectionConditions.element(0, value -> {
+            calls[0]++;
+            return true;
+        }));
+        var failure = assertInstanceOf(AwaitResult.Failed.class, result);
+        assertEquals(INTERRUPTED, failure.failure().reason());
+        assertInstanceOf(InterruptedException.class, failure.failure().cause());
+        assertEquals(0, calls[0]);
+        assertTrue(Thread.currentThread().isInterrupted());
+    }
+
+    @Test
+    void interruptionDuringEntryExtractionSkipsEveryEntryPredicate() {
+        for (boolean key : List.of(false, true)) {
+            var entry = new AbstractMap.SimpleImmutableEntry<String, String>("key", "ready") {
+                @Override
+                public String getKey() {
+                    if (key) Thread.currentThread().interrupt();
+                    return super.getKey();
+                }
+
+                @Override
+                public String getValue() {
+                    if (!key) Thread.currentThread().interrupt();
+                    return super.getValue();
+                }
+            };
+            var actual = new ProbeContainers.EntryMap<String, String>(List.of(entry));
+            List<Function<BiPredicate<String, String>, AwaitResult<?, ?>>> waits = List.of(
+                    predicate -> await(() -> actual).tryUntil(MapConditions.allEntries(predicate)),
+                    predicate -> await(() -> actual).tryUntil(MapConditions.anyEntry(predicate)),
+                    predicate -> await(() -> actual).tryUntil(MapConditions.noEntry(predicate)));
+            for (var wait : waits) {
+                int[] calls = {0};
+                try {
+                    var result = wait.apply((name, value) -> { calls[0]++; return true; });
+                    var failure = assertInstanceOf(AwaitResult.Failed.class, result);
+                    assertEquals(INTERRUPTED, failure.failure().reason());
+                    assertInstanceOf(InterruptedException.class, failure.failure().cause());
+                    assertEquals(0, calls[0]);
+                    assertTrue(Thread.currentThread().isInterrupted());
+                } finally {
+                    Thread.interrupted();
+                }
+            }
+        }
     }
 
     @Test

@@ -118,21 +118,21 @@ public final class MapConditions {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all map entries match", "not all map entries matched",
                 actual -> matchesAll(actual.entrySet(),
-                        entry -> predicate.test(entry.getKey(), entry.getValue())));
+                        entry -> entryMatches(entry, predicate)));
     }
 
     public static <K, V> PreservingCondition<Map<K, V>> anyEntry(BiPredicate<? super K, ? super V> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any map entry matches", "no map entry matched",
                 actual -> matchesAny(actual.entrySet(),
-                        entry -> predicate.test(entry.getKey(), entry.getValue())));
+                        entry -> entryMatches(entry, predicate)));
     }
 
     public static <K, V> PreservingCondition<Map<K, V>> noEntry(BiPredicate<? super K, ? super V> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no map entry matches", "a map entry matched",
                 actual -> !matchesAny(actual.entrySet(),
-                        entry -> predicate.test(entry.getKey(), entry.getValue())));
+                        entry -> entryMatches(entry, predicate)));
     }
 
     public static <K, V> PreservingCondition<Map<K, V>> allKeys(Predicate<? super K> predicate) {
@@ -344,6 +344,13 @@ public final class MapConditions {
 
     private static boolean entryMatches(Map.Entry<?, ?> actual, Map.Entry<?, ?> expected) throws InterruptedException {
         return entryMatches(actual, expected.getKey(), expected.getValue());
+    }
+
+    private static <K, V> boolean entryMatches(Map.Entry<K, V> entry, BiPredicate<? super K, ? super V> predicate) throws InterruptedException {
+        K key = entry.getKey();
+        V value = entry.getValue();
+        ValueMatching.checkInterruption();
+        return predicate.test(key, value);
     }
 
     private static boolean entryMatches(Map.Entry<?, ?> actual, Object expectedKey, Object expectedValue) throws InterruptedException {

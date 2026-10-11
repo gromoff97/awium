@@ -335,6 +335,7 @@ public final class CollectionConditions {
                 return unsatisfied("list size was " + actual.size());
             }
             E value = actual.get(index);
+            ValueMatching.checkInterruption();
             return predicate.test(value) ? satisfied(value) : unsatisfied("element at index " + index + " did not match");
         });
     }
