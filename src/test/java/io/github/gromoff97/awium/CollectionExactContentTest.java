@@ -53,6 +53,35 @@ class CollectionExactContentTest {
     }
 
     @Test
+    void exactComparisonRejectsChangesBetweenSizeAndTraversal() throws Exception {
+        for (boolean shrink : List.of(false, true)) {
+            for (boolean negative : List.of(false, true)) {
+                var actual = new ArrayList<String>(shrink ? List.of("a", "c") : List.of("a", "b")) {
+                    private boolean changed;
+
+                    @Override
+                    public Iterator<String> iterator() {
+                        if (!changed) {
+                            changed = true;
+                            if (shrink) removeLast();
+                            else add("c");
+                        }
+                        return super.iterator();
+                    }
+                };
+                var condition = negative ? doesNotContainExactly("a", "b") : containsExactly("a", "b");
+                var evaluation = evaluate(condition, actual);
+                if (negative) {
+                    assertEquals(Satisfied.class, evaluation.getClass());
+                    assertSame(actual, result(evaluation));
+                } else {
+                    assertEquals(Unsatisfied.class, evaluation.getClass());
+                }
+            }
+        }
+    }
+
+    @Test
     void exactEqualityIsActualFirstArrayAwareAndDoesNotHash()
             throws Exception {
         Directional actual = new Directional(true);

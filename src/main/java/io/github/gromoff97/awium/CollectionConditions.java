@@ -395,12 +395,12 @@ public final class CollectionConditions {
         }
         Iterator<?> left = actual.iterator();
         Iterator<?> right = expected.iterator();
-        while (left.hasNext()) {
+        while (left.hasNext() && right.hasNext()) {
             if (!equal(left.next(), right.next())) {
                 return false;
             }
         }
-        return true;
+        return !left.hasNext() && !right.hasNext();
     }
 
     private static boolean exactContentInAnyOrder(Collection<?> actual, Collection<?> expected) throws Exception {
