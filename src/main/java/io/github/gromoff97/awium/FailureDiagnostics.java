@@ -92,6 +92,7 @@ final class FailureDiagnostics {
                 addSuppressed(fatal, cause);
                 throw fatal;
             } catch (Throwable failure) {
+                restoreInterrupt |= failure instanceof InterruptedException;
                 try {
                     message = message("Failure diagnostics could not be formatted", failure);
                 } catch (VirtualMachineError | ThreadDeath fatal) {
@@ -101,7 +102,6 @@ final class FailureDiagnostics {
                     }
                     throw fatal;
                 }
-                restoreInterrupt |= failure instanceof InterruptedException;
                 return new AwaitFailure(DIAGNOSTICS_FAILED, message, failure,
                         cause == null || cause == failure ? List.of() : List.of(cause));
             }

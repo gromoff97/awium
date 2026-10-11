@@ -666,6 +666,41 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
+    void diagnosticInterruptionSurvivesFatalEmergencyFormatting() {
+        for (boolean captured : List.of(false, true)) {
+            var fatal = new InternalError("emergency message fatal");
+            var interruption = new InterruptedException("diagnostics stopped") {
+                @Override
+                public String getMessage() {
+                    throw fatal;
+                }
+            };
+            Object actual = new Object() {
+                @Override
+                public String toString() {
+                    throwUnchecked(interruption);
+                    return "unreachable";
+                }
+            };
+            var original = new AssertionError("not ready");
+            var time = new FakeTime(0);
+            var waiting = timedAwait(() -> actual, config(1, 2, 0), time, time);
+            var condition = Conditions.<Object, Object>condition("ready", value -> assertionUnsatisfied("not ready", original));
+            try {
+                var thrown = assertThrows(InternalError.class, () -> {
+                    if (captured) waiting.tryUntil(condition);
+                    else waiting.until(condition);
+                });
+                assertSame(fatal, thrown);
+                assertArrayEquals(new Throwable[] {interruption, original}, thrown.getSuppressed());
+                assertTrue(currentThread().isInterrupted());
+            } finally {
+                interrupted();
+            }
+        }
+    }
+
+    @Test
     void multilineFieldsAreNormalizedAndArraysRenderWithoutDependencies() {
         var cause = new IllegalStateException("first\r\nsecond");
         var sourceFailure = assertFailure(SOURCE_FAILED,
