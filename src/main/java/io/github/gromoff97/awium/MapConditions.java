@@ -28,6 +28,7 @@ import static io.github.gromoff97.awium.ValueMatching.exactly;
 import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
+import static io.github.gromoff97.awium.ValueRendering.snapshot;
 import static io.github.gromoff97.awium.ValueRendering.stringValue;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
@@ -213,35 +214,35 @@ public final class MapConditions {
 
     @SafeVarargs
     public static <K> PreservingCondition<Map<? super K, ?>> containsKeys(K... expected) {
-        List<K> keys = stream(nonEmpty(expected, "expected keys")).toList();
+        List<K> keys = snapshot(stream(nonEmpty(expected, "expected keys")));
         return preserving("map contains all expected keys", "map did not contain all expected keys", expectedReference(keys),
                 actual -> containsAll(actual.keySet(), keys, ValueMatching::equal));
     }
 
     @SafeVarargs
     public static <K> PreservingCondition<Map<? super K, ?>> doesNotContainKeys(K... unexpected) {
-        List<K> keys = stream(nonEmpty(unexpected, "unexpected keys")).toList();
+        List<K> keys = snapshot(stream(nonEmpty(unexpected, "unexpected keys")));
         return preserving("map does not contain unexpected keys", "map contained an unexpected key", unexpectedReference(keys),
                 actual -> !matchesAny(actual.keySet(), value -> matchesAny(keys, key -> equal(value, key))));
     }
 
     @SafeVarargs
     public static <K> PreservingCondition<Map<? super K, ?>> containsOnlyKeys(K... expected) {
-        List<K> keys = stream(requireNonNull(expected, "expected keys must not be null")).toList();
+        List<K> keys = snapshot(stream(requireNonNull(expected, "expected keys must not be null")));
         return preserving("map contains only the expected keys", "map did not contain only the expected keys", expectedReference(keys),
                 actual -> sameDistinctElements(actual.keySet(), keys));
     }
 
     @SafeVarargs
     public static <V> PreservingCondition<Map<?, ? super V>> containsValues(V... expected) {
-        List<V> values = stream(nonEmpty(expected, "expected values")).toList();
+        List<V> values = snapshot(stream(nonEmpty(expected, "expected values")));
         return preserving("map contains all expected values", "map did not contain all expected values", expectedReference(values),
                 actual -> containsAll(actual.values(), values, ValueMatching::equal));
     }
 
     @SafeVarargs
     public static <V> PreservingCondition<Map<?, ? super V>> doesNotContainValues(V... unexpected) {
-        List<V> values = stream(nonEmpty(unexpected, "unexpected values")).toList();
+        List<V> values = snapshot(stream(nonEmpty(unexpected, "unexpected values")));
         return preserving("map does not contain unexpected values", "map contained an unexpected value", unexpectedReference(values),
                 actual -> !matchesAny(actual.values(), value -> matchesAny(values, candidate -> equal(value, candidate))));
     }

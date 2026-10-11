@@ -6,6 +6,7 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
@@ -18,6 +19,7 @@ import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ValueMatching.equal;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
+import static io.github.gromoff97.awium.ValueRendering.snapshot;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
@@ -106,7 +108,7 @@ public final class Conditions {
     @SafeVarargs
     @SuppressWarnings("varargs")
     public static <Value> ExpectedCondition<Value> in(Value... expected) {
-        List<Value> values = stream(nonEmpty(expected, "expected values")).toList();
+        List<Value> values = snapshot(stream(nonEmpty(expected, "expected values")));
         return expected("value is in the expected values", expectedReference(values),
                 actual -> matchesAny(values, candidate -> equal(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was not in the expected values"));
@@ -115,7 +117,7 @@ public final class Conditions {
     @SafeVarargs
     @SuppressWarnings("varargs")
     public static <Value> ExpectedCondition<Value> notIn(Value... unexpected) {
-        List<Value> values = stream(nonEmpty(unexpected, "unexpected values")).toList();
+        List<Value> values = snapshot(stream(nonEmpty(unexpected, "unexpected values")));
         return expected("value is not in the unexpected values", unexpectedReference(values),
                 actual -> !matchesAny(values, candidate -> equal(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was in the unexpected values"));
@@ -145,14 +147,14 @@ public final class Conditions {
     public static <Value extends Comparable<? super Value>> PreservingCondition<Value> between(Value lowerBound, Value upperBound) {
         validateRange(lowerBound, upperBound);
         return preservingNonNull("value", "value is between the inclusive bounds", "value was outside the inclusive range",
-                expectedReference(List.of(lowerBound, upperBound)),
+                expectedReference(snapshot(Stream.of(lowerBound, upperBound))),
                 actual -> compare(actual, lowerBound) >= 0 && compare(actual, upperBound) <= 0);
     }
 
     public static <Value extends Comparable<? super Value>> PreservingCondition<Value> strictlyBetween(Value lowerBound, Value upperBound) {
         validateRange(lowerBound, upperBound);
         return preservingNonNull("value", "value is strictly between the bounds", "value was outside the exclusive range",
-                expectedReference(List.of(lowerBound, upperBound)),
+                expectedReference(snapshot(Stream.of(lowerBound, upperBound))),
                 actual -> compare(actual, lowerBound) > 0 && compare(actual, upperBound) < 0);
     }
 

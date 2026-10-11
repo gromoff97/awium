@@ -624,6 +624,59 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
+    void expectedListFormattingPreservesInterruptionBetweenValues() {
+        for (boolean capture : List.of(false, true)) {
+            for (boolean negative : List.of(false, true)) {
+                int[] renders = {0, 0};
+                Object signalling = new Object() {
+                    @Override
+                    public String toString() {
+                        renders[0]++;
+                        currentThread().interrupt();
+                        return "signalling";
+                    }
+                };
+                Object clearing = new Object() {
+                    @Override
+                    public String toString() {
+                        renders[1]++;
+                        interrupted();
+                        return "clearing";
+                    }
+                };
+                Object actual = new Object() {
+                    @Override
+                    public boolean equals(Object other) { return negative && other == signalling; }
+
+                    @Override
+                    public int hashCode() { throw new AssertionError("hashCode must not be called"); }
+
+                    @Override
+                    public String toString() { return "actual"; }
+                };
+                var check = negative ? Conditions.notIn(signalling, clearing) : Conditions.in(signalling, clearing);
+                var time = new FakeTime(0);
+                var waiting = timedAwait(() -> {
+                    time.advanceNanos(2);
+                    return actual;
+                }, config(1, 2, 0), time, time);
+                try {
+                    AwaitFailure failure = capture
+                            ? ((AwaitResult.Failed<?, ?>) waiting.tryUntil(check)).failure()
+                            : assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure();
+                    assertEquals(TIMEOUT, failure.reason());
+                    assertTrue(failure.message().contains("[signalling, clearing]"));
+                    assertEquals(1, renders[0]);
+                    assertEquals(1, renders[1]);
+                    assertTrue(currentThread().isInterrupted());
+                } finally {
+                    interrupted();
+                }
+            }
+        }
+    }
+
+    @Test
     void expectedEntryFormattingPreservesInterruptionBetweenKeyAndValue() {
         for (boolean capture : List.of(false, true)) {
             for (boolean negative : List.of(false, true)) {

@@ -1,16 +1,25 @@
 package io.github.gromoff97.awium;
 
+import java.util.AbstractList;
 import java.util.ArrayDeque;
 import java.util.HashSet;
+import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static java.lang.Thread.currentThread;
 import static java.util.Arrays.deepToString;
+import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
 
 final class ValueRendering {
 
     private ValueRendering() {}
+
+    static <Element> List<Element> snapshot(Stream<? extends Element> values) {
+        return unmodifiableList(new SnapshotList<>(values.toList()));
+    }
 
     static String renderValue(Object value) {
         if (value instanceof Object[] values) {
@@ -67,6 +76,25 @@ final class ValueRendering {
             return rendering.get();
         } finally {
             if (interrupted) currentThread().interrupt();
+        }
+    }
+
+    private static final class SnapshotList<Element> extends AbstractList<Element> {
+        private final List<? extends Element> values;
+
+        private SnapshotList(List<? extends Element> values) {
+            this.values = values;
+        }
+
+        @Override
+        public Element get(int index) { return values.get(index); }
+
+        @Override
+        public int size() { return values.size(); }
+
+        @Override
+        public String toString() {
+            return values.stream().map(ValueRendering::stringValue).collect(joining(", ", "[", "]"));
         }
     }
 

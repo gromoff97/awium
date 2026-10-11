@@ -27,6 +27,7 @@ import static io.github.gromoff97.awium.ValueMatching.exactly;
 import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
+import static io.github.gromoff97.awium.ValueRendering.snapshot;
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
@@ -146,7 +147,7 @@ public final class CollectionConditions {
     }
 
     public static <E> PreservingCondition<Collection<? super E>> contains(Collection<? extends E> expected) {
-        Collection<? extends E> values = nonEmpty(expected, "expected elements").stream().toList();
+        Collection<? extends E> values = snapshot(nonEmpty(expected, "expected elements").stream());
         String target = values.size() == 1 ? "expected element" : "all expected elements";
         return preserving("collection contains " + target, "collection did not contain " + target, expectedReference(values),
                 actual -> ValueMatching.containsAll(actual, values, ValueMatching::equal));
@@ -158,7 +159,7 @@ public final class CollectionConditions {
     }
 
     public static <E> PreservingCondition<Collection<? super E>> doesNotContain(Collection<? extends E> unexpected) {
-        Collection<? extends E> values = nonEmpty(unexpected, "unexpected elements").stream().toList();
+        Collection<? extends E> values = snapshot(nonEmpty(unexpected, "unexpected elements").stream());
         String target = values.size() == 1 ? "expected element" : "an expected element";
         return preserving("collection does not contain " + target, "collection contained " + target, unexpectedReference(values),
                 actual -> !matchesAny(actual,
@@ -171,7 +172,7 @@ public final class CollectionConditions {
     }
 
     public static <E> PreservingCondition<Collection<? super E>> doesNotContainAll(Collection<? extends E> unexpected) {
-        Collection<? extends E> values = nonEmpty(unexpected, "unexpected elements").stream().toList();
+        Collection<? extends E> values = snapshot(nonEmpty(unexpected, "unexpected elements").stream());
         String target = values.size() == 1 ? "expected element" : "all expected elements";
         return preserving("collection does not contain " + target, "collection contained " + target, unexpectedReference(values),
                 actual -> !ValueMatching.containsAll(actual, values, ValueMatching::equal));
@@ -183,7 +184,7 @@ public final class CollectionConditions {
     }
 
     public static <E> PreservingCondition<Collection<? super E>> containsAny(Collection<? extends E> expected) {
-        Collection<? extends E> values = nonEmpty(expected, "expected elements").stream().toList();
+        Collection<? extends E> values = snapshot(nonEmpty(expected, "expected elements").stream());
         String target = values.size() == 1 ? "expected element" : "an expected element";
         return preserving("collection contains " + target, "collection did not contain " + target, expectedReference(values),
                 actual -> matchesAny(actual,
@@ -196,7 +197,7 @@ public final class CollectionConditions {
     }
 
     public static <E> PreservingCondition<SequencedCollection<? super E>> containsExactly(Collection<? extends E> expected) {
-        Collection<? extends E> values = requireNonNull(expected, "expected elements must not be null").stream().toList();
+        Collection<? extends E> values = snapshot(requireNonNull(expected, "expected elements must not be null").stream());
         return preserving("collection contains exactly the expected elements",
                 "collection did not contain exactly the expected elements", expectedReference(values),
                 actual -> exactContent(actual, values));
@@ -208,7 +209,7 @@ public final class CollectionConditions {
     }
 
     public static <E> PreservingCondition<SequencedCollection<? super E>> doesNotContainExactly(Collection<? extends E> expected) {
-        Collection<? extends E> values = requireNonNull(expected, "expected elements must not be null").stream().toList();
+        Collection<? extends E> values = snapshot(requireNonNull(expected, "expected elements must not be null").stream());
         return preserving("collection does not contain exactly the expected elements",
                 "collection contained exactly the expected elements", expectedReference(values),
                 actual -> !exactContent(actual, values));
@@ -220,7 +221,7 @@ public final class CollectionConditions {
     }
 
     public static <E> PreservingCondition<Collection<? super E>> containsExactlyInAnyOrder(Collection<? extends E> expected) {
-        Collection<? extends E> values = requireNonNull(expected, "expected elements must not be null").stream().toList();
+        Collection<? extends E> values = snapshot(requireNonNull(expected, "expected elements must not be null").stream());
         return preserving("collection contains exactly the expected elements in any order",
                 "collection did not contain exactly the expected elements in any order", expectedReference(values),
                 actual -> exactContentInAnyOrder(actual, values));
@@ -232,7 +233,7 @@ public final class CollectionConditions {
     }
 
     public static <E> PreservingCondition<Collection<? super E>> doesNotContainExactlyInAnyOrder(Collection<? extends E> expected) {
-        Collection<? extends E> values = requireNonNull(expected, "expected elements must not be null").stream().toList();
+        Collection<? extends E> values = snapshot(requireNonNull(expected, "expected elements must not be null").stream());
         return preserving("collection does not contain exactly the expected elements in any order",
                 "collection contained exactly the expected elements in any order", expectedReference(values),
                 actual -> !exactContentInAnyOrder(actual, values));
@@ -244,14 +245,14 @@ public final class CollectionConditions {
     }
 
     public static <E> PreservingCondition<Collection<? super E>> containsOnly(Collection<? extends E> expected) {
-        Collection<? extends E> values = requireNonNull(expected, "expected elements must not be null").stream().toList();
+        Collection<? extends E> values = snapshot(requireNonNull(expected, "expected elements must not be null").stream());
         return preserving("collection contains only the expected elements",
                 "collection did not contain only the expected elements", expectedReference(values),
                 actual -> sameDistinctElements(actual, values));
     }
 
     public static <E> PreservingCondition<Collection<? extends E>> subsetOf(Collection<? extends E> expected) {
-        Collection<? extends E> values = requireNonNull(expected, "expected elements must not be null").stream().toList();
+        Collection<? extends E> values = snapshot(requireNonNull(expected, "expected elements must not be null").stream());
         return preserving("collection is a subset of the expected elements",
                 "collection was not a subset of the expected elements", expectedReference(values),
                 actual -> matchesAll(actual, value -> matchesAny(values, candidate -> equal(value, candidate))));
@@ -259,14 +260,14 @@ public final class CollectionConditions {
 
     @SafeVarargs
     public static <E> PreservingCondition<SequencedCollection<? super E>> startsWith(E... expected) {
-        List<? extends E> values = stream(nonEmpty(expected, "expected elements")).toList();
+        List<? extends E> values = snapshot(stream(nonEmpty(expected, "expected elements")));
         return preserving("collection contains expected prefix", "collection did not contain expected prefix", expectedReference(values),
                 actual -> regionMatches(elements(actual), 0, values));
     }
 
     @SafeVarargs
     public static <E> PreservingCondition<SequencedCollection<? super E>> endsWith(E... expected) {
-        List<? extends E> values = stream(nonEmpty(expected, "expected elements")).toList();
+        List<? extends E> values = snapshot(stream(nonEmpty(expected, "expected elements")));
         return preserving("collection contains expected suffix", "collection did not contain expected suffix", expectedReference(values),
                 actual -> {
                     List<?> actualElements = elements(actual);
@@ -276,28 +277,28 @@ public final class CollectionConditions {
 
     @SafeVarargs
     public static <E> PreservingCondition<SequencedCollection<? super E>> containsSequence(E... expected) {
-        List<? extends E> values = stream(nonEmpty(expected, "expected elements")).toList();
+        List<? extends E> values = snapshot(stream(nonEmpty(expected, "expected elements")));
         return preserving("collection contains expected sequence", "collection did not contain expected sequence", expectedReference(values),
                 actual -> containsSequence(elements(actual), values));
     }
 
     @SafeVarargs
     public static <E> PreservingCondition<SequencedCollection<? super E>> doesNotContainSequence(E... expected) {
-        List<? extends E> values = stream(nonEmpty(expected, "expected elements")).toList();
+        List<? extends E> values = snapshot(stream(nonEmpty(expected, "expected elements")));
         return preserving("collection does not contain expected sequence", "collection contained expected sequence", expectedReference(values),
                 actual -> !containsSequence(elements(actual), values));
     }
 
     @SafeVarargs
     public static <E> PreservingCondition<SequencedCollection<? super E>> containsSubsequence(E... expected) {
-        List<? extends E> values = stream(nonEmpty(expected, "expected elements")).toList();
+        List<? extends E> values = snapshot(stream(nonEmpty(expected, "expected elements")));
         return preserving("collection contains expected subsequence", "collection did not contain expected subsequence", expectedReference(values),
                 actual -> containsSubsequence(elements(actual), values));
     }
 
     @SafeVarargs
     public static <E> PreservingCondition<SequencedCollection<? super E>> doesNotContainSubsequence(E... expected) {
-        List<? extends E> values = stream(nonEmpty(expected, "expected elements")).toList();
+        List<? extends E> values = snapshot(stream(nonEmpty(expected, "expected elements")));
         return preserving("collection does not contain expected subsequence",
                 "collection contained expected subsequence", expectedReference(values),
                 actual -> !containsSubsequence(elements(actual), values));
