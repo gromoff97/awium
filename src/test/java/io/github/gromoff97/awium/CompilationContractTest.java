@@ -458,9 +458,9 @@ class CompilationContractTest {
                     void check() {
                         List<String> expectedElement = List.of("a");
                         List<List<String>> expectedElements = List.of(List.of("a"), List.of("b"));
-                        await(Contract::nested).until(contains(expectedElement));
-                        await(Contract::nested).until(containsAll(expectedElements));
-                        await(Contract::nested).until(containsExactlyElementsOf(expectedElements));
+                        await(Contract::nested).until(contains(List.of(expectedElement)));
+                        await(Contract::nested).until(contains(expectedElements));
+                        await(Contract::nested).until(containsExactly(expectedElements));
                     }
                 }
                 """));
@@ -564,15 +564,15 @@ class CompilationContractTest {
                         List<String> ordered = await(Contract::list).until(containsExactly("a", "b"));
                         await(Contract::list).until(doesNotContainExactly("b", "a")
                                 .because("ordered"));
-                        await(Contract::list).until(containsExactlyElementsOf(expected));
-                        await(Contract::list).until(doesNotContainExactlyElementsOf(
+                        await(Contract::list).until(containsExactly(expected));
+                        await(Contract::list).until(doesNotContainExactly(
                                 expected).because("ordered"));
 
                         Collection<String> anyOrder = await(collection).until(containsExactlyInAnyOrder("a", "b"));
                         await(collection).until(doesNotContainExactlyInAnyOrder(
                                 "a", "b").because("any order"));
-                        await(collection).until(containsExactlyInAnyOrderElementsOf(expected));
-                        await(collection).until(doesNotContainExactlyInAnyOrderElementsOf(expected).because("any order"));
+                        await(collection).until(containsExactlyInAnyOrder(expected));
+                        await(collection).until(doesNotContainExactlyInAnyOrder(expected).because("any order"));
 
                     }
                 }

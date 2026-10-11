@@ -25,11 +25,11 @@ class ExpectedInputsTest {
     @Test
     void collectionFactoriesFreezeMembershipOrderDuplicatesAndNulls() {
         var expected = new ArrayList<>(asList("a", null, "a"));
-        assertStable(List.of(containsAll(expected), doesNotContainAnyElementsOf(expected),
-                doesNotContainAllElementsOf(expected), containsAnyElementsOf(expected),
-                containsExactlyElementsOf(expected), doesNotContainExactlyElementsOf(expected),
-                containsExactlyInAnyOrderElementsOf(expected), doesNotContainExactlyInAnyOrderElementsOf(expected),
-                containsOnlyElementsOf(expected), subsetOf(expected)),
+        assertStable(List.of(contains(expected), doesNotContain(expected),
+                doesNotContainAll(expected), containsAny(expected),
+                containsExactly(expected), doesNotContainExactly(expected),
+                containsExactlyInAnyOrder(expected), doesNotContainExactlyInAnyOrder(expected),
+                containsOnly(expected), subsetOf(expected)),
                 asList("a", null, "a"), List.of("changed"), () -> {
                     expected.clear();
                     expected.add("changed");
@@ -40,7 +40,7 @@ class ExpectedInputsTest {
     void collectionVarargsFactoriesFreezeTheArray() {
         String[] expected = {"a", null, "a"};
         assertStable(List.of(contains(expected), doesNotContain(expected), doesNotContainAll(expected),
-                containsAnyOf(expected), containsExactly(expected), doesNotContainExactly(expected),
+                containsAny(expected), containsExactly(expected), doesNotContainExactly(expected),
                 containsExactlyInAnyOrder(expected), doesNotContainExactlyInAnyOrder(expected),
                 containsOnly(expected), startsWith(expected), endsWith(expected), containsSequence(expected),
                 doesNotContainSequence(expected), containsSubsequence(expected), doesNotContainSubsequence(expected)),
@@ -113,7 +113,7 @@ class ExpectedInputsTest {
     void snapshotsKeepElementIdentityAndReadOnlyDiagnosticContainers() {
         var element = new StringBuilder("before");
         var expected = new ArrayList<>(List.of(element));
-        var condition = containsAll(expected);
+        var condition = contains(expected);
         var reference = assertInstanceOf(List.class, condition.metadata.reference().value());
         expected.clear();
         element.append(" changed");

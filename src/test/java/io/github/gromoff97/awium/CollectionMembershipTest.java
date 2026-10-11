@@ -72,11 +72,20 @@ class CollectionMembershipTest {
     }
 
     @Test
+    void collectionArgumentsRepresentExpectedElementsIncludingNestedCollections() throws Exception {
+        List<String> element = List.of("a", "b");
+        Collection<List<String>> actual = List.of(element);
+
+        assertSame(actual, result(evaluate(contains(List.of(element)), actual)));
+        assertUnsatisfied(evaluate(contains(List.of(List.of("a"))), actual));
+    }
+
+    @Test
     void clearingExpectedCollectionDoesNotChangeContainment()
             throws Exception {
         var expected = new ArrayList<>(List.of("expected"));
-        var positive = containsAll(expected);
-        var negative = doesNotContainAllElementsOf(expected);
+        var positive = contains(expected);
+        var negative = doesNotContainAll(expected);
         expected.clear();
 
         for (Collection<String> actual : List.of(List.<String>of(), List.of("actual"))) {
@@ -125,11 +134,11 @@ class CollectionMembershipTest {
         assertValidation(NullPointerException.class,
                 () -> contains((Object[]) null));
         assertValidation(NullPointerException.class,
-                () -> containsAll((Collection<Object>) null));
+                () -> contains((Collection<Object>) null));
         assertValidation(IllegalArgumentException.class,
                 () -> contains(new Object[0]));
         assertValidation(IllegalArgumentException.class,
-                () -> containsAll(List.of()));
+                () -> contains(List.of()));
     }
 
     @Test
@@ -148,14 +157,14 @@ class CollectionMembershipTest {
                         Collection<Integer> integers = List.of(1, 2);
                         contains("a", "b");
                         doesNotContainAll("a", "b");
-                        containsAnyOf("a", "b");
+                        containsAny("a", "b");
                         doesNotContain("a", "b");
                         contains(nil);
                         PreservingCondition<Collection<? super Integer>> typed =
-                                containsAll(integers);
+                                contains(integers);
                         CollectionSource<ArrayList<Number>> source =
                                 () -> new ArrayList<>(integers);
-                        ArrayList<Number> result = await(source).until(containsAll(integers));
+                        ArrayList<Number> result = await(source).until(contains(integers));
                     }
                 }
                 """));
@@ -193,12 +202,12 @@ class CollectionMembershipTest {
                 new Pair("contains", contains("b"), doesNotContain("b")),
                 new Pair("contains", contains("a", "b"),
                         doesNotContainAll("a", "b")),
-                new Pair("contains collection", containsAll(List.of("a", "b")),
-                        doesNotContainAllElementsOf(List.of("a", "b"))),
-                new Pair("containsAny", containsAnyOf("x", "b"),
+                new Pair("contains collection", contains(List.of("a", "b")),
+                        doesNotContainAll(List.of("a", "b"))),
+                new Pair("containsAny", containsAny("x", "b"),
                         doesNotContain("x", "b")),
-                new Pair("containsAny collection", containsAnyElementsOf(List.of("x", "b")),
-                        doesNotContainAnyElementsOf(List.of("x", "b"))));
+                new Pair("containsAny collection", containsAny(List.of("x", "b")),
+                        doesNotContain(List.of("x", "b"))));
     }
 
     private record Pair(String name,

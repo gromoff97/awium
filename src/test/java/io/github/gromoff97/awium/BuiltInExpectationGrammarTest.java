@@ -92,7 +92,7 @@ class BuiltInExpectationGrammarTest {
                         description(doesNotContain("expected")),
                         description(contains("first", "second")),
                         description(doesNotContainAll("first", "second")),
-                        description(containsAnyOf("expected")),
+                        description(containsAny("expected")),
                         description(doesNotContain("expected")),
                         description(containsExactly("expected")),
                         description(doesNotContainExactly("expected")),

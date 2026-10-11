@@ -101,7 +101,7 @@ class CollectionExactContentTest {
 
         List<String> expected = new ArrayList<>(List.of("before"));
         PreservingCondition<? super List<String>> collectionCondition =
-                containsExactlyElementsOf(expected);
+                containsExactly(expected);
         expected.set(0, "after");
         assertStatus(collectionCondition, List.of("before"), Satisfied.class);
         assertStatus(collectionCondition, List.of("after"), Unsatisfied.class);
@@ -127,7 +127,7 @@ class CollectionExactContentTest {
     @Test
     void nullActualIsUnsatisfiedAndNullAggregateIsRejected() throws Exception {
         ConditionResult<?> evaluation = evaluate(
-                containsExactlyElementsOf(List.of("a")), null);
+                containsExactly(List.of("a")), null);
         assertEquals(Unsatisfied.class, evaluation.getClass());
         assertFalse(mismatch(evaluation).isBlank());
         assertTrue(!assertThrows(NullPointerException.class,
@@ -175,16 +175,16 @@ class CollectionExactContentTest {
                         doesNotContainExactly("a", "a"),
                         List.of("a", "a"), List.of("a", "b")),
                 new Pair("ordered collection",
-                        containsExactlyElementsOf(List.of("a", "a")),
-                        doesNotContainExactlyElementsOf(List.of("a", "a")),
+                        containsExactly(List.of("a", "a")),
+                        doesNotContainExactly(List.of("a", "a")),
                         List.of("a", "a"), List.of("a", "b")),
                 new Pair("any-order varargs",
                         containsExactlyInAnyOrder("a", "b"),
                         doesNotContainExactlyInAnyOrder("a", "b"),
                         List.of("b", "a"), List.of("a", "a")),
                 new Pair("any-order collection",
-                        containsExactlyInAnyOrderElementsOf(List.of("a", "b")),
-                        doesNotContainExactlyInAnyOrderElementsOf(
+                        containsExactlyInAnyOrder(List.of("a", "b")),
+                        doesNotContainExactlyInAnyOrder(
                                 List.of("a", "b")),
                         List.of("b", "a"), List.of("a", "a")));
     }
