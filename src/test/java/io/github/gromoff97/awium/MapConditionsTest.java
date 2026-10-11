@@ -37,12 +37,12 @@ class MapConditionsTest {
     @Test
     void exactAndAggregateConditionsKeepSetLikeEntrySemantics()
             throws Exception {
-        assertStatus(containsAllEntriesOf(map("a", "1")),
+        assertStatus(containsEntries(map("a", "1")),
                 map("a", "1"), Satisfied.class);
-        assertStatus(containsExactlyEntriesOf(map("a", "1", "b", "2")),
+        assertStatus(containsExactlyEntries(map("a", "1", "b", "2")),
                 map("b", "2", "a", "1"), Satisfied.class);
-        assertStatus(containsExactlyEntriesOf(Map.of()), Map.of(), Satisfied.class);
-        assertStatus(containsExactlyEntriesOf(map("a", "1")),
+        assertStatus(containsExactlyEntries(Map.of()), Map.of(), Satisfied.class);
+        assertStatus(containsExactlyEntries(map("a", "1")),
                 map("a", "1", "b", "2"), Unsatisfied.class);
     }
 
@@ -57,7 +57,7 @@ class MapConditionsTest {
         var arrayActual = entryMap(entry(new int[] {1}, new int[] {2}));
         assertStatus(containsKeys(new int[] {1}), arrayActual, Satisfied.class);
         assertStatus(containsValues(new int[] {2}), arrayActual, Satisfied.class);
-        assertStatus(containsEntry(new int[] {1}, new int[] {2}),
+        assertStatus(containsEntries(new int[] {1}, new int[] {2}),
                 arrayActual, Satisfied.class);
 
         var objectArrayActual = entryMap(entry(new String[] {"key"}, new String[] {"value"}));
@@ -69,7 +69,7 @@ class MapConditionsTest {
         var valueFailure = new IllegalStateException("value equals");
         var keyMismatch = entryMap(entry("actual",
                 new ThrowingEquals(valueFailure)));
-        assertStatus(containsEntry("expected", new ThrowingEquals(null)),
+        assertStatus(containsEntries("expected", new ThrowingEquals(null)),
                 keyMismatch, Unsatisfied.class);
 
         Directional onlyActual = new Directional(true);
@@ -85,8 +85,8 @@ class MapConditionsTest {
         var actual = entryMap(entry(null, "value"), entry("key", null));
         assertStatus(containsKeys((String) null), actual, Satisfied.class);
         assertStatus(containsValues((String) null), actual, Satisfied.class);
-        assertStatus(containsEntry(null, "value"), actual, Satisfied.class);
-        assertStatus(containsEntry("key", null), actual, Satisfied.class);
+        assertStatus(containsEntries(null, "value"), actual, Satisfied.class);
+        assertStatus(containsEntries("key", null), actual, Satisfied.class);
     }
 
     @Test
@@ -94,9 +94,9 @@ class MapConditionsTest {
             throws Exception {
         Map<String, String> expected = new LinkedHashMap<>(map("a", "before"));
         PreservingCondition<? super Map<String, String>> membership =
-                containsAllEntriesOf(expected);
+                containsEntries(expected);
         PreservingCondition<? super Map<String, String>> exact =
-                containsExactlyEntriesOf(expected);
+                containsExactlyEntries(expected);
         expected.put("a", "after");
 
         assertStatus(membership, map("a", "before", "b", "other"), Satisfied.class);
@@ -109,8 +109,8 @@ class MapConditionsTest {
     void clearingExpectedMapDoesNotChangeContainment()
             throws Exception {
         var expected = new LinkedHashMap<>(map("expected", "value"));
-        var positive = containsAllEntriesOf(expected);
-        var negative = doesNotContainAllEntriesOf(expected);
+        var positive = containsEntries(expected);
+        var negative = doesNotContainAllEntries(expected);
         expected.clear();
 
         for (Map<String, String> actual : List.of(Map.<String, String>of(), map("actual", "value"))) {
@@ -134,7 +134,7 @@ class MapConditionsTest {
         assertSame(actualCause, assertFailure(CONDITION_FAILED,
                 () -> awaitMap(brokenActual, doesNotContainKeys("a"))).getCause());
         assertSame(expectedCause, assertThrows(IllegalStateException.class,
-                () -> containsNoEntriesOf(brokenExpected)));
+                () -> doesNotContainEntries(brokenExpected)));
         assertSame(equalityCause, assertFailure(CONDITION_FAILED,
                 () -> awaitMap(brokenEquality,
                         doesNotContainKeys(new ThrowingEquals(null)))).getCause());
@@ -144,16 +144,16 @@ class MapConditionsTest {
     void nullActualShortCircuitsAndAggregateFactoriesValidateInputs()
             throws Exception {
         ConditionResult<?> evaluation = evaluate(
-                containsAllEntriesOf(map("a", "1")), null);
+                containsEntries(map("a", "1")), null);
         assertEquals(Unsatisfied.class, evaluation.getClass());
         assertFalse(mismatch(evaluation).isBlank());
 
         assertValidation(NullPointerException.class,
-                () -> containsAllEntriesOf(null));
+                () -> containsEntries(null));
         assertValidation(NullPointerException.class,
-                () -> containsExactlyEntriesOf(null));
+                () -> containsExactlyEntries(null));
         assertValidation(IllegalArgumentException.class,
-                () -> containsAllEntriesOf(Map.of()));
+                () -> containsEntries(Map.of()));
     }
 
     @Test
@@ -178,7 +178,7 @@ class MapConditionsTest {
         var actual = map("a", "1");
         MapSource<LinkedHashMap<String, String>> source = () -> actual;
 
-        LinkedHashMap<String, String> result = await(source).usingTime(pollingTime, pollingTime).until(containsEntry("a", "1"));
+        LinkedHashMap<String, String> result = await(source).usingTime(pollingTime, pollingTime).until(containsEntries("a", "1"));
 
         assertSame(actual, result);
     }
@@ -241,20 +241,20 @@ class MapConditionsTest {
                         map("a", "1", "b", "2"), map("a", "1", "c", "2")),
                 new Pair("value", containsValues("2"), doesNotContainValues("2"),
                         map("a", "1", "b", "2"), map("a", "1", "b", "3")),
-                new Pair("entry", containsEntry("b", "2"),
-                        doesNotContainEntry("b", "2"),
+                new Pair("entry", containsEntries("b", "2"),
+                        doesNotContainEntries("b", "2"),
                         map("a", "1", "b", "2"), map("a", "1", "b", "3")),
-                new Pair("all", containsAllEntriesOf(map("a", "1", "b", "2")),
-                        doesNotContainAllEntriesOf(map("a", "1", "b", "2")),
+                new Pair("all", containsEntries(map("a", "1", "b", "2")),
+                        doesNotContainAllEntries(map("a", "1", "b", "2")),
                         map("a", "1", "b", "2", "c", "3"),
                         map("a", "1", "b", "3")),
-                new Pair("any", containsAnyEntriesOf(map("x", "9", "b", "2")),
-                        containsNoEntriesOf(map("x", "9", "b", "2")),
+                new Pair("any", containsAnyEntries(map("x", "9", "b", "2")),
+                        doesNotContainEntries(map("x", "9", "b", "2")),
                         map("a", "1", "b", "2"),
                         map("a", "1", "c", "3")),
                 new Pair("exact",
-                        containsExactlyEntriesOf(map("a", "1", "b", "2")),
-                        doesNotContainExactlyEntriesOf(
+                        containsExactlyEntries(map("a", "1", "b", "2")),
+                        doesNotContainExactlyEntries(
                                 map("a", "1", "b", "2")),
                         map("b", "2", "a", "1"),
                         map("a", "1", "b", "3")));

@@ -244,51 +244,51 @@ public final class MapConditions {
                 actual -> !matchesAny(actual.values(), value -> matchesAny(values, candidate -> equal(value, candidate))));
     }
 
-    public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsEntry(K key, V value) {
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsEntries(K key, V value) {
         return preserving("map contains expected entry", "map did not contain expected entry", expectedReference(new Object[]{key, value}),
                 actual -> matchesAny(actual.entrySet(), entry -> entryMatches(entry, key, value)));
     }
 
-    public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainEntry(K key, V value) {
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainEntries(K key, V value) {
         return preserving("map does not contain expected entry", "map contained expected entry", expectedReference(new Object[]{key, value}),
                 actual -> !matchesAny(actual.entrySet(), entry -> entryMatches(entry, key, value)));
     }
 
-    public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsAllEntriesOf(Map<? extends K, ? extends V> expected) {
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsEntries(Map<? extends K, ? extends V> expected) {
         var entries = new ExpectedEntries(nonEmpty(expected, "expected entries"));
         return preserving("map contains all expected entries", "map did not contain all expected entries", expectedReference(entries),
                 actual -> containsAll(actual.entrySet(), entries.entries(),
                         MapConditions::entryMatches));
     }
 
-    public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainAllEntriesOf(Map<? extends K, ? extends V> unexpected) {
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainAllEntries(Map<? extends K, ? extends V> unexpected) {
         var entries = new ExpectedEntries(nonEmpty(unexpected, "expected entries"));
         return preserving("map does not contain all expected entries", "map contained all expected entries", expectedReference(entries),
                 actual -> !containsAll(actual.entrySet(), entries.entries(),
                         MapConditions::entryMatches));
     }
 
-    public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsAnyEntriesOf(Map<? extends K, ? extends V> expected) {
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsAnyEntries(Map<? extends K, ? extends V> expected) {
         var entries = new ExpectedEntries(nonEmpty(expected, "expected entries"));
         return preserving("map contains an expected entry", "map did not contain an expected entry", expectedReference(entries),
                 actual -> matchesAny(actual.entrySet(), value ->
                         matchesAny(entries.entries(), candidate -> entryMatches(value, candidate))));
     }
 
-    public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsNoEntriesOf(Map<? extends K, ? extends V> expected) {
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainEntries(Map<? extends K, ? extends V> expected) {
         var entries = new ExpectedEntries(nonEmpty(expected, "expected entries"));
         return preserving("map does not contain an expected entry", "map contained an expected entry", expectedReference(entries),
                 actual -> !matchesAny(actual.entrySet(), value ->
                         matchesAny(entries.entries(), candidate -> entryMatches(value, candidate))));
     }
 
-    public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsExactlyEntriesOf(Map<? extends K, ? extends V> expected) {
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsExactlyEntries(Map<? extends K, ? extends V> expected) {
         var entries = new ExpectedEntries(requireNonNull(expected, "expected entries must not be null"));
         return preserving("map contains exactly the expected entries", "map did not contain exactly the expected entries", expectedReference(entries),
                 actual -> exactContent(actual, entries));
     }
 
-    public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainExactlyEntriesOf(Map<? extends K, ? extends V> expected) {
+    public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainExactlyEntries(Map<? extends K, ? extends V> expected) {
         var entries = new ExpectedEntries(requireNonNull(expected, "expected entries must not be null"));
         return preserving("map does not contain exactly the expected entries", "map contained exactly the expected entries", expectedReference(entries),
                 actual -> !exactContent(actual, entries));

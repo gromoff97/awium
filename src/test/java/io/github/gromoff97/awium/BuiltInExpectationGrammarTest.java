@@ -111,16 +111,16 @@ class BuiltInExpectationGrammarTest {
                         description(doesNotContainKeys("expected")),
                         description(containsValues("expected")),
                         description(doesNotContainValues("expected")),
-                        description(containsEntry("key", "value")),
-                        description(doesNotContainEntry("key", "value")),
-                        description(containsAllEntriesOf(Map.of("key", "value"))),
-                        description(doesNotContainAllEntriesOf(
+                        description(containsEntries("key", "value")),
+                        description(doesNotContainEntries("key", "value")),
+                        description(containsEntries(Map.of("key", "value"))),
+                        description(doesNotContainAllEntries(
                                 Map.of("key", "value"))),
-                        description(containsAnyEntriesOf(Map.of("key", "value"))),
-                        description(containsNoEntriesOf(Map.of("key", "value"))),
-                        description(containsExactlyEntriesOf(
+                        description(containsAnyEntries(Map.of("key", "value"))),
+                        description(doesNotContainEntries(Map.of("key", "value"))),
+                        description(containsExactlyEntries(
                                 Map.of("key", "value"))),
-                        description(doesNotContainExactlyEntriesOf(
+                        description(doesNotContainExactlyEntries(
                                 Map.of("key", "value")))));
     }
 

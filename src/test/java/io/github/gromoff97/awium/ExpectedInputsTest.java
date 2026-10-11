@@ -51,9 +51,9 @@ class ExpectedInputsTest {
         expected.put("a", "before");
         expected.put(null, null);
         Map<String, String> original = new LinkedHashMap<>(expected);
-        assertStable(List.of(MapConditions.containsAllEntriesOf(expected), MapConditions.doesNotContainAllEntriesOf(expected),
-                MapConditions.containsAnyEntriesOf(expected), MapConditions.containsNoEntriesOf(expected),
-                MapConditions.containsExactlyEntriesOf(expected), MapConditions.doesNotContainExactlyEntriesOf(expected)),
+        assertStable(List.of(MapConditions.containsEntries(expected), MapConditions.doesNotContainAllEntries(expected),
+                MapConditions.containsAnyEntries(expected), MapConditions.doesNotContainEntries(expected),
+                MapConditions.containsExactlyEntries(expected), MapConditions.doesNotContainExactlyEntries(expected)),
                 original, Map.of("a", "changed"), () -> {
                     expected.entrySet().iterator().next().setValue("changed");
                     expected.remove(null);
@@ -95,14 +95,14 @@ class ExpectedInputsTest {
         expected.put(new String("key"), "first");
         expected.put(new String("key"), "second");
         var actual = new IdentityHashMap<>(expected);
-        var condition = MapConditions.containsExactlyEntriesOf(expected);
+        var condition = MapConditions.containsExactlyEntries(expected);
         expected.clear();
         assertSame(actual, result(evaluate(condition, actual)));
 
         var key = new ProbeContainers.Directional(false);
         var withUserKey = new IdentityHashMap<ProbeContainers.Directional, String>();
         withUserKey.put(key, "value");
-        var withUserKeyCondition = MapConditions.containsExactlyEntriesOf(withUserKey);
+        var withUserKeyCondition = MapConditions.containsExactlyEntries(withUserKey);
         assertEquals(0, key.equalsCalls);
         assertSame(withUserKey, result(evaluate(withUserKeyCondition, withUserKey)));
     }
@@ -130,7 +130,7 @@ class ExpectedInputsTest {
         var expected = new LinkedHashMap<String, String>();
         expected.put("b", "before");
         expected.put("a", null);
-        var condition = MapConditions.containsAllEntriesOf(expected);
+        var condition = MapConditions.containsEntries(expected);
         expected.put("b", "after");
         expected.remove("a");
         assertEquals("{b=before, a=null}", condition.metadata.reference().value().toString());
