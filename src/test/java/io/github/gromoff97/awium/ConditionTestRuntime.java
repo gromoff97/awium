@@ -8,51 +8,49 @@ import io.github.gromoff97.awium.Condition.SelectedCondition;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-public final class ConditionTestRuntime {
+final class ConditionTestRuntime {
 
-    public static <S, R> ConditionResult<? extends R> evaluate(
+    static <S, R> ConditionResult<? extends R> evaluate(
             Condition<? super S, ? extends R> condition, S actual) {
         return condition.newSession().apply(actual);
     }
 
-    public static <S> ConditionResult<? extends S> evaluate(PreservingCondition<? super S> condition, S actual) {
+    static <S> ConditionResult<? extends S> evaluate(PreservingCondition<? super S> condition, S actual) {
         return condition.<S>preservingSession().apply(actual);
     }
 
-    public static <S, T extends S> ConditionResult<? extends S> evaluate(ExpectedCondition<T> condition, S actual) {
+    static <S, T extends S> ConditionResult<? extends S> evaluate(ExpectedCondition<T> condition, S actual) {
         return condition.<S>preservingSession().apply(actual);
     }
 
-    public static <S, R> ConditionResult<? extends R> evaluate(NarrowingCondition<R> condition, S actual) {
+    static <S, R> ConditionResult<? extends R> evaluate(NarrowingCondition<R> condition, S actual) {
         return condition.newSession().apply(actual);
     }
 
-    public static <S, R, F> ConditionResult<? extends R> evaluate(
+    static <S, R, F> ConditionResult<? extends R> evaluate(
             SelectedCondition<? super S, F> condition, S actual) {
         return condition.<R>selectionSession().apply(actual);
     }
 
-    public static String description(ConditionDefinition<?, ?> condition) {
+    static String description(ConditionDefinition<?, ?> condition) {
         return condition.metadata.description();
     }
 
-    public static String explanation(ConditionDefinition<?, ?> condition) {
+    static String explanation(ConditionDefinition<?, ?> condition) {
         return condition.metadata.explanation();
     }
 
-    public static void assertUnsatisfied(ConditionResult<?> evaluation) {
+    static void assertUnsatisfied(ConditionResult<?> evaluation) {
         assertFalse(mismatch(evaluation).isBlank());
     }
 
-    public static Object result(ConditionResult<?> evaluation) {
+    static Object result(ConditionResult<?> evaluation) {
         return assertInstanceOf(ConditionResult.Satisfied.class, evaluation).result();
     }
 
-    public static String mismatch(ConditionResult<?> evaluation) {
+    static String mismatch(ConditionResult<?> evaluation) {
         return assertInstanceOf(ConditionResult.Unsatisfied.class, evaluation).mismatch();
     }
 
-    private ConditionTestRuntime() {
-        throw new AssertionError("Utility class");
-    }
+    private ConditionTestRuntime() {}
 }

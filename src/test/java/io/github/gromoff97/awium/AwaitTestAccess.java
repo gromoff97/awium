@@ -8,17 +8,15 @@ import java.util.function.LongSupplier;
 
 import static java.time.Duration.ofNanos;
 
-public final class AwaitTestAccess {
+final class AwaitTestAccess {
 
-    private AwaitTestAccess() {
-        throw new AssertionError("Utility class");
-    }
+    private AwaitTestAccess() {}
 
-    public static WaitConfiguration config(long every, long upTo, long persistence) {
+    static WaitConfiguration config(long every, long upTo, long persistence) {
         return new WaitConfiguration(every, upTo, persistence);
     }
 
-    public static <S> Await<S, S, Object> timedAwait(Source<? extends S> source,
+    static <S> Await<S, S, Object> timedAwait(Source<? extends S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {
         return Await.<S>await(source::get).usingTime(clock, parker)
@@ -26,7 +24,7 @@ public final class AwaitTestAccess {
                 .persisting(ofNanos(configuration.persistenceNanos()));
     }
 
-    public static <E, C extends Collection<E>> Await<C, E, Collection<?>> timedCollectionAwait(
+    static <E, C extends Collection<E>> Await<C, E, Collection<?>> timedCollectionAwait(
             Source<? extends C> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         return Await.<E, C>await(source::get).usingTime(clock, parker)
@@ -34,7 +32,7 @@ public final class AwaitTestAccess {
                 .persisting(ofNanos(configuration.persistenceNanos()));
     }
 
-    public static <E> Await<Optional<E>, E, Optional<?>> timedOptionalAwait(
+    static <E> Await<Optional<E>, E, Optional<?>> timedOptionalAwait(
             Source<? extends Optional<E>> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         return Await.<E>await((Source.OptionalSource<E>) source::get).usingTime(clock, parker)
@@ -42,7 +40,7 @@ public final class AwaitTestAccess {
                 .persisting(ofNanos(configuration.persistenceNanos()));
     }
 
-    public static <K, V, M extends Map<K, V>> Await<M, Map.Entry<K, V>, Map<?, ?>> timedMapAwait(
+    static <K, V, M extends Map<K, V>> Await<M, Map.Entry<K, V>, Map<?, ?>> timedMapAwait(
             Source<? extends M> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         return Await.<K, V, M>await(source::get).usingTime(clock, parker)

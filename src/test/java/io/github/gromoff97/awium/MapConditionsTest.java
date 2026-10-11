@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class MapConditionsTest {
 
     @Test
-    void positiveAndNegativeMapConditionsAreComplements() throws Exception {
+    void positiveAndNegativeMapConditionsAreComplements() {
         for (Pair pair : pairs()) {
             assertPair(pair, pair.matchingActual(), true);
             assertPair(pair, pair.mismatchingActual(), false);
@@ -35,8 +35,7 @@ class MapConditionsTest {
     }
 
     @Test
-    void exactAndAggregateConditionsKeepSetLikeEntrySemantics()
-            throws Exception {
+    void exactAndAggregateConditionsKeepSetLikeEntrySemantics() {
         assertStatus(containsEntries(map("a", "1")),
                 map("a", "1"), Satisfied.class);
         assertStatus(containsExactlyEntries(map("a", "1", "b", "2")),
@@ -47,7 +46,7 @@ class MapConditionsTest {
     }
 
     @Test
-    void mapEqualityIsActualFirstArrayAwareAndKeyFirst() throws Exception {
+    void mapEqualityIsActualFirstArrayAwareAndKeyFirst() {
         Directional actualKey = new Directional(true);
         Directional expectedKey = new Directional(false);
         var actual = entryMap(entry(actualKey, "value"));
@@ -81,7 +80,7 @@ class MapConditionsTest {
     }
 
     @Test
-    void nullKeysAndValuesUseScanSemantics() throws Exception {
+    void nullKeysAndValuesUseScanSemantics() {
         var actual = entryMap(entry(null, "value"), entry("key", null));
         assertStatus(containsKeys((String) null), actual, Satisfied.class);
         assertStatus(containsValues((String) null), actual, Satisfied.class);
@@ -90,8 +89,7 @@ class MapConditionsTest {
     }
 
     @Test
-    void mapConditionsSnapshotExpectedValuesAtConstruction()
-            throws Exception {
+    void mapConditionsSnapshotExpectedValuesAtConstruction() {
         Map<String, String> expected = new LinkedHashMap<>(map("a", "before"));
         PreservingCondition<? super Map<String, String>> membership =
                 containsEntries(expected);
@@ -106,8 +104,7 @@ class MapConditionsTest {
     }
 
     @Test
-    void clearingExpectedMapDoesNotChangeContainment()
-            throws Exception {
+    void clearingExpectedMapDoesNotChangeContainment() {
         var expected = new LinkedHashMap<>(map("expected", "value"));
         var positive = containsEntries(expected);
         var negative = doesNotContainAllEntries(expected);
@@ -141,8 +138,7 @@ class MapConditionsTest {
     }
 
     @Test
-    void nullActualShortCircuitsAndAggregateFactoriesValidateInputs()
-            throws Exception {
+    void nullActualShortCircuitsAndAggregateFactoriesValidateInputs() {
         ConditionResult<?> evaluation = evaluate(
                 containsEntries(map("a", "1")), null);
         assertEquals(Unsatisfied.class, evaluation.getClass());
@@ -184,8 +180,7 @@ class MapConditionsTest {
     }
 
     private static void assertPair(Pair pair,
-            LinkedHashMap<String, String> actual, boolean positiveSatisfied)
-            throws Exception {
+            LinkedHashMap<String, String> actual, boolean positiveSatisfied) {
         ConditionResult<?> positive = evaluate(pair.positive(), actual);
         ConditionResult<?> negative = evaluate(pair.negative(), actual);
         assertEquals(positiveSatisfied ? Satisfied.class : Unsatisfied.class,
@@ -197,7 +192,7 @@ class MapConditionsTest {
 
     private static <K, V, M extends Map<K, V>> void assertStatus(
             PreservingCondition<? super M> condition, M actual,
-            Class<?> status) throws Exception {
+            Class<?> status) {
         assertFalse(description(condition).isBlank());
         assertEquals(status, evaluate(condition, actual).getClass());
     }
@@ -212,7 +207,7 @@ class MapConditionsTest {
 
     private static void assertValidation(Class<? extends Throwable> type,
             org.junit.jupiter.api.function.Executable action) {
-        assertTrue(!assertThrows(type, action).getMessage().isBlank());
+        assertFalse(assertThrows(type, action).getMessage().isBlank());
     }
 
     @SafeVarargs

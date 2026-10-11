@@ -12,6 +12,7 @@ import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.OptionalConditions.*;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -20,8 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ObjectAndOptionalConditionsTest {
 
     @Test
-    void nullabilityConditionsAreExactPositiveAndNegativePairs()
-            throws Exception {
+    void nullabilityConditionsAreExactPositiveAndNegativePairs() {
         var actual = new Object();
 
         assertSatisfied(evaluate(isNull, null), null);
@@ -31,8 +31,7 @@ class ObjectAndOptionalConditionsTest {
     }
 
     @Test
-    void equalityConditionsAreComplementsAndReturnTheActualSnapshot()
-            throws Exception {
+    void equalityConditionsAreComplementsAndReturnTheActualSnapshot() {
         var expected = new String("1");
         var equalActual = new String("1");
         var differentActual = "2";
@@ -51,12 +50,11 @@ class ObjectAndOptionalConditionsTest {
     }
 
     @Test
-    void optionalPresenceConditionsDistinguishNullEmptyAndPresent()
-            throws Exception {
+    void optionalPresenceConditionsDistinguishNullEmptyAndPresent() {
         Optional<String> empty = Optional.empty();
         Optional<String> presentValue = Optional.of("value");
 
-        assertTrue(!description(present).isBlank());
+        assertFalse(description(present).isBlank());
         assertUnsatisfied(evaluate(present, null));
         assertUnsatisfied(evaluate(absent, null));
         assertUnsatisfied(evaluate(present, empty));
@@ -66,8 +64,7 @@ class ObjectAndOptionalConditionsTest {
     }
 
     @Test
-    void optionalValueConditionsRequirePresenceAndReturnTheActualValue()
-            throws Exception {
+    void optionalValueConditionsRequirePresenceAndReturnTheActualValue() {
         var expected = new String("1");
         var equalActual = new String("1");
         var differentActual = "2";
@@ -84,7 +81,7 @@ class ObjectAndOptionalConditionsTest {
     }
 
     @Test
-    void optionalValueEqualityUsesActualFirstAndArrayContent() throws Exception {
+    void optionalValueEqualityUsesActualFirstAndArrayContent() {
         var expected = new Directional(false);
         var actual = new Directional(true);
 
@@ -116,6 +113,6 @@ class ObjectAndOptionalConditionsTest {
 
     private static void assertUnsatisfied(ConditionResult<?> evaluation) {
         assertInstanceOf(ConditionResult.Unsatisfied.class, evaluation);
-        assertTrue(!mismatch(evaluation).isBlank());
+        assertFalse(mismatch(evaluation).isBlank());
     }
 }

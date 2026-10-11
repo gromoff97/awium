@@ -8,22 +8,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public final class ProbeContainers {
+final class ProbeContainers {
 
-    private ProbeContainers() {
-        throw new AssertionError("Utility class");
-    }
+    private ProbeContainers() {}
 
-    public static final class ProbeCollection<E> extends AbstractCollection<E> {
+    static final class ProbeCollection<E> extends AbstractCollection<E> {
         private final int reportedSize;
         private final RuntimeException sizeFailure;
-        public int sizeCalls;
+        int sizeCalls;
 
-        public ProbeCollection(int reportedSize) {
+        ProbeCollection(int reportedSize) {
             this(reportedSize, null);
         }
 
-        public ProbeCollection(RuntimeException sizeFailure) {
+        ProbeCollection(RuntimeException sizeFailure) {
             this(0, sizeFailure);
         }
 
@@ -53,15 +51,15 @@ public final class ProbeContainers {
         }
     }
 
-    public static final class ProbeMap<K, V> extends AbstractMap<K, V> {
+    static final class ProbeMap<K, V> extends AbstractMap<K, V> {
         private final RuntimeException sizeFailure;
-        public int sizeCalls;
+        int sizeCalls;
 
-        public ProbeMap() {
+        ProbeMap() {
             this(null);
         }
 
-        public ProbeMap(RuntimeException sizeFailure) {
+        ProbeMap(RuntimeException sizeFailure) {
             this.sizeFailure = sizeFailure;
         }
 
@@ -85,16 +83,16 @@ public final class ProbeContainers {
         }
     }
 
-    public static final class MembershipCollection<E> extends AbstractCollection<E> {
+    static final class MembershipCollection<E> extends AbstractCollection<E> {
         private final List<E> elements;
         private final RuntimeException iteratorFailure;
-        public int iteratorCalls;
+        int iteratorCalls;
 
-        public MembershipCollection(List<E> elements) {
+        MembershipCollection(List<E> elements) {
             this(elements, null);
         }
 
-        public MembershipCollection(RuntimeException iteratorFailure) {
+        MembershipCollection(RuntimeException iteratorFailure) {
             this(List.of(), iteratorFailure);
         }
 
@@ -124,12 +122,12 @@ public final class ProbeContainers {
         }
     }
 
-    public static final class EntryMap<K, V> extends AbstractMap<K, V> {
+    static final class EntryMap<K, V> extends AbstractMap<K, V> {
         private final List<Entry<K, V>> entries;
-        public RuntimeException entrySetFailure;
-        public int entrySetCalls;
+        RuntimeException entrySetFailure;
+        int entrySetCalls;
 
-        public EntryMap(List<Entry<K, V>> entries) {
+        EntryMap(List<Entry<K, V>> entries) {
             this.entries = entries;
         }
 
@@ -163,7 +161,7 @@ public final class ProbeContainers {
         }
     }
 
-    public record ProbeEntry<K, V>(K key, V value) implements Map.Entry<K, V> {
+    record ProbeEntry<K, V>(K key, V value) implements Map.Entry<K, V> {
 
         @Override
         public K getKey() {
@@ -191,11 +189,11 @@ public final class ProbeContainers {
         }
     }
 
-    public static final class Directional {
+    static final class Directional {
         private final boolean result;
-        public int equalsCalls;
+        int equalsCalls;
 
-        public Directional(boolean result) {
+        Directional(boolean result) {
             this.result = result;
         }
 
@@ -211,7 +209,7 @@ public final class ProbeContainers {
         }
     }
 
-    public record GreedyValue(Set<String> matches) {
+    record GreedyValue(Set<String> matches) {
         @Override
         public boolean equals(Object other) {
             return other instanceof ExpectedValue expected
@@ -224,9 +222,9 @@ public final class ProbeContainers {
         }
     }
 
-    public record ExpectedValue(String value) {}
+    record ExpectedValue(String value) {}
 
-    public record ThrowingEquals(RuntimeException failure) {
+    record ThrowingEquals(RuntimeException failure) {
         @Override
         public boolean equals(Object other) {
             if (failure != null) {

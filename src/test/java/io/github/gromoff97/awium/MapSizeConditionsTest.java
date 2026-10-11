@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MapSizeConditionsTest {
 
     @Test
-    void hasSingleEntryReturnsTheTypedEntry() throws Exception {
+    void hasSingleEntryReturnsTheTypedEntry() {
         var pollingTime = new FakeTime(0);
         MapSource<LinkedHashMap<String, Integer>> source = () -> {
             var map = new LinkedHashMap<String, Integer>();
@@ -62,7 +62,7 @@ class MapSizeConditionsTest {
     }
 
     @Test
-    void conditionsEvaluateEverySizeRelation() throws Exception {
+    void conditionsEvaluateEverySizeRelation() {
         for (Case testCase : cases()) {
             Map<Integer, Integer> matching = mapWithSize(testCase.matchingSize());
             Map<Integer, Integer> mismatching = mapWithSize(testCase.mismatchingSize());
@@ -127,7 +127,7 @@ class MapSizeConditionsTest {
     }
 
     @Test
-    void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() throws Exception {
+    void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() {
         assertEquals(Satisfied.class, evaluate(sizeBetween(2, 4), mapWithSize(2)).getClass());
         assertEquals(Satisfied.class, evaluate(sizeBetween(2, 4), mapWithSize(4)).getClass());
         assertUnsatisfied(evaluate(sizeBetween(2, 4), mapWithSize(1)));
@@ -135,7 +135,7 @@ class MapSizeConditionsTest {
     }
 
     @Test
-    void sameSizeAsReadsTheCurrentExpectedSizeOnEachEvaluation() throws Exception {
+    void sameSizeAsReadsTheCurrentExpectedSizeOnEachEvaluation() {
         var expected = new LinkedHashMap<>(Map.of(1, 1));
         var condition = sameSizeAs(expected);
         assertEquals(Satisfied.class, evaluate(condition, Map.of(1, 1)).getClass());

@@ -43,7 +43,7 @@ class MapSelectionConditionsTest {
     }
 
     @Test
-    void nullValuesAreDistinguishedFromMissingKeys() throws Exception {
+    void nullValuesAreDistinguishedFromMissingKeys() {
         var pollingTime = new FakeTime(0);
         var actual = new LinkedHashMap<String, String>();
         actual.put("nullable", null);
@@ -56,7 +56,7 @@ class MapSelectionConditionsTest {
     }
 
     @Test
-    void quantifiersAndBulkConditionsPreserveTheConcreteMap() throws Exception {
+    void quantifiersAndBulkConditionsPreserveTheConcreteMap() {
         var pollingTime = new FakeTime(0);
         var actual = new LinkedHashMap<>(Map.of("a", 1, "b", 2));
         MapSource<LinkedHashMap<String, Integer>> source = () -> actual;
@@ -80,7 +80,7 @@ class MapSelectionConditionsTest {
     }
 
     @Test
-    void quantifiersAndBulkConditionsCoverTheirUnsatisfiedBranches() throws Exception {
+    void quantifiersAndBulkConditionsCoverTheirUnsatisfiedBranches() {
         var actual = new LinkedHashMap<>(Map.of("a", 1, "b", 2));
 
         assertEquals(Unsatisfied.class, evaluate(MapConditions.allEntries(
@@ -127,7 +127,7 @@ class MapSelectionConditionsTest {
     }
 
     @Test
-    void selectorsCoverMissingMultipleAndWrongEntries() throws Exception {
+    void selectorsCoverMissingMultipleAndWrongEntries() {
         var actual = new LinkedHashMap<>(Map.of("first", 1, "second", 2));
 
         var none = evaluate(MapConditions.<String, Integer>singleEntry(matches(entry -> entry.getValue() > 2)), actual);

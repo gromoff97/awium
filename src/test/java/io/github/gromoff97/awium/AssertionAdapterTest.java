@@ -17,6 +17,7 @@ import static java.lang.Long.parseLong;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -78,7 +79,7 @@ class AssertionAdapterTest {
         assertEquals(Satisfied.class, evaluation.getClass());
         assertSame(actual, result(evaluation));
         assertEquals(1, invocations[0]);
-        assertTrue(!description(condition).isBlank());
+        assertFalse(description(condition).isBlank());
     }
 
     @Test
@@ -94,7 +95,7 @@ class AssertionAdapterTest {
         assertEquals(Satisfied.class, evaluation.getClass());
         assertNull(result(evaluation));
         assertEquals(1, invocations[0]);
-        assertTrue(!description(condition).isBlank());
+        assertFalse(description(condition).isBlank());
     }
 
     @Test

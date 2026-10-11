@@ -182,7 +182,7 @@ class CollectionMembershipTest {
 
     private static void assertValidation(Class<? extends Throwable> type,
             org.junit.jupiter.api.function.Executable action) {
-        assertTrue(!assertThrows(type, action).getMessage().isBlank());
+        assertFalse(assertThrows(type, action).getMessage().isBlank());
     }
 
     private static <E> ProbeContainers.MembershipCollection<E> await(

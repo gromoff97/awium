@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CollectionSizeConditionsTest {
 
     @Test
-    void hasSingleElementReturnsTheTypedElement() throws Exception {
+    void hasSingleElementReturnsTheTypedElement() {
         var pollingTime = new FakeTime(0);
         String element = new String("element");
         CollectionSource<ArrayList<String>> source = () -> new ArrayList<>(List.of(element));
@@ -62,7 +62,7 @@ class CollectionSizeConditionsTest {
     }
 
     @Test
-    void conditionsEvaluateEverySizeRelation() throws Exception {
+    void conditionsEvaluateEverySizeRelation() {
         for (Case testCase : cases()) {
             var matching = new ProbeContainers.ProbeCollection<Object>(testCase.matchingSize());
             var mismatching = new ProbeContainers.ProbeCollection<Object>(testCase.mismatchingSize());
@@ -130,7 +130,7 @@ class CollectionSizeConditionsTest {
     }
 
     @Test
-    void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() throws Exception {
+    void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() {
         assertEquals(Satisfied.class, evaluate(sizeBetween(2, 4), List.of(1, 2)).getClass());
         assertEquals(Satisfied.class,
                 evaluate(sizeBetween(2, 4), List.of(1, 2, 3, 4)).getClass());

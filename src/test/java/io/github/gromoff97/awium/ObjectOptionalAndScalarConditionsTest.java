@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ObjectOptionalAndScalarConditionsTest {
 
     @Test
-    void objectConditionsPreserveAndNarrowTypes() throws Exception {
+    void objectConditionsPreserveAndNarrowTypes() {
         var pollingTime = new FakeTime(0);
         var actual = new Child();
         Source<Parent> source = () -> actual;
@@ -72,7 +72,7 @@ class ObjectOptionalAndScalarConditionsTest {
     }
 
     @Test
-    void stringConditionsCoverTextPatternsAndSizes() throws Exception {
+    void stringConditionsCoverTextPatternsAndSizes() {
         var pollingTime = new FakeTime(0);
         String actual = "Ready 42";
 
@@ -90,7 +90,7 @@ class ObjectOptionalAndScalarConditionsTest {
     }
 
     @Test
-    void objectAndOptionalConditionsCoverBothTruthValues() throws Exception {
+    void objectAndOptionalConditionsCoverBothTruthValues() {
         Object actual = new String("ready");
         Object equal = new String("ready");
 
@@ -127,7 +127,7 @@ class ObjectOptionalAndScalarConditionsTest {
     }
 
     @Test
-    void comparableConditionsCoverBoundariesAndInvalidRanges() throws Exception {
+    void comparableConditionsCoverBoundariesAndInvalidRanges() {
         assertPreserving(Conditions.greaterThan(5), 6, 5);
         assertPreserving(Conditions.atLeast(5), 5, 4);
         assertPreserving(Conditions.lessThan(5), 4, 5);
@@ -151,7 +151,7 @@ class ObjectOptionalAndScalarConditionsTest {
     }
 
     @Test
-    void stringConditionsCoverBothTruthValuesAndBoundaries() throws Exception {
+    void stringConditionsCoverBothTruthValuesAndBoundaries() {
         assertPreserving(StringConditions.empty, "", "x");
         assertPreserving(StringConditions.nonEmpty, "x", "");
         assertPreserving(StringConditions.blank, " \n", "x");
@@ -196,33 +196,33 @@ class ObjectOptionalAndScalarConditionsTest {
         assertThrows(NullPointerException.class, () -> StringConditions.contains("ready", null));
     }
 
-    private static <S> void assertPreserving(PreservingCondition<? super S> condition, S matching, S mismatching) throws Exception {
+    private static <S> void assertPreserving(PreservingCondition<? super S> condition, S matching, S mismatching) {
         assertStatus(condition, matching, Satisfied.class);
         assertStatus(condition, mismatching, Unsatisfied.class);
     }
 
-    private static <S, T extends S> void assertExpected(ExpectedCondition<T> condition, S matching, S mismatching) throws Exception {
+    private static <S, T extends S> void assertExpected(ExpectedCondition<T> condition, S matching, S mismatching) {
         assertStatus(condition, matching, Satisfied.class);
         assertStatus(condition, mismatching, Unsatisfied.class);
     }
 
     private static <S> void assertStatus(Condition<? super S, ?> condition, S actual,
-            Class<?> expected) throws Exception {
+            Class<?> expected) {
         assertEquals(expected, evaluate(condition, actual).getClass());
     }
 
     private static <S> void assertStatus(PreservingCondition<? super S> condition, S actual,
-            Class<?> expected) throws Exception {
+            Class<?> expected) {
         assertEquals(expected, evaluate(condition, actual).getClass());
     }
 
     private static <S, T extends S> void assertStatus(ExpectedCondition<T> condition, S actual,
-            Class<?> expected) throws Exception {
+            Class<?> expected) {
         assertEquals(expected, evaluate(condition, actual).getClass());
     }
 
     private static <S, R> void assertStatus(NarrowingCondition<R> condition, S actual,
-            Class<?> expected) throws Exception {
+            Class<?> expected) {
         assertEquals(expected, evaluate(condition, actual).getClass());
     }
 

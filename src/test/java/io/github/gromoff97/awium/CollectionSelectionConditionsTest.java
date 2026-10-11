@@ -55,7 +55,7 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
-    void quantifiersCoverTheirUnsatisfiedBranches() throws Exception {
+    void quantifiersCoverTheirUnsatisfiedBranches() {
         assertEquals(Unsatisfied.class, evaluate(CollectionConditions.all(
                 (Integer value) -> value % 2 == 0), List.of(2, 3)).getClass());
         assertEquals(Unsatisfied.class, evaluate(CollectionConditions.any(
@@ -65,7 +65,7 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
-    void contentConditionsCoverNullsDuplicatesSetsAndSizeRanges() throws Exception {
+    void contentConditionsCoverNullsDuplicatesSetsAndSizeRanges() {
         var values = new ArrayList<>(Arrays.asList("a", "a", null));
 
         assertEquals(Satisfied.class, evaluate(CollectionConditions.containsNull, values).getClass());
@@ -100,7 +100,7 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
-    void sameSizeAsReadsTheCurrentExpectedSizeOnEachEvaluation() throws Exception {
+    void sameSizeAsReadsTheCurrentExpectedSizeOnEachEvaluation() {
         var expected = new ArrayList<>(List.of(1));
         var condition = CollectionConditions.sameSizeAs(expected);
         assertEquals(Satisfied.class, evaluate(condition, List.of(1)).getClass());
@@ -111,7 +111,7 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
-    void orderedConditionsCoverPositionsSequencesAndSorting() throws Exception {
+    void orderedConditionsCoverPositionsSequencesAndSorting() {
         var pollingTime = new FakeTime(0);
         var values = new ArrayList<>(List.of(1, 2, 3, 5));
         CollectionSource<ArrayList<Integer>> source = () -> values;
@@ -159,7 +159,7 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
-    void singleMatchingConditionRequiresExactlyOneMatch() throws Exception {
+    void singleMatchingConditionRequiresExactlyOneMatch() {
         ConditionResult<?> none = evaluate(
                 CollectionConditions.<Integer>single(matches(value -> value > 10)), List.of(1, 2));
         ConditionResult<?> many = evaluate(
@@ -184,7 +184,7 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
-    void selectorsCoverMissingNullAndInvalidPositions() throws Exception {
+    void selectorsCoverMissingNullAndInvalidPositions() {
         assertEquals(Unsatisfied.class, evaluate(first, List.of()).getClass());
         assertEquals(Unsatisfied.class, evaluate(last, null).getClass());
         assertEquals(Unsatisfied.class, evaluate(CollectionConditions.<String>first(

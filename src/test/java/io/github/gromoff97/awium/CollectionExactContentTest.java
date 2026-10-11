@@ -156,7 +156,7 @@ class CollectionExactContentTest {
                 containsExactly(List.of("a")), null);
         assertEquals(Unsatisfied.class, evaluation.getClass());
         assertFalse(mismatch(evaluation).isBlank());
-        assertTrue(!assertThrows(NullPointerException.class,
+        assertFalse(assertThrows(NullPointerException.class,
                 () -> containsExactly((Object[]) null)).getMessage().isBlank());
     }
 
