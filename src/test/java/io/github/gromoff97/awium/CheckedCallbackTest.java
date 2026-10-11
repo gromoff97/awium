@@ -1,10 +1,12 @@
 package io.github.gromoff97.awium;
 
 import java.io.IOException;
+import java.util.AbstractMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -84,6 +86,61 @@ class CheckedCallbackTest {
         assertEquals(2, result);
         assertEquals(2, calls[0]);
         assertEquals(List.of(1L), time.parkRequests);
+    }
+
+    @Test
+    void interruptionDuringFactoryCreationSkipsItsEvaluator() {
+        List<Function<Callable<CheckedFunction<String, ConditionResult<String>>>, AwaitResult<?, ?>>> waits = List.of(
+                factory -> await(() -> "ready").tryUntil(conditionFactory("lazy", factory)),
+                factory -> await(() -> "ready").tryUntil(preservingFactory("lazy", factory)),
+                factory -> await(() -> Optional.of("ready")).tryUntil(hasValue(conditionFactory("lazy", factory))),
+                factory -> await(() -> Optional.of("ready")).tryUntil(hasValue(preservingFactory("lazy", factory))),
+                factory -> await(() -> "ready").tryUntil(conditionFactory("lazy", factory), yields(String::trim)),
+                factory -> await(() -> "ready").tryUntil(preservingFactory("lazy", factory), matches(value -> true)));
+        for (var wait : waits) {
+            int[] factoryCalls = {0};
+            int[] evaluatorCalls = {0};
+            try {
+                var result = wait.apply(() -> {
+                    factoryCalls[0]++;
+                    Thread.currentThread().interrupt();
+                    return actual -> { evaluatorCalls[0]++; return satisfied(actual); };
+                });
+                var failure = assertInstanceOf(AwaitResult.Failed.class, result);
+                assertEquals(INTERRUPTED, failure.failure().reason());
+                assertInstanceOf(InterruptedException.class, failure.failure().cause());
+                assertEquals(1, factoryCalls[0]);
+                assertEquals(0, evaluatorCalls[0]);
+                assertTrue(Thread.currentThread().isInterrupted());
+            } finally {
+                Thread.interrupted();
+            }
+        }
+    }
+
+    @Test
+    void interruptionDuringValueExtractionSkipsTheNestedFactoryAndEvaluator() {
+        var entry = new AbstractMap.SimpleImmutableEntry<String, String>("key", "ready") {
+            @Override
+            public String getValue() {
+                Thread.currentThread().interrupt();
+                return super.getValue();
+            }
+        };
+        var actual = new ProbeContainers.EntryMap<String, String>(List.of(entry));
+        int[] factoryCalls = {0};
+        int[] evaluatorCalls = {0};
+        var result = await(() -> actual).tryUntil(valueFor("key", conditionFactory("nested", () -> {
+            factoryCalls[0]++;
+            return value -> { evaluatorCalls[0]++; return satisfied(value); };
+        })));
+
+        var failure = assertInstanceOf(AwaitResult.Failed.class, result);
+        assertEquals(INTERRUPTED, failure.failure().reason());
+        assertInstanceOf(InterruptedException.class, failure.failure().cause());
+        assertEquals(0, factoryCalls[0]);
+        assertEquals(0, evaluatorCalls[0]);
+        assertTrue(Thread.currentThread().isInterrupted());
     }
 
     @Test

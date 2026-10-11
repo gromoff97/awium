@@ -4,6 +4,7 @@ import java.util.concurrent.Callable;
 import java.util.function.Function;
 
 import static io.github.gromoff97.awium.ConditionResult.uncontrolled;
+import static io.github.gromoff97.awium.ValueMatching.checkInterruption;
 import static java.util.Objects.requireNonNull;
 
 /** Lazily executes a condition, converting nonfatal callback failures into uncontrolled results. */
@@ -24,8 +25,10 @@ final class ConditionSession<Observed, Result> implements Function<Observed, Con
     public ConditionResult<? extends Result> apply(Observed actual) {
         try {
             if (evaluator == null) {
+                checkInterruption();
                 evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
             }
+            checkInterruption();
             var result = evaluator.apply(actual);
             if (result instanceof ConditionResult.Uncontrolled<?> failure) {
                 rethrowFatalOrRestoreInterrupt(failure.cause());
