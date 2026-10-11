@@ -52,7 +52,7 @@ record WaitEngine<Observed, Result>(WaitConfiguration configuration, LongSupplie
             }
 
             long retrievalStarted = now(clock);
-            if (number > 1 && reached(retrievalStarted, deadline)) {
+            if (number > 1 && reached(retrievalStarted, deadline) && !currentThread().isInterrupted()) {
                 return new WaitCompletion.TimeoutBetweenObservations<>(retrievalStarted - started, lastUnsatisfied);
             }
 
@@ -133,6 +133,7 @@ record WaitEngine<Observed, Result>(WaitConfiguration configuration, LongSupplie
         }
 
         ConditionResult<? extends Result> evaluation = evaluator.apply(actual);
+        long completed = now(clock);
 
         if (!(evaluation instanceof ConditionResult.Uncontrolled<?>)
                 && currentThread().isInterrupted()) {
@@ -141,7 +142,6 @@ record WaitEngine<Observed, Result>(WaitConfiguration configuration, LongSupplie
                     evaluation == null ? ConditionResult.Context.Plain.INSTANCE : evaluation.context());
         }
 
-        long completed = now(clock);
         AwaitAttempt.Timing.AfterObservation timing = afterObservation(attemptStarted,
                 retrievalStarted, observed, completed);
         if (evaluation == null) {

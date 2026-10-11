@@ -355,6 +355,29 @@ class WaitEngineTest {
         assertTrue(currentThread().isInterrupted());
     }
 
+    @Test
+    void retrievalClockInterruptionWinsOverTheAcquisitionDeadline() {
+        long[] ticks = {0, 0, 0, 0, 0, 1, 2};
+        int[] clocks = {0};
+        int[] sourceCalls = {0};
+        LongSupplier clock = () -> {
+            int index = clocks[0]++;
+            if (index == ticks.length - 1) currentThread().interrupt();
+            return ticks[Math.min(index, ticks.length - 1)];
+        };
+        var outcome = new WaitEngine<String, String>(config(1, 2, 0), clock, nanos -> {}, () -> {
+            sourceCalls[0]++;
+            return "actual";
+        }, Conditions.<String, String>condition("not ready", value -> unsatisfied("not yet")).newSession()).waitFor();
+
+        var failure = assertInstanceOf(Uncontrolled.class, outcome);
+        var attempt = assertInstanceOf(AwaitAttempt.Outcome.WaitingFailed.class, failure.attempt().outcome());
+        assertEquals(1, sourceCalls[0]);
+        assertEquals(2, failure.attempt().number());
+        assertInstanceOf(InterruptedException.class, attempt.failure());
+        assertTrue(currentThread().isInterrupted());
+    }
+
     @ParameterizedTest
     @ValueSource(longs = {0, 10})
     void skipsParkingWhenIntervalClockSetsInterruptFlag(long persistence) {

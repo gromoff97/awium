@@ -278,6 +278,50 @@ class ObservationTest {
     }
 
     @Test
+    void completionClockInterruptionWinsBeforeNormalResultIsInterpreted() {
+        var actual = new Object();
+        for (boolean capture : List.of(false, true)) {
+            for (long persistence : new long[] {0, 2}) {
+                for (String form : List.of("satisfied", "unsatisfied", "null")) {
+                    var time = new FakeTime(0);
+                    int[] evaluations = {0};
+                    int interruptedAttempt = persistence == 0 ? 1 : 2;
+                    var waiting = await(() -> actual).usingTime(() -> {
+                        if (evaluations[0] == interruptedAttempt) currentThread().interrupt();
+                        return time.getAsLong();
+                    }, time).every(Duration.ofNanos(1)).upTo(Duration.ofNanos(10))
+                            .persisting(Duration.ofNanos(persistence));
+                    var check = condition("completion boundary", value -> {
+                        if (++evaluations[0] < interruptedAttempt) return satisfied(value);
+                        return switch (form) {
+                            case "satisfied" -> satisfied(value);
+                            case "unsatisfied" -> ConditionResult.unsatisfied("not ready");
+                            default -> null;
+                        };
+                    });
+                    try {
+                        AwaitFailure failure;
+                        if (capture) {
+                            var result = waiting.tryUntil(check);
+                            failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+                            assertEquals(interruptedAttempt, result.totalAttempts());
+                            assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, result.attempts().getLast().outcome());
+                        } else {
+                            failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(check)).failure();
+                        }
+                        assertEquals(AwaitFailure.Reason.INTERRUPTED, failure.reason(), form);
+                        assertInstanceOf(InterruptedException.class, failure.cause());
+                        assertEquals(interruptedAttempt, evaluations[0]);
+                        assertTrue(currentThread().isInterrupted());
+                    } finally {
+                        interrupted();
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     void conditionFlagAfterNormalReturnWinsBeforeInterpretation() {
         var actual = new Object();
         var attempt = attempt(() -> actual, value -> {
