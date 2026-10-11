@@ -34,8 +34,7 @@ class CollectionMembershipTest {
     Path temporaryDirectory;
 
     @Test
-    void positiveAndNegativeMembershipConditionsAreComplements()
-            throws Exception {
+    void positiveAndNegativeMembershipConditionsAreComplements() {
         for (Pair pair : pairs()) {
             assertPair(pair, List.of("a", "b", "c"), true);
             assertPair(pair, List.of("a", "c"), false);
@@ -43,8 +42,7 @@ class CollectionMembershipTest {
     }
 
     @Test
-    void nullAndRepeatedExpectedValuesKeepMembershipSemantics()
-            throws Exception {
+    void nullAndRepeatedExpectedValuesKeepMembershipSemantics() {
         assertUnsatisfied(evaluate(contains("b"), null));
         assertPair(new Pair("repeated", contains("a", "a"),
                 doesNotContainAll("a", "a")), List.of("a"), true);
@@ -55,8 +53,7 @@ class CollectionMembershipTest {
     }
 
     @Test
-    void membershipUsesActualFirstArrayAwareEqualityWithoutHashing()
-            throws Exception {
+    void membershipUsesActualFirstArrayAwareEqualityWithoutHashing() {
         Directional actualValue = new Directional(true);
         Directional expectedValue = new Directional(false);
         Collection<Object> directional = new ArrayList<>(List.of(actualValue));
@@ -69,7 +66,7 @@ class CollectionMembershipTest {
     }
 
     @Test
-    void collectionArgumentsRepresentExpectedElementsIncludingNestedCollections() throws Exception {
+    void collectionArgumentsRepresentExpectedElementsIncludingNestedCollections() {
         List<String> element = List.of("a", "b");
         Collection<List<String>> actual = List.of(element);
 
@@ -78,8 +75,7 @@ class CollectionMembershipTest {
     }
 
     @Test
-    void clearingExpectedCollectionDoesNotChangeContainment()
-            throws Exception {
+    void clearingExpectedCollectionDoesNotChangeContainment() {
         var expected = new ArrayList<>(List.of("expected"));
         var positive = contains(expected);
         var negative = doesNotContainAll(expected);
@@ -168,7 +164,7 @@ class CollectionMembershipTest {
     }
 
     private static void assertPair(Pair pair, List<String> values,
-            boolean positiveSatisfied) throws Exception {
+            boolean positiveSatisfied) {
         Collection<String> actual = new ArrayList<>(values);
         ConditionResult<?> positive = evaluate(pair.positive(), actual);
         ConditionResult<?> negative = evaluate(pair.negative(), actual);

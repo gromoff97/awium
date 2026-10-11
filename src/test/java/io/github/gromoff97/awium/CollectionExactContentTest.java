@@ -32,8 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class CollectionExactContentTest {
 
     @Test
-    void positiveAndNegativeExactConditionsAreComplements()
-            throws Exception {
+    void positiveAndNegativeExactConditionsAreComplements() {
         for (Pair pair : pairs()) {
             assertPair(pair, pair.matchingActual(), true);
             assertPair(pair, pair.mismatchingActual(), false);
@@ -41,8 +40,7 @@ class CollectionExactContentTest {
     }
 
     @Test
-    void orderedAndAnyOrderFormsKeepTheirDistinctSemantics()
-            throws Exception {
+    void orderedAndAnyOrderFormsKeepTheirDistinctSemantics() {
         assertStatus(containsExactly("a", "b"), List.of("b", "a"),
                 Unsatisfied.class);
         assertStatus(containsExactlyInAnyOrder("a", "b"),
@@ -53,7 +51,7 @@ class CollectionExactContentTest {
     }
 
     @Test
-    void exactComparisonRejectsChangesBetweenSizeAndTraversal() throws Exception {
+    void exactComparisonRejectsChangesBetweenSizeAndTraversal() {
         for (boolean shrink : List.of(false, true)) {
             for (boolean negative : List.of(false, true)) {
                 var actual = new ArrayList<String>(shrink ? List.of("a", "c") : List.of("a", "b")) {
@@ -82,8 +80,7 @@ class CollectionExactContentTest {
     }
 
     @Test
-    void exactEqualityIsActualFirstArrayAwareAndDoesNotHash()
-            throws Exception {
+    void exactEqualityIsActualFirstArrayAwareAndDoesNotHash() {
         Directional actual = new Directional(true);
         Directional expected = new Directional(false);
         assertStatus(containsExactlyInAnyOrder(expected), List.of(actual),
@@ -103,7 +100,7 @@ class CollectionExactContentTest {
     }
 
     @Test
-    void anyOrderMatchingRemainsGreedyInEncounterOrder() throws Exception {
+    void anyOrderMatchingRemainsGreedyInEncounterOrder() {
         GreedyValue first = new GreedyValue(Set.of("x", "y"));
         GreedyValue second = new GreedyValue(Set.of("x"));
         ExpectedValue x = new ExpectedValue("x");
@@ -116,8 +113,7 @@ class CollectionExactContentTest {
     }
 
     @Test
-    void exactConditionsSnapshotExpectedValuesAtConstruction()
-            throws Exception {
+    void exactConditionsSnapshotExpectedValuesAtConstruction() {
         String[] array = {"before"};
         PreservingCondition<? super List<String>> arrayCondition =
                 containsExactly(array);
@@ -151,7 +147,7 @@ class CollectionExactContentTest {
     }
 
     @Test
-    void nullActualIsUnsatisfiedAndNullAggregateIsRejected() throws Exception {
+    void nullActualIsUnsatisfiedAndNullAggregateIsRejected() {
         ConditionResult<?> evaluation = evaluate(
                 containsExactly(List.of("a")), null);
         assertEquals(Unsatisfied.class, evaluation.getClass());
@@ -177,7 +173,7 @@ class CollectionExactContentTest {
     }
 
     private static void assertPair(Pair pair, List<String> actual,
-            boolean positiveSatisfied) throws Exception {
+            boolean positiveSatisfied) {
         ConditionResult<?> positive = evaluate(pair.positive(), actual);
         ConditionResult<?> negative = evaluate(pair.negative(), actual);
         assertEquals(positiveSatisfied ? Satisfied.class : Unsatisfied.class,
@@ -189,8 +185,7 @@ class CollectionExactContentTest {
 
     private static <E> void assertStatus(
             PreservingCondition<? super List<E>> condition,
-            List<? extends E> elements, Class<?> status)
-            throws Exception {
+            List<? extends E> elements, Class<?> status) {
         List<E> actual = new ArrayList<>(elements);
         assertEquals(status, evaluate(condition, actual).getClass());
     }

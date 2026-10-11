@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class AssertionAdapterTest {
 
     @Test
-    void namedConditionDelegatesOnceAndSuppliesItsDescription() throws Exception {
+    void namedConditionDelegatesOnceAndSuppliesItsDescription() {
         var invocations = new int[1];
         var condition = Conditions.<String, Long>condition(
                 "payment id", value -> {
@@ -43,8 +43,7 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void namedConditionValidatesItsArgumentsAndPreservesNullEvaluation()
-            throws Exception {
+    void namedConditionValidatesItsArgumentsAndPreservesNullEvaluation() {
         assertTrue(assertThrows(NullPointerException.class,
                 () -> condition(null, payment -> satisfied(payment)))
                 .getMessage().contains("description"));
@@ -67,7 +66,7 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void assertedWithoutResultReturnsTheExactActualAndInvokesItsCallbackOnce() throws Exception {
+    void assertedWithoutResultReturnsTheExactActualAndInvokesItsCallbackOnce() {
         var invocations = new int[1];
         var actual = new String("42");
         var condition = Conditions.<String>asserted(value -> {
@@ -83,7 +82,7 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void yieldsMayReturnNullAndInvokesItsCallbackOnce() throws Exception {
+    void yieldsMayReturnNullAndInvokesItsCallbackOnce() {
         var invocations = new int[1];
         var condition = Conditions.<String, String>yields(value -> {
             invocations[0]++;

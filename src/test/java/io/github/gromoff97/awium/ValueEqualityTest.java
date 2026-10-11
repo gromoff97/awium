@@ -93,10 +93,10 @@ class ValueEqualityTest {
     }
 
     private static boolean equal(Object actual, Object expected) {
-        try {
-            return evaluate(equalTo(expected), actual) instanceof Satisfied<?>;
-        } catch (Exception failure) {
-            throw new AssertionError(failure);
+        var evaluation = evaluate(equalTo(expected), actual);
+        if (evaluation instanceof ConditionResult.Uncontrolled<?> failure) {
+            throw new AssertionError("comparison failed", failure.cause());
         }
+        return evaluation instanceof Satisfied<?>;
     }
 }

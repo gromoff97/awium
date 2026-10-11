@@ -15,7 +15,7 @@ class ConditionResultContractTest {
             new ConditionResult.Context.Sequence(1, 2, 1, "second stage", "business reason", null);
 
     @Test
-    void satisfiedEvaluationContinuesWithAnotherResultType() throws Exception {
+    void satisfiedEvaluationContinuesWithAnotherResultType() {
         ConditionResult<String> continued = satisfied(42)
                 .continueIfSatisfied(value -> satisfied("value=" + value).withContext(SEQUENCE));
 
@@ -25,7 +25,7 @@ class ConditionResultContractTest {
     }
 
     @Test
-    void nonSatisfiedEvaluationSkipsContinuationAndKeepsDiagnostics() throws Exception {
+    void nonSatisfiedEvaluationSkipsContinuationAndKeepsDiagnostics() {
         var assertion = new AssertionError("assertion");
         ConditionResult<String> unsatisfied = ConditionResult.<Integer>assertionUnsatisfied("mismatch", assertion)
                 .withContext(SEQUENCE)
