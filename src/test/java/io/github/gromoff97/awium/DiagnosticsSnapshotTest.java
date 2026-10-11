@@ -619,6 +619,46 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
+    void emergencyMessageInterruptionRetainsTheFlagAndOriginalCauses() {
+        for (boolean capture : List.of(false, true)) {
+            var interruption = new InterruptedException("diagnostic message interrupted");
+            int[] messageCalls = {0};
+            var diagnostic = new IllegalStateException() {
+                @Override
+                public String getMessage() {
+                    messageCalls[0]++;
+                    throwUnchecked(interruption);
+                    return null;
+                }
+            };
+            var actual = new ThrowingValue(diagnostic);
+            var original = new AssertionError("not ready");
+            var time = new FakeTime(0);
+            var waiting = await(() -> {
+                time.advanceNanos(2);
+                return actual;
+            }).usingTime(time, time).upTo(Duration.ofNanos(2));
+            var check = condition("not ready", value -> assertionUnsatisfied("not ready", original));
+            try {
+                AwaitFailure failure;
+                if (capture) {
+                    failure = ((AwaitResult.Failed<?, ?>) waiting.tryUntil(check)).failure();
+                } else {
+                    failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(check)).failure();
+                }
+                assertEquals(DIAGNOSTICS_FAILED, failure.reason());
+                assertSame(diagnostic, failure.cause());
+                assertSame(original, failure.suppressed().getFirst());
+                assertEquals(1, actual.calls);
+                assertEquals(1, messageCalls[0]);
+                assertTrue(currentThread().isInterrupted());
+            } finally {
+                interrupted();
+            }
+        }
+    }
+
+    @Test
     void fatalDiagnosticSignalsEscapeUnchanged() {
         var valueFatal = new InternalError("value fatal");
         var engineCause = new AssertionError("assertion failed");

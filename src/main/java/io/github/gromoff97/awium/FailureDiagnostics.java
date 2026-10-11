@@ -362,6 +362,7 @@ final class FailureDiagnostics {
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
         } catch (Throwable ignored) {
+            if (ignored instanceof InterruptedException) currentThread().interrupt();
             return new ThrowableDiagnostic(typeName(failure), null);
         }
     }
