@@ -65,11 +65,11 @@ final class CapturedEvaluator<Observed, Result> implements CheckedFunction<Obser
                 .toList();
     }
 
-    private final List<ConditionSession<? super Observed, ? extends Result>> stages;
+    private final List<? extends ConditionSession<? super Observed, ? extends Result>> stages;
     private final ArrayList<Result> results = new ArrayList<>();
 
-    CapturedEvaluator(List<? extends ConditionSession<? super Observed, ? extends Result>> stages) {
-        this.stages = List.copyOf(stages);
+    private CapturedEvaluator(List<? extends ConditionSession<? super Observed, ? extends Result>> stages) {
+        this.stages = stages;
     }
 
     @Override

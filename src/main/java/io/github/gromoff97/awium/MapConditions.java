@@ -9,6 +9,7 @@ import io.github.gromoff97.awium.ConditionResult.Reference;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.function.BiPredicate;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
@@ -101,108 +102,108 @@ public final class MapConditions {
                 });
     }
 
-    public static <K, V> Condition<Map<K, V>, Map.Entry<K, V>> singleEntry(PreservingCondition<? super Map.Entry<K, V>> nested) {
+    public static <Key, Value> Condition<Map<Key, Value>, Entry<Key, Value>> singleEntry(PreservingCondition<? super Entry<Key, Value>> nested) {
         return ConditionSupport.single("map", nested, Map::entrySet,
                 () -> nested.preservingSession());
     }
 
-    public static <K, V, Expected extends Map.Entry<K, V>> Condition<Map<K, V>, Map.Entry<K, V>> singleEntry(ExpectedCondition<Expected> nested) {
+    public static <Key, Value, Expected extends Entry<Key, Value>> Condition<Map<Key, Value>, Entry<Key, Value>> singleEntry(ExpectedCondition<Expected> nested) {
         return ConditionSupport.single("map", nested, Map::entrySet,
                 () -> nested.preservingSession());
     }
 
-    public static <K, V, Result extends Map.Entry<K, V>> Condition<Map<K, V>, Result> singleEntry(NarrowingCondition<Result> nested) {
+    public static <Key, Value, Result extends Entry<Key, Value>> Condition<Map<Key, Value>, Result> singleEntry(NarrowingCondition<Result> nested) {
         return ConditionSupport.single("map", nested, Map::entrySet,
                 () -> nested.newSession());
     }
 
-    public static <K, V, Result> Condition<Map<K, V>, Result> singleEntry(Condition<? super Map.Entry<K, V>, ? extends Result> nested) {
+    public static <Key, Value, Result> Condition<Map<Key, Value>, Result> singleEntry(Condition<? super Entry<Key, Value>, ? extends Result> nested) {
         return ConditionSupport.single("map", nested, Map::entrySet,
                 () -> nested.newSession());
     }
 
-    public static <K, V> PreservingCondition<Map<K, V>> allEntries(BiPredicate<? super K, ? super V> predicate) {
+    public static <Key, Value> PreservingCondition<Map<Key, Value>> allEntries(BiPredicate<? super Key, ? super Value> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all map entries match", "not all map entries matched",
                 actual -> matchesAll(call(actual::entrySet),
                         entry -> entryMatches(entry, predicate)));
     }
 
-    public static <K, V> PreservingCondition<Map<K, V>> anyEntry(BiPredicate<? super K, ? super V> predicate) {
+    public static <Key, Value> PreservingCondition<Map<Key, Value>> anyEntry(BiPredicate<? super Key, ? super Value> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any map entry matches", "no map entry matched",
                 actual -> matchesAny(call(actual::entrySet),
                         entry -> entryMatches(entry, predicate)));
     }
 
-    public static <K, V> PreservingCondition<Map<K, V>> noEntry(BiPredicate<? super K, ? super V> predicate) {
+    public static <Key, Value> PreservingCondition<Map<Key, Value>> noEntry(BiPredicate<? super Key, ? super Value> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no map entry matches", "a map entry matched",
                 actual -> !matchesAny(call(actual::entrySet),
                         entry -> entryMatches(entry, predicate)));
     }
 
-    public static <K, V> PreservingCondition<Map<K, V>> allKeys(Predicate<? super K> predicate) {
+    public static <Key, Value> PreservingCondition<Map<Key, Value>> allKeys(Predicate<? super Key> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all map keys match", "not all map keys matched", actual -> matchesAll(call(actual::keySet), predicate::test));
     }
 
-    public static <K, V> PreservingCondition<Map<K, V>> anyKey(Predicate<? super K> predicate) {
+    public static <Key, Value> PreservingCondition<Map<Key, Value>> anyKey(Predicate<? super Key> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any map key matches", "no map key matched", actual -> matchesAny(call(actual::keySet), predicate::test));
     }
 
-    public static <K, V> PreservingCondition<Map<K, V>> noKey(Predicate<? super K> predicate) {
+    public static <Key, Value> PreservingCondition<Map<Key, Value>> noKey(Predicate<? super Key> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no map key matches", "a map key matched", actual -> !matchesAny(call(actual::keySet), predicate::test));
     }
 
-    public static <K, V> PreservingCondition<Map<K, V>> allValues(Predicate<? super V> predicate) {
+    public static <Key, Value> PreservingCondition<Map<Key, Value>> allValues(Predicate<? super Value> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all map values match", "not all map values matched", actual -> matchesAll(call(actual::values), predicate::test));
     }
 
-    public static <K, V> PreservingCondition<Map<K, V>> anyValue(Predicate<? super V> predicate) {
+    public static <Key, Value> PreservingCondition<Map<Key, Value>> anyValue(Predicate<? super Value> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any map value matches", "no map value matched", actual -> matchesAny(call(actual::values), predicate::test));
     }
 
-    public static <K, V> PreservingCondition<Map<K, V>> noValue(Predicate<? super V> predicate) {
+    public static <Key, Value> PreservingCondition<Map<Key, Value>> noValue(Predicate<? super Value> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no map value matches", "a map value matched", actual -> !matchesAny(call(actual::values), predicate::test));
     }
 
-    public static <K, V> Condition<Map<K, V>, V> valueFor(K key) {
+    public static <Key, Value> Condition<Map<Key, Value>, Value> valueFor(Key key) {
         return ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> value(actual, key));
     }
 
-    public static <K, V, R> Condition<Map<K, V>, R> valueFor(K key,
-            Condition<? super V, ? extends R> nested) {
+    public static <Key, Value, Result> Condition<Map<Key, Value>, Result> valueFor(Key key,
+            Condition<? super Value, ? extends Result> nested) {
         return compose("map value ", nested, actual -> value(actual, key),
                 () -> nested.newSession());
     }
 
-    public static <K, V> Condition<Map<K, V>, V> valueFor(K key,
-            PreservingCondition<? super V> nested) {
+    public static <Key, Value> Condition<Map<Key, Value>, Value> valueFor(Key key,
+            PreservingCondition<? super Value> nested) {
         return compose("map value ", nested, actual -> value(actual, key),
                 () -> nested.preservingSession());
     }
 
-    public static <K, V, T extends V> Condition<Map<K, V>, V> valueFor(K key, ExpectedCondition<T> nested) {
+    public static <Key, Value, Expected extends Value> Condition<Map<Key, Value>, Value> valueFor(Key key, ExpectedCondition<Expected> nested) {
         return compose("map value ", nested, actual -> value(actual, key),
                 () -> nested.preservingSession());
     }
 
-    public static <K, V, R extends V> Condition<Map<K, V>, R> valueFor(K key, NarrowingCondition<R> nested) {
+    public static <Key, Value, Result extends Value> Condition<Map<Key, Value>, Result> valueFor(Key key, NarrowingCondition<Result> nested) {
         return compose("map value ", nested, actual -> value(actual, key),
                 () -> nested.newSession());
     }
 
-    public static <K, V> Condition<Map<K, V>, Map.Entry<K, V>> entryFor(K key) {
+    public static <Key, Value> Condition<Map<Key, Value>, Entry<Key, Value>> entryFor(Key key) {
         return ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> findEntry(actual, key));
     }
 
-    public static <K, V> Condition<Map<K, V>, V> onlyValueFor(K key) {
+    public static <Key, Value> Condition<Map<Key, Value>, Value> onlyValueFor(Key key) {
         return ConditionSupport.condition("map contains only the expected key", expectedReference(key), actual -> {
             if (actual == null) {
                 return unsatisfied("map was null");
@@ -211,118 +212,118 @@ public final class MapConditions {
             if (size != 1) {
                 return unsatisfied("map size was " + size);
             }
-            Map.Entry<K, V> entry = firstEntry(actual);
+            Entry<Key, Value> entry = firstEntry(actual);
             return equal(call(entry::getKey), key)
                     ? satisfied(call(entry::getValue)) : unsatisfied("map contained a different key");
         });
     }
 
     @SafeVarargs
-    public static <K> PreservingCondition<Map<? super K, ?>> containsKeys(K... expected) {
-        List<K> keys = snapshot(stream(nonEmpty(expected, "expected keys")));
+    public static <Key> PreservingCondition<Map<? super Key, ?>> containsKeys(Key... expected) {
+        List<Key> keys = snapshot(stream(nonEmpty(expected, "expected keys")));
         return preserving("map contains all expected keys", "map did not contain all expected keys", expectedReference(keys),
                 actual -> containsAll(call(actual::keySet), keys, ValueMatching::equal));
     }
 
     @SafeVarargs
-    public static <K> PreservingCondition<Map<? super K, ?>> doesNotContainKeys(K... unexpected) {
-        List<K> keys = snapshot(stream(nonEmpty(unexpected, "unexpected keys")));
+    public static <Key> PreservingCondition<Map<? super Key, ?>> doesNotContainKeys(Key... unexpected) {
+        List<Key> keys = snapshot(stream(nonEmpty(unexpected, "unexpected keys")));
         return preserving("map does not contain unexpected keys", "map contained an unexpected key", unexpectedReference(keys),
                 actual -> !matchesAny(call(actual::keySet), value -> matchesAny(keys, key -> equal(value, key))));
     }
 
     @SafeVarargs
-    public static <K> PreservingCondition<Map<? super K, ?>> containsOnlyKeys(K... expected) {
-        List<K> keys = snapshot(stream(requireNonNull(expected, "expected keys must not be null")));
+    public static <Key> PreservingCondition<Map<? super Key, ?>> containsOnlyKeys(Key... expected) {
+        List<Key> keys = snapshot(stream(requireNonNull(expected, "expected keys must not be null")));
         return preserving("map contains only the expected keys", "map did not contain only the expected keys", expectedReference(keys),
                 actual -> sameDistinctElements(call(actual::keySet), keys));
     }
 
     @SafeVarargs
-    public static <V> PreservingCondition<Map<?, ? super V>> containsValues(V... expected) {
-        List<V> values = snapshot(stream(nonEmpty(expected, "expected values")));
+    public static <Value> PreservingCondition<Map<?, ? super Value>> containsValues(Value... expected) {
+        List<Value> values = snapshot(stream(nonEmpty(expected, "expected values")));
         return preserving("map contains all expected values", "map did not contain all expected values", expectedReference(values),
                 actual -> containsAll(call(actual::values), values, ValueMatching::equal));
     }
 
     @SafeVarargs
-    public static <V> PreservingCondition<Map<?, ? super V>> doesNotContainValues(V... unexpected) {
-        List<V> values = snapshot(stream(nonEmpty(unexpected, "unexpected values")));
+    public static <Value> PreservingCondition<Map<?, ? super Value>> doesNotContainValues(Value... unexpected) {
+        List<Value> values = snapshot(stream(nonEmpty(unexpected, "unexpected values")));
         return preserving("map does not contain unexpected values", "map contained an unexpected value", unexpectedReference(values),
                 actual -> !matchesAny(call(actual::values), value -> matchesAny(values, candidate -> equal(value, candidate))));
     }
 
-    public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsEntries(K key, V value) {
+    public static <Key, Value> PreservingCondition<Map<? super Key, ? super Value>> containsEntries(Key key, Value value) {
         return preserving("map contains expected entry", "map did not contain expected entry", expectedReference(new Object[]{key, value}),
                 actual -> matchesAny(call(actual::entrySet), entry -> entryMatches(entry, key, value)));
     }
 
-    public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainEntries(K key, V value) {
+    public static <Key, Value> PreservingCondition<Map<? super Key, ? super Value>> doesNotContainEntries(Key key, Value value) {
         return preserving("map does not contain expected entry", "map contained expected entry", expectedReference(new Object[]{key, value}),
                 actual -> !matchesAny(call(actual::entrySet), entry -> entryMatches(entry, key, value)));
     }
 
-    public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsEntries(Map<? extends K, ? extends V> expected) {
+    public static <Key, Value> PreservingCondition<Map<? super Key, ? super Value>> containsEntries(Map<? extends Key, ? extends Value> expected) {
         var entries = new ExpectedEntries(nonEmpty(expected, "expected entries"));
         return preserving("map contains all expected entries", "map did not contain all expected entries", expectedReference(entries),
                 actual -> containsAll(call(actual::entrySet), entries.entries(),
                         MapConditions::entryMatches));
     }
 
-    public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainAllEntries(Map<? extends K, ? extends V> unexpected) {
+    public static <Key, Value> PreservingCondition<Map<? super Key, ? super Value>> doesNotContainAllEntries(Map<? extends Key, ? extends Value> unexpected) {
         var entries = new ExpectedEntries(nonEmpty(unexpected, "expected entries"));
         return preserving("map does not contain all expected entries", "map contained all expected entries", expectedReference(entries),
                 actual -> !containsAll(call(actual::entrySet), entries.entries(),
                         MapConditions::entryMatches));
     }
 
-    public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsAnyEntries(Map<? extends K, ? extends V> expected) {
+    public static <Key, Value> PreservingCondition<Map<? super Key, ? super Value>> containsAnyEntries(Map<? extends Key, ? extends Value> expected) {
         var entries = new ExpectedEntries(nonEmpty(expected, "expected entries"));
         return preserving("map contains an expected entry", "map did not contain an expected entry", expectedReference(entries),
                 actual -> matchesAny(call(actual::entrySet), value ->
                         matchesAny(entries.entries(), candidate -> entryMatches(value, candidate))));
     }
 
-    public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainEntries(Map<? extends K, ? extends V> expected) {
+    public static <Key, Value> PreservingCondition<Map<? super Key, ? super Value>> doesNotContainEntries(Map<? extends Key, ? extends Value> expected) {
         var entries = new ExpectedEntries(nonEmpty(expected, "expected entries"));
         return preserving("map does not contain an expected entry", "map contained an expected entry", expectedReference(entries),
                 actual -> !matchesAny(call(actual::entrySet), value ->
                         matchesAny(entries.entries(), candidate -> entryMatches(value, candidate))));
     }
 
-    public static <K, V> PreservingCondition<Map<? super K, ? super V>> containsExactlyEntries(Map<? extends K, ? extends V> expected) {
+    public static <Key, Value> PreservingCondition<Map<? super Key, ? super Value>> containsExactlyEntries(Map<? extends Key, ? extends Value> expected) {
         var entries = new ExpectedEntries(requireNonNull(expected, "expected entries must not be null"));
         return preserving("map contains exactly the expected entries", "map did not contain exactly the expected entries", expectedReference(entries),
                 actual -> exactContent(actual, entries));
     }
 
-    public static <K, V> PreservingCondition<Map<? super K, ? super V>> doesNotContainExactlyEntries(Map<? extends K, ? extends V> expected) {
+    public static <Key, Value> PreservingCondition<Map<? super Key, ? super Value>> doesNotContainExactlyEntries(Map<? extends Key, ? extends Value> expected) {
         var entries = new ExpectedEntries(requireNonNull(expected, "expected entries must not be null"));
         return preserving("map does not contain exactly the expected entries", "map contained exactly the expected entries", expectedReference(entries),
                 actual -> !exactContent(actual, entries));
     }
 
-    private static <K, V> Map.Entry<K, V> firstEntry(Map<K, V> actual) throws Exception {
+    private static <Key, Value> Entry<Key, Value> firstEntry(Map<Key, Value> actual) throws Exception {
         var entries = call(actual::entrySet);
         var iterator = call(entries::iterator);
         return call(iterator::next);
     }
 
-    private static <K, V> ConditionResult<V> value(Map<K, V> actual, K key) throws Exception {
-        return findEntry(actual, key).mapSatisfied(Map.Entry::getValue);
+    private static <Key, Value> ConditionResult<Value> value(Map<Key, Value> actual, Key key) throws Exception {
+        return findEntry(actual, key).mapSatisfied(Entry::getValue);
     }
 
-    private static <K, V> ConditionResult<Map.Entry<K, V>> findEntry(Map<K, V> actual, K key) throws Exception {
+    private static <Key, Value> ConditionResult<Entry<Key, Value>> findEntry(Map<Key, Value> actual, Key key) throws Exception {
         if (actual != null) {
             var entries = call(actual::entrySet);
             for (var iterator = call(entries::iterator); call(iterator::hasNext);) {
-                Map.Entry<K, V> entry = call(iterator::next);
+                Entry<Key, Value> entry = call(iterator::next);
                 if (equal(call(entry::getKey), key)) {
                     return satisfied(entry);
                 }
             }
         }
-        return ConditionResult.<Map.Entry<K, V>>unsatisfied(actual == null ? "map was null" : "map did not contain the expected key")
+        return ConditionResult.<Entry<Key, Value>>unsatisfied(actual == null ? "map was null" : "map did not contain the expected key")
                 .withContext(new Context.Expectation("map contains the expected key", expectedReference(key)));
     }
 
@@ -331,13 +332,13 @@ public final class MapConditions {
         return ConditionSupport.sized("map", bound, matches, description, Map::size);
     }
 
-    private static <M extends Map<?, ?>> PreservingCondition<M> preserving(String description, String mismatch,
-            CheckedFunction<? super M, Boolean> matches) {
+    private static <Entries extends Map<?, ?>> PreservingCondition<Entries> preserving(String description, String mismatch,
+            CheckedFunction<? super Entries, Boolean> matches) {
         return preservingNonNull("map", description, mismatch, matches);
     }
 
-    private static <M extends Map<?, ?>> PreservingCondition<M> preserving(String description, String mismatch,
-            Reference<?> reference, CheckedFunction<? super M, Boolean> matches) {
+    private static <Entries extends Map<?, ?>> PreservingCondition<Entries> preserving(String description, String mismatch,
+            Reference<?> reference, CheckedFunction<? super Entries, Boolean> matches) {
         return preservingNonNull("map", description, mismatch, reference, matches);
     }
 
@@ -350,7 +351,7 @@ public final class MapConditions {
     }
 
     // Preserve encounter order and distinct entries without calling user equals/hashCode.
-    private record ExpectedEntries(List<? extends Map.Entry<?, ?>> entries) {
+    private record ExpectedEntries(List<? extends Entry<?, ?>> entries) {
         ExpectedEntries(Map<?, ?> values) {
             this(values.entrySet().stream().map(SimpleImmutableEntry::new).toList());
         }
@@ -362,17 +363,17 @@ public final class MapConditions {
         }
     }
 
-    private static boolean entryMatches(Map.Entry<?, ?> actual, Map.Entry<?, ?> expected) throws Exception {
+    private static boolean entryMatches(Entry<?, ?> actual, Entry<?, ?> expected) throws Exception {
         return entryMatches(actual, expected.getKey(), expected.getValue());
     }
 
-    private static <K, V> boolean entryMatches(Map.Entry<K, V> entry, BiPredicate<? super K, ? super V> predicate) throws Exception {
-        K key = call(entry::getKey);
-        V value = call(entry::getValue);
+    private static <Key, Value> boolean entryMatches(Entry<Key, Value> entry, BiPredicate<? super Key, ? super Value> predicate) throws Exception {
+        Key key = call(entry::getKey);
+        Value value = call(entry::getValue);
         return call(() -> predicate.test(key, value));
     }
 
-    private static boolean entryMatches(Map.Entry<?, ?> actual, Object expectedKey, Object expectedValue) throws Exception {
+    private static boolean entryMatches(Entry<?, ?> actual, Object expectedKey, Object expectedValue) throws Exception {
         return equal(call(actual::getKey), expectedKey) && equal(call(actual::getValue), expectedValue);
     }
 
