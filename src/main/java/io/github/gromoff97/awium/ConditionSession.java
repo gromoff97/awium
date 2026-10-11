@@ -26,11 +26,26 @@ final class ConditionSession<Observed, Result> implements Function<Observed, Con
             if (evaluator == null) {
                 evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
             }
-            return evaluator.apply(actual);
+            var result = evaluator.apply(actual);
+            if (result instanceof ConditionResult.Uncontrolled<?> failure) {
+                rethrowFatalOrRestoreInterrupt(failure.cause());
+            }
+            return result;
         } catch (VirtualMachineError | ThreadDeath fatal) {
             throw fatal;
         } catch (Throwable failure) {
+            rethrowFatalOrRestoreInterrupt(failure);
             return uncontrolled(failure);
+        }
+    }
+
+    private static void rethrowFatalOrRestoreInterrupt(Throwable failure) {
+        if (failure instanceof Error fatal
+                && (fatal instanceof VirtualMachineError || fatal instanceof ThreadDeath)) {
+            throw fatal;
+        }
+        if (failure instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
         }
     }
 }

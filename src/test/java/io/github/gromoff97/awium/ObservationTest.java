@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
@@ -8,11 +9,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitAttempt.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.uncontrolled;
+import static io.github.gromoff97.awium.Conditions.condition;
+import static io.github.gromoff97.awium.Conditions.conditionFactory;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -65,7 +69,7 @@ class ObservationTest {
         var actual = new Object();
         var context = new ConditionResult.Context.Sequence(0, 2, 1,
                 "first stage", "business reason", new ConditionResult.Reference<>("Expected", actual));
-        for (ConditionResult<Object> evaluation : java.util.List.of(satisfied(null),
+        for (ConditionResult<Object> evaluation : List.of(satisfied(null),
                 assertionUnsatisfied("not ready", new AssertionError("assertion")),
                 uncontrolled(new IllegalStateException("failed")))) {
             var original = evaluation.withContext(context);
@@ -280,6 +284,67 @@ class ObservationTest {
             return uncontrolled(fatal);
         })));
         assertTrue(currentThread().isInterrupted());
+    }
+
+    @Test
+    void conditionInterruptionIsRestoredBeforeAnyLaterClockFailure() {
+        for (boolean capture : List.of(false, true)) {
+            for (String form : List.of("thrown", "returned", "factory")) {
+                var interruption = new InterruptedException("condition stopped");
+                var clockFailure = new IllegalStateException("completion clock failed");
+                boolean[] failed = {false};
+                Condition<Object, Object> signal = switch (form) {
+                    case "thrown" -> condition("interruption", actual -> {
+                        failed[0] = true;
+                        throw interruption;
+                    });
+                    case "returned" -> condition("interruption", actual -> {
+                        failed[0] = true;
+                        return uncontrolled(interruption);
+                    });
+                    default -> conditionFactory("interruption", () -> {
+                        failed[0] = true;
+                        throw interruption;
+                    });
+                };
+                var waiting = await(Object::new).usingTime(() -> {
+                    if (failed[0]) {
+                        assertTrue(currentThread().isInterrupted(), form);
+                        throw clockFailure;
+                    }
+                    return 0;
+                }, ignored -> {});
+                try {
+                    assertSame(clockFailure, assertThrows(IllegalStateException.class, () -> {
+                        if (capture) waiting.tryUntil(signal);
+                        else waiting.until(signal);
+                    }));
+                    assertTrue(currentThread().isInterrupted());
+                } finally {
+                    interrupted();
+                }
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("fatalSignals")
+    void returnedFatalSignalsEscapeBeforeAnotherClockRead(Error fatal) {
+        for (boolean capture : List.of(false, true)) {
+            boolean[] evaluated = {false};
+            var signal = condition("fatal", actual -> {
+                evaluated[0] = true;
+                return uncontrolled(fatal);
+            });
+            var waiting = await(Object::new).usingTime(() -> {
+                if (evaluated[0]) throw new IllegalStateException("completion clock failed");
+                return 0;
+            }, ignored -> {});
+            assertSame(fatal, assertThrows(fatal.getClass(), () -> {
+                if (capture) waiting.tryUntil(signal);
+                else waiting.until(signal);
+            }));
+        }
     }
 
     @Test

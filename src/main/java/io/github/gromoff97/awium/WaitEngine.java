@@ -144,16 +144,6 @@ record WaitEngine<Observed, Result>(WaitConfiguration configuration, LongSupplie
             evaluation = ConditionResult.uncontrolled(
                     new NullPointerException("condition returned null ConditionResult"));
         }
-        if (evaluation instanceof ConditionResult.Uncontrolled<?> uncontrolled) {
-            Throwable failure = uncontrolled.cause();
-            if (failure instanceof Error fatal
-                    && (fatal instanceof VirtualMachineError || fatal instanceof ThreadDeath)) {
-                throw fatal;
-            }
-            if (failure instanceof InterruptedException) {
-                currentThread().interrupt();
-            }
-        }
         return new AwaitAttempt<>(number, phase,
                 new AwaitAttempt.Outcome.Evaluated<>(timing, actual, evaluation));
     }
