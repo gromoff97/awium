@@ -104,11 +104,6 @@ public final class CollectionConditions {
                 actual -> actual.size() == values.size());
     }
 
-    public static <E> Condition<Collection<E>, E> single(Predicate<? super E> predicate) {
-        requireNonNull(predicate, "predicate must not be null");
-        return condition("collection has a single matching element", actual -> selectSingle(actual, predicate));
-    }
-
     public static <E> Condition<Collection<E>, E> single(PreservingCondition<? super E> nested) {
         return ConditionSupport.single("collection", nested, actual -> actual,
                 () -> nested.preservingSession());
@@ -353,15 +348,6 @@ public final class CollectionConditions {
     public static <E> PreservingCondition<SequencedCollection<E>> sorted(Comparator<? super E> comparator) {
         requireNonNull(comparator, "comparator must not be null");
         return preserving("collection is sorted", "collection was not sorted", actual -> isSorted(actual, comparator));
-    }
-
-    private static <E> ConditionResult<? extends E> selectSingle(Collection<E> actual,
-            Predicate<? super E> predicate) throws InterruptedException {
-        if (actual == null) {
-            return unsatisfied("collection was null");
-        }
-        return ConditionSupport.selectSingle(actual, predicate,
-                "no collection element matched", "more than one collection element matched");
     }
 
     private static <E> ConditionResult<E> selectFirst(Iterable<E> actual,

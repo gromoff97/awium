@@ -21,6 +21,7 @@ import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.CollectionConditions.first;
 import static io.github.gromoff97.awium.CollectionConditions.last;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
+import static io.github.gromoff97.awium.Conditions.matches;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -35,14 +36,14 @@ class CollectionSelectionConditionsTest {
         var users = new ArrayList<>(List.of(new User(1), new User(2)));
         CollectionSource<ArrayList<User>> source = () -> users;
 
-        User matching = await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(user -> user.id() == 2));
+        User matching = await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(matches(user -> user.id() == 2)));
         String typed = await((CollectionSource<List<Object>>) () -> List.of("text", 42)).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(instanceOf(String.class)));
         String nullable = await((CollectionSource<List<String>>) () -> Arrays.asList((String) null)).usingTime(pollingTime, pollingTime).until(CollectionConditions.single);
 
         assertSame(users.get(1), matching);
         assertEquals("text", typed);
         assertNull(nullable);
-        assertNull(await(() -> Arrays.asList(null, "other")).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(value -> value == null)));
+        assertNull(await(() -> Arrays.asList(null, "other")).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(matches(value -> value == null))));
     }
 
     @Test
@@ -161,16 +162,16 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
-    void singlePredicateRequiresExactlyOneMatch() throws Exception {
+    void singleMatchingConditionRequiresExactlyOneMatch() throws Exception {
         ConditionResult<?> none = evaluate(
-                CollectionConditions.<Integer>single(value -> value > 10), List.of(1, 2));
+                CollectionConditions.<Integer>single(matches(value -> value > 10)), List.of(1, 2));
         ConditionResult<?> many = evaluate(
-                CollectionConditions.<Integer>single(value -> value > 0), List.of(1, 2));
+                CollectionConditions.<Integer>single(matches(value -> value > 0)), List.of(1, 2));
 
         assertEquals(Unsatisfied.class, none.getClass());
         assertEquals(Unsatisfied.class, many.getClass());
-        assertEquals("no collection element matched", ((Unsatisfied<?>) none).mismatch());
-        assertEquals("more than one collection element matched", ((Unsatisfied<?>) many).mismatch());
+        assertEquals("value did not match", ((Unsatisfied<?>) none).mismatch());
+        assertEquals("more than one value matched", ((Unsatisfied<?>) many).mismatch());
     }
 
     @Test

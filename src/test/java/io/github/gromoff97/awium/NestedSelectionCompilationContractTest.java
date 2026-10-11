@@ -18,7 +18,7 @@ class NestedSelectionCompilationContractTest {
     @Test
     void nestedSelectionInfersValuesAndSequencesWithoutPreparatoryVariables() throws IOException {
         assertTrue(compiles("""
-                Payment one = await(Contract::payments).until(single(Payment::paid));
+                Payment one = await(Contract::payments).until(single(matches(Payment::paid)));
                 Payment checked = await(Contract::payments).until(single(matches(Payment::paid).because("paid")));
                 var inferred = await(Contract::payments).until(single(matches(value -> value.paid())));
                 boolean paid = inferred.paid();
@@ -27,7 +27,7 @@ class NestedSelectionCompilationContractTest {
                 Integer narrowed = await(() -> List.<Number>of(1)).until(single(instanceOf(Integer.class)));
                 Number number = await(() -> List.<Number>of(1)).until(single(equalTo(1)));
                 String key = await(Contract::map).until(singleEntry(yields(Map.Entry::getKey)));
-                List<Payment> stages = await(Contract::payments).until(single(Payment::paid), single(matches(Payment::paid).because("final")));
+                List<Payment> stages = await(Contract::payments).until(single(matches(Payment::paid)), single(matches(Payment::paid).because("final")));
                 AwaitResult<List<Payment>, Payment> diagnostic = await(Contract::payments).tryUntil(single(matches(Payment::paid).because("paid")));
                 AwaitResult<List<Payment>, List<Integer>> ids = await(Contract::payments).tryUntil(single(yields(Payment::id)), single(yields(Payment::id)));
                 AwaitResult<Map<String, Payment>, String> map = await(Contract::map).tryUntil(singleEntry(yields(Map.Entry::getKey)));
@@ -41,10 +41,10 @@ class NestedSelectionCompilationContractTest {
                 "await(Contract::payments).tryUntil(single(equalTo(42)));",
                 "await(Contract::payments).until(single(instanceOf(String.class)));",
                 "await(Contract::payments).until(single(matches(String::isBlank)));",
-                "String wrong = await(Contract::payments).until(single(Payment::paid));",
-                "AwaitResult<List<Payment>, String> wrong = await(Contract::payments).tryUntil(single(Payment::paid));",
+                "String wrong = await(Contract::payments).until(single(matches(Payment::paid)));",
+                "AwaitResult<List<Payment>, String> wrong = await(Contract::payments).tryUntil(single(matches(Payment::paid)));",
                 "await(Contract::map).until(singleEntry(equalTo(42)));",
-                "List<String> wrong = await(Contract::payments).until(single(Payment::paid), single(Payment::paid));")) {
+                "List<String> wrong = await(Contract::payments).until(single(matches(Payment::paid)), single(matches(Payment::paid)));")) {
             assertFalse(compiles(body), body);
         }
     }

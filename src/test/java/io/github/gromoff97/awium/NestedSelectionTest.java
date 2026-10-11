@@ -24,12 +24,11 @@ class NestedSelectionTest {
     record Payment(int id, boolean paid) {}
 
     @Test
-    void nestedConditionsSelectTheUniqueMatchingElementJustLikePredicates() {
+    void nestedConditionsSelectAndTransformTheUniqueMatchingValue() {
         var pending = new Payment(1, false);
         var paid = new Payment(2, true);
         var time = new FakeTime(0);
         var waiting = await(() -> List.of(paid, pending)).usingTime(time, time);
-        assertSame(paid, waiting.until(single(Payment::paid)));
         assertSame(paid, waiting.until(single(matches(Payment::paid).because("paid payment"))));
         assertSame(paid, waiting.until(single(asserted(payment -> { assertTrue(payment.paid()); }))));
         assertEquals(paid, waiting.until(single(equalTo(paid))));
@@ -121,9 +120,7 @@ class NestedSelectionTest {
     @Test
     void everySelectionStopsBeforeTheNextCallbackAfterInterruption() {
         List<Function<Predicate<Integer>, AwaitResult<?, ?>>> waits = List.of(
-                predicate -> await(() -> List.of(1, 2)).tryUntil(single(predicate)),
                 predicate -> await(() -> List.of(1, 2)).tryUntil(single(matches(predicate))),
-                predicate -> await(() -> Map.of("a", 1, "b", 2)).tryUntil(singleEntry((key, value) -> predicate.test(value))),
                 predicate -> await(() -> Map.of("a", 1, "b", 2)).tryUntil(singleEntry(matches(
                         (Map.Entry<String, Integer> entry) -> predicate.test(entry.getValue())))));
         for (var wait : waits) {

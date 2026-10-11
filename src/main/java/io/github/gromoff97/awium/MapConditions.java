@@ -96,12 +96,6 @@ public final class MapConditions {
                 actual -> actual.size() == entries.size());
     }
 
-    public static <K, V> Condition<Map<K, V>, Map.Entry<K, V>> singleEntry(BiPredicate<? super K, ? super V> predicate) {
-        requireNonNull(predicate, "predicate must not be null");
-        Predicate<Map.Entry<K, V>> matches = entry -> predicate.test(entry.getKey(), entry.getValue());
-        return condition("map has a single matching entry", actual -> selectSingle(actual, matches));
-    }
-
     public static <K, V> Condition<Map<K, V>, Map.Entry<K, V>> singleEntry(PreservingCondition<? super Map.Entry<K, V>> nested) {
         return ConditionSupport.single("map", nested, Map::entrySet,
                 () -> nested.preservingSession());
@@ -320,15 +314,6 @@ public final class MapConditions {
         var entries = new ExpectedEntries(requireNonNull(expected, "expected entries must not be null"));
         return preserving("map does not contain exactly the expected entries", "map contained exactly the expected entries", expectedReference(entries),
                 actual -> !exactContent(actual, entries));
-    }
-
-    private static <K, V> ConditionResult<? extends Map.Entry<K, V>> selectSingle(Map<K, V> actual,
-            Predicate<? super Map.Entry<K, V>> predicate) throws InterruptedException {
-        if (actual == null) {
-            return unsatisfied("map was null");
-        }
-        return ConditionSupport.selectSingle(actual.entrySet(), predicate,
-                "no map entry matched", "more than one map entry matched");
     }
 
     private static <K, V> ConditionResult<V> value(Map<K, V> actual, K key) {

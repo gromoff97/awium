@@ -10,6 +10,7 @@ import java.util.Map;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.Conditions.matches;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -25,14 +26,14 @@ class MapSelectionConditionsTest {
         actual.put("second", 2);
         MapSource<LinkedHashMap<String, Integer>> source = () -> actual;
 
-        Map.Entry<String, Integer> selected = await(source).usingTime(pollingTime, pollingTime).until(MapConditions.singleEntry((key, value) -> value == 2));
+        Map.Entry<String, Integer> selected = await(source).usingTime(pollingTime, pollingTime).until(MapConditions.singleEntry(matches(entry -> entry.getValue() == 2)));
         Map.Entry<String, Integer> byKey = await(source).usingTime(pollingTime, pollingTime).until(MapConditions.entryFor("first"));
         Integer value = await(source).usingTime(pollingTime, pollingTime).until(MapConditions.valueFor("second"));
         Integer nested = await(source).usingTime(pollingTime, pollingTime).until(MapConditions.valueFor("second", Conditions.atLeast(2)));
         String key = await(source).usingTime(pollingTime, pollingTime).until(MapConditions.singleEntry(
-                (candidate, valueCandidate) -> candidate.startsWith("f"))).getKey();
+                matches(entry -> entry.getKey().startsWith("f")))).getKey();
         Integer singleValue = await(source).usingTime(pollingTime, pollingTime).until(MapConditions.singleEntry(
-                (keyCandidate, candidate) -> candidate == 2)).getValue();
+                matches(entry -> entry.getValue() == 2))).getValue();
 
         assertEquals("second", selected.getKey());
         assertEquals("first", byKey.getKey());
@@ -130,12 +131,12 @@ class MapSelectionConditionsTest {
     void selectorsCoverMissingMultipleAndWrongEntries() throws Exception {
         var actual = new LinkedHashMap<>(Map.of("first", 1, "second", 2));
 
-        var none = evaluate(MapConditions.<String, Integer>singleEntry((key, value) -> value > 2), actual);
-        var many = evaluate(MapConditions.<String, Integer>singleEntry((key, value) -> value > 0), actual);
+        var none = evaluate(MapConditions.<String, Integer>singleEntry(matches(entry -> entry.getValue() > 2)), actual);
+        var many = evaluate(MapConditions.<String, Integer>singleEntry(matches(entry -> entry.getValue() > 0)), actual);
         assertEquals(Unsatisfied.class, none.getClass());
         assertEquals(Unsatisfied.class, many.getClass());
-        assertEquals("no map entry matched", ((Unsatisfied<?>) none).mismatch());
-        assertEquals("more than one map entry matched", ((Unsatisfied<?>) many).mismatch());
+        assertEquals("value did not match", ((Unsatisfied<?>) none).mismatch());
+        assertEquals("more than one value matched", ((Unsatisfied<?>) many).mismatch());
         assertEquals(Unsatisfied.class,
                 evaluate(MapConditions.<String, Integer>valueFor("missing"), actual).getClass());
         assertEquals(Unsatisfied.class, evaluate(
@@ -148,7 +149,8 @@ class MapSelectionConditionsTest {
                 Map.of("first", 1)).getClass());
         assertEquals(Unsatisfied.class, evaluate(
                 MapConditions.<String, Integer>onlyValueFor("first"), null).getClass());
-        assertThrows(NullPointerException.class, () -> MapConditions.singleEntry((java.util.function.BiPredicate<Object, Object>) null));
+        assertThrows(NullPointerException.class, () -> MapConditions.singleEntry(
+                (Condition.PreservingCondition<Map.Entry<Object, Object>>) null));
         assertThrows(NullPointerException.class, () -> MapConditions.allEntries(null));
     }
 }

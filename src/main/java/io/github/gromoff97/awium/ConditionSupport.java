@@ -117,13 +117,6 @@ final class ConditionSupport {
         });
     }
 
-    static <Element> ConditionResult<? extends Element> selectSingle(Iterable<Element> values,
-            Predicate<? super Element> matches,
-            String noneMatched, String multipleMatched) throws InterruptedException {
-        return evaluateSingle(values, value -> matches.test(value) ? satisfied(value) : unsatisfied(noneMatched),
-                noneMatched, multipleMatched);
-    }
-
     static <Observed, Element, Result> Condition<Observed, Result> single(String subject, ConditionDefinition<?, ?> nested,
             Function<? super Observed, ? extends Iterable<Element>> elements,
             Supplier<? extends Function<? super Element, ? extends ConditionResult<? extends Result>>> evaluatorFactory) {

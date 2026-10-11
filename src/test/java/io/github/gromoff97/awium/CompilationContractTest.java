@@ -380,6 +380,7 @@ class CompilationContractTest {
     void singleElementIsBothAFieldAndAnOverloadedSelector() throws IOException {
         assertTrue(compiles("""
                 import static io.github.gromoff97.awium.Conditions.instanceOf;
+                import static io.github.gromoff97.awium.Conditions.matches;
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.CollectionConditions.single;
                 import io.github.gromoff97.awium.MapConditions;
@@ -393,10 +394,10 @@ class CompilationContractTest {
                             CollectionSource<List<Object>> objects,
                             MapSource<Map<String, Integer>> map) {
                         String only = await(strings).until(single);
-                        String matching = await(strings).until(single(value -> !value.isBlank()));
+                        String matching = await(strings).until(single(matches(value -> !value.isBlank())));
                         String narrowed = await(objects).until(single(instanceOf(String.class)));
                         Map.Entry<String, Integer> entry = await(map).until(MapConditions.singleEntry);
-                        Map.Entry<String, Integer> selected = await(map).until(MapConditions.singleEntry((key, value) -> value > 0));
+                        Map.Entry<String, Integer> selected = await(map).until(MapConditions.singleEntry(matches(candidate -> candidate.getValue() > 0)));
                     }
                 }
                 """));
