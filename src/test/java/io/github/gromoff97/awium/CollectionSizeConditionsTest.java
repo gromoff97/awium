@@ -62,6 +62,20 @@ class CollectionSizeConditionsTest {
     }
 
     @Test
+    void singleMismatchUsesTheSizeObservedByTheCheck() {
+        var actual = new ArrayList<String>() {
+            @Override
+            public int size() {
+                int observed = super.size();
+                if (observed == 0) add("ready");
+                return observed;
+            }
+        };
+
+        assertEquals("collection size was 0", mismatch(evaluate(single, actual)));
+    }
+
+    @Test
     void conditionsEvaluateEverySizeRelation() {
         for (Case testCase : cases()) {
             var matching = new ProbeContainers.ProbeCollection<Object>(testCase.matchingSize());

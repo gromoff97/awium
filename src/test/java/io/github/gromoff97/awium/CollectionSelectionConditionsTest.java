@@ -210,6 +210,21 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
+    void indexedMismatchUsesTheSizeObservedByTheCheck() {
+        var actual = new ArrayList<String>() {
+            @Override
+            public int size() {
+                int observed = super.size();
+                if (observed == 0) add("ready");
+                return observed;
+            }
+        };
+
+        var result = evaluate(CollectionConditions.<String>element(0), actual);
+        assertEquals("list size was 0", ((Unsatisfied<?>) result).mismatch());
+    }
+
+    @Test
     void lastReturnsTheFinalPersistenceObservation() {
         var observations = new ArrayDeque<>(List.of(List.of(1), List.of(2), List.of(3)));
         CollectionSource<List<Integer>> source = observations::removeFirst;

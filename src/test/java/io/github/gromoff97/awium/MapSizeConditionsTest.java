@@ -62,6 +62,20 @@ class MapSizeConditionsTest {
     }
 
     @Test
+    void singleMismatchUsesTheSizeObservedByTheCheck() {
+        var actual = new LinkedHashMap<String, String>() {
+            @Override
+            public int size() {
+                int observed = super.size();
+                if (observed == 0) put("key", "ready");
+                return observed;
+            }
+        };
+
+        assertEquals("map size was 0", mismatch(evaluate(singleEntry, actual)));
+    }
+
+    @Test
     void conditionsEvaluateEverySizeRelation() {
         for (Case testCase : cases()) {
             Map<Integer, Integer> matching = mapWithSize(testCase.matchingSize());

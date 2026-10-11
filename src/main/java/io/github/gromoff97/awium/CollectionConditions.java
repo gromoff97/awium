@@ -38,9 +38,10 @@ public final class CollectionConditions {
         if (actual == null) {
             return unsatisfied("collection was null");
         }
-        return actual.size() == 1
+        int size = actual.size();
+        return size == 1
                 ? satisfied(actual.iterator().next())
-                : unsatisfied("collection size was " + actual.size());
+                : unsatisfied("collection size was " + size);
     });
     public static final PreservingCondition<Collection<?>> empty = sized(0, size -> size == 0,
             "collection is empty");
@@ -330,8 +331,9 @@ public final class CollectionConditions {
             if (actual == null) {
                 return unsatisfied("list was null");
             }
-            if (actual.size() <= index) {
-                return unsatisfied("list size was " + actual.size());
+            int size = actual.size();
+            if (size <= index) {
+                return unsatisfied("list size was " + size);
             }
             E value = actual.get(index);
             ValueMatching.checkInterruption();

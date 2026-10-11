@@ -39,9 +39,10 @@ public final class MapConditions {
         if (actual == null) {
             return unsatisfied("map was null");
         }
-        return actual.size() == 1
+        int size = actual.size();
+        return size == 1
                 ? satisfied(actual.entrySet().iterator().next())
-                : unsatisfied("map size was " + actual.size());
+                : unsatisfied("map size was " + size);
     });
     public static final PreservingCondition<Map<?, ?>> empty = sized(0, size -> size == 0,
             "map is empty");
@@ -199,8 +200,9 @@ public final class MapConditions {
             if (actual == null) {
                 return unsatisfied("map was null");
             }
-            if (actual.size() != 1) {
-                return unsatisfied("map size was " + actual.size());
+            int size = actual.size();
+            if (size != 1) {
+                return unsatisfied("map size was " + size);
             }
             Map.Entry<K, V> entry = actual.entrySet().iterator().next();
             return equal(entry.getKey(), key)

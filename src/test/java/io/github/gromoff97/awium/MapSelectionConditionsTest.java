@@ -43,6 +43,21 @@ class MapSelectionConditionsTest {
     }
 
     @Test
+    void onlyValueMismatchUsesTheSizeObservedByTheCheck() {
+        var actual = new LinkedHashMap<String, String>() {
+            @Override
+            public int size() {
+                int observed = super.size();
+                if (observed == 0) put("key", "ready");
+                return observed;
+            }
+        };
+
+        var result = evaluate(MapConditions.<String, String>onlyValueFor("key"), actual);
+        assertEquals("map size was 0", ((Unsatisfied<?>) result).mismatch());
+    }
+
+    @Test
     void nullValuesAreDistinguishedFromMissingKeys() {
         var pollingTime = new FakeTime(0);
         var actual = new LinkedHashMap<String, String>();
