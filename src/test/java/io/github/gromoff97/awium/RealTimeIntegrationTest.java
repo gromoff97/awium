@@ -22,17 +22,16 @@ class RealTimeIntegrationTest {
     void externalControllerCancelsTheCallerWhileItIsParked() throws Exception {
         Throwable[] terminal = new Throwable[1];
         boolean[] interrupted = new boolean[1];
-        Thread caller = ofPlatform().name("awium-platform-caller")
-                .unstarted(() -> {
-                    try {
-                        await((Source<Integer>) () -> 1).every(ofSeconds(5)).upTo(ofSeconds(10)).until(condition(
-                                        "never satisfied", value ->
-                                                unsatisfied("not ready")));
-                    } catch (Throwable failure) {
-                        terminal[0] = failure;
-                        interrupted[0] = currentThread().isInterrupted();
-                    }
-                });
+        Thread caller = ofPlatform().name("awium-platform-caller").unstarted(() -> {
+            try {
+                await((Source<Integer>) () -> 1).every(ofSeconds(5)).upTo(ofSeconds(10)).until(condition(
+                                "never satisfied", value ->
+                                        unsatisfied("not ready")));
+            } catch (Throwable failure) {
+                terminal[0] = failure;
+                interrupted[0] = currentThread().isInterrupted();
+            }
+        });
         caller.start();
         awaitTimedWaiting(caller);
 

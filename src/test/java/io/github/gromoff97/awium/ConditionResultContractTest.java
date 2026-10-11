@@ -27,16 +27,13 @@ class ConditionResultContractTest {
     @Test
     void nonSatisfiedEvaluationSkipsContinuationAndKeepsDiagnostics() {
         var assertion = new AssertionError("assertion");
-        ConditionResult<String> unsatisfied = ConditionResult.<Integer>assertionUnsatisfied("mismatch", assertion)
-                .withContext(SEQUENCE)
-                .continueIfSatisfied(value -> {
-                    throw new AssertionError("continuation must not run");
-                });
+        ConditionResult<String> unsatisfied = ConditionResult.<Integer>assertionUnsatisfied("mismatch", assertion).withContext(SEQUENCE).continueIfSatisfied(value -> {
+            throw new AssertionError("continuation must not run");
+        });
         var cause = new IllegalStateException("broken");
-        ConditionResult<String> uncontrolled = ConditionResult.<Integer>uncontrolled(cause)
-                .continueIfSatisfied(value -> {
-                    throw new AssertionError("continuation must not run");
-                });
+        ConditionResult<String> uncontrolled = ConditionResult.<Integer>uncontrolled(cause).continueIfSatisfied(value -> {
+            throw new AssertionError("continuation must not run");
+        });
 
         var assertionFailure = assertInstanceOf(ConditionResult.Unsatisfied.class, unsatisfied);
         assertEquals("mismatch", assertionFailure.mismatch());

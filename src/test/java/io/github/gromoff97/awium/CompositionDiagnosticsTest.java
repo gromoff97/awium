@@ -18,8 +18,8 @@ class CompositionDiagnosticsTest {
     void missingKeyAndNestedMismatchReportTheirOwnExpectedValues() {
         for (Map<String, String> actual : asList(null, Map.<String, String>of(), Map.of("customerId", "Alice"))) {
             var time = new FakeTime(0);
-            var result = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
-                    .tryUntil(valueFor("customerId", equalTo("Bob")).because("customer is required"));
+            var result = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).tryUntil(
+                    valueFor("customerId", equalTo("Bob")).because("customer is required"));
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
             assertEquals(TIMEOUT, failure.reason());
             assertTrue(failure.message().contains("Expected: " + (actual == null || actual.isEmpty() ? "customerId" : "Bob")), failure.message());

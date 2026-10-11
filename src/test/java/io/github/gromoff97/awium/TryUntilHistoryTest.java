@@ -63,8 +63,8 @@ class TryUntilHistoryTest {
     void boundsHistoryWhileRetainingTheFirstAndLatestAttempts() {
         var time = new FakeTime(0);
 
-        var result = timedAwait(Object::new, config(1, 300, 0), time, time)
-                .tryUntil(condition("never ready", actual -> unsatisfied("not ready")));
+        var result = timedAwait(Object::new, config(1, 300, 0), time, time).tryUntil(
+                condition("never ready", actual -> unsatisfied("not ready")));
 
         assertEquals(300, result.totalAttempts());
         assertEquals(256, result.attempts().size());

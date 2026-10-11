@@ -6,7 +6,6 @@ import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
 import io.github.gromoff97.awium.Source.CollectionSource;
 import java.util.AbstractList;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;

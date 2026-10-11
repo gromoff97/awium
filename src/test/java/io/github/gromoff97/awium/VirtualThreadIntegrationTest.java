@@ -30,15 +30,14 @@ class VirtualThreadIntegrationTest {
         int[] observations = {0};
         int[] result = {0};
 
-        Thread caller = ofVirtual().name("awium-virtual-caller")
-                .start(() -> result[0] = await((Source<Integer>) () -> {
-                    callbackThreads.add(currentThread());
-                    return ++observations[0];
-                }).every(ofMillis(20)).upTo(ofSeconds(2)).until(condition("third observation", value -> {
-                    callbackThreads.add(currentThread());
-                    return value == 3 ? satisfied(value)
-                            : unsatisfied("not the third observation");
-                })));
+        Thread caller = ofVirtual().name("awium-virtual-caller").start(() -> result[0] = await((Source<Integer>) () -> {
+            callbackThreads.add(currentThread());
+            return ++observations[0];
+        }).every(ofMillis(20)).upTo(ofSeconds(2)).until(condition("third observation", value -> {
+            callbackThreads.add(currentThread());
+            return value == 3 ? satisfied(value)
+                    : unsatisfied("not the third observation");
+        })));
         caller.join(5_000);
         if (caller.isAlive()) {
             caller.interrupt();
