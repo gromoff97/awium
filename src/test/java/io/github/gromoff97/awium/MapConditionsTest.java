@@ -51,12 +51,20 @@ class MapConditionsTest {
         Directional actualKey = new Directional(true);
         Directional expectedKey = new Directional(false);
         var actual = entryMap(entry(actualKey, "value"));
-        assertStatus(containsKey(expectedKey), actual, Satisfied.class);
+        assertStatus(containsKeys(expectedKey), actual, Satisfied.class);
         assertEquals(1, actualKey.equalsCalls);
 
         var arrayActual = entryMap(entry(new int[] {1}, new int[] {2}));
+        assertStatus(containsKeys(new int[] {1}), arrayActual, Satisfied.class);
+        assertStatus(containsValues(new int[] {2}), arrayActual, Satisfied.class);
         assertStatus(containsEntry(new int[] {1}, new int[] {2}),
                 arrayActual, Satisfied.class);
+
+        var objectArrayActual = entryMap(entry(new String[] {"key"}, new String[] {"value"}));
+        assertStatus(MapConditions.<String[]>containsKeys(new String[] {"key"}),
+                objectArrayActual, Satisfied.class);
+        assertStatus(MapConditions.<String[]>containsValues(new String[] {"value"}),
+                objectArrayActual, Satisfied.class);
 
         var valueFailure = new IllegalStateException("value equals");
         var keyMismatch = entryMap(entry("actual",
@@ -75,8 +83,8 @@ class MapConditionsTest {
     @Test
     void nullKeysAndValuesUseScanSemantics() throws Exception {
         var actual = entryMap(entry(null, "value"), entry("key", null));
-        assertStatus(containsKey(null), actual, Satisfied.class);
-        assertStatus(containsValue(null), actual, Satisfied.class);
+        assertStatus(containsKeys((String) null), actual, Satisfied.class);
+        assertStatus(containsValues((String) null), actual, Satisfied.class);
         assertStatus(containsEntry(null, "value"), actual, Satisfied.class);
         assertStatus(containsEntry("key", null), actual, Satisfied.class);
     }
@@ -124,12 +132,12 @@ class MapConditionsTest {
                 new ThrowingEquals(equalityCause), "1"));
 
         assertSame(actualCause, assertFailure(CONDITION_FAILED,
-                () -> awaitMap(brokenActual, doesNotContainKey("a"))).getCause());
+                () -> awaitMap(brokenActual, doesNotContainKeys("a"))).getCause());
         assertSame(expectedCause, assertThrows(IllegalStateException.class,
                 () -> containsNoEntriesOf(brokenExpected)));
         assertSame(equalityCause, assertFailure(CONDITION_FAILED,
                 () -> awaitMap(brokenEquality,
-                        doesNotContainKey(new ThrowingEquals(null)))).getCause());
+                        doesNotContainKeys(new ThrowingEquals(null)))).getCause());
     }
 
     @Test
@@ -159,7 +167,7 @@ class MapConditionsTest {
                             time.advanceNanos(2);
                             return actual;
                         }, defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
-                        time, time).until(doesNotContainKey("a").because("business reason")));
+                        time, time).until(doesNotContainKeys("a").because("business reason")));
 
         assertEquals(1, actual.entrySetCalls);
     }
@@ -229,9 +237,9 @@ class MapConditionsTest {
 
     private static List<Pair> pairs() {
         return List.of(
-                new Pair("key", containsKey("b"), doesNotContainKey("b"),
+                new Pair("key", containsKeys("b"), doesNotContainKeys("b"),
                         map("a", "1", "b", "2"), map("a", "1", "c", "2")),
-                new Pair("value", containsValue("2"), doesNotContainValue("2"),
+                new Pair("value", containsValues("2"), doesNotContainValues("2"),
                         map("a", "1", "b", "2"), map("a", "1", "b", "3")),
                 new Pair("entry", containsEntry("b", "2"),
                         doesNotContainEntry("b", "2"),

@@ -209,16 +209,6 @@ public final class MapConditions {
         });
     }
 
-    public static <K> PreservingCondition<Map<? super K, ?>> containsKey(K expected) {
-        return preserving("map contains expected key", "map did not contain expected key", expectedReference(expected),
-                actual -> matchesAny(actual.keySet(), key -> equal(key, expected)));
-    }
-
-    public static <K> PreservingCondition<Map<? super K, ?>> doesNotContainKey(K expected) {
-        return preserving("map does not contain expected key", "map contained expected key", unexpectedReference(expected),
-                actual -> !matchesAny(actual.keySet(), key -> equal(key, expected)));
-    }
-
     @SafeVarargs
     public static <K> PreservingCondition<Map<? super K, ?>> containsKeys(K... expected) {
         List<K> keys = stream(nonEmpty(expected, "expected keys")).toList();
@@ -238,16 +228,6 @@ public final class MapConditions {
         List<K> keys = stream(requireNonNull(expected, "expected keys must not be null")).toList();
         return preserving("map contains only the expected keys", "map did not contain only the expected keys", expectedReference(keys),
                 actual -> sameDistinctElements(actual.keySet(), keys));
-    }
-
-    public static <V> PreservingCondition<Map<?, ? super V>> containsValue(V expected) {
-        return preserving("map contains expected value", "map did not contain expected value", expectedReference(expected),
-                actual -> matchesAny(actual.values(), value -> equal(value, expected)));
-    }
-
-    public static <V> PreservingCondition<Map<?, ? super V>> doesNotContainValue(V expected) {
-        return preserving("map does not contain expected value", "map contained expected value", unexpectedReference(expected),
-                actual -> !matchesAny(actual.values(), value -> equal(value, expected)));
     }
 
     @SafeVarargs

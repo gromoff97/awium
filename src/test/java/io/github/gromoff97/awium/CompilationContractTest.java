@@ -543,10 +543,36 @@ class CompilationContractTest {
                         await(map).until(allEntries((key, value) -> true));
                         await(map).until(MapConditions.size(1));
                         await(map).until(valueFor("x"));
+                        Map<String, Integer> keys = await(map).until(containsKeys("x"));
+                        Map<String, Integer> values = await(map).until(containsValues(1));
+                        await(map).until(containsKeys("x", "y"));
+                        await(map).until(containsValues(1, 2));
+                        await(map).tryUntil(doesNotContainKeys("z"));
+                        await(map).tryUntil(doesNotContainValues(3));
                         await(map).until(containsExactlyEntriesOf(Map.of("x", 1)));
                     }
                 }
                 """));
+    }
+
+    @Test
+    void mapMembershipConditionsRejectIncompatibleKeysAndValues() throws IOException {
+        for (String terminal : List.of("until", "tryUntil")) {
+            for (String condition : List.of("containsKeys(1)", "containsValues(\"wrong\")")) {
+                assertFalse(compiles("""
+                        import static io.github.gromoff97.awium.Await.await;
+                        import static io.github.gromoff97.awium.MapConditions.*;
+                        import io.github.gromoff97.awium.Source.MapSource;
+                        import java.util.Map;
+
+                        final class Contract {
+                            void check(MapSource<Map<String, Integer>> source) {
+                                await(source).%s(%s);
+                            }
+                        }
+                        """.formatted(terminal, condition)), terminal + ": " + condition);
+            }
+        }
     }
 
     @Test
