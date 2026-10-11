@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -683,6 +684,48 @@ class DiagnosticsSnapshotTest {
         assertMessage(sourceFailure, "condition", "description", "business",
                 "reason", "first", "second");
         assertMessage(arrayFailure, "[1, 2]");
+    }
+
+    @Test
+    void deepActualAndExpectedArraysRemainDiagnosticValues() {
+        Object nested = "leaf";
+        int depth = 50_000;
+        for (int index = 0; index < depth; index++) nested = new Object[] {nested};
+        String rendered = "[".repeat(depth) + "leaf" + "]".repeat(depth);
+        for (boolean expectedArray : List.of(false, true)) {
+            Object actual = expectedArray ? "other" : nested;
+            Object expected = expectedArray ? nested : "other";
+            var time = new FakeTime(0);
+            var failure = assertFailure(TIMEOUT,
+                    () -> timedAwait((Source<Object>) () -> actual, config(1, 2, 0), time, time).until(equalTo(expected)));
+            assertMessage(failure, rendered);
+        }
+    }
+
+    @Test
+    void fatalErrorsFromArrayElementToStringStillEscapeUnchanged() {
+        var fatal = new InternalError("array element fatal");
+        Object[] actual = {new Object() {
+            @Override
+            public String toString() {
+                throw fatal;
+            }
+        }};
+        assertSame(fatal, assertThrows(InternalError.class,
+                () -> complete(new LateTimeout<>(unsatisfiedAttempt(actual, "not ready", 1, 2)),
+                        "condition", null, config(1, 2, 0))));
+    }
+
+    @Test
+    void arrayDiagnosticsKeepPrimitiveValuesSharedArraysAndCycleMarkers() {
+        Object[] shared = {new int[] {1, 2}, "leaf"};
+        Object[] cycle = new Object[1];
+        cycle[0] = cycle;
+        Object[] actual = {shared, shared, new Object[] {null, new char[] {'a', 'b'}}, cycle};
+        var failure = assertFailure(TIMEOUT,
+                () -> complete(new LateTimeout<>(unsatisfiedAttempt(actual, "not ready", 1, 2)),
+                        "condition", null, config(1, 2, 0)));
+        assertMessage(failure, "[[[1, 2], leaf], [[1, 2], leaf], [null, [a, b]], [[...]]]");
     }
 
     private static <S, R> R complete(WaitCompletion<S, R> outcome, String description,
