@@ -1,6 +1,8 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -8,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedOptionalAwait;
 import static io.github.gromoff97.awium.CapturedEvaluator.captured;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
@@ -24,6 +27,53 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CapturedConditionTest {
+
+    @Test
+    void expectedSequencesCaptureTheOriginalObservationsInBothTerminals() {
+        Number first = new BigDecimal("1.00");
+        Number second = new BigInteger("2");
+        Number third = 1024L;
+        Number[] observations = {first, second, third, first, second, third};
+        int[] reads = {0};
+        var time = new FakeTime(0);
+        var waiting = timedAwait(() -> observations[reads[0]++], config(1, 5, 0), time, time);
+        var firstStage = Conditions.equalTo(new BigDecimal("1.00"));
+        var secondStage = Conditions.equalTo(new BigInteger("2"));
+        var finalStage = Conditions.equalTo(1024L);
+
+        List<Number> values = waiting.until(firstStage, secondStage, finalStage);
+        AwaitResult<Number, List<Number>> captured = waiting.tryUntil(firstStage, secondStage, finalStage);
+
+        assertSame(first, values.get(0));
+        assertSame(second, values.get(1));
+        assertSame(third, values.get(2));
+        var results = assertInstanceOf(List.class, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+        assertSame(first, results.get(0));
+        assertSame(second, results.get(1));
+        assertSame(third, results.get(2));
+        assertEquals(3, captured.totalAttempts());
+        assertEquals(6, reads[0]);
+    }
+
+    @Test
+    void diagnosticSelectedSequenceRefreshesOnlyItsLastValueDuringPersistence() {
+        var first = new String("first");
+        var acquired = new String("acquired");
+        var persisted = new String("persisted");
+        var observations = List.of(List.of(first, "ignored"), List.of("ignored", acquired), List.of("ignored", persisted));
+        int[] reads = {0};
+        var time = new FakeTime(0);
+
+        AwaitResult<List<String>, List<String>> result = timedCollectionAwait(() -> observations.get(reads[0]++),
+                config(1, 5, 1), time, time).tryUntil(CollectionConditions.first, CollectionConditions.last);
+
+        var values = assertInstanceOf(List.class, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertSame(first, values.get(0));
+        assertSame(persisted, values.get(1));
+        assertEquals(3, reads[0]);
+        assertEquals(List.of(AwaitAttempt.Phase.ACQUISITION, AwaitAttempt.Phase.ACQUISITION, AwaitAttempt.Phase.PERSISTENCE),
+                result.attempts().stream().map(AwaitAttempt::phase).toList());
+    }
 
     @Test
     void successfulSequenceReportsAllCapturedStages() {

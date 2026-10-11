@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -15,8 +16,26 @@ import static io.github.gromoff97.awium.OptionalConditions.present;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class TryUntilTest {
+
+    @Test
+    void narrowingKeepsTheOriginalObservationAndReturnsItsConcreteType() {
+        var actual = new BigDecimal("42.00");
+        int[] reads = {0};
+        Source<Number> source = () -> {
+            reads[0]++;
+            return actual;
+        };
+        var time = new FakeTime(0);
+
+        AwaitResult<Number, BigDecimal> result = await(source).usingTime(time, time).tryUntil(Conditions.instanceOf(BigDecimal.class));
+
+        assertSame(actual, satisfied(result).result());
+        assertSame(actual, assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, result.attempts().getFirst().outcome()).observed());
+        assertEquals(1, reads[0]);
+    }
 
     @Test
     void returnsTheLastPersistenceResultAndBothPhases() {

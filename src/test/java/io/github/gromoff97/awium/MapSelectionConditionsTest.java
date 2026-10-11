@@ -3,7 +3,9 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
 import io.github.gromoff97.awium.Source.MapSource;
+import java.math.BigDecimal;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -11,11 +13,50 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class MapSelectionConditionsTest {
+
+    @Test
+    void expectedAndNarrowingConditionsReturnTheOriginalEntryAndValue() {
+        record ReceiptEntry(String key, Number value) implements Map.Entry<String, Number> {
+            @Override
+            public String getKey() { return key; }
+
+            @Override
+            public Number getValue() { return value; }
+
+            @Override
+            public Number setValue(Number replacement) { throw new UnsupportedOperationException(); }
+        }
+
+        var value = new BigDecimal("42.00");
+        var entry = new ReceiptEntry("receipt", value);
+        var equalEntry = new ReceiptEntry("receipt", new BigDecimal("42.00"));
+        var actual = new ProbeContainers.EntryMap<String, Number>(List.of(entry));
+        int[] reads = {0};
+        MapSource<ProbeContainers.EntryMap<String, Number>> source = () -> {
+            reads[0]++;
+            return actual;
+        };
+        var time = new FakeTime(0);
+        var waiting = await(source).usingTime(time, time);
+
+        Map.Entry<String, Number> matching = waiting.until(MapConditions.singleEntry(Conditions.equalTo(equalEntry)));
+        ReceiptEntry narrowed = waiting.until(MapConditions.singleEntry(Conditions.instanceOf(ReceiptEntry.class)));
+        BigDecimal selected = waiting.until(MapConditions.valueFor("receipt", Conditions.instanceOf(BigDecimal.class)));
+        AwaitResult<ProbeContainers.EntryMap<String, Number>, ReceiptEntry> captured =
+                waiting.tryUntil(MapConditions.singleEntry(Conditions.instanceOf(ReceiptEntry.class)));
+
+        assertSame(entry, matching);
+        assertSame(entry, narrowed);
+        assertSame(value, selected);
+        assertSame(entry, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+        assertEquals(4, reads[0]);
+    }
 
     @Test
     void selectorsReturnEntriesKeysAndValuesWithConcreteTypes() {
