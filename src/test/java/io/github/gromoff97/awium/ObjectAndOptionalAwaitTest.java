@@ -23,10 +23,29 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class ObjectAndOptionalAwaitTest {
+
+    @Test
+    void singlePredicatesRetryAndReturnTheExactSuccessfulObservationInBothTerminals() {
+        var time = new FakeTime(0);
+        var first = new Object();
+        var ready = new Object();
+        var observations = new Object[]{first, ready, first, ready};
+        int[] calls = {0};
+        var waiting = await(() -> observations[calls[0]++]).usingTime(time, time).every(ofNanos(2)).upTo(ofNanos(5));
+
+        assertSame(ready, waiting.until(actual -> actual == ready));
+        var result = waiting.tryUntil(ready::equals);
+
+        assertSame(ready, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals(2, result.totalAttempts());
+        assertEquals(4, calls[0]);
+        assertEquals(List.of(2L, 2L), time.parkRequests);
+    }
 
     @Test
     void awaitReturnsTheObservationFromABroadPreservingCondition() {
@@ -50,6 +69,7 @@ class ObjectAndOptionalAwaitTest {
     void voidAndNullableSelectingTerminalsReturnNullOnSuccess() {
         var pollingTime = new FakeTime(0);
         assertNull(await((Source<Object>) () -> null).usingTime(pollingTime, pollingTime).until(isNull));
+        assertNull(await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).until(actual -> actual == null));
         assertNull(await((Source<String>) () -> "value").usingTime(pollingTime, pollingTime).until(yields(value -> {
             return null;
         }).because("nullable property")));

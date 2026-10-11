@@ -24,6 +24,7 @@ import java.util.function.Predicate;
 import static io.github.gromoff97.awium.WaitConfiguration.defaults;
 import static java.util.Objects.requireNonNull;
 import static io.github.gromoff97.awium.ConditionDefinition.required;
+import static io.github.gromoff97.awium.Conditions.matches;
 
 /**
  * Fluent await facade. One condition returns one value; several compatible conditions capture a list
@@ -105,6 +106,10 @@ public final class Await<Observed, Element, Family extends Source<?>> {
         return new Await<>(source, configuration, clock, parker);
     }
 
+    public Observed until(Predicate<? super Observed> predicate) {
+        return until(matches(predicate));
+    }
+
     public Observed until(PreservingCondition<? super Observed> condition) {
         return complete(required(condition).preservingSession());
     }
@@ -123,6 +128,10 @@ public final class Await<Observed, Element, Family extends Source<?>> {
 
     public Element until(SelectedCondition<? super Observed, Family> condition) {
         return complete(required(condition).<Element>selectionSession());
+    }
+
+    public AwaitResult<Observed, Observed> tryUntil(Predicate<? super Observed> predicate) {
+        return tryUntil(matches(predicate));
     }
 
     public AwaitResult<Observed, Observed> tryUntil(PreservingCondition<? super Observed> condition) {

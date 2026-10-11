@@ -41,11 +41,13 @@ class TryUntilTest {
         var pollingTime = new FakeTime(0);
         AwaitResult<String, String> nullable = await((Source<String>) () -> "actual").usingTime(pollingTime, pollingTime).tryUntil(yields(actual -> null));
         AwaitResult<String, Void> nullSource = await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(isNull);
+        AwaitResult<String, String> nullPredicate = await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(actual -> actual == null);
         AwaitResult<Optional<String>, String> selected =
                 await((Source.OptionalSource<String>) () -> Optional.of("payment")).usingTime(pollingTime, pollingTime).tryUntil(present);
 
         assertNull(satisfied(nullable).result());
         assertNull(satisfied(nullSource).result());
+        assertNull(satisfied(nullPredicate).result());
         var outcome = assertInstanceOf(ConditionResult.Satisfied.class,
                 assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, satisfied(nullSource).attempts().getFirst().outcome()).evaluation());
         assertNull(assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, satisfied(nullSource).attempts().getFirst().outcome()).observed());

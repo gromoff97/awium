@@ -18,6 +18,23 @@ class OrderedWaitCompilationContractTest {
     Path directory;
 
     @Test
+    void singlePredicatesPreserveObservedTypesWithLambdasAndMethodReferences() throws IOException {
+        assertTrue(compiles("""
+                Predicate<Object> broad = Objects::nonNull;
+                String lambda = await(Contract::text).until(value -> !value.isBlank());
+                String methodReference = await(Contract::text).until(String::isBlank);
+                ArrayList<String> collection = await(() -> new ArrayList<String>()).until(broad);
+                LinkedHashMap<String, Integer> map = await(() -> new LinkedHashMap<String, Integer>()).until(Map::isEmpty);
+                Optional<String> optional = await(Contract::optional).until(Optional::isPresent);
+                AwaitResult<String, String> diagnostic = await(Contract::text).tryUntil(String::isBlank);
+                AwaitResult<ArrayList<String>, ArrayList<String>> diagnosticCollection =
+                        await(() -> new ArrayList<String>()).every(java.time.Duration.ofMillis(1)).tryUntil(broad);
+                AwaitResult<Optional<String>, Optional<String>> diagnosticOptional =
+                        await(Contract::optional).tryUntil(value -> value.isPresent());
+                """));
+    }
+
+    @Test
     void oneConditionReturnsAValueAndSeveralReturnTypedOrderedLists() throws IOException {
         assertTrue(compiles("""
                 String one = await(Contract::text).until(isNotNull);
@@ -54,6 +71,8 @@ class OrderedWaitCompilationContractTest {
     @ValueSource(strings = {"until", "tryUntil"})
     void rejectsIncompatibleOperandsAndMixedConditionFamilies(String terminal) throws IOException {
         for (String expression : List.of(
+                "await(Contract::text).%s((Integer value) -> true);",
+                "await(Contract::text).%s(value -> value.length());",
                 "await(Contract::text).%s(equalTo(1), equalTo(2));",
                 "await(Contract::optional).%s(first, last);",
                 "await(Contract::collection).%s(present, present);",
@@ -84,7 +103,6 @@ class OrderedWaitCompilationContractTest {
     void sequenceDoesNotIntroduceAnEmptyTerminalOrPublicCapturedFactory() throws IOException {
         assertFalse(compiles("await(Contract::text).until();"));
         assertFalse(compiles("await(Contract::text).tryUntil();"));
-        assertFalse(compiles("await(Contract::text).until((String value) -> true);"));
         assertFalse(CompilationSupport.compiles(directory,
                 source("io.github.gromoff97.awium.Conditions.captured(isNotNull, isNotNull);"), "captured"));
     }
@@ -96,6 +114,7 @@ class OrderedWaitCompilationContractTest {
     private static String source(String body) {
         return """
                 import java.util.*;
+                import java.util.function.Predicate;
                 import io.github.gromoff97.awium.Condition;
                 import io.github.gromoff97.awium.AwaitResult;
                 import io.github.gromoff97.awium.Source;

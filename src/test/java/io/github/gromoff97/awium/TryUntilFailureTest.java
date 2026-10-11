@@ -5,6 +5,7 @@ import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -37,11 +38,27 @@ class TryUntilFailureTest {
     }
 
     @Test
+    void singlePredicateAssertionStopsBothTerminalsWithTheOriginalCause() {
+        var assertion = new AssertionError("predicate failed");
+        int[] calls = {0};
+        Predicate<String> predicate = actual -> {
+            calls[0]++;
+            throw assertion;
+        };
+
+        var result = assertParity(time -> timedAwait(() -> "actual", config(1, 2, 0), time, time).until(predicate),
+                time -> timedAwait(() -> "actual", config(1, 2, 0), time, time).tryUntil(predicate));
+
+        assertEquals(CONDITION_FAILED, result.failure().reason());
+        assertSame(assertion, result.failure().cause());
+        assertEquals(1, result.totalAttempts());
+        assertEquals(2, calls[0]);
+    }
+
+    @Test
     void capturesAcquisitionTimeoutAndPersistenceFailureWithoutChangingThem() {
-        var timeout = assertParity(time -> timedAwait(() -> "actual",
-                        config(1, 2, 0), time, time).until(condition("value is ready", actual -> unsatisfied("not ready"))),
-                time -> timedAwait(() -> "actual", config(1, 2, 0), time, time).tryUntil(condition(
-                        "value is ready", actual -> unsatisfied("not ready"))));
+        var timeout = assertParity(time -> timedAwait(() -> "actual", config(1, 2, 0), time, time).until(actual -> false),
+                time -> timedAwait(() -> "actual", config(1, 2, 0), time, time).tryUntil(actual -> false));
         var persistence = assertParity(time -> timedAwait(() -> "actual",
                         config(1, 3, 2), time, time).until(unstableCondition()),
                 time -> timedAwait(() -> "actual", config(1, 3, 2), time, time).tryUntil(unstableCondition()));
@@ -152,9 +169,13 @@ class TryUntilFailureTest {
                     currentThread().interrupt();
                     return "actual";
                 }, config(1, 2, 0), time, time).tryUntil(isNotNull));
-        var condition = assertParity(time -> timedAwait(() -> "actual",
-                        config(1, 2, 0), time, time).until(interruptingCondition()),
-                time -> timedAwait(() -> "actual", config(1, 2, 0), time, time).tryUntil(interruptingCondition()));
+        var condition = assertParity(time -> timedAwait(() -> "actual", config(1, 2, 0), time, time).until(actual -> {
+            currentThread().interrupt();
+            return true;
+        }), time -> timedAwait(() -> "actual", config(1, 2, 0), time, time).tryUntil(actual -> {
+            currentThread().interrupt();
+            return true;
+        }));
 
         assertInstanceOf(ConditionResult.Uncontrolled.class,
                 assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, condition.attempts().getLast().outcome()).evaluation());

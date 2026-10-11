@@ -101,6 +101,9 @@ class ArtifactContractIT {
                     String object() {
                         return await(this::loadObject).until(equalTo("value"));
                     }
+                    String predicate() {
+                        return await(this::loadObject).until(String::isBlank);
+                    }
                     String optional() {
                         return await(this::loadOptional).until(present);
                     }
@@ -189,6 +192,9 @@ class ArtifactContractIT {
                 final class Contract {
                     String value() {
                         return await(() -> "ready").usingTime(() -> 0L, nanos -> {}).until(isNotNull);
+                    }
+                    AwaitResult<String, String> predicate() {
+                        return await(() -> "ready").tryUntil(String::isBlank);
                     }
                     String optional() {
                         return await(() -> Optional.of("ready")).upTo(ofNanos(5))
