@@ -73,6 +73,10 @@ class ArtifactContractIT {
         Set<String> support = classes.get("ConditionSupport");
         assertTrue(support.stream().noneMatch(Set.of("Source", "CapturedEvaluator", "ConditionSession")::contains),
                 "ConditionSupport -> " + support);
+        for (String catalog : Set.of("Conditions", "CollectionConditions", "MapConditions",
+                "OptionalConditions", "StringConditions")) {
+            assertFalse(classes.get(catalog).contains("Source"), catalog + " -> " + classes.get(catalog));
+        }
         // Diagnostics describe failures; only the fluent facade chooses a terminal result or throws.
         Set<String> terminals = Set.of("Await", "AwaitResult", "AwaitAssertionError", "AwaitExecutionException");
         Set<String> diagnostics = classes.get("FailureDiagnostics");

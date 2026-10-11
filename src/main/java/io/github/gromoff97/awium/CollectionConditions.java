@@ -5,7 +5,6 @@ import io.github.gromoff97.awium.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.ConditionResult.Reference;
-import io.github.gromoff97.awium.Source.CollectionSource;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -35,7 +34,7 @@ import static java.util.Objects.requireNonNull;
 @SuppressWarnings("varargs")
 public final class CollectionConditions {
 
-    public static final SelectedCondition<Collection<?>, CollectionSource<?>> single = selected("collection has a single element", actual -> {
+    public static final SelectedCondition<Collection<?>, Collection<?>> single = selected("collection has a single element", actual -> {
         if (actual == null) {
             return unsatisfied("collection was null");
         }
@@ -303,14 +302,14 @@ public final class CollectionConditions {
                 actual -> !containsSubsequence(elements(actual), values));
     }
 
-    public static final SelectedCondition<SequencedCollection<?>, CollectionSource<?>> first = position("first", SequencedCollection::getFirst);
+    public static final SelectedCondition<SequencedCollection<?>, Collection<?>> first = position("first", SequencedCollection::getFirst);
 
     public static <E> Condition<SequencedCollection<E>, E> first(Predicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return condition("collection has a matching element", actual -> selectFirst(actual, predicate));
     }
 
-    public static final SelectedCondition<SequencedCollection<?>, CollectionSource<?>> last = position("last", SequencedCollection::getLast);
+    public static final SelectedCondition<SequencedCollection<?>, Collection<?>> last = position("last", SequencedCollection::getLast);
 
     public static <E> Condition<SequencedCollection<E>, E> last(Predicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
@@ -363,7 +362,7 @@ public final class CollectionConditions {
         return unsatisfied("no collection element matched");
     }
 
-    private static SelectedCondition<SequencedCollection<?>, CollectionSource<?>> position(String name,
+    private static SelectedCondition<SequencedCollection<?>, Collection<?>> position(String name,
             java.util.function.Function<SequencedCollection<?>, ?> selector) {
         return selected("collection has a " + name + " element", actual -> {
             if (actual == null) {

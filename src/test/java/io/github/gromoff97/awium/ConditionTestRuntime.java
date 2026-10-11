@@ -27,7 +27,7 @@ public final class ConditionTestRuntime {
         return condition.newSession().apply(actual);
     }
 
-    public static <S, R, F extends Source<?>> ConditionResult<? extends R> evaluate(
+    public static <S, R, F> ConditionResult<? extends R> evaluate(
             SelectedCondition<? super S, F> condition, S actual) {
         return condition.<R>selectionSession().apply(actual);
     }

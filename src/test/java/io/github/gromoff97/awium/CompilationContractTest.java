@@ -163,9 +163,9 @@ class CompilationContractTest {
     @Test
     void categorySpecificTerminalsRejectWrongConditions() throws IOException {
         for (String type : List.of(
-                "SelectedCondition<java.util.Optional<?>, Source.OptionalSource<?>>",
-                "SelectedCondition<java.util.Collection<?>, Source.CollectionSource<?>>",
-                "SelectedCondition<java.util.Map<?, ?>, Source.MapSource<?>>")) {
+                "SelectedCondition<java.util.Optional<?>, java.util.Optional<?>>",
+                "SelectedCondition<java.util.Collection<?>, java.util.Collection<?>>",
+                "SelectedCondition<java.util.Map<?, ?>, java.util.Map<?, ?>>")) {
             assertFalse(compiles("""
                     import static io.github.gromoff97.awium.Await.await;
                     import io.github.gromoff97.awium.Source;
@@ -214,9 +214,9 @@ class CompilationContractTest {
                 import java.util.Map;
                 import java.util.Optional;
                 final class Contract {
-                    SelectedCondition<Optional<?>, io.github.gromoff97.awium.Source.OptionalSource<?>> optional = present;
-                    SelectedCondition<Collection<?>, io.github.gromoff97.awium.Source.CollectionSource<?>> collection = CollectionConditions.single;
-                    SelectedCondition<Map<?, ?>, io.github.gromoff97.awium.Source.MapSource<?>> map = MapConditions.singleEntry;
+                    SelectedCondition<Optional<?>, Optional<?>> optional = present;
+                    SelectedCondition<Collection<?>, Collection<?>> collection = CollectionConditions.single;
+                    SelectedCondition<Map<?, ?>, Map<?, ?>> map = MapConditions.singleEntry;
                 }
                 """));
     }

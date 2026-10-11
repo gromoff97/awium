@@ -18,7 +18,7 @@ public final class AwaitTestAccess {
         return new WaitConfiguration(every, upTo, persistence);
     }
 
-    public static <S> Await<S, S, Source<?>> timedAwait(Source<? extends S> source,
+    public static <S> Await<S, S, Object> timedAwait(Source<? extends S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {
         return Await.<S>await(source::get).usingTime(clock, parker)
@@ -26,7 +26,7 @@ public final class AwaitTestAccess {
                 .persisting(ofNanos(configuration.persistenceNanos()));
     }
 
-    public static <E, C extends Collection<E>> Await<C, E, Source.CollectionSource<?>> timedCollectionAwait(
+    public static <E, C extends Collection<E>> Await<C, E, Collection<?>> timedCollectionAwait(
             Source<? extends C> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         return Await.<E, C>await(source::get).usingTime(clock, parker)
@@ -34,7 +34,7 @@ public final class AwaitTestAccess {
                 .persisting(ofNanos(configuration.persistenceNanos()));
     }
 
-    public static <E> Await<Optional<E>, E, Source.OptionalSource<?>> timedOptionalAwait(
+    public static <E> Await<Optional<E>, E, Optional<?>> timedOptionalAwait(
             Source<? extends Optional<E>> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         return Await.<E>await((Source.OptionalSource<E>) source::get).usingTime(clock, parker)
@@ -42,7 +42,7 @@ public final class AwaitTestAccess {
                 .persisting(ofNanos(configuration.persistenceNanos()));
     }
 
-    public static <K, V, M extends Map<K, V>> Await<M, Map.Entry<K, V>, Source.MapSource<?>> timedMapAwait(
+    public static <K, V, M extends Map<K, V>> Await<M, Map.Entry<K, V>, Map<?, ?>> timedMapAwait(
             Source<? extends M> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         return Await.<K, V, M>await(source::get).usingTime(clock, parker)

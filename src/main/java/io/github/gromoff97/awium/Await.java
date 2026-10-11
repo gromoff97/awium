@@ -30,7 +30,7 @@ import static java.util.Objects.requireNonNull;
  * @param <Element> value selected from an optional, collection, or map
  * @param <Family> phantom source-family marker restricting compatible selection conditions
  */
-public final class Await<Observed, Element, Family extends Source<?>> {
+public final class Await<Observed, Element, Family> {
 
     private final Source<? extends Observed> source;
     private final WaitConfiguration configuration;
@@ -42,29 +42,29 @@ public final class Await<Observed, Element, Family extends Source<?>> {
                 defaults(), System::nanoTime, LockSupport::parkNanos);
     }
 
-    public static <Value> Await<Value, Value, Source<?>> await(Source<Value> source) {
+    public static <Value> Await<Value, Value, Object> await(Source<Value> source) {
         return new Await<>(source);
     }
 
-    public static <Value> Await<Optional<Value>, Value, OptionalSource<?>> await(OptionalSource<Value> source) {
+    public static <Value> Await<Optional<Value>, Value, Optional<?>> await(OptionalSource<Value> source) {
         return new Await<>(source);
     }
 
-    public static <Element, Values extends Collection<Element>> Await<Values, Element, CollectionSource<?>> await(CollectionSource<Values> source) {
+    public static <Element, Values extends Collection<Element>> Await<Values, Element, Collection<?>> await(CollectionSource<Values> source) {
         return new Await<>(source);
     }
 
     public static <Element, Values extends Collection<? extends Element>>
-            Await<Values, Element, CollectionSource<?>> await(CollectionViewSource<Element, Values> source) {
+            Await<Values, Element, Collection<?>> await(CollectionViewSource<Element, Values> source) {
         return new Await<>(source);
     }
 
-    public static <Key, Value, Entries extends Map<Key, Value>> Await<Entries, Map.Entry<Key, Value>, MapSource<?>> await(MapSource<Entries> source) {
+    public static <Key, Value, Entries extends Map<Key, Value>> Await<Entries, Map.Entry<Key, Value>, Map<?, ?>> await(MapSource<Entries> source) {
         return new Await<>(source);
     }
 
     public static <Key, Value, Entries extends Map<? extends Key, ? extends Value>>
-            Await<Entries, Map.Entry<? extends Key, ? extends Value>, MapSource<?>> await(MapViewSource<Key, Value, Entries> source) {
+            Await<Entries, Map.Entry<? extends Key, ? extends Value>, Map<?, ?>> await(MapViewSource<Key, Value, Entries> source) {
         return new Await<>(source);
     }
 

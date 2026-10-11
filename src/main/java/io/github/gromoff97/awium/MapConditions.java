@@ -6,7 +6,6 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.ConditionResult.Context;
 import io.github.gromoff97.awium.ConditionResult.Reference;
-import io.github.gromoff97.awium.Source.MapSource;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +35,7 @@ import static java.util.stream.Collectors.joining;
 @SuppressWarnings("varargs")
 public final class MapConditions {
 
-    public static final SelectedCondition<Map<?, ?>, MapSource<?>> singleEntry = selected("map has a single entry", actual -> {
+    public static final SelectedCondition<Map<?, ?>, Map<?, ?>> singleEntry = selected("map has a single entry", actual -> {
         if (actual == null) {
             return unsatisfied("map was null");
         }

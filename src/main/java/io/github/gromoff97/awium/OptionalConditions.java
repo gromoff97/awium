@@ -4,7 +4,6 @@ import io.github.gromoff97.awium.Condition.ExpectedCondition;
 import io.github.gromoff97.awium.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
-import io.github.gromoff97.awium.Source.OptionalSource;
 import java.util.Optional;
 
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
@@ -14,7 +13,7 @@ import static io.github.gromoff97.awium.Conditions.condition;
 
 public final class OptionalConditions {
 
-    public static final SelectedCondition<Optional<?>, OptionalSource<?>> present =
+    public static final SelectedCondition<Optional<?>, Optional<?>> present =
             ConditionSupport.selected("optional is present", OptionalConditions::present);
     public static final Condition<Optional<?>, Void> absent = condition("optional is absent", actual -> {
         if (actual == null) {
