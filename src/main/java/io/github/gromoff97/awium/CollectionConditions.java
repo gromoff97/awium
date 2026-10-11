@@ -125,19 +125,19 @@ public final class CollectionConditions {
     public static <E> PreservingCondition<Collection<E>> all(Predicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all collection elements match", "not all collection elements matched",
-                actual -> matchesAll(actual, predicate));
+                actual -> matchesAll(actual, predicate::test));
     }
 
     public static <E> PreservingCondition<Collection<E>> any(Predicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any collection element matches", "no collection element matched",
-                actual -> matchesAny(actual, predicate));
+                actual -> matchesAny(actual, predicate::test));
     }
 
     public static <E> PreservingCondition<Collection<E>> none(Predicate<? super E> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no collection element matches", "a collection element matched",
-                actual -> !matchesAny(actual, predicate));
+                actual -> !matchesAny(actual, predicate::test));
     }
 
     @SafeVarargs
@@ -349,11 +349,12 @@ public final class CollectionConditions {
     }
 
     private static <E> ConditionResult<E> selectFirst(Iterable<E> actual,
-            Predicate<? super E> predicate) {
+            Predicate<? super E> predicate) throws InterruptedException {
         if (actual == null) {
             return unsatisfied("collection was null");
         }
         for (E value : actual) {
+            ValueMatching.checkInterruption();
             if (predicate.test(value)) {
                 return satisfied(value);
             }
@@ -379,12 +380,12 @@ public final class CollectionConditions {
     }
 
     private static <C extends Collection<?>> PreservingCondition<C> preserving(String description, String mismatch,
-            Predicate<? super C> matches) {
+            CheckedFunction<? super C, Boolean> matches) {
         return preservingNonNull("collection", description, mismatch, matches);
     }
 
     private static <C extends Collection<?>> PreservingCondition<C> preserving(String description, String mismatch,
-            Reference<?> reference, Predicate<? super C> matches) {
+            Reference<?> reference, CheckedFunction<? super C, Boolean> matches) {
         return preservingNonNull("collection", description, mismatch, reference, matches);
     }
 
@@ -442,7 +443,7 @@ public final class CollectionConditions {
         return true;
     }
 
-    private static boolean hasUniqueElements(Collection<?> actual) {
+    private static boolean hasUniqueElements(Collection<?> actual) throws Exception {
         List<Object> seen = new ArrayList<>();
         for (Object value : actual) {
             if (matchesAny(seen, previous -> equal(previous, value))) {

@@ -117,11 +117,25 @@ class NestedSelectionTest {
     }
 
     @Test
-    void everySelectionStopsBeforeTheNextCallbackAfterInterruption() {
+    void builtInTraversalsStopBeforeTheNextCallbackAfterInterruption() {
         List<Function<Predicate<Integer>, AwaitResult<?, ?>>> waits = List.of(
                 predicate -> await(() -> List.of(1, 2)).tryUntil(single(matches(predicate))),
                 predicate -> await(() -> Map.of("a", 1, "b", 2)).tryUntil(singleEntry(matches(
-                        (Map.Entry<String, Integer> entry) -> predicate.test(entry.getValue())))));
+                        (Map.Entry<String, Integer> entry) -> predicate.test(entry.getValue())))),
+                predicate -> await(() -> List.of(1, 2)).tryUntil(CollectionConditions.first(predicate)),
+                predicate -> await(() -> List.of(1, 2)).tryUntil(CollectionConditions.last(predicate)),
+                predicate -> await(() -> List.of(1, 2)).tryUntil(CollectionConditions.all(predicate)),
+                predicate -> await(() -> List.of(1, 2)).tryUntil(CollectionConditions.any(predicate)),
+                predicate -> await(() -> List.of(1, 2)).tryUntil(CollectionConditions.none(predicate)),
+                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.allKeys(predicate)),
+                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.anyKey(predicate)),
+                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.noKey(predicate)),
+                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.allValues(predicate)),
+                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.anyValue(predicate)),
+                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.noValue(predicate)),
+                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.allEntries((key, value) -> predicate.test(value))),
+                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.anyEntry((key, value) -> predicate.test(value))),
+                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.noEntry((key, value) -> predicate.test(value))));
         for (var wait : waits) {
             for (boolean matching : List.of(false, true)) {
                 var calls = new AtomicInteger();

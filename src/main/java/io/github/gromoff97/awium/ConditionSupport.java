@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 
@@ -85,21 +84,21 @@ final class ConditionSupport {
     }
 
     static <Observed> PreservingCondition<Observed> preserving(String description, String mismatch,
-            Predicate<? super Observed> matches) {
-        return preserving(description, actual -> matches.test(actual)
+            CheckedFunction<? super Observed, Boolean> matches) {
+        return preserving(description, actual -> matches.apply(actual)
                 ? satisfied(actual) : unsatisfied(mismatch));
     }
 
     static <Observed> PreservingCondition<Observed> preservingNonNull(String subject, String description,
-            String mismatch, Predicate<? super Observed> matches) {
+            String mismatch, CheckedFunction<? super Observed, Boolean> matches) {
         return preservingNonNull(subject, description, mismatch, null, matches);
     }
 
     static <Observed> PreservingCondition<Observed> preservingNonNull(String subject, String description,
-            String mismatch, Reference<?> reference, Predicate<? super Observed> matches) {
+            String mismatch, Reference<?> reference, CheckedFunction<? super Observed, Boolean> matches) {
         return preserving(description, reference, actual -> actual == null
                 ? unsatisfied(subject + " was null")
-                : matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch));
+                : matches.apply(actual) ? satisfied(actual) : unsatisfied(mismatch));
     }
 
     static <Observed> PreservingCondition<Observed> sized(String subject, int bound, IntPredicate matches,
@@ -131,7 +130,7 @@ final class ConditionSupport {
             String noneMatched, String multipleMatched) throws InterruptedException {
         ConditionResult<? extends Result> result = unsatisfied(noneMatched);
         for (Element value : values) {
-            if (Thread.currentThread().isInterrupted()) throw new InterruptedException("caller thread interrupt flag was set");
+            ValueMatching.checkInterruption();
             var evaluated = requireNonNull(evaluator.apply(value), "condition returned null ConditionResult");
             if (evaluated instanceof ConditionResult.Uncontrolled<?>) return evaluated;
             if (evaluated instanceof ConditionResult.Satisfied<?>

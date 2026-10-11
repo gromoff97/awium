@@ -6,7 +6,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 
 import static java.util.Objects.deepEquals;
 
@@ -14,17 +13,18 @@ final class ValueMatching {
 
     private ValueMatching() {}
 
-    static <Value> boolean matchesAny(Iterable<Value> values, Predicate<? super Value> matches) {
+    static <Value> boolean matchesAny(Iterable<Value> values, CheckedFunction<? super Value, Boolean> matches) throws Exception {
         for (Value value : values) {
-            if (matches.test(value)) {
+            checkInterruption();
+            if (matches.apply(value)) {
                 return true;
             }
         }
         return false;
     }
 
-    static <Value> boolean matchesAll(Iterable<Value> values, Predicate<? super Value> matches) {
-        return !matchesAny(values, value -> !matches.test(value));
+    static <Value> boolean matchesAll(Iterable<Value> values, CheckedFunction<? super Value, Boolean> matches) throws Exception {
+        return !matchesAny(values, value -> !matches.apply(value));
     }
 
     static <Actual, Expected> boolean containsAll(Iterable<Actual> actual, Collection<Expected> expected,
@@ -63,7 +63,7 @@ final class ValueMatching {
         return remainingExpected.isEmpty();
     }
 
-    static boolean sameDistinctElements(Collection<?> actual, Collection<?> expected) {
+    static boolean sameDistinctElements(Collection<?> actual, Collection<?> expected) throws Exception {
         return matchesAll(actual, value -> matchesAny(expected, candidate -> equal(value, candidate)))
                 && matchesAll(expected, value -> matchesAny(actual, candidate -> equal(candidate, value)));
     }
@@ -96,5 +96,11 @@ final class ValueMatching {
             }
         }
         return true;
+    }
+
+    static void checkInterruption() throws InterruptedException {
+        if (Thread.currentThread().isInterrupted()) {
+            throw new InterruptedException("caller thread interrupt flag was set");
+        }
     }
 }

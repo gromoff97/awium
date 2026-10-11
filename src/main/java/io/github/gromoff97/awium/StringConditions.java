@@ -3,7 +3,6 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Reference;
 import java.util.List;
-import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
@@ -141,12 +140,12 @@ public final class StringConditions {
     }
 
     private static PreservingCondition<String> matching(String description, String mismatch,
-            Predicate<String> matches) {
+            CheckedFunction<String, Boolean> matches) {
         return preservingNonNull("string", description, mismatch, matches);
     }
 
     private static PreservingCondition<String> matching(String description, String mismatch,
-            Reference<?> reference, Predicate<String> matches) {
+            Reference<?> reference, CheckedFunction<String, Boolean> matches) {
         return preservingNonNull("string", description, mismatch, reference, matches);
     }
 

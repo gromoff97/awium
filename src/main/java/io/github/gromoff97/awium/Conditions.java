@@ -123,7 +123,7 @@ public final class Conditions {
 
     public static <Observed> PreservingCondition<Observed> matches(Predicate<? super Observed> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return ConditionSupport.preserving("value matches", "value did not match", predicate);
+        return ConditionSupport.preserving("value matches", "value did not match", predicate::test);
     }
 
     public static <Value extends Comparable<? super Value>> PreservingCondition<Value> greaterThan(Value bound) {
@@ -157,7 +157,7 @@ public final class Conditions {
     }
 
     private static <Value extends Comparable<? super Value>> PreservingCondition<Value> comparing(String relation, Value bound,
-            Predicate<? super Value> matches) {
+            CheckedFunction<? super Value, Boolean> matches) {
         requireNonNull(bound, "bound must not be null");
         return preservingNonNull("value", "value is " + relation + " the bound",
                 "value was not " + relation + " the bound", expectedReference(bound), matches);
