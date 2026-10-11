@@ -24,7 +24,7 @@ import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ExpectedValue;
 import static io.github.gromoff97.awium.ProbeContainers.GreedyValue;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
@@ -178,7 +178,7 @@ class CollectionExactContentTest {
                 () -> timedCollectionAwait((Source<ProbeList<String>>) () -> {
                             time.advanceNanos(2);
                             return actual;
-                        }, defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
+                        }, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
                         time, time).until(containsExactly("b").because("business reason")));
 
         assertEquals(1, actual.iteratorCalls);

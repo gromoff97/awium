@@ -12,7 +12,7 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-import static io.github.gromoff97.awium.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.lang.Long.parseLong;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -108,7 +108,7 @@ class AssertionAdapterTest {
 
         var failure = assertFailure(CONDITION_FAILED, () -> timedAwait(
                 (Source<String>) () -> "42",
-                defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(10)), time, time).until(Conditions.<String, Long>yields(value -> {
+                DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(10)), time, time).until(Conditions.<String, Long>yields(value -> {
                             invocations[0]++;
                             throw assertion;
                         }).because("payment selection")));

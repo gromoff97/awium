@@ -6,16 +6,15 @@ import static java.util.Objects.requireNonNull;
 
 record WaitConfiguration(long everyNanos, long upToNanos, long persistenceNanos) {
 
+    static final WaitConfiguration DEFAULT = new WaitConfiguration(
+            Duration.ofMillis(100).toNanos(), Duration.ofSeconds(10).toNanos(), 0L);
+
     WaitConfiguration {
         requirePositive(everyNanos, "polling interval");
         requirePositive(upToNanos, "acquisition timeout");
         if (persistenceNanos < 0) {
             throw new IllegalArgumentException("persistence duration must be non-negative");
         }
-    }
-
-    static WaitConfiguration defaults() {
-        return new WaitConfiguration(Duration.ofMillis(100).toNanos(), Duration.ofSeconds(10).toNanos(), 0L);
     }
 
     WaitConfiguration withEvery(Duration value) {

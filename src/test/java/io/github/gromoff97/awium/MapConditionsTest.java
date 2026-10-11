@@ -20,7 +20,7 @@ import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.*;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -174,7 +174,7 @@ class MapConditionsTest {
                                 String, String>>) () -> {
                             time.advanceNanos(2);
                             return actual;
-                        }, defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
+                        }, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
                         time, time).until(doesNotContainKeys("a").because("business reason")));
 
         assertEquals(1, actual.entrySetCalls);

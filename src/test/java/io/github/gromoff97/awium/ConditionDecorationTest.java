@@ -15,7 +15,7 @@ import static io.github.gromoff97.awium.CapturedEvaluator.captured;
 import static io.github.gromoff97.awium.ConditionResult.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.explanation;
 import static io.github.gromoff97.awium.Conditions.*;
-import static io.github.gromoff97.awium.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -37,8 +37,8 @@ class ConditionDecorationTest {
         });
         var time = new FakeTime(0);
 
-        assertEquals("ready", timedAwait(() -> "ready", defaults(), time, time).until(condition));
-        assertEquals("ready", timedAwait(() -> "ready", defaults(), time, time).until(condition));
+        assertEquals("ready", timedAwait(() -> "ready", DEFAULT, time, time).until(condition));
+        assertEquals("ready", timedAwait(() -> "ready", DEFAULT, time, time).until(condition));
         assertEquals(2, factories.get());
     }
 
@@ -48,7 +48,7 @@ class ConditionDecorationTest {
                 ? satisfied(actual) : unsatisfied("value was not ready"));
         var time = new FakeTime(0);
 
-        List<String> captured = timedAwait(() -> "ready", defaults(), time, time).until(custom,
+        List<String> captured = timedAwait(() -> "ready", DEFAULT, time, time).until(custom,
                 matches(actual -> actual.equals("ready")));
 
         assertEquals(List.of("ready", "ready"), captured);
@@ -65,8 +65,8 @@ class ConditionDecorationTest {
         });
         var time = new FakeTime(0);
 
-        assertEquals("ready", timedAwait(() -> "ready", defaults(), time, time).until(condition));
-        assertEquals("ready", timedAwait(() -> "ready", defaults(), time, time).until(condition));
+        assertEquals("ready", timedAwait(() -> "ready", DEFAULT, time, time).until(condition));
+        assertEquals("ready", timedAwait(() -> "ready", DEFAULT, time, time).until(condition));
         assertEquals(2, factories.get());
     }
 

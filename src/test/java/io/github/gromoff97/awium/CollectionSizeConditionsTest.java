@@ -28,7 +28,7 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-import static io.github.gromoff97.awium.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -99,7 +99,7 @@ class CollectionSizeConditionsTest {
 
         assertFailure(TIMEOUT,
                 () -> timedCollectionAwait((Source<Collection<Object>>) () -> null,
-                        defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
+                        DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
                         time, time).until(empty));
     }
 
@@ -113,7 +113,7 @@ class CollectionSizeConditionsTest {
                         (Source<ProbeContainers.ProbeCollection<Object>>) () -> {
                             time.advanceNanos(2);
                             return actual;
-                        }, defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
+                        }, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
                         time, time).until(empty));
 
         assertTrue(failure.getMessage().contains("collection"));
@@ -162,7 +162,7 @@ class CollectionSizeConditionsTest {
         };
 
         assertTrue(assertThrows(NullPointerException.class,
-                () -> timedCollectionAwait(source, defaults(), time, time).until((PreservingCondition<Collection<String>>) null))
+                () -> timedCollectionAwait(source, DEFAULT, time, time).until((PreservingCondition<Collection<String>>) null))
                 .getMessage().contains("condition"));
         assertEquals(0, sourceCalls[0]);
     }

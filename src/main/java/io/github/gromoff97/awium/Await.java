@@ -19,7 +19,7 @@ import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
 import static io.github.gromoff97.awium.ConditionDefinition.required;
-import static io.github.gromoff97.awium.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -39,7 +39,7 @@ public final class Await<Observed, Element, Family> {
 
     private Await(Source<? extends Observed> source) {
         this(requireNonNull(source, "source must not be null"),
-                defaults(), System::nanoTime, LockSupport::parkNanos);
+                DEFAULT, System::nanoTime, LockSupport::parkNanos);
     }
 
     public static <Value> Await<Value, Value, Object> await(Source<Value> source) {

@@ -14,7 +14,7 @@ import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.OptionalConditions.*;
-import static io.github.gromoff97.awium.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -121,7 +121,7 @@ class ObjectAndOptionalAwaitTest {
 
     private static <T> Await<T, T, Object> stage(
             FakeTime time, Source<T> source) {
-        return timedAwait(source, defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(3)), time, time);
+        return timedAwait(source, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(3)), time, time);
     }
 
     private static PreservingCondition<Object> broadPreservingCondition() {

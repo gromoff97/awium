@@ -28,7 +28,7 @@ import static io.github.gromoff97.awium.MapConditions.sizeBetween;
 import static io.github.gromoff97.awium.MapConditions.sizeGreaterThan;
 import static io.github.gromoff97.awium.MapConditions.sizeIsNot;
 import static io.github.gromoff97.awium.MapConditions.sizeLessThan;
-import static io.github.gromoff97.awium.WaitConfiguration.defaults;
+import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -97,7 +97,7 @@ class MapSizeConditionsTest {
 
         assertFailure(TIMEOUT,
                 () -> timedMapAwait((Source<Map<Object, Object>>) () -> null,
-                        defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
+                        DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
                         time, time).until(empty));
     }
 
@@ -111,7 +111,7 @@ class MapSizeConditionsTest {
                         (Source<ProbeContainers.ProbeMap<Object, Object>>) () -> {
                             time.advanceNanos(2);
                             return actual;
-                        }, defaults().withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
+                        }, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
                         time, time).until(empty));
 
         assertTrue(failure.getMessage().contains("map"));
@@ -169,7 +169,7 @@ class MapSizeConditionsTest {
         };
 
         assertTrue(assertThrows(NullPointerException.class,
-                () -> timedMapAwait(source, defaults(), time, time).until((PreservingCondition<Map<String, String>>) null))
+                () -> timedMapAwait(source, DEFAULT, time, time).until((PreservingCondition<Map<String, String>>) null))
                 .getMessage().contains("condition"));
         assertEquals(0, sourceCalls[0]);
     }
