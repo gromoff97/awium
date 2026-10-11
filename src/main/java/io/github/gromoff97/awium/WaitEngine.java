@@ -121,15 +121,20 @@ record WaitEngine<Observed, Result>(WaitConfiguration configuration, LongSupplie
             if (failure instanceof InterruptedException) {
                 currentThread().interrupt();
             }
-            return beforeObservation(phase, number, attemptStarted,
-                    retrievalStarted, failure);
+            long completed = now(clock);
+            var timing = new AwaitAttempt.Timing.BeforeObservation(offset(attemptStarted),
+                    offset(retrievalStarted), offset(completed));
+            return new AwaitAttempt<>(number, phase,
+                    new AwaitAttempt.Outcome.SourceRetrievalFailed<>(timing, failure));
         }
 
         long observed = now(clock);
         if (currentThread().isInterrupted()) {
             var interruption = new InterruptedException("caller thread interrupt flag was set");
-            return afterSourceInterruption(phase, number, attemptStarted,
-                    retrievalStarted, observed, actual, interruption);
+            long completed = now(clock);
+            var timing = afterObservation(attemptStarted, retrievalStarted, observed, completed);
+            return new AwaitAttempt<>(number, phase,
+                    new AwaitAttempt.Outcome.SourceInterrupted<>(timing, actual, interruption));
         }
 
         ConditionResult<? extends Result> evaluation = evaluator.apply(actual);
@@ -145,26 +150,6 @@ record WaitEngine<Observed, Result>(WaitConfiguration configuration, LongSupplie
         }
         return new AwaitAttempt<>(number, phase,
                 new AwaitAttempt.Outcome.Evaluated<>(timing, actual, evaluation));
-    }
-
-    private AwaitAttempt<Observed, Result> beforeObservation(AwaitAttempt.Phase phase,
-            long number, long attemptStarted,
-            long retrievalStarted, Throwable failure) {
-        long completed = now(clock);
-        var timing = new AwaitAttempt.Timing.BeforeObservation(offset(attemptStarted),
-                offset(retrievalStarted), offset(completed));
-        return new AwaitAttempt<>(number, phase,
-                new AwaitAttempt.Outcome.SourceRetrievalFailed<>(timing, failure));
-    }
-
-    private AwaitAttempt<Observed, Result> afterSourceInterruption(AwaitAttempt.Phase phase, long number,
-            long attemptStarted, long retrievalStarted, long observed,
-            Observed actual, InterruptedException interruption) {
-        currentThread().interrupt();
-        long completed = now(clock);
-        var timing = afterObservation(attemptStarted, retrievalStarted, observed, completed);
-        return new AwaitAttempt<>(number, phase,
-                new AwaitAttempt.Outcome.SourceInterrupted<>(timing, actual, interruption));
     }
 
     private AwaitAttempt.Timing.AfterObservation afterObservation(long attemptStarted, long retrievalStarted,
