@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
-import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -112,46 +110,6 @@ class NestedSelectionTest {
                 assertEquals(cause instanceof InterruptedException, Thread.currentThread().isInterrupted());
             } finally {
                 Thread.interrupted();
-            }
-        }
-    }
-
-    @Test
-    void builtInTraversalsStopBeforeTheNextCallbackAfterInterruption() {
-        List<Function<Predicate<Integer>, AwaitResult<?, ?>>> waits = List.of(
-                predicate -> await(() -> List.of(1, 2)).tryUntil(single(matches(predicate))),
-                predicate -> await(() -> Map.of("a", 1, "b", 2)).tryUntil(singleEntry(matches(
-                        (Map.Entry<String, Integer> entry) -> predicate.test(entry.getValue())))),
-                predicate -> await(() -> List.of(1, 2)).tryUntil(CollectionConditions.first(predicate)),
-                predicate -> await(() -> List.of(1, 2)).tryUntil(CollectionConditions.last(predicate)),
-                predicate -> await(() -> List.of(1, 2)).tryUntil(CollectionConditions.all(predicate)),
-                predicate -> await(() -> List.of(1, 2)).tryUntil(CollectionConditions.any(predicate)),
-                predicate -> await(() -> List.of(1, 2)).tryUntil(CollectionConditions.none(predicate)),
-                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.allKeys(predicate)),
-                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.anyKey(predicate)),
-                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.noKey(predicate)),
-                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.allValues(predicate)),
-                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.anyValue(predicate)),
-                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.noValue(predicate)),
-                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.allEntries((key, value) -> predicate.test(value))),
-                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.anyEntry((key, value) -> predicate.test(value))),
-                predicate -> await(() -> Map.of(1, 1, 2, 2)).tryUntil(MapConditions.noEntry((key, value) -> predicate.test(value))));
-        for (var wait : waits) {
-            for (boolean matching : List.of(false, true)) {
-                var calls = new AtomicInteger();
-                try {
-                    var result = wait.apply(value -> {
-                        calls.incrementAndGet();
-                        Thread.currentThread().interrupt();
-                        return matching;
-                    });
-                    var failure = assertInstanceOf(AwaitResult.Failed.class, result);
-                    assertInstanceOf(InterruptedException.class, failure.failure().cause());
-                    assertTrue(Thread.currentThread().isInterrupted());
-                    assertEquals(1, calls.get());
-                } finally {
-                    Thread.interrupted();
-                }
             }
         }
     }

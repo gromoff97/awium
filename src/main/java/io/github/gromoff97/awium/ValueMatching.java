@@ -5,13 +5,17 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.function.BiPredicate;
 
 import static java.util.Objects.deepEquals;
 
 final class ValueMatching {
 
     private ValueMatching() {}
+
+    @FunctionalInterface
+    interface CheckedBiPredicate<Actual, Expected> {
+        boolean test(Actual actual, Expected expected) throws Exception;
+    }
 
     static <Value> boolean matchesAny(Iterable<Value> values, CheckedFunction<? super Value, Boolean> matches) throws Exception {
         for (Value value : values) {
@@ -28,13 +32,19 @@ final class ValueMatching {
     }
 
     static <Actual, Expected> boolean containsAll(Iterable<Actual> actual, Collection<Expected> expected,
-            BiPredicate<? super Actual, ? super Expected> matches) {
+            CheckedBiPredicate<? super Actual, ? super Expected> matches) throws Exception {
         var remainingExpected = new ArrayList<>(expected);
         if (remainingExpected.isEmpty()) {
             return true;
         }
         for (Actual value : actual) {
-            remainingExpected.removeIf(candidate -> matches.test(value, candidate));
+            Iterator<Expected> candidates = remainingExpected.iterator();
+            while (candidates.hasNext()) {
+                checkInterruption();
+                if (matches.test(value, candidates.next())) {
+                    candidates.remove();
+                }
+            }
             if (remainingExpected.isEmpty()) {
                 return true;
             }
@@ -43,13 +53,14 @@ final class ValueMatching {
     }
 
     static <Actual, Expected> boolean exactly(Iterator<Actual> actual, Collection<Expected> expected,
-            BiPredicate<? super Actual, ? super Expected> matches) {
+            CheckedBiPredicate<? super Actual, ? super Expected> matches) throws Exception {
         var remainingExpected = new ArrayList<>(expected);
         while (actual.hasNext()) {
             Actual value = actual.next();
             boolean found = false;
             Iterator<Expected> candidates = remainingExpected.iterator();
             while (candidates.hasNext()) {
+                checkInterruption();
                 if (matches.test(value, candidates.next())) {
                     candidates.remove();
                     found = true;
@@ -68,13 +79,14 @@ final class ValueMatching {
                 && matchesAll(expected, value -> matchesAny(actual, candidate -> equal(candidate, value)));
     }
 
-    static boolean equal(Object actual, Object expected) {
+    static boolean equal(Object actual, Object expected) throws InterruptedException {
         record ValuePair(Object actual, Object expected) {}
 
         var pending = new ArrayDeque<ValuePair>();
         var visited = new HashSet<ValuePair>();
         pending.addLast(new ValuePair(actual, expected));
         while (!pending.isEmpty()) {
+            checkInterruption();
             ValuePair pair = pending.removeLast();
             Object left = pair.actual();
             Object right = pair.expected();

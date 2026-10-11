@@ -75,7 +75,7 @@ final class ConditionSupport {
     }
 
     static <Observed, Value, Result> Condition<Observed, Result> compose(String prefix, ConditionDefinition<?, ?> nested,
-            Function<? super Observed, ? extends ConditionResult<Value>> extract,
+            CheckedFunction<? super Observed, ? extends ConditionResult<Value>> extract,
             Supplier<? extends Function<? super Value, ? extends ConditionResult<? extends Result>>> evaluatorFactory) {
         return new Condition<>(ConditionDefinition.required(nested).metadata.prefixed(prefix), () -> {
             var evaluator = evaluatorFactory.get();

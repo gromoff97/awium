@@ -127,33 +127,33 @@ public final class Conditions {
     }
 
     public static <Value extends Comparable<? super Value>> PreservingCondition<Value> greaterThan(Value bound) {
-        return comparing("greater than", bound, actual -> actual.compareTo(bound) > 0);
+        return comparing("greater than", bound, actual -> compare(actual, bound) > 0);
     }
 
     public static <Value extends Comparable<? super Value>> PreservingCondition<Value> atLeast(Value bound) {
-        return comparing("at least", bound, actual -> actual.compareTo(bound) >= 0);
+        return comparing("at least", bound, actual -> compare(actual, bound) >= 0);
     }
 
     public static <Value extends Comparable<? super Value>> PreservingCondition<Value> lessThan(Value bound) {
-        return comparing("less than", bound, actual -> actual.compareTo(bound) < 0);
+        return comparing("less than", bound, actual -> compare(actual, bound) < 0);
     }
 
     public static <Value extends Comparable<? super Value>> PreservingCondition<Value> atMost(Value bound) {
-        return comparing("at most", bound, actual -> actual.compareTo(bound) <= 0);
+        return comparing("at most", bound, actual -> compare(actual, bound) <= 0);
     }
 
     public static <Value extends Comparable<? super Value>> PreservingCondition<Value> between(Value lowerBound, Value upperBound) {
         validateRange(lowerBound, upperBound);
         return preservingNonNull("value", "value is between the inclusive bounds", "value was outside the inclusive range",
                 expectedReference(List.of(lowerBound, upperBound)),
-                actual -> actual.compareTo(lowerBound) >= 0 && actual.compareTo(upperBound) <= 0);
+                actual -> compare(actual, lowerBound) >= 0 && compare(actual, upperBound) <= 0);
     }
 
     public static <Value extends Comparable<? super Value>> PreservingCondition<Value> strictlyBetween(Value lowerBound, Value upperBound) {
         validateRange(lowerBound, upperBound);
         return preservingNonNull("value", "value is strictly between the bounds", "value was outside the exclusive range",
                 expectedReference(List.of(lowerBound, upperBound)),
-                actual -> actual.compareTo(lowerBound) > 0 && actual.compareTo(upperBound) < 0);
+                actual -> compare(actual, lowerBound) > 0 && compare(actual, upperBound) < 0);
     }
 
     private static <Value extends Comparable<? super Value>> PreservingCondition<Value> comparing(String relation, Value bound,
@@ -161,6 +161,11 @@ public final class Conditions {
         requireNonNull(bound, "bound must not be null");
         return preservingNonNull("value", "value is " + relation + " the bound",
                 "value was not " + relation + " the bound", expectedReference(bound), matches);
+    }
+
+    private static <Value extends Comparable<? super Value>> int compare(Value actual, Value bound) throws InterruptedException {
+        ValueMatching.checkInterruption();
+        return actual.compareTo(bound);
     }
 
     private static <Value extends Comparable<? super Value>> void validateRange(Value lowerBound, Value upperBound) {

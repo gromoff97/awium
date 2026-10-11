@@ -389,7 +389,7 @@ public final class CollectionConditions {
         return preservingNonNull("collection", description, mismatch, reference, matches);
     }
 
-    private static boolean exactContent(Collection<?> actual, Collection<?> expected) {
+    private static boolean exactContent(Collection<?> actual, Collection<?> expected) throws InterruptedException {
         if (actual.size() != expected.size()) {
             return false;
         }
@@ -403,7 +403,7 @@ public final class CollectionConditions {
         return true;
     }
 
-    private static boolean exactContentInAnyOrder(Collection<?> actual, Collection<?> expected) {
+    private static boolean exactContentInAnyOrder(Collection<?> actual, Collection<?> expected) throws Exception {
         return actual.size() == expected.size()
                 && exactly(actual.iterator(), expected, ValueMatching::equal);
     }
@@ -412,7 +412,7 @@ public final class CollectionConditions {
         return actual instanceof List<?> list ? list : new ArrayList<>(actual);
     }
 
-    private static boolean containsSequence(List<?> actual, List<?> expected) {
+    private static boolean containsSequence(List<?> actual, List<?> expected) throws InterruptedException {
         for (int start = 0; start <= actual.size() - expected.size(); start++) {
             if (regionMatches(actual, start, expected)) {
                 return true;
@@ -421,7 +421,7 @@ public final class CollectionConditions {
         return false;
     }
 
-    private static boolean containsSubsequence(List<?> actual, List<?> expected) {
+    private static boolean containsSubsequence(List<?> actual, List<?> expected) throws InterruptedException {
         int expectedIndex = 0;
         for (Object value : actual) {
             if (equal(value, expected.get(expectedIndex)) && ++expectedIndex == expected.size()) {
@@ -431,7 +431,7 @@ public final class CollectionConditions {
         return false;
     }
 
-    private static boolean regionMatches(List<?> actual, int start, List<?> expected) {
+    private static boolean regionMatches(List<?> actual, int start, List<?> expected) throws InterruptedException {
         if (start < 0 || start + expected.size() > actual.size()) {
             return false;
         }
@@ -454,7 +454,7 @@ public final class CollectionConditions {
         return true;
     }
 
-    private static <E> boolean isSorted(SequencedCollection<E> actual, Comparator<? super E> comparator) {
+    private static <E> boolean isSorted(SequencedCollection<E> actual, Comparator<? super E> comparator) throws InterruptedException {
         Iterator<E> values = actual.iterator();
         if (!values.hasNext()) {
             return true;
@@ -462,6 +462,7 @@ public final class CollectionConditions {
         E previous = values.next();
         while (values.hasNext()) {
             E next = values.next();
+            ValueMatching.checkInterruption();
             if (comparator.compare(previous, next) > 0) {
                 return false;
             }

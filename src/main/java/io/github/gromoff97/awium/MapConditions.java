@@ -294,11 +294,11 @@ public final class MapConditions {
                 actual -> !exactContent(actual, entries));
     }
 
-    private static <K, V> ConditionResult<V> value(Map<K, V> actual, K key) {
+    private static <K, V> ConditionResult<V> value(Map<K, V> actual, K key) throws InterruptedException {
         return findEntry(actual, key).mapSatisfied(Map.Entry::getValue);
     }
 
-    private static <K, V> ConditionResult<Map.Entry<K, V>> findEntry(Map<K, V> actual, K key) {
+    private static <K, V> ConditionResult<Map.Entry<K, V>> findEntry(Map<K, V> actual, K key) throws InterruptedException {
         if (actual != null) {
             for (Map.Entry<K, V> entry : actual.entrySet()) {
                 if (equal(entry.getKey(), key)) {
@@ -325,7 +325,7 @@ public final class MapConditions {
         return preservingNonNull("map", description, mismatch, reference, matches);
     }
 
-    private static boolean exactContent(Map<?, ?> actual, ExpectedEntries expected) {
+    private static boolean exactContent(Map<?, ?> actual, ExpectedEntries expected) throws Exception {
         return actual.size() == expected.entries().size()
                 && exactly(actual.entrySet().iterator(), expected.entries(), MapConditions::entryMatches);
     }
@@ -342,11 +342,11 @@ public final class MapConditions {
         }
     }
 
-    private static boolean entryMatches(Map.Entry<?, ?> actual, Map.Entry<?, ?> expected) {
+    private static boolean entryMatches(Map.Entry<?, ?> actual, Map.Entry<?, ?> expected) throws InterruptedException {
         return entryMatches(actual, expected.getKey(), expected.getValue());
     }
 
-    private static boolean entryMatches(Map.Entry<?, ?> actual, Object expectedKey, Object expectedValue) {
+    private static boolean entryMatches(Map.Entry<?, ?> actual, Object expectedKey, Object expectedValue) throws InterruptedException {
         return equal(actual.getKey(), expectedKey) && equal(actual.getValue(), expectedValue);
     }
 
