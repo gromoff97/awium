@@ -28,6 +28,7 @@ import static io.github.gromoff97.awium.ValueMatching.exactly;
 import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
+import static io.github.gromoff97.awium.ValueRendering.stringValue;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
@@ -339,7 +340,8 @@ public final class MapConditions {
 
         @Override
         public String toString() {
-            return entries.stream().map(Object::toString).collect(joining(", ", "{", "}"));
+            return entries.stream().map(entry -> stringValue(entry.getKey()) + "=" + stringValue(entry.getValue()))
+                    .collect(joining(", ", "{", "}"));
         }
     }
 

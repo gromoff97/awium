@@ -1,7 +1,11 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.time.Duration;
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -9,6 +13,7 @@ import static io.github.gromoff97.awium.AwaitAttempt.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.timedMapAwait;
 import static io.github.gromoff97.awium.CapturedEvaluator.captured;
 import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
@@ -616,6 +621,61 @@ class DiagnosticsSnapshotTest {
         assertTrue(valueFailure.getCause() instanceof NullPointerException);
         assertMessage(valueFailure, "value toString() must not return null",
                 "Timing:");
+    }
+
+    @Test
+    void expectedEntryFormattingPreservesInterruptionBetweenKeyAndValue() {
+        for (boolean capture : List.of(false, true)) {
+            for (boolean negative : List.of(false, true)) {
+                int[] renders = {0, 0};
+                Object key = new Object() {
+                    @Override
+                    public String toString() {
+                        renders[0]++;
+                        currentThread().interrupt();
+                        return "key";
+                    }
+                };
+                Object value = new Object() {
+                    @Override
+                    public String toString() {
+                        renders[1]++;
+                        interrupted();
+                        return "value";
+                    }
+                };
+                var expected = new IdentityHashMap<Object, Object>();
+                expected.put(key, value);
+                Map<Object, Object> actual = negative
+                        ? new ProbeContainers.EntryMap<>(List.of(new SimpleImmutableEntry<>(key, value)))
+                        : Map.of("other", "other");
+                List<? extends PreservingCondition<? super Map<Object, Object>>> checks = negative
+                        ? List.of(MapConditions.doesNotContainEntries(expected), MapConditions.doesNotContainAllEntries(expected),
+                                MapConditions.doesNotContainExactlyEntries(expected))
+                        : List.of(MapConditions.containsEntries(expected),
+                                MapConditions.containsAnyEntries(expected), MapConditions.containsExactlyEntries(expected));
+                for (var check : checks) {
+                    renders[0] = renders[1] = 0;
+                    var time = new FakeTime(0);
+                    var waiting = timedMapAwait(() -> {
+                        time.advanceNanos(2);
+                        return actual;
+                    }, config(1, 2, 0), time, time);
+                    try {
+                        AwaitFailure failure = capture
+                                ? ((AwaitResult.Failed<?, ?>) waiting.tryUntil(check)).failure()
+                                : assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure();
+                        assertEquals(TIMEOUT, failure.reason());
+                        assertTrue(failure.message().contains("{key=value}"));
+                        assertEquals(1, renders[0]);
+                        assertEquals(1, renders[1]);
+                        assertTrue(currentThread().isInterrupted());
+                    } finally {
+                        interrupted();
+                    }
+                }
+            }
+        }
     }
 
     @Test

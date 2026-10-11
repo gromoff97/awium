@@ -1,15 +1,13 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.ConditionResult.Reference;
-import java.util.ArrayDeque;
-import java.util.HashSet;
 import java.util.List;
 import java.util.StringJoiner;
-import java.util.function.Supplier;
 
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
+import static io.github.gromoff97.awium.ValueRendering.preservingInterrupt;
+import static io.github.gromoff97.awium.ValueRendering.renderValue;
 import static java.lang.Thread.currentThread;
-import static java.util.Arrays.deepToString;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("removal")
@@ -286,60 +284,6 @@ final class FailureDiagnostics {
                 out.append(indentation).append("    ").append(line);
             }
             out.append('\n');
-        }
-    }
-
-    private static String renderValue(Object value) {
-        if (value instanceof Object[] values) {
-            return renderArray(values);
-        }
-        if (value != null && value.getClass().isArray()) {
-            String array = deepToString(new Object[]{value});
-            return array.substring(1, array.length() - 1);
-        }
-        return requireNonNull(preservingInterrupt(() -> String.valueOf(value)),
-                "value toString() must not return null");
-    }
-
-    private static String renderArray(Object[] values) {
-        record ArrayFrame(Object[] values, int index) {}
-
-        var pending = new ArrayDeque<ArrayFrame>();
-        var active = new HashSet<Object[]>();
-        var out = new StringBuilder("[");
-        pending.push(new ArrayFrame(values, 0));
-        active.add(values);
-        while (!pending.isEmpty()) {
-            ArrayFrame frame = pending.pop();
-            if (frame.index() == frame.values().length) {
-                out.append(']');
-                active.remove(frame.values());
-                continue;
-            }
-            if (frame.index() > 0) out.append(", ");
-            pending.push(new ArrayFrame(frame.values(), frame.index() + 1));
-            Object value = frame.values()[frame.index()];
-            if (value instanceof Object[] nested) {
-                if (active.add(nested)) {
-                    out.append('[');
-                    pending.push(new ArrayFrame(nested, 0));
-                } else {
-                    out.append("[...]");
-                }
-            } else {
-                out.append(value != null && value.getClass().isArray()
-                        ? renderValue(value) : preservingInterrupt(() -> String.valueOf(value)));
-            }
-        }
-        return out.toString();
-    }
-
-    private static String preservingInterrupt(Supplier<String> rendering) {
-        boolean interrupted = currentThread().isInterrupted();
-        try {
-            return rendering.get();
-        } finally {
-            if (interrupted) currentThread().interrupt();
         }
     }
 
