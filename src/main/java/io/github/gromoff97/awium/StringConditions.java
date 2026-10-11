@@ -126,9 +126,9 @@ public final class StringConditions {
 
     public static PreservingCondition<String> lengthBetween(int lowerBound, int upperBound) {
         validateRange(lowerBound, upperBound, "length");
-        return matching("string length is between " + lowerBound + " and " + upperBound,
-                "string length was outside " + lowerBound + ".." + upperBound,
-                actual -> actual.length() >= lowerBound && actual.length() <= upperBound);
+        return matchingLength(lowerBound, length -> length >= lowerBound && length <= upperBound,
+                "is between " + lowerBound + " and " + upperBound,
+                "was outside " + lowerBound + ".." + upperBound);
     }
 
     private static PreservingCondition<String> matchingLength(int bound, IntPredicate matches,

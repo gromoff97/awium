@@ -477,8 +477,8 @@ public final class CollectionConditions {
         E previous = call(values::next);
         while (call(values::hasNext)) {
             E next = call(values::next);
-            int comparison = comparator.compare(previous, next);
             checkInterruption();
+            int comparison = comparator.compare(previous, next);
             if (comparison > 0) {
                 return false;
             }

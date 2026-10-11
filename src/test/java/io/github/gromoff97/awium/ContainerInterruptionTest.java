@@ -62,6 +62,18 @@ class ContainerInterruptionTest {
     }
 
     @Test
+    void interruptionDuringSecondElementExtractionSkipsTheComparator() {
+        var actual = new SignallingList("secondNext");
+        int[] comparisons = {0};
+        assertInterrupted(() -> await(() -> actual).tryUntil(sorted((left, right) -> {
+            comparisons[0]++;
+            Thread.interrupted();
+            return 0;
+        })), "next", actual.calls);
+        assertEquals(0, comparisons[0]);
+    }
+
+    @Test
     void interruptionAtEveryIteratorBoundaryStopsCollectionConditions() {
         List<Function<Await<SignallingList, String, java.util.Collection<?>>, AwaitResult<?, ?>>> waits = List.of(
                 waiting -> waiting.tryUntil(all(value -> true)),
@@ -266,11 +278,17 @@ class ContainerInterruptionTest {
             called("iterator");
             Iterator<String> delegate = super.iterator();
             return new Iterator<>() {
+                private int nextCalls;
+
                 @Override
                 public boolean hasNext() { called("hasNext"); return delegate.hasNext(); }
 
                 @Override
-                public String next() { called("next"); return delegate.next(); }
+                public String next() {
+                    called("next");
+                    if (++nextCalls == 2 && boundary.equals("secondNext")) Thread.currentThread().interrupt();
+                    return delegate.next();
+                }
             };
         }
 

@@ -8,9 +8,7 @@ final class CheckedCalls {
 
     static <Result> Result call(Callable<? extends Result> callback) throws Exception {
         checkInterruption();
-        Result result = callback.call();
-        checkInterruption();
-        return result;
+        return callback.call();
     }
 
     static void checkInterruption() throws InterruptedException {

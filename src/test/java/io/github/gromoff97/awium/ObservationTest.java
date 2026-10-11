@@ -3,6 +3,7 @@ package io.github.gromoff97.awium;
 import java.time.Duration;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.LongSupplier;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,9 @@ import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.uncontrolled;
+import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.condition;
+import static java.time.Duration.ofNanos;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,6 +35,55 @@ class ObservationTest {
     @AfterEach
     void clearInterruptFlag() {
         interrupted();
+    }
+
+    @Test
+    void interruptionWhileWaitingRetainsItsOriginalCompletionTime() {
+        for (String boundary : List.of("beforePark", "afterPark", "afterInterval")) {
+            for (long persistence : new long[] {0, 5}) {
+                boolean[] evaluated = {false};
+                int[] reads = {0};
+                int[] sources = {0};
+                int[] parks = {0};
+                long[] now = {0};
+                LongSupplier clock = () -> {
+                    interrupted();
+                    if (!evaluated[0]) return 0;
+                    int read = ++reads[0];
+                    if (read == 1) return 0;
+                    now[0]++;
+                    if (boundary.equals("beforePark") && read == 2) currentThread().interrupt();
+                    if (boundary.equals("afterInterval") && read == 2) {
+                        now[0] = 5;
+                        currentThread().interrupt();
+                    }
+                    return now[0];
+                };
+                try {
+                    var waiting = await(() -> { sources[0]++; return "ready"; }).usingTime(clock, nanos -> {
+                        parks[0]++;
+                        now[0] = 1;
+                        currentThread().interrupt();
+                    }).every(ofNanos(5)).upTo(ofNanos(20)).persisting(ofNanos(persistence));
+                    var result = waiting.tryUntil(condition("state", actual -> {
+                        evaluated[0] = true;
+                        return persistence == 0 ? unsatisfied("waiting") : satisfied(actual);
+                    }));
+                    AwaitResult.Failed<?, ?> failure = assertInstanceOf(AwaitResult.Failed.class, result);
+                    var attempt = failure.attempts().getLast();
+                    var outcome = assertInstanceOf(AwaitAttempt.Outcome.WaitingFailed.class, attempt.outcome());
+                    assertEquals(boundary.equals("afterInterval") ? 6 : 2, outcome.timing().completionOffset().toNanos());
+                    assertEquals(persistence == 0 ? ACQUISITION : AwaitAttempt.Phase.PERSISTENCE, attempt.phase());
+                    assertEquals(2, attempt.number());
+                    assertEquals(1, sources[0]);
+                    assertEquals(boundary.equals("afterPark") ? 1 : 0, parks[0]);
+                    assertInstanceOf(InterruptedException.class, outcome.failure());
+                    assertTrue(currentThread().isInterrupted());
+                } finally {
+                    interrupted();
+                }
+            }
+        }
     }
 
     @Test
