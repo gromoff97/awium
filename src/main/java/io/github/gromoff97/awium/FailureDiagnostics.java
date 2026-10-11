@@ -2,7 +2,9 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.ConditionResult.Reference;
 import java.util.List;
+import java.util.Locale;
 import java.util.StringJoiner;
+import java.util.concurrent.TimeUnit;
 
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.ValueRendering.preservingInterrupt;
@@ -13,8 +15,9 @@ import static java.util.Objects.requireNonNull;
 @SuppressWarnings("removal")
 final class FailureDiagnostics {
 
-    private static final long[] UNIT_NANOS = {86_400_000_000_000L, 3_600_000_000_000L, 60_000_000_000L, 1_000_000_000L, 1_000_000L, 1_000L, 1L};
-    private static final String[] UNIT_NAMES = {"day", "hour", "minute", "second", "millisecond", "microsecond", "nanosecond"};
+    private static final List<TimeUnit> DURATION_UNITS = List.of(
+            TimeUnit.DAYS, TimeUnit.HOURS, TimeUnit.MINUTES, TimeUnit.SECONDS,
+            TimeUnit.MILLISECONDS, TimeUnit.MICROSECONDS, TimeUnit.NANOSECONDS);
 
     private static final int CAUSE_MESSAGE_LIMIT = 160;
     private static final String STACK_TRACE_HINT = "… <see stack trace>";
@@ -63,11 +66,13 @@ final class FailureDiagnostics {
 
     static String duration(long nanos) {
         StringJoiner result = new StringJoiner(" ");
-        for (int index = 0; index < UNIT_NANOS.length; index++) {
-            long count = nanos / UNIT_NANOS[index];
-            nanos %= UNIT_NANOS[index];
+        for (TimeUnit unit : DURATION_UNITS) {
+            long unitNanos = unit.toNanos(1);
+            long count = nanos / unitNanos;
+            nanos %= unitNanos;
             if (count != 0) {
-                result.add(count + " " + UNIT_NAMES[index] + (count == 1 ? "" : "s"));
+                String name = unit.name().toLowerCase(Locale.ROOT);
+                result.add(count + " " + (count == 1 ? name.substring(0, name.length() - 1) : name));
             }
         }
         return result.length() == 0 ? "0 nanoseconds" : result.toString();
