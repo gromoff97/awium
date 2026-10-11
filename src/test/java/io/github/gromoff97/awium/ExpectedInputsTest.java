@@ -21,6 +21,25 @@ import static org.junit.jupiter.api.Assertions.*;
 class ExpectedInputsTest {
 
     @Test
+    void expectedValuesCanDisappearBeforeTheirSnapshotIsTaken() {
+        var expected = new ArrayList<>(List.of("before")) {
+            @Override
+            public boolean isEmpty() {
+                boolean empty = super.isEmpty();
+                clear();
+                return empty;
+            }
+        };
+        var condition = contains(expected);
+        assertEquals(List.of(), condition.metadata.reference().value());
+        expected.add("after");
+        for (var actual : List.of(List.<String>of(), List.of("unrelated"))) {
+            assertSame(actual, result(evaluate(condition, actual)));
+        }
+        assertInstanceOf(Unsatisfied.class, evaluate(condition, null));
+    }
+
+    @Test
     void collectionFactoriesFreezeMembershipOrderDuplicatesAndNulls() {
         var expected = new ArrayList<>(asList("a", null, "a"));
         assertStable(List.of(contains(expected), doesNotContain(expected),

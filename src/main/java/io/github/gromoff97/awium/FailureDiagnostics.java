@@ -239,7 +239,7 @@ final class FailureDiagnostics {
 
     private void condition(StringBuilder out, boolean emergency) {
         field(out, "", "Condition", metadata.description());
-        reference(out, metadata.reference(), false, emergency);
+        referenceValue = reference(out, metadata.reference(), referenceValue, emergency);
         if (metadata.explanation() != null) {
             field(out, "Importance", metadata.explanation());
         }
@@ -252,7 +252,7 @@ final class FailureDiagnostics {
         out.append('\n').append("Sequence (captured ").append(sequence.capturedStages())
                 .append(" of ").append(sequence.totalStages()).append("):\n");
         field(out, "Expectation", sequence.expectation());
-        reference(out, sequence.reference(), true, emergency);
+        sequenceReference = reference(out, sequence.reference(), sequenceReference, emergency);
         if (sequence.importance() != null) {
             field(out, "Importance", sequence.importance());
         }
@@ -261,17 +261,14 @@ final class FailureDiagnostics {
         }
     }
 
-    private void reference(StringBuilder out, Reference<?> reference,
-            boolean forSequence, boolean emergency) {
-        if (reference != null) {
-            String rendered = forSequence ? sequenceReference : referenceValue;
-            if (!emergency) {
-                rendered = renderValue(reference.value());
-                if (forSequence) sequenceReference = rendered;
-                else referenceValue = rendered;
-            }
-            field(out, reference.label(), rendered == null ? "<value unavailable: diagnostics failed>" : rendered);
+    private static String reference(StringBuilder out, Reference<?> reference,
+            String cached, boolean emergency) {
+        if (reference == null) {
+            return cached;
         }
+        String rendered = emergency ? cached : renderValue(reference.value());
+        field(out, reference.label(), rendered == null ? "<value unavailable: diagnostics failed>" : rendered);
+        return rendered;
     }
 
     private static void field(StringBuilder out, String label, String value) {

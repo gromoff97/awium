@@ -49,22 +49,16 @@ final class ConditionSupport {
 
     static <Expected> ExpectedCondition<Expected> expected(String description, Reference<?> reference,
             CheckedFunction<Object, ConditionResult<Object>> evaluator) {
-        var metadata = new ConditionMetadata(description, null, reference);
-        requireNonNull(evaluator, "evaluation must not be null");
-        return new ExpectedCondition<>(metadata, () -> evaluator);
+        return new ExpectedCondition<>(new ConditionMetadata(description, null, reference), () -> evaluator);
     }
 
     static <Result> NarrowingCondition<Result> narrowing(String description, CheckedFunction<Object, ConditionResult<Result>> evaluator) {
-        var metadata = new ConditionMetadata(description, null, null);
-        requireNonNull(evaluator, "evaluation must not be null");
-        return new NarrowingCondition<>(metadata, () -> evaluator);
+        return new NarrowingCondition<>(new ConditionMetadata(description, null, null), () -> evaluator);
     }
 
     static <Observed, Family> SelectedCondition<Observed, Family> selected(String description,
             CheckedFunction<? super Observed, ? extends ConditionResult<?>> evaluator) {
-        var metadata = new ConditionMetadata(description, null, null);
-        requireNonNull(evaluator, "evaluation must not be null");
-        return new SelectedCondition<>(metadata, () -> evaluator);
+        return new SelectedCondition<>(new ConditionMetadata(description, null, null), () -> evaluator);
     }
 
     static <Value> Reference<Value> expectedReference(Value value) {

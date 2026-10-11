@@ -67,26 +67,30 @@ class CollectionExactContentTest {
     void exactComparisonRejectsChangesBetweenSizeAndTraversal() {
         for (boolean shrink : List.of(false, true)) {
             for (boolean negative : List.of(false, true)) {
-                var actual = new ArrayList<String>(shrink ? List.of("a", "c") : List.of("a", "b")) {
-                    private boolean changed;
+                for (boolean anyOrder : List.of(false, true)) {
+                    var actual = new ArrayList<>(List.of("a", "b")) {
+                        private boolean changed;
 
-                    @Override
-                    public Iterator<String> iterator() {
-                        if (!changed) {
-                            changed = true;
-                            if (shrink) removeLast();
-                            else add("c");
+                        @Override
+                        public Iterator<String> iterator() {
+                            if (!changed) {
+                                changed = true;
+                                if (shrink) removeLast();
+                                else add("c");
+                            }
+                            return super.iterator();
                         }
-                        return super.iterator();
+                    };
+                    PreservingCondition<? super ArrayList<String>> condition = anyOrder
+                            ? negative ? doesNotContainExactlyInAnyOrder("a", "b") : containsExactlyInAnyOrder("a", "b")
+                            : negative ? doesNotContainExactly("a", "b") : containsExactly("a", "b");
+                    var evaluation = evaluate(condition, actual);
+                    if (negative) {
+                        assertEquals(Satisfied.class, evaluation.getClass());
+                        assertSame(actual, result(evaluation));
+                    } else {
+                        assertEquals(Unsatisfied.class, evaluation.getClass());
                     }
-                };
-                var condition = negative ? doesNotContainExactly("a", "b") : containsExactly("a", "b");
-                var evaluation = evaluate(condition, actual);
-                if (negative) {
-                    assertEquals(Satisfied.class, evaluation.getClass());
-                    assertSame(actual, result(evaluation));
-                } else {
-                    assertEquals(Unsatisfied.class, evaluation.getClass());
                 }
             }
         }

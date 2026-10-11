@@ -7,6 +7,7 @@ import io.github.gromoff97.awium.Source.MapSource;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -25,6 +26,32 @@ import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MapConditionsTest {
+
+    @Test
+    void exactComparisonRejectsChangesBetweenSizeAndEntryTraversal() {
+        for (boolean shrink : List.of(false, true)) {
+            for (boolean negative : List.of(false, true)) {
+                var actual = new LinkedHashMap<>(Map.of("a", "1", "b", "2")) {
+                    private boolean changed;
+
+                    @Override
+                    public Set<Map.Entry<String, String>> entrySet() {
+                        if (!changed) {
+                            changed = true;
+                            if (shrink) remove("b");
+                            else put("c", "3");
+                        }
+                        return super.entrySet();
+                    }
+                };
+                var expected = Map.of("a", "1", "b", "2");
+                var condition = negative ? doesNotContainExactlyEntries(expected) : containsExactlyEntries(expected);
+                var evaluation = evaluate(condition, actual);
+                assertEquals(negative ? Satisfied.class : Unsatisfied.class, evaluation.getClass());
+                if (negative) assertSame(actual, result(evaluation));
+            }
+        }
+    }
 
     @Test
     void positiveAndNegativeMapConditionsAreComplements() {

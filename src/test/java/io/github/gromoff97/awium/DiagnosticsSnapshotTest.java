@@ -606,7 +606,6 @@ class DiagnosticsSnapshotTest {
         assertEquals(1, expected.calls);
     }
 
-
     @Test
     void emergencyDiagnosticsReuseEveryValueAfterTheOriginalCauseMessageFails() {
         for (boolean capture : List.of(false, true)) {
@@ -649,9 +648,9 @@ class DiagnosticsSnapshotTest {
             assertEquals(DIAGNOSTICS_FAILED, failure.reason());
             assertSame(diagnostic, failure.cause());
             assertEquals(List.of(original), failure.suppressed());
-            assertTrue(failure.message().contains("Expected: root operand"));
+            assertTrue(failure.message().contains("Condition: ordered conditions\n    Expected: root operand"));
             assertTrue(failure.message().contains("Actual: observed value"));
-            assertTrue(failure.message().contains("Expected: stage operand"));
+            assertTrue(failure.message().contains("Expectation: second stage\n    Expected: stage operand"));
             assertArrayEquals(new int[]{1, 1, 1}, renders);
             assertEquals(1, messageCalls[0]);
         }
