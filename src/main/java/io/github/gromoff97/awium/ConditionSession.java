@@ -34,8 +34,6 @@ final class ConditionSession<Observed, Result> implements Function<Observed, Con
                 rethrowFatalOrRestoreInterrupt(failure.cause());
             }
             return result == null ? null : withInterruption(result);
-        } catch (VirtualMachineError | ThreadDeath fatal) {
-            throw fatal;
         } catch (Throwable failure) {
             rethrowFatalOrRestoreInterrupt(failure);
             return uncontrolled(failure);

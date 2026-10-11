@@ -121,19 +121,18 @@ final class ConditionSupport {
         return new Condition<>(ConditionDefinition.required(nested).metadata.prefixed(subject + " has a single matching value: "), () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> actual == null ? unsatisfied(subject + " was null")
-                    : evaluateSingle(elements.apply(actual), evaluator, "no value matched", "more than one value matched");
+                    : evaluateSingle(elements.apply(actual), evaluator);
         });
     }
 
     private static <Element, Result> ConditionResult<? extends Result> evaluateSingle(Iterable<Element> values,
-            Function<? super Element, ? extends ConditionResult<? extends Result>> evaluator,
-            String noneMatched, String multipleMatched) {
-        ConditionResult<? extends Result> result = unsatisfied(noneMatched);
+            Function<? super Element, ? extends ConditionResult<? extends Result>> evaluator) {
+        ConditionResult<? extends Result> result = unsatisfied("no value matched");
         for (Element value : values) {
             var evaluated = requireNonNull(evaluator.apply(value), "condition returned null ConditionResult");
             if (evaluated instanceof ConditionResult.Uncontrolled<?>) return evaluated;
             if (evaluated instanceof ConditionResult.Satisfied<?>
-                    && result instanceof ConditionResult.Satisfied<?>) return unsatisfied(multipleMatched);
+                    && result instanceof ConditionResult.Satisfied<?>) return unsatisfied("more than one value matched");
             // Keep the first match, otherwise the last mismatch.
             if (!(result instanceof ConditionResult.Satisfied<?>)) {
                 result = evaluated;
