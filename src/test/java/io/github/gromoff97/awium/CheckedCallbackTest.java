@@ -169,6 +169,7 @@ class CheckedCallbackTest {
     @Test
     void interruptionDuringEntryExtractionSkipsEveryEntryPredicate() {
         for (boolean key : List.of(false, true)) {
+            int[] valueReads = {0};
             var entry = new AbstractMap.SimpleImmutableEntry<String, String>("key", "ready") {
                 @Override
                 public String getKey() {
@@ -178,6 +179,7 @@ class CheckedCallbackTest {
 
                 @Override
                 public String getValue() {
+                    valueReads[0]++;
                     if (!key) Thread.currentThread().interrupt();
                     return super.getValue();
                 }
@@ -189,12 +191,70 @@ class CheckedCallbackTest {
                     predicate -> await(() -> actual).tryUntil(MapConditions.noEntry(predicate)));
             for (var wait : waits) {
                 int[] calls = {0};
+                valueReads[0] = 0;
                 try {
                     var result = wait.apply((name, value) -> { calls[0]++; return true; });
                     var failure = assertInstanceOf(AwaitResult.Failed.class, result);
                     assertEquals(INTERRUPTED, failure.failure().reason());
                     assertInstanceOf(InterruptedException.class, failure.failure().cause());
                     assertEquals(0, calls[0]);
+                    assertEquals(key ? 0 : 1, valueReads[0]);
+                    assertTrue(Thread.currentThread().isInterrupted());
+                } finally {
+                    Thread.interrupted();
+                }
+            }
+        }
+    }
+
+    @Test
+    void interruptionDuringKeyComparisonSkipsFurtherEntryExtraction() {
+        for (boolean matching : List.of(false, true)) {
+            int[] keyReads = {0};
+            int[] valueReads = {0};
+            var actualKey = new Object() {
+                @Override
+                public boolean equals(Object other) {
+                    Thread.currentThread().interrupt();
+                    return matching;
+                }
+
+                @Override
+                public int hashCode() { throw new AssertionError("hashCode must not be called"); }
+            };
+            var entry = new AbstractMap.SimpleImmutableEntry<Object, String>(actualKey, "ready") {
+                @Override
+                public Object getKey() { keyReads[0]++; return super.getKey(); }
+
+                @Override
+                public String getValue() { valueReads[0]++; return super.getValue(); }
+            };
+            var second = new AbstractMap.SimpleImmutableEntry<Object, String>(new Object(), "other") {
+                @Override
+                public Object getKey() { keyReads[0]++; return super.getKey(); }
+
+                @Override
+                public String getValue() { valueReads[0]++; return super.getValue(); }
+            };
+            var actual = new ProbeContainers.EntryMap<Object, String>(List.of(entry, second));
+            var only = new ProbeContainers.EntryMap<Object, String>(List.of(entry));
+            Object expectedKey = new Object();
+            List<Supplier<AwaitResult<?, ?>>> waits = List.of(
+                    () -> await(() -> actual).tryUntil(valueFor(expectedKey)),
+                    () -> await(() -> actual).tryUntil(valueFor(expectedKey, equalTo("ready"))),
+                    () -> await(() -> only).tryUntil(MapConditions.onlyValueFor(expectedKey)),
+                    () -> await(() -> actual).tryUntil(MapConditions.containsEntries(expectedKey, "ready")),
+                    () -> await(() -> actual).tryUntil(MapConditions.doesNotContainEntries(expectedKey, "ready")),
+                    () -> await(() -> actual).tryUntil(MapConditions.containsEntries(Map.of(expectedKey, "ready"))));
+            for (var wait : waits) {
+                keyReads[0] = 0;
+                valueReads[0] = 0;
+                try {
+                    var failure = assertInstanceOf(AwaitResult.Failed.class, wait.get()).failure();
+                    assertEquals(INTERRUPTED, failure.reason());
+                    assertInstanceOf(InterruptedException.class, failure.cause());
+                    assertEquals(1, keyReads[0]);
+                    assertEquals(0, valueReads[0]);
                     assertTrue(Thread.currentThread().isInterrupted());
                 } finally {
                     Thread.interrupted();

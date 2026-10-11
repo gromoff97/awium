@@ -347,6 +347,7 @@ public final class MapConditions {
 
     private static <K, V> boolean entryMatches(Map.Entry<K, V> entry, BiPredicate<? super K, ? super V> predicate) throws InterruptedException {
         K key = entry.getKey();
+        ValueMatching.checkInterruption();
         V value = entry.getValue();
         ValueMatching.checkInterruption();
         return predicate.test(key, value);

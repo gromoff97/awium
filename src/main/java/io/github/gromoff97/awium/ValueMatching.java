@@ -103,8 +103,12 @@ final class ValueMatching {
                 for (int index = leftObjects.length - 1; index >= 0; index--) {
                     pending.addLast(new ValuePair(leftObjects[index], rightObjects[index]));
                 }
-            } else if (!deepEquals(left, right)) {
-                return false;
+            } else {
+                boolean matching = deepEquals(left, right);
+                checkInterruption();
+                if (!matching) {
+                    return false;
+                }
             }
         }
         return true;
