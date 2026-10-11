@@ -69,9 +69,9 @@ class ArtifactContractIT {
         }
         assertFalse(classes.get("ConditionDefinition").contains("Condition"),
                 "ConditionDefinition must not depend on its concrete families");
-        // Shared condition construction and composition are independent of source protocols and ordered execution.
+        // Condition construction and composition are independent of source protocols, execution, and value comparison.
         Set<String> support = classes.get("ConditionSupport");
-        assertTrue(support.stream().noneMatch(Set.of("Source", "CapturedEvaluator", "ConditionSession")::contains),
+        assertTrue(support.stream().noneMatch(Set.of("Source", "CapturedEvaluator", "ConditionSession", "ValueMatching")::contains),
                 "ConditionSupport -> " + support);
         for (String catalog : Set.of("Conditions", "CollectionConditions", "MapConditions",
                 "OptionalConditions", "StringConditions")) {

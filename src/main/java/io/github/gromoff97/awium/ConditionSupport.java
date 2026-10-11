@@ -127,10 +127,9 @@ final class ConditionSupport {
 
     private static <Element, Result> ConditionResult<? extends Result> evaluateSingle(Iterable<Element> values,
             Function<? super Element, ? extends ConditionResult<? extends Result>> evaluator,
-            String noneMatched, String multipleMatched) throws InterruptedException {
+            String noneMatched, String multipleMatched) {
         ConditionResult<? extends Result> result = unsatisfied(noneMatched);
         for (Element value : values) {
-            ValueMatching.checkInterruption();
             var evaluated = requireNonNull(evaluator.apply(value), "condition returned null ConditionResult");
             if (evaluated instanceof ConditionResult.Uncontrolled<?>) return evaluated;
             if (evaluated instanceof ConditionResult.Satisfied<?>
