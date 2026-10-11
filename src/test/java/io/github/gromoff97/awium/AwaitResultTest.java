@@ -49,6 +49,9 @@ class AwaitResultTest {
         assertEquals("total attempts must be non-negative", assertThrows(
                 IllegalArgumentException.class,
                 () -> new AwaitResult.Satisfied<>(List.of(), -1, null)).getMessage());
+        assertEquals("total attempts must be non-negative", assertThrows(
+                IllegalArgumentException.class,
+                () -> new AwaitResult.Failed<>(List.of(), -1, null)).getMessage());
     }
 
     @Test

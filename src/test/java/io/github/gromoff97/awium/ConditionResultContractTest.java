@@ -73,4 +73,13 @@ class ConditionResultContractTest {
         assertThrows(NullPointerException.class, () -> uncontrolled(null));
     }
 
+    @Test
+    void sequenceProgressRequiresAnExistingEvaluatedStage() {
+        assertThrows(IllegalArgumentException.class, () -> new Context.Sequence(0, 2, 0, "first stage", null, null));
+        assertThrows(IllegalArgumentException.class, () -> new Context.Sequence(0, 0, 1, "first stage", null, null));
+        assertThrows(IllegalArgumentException.class, () -> new Context.Sequence(-1, 2, 1, "first stage", null, null));
+        assertThrows(IllegalArgumentException.class, () -> new Context.Sequence(3, 2, 1, "first stage", null, null));
+        assertThrows(IllegalArgumentException.class, () -> new Context.Sequence(1, 2, 3, "first stage", null, null));
+    }
+
 }

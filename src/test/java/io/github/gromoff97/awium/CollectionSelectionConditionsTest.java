@@ -172,6 +172,18 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
+    void orderedConditionsRejectIncompletePrefixesAndSuffixes() {
+        for (List<Integer> actual : List.of(List.<Integer>of(), List.of(1), List.of(1, 2))) {
+            assertEquals(Unsatisfied.class, evaluate(CollectionConditions.startsWith(1, 2, 3), actual).getClass());
+            assertEquals(Unsatisfied.class, evaluate(CollectionConditions.endsWith(1, 2, 3), actual).getClass());
+            assertEquals(Unsatisfied.class, evaluate(CollectionConditions.containsSequence(1, 2, 3), actual).getClass());
+            assertSame(actual, ((Satisfied<?>) evaluate(CollectionConditions.doesNotContainSequence(1, 2, 3), actual)).result());
+        }
+        var empty = new ArrayDeque<Integer>();
+        assertSame(empty, ((Satisfied<?>) evaluate(CollectionConditions.<Integer>sorted(), empty)).result());
+    }
+
+    @Test
     void selectorsCoverMissingNullAndInvalidPositions() throws Exception {
         assertEquals(Unsatisfied.class, evaluate(first, List.of()).getClass());
         assertEquals(Unsatisfied.class, evaluate(last, null).getClass());

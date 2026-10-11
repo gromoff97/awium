@@ -1,13 +1,16 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Source.CollectionSource;
+import io.github.gromoff97.awium.Source.CollectionViewSource;
 import io.github.gromoff97.awium.Source.MapSource;
+import io.github.gromoff97.awium.Source.MapViewSource;
 import io.github.gromoff97.awium.Source.OptionalSource;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -16,6 +19,8 @@ import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.OptionalConditions.*;
 import static java.time.Duration.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class PositiveFluentMatrixTest {
@@ -89,6 +94,39 @@ class PositiveFluentMatrixTest {
 
         assertSame(actual, raw);
         assertSame(actual, selected);
+    }
+
+    @Test
+    void wildcardViewsPreserveContainersAndSelectOriginalElementsOncePerAttempt() {
+        var time = new FakeTime(0);
+        Number element = Integer.valueOf(1000);
+        List<? extends Number> values = new ArrayList<>(List.of(element));
+        var entries = new LinkedHashMap<Number, CharSequence>();
+        entries.put(element, new StringBuilder("ready"));
+        Map<? extends Number, ? extends CharSequence> map = entries;
+        var entry = entries.entrySet().iterator().next();
+        int[] collectionCalls = {0};
+        int[] mapCalls = {0};
+        var collectionSource = new CollectionViewSource<Number, List<? extends Number>>(() -> {
+            collectionCalls[0]++;
+            return values;
+        });
+        var mapSource = new MapViewSource<Number, CharSequence,
+                Map<? extends Number, ? extends CharSequence>>(() -> {
+                    mapCalls[0]++;
+                    return map;
+                });
+
+        assertSame(values, await(collectionSource).usingTime(time, time).until(nonEmpty));
+        assertSame(element, await(collectionSource).usingTime(time, time).until(single));
+        assertSame(element, assertInstanceOf(AwaitResult.Satisfied.class,
+                await(collectionSource).usingTime(time, time).tryUntil(single)).result());
+        assertSame(map, await(mapSource).usingTime(time, time).until(MapConditions.nonEmpty));
+        assertSame(entry, await(mapSource).usingTime(time, time).until(MapConditions.singleEntry));
+        assertSame(entry, assertInstanceOf(AwaitResult.Satisfied.class,
+                await(mapSource).usingTime(time, time).tryUntil(MapConditions.singleEntry)).result());
+        assertEquals(3, collectionCalls[0]);
+        assertEquals(3, mapCalls[0]);
     }
 
     private static void assertAllSame(Object expected, Object... actuals) {
