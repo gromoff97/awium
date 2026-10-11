@@ -75,8 +75,8 @@ class ObjectAndOptionalConditionsTest {
         var expected = new String("1");
         var equalActual = new String("1");
         var differentActual = "2";
-        var equal = hasValue(expected);
-        var notEqual = doesNotHaveValue(expected);
+        Condition<Optional<String>, String> equal = hasValue(equalTo(expected));
+        Condition<Optional<String>, String> notEqual = hasValue(notEqualTo(expected));
 
         assertUnsatisfied(evaluate(equal, null));
         assertUnsatisfied(evaluate(equal, Optional.empty()));
@@ -92,22 +92,25 @@ class ObjectAndOptionalConditionsTest {
         var expected = new Directional(false);
         var actual = new Directional(true);
 
-        assertSatisfied(evaluate(hasValue((Object) expected),
+        assertSatisfied(evaluate(hasValue(equalTo((Object) expected)),
                 Optional.of(actual)), actual);
         assertEquals(1, actual.equalsCalls);
 
         int[] actualArray = {1, 2};
-        assertSame(actualArray, result(evaluate(hasValue(
-                new int[]{1, 2}), Optional.of(actualArray))));
+        assertSame(actualArray, result(evaluate(hasValue(equalTo(
+                new int[]{1, 2})), Optional.of(actualArray))));
     }
 
     @Test
-    void optionalValueFactoriesRejectNullOperandsImmediately() {
+    void optionalValueFactoriesRejectNullConditionsImmediately() {
         assertTrue(assertThrows(NullPointerException.class,
-                () -> hasValue((Object) null)).getMessage().contains("expected"));
+                () -> hasValue((Condition<Object, Object>) null)).getMessage().contains("condition"));
         assertTrue(assertThrows(NullPointerException.class,
-                () -> doesNotHaveValue(null)).getMessage()
-                .contains("unexpected"));
+                () -> hasValue((Condition.PreservingCondition<Object>) null)).getMessage().contains("condition"));
+        assertTrue(assertThrows(NullPointerException.class,
+                () -> hasValue((Condition.ExpectedCondition<Object>) null)).getMessage().contains("condition"));
+        assertTrue(assertThrows(NullPointerException.class,
+                () -> hasValue((Condition.NarrowingCondition<Object>) null)).getMessage().contains("condition"));
     }
 
     private static void assertSatisfied(ConditionResult<?> evaluation, Object result) {

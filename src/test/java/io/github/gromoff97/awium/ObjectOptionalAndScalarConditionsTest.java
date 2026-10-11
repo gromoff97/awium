@@ -48,8 +48,8 @@ class ObjectOptionalAndScalarConditionsTest {
         var pollingTime = new FakeTime(0);
         OptionalSource<Object> source = () -> Optional.of("ready");
 
-        Object expected = await(source).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue((Object) "ready"));
-        Object selected = await(source).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(value -> value.toString().startsWith("r")));
+        Object expected = await(source).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(Conditions.equalTo((Object) "ready")));
+        Object selected = await(source).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(Conditions.matches(value -> value.toString().startsWith("r"))));
         String narrowed = await(source).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(instanceOf(String.class)));
         String nested = await((OptionalSource<String>) () -> Optional.of("ready")).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(StringConditions.startsWith("rea")));
         Integer transformed = await((OptionalSource<String>) () -> Optional.of("ready")).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(Conditions.yields(String::length)));
@@ -116,13 +116,13 @@ class ObjectOptionalAndScalarConditionsTest {
                 evaluate(OptionalConditions.present, Optional.empty()).getClass());
         assertStatus(OptionalConditions.absent, Optional.empty(), Satisfied.class);
         assertStatus(OptionalConditions.absent, Optional.of("ready"), Unsatisfied.class);
-        assertStatus(OptionalConditions.hasValue("ready"), Optional.of("ready"), Satisfied.class);
-        assertStatus(OptionalConditions.hasValue("ready"), Optional.of("failed"), Unsatisfied.class);
-        assertStatus(OptionalConditions.hasValue("ready"), Optional.empty(), Unsatisfied.class);
-        assertStatus(OptionalConditions.doesNotHaveValue("failed"), Optional.of("ready"), Satisfied.class);
-        assertStatus(OptionalConditions.doesNotHaveValue("ready"), Optional.of("ready"), Unsatisfied.class);
-        assertStatus(OptionalConditions.hasValue(value -> value.startsWith("r")), Optional.of("ready"), Satisfied.class);
-        assertStatus(OptionalConditions.hasValue(value -> value.startsWith("r")), Optional.of("failed"), Unsatisfied.class);
+        assertStatus(OptionalConditions.hasValue(Conditions.equalTo("ready")), Optional.of("ready"), Satisfied.class);
+        assertStatus(OptionalConditions.hasValue(Conditions.equalTo("ready")), Optional.of("failed"), Unsatisfied.class);
+        assertStatus(OptionalConditions.hasValue(Conditions.equalTo("ready")), Optional.empty(), Unsatisfied.class);
+        assertStatus(OptionalConditions.hasValue(Conditions.notEqualTo("failed")), Optional.of("ready"), Satisfied.class);
+        assertStatus(OptionalConditions.hasValue(Conditions.notEqualTo("ready")), Optional.of("ready"), Unsatisfied.class);
+        assertStatus(OptionalConditions.hasValue(Conditions.matches((String value) -> value.startsWith("r"))), Optional.of("ready"), Satisfied.class);
+        assertStatus(OptionalConditions.hasValue(Conditions.matches((String value) -> value.startsWith("r"))), Optional.of("failed"), Unsatisfied.class);
         assertStatus(OptionalConditions.hasValue(instanceOf(String.class)), Optional.of("ready"), Satisfied.class);
         assertStatus(OptionalConditions.hasValue(instanceOf(String.class)), Optional.of(42), Unsatisfied.class);
     }

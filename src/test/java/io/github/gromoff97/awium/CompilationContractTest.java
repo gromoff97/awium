@@ -472,6 +472,7 @@ class CompilationContractTest {
                 import static io.github.gromoff97.awium.Conditions.instanceOf;
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.Conditions.equalTo;
+                import static io.github.gromoff97.awium.Conditions.matches;
                 import static io.github.gromoff97.awium.Conditions.yields;
                 import static io.github.gromoff97.awium.OptionalConditions.*;
                 import io.github.gromoff97.awium.Condition;
@@ -486,13 +487,13 @@ class CompilationContractTest {
                             OptionalSource<Predicate<String>> predicates,
                             Predicate<String> expectedPredicate,
                             OptionalSource<Object> objects, OptionalSource<String> strings) {
-                        Class<?> classValue = await(classes).until(hasValue(expectedClass));
+                        Class<?> classValue = await(classes).until(hasValue(equalTo(expectedClass)));
                         Condition<String, String> conditionValue =
-                                await(conditions).until(OptionalConditions.<Condition<String, String>>hasValue(expectedCondition));
+                                await(conditions).until(hasValue(equalTo(expectedCondition)));
                         Predicate<String> predicateValue =
-                                await(predicates).until(OptionalConditions.<Predicate<String>>hasValue(expectedPredicate));
+                                await(predicates).until(hasValue(equalTo(expectedPredicate)));
                         String typed = await(objects).until(hasValue(instanceOf(String.class)));
-                        String matching = await(strings).until(hasValue(value -> !value.isBlank()));
+                        String matching = await(strings).until(hasValue(matches(value -> !value.isBlank())));
                         String satisfying = await(strings).until(hasValue(equalTo("ready")));
                         Integer transformed = await(strings).until(hasValue(yields(String::length)));
                     }
@@ -529,7 +530,7 @@ class CompilationContractTest {
                         await(text).until(matchesRegex("x"));
                         await(text).until(StringConditions.length(1));
                         await(object).until(matches(value -> true));
-                        await(optional).until(hasValue("x"));
+                        await(optional).until(hasValue(equalTo("x")));
                         await(collection).until(CollectionConditions.nonEmpty);
                         await(collection).until(single);
                         await(collection).until(all(value -> true));

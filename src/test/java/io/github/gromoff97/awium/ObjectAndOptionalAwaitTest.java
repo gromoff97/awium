@@ -81,7 +81,7 @@ class ObjectAndOptionalAwaitTest {
         var equalValue = new Object();
 
         assertSame(equalValue, await((OptionalSource<Object>)
-                () -> Optional.of(equalValue)).usingTime(pollingTime, pollingTime).until(hasValue(equalValue)));
+                () -> Optional.of(equalValue)).usingTime(pollingTime, pollingTime).until(hasValue(equalTo(equalValue))));
     }
 
     @Test
