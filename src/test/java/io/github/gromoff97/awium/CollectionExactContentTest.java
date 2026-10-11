@@ -50,6 +50,28 @@ class CollectionExactContentTest {
     }
 
     @Test
+    void exactContentRequiresEqualSizesWithoutStartingTraversal() {
+        for (var elements : List.of(List.<String>of(), List.of("a"), List.of("a", "b", "c"))) {
+            for (boolean negative : List.of(false, true)) {
+                for (boolean anyOrder : List.of(false, true)) {
+                    var actual = new ArrayList<>(elements) {
+                        @Override
+                        public Iterator<String> iterator() {
+                            throw new AssertionError("different sizes must not start traversal");
+                        }
+                    };
+                    PreservingCondition<? super ArrayList<String>> condition = anyOrder
+                            ? negative ? doesNotContainExactlyInAnyOrder("a", "b") : containsExactlyInAnyOrder("a", "b")
+                            : negative ? doesNotContainExactly("a", "b") : containsExactly("a", "b");
+                    var evaluation = evaluate(condition, actual);
+                    assertEquals(negative ? Satisfied.class : Unsatisfied.class, evaluation.getClass());
+                    if (negative) assertSame(actual, result(evaluation));
+                }
+            }
+        }
+    }
+
+    @Test
     void onlyElementsRejectMissingAndExtraValuesButIgnoreDuplicates() {
         for (var condition : List.of(containsOnly("a", "b", "a"), containsOnly(List.of("a", "b", "a")))) {
             assertStatus(condition, List.of(), Unsatisfied.class);

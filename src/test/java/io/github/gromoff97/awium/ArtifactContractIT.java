@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.lang.module.ModuleFinder;
 import java.lang.module.ModuleReference;
+import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -19,6 +20,7 @@ import static io.github.gromoff97.awium.CompilationSupport.compilesModule;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.Files.isRegularFile;
 import static java.util.Objects.requireNonNull;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -84,6 +86,8 @@ class ArtifactContractIT {
         assertTrue(diagnostics.stream().noneMatch(terminals::contains), "FailureDiagnostics -> " + diagnostics);
         Set<String> rendering = classes.getOrDefault("ValueRendering", Set.of());
         assertTrue(rendering.stream().allMatch("ValueRendering"::equals), "ValueRendering -> " + rendering);
+        Set<String> callbacks = classes.getOrDefault("CheckedCalls", Set.of());
+        assertTrue(callbacks.stream().allMatch("CheckedCalls"::equals), "CheckedCalls -> " + callbacks);
     }
 
     @Test
@@ -239,6 +243,48 @@ class ArtifactContractIT {
                     int length(String value) throws IOException { return value.length(); }
                 }
                 """, JAR));
+    }
+
+    @Test
+    void packagedJarExecutesConsumerCodeInAnIndependentClassLoader(@TempDir Path directory) throws Exception {
+        assertTrue(compiles(directory, """
+                import io.github.gromoff97.awium.AwaitResult;
+                import io.github.gromoff97.awium.Source;
+                import java.io.IOException;
+                import java.util.List;
+                import java.util.Optional;
+                import static io.github.gromoff97.awium.Await.await;
+                import static io.github.gromoff97.awium.CollectionConditions.*;
+                import static io.github.gromoff97.awium.Conditions.*;
+                import static io.github.gromoff97.awium.OptionalConditions.*;
+                import static java.time.Duration.ofNanos;
+
+                public final class Contract {
+                    public static Object[] run() {
+                        var values = List.of("ready");
+                        String optional = await(() -> Optional.of("ready")).until(present.because("optional %s", "value"));
+                        String selected = await(() -> values).until(single.because("one value"));
+                        int length = await(Contract::text).until(yields(Contract::length));
+                        String narrowed = await((Source<Object>) Contract::text).until(instanceOf(String.class));
+                        long[] time = {0};
+                        List<String> stages = await(Contract::text).usingTime(() -> time[0], nanos -> time[0] += nanos).every(ofNanos(1)).upTo(ofNanos(5)).until(
+                                equalTo("ready"), equalTo("ready"));
+                        boolean preserved = await(() -> values).until(asserted(actual -> {
+                            if (actual.size() != 1) throw new AssertionError("one value expected");
+                        })) == values;
+                        AwaitResult<Optional<String>, String> result = await(() -> Optional.of("ready")).tryUntil(present);
+                        String captured = ((AwaitResult.Satisfied<Optional<String>, String>) result).result();
+                        return new Object[]{optional, selected, length, narrowed, stages, preserved, captured};
+                    }
+                    private static String text() throws IOException { return "ready"; }
+                    private static int length(String value) throws IOException { return value.length(); }
+                }
+                """, JAR));
+        try (var loader = new URLClassLoader(new java.net.URL[]{directory.toUri().toURL(), JAR.toUri().toURL()},
+                ClassLoader.getPlatformClassLoader())) {
+            Object[] result = (Object[]) loader.loadClass("Contract").getMethod("run").invoke(null);
+            assertArrayEquals(new Object[]{"ready", "ready", 5, "ready", List.of("ready", "ready"), true, "ready"}, result);
+        }
     }
 
     @Test

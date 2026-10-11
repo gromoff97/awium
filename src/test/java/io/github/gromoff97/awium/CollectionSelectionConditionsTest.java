@@ -184,6 +184,33 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
+    void impossibleSequenceLengthDoesNotReenterContainerCallbacks() {
+        for (var elements : List.of(List.<Integer>of(), List.of(1), List.of(1, 2))) {
+            for (boolean negative : List.of(false, true)) {
+                var actual = new ArrayList<>(elements) {
+                    private int sizeReads;
+
+                    @Override
+                    public int size() {
+                        if (++sizeReads > 1) throw new AssertionError("an impossible sequence must not reenter size");
+                        return super.size();
+                    }
+
+                    @Override
+                    public Integer get(int index) {
+                        throw new AssertionError("an impossible sequence must not retrieve elements");
+                    }
+                };
+                var condition = negative ? CollectionConditions.doesNotContainSequence(1, 2, 3)
+                        : CollectionConditions.containsSequence(1, 2, 3);
+                var evaluation = evaluate(condition, actual);
+                assertEquals(negative ? Satisfied.class : Unsatisfied.class, evaluation.getClass());
+                if (negative) assertSame(actual, ((Satisfied<?>) evaluation).result());
+            }
+        }
+    }
+
+    @Test
     void selectorsCoverMissingNullAndInvalidPositions() {
         assertEquals(Unsatisfied.class, evaluate(first, List.of()).getClass());
         assertEquals(Unsatisfied.class, evaluate(last, null).getClass());

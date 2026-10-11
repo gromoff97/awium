@@ -34,10 +34,10 @@ public final class StringConditions {
     }
 
     public static PreservingCondition<String> containsIgnoringCase(String expected) {
-        String fragment = requireNonNull(expected, "expected string must not be null");
+        requireNonNull(expected, "expected string must not be null");
         return matching("string contains expected string ignoring case",
-                "string did not contain expected string ignoring case", expectedReference(fragment),
-                actual -> containsIgnoringCase(actual, fragment));
+                "string did not contain expected string ignoring case", expectedReference(expected),
+                actual -> containsIgnoringCase(actual, expected));
     }
 
     public static PreservingCondition<String> startsWith(String prefix) {
@@ -68,8 +68,8 @@ public final class StringConditions {
         return matchesRegex(Pattern.compile(requireNonNull(regex, "regex must not be null")));
     }
 
-    public static PreservingCondition<String> matchesRegex(Pattern pattern) {
-        Pattern expected = requireNonNull(pattern, "pattern must not be null");
+    public static PreservingCondition<String> matchesRegex(Pattern expected) {
+        requireNonNull(expected, "pattern must not be null");
         return matching("string matches expected pattern", "string did not match expected pattern", expectedReference(expected),
                 actual -> expected.matcher(actual).matches());
     }
@@ -78,8 +78,8 @@ public final class StringConditions {
         return doesNotMatchRegex(Pattern.compile(requireNonNull(regex, "regex must not be null")));
     }
 
-    public static PreservingCondition<String> doesNotMatchRegex(Pattern pattern) {
-        Pattern unexpected = requireNonNull(pattern, "pattern must not be null");
+    public static PreservingCondition<String> doesNotMatchRegex(Pattern unexpected) {
+        requireNonNull(unexpected, "pattern must not be null");
         return matching("string does not match unexpected pattern", "string matched unexpected pattern", unexpectedReference(unexpected),
                 actual -> !unexpected.matcher(actual).matches());
     }
