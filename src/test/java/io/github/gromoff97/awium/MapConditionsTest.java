@@ -46,6 +46,18 @@ class MapConditionsTest {
     }
 
     @Test
+    void onlyKeysRejectMissingAndExtraKeysButIgnoreExpectedDuplicates() {
+        var condition = containsOnlyKeys("a", "b", "a");
+        assertStatus(condition, Map.of(), Unsatisfied.class);
+        assertStatus(condition, map("a", "1"), Unsatisfied.class);
+        assertStatus(condition, map("b", "2"), Unsatisfied.class);
+        assertStatus(condition, map("a", "1", "b", "2", "c", "3"), Unsatisfied.class);
+        assertStatus(condition, map("b", "2", "a", "1"), Satisfied.class);
+        assertStatus(containsOnlyKeys(), Map.of(), Satisfied.class);
+        assertStatus(containsOnlyKeys(), map("a", "1"), Unsatisfied.class);
+    }
+
+    @Test
     void mapEqualityIsActualFirstArrayAwareAndKeyFirst() {
         Directional actualKey = new Directional(true);
         Directional expectedKey = new Directional(false);

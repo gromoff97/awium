@@ -51,6 +51,19 @@ class CollectionExactContentTest {
     }
 
     @Test
+    void onlyElementsRejectMissingAndExtraValuesButIgnoreDuplicates() {
+        for (var condition : List.of(containsOnly("a", "b", "a"), containsOnly(List.of("a", "b", "a")))) {
+            assertStatus(condition, List.of(), Unsatisfied.class);
+            assertStatus(condition, List.of("a"), Unsatisfied.class);
+            assertStatus(condition, List.of("b"), Unsatisfied.class);
+            assertStatus(condition, List.of("a", "b", "c"), Unsatisfied.class);
+            assertStatus(condition, List.of("b", "a", "b"), Satisfied.class);
+        }
+        assertStatus(containsOnly(), List.of(), Satisfied.class);
+        assertStatus(containsOnly(), List.of("a"), Unsatisfied.class);
+    }
+
+    @Test
     void exactComparisonRejectsChangesBetweenSizeAndTraversal() {
         for (boolean shrink : List.of(false, true)) {
             for (boolean negative : List.of(false, true)) {

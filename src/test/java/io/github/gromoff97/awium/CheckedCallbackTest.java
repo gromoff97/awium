@@ -168,6 +168,107 @@ class CheckedCallbackTest {
     }
 
     @Test
+    void interruptionDuringIterationSkipsPredicatesAndComparators() {
+        var actual = new ArrayList<>(List.of("first", "second")) {
+            @Override
+            public Iterator<String> iterator() {
+                Iterator<String> delegate = super.iterator();
+                return new Iterator<>() {
+                    private boolean signalled;
+
+                    @Override
+                    public boolean hasNext() { return delegate.hasNext(); }
+
+                    @Override
+                    public String next() {
+                        if (!signalled) {
+                            signalled = true;
+                            Thread.currentThread().interrupt();
+                        }
+                        return delegate.next();
+                    }
+                };
+            }
+
+            @Override
+            public String toString() { return "signalling iterator"; }
+        };
+        var time = new FakeTime(0);
+        var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
+        List<Function<Predicate<String>, AwaitResult<?, ?>>> waits = List.of(
+                predicate -> waiting.tryUntil(CollectionConditions.first(predicate)),
+                predicate -> waiting.tryUntil(CollectionConditions.all(predicate)),
+                predicate -> waiting.tryUntil(CollectionConditions.any(predicate)),
+                predicate -> waiting.tryUntil(CollectionConditions.none(predicate)),
+                predicate -> waiting.tryUntil(CollectionConditions.sorted((left, right) -> {
+                    predicate.test(left);
+                    return 0;
+                })));
+        for (var wait : waits) {
+            int[] calls = {0};
+            try {
+                var result = wait.apply(value -> {
+                    calls[0]++;
+                    Thread.interrupted();
+                    return true;
+                });
+                var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+                assertEquals(INTERRUPTED, failure.reason());
+                assertInstanceOf(InterruptedException.class, failure.cause());
+                assertEquals(0, calls[0]);
+                assertTrue(Thread.currentThread().isInterrupted());
+            } finally {
+                Thread.interrupted();
+            }
+        }
+    }
+
+    @Test
+    void interruptionDuringKeyExtractionSkipsEqualityCallbacks() {
+        int[] comparisons = {0};
+        Object key = new Object() {
+            @Override
+            public boolean equals(Object other) {
+                comparisons[0]++;
+                Thread.interrupted();
+                return true;
+            }
+
+            @Override
+            public int hashCode() { throw new AssertionError("hashCode must not be called"); }
+        };
+        var entry = new AbstractMap.SimpleImmutableEntry<Object, String>(key, "ready") {
+            @Override
+            public Object getKey() {
+                Thread.currentThread().interrupt();
+                return super.getKey();
+            }
+        };
+        var actual = new ProbeContainers.EntryMap<Object, String>(List.of(entry));
+        var expectedKey = new Object();
+        var time = new FakeTime(0);
+        var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
+        List<Supplier<AwaitResult<?, ?>>> waits = List.of(
+                () -> waiting.tryUntil(valueFor(expectedKey)),
+                () -> waiting.tryUntil(valueFor(expectedKey, equalTo("ready"))),
+                () -> waiting.tryUntil(MapConditions.onlyValueFor(expectedKey)),
+                () -> waiting.tryUntil(MapConditions.containsEntries(expectedKey, "ready")),
+                () -> waiting.tryUntil(MapConditions.doesNotContainEntries(expectedKey, "ready")));
+        for (var wait : waits) {
+            comparisons[0] = 0;
+            try {
+                var failure = assertInstanceOf(AwaitResult.Failed.class, wait.get()).failure();
+                assertEquals(INTERRUPTED, failure.reason());
+                assertInstanceOf(InterruptedException.class, failure.cause());
+                assertEquals(0, comparisons[0]);
+                assertTrue(Thread.currentThread().isInterrupted());
+            } finally {
+                Thread.interrupted();
+            }
+        }
+    }
+
+    @Test
     void interruptionDuringEntryExtractionSkipsEveryEntryPredicate() {
         for (boolean key : List.of(false, true)) {
             int[] valueReads = {0};

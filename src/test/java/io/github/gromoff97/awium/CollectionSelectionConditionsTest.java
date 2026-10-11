@@ -187,6 +187,8 @@ class CollectionSelectionConditionsTest {
     void selectorsCoverMissingNullAndInvalidPositions() {
         assertEquals(Unsatisfied.class, evaluate(first, List.of()).getClass());
         assertEquals(Unsatisfied.class, evaluate(last, null).getClass());
+        assertEquals(Unsatisfied.class, evaluate(CollectionConditions.<String>first(value -> true), null).getClass());
+        assertEquals(Unsatisfied.class, evaluate(CollectionConditions.<String>element(0), null).getClass());
         assertEquals(Unsatisfied.class, evaluate(CollectionConditions.<String>first(
                 value -> value.startsWith("r")), List.of("failed")).getClass());
         assertEquals(Unsatisfied.class, evaluate(CollectionConditions.<String>last(
