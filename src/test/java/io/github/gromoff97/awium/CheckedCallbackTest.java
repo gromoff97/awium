@@ -147,6 +147,41 @@ class CheckedCallbackTest {
     }
 
     @Test
+    void interruptionDuringSizeExtractionSkipsTheIterator() {
+        for (boolean throwing : List.of(false, true)) {
+            int[] iteratorCalls = {0};
+            var actual = new ArrayList<>(List.of("ready")) {
+                @Override
+                public int size() {
+                    Thread.currentThread().interrupt();
+                    return super.size();
+                }
+
+                @Override
+                public Iterator<String> iterator() {
+                    iteratorCalls[0]++;
+                    Thread.interrupted();
+                    return super.iterator();
+                }
+
+                @Override
+                public String toString() { return "signalling collection"; }
+            };
+            try {
+                var waiting = await(() -> actual);
+                Throwable cause = throwing
+                        ? assertFailure(INTERRUPTED, () -> waiting.until(single)).getCause()
+                        : assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(single)).failure().cause();
+                assertInstanceOf(InterruptedException.class, cause);
+                assertEquals(0, iteratorCalls[0]);
+                assertTrue(Thread.currentThread().isInterrupted());
+            } finally {
+                Thread.interrupted();
+            }
+        }
+    }
+
+    @Test
     void interruptionDuringIndexedExtractionSkipsThePredicate() {
         var actual = new ArrayList<>(List.of("ready")) {
             @Override

@@ -8,6 +8,7 @@ import java.util.concurrent.Callable;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import static io.github.gromoff97.awium.CheckedCalls.checkInterruption;
 import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
@@ -166,7 +167,7 @@ public final class Conditions {
     }
 
     private static <Value extends Comparable<? super Value>> int compare(Value actual, Value bound) throws InterruptedException {
-        ValueMatching.checkInterruption();
+        checkInterruption();
         return actual.compareTo(bound);
     }
 

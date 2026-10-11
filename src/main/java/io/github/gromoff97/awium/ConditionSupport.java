@@ -13,6 +13,7 @@ import java.util.function.IntPredicate;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 
+import static io.github.gromoff97.awium.CheckedCalls.call;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static java.util.Objects.requireNonNull;
@@ -110,7 +111,7 @@ final class ConditionSupport {
             if (actual == null) {
                 return unsatisfied(subject + " was null");
             }
-            int size = sizeOf.applyAsInt(actual);
+            int size = call(() -> sizeOf.applyAsInt(actual));
             return matches.test(size) ? satisfied(actual) : unsatisfied(subject + " size was " + size);
         });
     }
@@ -121,14 +122,15 @@ final class ConditionSupport {
         return new Condition<>(ConditionDefinition.required(nested).metadata.prefixed(subject + " has a single matching value: "), () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> actual == null ? unsatisfied(subject + " was null")
-                    : evaluateSingle(elements.apply(actual), evaluator);
+                    : evaluateSingle(call(() -> elements.apply(actual)), evaluator);
         });
     }
 
     private static <Element, Result> ConditionResult<? extends Result> evaluateSingle(Iterable<Element> values,
-            Function<? super Element, ? extends ConditionResult<? extends Result>> evaluator) {
+            Function<? super Element, ? extends ConditionResult<? extends Result>> evaluator) throws Exception {
         ConditionResult<? extends Result> result = unsatisfied("no value matched");
-        for (Element value : values) {
+        for (var iterator = call(values::iterator); call(iterator::hasNext);) {
+            Element value = call(iterator::next);
             var evaluated = requireNonNull(evaluator.apply(value), "condition returned null ConditionResult");
             if (evaluated instanceof ConditionResult.Uncontrolled<?>) return evaluated;
             if (evaluated instanceof ConditionResult.Satisfied<?>

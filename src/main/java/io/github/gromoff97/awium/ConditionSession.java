@@ -4,7 +4,7 @@ import java.util.concurrent.Callable;
 import java.util.function.Function;
 
 import static io.github.gromoff97.awium.ConditionResult.uncontrolled;
-import static io.github.gromoff97.awium.ValueMatching.checkInterruption;
+import static io.github.gromoff97.awium.CheckedCalls.checkInterruption;
 import static java.util.Objects.requireNonNull;
 
 /** Lazily executes a condition, converting nonfatal callback failures into uncontrolled results. */

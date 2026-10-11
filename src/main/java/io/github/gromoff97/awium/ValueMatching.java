@@ -6,6 +6,8 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 
+import static io.github.gromoff97.awium.CheckedCalls.call;
+import static io.github.gromoff97.awium.CheckedCalls.checkInterruption;
 import static java.util.Objects.deepEquals;
 
 final class ValueMatching {
@@ -18,10 +20,9 @@ final class ValueMatching {
     }
 
     static <Value> boolean matchesAny(Iterable<Value> values, CheckedFunction<? super Value, Boolean> matches) throws Exception {
-        for (Value value : values) {
-            checkInterruption();
-            boolean matching = matches.apply(value);
-            checkInterruption();
+        for (var iterator = call(values::iterator); call(iterator::hasNext);) {
+            Value value = call(iterator::next);
+            boolean matching = call(() -> matches.apply(value));
             if (matching) {
                 return true;
             }
@@ -39,11 +40,11 @@ final class ValueMatching {
         if (remainingExpected.isEmpty()) {
             return true;
         }
-        for (Actual value : actual) {
+        for (var iterator = call(actual::iterator); call(iterator::hasNext);) {
+            Actual value = call(iterator::next);
             Iterator<Expected> candidates = remainingExpected.iterator();
             while (candidates.hasNext()) {
-                checkInterruption();
-                if (matches.test(value, candidates.next())) {
+                if (call(() -> matches.test(value, candidates.next()))) {
                     candidates.remove();
                 }
             }
@@ -57,13 +58,12 @@ final class ValueMatching {
     static <Actual, Expected> boolean exactly(Iterator<Actual> actual, Collection<Expected> expected,
             CheckedBiPredicate<? super Actual, ? super Expected> matches) throws Exception {
         var remainingExpected = new ArrayList<>(expected);
-        while (actual.hasNext()) {
-            Actual value = actual.next();
+        while (call(actual::hasNext)) {
+            Actual value = call(actual::next);
             boolean found = false;
             Iterator<Expected> candidates = remainingExpected.iterator();
             while (candidates.hasNext()) {
-                checkInterruption();
-                if (matches.test(value, candidates.next())) {
+                if (call(() -> matches.test(value, candidates.next()))) {
                     candidates.remove();
                     found = true;
                     break;
@@ -114,11 +114,5 @@ final class ValueMatching {
             }
         }
         return true;
-    }
-
-    static void checkInterruption() throws InterruptedException {
-        if (Thread.currentThread().isInterrupted()) {
-            throw new InterruptedException("caller thread interrupt flag was set");
-        }
     }
 }

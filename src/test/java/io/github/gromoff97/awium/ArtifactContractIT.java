@@ -246,7 +246,7 @@ class ArtifactContractIT {
         for (Class<?> internal : List.of(ConditionSupport.class, ConditionDefinition.class, ConditionSession.class,
                 ConditionMetadata.class, CapturedEvaluator.class, WaitEngine.class, WaitConfiguration.class,
                 WaitCompletion.class, AttemptHistory.class,
-                FailureDiagnostics.class, ValueMatching.class, ValueRendering.class)) {
+                FailureDiagnostics.class, ValueMatching.class, ValueRendering.class, CheckedCalls.class)) {
             assertFalse(java.lang.reflect.Modifier.isPublic(internal.getModifiers()), internal.getName());
         }
         for (boolean modulePath : List.of(false, true)) {
