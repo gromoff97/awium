@@ -31,27 +31,27 @@ final class CompilationSupport {
 
     static boolean compiles(Path directory, String source) throws IOException {
         return compiles(directory, source,
-                Path.of(System.getProperty("java.class.path")));
+                System.getProperty("java.class.path"), null);
     }
 
     static boolean compiles(Path directory, String source,
             String expectedMissingMethod) throws IOException {
         return compiles(directory, source,
-                Path.of(System.getProperty("java.class.path")), expectedMissingMethod);
+                System.getProperty("java.class.path"), expectedMissingMethod);
     }
 
     static boolean compiles(Path directory, String source, Path classpath)
             throws IOException {
-        return compiles(directory, source, classpath, null);
+        return compiles(directory, source, classpath.toString(), null);
     }
 
-    private static boolean compiles(Path directory, String source, Path classpath,
+    private static boolean compiles(Path directory, String source, String classpath,
             String expectedMissingMethod) throws IOException {
         Path sourceFile = directory.resolve("Contract.java");
         writeString(sourceFile, source);
         return compile(List.of("--release", "21", "-Xlint:all",
                         "-Werror", "-proc:none", "-classpath",
-                        classpath.toString(), "-d", directory.toString()),
+                        classpath, "-d", directory.toString()),
                 expectedMissingMethod, TYPE_REJECTION_CODES, sourceFile);
     }
 

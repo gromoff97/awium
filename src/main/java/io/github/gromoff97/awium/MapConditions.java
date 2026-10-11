@@ -10,6 +10,7 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiPredicate;
+import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
@@ -313,7 +314,7 @@ public final class MapConditions {
                 .withContext(new Context.Expectation("map contains the expected key", expectedReference(key)));
     }
 
-    private static PreservingCondition<Map<?, ?>> sized(int bound, java.util.function.IntPredicate matches,
+    private static PreservingCondition<Map<?, ?>> sized(int bound, IntPredicate matches,
             String description) {
         return ConditionSupport.sized("map", bound, matches, description, Map::size);
     }

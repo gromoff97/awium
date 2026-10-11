@@ -3,6 +3,7 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Reference;
 import java.util.List;
+import java.util.function.IntPredicate;
 import java.util.regex.Pattern;
 
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
@@ -130,7 +131,7 @@ public final class StringConditions {
                 actual -> actual.length() >= lowerBound && actual.length() <= upperBound);
     }
 
-    private static PreservingCondition<String> matchingLength(int bound, java.util.function.IntPredicate matches,
+    private static PreservingCondition<String> matchingLength(int bound, IntPredicate matches,
             String relation, String mismatch) {
         if (bound < 0) {
             throw new IllegalArgumentException("length must be non-negative");

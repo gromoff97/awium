@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import java.util.List;
+import java.util.function.IntFunction;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.AwaitAttempt.Phase.ACQUISITION;
@@ -162,8 +163,7 @@ class TryUntilHistoryTest {
     }
 
     private static AwaitResult<Object, Object> recordUnsatisfied(
-            io.github.gromoff97.awium.Source<Object> source,
-            java.util.function.IntFunction<io.github.gromoff97.awium.ConditionResult<Object>> evaluation) {
+            Source<Object> source, IntFunction<ConditionResult<Object>> evaluation) {
         var time = new FakeTime(0);
         int[] calls = {0};
         return timedAwait(source, config(1, 2, 0), time, time).tryUntil(condition("not ready", actual -> evaluation.apply(calls[0]++)));

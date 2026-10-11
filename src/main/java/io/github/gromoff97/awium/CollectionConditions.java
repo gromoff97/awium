@@ -11,6 +11,8 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.SequencedCollection;
+import java.util.function.Function;
+import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
@@ -368,7 +370,7 @@ public final class CollectionConditions {
     }
 
     private static SelectedCondition<SequencedCollection<?>, Collection<?>> position(String name,
-            java.util.function.Function<SequencedCollection<?>, ?> selector) {
+            Function<SequencedCollection<?>, ?> selector) {
         return selected("collection has a " + name + " element", actual -> {
             if (actual == null) {
                 return unsatisfied("collection was null");
@@ -379,7 +381,7 @@ public final class CollectionConditions {
         });
     }
 
-    private static PreservingCondition<Collection<?>> sized(int bound, java.util.function.IntPredicate matches,
+    private static PreservingCondition<Collection<?>> sized(int bound, IntPredicate matches,
             String description) {
         return ConditionSupport.sized("collection", bound, matches, description, Collection::size);
     }

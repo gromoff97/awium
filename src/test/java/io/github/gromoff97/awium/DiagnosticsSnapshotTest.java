@@ -1073,7 +1073,7 @@ class DiagnosticsSnapshotTest {
         return Await.complete(outcome, new ConditionMetadata(description, explanation, null), configuration);
     }
 
-    private static Condition<String, java.util.List<String>> lifecycle(
+    private static Condition<String, List<String>> lifecycle(
             Condition<String, String> pending,
             Condition<String, String> completed) {
         return captured(status("created", "payment status is created", null),

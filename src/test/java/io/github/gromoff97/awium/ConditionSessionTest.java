@@ -3,6 +3,7 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -75,7 +76,7 @@ class ConditionSessionTest {
         PreservingCondition<Integer> preserving =
                 Conditions.matches(value -> value > 0);
         SelectedCondition<Collection<?>, ?> selected = CollectionConditions.single;
-        Condition<Collection<?>, java.util.List<Object>> sequence =
+        Condition<Collection<?>, List<Object>> sequence =
                 captured(CollectionConditions.single, CollectionConditions.single);
 
         assertEquals("counted", ordinary.metadata.description());
