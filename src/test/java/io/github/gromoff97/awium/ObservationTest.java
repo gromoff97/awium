@@ -217,6 +217,68 @@ class ObservationTest {
     }
 
     @Test
+    void observationClockCannotEraseTheSourceInterruption() {
+        var actual = new Object();
+        int[] sourceCalls = {0};
+        int[] conditionCalls = {0};
+        var outcome = new WaitEngine<Object, Object>(config(1, 20, 0), () -> {
+            interrupted();
+            return 0;
+        }, nanos -> { throw new AssertionError("parker must not be called"); }, () -> {
+            sourceCalls[0]++;
+            currentThread().interrupt();
+            return actual;
+        }, Conditions.<Object, Object>condition("ready", value -> {
+            conditionCalls[0]++;
+            return satisfied(value);
+        }).newSession()).waitFor();
+
+        var failure = assertInstanceOf(WaitCompletion.Uncontrolled.class, outcome);
+        var attempt = assertInstanceOf(AwaitAttempt.Outcome.SourceInterrupted.class, failure.attempt().outcome());
+        assertSame(actual, attempt.observed());
+        assertEquals(1, sourceCalls[0]);
+        assertEquals(0, conditionCalls[0]);
+        assertTrue(currentThread().isInterrupted());
+    }
+
+    @Test
+    void clockFailuresRetainTheInterruptFlagAtEveryExecutionPhase() {
+        for (String phase : List.of("initial", "source", "condition", "waiting")) {
+            var failure = new IllegalStateException("clock failed");
+            boolean[] armed = {phase.equals("initial")};
+            try {
+                if (armed[0]) currentThread().interrupt();
+                assertSame(failure, assertThrows(IllegalStateException.class, () ->
+                        new WaitEngine<Object, Object>(config(1, 20, 0), () -> {
+                            if (armed[0]) {
+                                interrupted();
+                                throw failure;
+                            }
+                            return 0;
+                        }, nanos -> {
+                            armed[0] = true;
+                            currentThread().interrupt();
+                        }, () -> {
+                            if (phase.equals("source")) {
+                                armed[0] = true;
+                                currentThread().interrupt();
+                            }
+                            return new Object();
+                        }, Conditions.<Object, Object>condition("ready", value -> {
+                            if (phase.equals("condition")) {
+                                armed[0] = true;
+                                currentThread().interrupt();
+                            }
+                            return ConditionResult.unsatisfied("not yet");
+                        }).newSession()).waitFor()));
+                assertTrue(currentThread().isInterrupted(), phase);
+            } finally {
+                interrupted();
+            }
+        }
+    }
+
+    @Test
     void conditionFlagAfterNormalReturnWinsBeforeInterpretation() {
         var actual = new Object();
         var attempt = attempt(() -> actual, value -> {
