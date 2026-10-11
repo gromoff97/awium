@@ -97,7 +97,7 @@ record WaitEngine<Observed, Result>(WaitConfiguration configuration, LongSupplie
             if (failed(attempt)) {
                 return new WaitCompletion.Uncontrolled<>(attempt);
             }
-            if (unsatisfied(attempt)) {
+            if (!satisfied(attempt)) {
                 return new WaitCompletion.PersistenceFailure<>(acquiredAt - started, attempt);
             }
             if (reached(completed, deadline)) {
@@ -224,13 +224,9 @@ record WaitEngine<Observed, Result>(WaitConfiguration configuration, LongSupplie
                 && value.evaluation() instanceof ConditionResult.Satisfied<?>;
     }
 
-    private static boolean unsatisfied(AwaitAttempt<?, ?> attempt) {
-        return attempt.outcome() instanceof AwaitAttempt.Outcome.Evaluated<?, ?> value
-                && value.evaluation() instanceof ConditionResult.Unsatisfied<?>;
-    }
-
     private static boolean failed(AwaitAttempt<?, ?> attempt) {
-        return !satisfied(attempt) && !unsatisfied(attempt);
+        return !(attempt.outcome() instanceof AwaitAttempt.Outcome.Evaluated<?, ?> value)
+                || value.evaluation() instanceof ConditionResult.Uncontrolled<?>;
     }
 
     private long completedNanos(AwaitAttempt<?, ?> attempt) {

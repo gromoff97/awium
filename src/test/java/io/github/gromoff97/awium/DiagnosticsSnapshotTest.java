@@ -579,6 +579,57 @@ class DiagnosticsSnapshotTest {
         assertEquals(1, expected.calls);
     }
 
+
+    @Test
+    void emergencyDiagnosticsReuseEveryValueAfterTheOriginalCauseMessageFails() {
+        for (boolean capture : List.of(false, true)) {
+            int[] renders = {0, 0, 0};
+            Object[] values = new Object[3];
+            List<String> labels = List.of("root operand", "observed value", "stage operand");
+            for (int index = 0; index < values.length; index++) {
+                int position = index;
+                values[index] = new Object() {
+                    @Override
+                    public String toString() {
+                        renders[position]++;
+                        return labels.get(position);
+                    }
+                };
+            }
+            int[] messageCalls = {0};
+            var diagnostic = new IllegalStateException("cause message failed");
+            var original = new AssertionError("not ready") {
+                @Override
+                public String getMessage() {
+                    messageCalls[0]++;
+                    throw diagnostic;
+                }
+            };
+            var context = new ConditionResult.Context.Sequence(1, 2, 2, "second stage", null,
+                    new ConditionResult.Reference<>("Expected", values[2]));
+            var check = ConditionSupport.<Object, Object>condition("ordered conditions",
+                    new ConditionResult.Reference<>("Expected", values[0]),
+                    actual -> ConditionResult.<Object>assertionUnsatisfied("not ready", original).withContext(context));
+            var time = new FakeTime(0);
+            var waiting = timedAwait(() -> {
+                time.advanceNanos(2);
+                return values[1];
+            }, config(1, 2, 0), time, time);
+
+            AwaitFailure failure = capture
+                    ? ((AwaitResult.Failed<?, ?>) waiting.tryUntil(check)).failure()
+                    : assertThrows(AwaitExecutionException.class, () -> waiting.until(check)).failure();
+            assertEquals(DIAGNOSTICS_FAILED, failure.reason());
+            assertSame(diagnostic, failure.cause());
+            assertEquals(List.of(original), failure.suppressed());
+            assertTrue(failure.message().contains("Expected: root operand"));
+            assertTrue(failure.message().contains("Actual: observed value"));
+            assertTrue(failure.message().contains("Expected: stage operand"));
+            assertArrayEquals(new int[]{1, 1, 1}, renders);
+            assertEquals(1, messageCalls[0]);
+        }
+    }
+
     @Test
     void diagnosticRenderingFailureRetainsTheEngineCauseAsSuppressed() {
         var diagnosticCause = new IllegalStateException("toString failed");

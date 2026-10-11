@@ -257,12 +257,15 @@ final class FailureDiagnostics {
     }
 
     private void reference(StringBuilder out, Reference<?> reference,
-            boolean sequence, boolean emergency) {
+            boolean forSequence, boolean emergency) {
         if (reference != null) {
-            String cached = sequence ? sequenceReference : referenceValue;
-            field(out, reference.label(), emergency
-                    ? cached == null ? "<value unavailable: diagnostics failed>" : cached
-                    : referenceValue(reference, sequence));
+            String rendered = forSequence ? sequenceReference : referenceValue;
+            if (!emergency) {
+                rendered = renderValue(reference.value());
+                if (forSequence) sequenceReference = rendered;
+                else referenceValue = rendered;
+            }
+            field(out, reference.label(), rendered == null ? "<value unavailable: diagnostics failed>" : rendered);
         }
     }
 
@@ -320,16 +323,6 @@ final class FailureDiagnostics {
             if (ignored instanceof InterruptedException) currentThread().interrupt();
             return new ThrowableDiagnostic(typeName(failure), null);
         }
-    }
-
-    private String referenceValue(Reference<?> value, boolean sequence) {
-        String rendered = renderValue(value.value());
-        if (sequence) {
-            sequenceReference = rendered;
-        } else {
-            referenceValue = rendered;
-        }
-        return rendered;
     }
 
     private record ThrowableDiagnostic(String type, String message) {}
