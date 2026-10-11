@@ -108,6 +108,10 @@ record WaitEngine<Observed, Result>(WaitConfiguration configuration, LongSupplie
 
     private AwaitAttempt<Observed, Result> evaluate(AwaitAttempt.Phase phase, long number,
             long attemptStarted, long retrievalStarted) {
+        AwaitAttempt<Observed, Result> interrupted = interruptedBefore(phase, number, attemptStarted);
+        if (interrupted != null) {
+            return interrupted;
+        }
         Observed actual;
         try {
             actual = source.get();
@@ -182,6 +186,10 @@ record WaitEngine<Observed, Result>(WaitConfiguration configuration, LongSupplie
         long deadline = attemptStarted + delay;
         long remaining;
         while ((remaining = remaining(clock.getAsLong(), deadline)) > 0) {
+            AwaitAttempt<Observed, Result> interrupted = interruptedBefore(phase, number, attemptStarted);
+            if (interrupted != null) {
+                return interrupted;
+            }
             try {
                 parker.accept(remaining);
             } catch (VirtualMachineError | ThreadDeath fatal) {
@@ -189,7 +197,7 @@ record WaitEngine<Observed, Result>(WaitConfiguration configuration, LongSupplie
             } catch (Throwable failure) {
                 return waitingFailure(phase, number, attemptStarted, failure);
             }
-            AwaitAttempt<Observed, Result> interrupted = interruptedBefore(phase, number, attemptStarted);
+            interrupted = interruptedBefore(phase, number, attemptStarted);
             if (interrupted != null) {
                 return interrupted;
             }

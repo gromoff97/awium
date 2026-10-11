@@ -336,6 +336,58 @@ class WaitEngineTest {
     }
 
     @Test
+    void skipsSourceWhenRetrievalClockSetsInterruptFlag() {
+        int[] sourceCalls = {0};
+        LongSupplier clock = () -> {
+            currentThread().interrupt();
+            return 0;
+        };
+        var outcome = new WaitEngine<String, String>(config(5, 20, 0), clock,
+                nanos -> { throw new AssertionError("parker must not be called"); },
+                () -> { sourceCalls[0]++; return "actual"; },
+                Conditions.<String, String>condition("ready", ConditionResult::satisfied).newSession(), 0).waitFor();
+
+        var failure = assertInstanceOf(Uncontrolled.class, outcome);
+        var attempt = assertInstanceOf(AwaitAttempt.Outcome.WaitingFailed.class, failure.attempt().outcome());
+        assertEquals(0, sourceCalls[0]);
+        assertEquals(1, failure.attempt().number());
+        assertInstanceOf(InterruptedException.class, attempt.failure());
+        assertTrue(currentThread().isInterrupted());
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = {0, 10})
+    void skipsParkingWhenIntervalClockSetsInterruptFlag(long persistence) {
+        boolean[] evaluated = {false};
+        boolean[] completionRecorded = {false};
+        int[] sourceCalls = {0};
+        int[] parkCalls = {0};
+        LongSupplier clock = () -> {
+            if (evaluated[0]) {
+                if (completionRecorded[0]) currentThread().interrupt();
+                completionRecorded[0] = true;
+            }
+            return 0;
+        };
+        var outcome = new WaitEngine<String, String>(config(5, 20, persistence), clock,
+                nanos -> parkCalls[0]++, () -> { sourceCalls[0]++; return "actual"; },
+                Conditions.<String, String>condition("ready", actual -> {
+                    evaluated[0] = true;
+                    return persistence == 0 ? unsatisfied("not yet") : satisfied("ready");
+                }).newSession(), 0).waitFor();
+
+        var failure = assertInstanceOf(Uncontrolled.class, outcome);
+        var attempt = assertInstanceOf(AwaitAttempt.Outcome.WaitingFailed.class, failure.attempt().outcome());
+        assertEquals(1, sourceCalls[0]);
+        assertEquals(0, parkCalls[0]);
+        assertEquals(2, failure.attempt().number());
+        assertEquals(persistence == 0 ? AwaitAttempt.Phase.ACQUISITION : AwaitAttempt.Phase.PERSISTENCE,
+                failure.attempt().phase());
+        assertInstanceOf(InterruptedException.class, attempt.failure());
+        assertTrue(currentThread().isInterrupted());
+    }
+
+    @Test
     void fatalParkingSignalsEscapeUnchanged() {
         var time = new FakeTime(0);
         var fatal = new InternalError("fatal park");
