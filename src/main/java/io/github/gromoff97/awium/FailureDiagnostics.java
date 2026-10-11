@@ -5,6 +5,7 @@ import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.StringJoiner;
+import java.util.function.Supplier;
 
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static java.lang.Thread.currentThread;
@@ -296,7 +297,7 @@ final class FailureDiagnostics {
             String array = deepToString(new Object[]{value});
             return array.substring(1, array.length() - 1);
         }
-        return requireNonNull(String.valueOf(value),
+        return requireNonNull(preservingInterrupt(() -> String.valueOf(value)),
                 "value toString() must not return null");
     }
 
@@ -326,10 +327,20 @@ final class FailureDiagnostics {
                     out.append("[...]");
                 }
             } else {
-                out.append(value != null && value.getClass().isArray() ? renderValue(value) : String.valueOf(value));
+                out.append(value != null && value.getClass().isArray()
+                        ? renderValue(value) : preservingInterrupt(() -> String.valueOf(value)));
             }
         }
         return out.toString();
+    }
+
+    private static String preservingInterrupt(Supplier<String> rendering) {
+        boolean interrupted = currentThread().isInterrupted();
+        try {
+            return rendering.get();
+        } finally {
+            if (interrupted) currentThread().interrupt();
+        }
     }
 
     private static String typeName(Throwable failure) {
@@ -342,7 +353,7 @@ final class FailureDiagnostics {
     }
 
     private static String causeMessage(Throwable failure) {
-        String message = failure.getMessage();
+        String message = preservingInterrupt(failure::getMessage);
         if (message == null || message.isBlank()) {
             return null;
         }
