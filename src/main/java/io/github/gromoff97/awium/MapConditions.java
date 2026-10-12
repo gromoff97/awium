@@ -93,12 +93,12 @@ public final class MapConditions {
     }
 
     public static PreservingCondition<Map<?, ?>> sameSizeAs(Map<?, ?> expected) {
-        Map<?, ?> entries = requireNonNull(expected, "expected map must not be null");
+        requireNonNull(expected, "expected map must not be null");
         return preserving("map has the same size as expected map",
-                "map size did not match expected map", expectedReference(entries),
+                "map size did not match expected map", expectedReference(expected),
                 actual -> {
                     int size = call(actual::size);
-                    return size == call(entries::size);
+                    return size == call(expected::size);
                 });
     }
 

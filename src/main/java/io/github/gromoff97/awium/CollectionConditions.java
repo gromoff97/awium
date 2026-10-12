@@ -103,12 +103,12 @@ public final class CollectionConditions {
     }
 
     public static PreservingCondition<Collection<?>> sameSizeAs(Collection<?> expected) {
-        Collection<?> values = requireNonNull(expected, "expected collection must not be null");
+        requireNonNull(expected, "expected collection must not be null");
         return preserving("collection has the same size as expected collection",
-                "collection size did not match expected collection", expectedReference(values),
+                "collection size did not match expected collection", expectedReference(expected),
                 actual -> {
                     int size = call(actual::size);
-                    return size == call(values::size);
+                    return size == call(expected::size);
                 });
     }
 
