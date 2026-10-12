@@ -226,6 +226,9 @@ record WaitEngine<Observed, Result>(WaitConfiguration configuration, LongSupplie
         boolean interrupted = currentThread().isInterrupted();
         try {
             return clock.getAsLong();
+        } catch (Throwable failure) {
+            interrupted |= failure instanceof InterruptedException;
+            throw failure;
         } finally {
             if (interrupted) currentThread().interrupt();
         }

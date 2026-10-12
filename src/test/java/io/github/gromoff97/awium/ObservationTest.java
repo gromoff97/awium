@@ -292,6 +292,45 @@ class ObservationTest {
     }
 
     @Test
+    void clockInterruptionRestoresTheFlagAtEveryExecutionPhase() {
+        for (String phase : List.of("initial", "source", "condition", "waiting")) {
+            for (boolean capture : List.of(false, true)) {
+                var interruption = new InterruptedException("clock stopped");
+                boolean[] armed = {phase.equals("initial")};
+                int[] calls = {0, 0, 0};
+                var waiting = await(() -> {
+                    calls[0]++;
+                    if (phase.equals("source")) armed[0] = true;
+                    return new Object();
+                }).usingTime(() -> {
+                    if (armed[0]) return ObservationTest.<Long, RuntimeException>throwUnchecked(interruption);
+                    return 0;
+                }, nanos -> {
+                    calls[2]++;
+                    armed[0] = true;
+                }).every(ofNanos(1)).upTo(ofNanos(20));
+                var condition = condition("state", (Object actual) -> {
+                    calls[1]++;
+                    if (phase.equals("condition")) armed[0] = true;
+                    return unsatisfied("not ready");
+                });
+                try {
+                    assertSame(interruption, assertThrows(InterruptedException.class, () -> {
+                        if (capture) waiting.tryUntil(condition);
+                        else waiting.until(condition);
+                    }));
+                    assertTrue(currentThread().isInterrupted(), phase);
+                    assertEquals(phase.equals("initial") ? 0 : 1, calls[0]);
+                    assertEquals(phase.equals("condition") || phase.equals("waiting") ? 1 : 0, calls[1]);
+                    assertEquals(phase.equals("waiting") ? 1 : 0, calls[2]);
+                } finally {
+                    interrupted();
+                }
+            }
+        }
+    }
+
+    @Test
     void clockFailuresRetainTheInterruptFlagAtEveryExecutionPhase() {
         for (String phase : List.of("initial", "source", "condition", "waiting")) {
             var failure = new IllegalStateException("clock failed");
