@@ -66,7 +66,7 @@ class TryUntilTest {
         assertNull(satisfied(nullable).result());
         assertNull(satisfied(nullSource).result());
         assertNull(satisfied(nullPredicate).result());
-        var outcome = assertInstanceOf(ConditionResult.Satisfied.class,
+        assertInstanceOf(ConditionResult.Satisfied.class,
                 assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, satisfied(nullSource).attempts().getFirst().outcome()).evaluation());
         assertNull(assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, satisfied(nullSource).attempts().getFirst().outcome()).observed());
         assertEquals("payment", satisfied(selected).result());
