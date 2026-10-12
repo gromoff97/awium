@@ -437,7 +437,7 @@ class DiagnosticsSnapshotTest {
 
                 Cause: CountingAssertion
                     Message: assertion failed""", failure.getMessage());
-        assertTrue(assertion.calls == 1);
+        assertEquals(1, assertion.calls);
     }
 
     @Test
@@ -517,7 +517,7 @@ class DiagnosticsSnapshotTest {
 
                 Cause: IllegalArgumentException
                     Message: toString failed""", valueFailure.getMessage());
-        assertTrue(actual.calls == 1);
+        assertEquals(1, actual.calls);
     }
 
     @Test
