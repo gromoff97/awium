@@ -9,42 +9,41 @@ import static java.util.Objects.requireNonNull;
 
 /** Lazily executes a condition, converting nonfatal callback failures into uncontrolled results. */
 @SuppressWarnings("removal")
-final class ConditionSession<Observed, Result> implements Function<Observed, ConditionResult<? extends Result>> {
+final class ConditionSession<OBSERVED, RESULT> implements Function<OBSERVED, ConditionResult<? extends RESULT>> {
 
     final ConditionMetadata metadata;
-    private final Callable<? extends CheckedFunction<? super Observed, ? extends ConditionResult<? extends Result>>> evaluatorFactory;
-    private CheckedFunction<? super Observed, ? extends ConditionResult<? extends Result>> evaluator;
+    private final Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory;
+    private CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>> evaluator;
 
     ConditionSession(ConditionMetadata metadata,
-            Callable<? extends CheckedFunction<? super Observed, ? extends ConditionResult<? extends Result>>> evaluatorFactory) {
+            Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory) {
         this.metadata = metadata;
         this.evaluatorFactory = evaluatorFactory;
     }
 
     @Override
-    public ConditionResult<? extends Result> apply(Observed actual) {
+    public ConditionResult<? extends RESULT> apply(OBSERVED actual) {
         try {
             if (evaluator == null) {
                 checkInterruption();
                 evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
             }
             checkInterruption();
-            var result = evaluator.apply(actual);
+            var result = requireNonNull(evaluator.apply(actual), "condition returned null ConditionResult");
             if (result instanceof ConditionResult.Uncontrolled<?> failure) {
                 rethrowFatalOrRestoreInterrupt(failure.cause());
             }
-            return result == null ? null : withInterruption(result);
+            return withInterruption(result);
         } catch (Throwable failure) {
             rethrowFatalOrRestoreInterrupt(failure);
             return uncontrolled(failure);
         }
     }
 
-    static <Result> ConditionResult<? extends Result> withInterruption(ConditionResult<? extends Result> result) {
+    static <RESULT> ConditionResult<? extends RESULT> withInterruption(ConditionResult<? extends RESULT> result) {
         if (!(result instanceof ConditionResult.Uncontrolled<?>) && Thread.currentThread().isInterrupted()) {
             var interruption = new InterruptedException("caller thread interrupt flag was set");
-            return new ConditionResult.Uncontrolled<>(interruption,
-                    result == null ? ConditionResult.Context.Plain.INSTANCE : result.context());
+            return new ConditionResult.Uncontrolled<>(interruption, result.context());
         }
         return result;
     }

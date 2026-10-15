@@ -6,7 +6,6 @@ import java.util.Locale;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.ValueRendering.preservingInterrupt;
 import static io.github.gromoff97.awium.ValueRendering.renderValue;
 import static java.lang.Thread.currentThread;
@@ -27,6 +26,7 @@ final class FailureDiagnostics {
     private final WaitConfiguration configuration;
     private final Object observed;
     private final String mismatch;
+    private final AwaitFailure.Reason reason;
     private final Throwable cause;
     private final ConditionResult.Context.Sequence sequence;
 
@@ -47,16 +47,8 @@ final class FailureDiagnostics {
             default -> null;
         };
         mismatch = evaluation instanceof ConditionResult.Unsatisfied<?> value ? value.mismatch() : null;
-        cause = switch (attempt) {
-            case AwaitAttempt.Outcome.WaitingFailed<?, ?> value -> value.failure();
-            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> value -> value.failure();
-            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> value -> value.failure();
-            case AwaitAttempt.Outcome.Evaluated<?, ?> value -> switch (value.evaluation()) {
-                case ConditionResult.Satisfied<?> ignored -> null;
-                case ConditionResult.Unsatisfied<?> result -> result.assertion();
-                case ConditionResult.Uncontrolled<?> result -> result.cause();
-            };
-        };
+        reason = outcome.failureReason();
+        cause = outcome.cause();
         var context = evaluation == null ? null : evaluation.context();
         sequence = context instanceof ConditionResult.Context.Sequence value ? value : null;
         this.metadata = context instanceof ConditionResult.Context.Expectation expectation
@@ -98,7 +90,7 @@ final class FailureDiagnostics {
             } catch (Throwable failure) {
                 restoreInterrupt |= failure instanceof InterruptedException;
                 try {
-                    message = message("Failure diagnostics could not be formatted", failure);
+                    message = message(title(), failure);
                 } catch (VirtualMachineError | ThreadDeath fatal) {
                     addSuppressed(fatal, failure);
                     if (cause != failure) {
@@ -106,29 +98,15 @@ final class FailureDiagnostics {
                     }
                     throw fatal;
                 }
-                return new AwaitFailure(DIAGNOSTICS_FAILED, message, failure,
-                        cause == null || cause == failure ? List.of() : List.of(cause));
+                return new AwaitFailure(reason, message, cause,
+                        cause == failure ? List.of() : List.of(failure));
             }
-            return new AwaitFailure(reason(), message, cause, List.of());
+            return new AwaitFailure(reason, message, cause, List.of());
         } finally {
             if (restoreInterrupt) {
                 currentThread().interrupt();
             }
         }
-    }
-
-    private AwaitFailure.Reason reason() {
-        return switch (outcome) {
-            case WaitCompletion.PersistenceFailure<?, ?> ignored -> PERSISTENCE_FAILED;
-            case WaitCompletion.Uncontrolled<?, ?> ignored -> cause instanceof InterruptedException
-                    ? INTERRUPTED : switch (outcome.attempt().outcome()) {
-                        case AwaitAttempt.Outcome.WaitingFailed<?, ?> value -> WAIT_FAILED;
-                        case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> value -> SOURCE_FAILED;
-                        case AwaitAttempt.Outcome.Evaluated<?, ?> value -> CONDITION_FAILED;
-                        default -> throw new IllegalArgumentException("attempt is not uncontrolled");
-                    };
-            default -> TIMEOUT;
-        };
     }
 
     private String uncontrolledHeading() {
@@ -187,7 +165,8 @@ final class FailureDiagnostics {
         }
         Throwable failure = emergency ? diagnosticFailure : cause;
         if (failure != null) {
-            cause(out, emergency ? emergencyDiagnostic(failure) : throwableDiagnostic(failure));
+            cause(out, emergency ? "Diagnostics failure" : "Cause",
+                    emergency ? emergencyDiagnostic(failure) : throwableDiagnostic(failure));
         }
         return out.deleteCharAt(out.length() - 1).toString();
     }
@@ -229,9 +208,9 @@ final class FailureDiagnostics {
         }
     }
 
-    private static void cause(StringBuilder out, ThrowableDiagnostic cause) {
+    private static void cause(StringBuilder out, String label, ThrowableDiagnostic cause) {
         out.append('\n');
-        field(out, "", "Cause", cause.type());
+        field(out, "", label, cause.type());
         if (cause.message() != null) {
             field(out, "Message", cause.message());
         }

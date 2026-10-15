@@ -1,12 +1,11 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.ExpectedCondition;
-import io.github.gromoff97.awium.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
 import io.github.gromoff97.awium.Source.OptionalSource;
 import java.util.Optional;
+import java.util.List;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
@@ -16,10 +15,29 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ObjectOptionalAndScalarConditionsTest {
+
+    @Test
+    void unrelatedEqualityAndTypeChecksRemainOrdinaryMismatches() {
+        for (var check : List.<Condition<? super String, ?>>of(Conditions.equalTo(42),
+                Conditions.sameAs(42), Conditions.in(1, 2),
+                Conditions.instanceOf(Integer.class), Conditions.exactInstanceOf(Integer.class))) {
+            var time = new FakeTime(0);
+            var waiting = await(() -> "actual").usingTime(time, time)
+                    .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(2));
+            var captured = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(check));
+            assertEquals(AwaitFailure.Reason.TIMEOUT, captured.failure().reason());
+            assertThrows(AwaitAssertionError.class, () -> waiting.until(check));
+        }
+        String actual = "actual";
+        assertSame(actual, await(() -> actual).until(Conditions.notEqualTo(42)));
+        assertSame(actual, await(() -> actual).until(Conditions.notSameAs(42)));
+        assertSame(actual, await(() -> actual).until(Conditions.notIn(1, 2)));
+    }
 
     @Test
     void objectConditionsPreserveAndNarrowTypes() {
@@ -97,12 +115,12 @@ class ObjectOptionalAndScalarConditionsTest {
         assertStatus(Conditions.isNull, null, Satisfied.class);
         assertStatus(Conditions.isNull, actual, Unsatisfied.class);
         assertPreserving(Conditions.isNotNull, actual, null);
-        assertExpected(Conditions.equalTo(equal), actual, "other");
-        assertExpected(Conditions.notEqualTo(equal), "other", actual);
-        assertExpected(Conditions.sameAs(actual), actual, equal);
-        assertExpected(Conditions.notSameAs(equal), actual, equal);
-        assertExpected(Conditions.in("other", equal), actual, new Object());
-        assertExpected(Conditions.notIn("other"), actual, "other");
+        assertPreserving(Conditions.equalTo(equal), actual, "other");
+        assertPreserving(Conditions.notEqualTo(equal), "other", actual);
+        assertPreserving(Conditions.sameAs(actual), actual, equal);
+        assertPreserving(Conditions.notSameAs(equal), actual, equal);
+        assertPreserving(Conditions.in("other", equal), actual, new Object());
+        assertPreserving(Conditions.notIn("other"), actual, "other");
         assertPreserving(Conditions.matches(value -> value.toString().startsWith("r")), actual, "failed");
         assertStatus(Conditions.instanceOf(String.class), actual, Satisfied.class);
         assertStatus(Conditions.instanceOf(Integer.class), actual, Unsatisfied.class);
@@ -201,27 +219,12 @@ class ObjectOptionalAndScalarConditionsTest {
         assertStatus(condition, mismatching, Unsatisfied.class);
     }
 
-    private static <S, T extends S> void assertExpected(ExpectedCondition<T> condition, S matching, S mismatching) {
-        assertStatus(condition, matching, Satisfied.class);
-        assertStatus(condition, mismatching, Unsatisfied.class);
-    }
-
     private static <S> void assertStatus(Condition<? super S, ?> condition, S actual,
             Class<?> expected) {
         assertEquals(expected, evaluate(condition, actual).getClass());
     }
 
     private static <S> void assertStatus(PreservingCondition<? super S> condition, S actual,
-            Class<?> expected) {
-        assertEquals(expected, evaluate(condition, actual).getClass());
-    }
-
-    private static <S, T extends S> void assertStatus(ExpectedCondition<T> condition, S actual,
-            Class<?> expected) {
-        assertEquals(expected, evaluate(condition, actual).getClass());
-    }
-
-    private static <S, R> void assertStatus(NarrowingCondition<R> condition, S actual,
             Class<?> expected) {
         assertEquals(expected, evaluate(condition, actual).getClass());
     }

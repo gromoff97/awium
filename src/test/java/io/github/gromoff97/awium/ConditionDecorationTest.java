@@ -122,12 +122,12 @@ class ConditionDecorationTest {
 
     @Test
     void replacingAnExplanationLeavesTheOriginalAndConstantsUnchanged() {
-        var conditions = List.<ConditionDefinition<?, ?>>of(
+        var conditions = List.<Condition<?, ?>>of(
                 condition("custom", ConditionResult::satisfied),
                 isNotNull, equalTo("ready"), instanceOf(String.class),
                 OptionalConditions.present, captured(equalTo("first"), equalTo("last")),
                 captured(CollectionConditions.first, CollectionConditions.last));
-        var replacements = List.<ConditionDefinition<?, ?>>of(
+        var replacements = List.<Condition<?, ?>>of(
                 condition("custom", ConditionResult::satisfied).because("old").because("new %d", 42),
                 isNotNull.because("old").because("new %d", 42),
                 equalTo("ready").because("old").because("new %d", 42),

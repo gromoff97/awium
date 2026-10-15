@@ -7,17 +7,17 @@ import static java.util.Objects.requireNonNull;
 /**
  * Public {@code tryUntil} result containing the terminal value or failure and its bounded, compressed attempt history.
  *
- * @param <Observed> complete value returned by the source
- * @param <Result> value produced by the condition
+ * @param <OBSERVED> complete value returned by the source
+ * @param <RESULT> value produced by the condition
  */
-public sealed interface AwaitResult<Observed, Result> {
+public sealed interface AwaitResult<OBSERVED, RESULT> {
 
-    List<AwaitAttempt<Observed, Result>> attempts();
+    List<AwaitAttempt<OBSERVED, RESULT>> attempts();
 
     long totalAttempts();
 
-    record Satisfied<Observed, Result>(List<AwaitAttempt<Observed, Result>> attempts,
-            long totalAttempts, Result result) implements AwaitResult<Observed, Result> {
+    record Satisfied<OBSERVED, RESULT>(List<AwaitAttempt<OBSERVED, RESULT>> attempts,
+            long totalAttempts, RESULT result) implements AwaitResult<OBSERVED, RESULT> {
 
         public Satisfied {
             attempts = List.copyOf(attempts);
@@ -25,8 +25,8 @@ public sealed interface AwaitResult<Observed, Result> {
         }
     }
 
-    record Failed<Observed, Result>(List<AwaitAttempt<Observed, Result>> attempts,
-            long totalAttempts, AwaitFailure failure) implements AwaitResult<Observed, Result> {
+    record Failed<OBSERVED, RESULT>(List<AwaitAttempt<OBSERVED, RESULT>> attempts,
+            long totalAttempts, AwaitFailure failure) implements AwaitResult<OBSERVED, RESULT> {
 
         public Failed {
             attempts = List.copyOf(attempts);

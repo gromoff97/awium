@@ -1,7 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.ExpectedCondition;
-import io.github.gromoff97.awium.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import java.lang.reflect.GenericArrayType;
@@ -33,11 +31,13 @@ class PublicSurfaceTest {
     void conditionStagesDoNotExposeRuntimeMechanicsOrFictitiousResults() {
         Set<String> runtimeMethods = Set.of("description", "explanation", "evaluatorFactory", "newEvaluator", "newSession", "preservingSession", "selectionSession");
         for (Class<?> stage : List.of(Condition.class, PreservingCondition.class,
-                ExpectedCondition.class, NarrowingCondition.class, SelectedCondition.class)) {
+                SelectedCondition.class)) {
             stream(stage.getMethods()).forEach(method ->
                     assertFalse(runtimeMethods.contains(method.getName()), method.toGenericString()));
         }
-        assertFalse(Condition.class.isAssignableFrom(SelectedCondition.class));
+        assertTrue(Condition.class.isAssignableFrom(SelectedCondition.class));
+        assertTrue(Condition.class.isAssignableFrom(PreservingCondition.class));
+        assertTrue(Condition.class.isSealed());
     }
 
     @Test

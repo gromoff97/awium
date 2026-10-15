@@ -37,9 +37,9 @@ class CapturedConditionTest {
         int[] reads = {0};
         var time = new FakeTime(0);
         var waiting = timedAwait(() -> observations[reads[0]++], config(1, 5, 0), time, time);
-        var firstStage = Conditions.equalTo(new BigDecimal("1.00"));
-        var secondStage = Conditions.equalTo(new BigInteger("2"));
-        var finalStage = Conditions.equalTo(1024L);
+        Condition<Number, Number> firstStage = Conditions.equalTo(new BigDecimal("1.00"));
+        Condition<Number, Number> secondStage = Conditions.equalTo(new BigInteger("2"));
+        Condition<Number, Number> finalStage = Conditions.equalTo(1024L);
 
         List<Number> values = waiting.until(firstStage, secondStage, finalStage);
         AwaitResult<Number, List<Number>> captured = waiting.tryUntil(firstStage, secondStage, finalStage);

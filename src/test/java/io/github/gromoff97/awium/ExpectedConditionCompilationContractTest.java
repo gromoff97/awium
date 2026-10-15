@@ -22,7 +22,8 @@ class ExpectedConditionCompilationContractTest {
 
                 void check(Source<Number> numbers, Source<Parent> parents, Source<Object> objects) {
                     Number number = await(numbers).until(equalTo(42));
-                    Parent child = await(parents).until(equalTo(new Child()).because("business identity"));
+                    Condition<Parent, Parent> childCondition = equalTo(new Child());
+                    Parent child = await(parents).until(childCondition.because("business identity"));
                     Object anything = await(objects).until(in(42, "ready"));
                     Number absent = await(numbers).until(equalTo(null));
                     AwaitResult<Number, Number> attempted = await(numbers).tryUntil(notEqualTo(0));
@@ -31,7 +32,7 @@ class ExpectedConditionCompilationContractTest {
     }
 
     @Test
-    void expectedConditionsRejectUnrelatedAndWiderTypes() throws IOException {
+    void expectedConditionsAllowRuntimeEqualityAcrossTypes() throws IOException {
         for (String invocation : List.of(
                 "await(strings).until(equalTo(42))",
                 "await(strings).until(notEqualTo(42))",
@@ -40,7 +41,7 @@ class ExpectedConditionCompilationContractTest {
                 "await(strings).until(in(1, 2))",
                 "await(strings).until(notIn(1, 2))",
                 "await(children).until(equalTo(new Parent()))")) {
-            assertFalse(compiles("""
+            assertTrue(compiles("""
                     static class Parent {}
                     static final class Child extends Parent {}
 
@@ -63,12 +64,29 @@ class ExpectedConditionCompilationContractTest {
         for (String invocation : List.of(
                 "await(optional).until(hasValue(equalTo(42)))",
                 "await(map).until(valueFor(\"answer\", equalTo(42)))")) {
-            assertFalse(compiles("""
+            assertTrue(compiles("""
                     void check(OptionalSource<String> optional, MapSource<Map<String, String>> map) {
-                        %s;
+                        String result = %s;
                     }
                     """.formatted(invocation)), invocation);
         }
+    }
+
+    @Test
+    void equalityConditionsKeepTheObservedResultTypeThroughTheCommonModel() throws IOException {
+        assertTrue(compiles("""
+                void check(Source<String> strings) {
+                    Condition<String, String> ready = equalTo("ready");
+                    String value = await(strings).until(ready.because("required"));
+                    java.util.List<String> states = await(strings).until(isNotNull, equalTo("ready"));
+                    AwaitResult<String, java.util.List<String>> captured = await(strings).tryUntil(ready, yields(String::trim));
+                }
+                """));
+        assertFalse(compiles("""
+                void check(Source<String> strings) {
+                    Integer wrong = await(strings).until(equalTo(42));
+                }
+                """));
     }
 
     private boolean compiles(String source) throws IOException {
@@ -76,6 +94,7 @@ class ExpectedConditionCompilationContractTest {
                 import static io.github.gromoff97.awium.Await.*;
                 import static io.github.gromoff97.awium.Conditions.*;
                 import io.github.gromoff97.awium.AwaitResult;
+                import io.github.gromoff97.awium.Condition;
                 import io.github.gromoff97.awium.Source;
                 import static io.github.gromoff97.awium.MapConditions.valueFor;
                 import static io.github.gromoff97.awium.OptionalConditions.hasValue;

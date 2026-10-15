@@ -7,14 +7,14 @@ import static java.util.Objects.requireNonNull;
 /**
  * One polling attempt with its phase, timing, observation, and condition outcome.
  *
- * @param <Observed> complete value returned by the source
- * @param <Result> value produced by the condition
+ * @param <OBSERVED> complete value returned by the source
+ * @param <RESULT> value produced by the condition
  * @param number one-based attempt number
  * @param phase acquisition or persistence phase
  * @param outcome terminal outcome of this attempt
  */
-public record AwaitAttempt<Observed, Result>(long number, Phase phase,
-        Outcome<Observed, Result> outcome) {
+public record AwaitAttempt<OBSERVED, RESULT>(long number, Phase phase,
+        Outcome<OBSERVED, RESULT> outcome) {
 
     public AwaitAttempt {
         if (number <= 0) {
@@ -26,13 +26,13 @@ public record AwaitAttempt<Observed, Result>(long number, Phase phase,
 
     public enum Phase { ACQUISITION, PERSISTENCE }
 
-    public sealed interface Outcome<Observed, Result> {
+    public sealed interface Outcome<OBSERVED, RESULT> {
 
         Timing timing();
 
         /** An observation and the exact result returned by its condition evaluation. */
-        record Evaluated<Observed, Result>(Timing.AfterObservation timing,
-                Observed observed, ConditionResult<? extends Result> evaluation) implements Outcome<Observed, Result> {
+        record Evaluated<OBSERVED, RESULT>(Timing.AfterObservation timing,
+                OBSERVED observed, ConditionResult<? extends RESULT> evaluation) implements Outcome<OBSERVED, RESULT> {
 
             public Evaluated {
                 requireNonNull(timing, "timing must not be null");
@@ -40,8 +40,8 @@ public record AwaitAttempt<Observed, Result>(long number, Phase phase,
             }
         }
 
-        record WaitingFailed<Observed, Result>(Timing.BeforeRetrieval timing,
-                Throwable failure) implements Outcome<Observed, Result> {
+        record WaitingFailed<OBSERVED, RESULT>(Timing.BeforeRetrieval timing,
+                Throwable failure) implements Outcome<OBSERVED, RESULT> {
 
             public WaitingFailed {
                 requireNonNull(timing, "timing must not be null");
@@ -49,8 +49,8 @@ public record AwaitAttempt<Observed, Result>(long number, Phase phase,
             }
         }
 
-        record SourceRetrievalFailed<Observed, Result>(Timing.BeforeObservation timing,
-                Throwable failure) implements Outcome<Observed, Result> {
+        record SourceRetrievalFailed<OBSERVED, RESULT>(Timing.BeforeObservation timing,
+                Throwable failure) implements Outcome<OBSERVED, RESULT> {
 
             public SourceRetrievalFailed {
                 requireNonNull(timing, "timing must not be null");
@@ -58,8 +58,8 @@ public record AwaitAttempt<Observed, Result>(long number, Phase phase,
             }
         }
 
-        record SourceInterrupted<Observed, Result>(Timing.AfterObservation timing, Observed observed,
-                InterruptedException failure) implements Outcome<Observed, Result> {
+        record SourceInterrupted<OBSERVED, RESULT>(Timing.AfterObservation timing, OBSERVED observed,
+                InterruptedException failure) implements Outcome<OBSERVED, RESULT> {
 
             public SourceInterrupted {
                 requireNonNull(timing, "timing must not be null");

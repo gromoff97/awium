@@ -76,21 +76,29 @@ class OrderedWaitCompilationContractTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"until", "tryUntil"})
-    void rejectsIncompatibleOperandsAndMixedConditionFamilies(String terminal) throws IOException {
+    void rejectsIncompatibleCallbackAndSourceTypes(String terminal) throws IOException {
         for (String expression : List.of(
                 "await(Contract::text).%s(matches((Integer value) -> true));",
                 "await(Contract::text).%s(matches(value -> value.length()));",
-                "await(Contract::text).%s(equalTo(1), equalTo(2));",
                 "await(Contract::optional).%s(first, last);",
                 "await(Contract::collection).%s(present, present);",
                 "await(Contract::map).%s(first, last);",
                 "await(Contract::collection).%s(singleEntry, singleEntry);",
+                "Source<List<String>> source = Contract::collection; List<String> wrong = await(source).%s(first, last);")) {
+            assertFalse(compiles(expression.formatted(terminal)), expression);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"until", "tryUntil"})
+    void compatibleConditionsCanBeMixedRegardlessOfTheirConstruction(String terminal) throws IOException {
+        for (String expression : List.of(
+                "await(Contract::text).%s(equalTo(1), equalTo(2));",
                 "await(Contract::collection).%s(single, isNotNull);",
                 "await(Contract::optional).%s(present, matches((Optional<String> value) -> true));",
                 "await(Contract::text).%s(equalTo(\"ready\"), isNotNull);",
-                "await(Contract::text).%s(isNotNull, yields(String::length));",
-                "Source<List<String>> source = Contract::collection; await(source).%s(first, last);")) {
-            assertFalse(compiles(expression.formatted(terminal)), expression);
+                "await(Contract::text).%s(isNotNull, yields(String::length));")) {
+            assertTrue(compiles(expression.formatted(terminal)), expression);
         }
     }
 

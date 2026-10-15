@@ -201,8 +201,8 @@ class ExpectedInputsTest {
         assertEquals(2, execution.totalAttempts());
     }
 
-    private static <Actual> void assertStable(List<? extends PreservingCondition<? super Actual>> conditions,
-            Actual original, Actual changed, Runnable mutate) {
+    private static <ACTUAL> void assertStable(List<? extends PreservingCondition<? super ACTUAL>> conditions,
+            ACTUAL original, ACTUAL changed, Runnable mutate) {
         var before = conditions.stream().map(condition -> List.of(evaluate(condition, original).getClass(),
                 evaluate(condition, changed).getClass())).toList();
         mutate.run();

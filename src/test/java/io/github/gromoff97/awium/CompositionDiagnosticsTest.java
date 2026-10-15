@@ -54,9 +54,10 @@ class CompositionDiagnosticsTest {
         };
         Condition<Map<Object, String>, String> selected = valueFor(key, equalTo("Bob"));
         assertEquals(0, renders[0]);
-        var failure = assertFailure(DIAGNOSTICS_FAILED, () -> await(() -> Map.<Object, String>of())
+        var failure = assertFailure(TIMEOUT, () -> await(() -> Map.<Object, String>of())
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).until(selected));
-        assertSame(formattingFailure, failure.getCause());
+        assertNull(failure.getCause());
+        assertArrayEquals(new Throwable[]{formattingFailure}, failure.getSuppressed());
         assertEquals(1, renders[0]);
     }
 }

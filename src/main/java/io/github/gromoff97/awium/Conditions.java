@@ -1,7 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.ExpectedCondition;
-import io.github.gromoff97.awium.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -12,9 +10,7 @@ import static io.github.gromoff97.awium.CheckedCalls.checkInterruption;
 import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
-import static io.github.gromoff97.awium.ConditionSupport.expected;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
-import static io.github.gromoff97.awium.ConditionSupport.narrowing;
 import static io.github.gromoff97.awium.ConditionSupport.nonEmpty;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
@@ -33,27 +29,27 @@ public final class Conditions {
 
     private Conditions() {}
 
-    public static <Observed, Result> Condition<Observed, Result> condition(String description,
-            CheckedFunction<? super Observed, ? extends ConditionResult<? extends Result>> evaluation) {
+    public static <OBSERVED, RESULT> Condition<OBSERVED, RESULT> condition(String description,
+            CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>> evaluation) {
         return ConditionSupport.condition(description, null, evaluation);
     }
 
-    public static <Observed, Result> Condition<Observed, Result> condition(String description,
-            Callable<? extends CheckedFunction<? super Observed, ? extends ConditionResult<? extends Result>>> evaluatorFactory) {
+    public static <OBSERVED, RESULT> Condition<OBSERVED, RESULT> condition(String description,
+            Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory) {
         return ConditionSupport.condition(description, evaluatorFactory);
     }
 
-    public static <Observed> PreservingCondition<Observed> preserving(String description,
-            CheckedFunction<? super Observed, ? extends ConditionResult<? extends Observed>> evaluation) {
+    public static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description,
+            CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>> evaluation) {
         return ConditionSupport.preserving(description, evaluation);
     }
 
-    public static <Observed> PreservingCondition<Observed> preserving(String description,
-            Callable<? extends CheckedFunction<? super Observed, ? extends ConditionResult<? extends Observed>>> evaluatorFactory) {
+    public static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description,
+            Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory) {
         return new PreservingCondition<>(new ConditionMetadata(description, null, null), evaluatorFactory);
     }
 
-    public static <Observed> PreservingCondition<Observed> asserted(CheckedConsumer<? super Observed> assertion) {
+    public static <OBSERVED> PreservingCondition<OBSERVED> asserted(CheckedConsumer<? super OBSERVED> assertion) {
         requireNonNull(assertion, "assertion must not be null");
         return ConditionSupport.preserving("value satisfies assertion", actual -> {
             try {
@@ -65,42 +61,42 @@ public final class Conditions {
         });
     }
 
-    public static <Observed, Result> Condition<Observed, Result> yields(CheckedFunction<? super Observed, ? extends Result> callback) {
+    public static <OBSERVED, RESULT> Condition<OBSERVED, RESULT> yields(CheckedFunction<? super OBSERVED, ? extends RESULT> callback) {
         requireNonNull(callback, "callback must not be null");
         return condition("callback yields a result", actual -> satisfied(callback.apply(actual)));
     }
 
-    public static <Value> ExpectedCondition<Value> equalTo(Value expected) {
-        return expected("value equals expected", expectedReference(expected), actual -> equal(actual, expected)
+    public static <VALUE> PreservingCondition<VALUE> equalTo(VALUE expected) {
+        return ConditionSupport.preserving("value equals expected", expectedReference(expected), actual -> equal(actual, expected)
                 ? satisfied(actual) : unsatisfied("value was not equal"));
     }
 
-    public static <Value> ExpectedCondition<Value> notEqualTo(Value unexpected) {
-        return expected("value does not equal unexpected", unexpectedReference(unexpected), actual -> !equal(actual, unexpected)
+    public static <VALUE> PreservingCondition<VALUE> notEqualTo(VALUE unexpected) {
+        return ConditionSupport.preserving("value does not equal unexpected", unexpectedReference(unexpected), actual -> !equal(actual, unexpected)
                 ? satisfied(actual) : unsatisfied("value was equal"));
     }
 
-    public static <Value> ExpectedCondition<Value> sameAs(Value expected) {
-        return expected("value is the same instance", expectedReference(expected), actual -> actual == expected
+    public static <VALUE> PreservingCondition<VALUE> sameAs(VALUE expected) {
+        return ConditionSupport.preserving("value is the same instance", expectedReference(expected), actual -> actual == expected
                 ? satisfied(actual) : unsatisfied("value was a different instance"));
     }
 
-    public static <Value> ExpectedCondition<Value> notSameAs(Value unexpected) {
-        return expected("value is not the same instance", unexpectedReference(unexpected), actual -> actual != unexpected
+    public static <VALUE> PreservingCondition<VALUE> notSameAs(VALUE unexpected) {
+        return ConditionSupport.preserving("value is not the same instance", unexpectedReference(unexpected), actual -> actual != unexpected
                 ? satisfied(actual) : unsatisfied("value was the same instance"));
     }
 
-    public static <Result> NarrowingCondition<Result> instanceOf(Class<Result> type) {
+    public static <RESULT> Condition<Object, RESULT> instanceOf(Class<RESULT> type) {
         requireNonNull(type, "type must not be null");
-        return narrowing("value is an instance of " + type.getTypeName(), actual ->
+        return condition("value is an instance of " + type.getTypeName(), actual ->
                 actual != null && type.isInstance(actual)
                         ? satisfied(type.cast(actual))
                         : unsatisfied("value was not an instance of " + type.getTypeName()));
     }
 
-    public static <Result> NarrowingCondition<Result> exactInstanceOf(Class<Result> type) {
+    public static <RESULT> Condition<Object, RESULT> exactInstanceOf(Class<RESULT> type) {
         requireNonNull(type, "type must not be null");
-        return narrowing("value is exactly an instance of " + type.getTypeName(), actual ->
+        return condition("value is exactly an instance of " + type.getTypeName(), actual ->
                 actual != null && actual.getClass() == type
                         ? satisfied(type.cast(actual))
                         : unsatisfied("value was not exactly an instance of " + type.getTypeName()));
@@ -108,70 +104,70 @@ public final class Conditions {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <Value> ExpectedCondition<Value> in(Value... expected) {
-        List<Value> values = snapshot(stream(nonEmpty(expected, "expected values")));
-        return expected("value is in the expected values", expectedReference(values),
+    public static <VALUE> PreservingCondition<VALUE> in(VALUE... expected) {
+        List<VALUE> values = snapshot(stream(nonEmpty(expected, "expected values")));
+        return ConditionSupport.preserving("value is in the expected values", expectedReference(values),
                 actual -> matchesAny(values, candidate -> equal(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was not in the expected values"));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <Value> ExpectedCondition<Value> notIn(Value... unexpected) {
-        List<Value> values = snapshot(stream(nonEmpty(unexpected, "unexpected values")));
-        return expected("value is not in the unexpected values", unexpectedReference(values),
+    public static <VALUE> PreservingCondition<VALUE> notIn(VALUE... unexpected) {
+        List<VALUE> values = snapshot(stream(nonEmpty(unexpected, "unexpected values")));
+        return ConditionSupport.preserving("value is not in the unexpected values", unexpectedReference(values),
                 actual -> !matchesAny(values, candidate -> equal(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was in the unexpected values"));
     }
 
-    public static <Observed> PreservingCondition<Observed> matches(Predicate<? super Observed> predicate) {
+    public static <OBSERVED> PreservingCondition<OBSERVED> matches(Predicate<? super OBSERVED> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return ConditionSupport.preserving("value matches", "value did not match", predicate::test);
     }
 
-    public static <Value extends Comparable<? super Value>> PreservingCondition<Value> greaterThan(Value bound) {
+    public static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> greaterThan(VALUE bound) {
         return comparing("greater than", bound, actual -> compare(actual, bound) > 0);
     }
 
-    public static <Value extends Comparable<? super Value>> PreservingCondition<Value> atLeast(Value bound) {
+    public static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> atLeast(VALUE bound) {
         return comparing("at least", bound, actual -> compare(actual, bound) >= 0);
     }
 
-    public static <Value extends Comparable<? super Value>> PreservingCondition<Value> lessThan(Value bound) {
+    public static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> lessThan(VALUE bound) {
         return comparing("less than", bound, actual -> compare(actual, bound) < 0);
     }
 
-    public static <Value extends Comparable<? super Value>> PreservingCondition<Value> atMost(Value bound) {
+    public static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> atMost(VALUE bound) {
         return comparing("at most", bound, actual -> compare(actual, bound) <= 0);
     }
 
-    public static <Value extends Comparable<? super Value>> PreservingCondition<Value> between(Value lowerBound, Value upperBound) {
+    public static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> between(VALUE lowerBound, VALUE upperBound) {
         validateRange(lowerBound, upperBound);
         return preservingNonNull("value", "value is between the inclusive bounds", "value was outside the inclusive range",
                 expectedReference(snapshot(Stream.of(lowerBound, upperBound))),
                 actual -> compare(actual, lowerBound) >= 0 && compare(actual, upperBound) <= 0);
     }
 
-    public static <Value extends Comparable<? super Value>> PreservingCondition<Value> strictlyBetween(Value lowerBound, Value upperBound) {
+    public static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> strictlyBetween(VALUE lowerBound, VALUE upperBound) {
         validateRange(lowerBound, upperBound);
         return preservingNonNull("value", "value is strictly between the bounds", "value was outside the exclusive range",
                 expectedReference(snapshot(Stream.of(lowerBound, upperBound))),
                 actual -> compare(actual, lowerBound) > 0 && compare(actual, upperBound) < 0);
     }
 
-    private static <Value extends Comparable<? super Value>> PreservingCondition<Value> comparing(String relation, Value bound,
-            CheckedFunction<? super Value, Boolean> matches) {
+    private static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> comparing(String relation, VALUE bound,
+            CheckedFunction<? super VALUE, Boolean> matches) {
         requireNonNull(bound, "bound must not be null");
         return preservingNonNull("value", "value is " + relation + " the bound",
                 "value was not " + relation + " the bound", expectedReference(bound), matches);
     }
 
-    private static <Value extends Comparable<? super Value>> int compare(Value actual, Value bound) throws InterruptedException {
+    private static <VALUE extends Comparable<? super VALUE>> int compare(VALUE actual, VALUE bound) throws InterruptedException {
         checkInterruption();
         return actual.compareTo(bound);
     }
 
-    private static <Value extends Comparable<? super Value>> void validateRange(Value lowerBound, Value upperBound) {
+    private static <VALUE extends Comparable<? super VALUE>> void validateRange(VALUE lowerBound, VALUE upperBound) {
         requireNonNull(lowerBound, "lower bound must not be null");
         requireNonNull(upperBound, "upper bound must not be null");
         if (lowerBound.compareTo(upperBound) > 0) {

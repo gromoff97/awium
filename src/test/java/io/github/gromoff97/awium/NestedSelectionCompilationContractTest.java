@@ -17,6 +17,10 @@ class NestedSelectionCompilationContractTest {
     @Test
     void nestedSelectionInfersValuesAndSequencesWithoutPreparatoryVariables() throws IOException {
         assertTrue(compiles("""
+                await(Contract::payments).until(single(equalTo(42)));
+                await(Contract::payments).tryUntil(single(equalTo(42)));
+                await(Contract::payments).until(single(instanceOf(String.class)));
+                await(Contract::map).until(singleEntry(equalTo(42)));
                 Payment one = await(Contract::payments).until(single(matches(Payment::paid)));
                 Payment checked = await(Contract::payments).until(single(matches(Payment::paid).because("paid")));
                 var inferred = await(Contract::payments).until(single(matches(value -> value.paid())));
@@ -36,13 +40,9 @@ class NestedSelectionCompilationContractTest {
     @Test
     void nestedSelectionRejectsIncompatibleChecksAndResults() throws IOException {
         for (String body : List.of(
-                "await(Contract::payments).until(single(equalTo(42)));",
-                "await(Contract::payments).tryUntil(single(equalTo(42)));",
-                "await(Contract::payments).until(single(instanceOf(String.class)));",
                 "await(Contract::payments).until(single(matches(String::isBlank)));",
                 "String wrong = await(Contract::payments).until(single(matches(Payment::paid)));",
                 "AwaitResult<List<Payment>, String> wrong = await(Contract::payments).tryUntil(single(matches(Payment::paid)));",
-                "await(Contract::map).until(singleEntry(equalTo(42)));",
                 "List<String> wrong = await(Contract::payments).until(single(matches(Payment::paid)), single(matches(Payment::paid)));")) {
             assertFalse(compiles(body), body);
         }

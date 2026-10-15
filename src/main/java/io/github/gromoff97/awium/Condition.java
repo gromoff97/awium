@@ -1,95 +1,103 @@
 package io.github.gromoff97.awium;
 
+import java.util.Locale;
 import java.util.concurrent.Callable;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Typed, immutable condition. Its family preserves, checks, narrows, selects, or transforms the observed value.
  *
- * @param <Observed> value supplied to the condition
- * @param <Result> value returned when the condition is satisfied
+ * @param <OBSERVED> value supplied to the condition
+ * @param <RESULT> value returned when the condition is satisfied
  */
-public final class Condition<Observed, Result> extends ConditionDefinition<Observed, Result> {
+public sealed class Condition<OBSERVED, RESULT> {
+
+    final ConditionMetadata metadata;
+    final Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory;
 
     Condition(ConditionMetadata metadata,
-            Callable<? extends CheckedFunction<? super Observed, ? extends ConditionResult<? extends Result>>> evaluatorFactory) {
-        super(metadata, evaluatorFactory);
+            Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory) {
+        this.metadata = requireNonNull(metadata, "metadata must not be null");
+        this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
     }
 
-    public Condition<Observed, Result> because(String explanation) {
+    ConditionSession<OBSERVED, RESULT> newSession() {
+        return new ConditionSession<>(metadata, evaluatorFactory);
+    }
+
+    static <C extends Condition<?, ?>> C required(C condition) {
+        return requireNonNull(condition, "condition must not be null");
+    }
+
+    static String formattedExplanation(String format, Object[] arguments) {
+        requireNonNull(format, "format must not be null");
+        requireNonNull(arguments, "arguments must not be null");
+        return String.format(Locale.ROOT, format, arguments);
+    }
+
+    public Condition<OBSERVED, RESULT> because(String explanation) {
         return new Condition<>(metadata.because(explanation), evaluatorFactory);
     }
 
-    public Condition<Observed, Result> because(String format, Object... arguments) {
+    public Condition<OBSERVED, RESULT> because(String format, Object... arguments) {
         return because(formattedExplanation(format, arguments));
     }
 
-    public static final class PreservingCondition<Observed> extends ConditionDefinition<Observed, Observed> {
+    public static final class PreservingCondition<OBSERVED> extends Condition<OBSERVED, OBSERVED> {
 
         PreservingCondition(ConditionMetadata metadata,
-                Callable<? extends CheckedFunction<? super Observed, ? extends ConditionResult<? extends Observed>>> evaluatorFactory) {
+                Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory) {
             super(metadata, evaluatorFactory);
         }
 
-        public PreservingCondition<Observed> because(String explanation) {
+        @Override
+        ConditionSession<OBSERVED, OBSERVED> newSession() {
+            return preservingSession();
+        }
+
+        final <ACTUAL extends OBSERVED> ConditionSession<ACTUAL, ACTUAL> preservingSession() {
+            return new ConditionSession<>(metadata, () -> {
+                var evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
+                return actual -> {
+                    var result = evaluator.apply(actual);
+                    return result == null ? null : result.mapSatisfied(ignored -> actual);
+                };
+            });
+        }
+
+        @Override
+        public PreservingCondition<OBSERVED> because(String explanation) {
             return new PreservingCondition<>(metadata.because(explanation), evaluatorFactory);
         }
 
-        public PreservingCondition<Observed> because(String format, Object... arguments) {
+        @Override
+        public PreservingCondition<OBSERVED> because(String format, Object... arguments) {
             return because(formattedExplanation(format, arguments));
         }
     }
 
-    public static final class ExpectedCondition<Expected> extends ConditionDefinition<Object, Object> {
-
-        ExpectedCondition(ConditionMetadata metadata,
-                Callable<? extends CheckedFunction<? super Object, ? extends ConditionResult<? extends Object>>> evaluatorFactory) {
-            super(metadata, evaluatorFactory);
-        }
-
-        public ExpectedCondition<Expected> because(String explanation) {
-            return new ExpectedCondition<>(metadata.because(explanation), evaluatorFactory);
-        }
-
-        public ExpectedCondition<Expected> because(String format, Object... arguments) {
-            return because(formattedExplanation(format, arguments));
-        }
-    }
-
-    public static final class NarrowingCondition<Result> extends ConditionDefinition<Object, Result> {
-
-        NarrowingCondition(ConditionMetadata metadata,
-                Callable<? extends CheckedFunction<? super Object, ? extends ConditionResult<? extends Result>>> evaluatorFactory) {
-            super(metadata, evaluatorFactory);
-        }
-
-        public NarrowingCondition<Result> because(String explanation) {
-            return new NarrowingCondition<>(metadata.because(explanation), evaluatorFactory);
-        }
-
-        public NarrowingCondition<Result> because(String format, Object... arguments) {
-            return because(formattedExplanation(format, arguments));
-        }
-    }
-
-    public static final class SelectedCondition<Observed, Family> extends ConditionDefinition<Observed, Object> {
+    public static final class SelectedCondition<OBSERVED> extends Condition<OBSERVED, Object> {
 
         SelectedCondition(ConditionMetadata metadata,
-                Callable<? extends CheckedFunction<? super Observed, ? extends ConditionResult<? extends Object>>> evaluatorFactory) {
+                Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends Object>>> evaluatorFactory) {
             super(metadata, evaluatorFactory);
         }
 
-        public SelectedCondition<Observed, Family> because(String explanation) {
+        @Override
+        public SelectedCondition<OBSERVED> because(String explanation) {
             return new SelectedCondition<>(metadata.because(explanation), evaluatorFactory);
         }
 
-        public SelectedCondition<Observed, Family> because(String format, Object... arguments) {
+        @Override
+        public SelectedCondition<OBSERVED> because(String format, Object... arguments) {
             return because(formattedExplanation(format, arguments));
         }
 
-        // The await facade binds Element to this condition's source family.
+        // The await facade binds ELEMENT to this condition's source family.
         @SuppressWarnings("unchecked")
-        <Element> ConditionSession<Observed, Element> selectionSession() {
-            return (ConditionSession<Observed, Element>) (ConditionSession<?, ?>) newSession();
+        <ELEMENT> ConditionSession<OBSERVED, ELEMENT> selectionSession() {
+            return (ConditionSession<OBSERVED, ELEMENT>) (ConditionSession<?, ?>) newSession();
         }
     }
 }

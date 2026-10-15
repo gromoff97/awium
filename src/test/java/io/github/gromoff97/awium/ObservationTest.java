@@ -368,7 +368,7 @@ class ObservationTest {
     }
 
     @Test
-    void completionClockInterruptionWinsBeforeNormalResultIsInterpreted() {
+    void completionClockInterruptionStopsNormalResultsWithoutReplacingConditionFailure() {
         var actual = new Object();
         for (boolean capture : List.of(false, true)) {
             for (long persistence : new long[] {0, 2}) {
@@ -399,8 +399,14 @@ class ObservationTest {
                         } else {
                             failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(check)).failure();
                         }
-                        assertEquals(AwaitFailure.Reason.INTERRUPTED, failure.reason(), form);
-                        assertInstanceOf(InterruptedException.class, failure.cause());
+                        if (form.equals("null")) {
+                            assertEquals(AwaitFailure.Reason.CONDITION_FAILED, failure.reason());
+                            assertInstanceOf(NullPointerException.class, failure.cause());
+                            assertEquals("condition returned null ConditionResult", failure.cause().getMessage());
+                        } else {
+                            assertEquals(AwaitFailure.Reason.INTERRUPTED, failure.reason(), form);
+                            assertInstanceOf(InterruptedException.class, failure.cause());
+                        }
                         assertEquals(interruptedAttempt, evaluations[0]);
                         assertTrue(currentThread().isInterrupted());
                     } finally {

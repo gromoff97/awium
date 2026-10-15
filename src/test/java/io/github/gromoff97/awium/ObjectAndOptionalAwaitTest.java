@@ -82,7 +82,7 @@ class ObjectAndOptionalAwaitTest {
     void reusableStageRetainsTheExactSourceAndStartsEachTerminalFresh() {
         int[] calls = {0};
         FakeTime time = new FakeTime(0);
-        Await<Integer, Integer, Object> stage = stage(time, () -> ++calls[0]);
+        Await<Integer, Object> stage = stage(time, () -> ++calls[0]);
         Condition<Integer, Integer> evenObservation = condition(
                 "even observation", value -> value % 2 == 0
                         ? satisfied(value)
@@ -97,7 +97,7 @@ class ObjectAndOptionalAwaitTest {
     void reusableStageStartsFreshAfterControlledAndUncontrolledFailures() {
         FakeTime time = new FakeTime(0);
         int[] sourceCalls = {0};
-        Await<String, String, Object> stage = stage(time, () -> {
+        Await<String, Object> stage = stage(time, () -> {
             sourceCalls[0]++;
             return "value";
         });
@@ -118,7 +118,7 @@ class ObjectAndOptionalAwaitTest {
         assertEquals(5, sourceCalls[0]);
     }
 
-    private static <T> Await<T, T, Object> stage(
+    private static <T> Await<T, Object> stage(
             FakeTime time, Source<T> source) {
         return timedAwait(source, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(3)), time, time);
     }

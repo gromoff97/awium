@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.ExpectedCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import java.util.ArrayList;
@@ -14,73 +13,58 @@ import static io.github.gromoff97.awium.ConditionSupport.condition;
 import static java.util.Objects.requireNonNull;
 
 /** Creates ordered conditions and owns the captured values of one execution. */
-final class CapturedEvaluator<Observed, Result> implements CheckedFunction<Observed, ConditionResult<List<Result>>> {
+final class CapturedEvaluator<OBSERVED, RESULT> implements CheckedFunction<OBSERVED, ConditionResult<List<RESULT>>> {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <Observed> Condition<Observed, List<Observed>> captured(PreservingCondition<? super Observed> first,
-            PreservingCondition<? super Observed> second, PreservingCondition<? super Observed>... rest) {
-        return capturedPreserving(stages(first, second, rest));
+    static <OBSERVED> Condition<OBSERVED, List<OBSERVED>> captured(PreservingCondition<? super OBSERVED> first,
+            PreservingCondition<? super OBSERVED> second, PreservingCondition<? super OBSERVED>... rest) {
+        List<PreservingCondition<? super OBSERVED>> stages = stages(first, second, rest);
+        return condition("conditions are satisfied in order", () ->
+                new CapturedEvaluator<>(stages.stream()
+                        .map(stage -> stage.<OBSERVED>preservingSession()).toList()));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <Observed, Result> Condition<Observed, List<Result>> captured(Condition<? super Observed, ? extends Result> first,
-            Condition<? super Observed, ? extends Result> second, Condition<? super Observed, ? extends Result>... rest) {
-        List<Condition<? super Observed, ? extends Result>> stages = stages(first, second, rest);
+    static <OBSERVED, RESULT> Condition<OBSERVED, List<RESULT>> captured(Condition<? super OBSERVED, ? extends RESULT> first,
+            Condition<? super OBSERVED, ? extends RESULT> second, Condition<? super OBSERVED, ? extends RESULT>... rest) {
+        List<Condition<? super OBSERVED, ? extends RESULT>> stages = stages(first, second, rest);
         return condition("conditions are satisfied in order", () ->
-                new CapturedEvaluator<Observed, Result>(stages.stream()
+                new CapturedEvaluator<OBSERVED, RESULT>(stages.stream()
                         .map(stage -> stage.newSession()).toList()));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <Observed, Expected extends Observed> Condition<Observed, List<Observed>> captured(ExpectedCondition<? extends Expected> first,
-            ExpectedCondition<? extends Expected> second, ExpectedCondition<? extends Expected>... rest) {
-        return capturedPreserving(stages(first, second, rest));
-    }
-
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    static <Observed, Element, Family> Condition<Observed, List<Element>> captured(SelectedCondition<? super Observed, Family> first,
-            SelectedCondition<? super Observed, Family> second,
-            SelectedCondition<? super Observed, Family>... rest) {
-        List<SelectedCondition<? super Observed, Family>> stages =
+    static <OBSERVED, ELEMENT> Condition<OBSERVED, List<ELEMENT>> captured(SelectedCondition<? super OBSERVED> first,
+            SelectedCondition<? super OBSERVED> second,
+            SelectedCondition<? super OBSERVED>... rest) {
+        List<SelectedCondition<? super OBSERVED>> stages =
                 stages(first, second, rest);
         return condition("conditions are satisfied in order",
                 () -> new CapturedEvaluator<>(stages.stream()
-                        .map(stage -> stage.<Element>selectionSession()).toList()));
+                        .map(stage -> stage.<ELEMENT>selectionSession()).toList()));
     }
 
-    private static <Observed> Condition<Observed, List<Observed>> capturedPreserving(List<? extends ConditionDefinition<? super Observed, ?>> stages) {
-        return condition("conditions are satisfied in order", () ->
-                new CapturedEvaluator<>(stages.stream()
-                        .map(stage -> stage.<Observed>preservingSession()).toList()));
-    }
-
-    private static <Stage> List<Stage> stages(Stage first, Stage second, Stage[] rest) {
+    private static <STAGE> List<STAGE> stages(STAGE first, STAGE second, STAGE[] rest) {
         return Stream.concat(Stream.of(first, second),
                         Arrays.stream(requireNonNull(rest, "conditions must not be null")))
                 .map(stage -> requireNonNull(stage, "condition must not be null"))
                 .toList();
     }
 
-    private final List<? extends ConditionSession<? super Observed, ? extends Result>> stages;
-    private final ArrayList<Result> results = new ArrayList<>();
+    private final List<? extends ConditionSession<? super OBSERVED, ? extends RESULT>> stages;
+    private final ArrayList<RESULT> results = new ArrayList<>();
 
-    private CapturedEvaluator(List<? extends ConditionSession<? super Observed, ? extends Result>> stages) {
+    private CapturedEvaluator(List<? extends ConditionSession<? super OBSERVED, ? extends RESULT>> stages) {
         this.stages = stages;
     }
 
     @Override
-    public ConditionResult<List<Result>> apply(Observed actual) {
+    public ConditionResult<List<RESULT>> apply(OBSERVED actual) {
         int evaluatedStageIndex = Math.min(results.size(), stages.size() - 1);
         var evaluation = stages.get(evaluatedStageIndex).apply(actual);
-        if (evaluation == null) {
-            return ConditionResult.<List<Result>>uncontrolled(
-                    new NullPointerException("condition returned null ConditionResult"))
-                    .withContext(contextFor(evaluatedStageIndex));
-        }
         ConditionResult.Context context = evaluation.context();
         if (context instanceof ConditionResult.Context.Expectation expectation) {
             context = new ConditionResult.Context.Sequence(evaluatedStageIndex, stages.size(), evaluatedStageIndex + 1,
@@ -92,14 +76,14 @@ final class CapturedEvaluator<Observed, Result> implements CheckedFunction<Obser
         return evaluation.withContext(context).continueIfSatisfied(value -> recordStageResult(value, evaluatedStageIndex));
     }
 
-    private ConditionResult<List<Result>> recordStageResult(Result result, int evaluatedStageIndex) {
+    private ConditionResult<List<RESULT>> recordStageResult(RESULT result, int evaluatedStageIndex) {
         if (results.size() == stages.size()) {
             results.set(evaluatedStageIndex, result);
         } else {
             results.add(result);
         }
         if (results.size() < stages.size()) {
-            return ConditionResult.<List<Result>>unsatisfied(
+            return ConditionResult.<List<RESULT>>unsatisfied(
                     "waiting for sequence stage " + (results.size() + 1))
                     .withContext(contextFor(results.size(), evaluatedStageIndex));
         }

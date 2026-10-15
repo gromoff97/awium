@@ -75,7 +75,7 @@ class ContainerInterruptionTest {
 
     @Test
     void interruptionAtEveryIteratorBoundaryStopsCollectionConditions() {
-        List<Function<Await<SignallingList, String, java.util.Collection<?>>, AwaitResult<?, ?>>> waits = List.of(
+        List<Function<Await<SignallingList, String>, AwaitResult<?, ?>>> waits = List.of(
                 waiting -> waiting.tryUntil(all(value -> true)),
                 waiting -> waiting.tryUntil(any(value -> true)),
                 waiting -> waiting.tryUntil(none(value -> false)),
@@ -102,7 +102,7 @@ class ContainerInterruptionTest {
 
     @Test
     void interruptionAtEveryMapBoundaryStopsTheFollowingCallback() {
-        List<Function<Await<SignallingMap, Map.Entry<String, String>, Map<?, ?>>, AwaitResult<?, ?>>> waits = List.of(
+        List<Function<Await<SignallingMap, Map.Entry<String, String>>, AwaitResult<?, ?>>> waits = List.of(
                 waiting -> waiting.tryUntil(MapConditions.singleEntry),
                 waiting -> waiting.tryUntil(MapConditions.singleEntry(matches(value -> true))),
                 waiting -> waiting.tryUntil(MapConditions.valueFor("key")),
@@ -214,14 +214,14 @@ class ContainerInterruptionTest {
         @Override
         public Set<String> values() { return view("values", "ready"); }
 
-        private <Value> Set<Value> view(String method, Value value) {
+        private <VALUE> Set<VALUE> view(String method, VALUE value) {
             called(method);
             return new AbstractSet<>() {
                 @Override
                 public int size() { return 1; }
 
                 @Override
-                public Iterator<Value> iterator() {
+                public Iterator<VALUE> iterator() {
                     called("iterator");
                     return new Iterator<>() {
                         private boolean consumed;
@@ -230,7 +230,7 @@ class ContainerInterruptionTest {
                         public boolean hasNext() { called("hasNext"); return !consumed; }
 
                         @Override
-                        public Value next() { called("next"); consumed = true; return value; }
+                        public VALUE next() { called("next"); consumed = true; return value; }
                     };
                 }
             };

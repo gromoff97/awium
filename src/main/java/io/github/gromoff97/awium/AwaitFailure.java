@@ -19,6 +19,6 @@ public record AwaitFailure(Reason reason, String message, Throwable cause, List<
 
     public enum Reason {
         TIMEOUT, PERSISTENCE_FAILED, SOURCE_FAILED, CONDITION_FAILED,
-        INTERRUPTED, WAIT_FAILED, DIAGNOSTICS_FAILED
+        INTERRUPTED, WAIT_FAILED
     }
 }

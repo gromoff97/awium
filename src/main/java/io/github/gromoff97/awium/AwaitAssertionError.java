@@ -8,6 +8,7 @@ public final class AwaitAssertionError extends AssertionError {
     AwaitAssertionError(AwaitFailure failure) {
         super(failure.message(), failure.cause());
         this.failure = failure;
+        failure.suppressed().forEach(this::addSuppressed);
     }
 
     public AwaitFailure failure() {

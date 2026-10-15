@@ -32,7 +32,7 @@ class NarrowingConditionCompilationContractTest {
     }
 
     @Test
-    void narrowingConditionsRejectUnrelatedAndWiderTypes() throws IOException {
+    void narrowingConditionsAllowRuntimeTypeChecks() throws IOException {
         for (String invocation : List.of(
                 "await(text).until(instanceOf(Integer.class))",
                 "await(integer).until(instanceOf(Number.class))",
@@ -40,7 +40,7 @@ class NarrowingConditionCompilationContractTest {
                 "await(optional).tryUntil(hasValue(instanceOf(Integer.class)))",
                 "await(map).until(valueFor(\"answer\", instanceOf(Integer.class)))",
                 "await(collection).until(single(instanceOf(Integer.class)))")) {
-            assertFalse(compiles("""
+            assertTrue(compiles("""
                     void check(Source<String> text, Source<Integer> integer,
                             OptionalSource<String> optional, MapSource<Map<String, String>> map,
                             CollectionSource<List<String>> collection) {
@@ -48,6 +48,15 @@ class NarrowingConditionCompilationContractTest {
                     }
                     """.formatted(invocation)), invocation);
         }
+    }
+
+    @Test
+    void narrowingResultCannotBeAssignedToAnUnrelatedType() throws IOException {
+        assertFalse(compiles("""
+                void check(Source<Object> objects) {
+                    String wrong = await(objects).until(instanceOf(Integer.class));
+                }
+                """));
     }
 
     private boolean compiles(String source) throws IOException {

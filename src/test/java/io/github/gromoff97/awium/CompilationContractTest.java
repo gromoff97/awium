@@ -163,9 +163,9 @@ class CompilationContractTest {
     @Test
     void categorySpecificTerminalsRejectWrongConditions() throws IOException {
         for (String type : List.of(
-                "SelectedCondition<java.util.Optional<?>, java.util.Optional<?>>",
-                "SelectedCondition<java.util.Collection<?>, java.util.Collection<?>>",
-                "SelectedCondition<java.util.Map<?, ?>, java.util.Map<?, ?>>")) {
+                "SelectedCondition<java.util.Optional<?>>",
+                "SelectedCondition<java.util.Collection<?>>",
+                "SelectedCondition<java.util.Map<?, ?>>")) {
             assertFalse(compiles("""
                     import static io.github.gromoff97.awium.Await.await;
                     import io.github.gromoff97.awium.Source;
@@ -181,9 +181,11 @@ class CompilationContractTest {
     }
 
     @Test
-    void plainSourcesRejectSelectedConditionCategoryEscapes() throws IOException {
+    void plainSourcesExposeSelectionsAsObjectsWithoutInventingElementTypes() throws IOException {
         for (String condition : List.of("present", "single", "first", "last", "singleEntry")) {
-            assertFalse(compiles("""
+            String source = condition.equals("present") ? "optional" : condition.equals("singleEntry") ? "map" : "collection";
+            String selectedType = condition.equals("singleEntry") ? "Map.Entry<String, String>" : "String";
+            String contract = """
                     import static io.github.gromoff97.awium.Await.await;
                     import static io.github.gromoff97.awium.CollectionConditions.*;
                     import static io.github.gromoff97.awium.MapConditions.singleEntry;
@@ -194,12 +196,15 @@ class CompilationContractTest {
                         void check(Source<Optional<String>> optional,
                                 Source<List<String>> collection,
                                 Source<Map<String, String>> map) {
-                            await(%s).until(%s);
+                            %s result = await(%s).until(%s);
                         }
                     }
-                    """.formatted(condition.equals("present") ? "optional"
-                                    : condition.equals("singleEntry") ? "map" : "collection",
-                            condition)), condition);
+                    """;
+            assertTrue(compiles(contract.formatted("Object", source, condition)), condition);
+            assertFalse(compiles(contract.formatted(selectedType, source, condition)), condition);
+            String containerType = condition.equals("present") ? "Optional<String>"
+                    : condition.equals("singleEntry") ? "Map<String, String>" : "List<String>";
+            assertFalse(compiles(contract.formatted(containerType, source, condition)), condition);
         }
     }
 
@@ -214,9 +219,9 @@ class CompilationContractTest {
                 import java.util.Map;
                 import java.util.Optional;
                 final class Contract {
-                    SelectedCondition<Optional<?>, Optional<?>> optional = present;
-                    SelectedCondition<Collection<?>, Collection<?>> collection = CollectionConditions.single;
-                    SelectedCondition<Map<?, ?>, Map<?, ?>> map = MapConditions.singleEntry;
+                    SelectedCondition<Optional<?>> optional = present;
+                    SelectedCondition<Collection<?>> collection = CollectionConditions.single;
+                    SelectedCondition<Map<?, ?>> map = MapConditions.singleEntry;
                 }
                 """));
     }

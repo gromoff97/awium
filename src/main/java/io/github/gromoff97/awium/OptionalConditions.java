@@ -1,7 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.ExpectedCondition;
-import io.github.gromoff97.awium.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import java.util.Optional;
@@ -13,7 +11,7 @@ import static io.github.gromoff97.awium.Conditions.condition;
 
 public final class OptionalConditions {
 
-    public static final SelectedCondition<Optional<?>, Optional<?>> present =
+    public static final SelectedCondition<Optional<?>> present =
             ConditionSupport.selected("optional is present", OptionalConditions::present);
     public static final Condition<Optional<?>, Void> absent = condition("optional is absent", actual -> {
         if (actual == null) {
@@ -24,27 +22,17 @@ public final class OptionalConditions {
 
     private OptionalConditions() {}
 
-    public static <Value, Result> Condition<Optional<Value>, Result> hasValue(Condition<? super Value, ? extends Result> nested) {
+    public static <VALUE, RESULT> Condition<Optional<VALUE>, RESULT> hasValue(Condition<? super VALUE, ? extends RESULT> nested) {
         return compose("optional value: ", nested, OptionalConditions::present,
                 () -> nested.newSession());
     }
 
-    public static <Value> Condition<Optional<Value>, Value> hasValue(PreservingCondition<? super Value> nested) {
+    public static <VALUE> Condition<Optional<VALUE>, VALUE> hasValue(PreservingCondition<? super VALUE> nested) {
         return compose("optional value: ", nested, OptionalConditions::present,
                 () -> nested.preservingSession());
     }
 
-    public static <Observed, Value extends Observed> Condition<Optional<Observed>, Observed> hasValue(ExpectedCondition<Value> nested) {
-        return compose("optional value: ", nested, OptionalConditions::present,
-                () -> nested.preservingSession());
-    }
-
-    public static <Value, Result extends Value> Condition<Optional<Value>, Result> hasValue(NarrowingCondition<Result> nested) {
-        return compose("optional value: ", nested, OptionalConditions::present,
-                () -> nested.newSession());
-    }
-
-    private static <Value> ConditionResult<Value> present(Optional<Value> actual) {
+    private static <VALUE> ConditionResult<VALUE> present(Optional<VALUE> actual) {
         if (actual == null) {
             return unsatisfied("optional was null");
         }

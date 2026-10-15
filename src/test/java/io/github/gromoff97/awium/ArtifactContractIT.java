@@ -58,19 +58,17 @@ class ArtifactContractIT {
         assertFalse(classes.isEmpty(), dependencies);
         Set<String> facade = Set.of("Await", "Conditions", "CollectionConditions", "MapConditions",
                 "OptionalConditions", "StringConditions", "FailureDiagnostics", "ValueRendering");
-        for (String execution : Set.of("Condition", "ConditionDefinition", "ConditionSession", "ConditionSupport",
+        for (String execution : Set.of("Condition", "ConditionSession", "ConditionSupport",
                 "ConditionResult", "ConditionMetadata", "CapturedEvaluator", "WaitEngine",
                 "AttemptHistory", "WaitCompletion", "WaitConfiguration")) {
             Set<String> used = classes.getOrDefault(execution, Set.of());
             assertTrue(used.stream().noneMatch(facade::contains), execution + " -> " + used);
         }
-        for (String condition : Set.of("Condition", "ConditionDefinition", "ConditionSession", "ConditionResult",
+        for (String condition : Set.of("Condition", "ConditionSession", "ConditionResult",
                 "ConditionMetadata", "ConditionSupport", "CapturedEvaluator")) {
             assertTrue(classes.get(condition).stream().noneMatch(Set.of("AwaitAttempt", "AwaitResult")::contains),
                     condition + " -> " + classes.get(condition));
         }
-        assertFalse(classes.get("ConditionDefinition").contains("Condition"),
-                "ConditionDefinition must not depend on its concrete families");
         // Condition construction and composition are independent of source protocols, execution, and value comparison.
         Set<String> support = classes.get("ConditionSupport");
         assertTrue(support.stream().noneMatch(Set.of("Source", "CapturedEvaluator", "ConditionSession", "ValueMatching")::contains),
@@ -289,7 +287,7 @@ class ArtifactContractIT {
 
     @Test
     void implementationTypesAreNotAccessibleToConsumers(@TempDir Path directory) throws Exception {
-        for (Class<?> internal : List.of(ConditionSupport.class, ConditionDefinition.class, ConditionSession.class,
+        for (Class<?> internal : List.of(ConditionSupport.class, ConditionSession.class,
                 ConditionMetadata.class, CapturedEvaluator.class, WaitEngine.class, WaitConfiguration.class,
                 WaitCompletion.class, AttemptHistory.class,
                 FailureDiagnostics.class, ValueMatching.class, ValueRendering.class, CheckedCalls.class)) {

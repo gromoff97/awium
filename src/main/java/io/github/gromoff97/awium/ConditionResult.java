@@ -8,16 +8,16 @@ import static java.util.Objects.requireNonNull;
 /**
  * Result and diagnostic context of one condition invocation; polling and timeout policy belong to the wait engine.
  *
- * @param <Result> value produced by a satisfied condition
+ * @param <RESULT> value produced by a satisfied condition
  */
-public sealed interface ConditionResult<Result> {
+public sealed interface ConditionResult<RESULT> {
 
     Context context();
 
-    default <Next> ConditionResult<Next> continueIfSatisfied(Function<? super Result, ? extends ConditionResult<? extends Next>> continuation) {
+    default <NEXT> ConditionResult<NEXT> continueIfSatisfied(Function<? super RESULT, ? extends ConditionResult<? extends NEXT>> continuation) {
         requireNonNull(continuation, "continuation must not be null");
         return switch (this) {
-            case Satisfied<? extends Result> value -> {
+            case Satisfied<? extends RESULT> value -> {
                 var next = continuation.apply(value.result());
                 yield next == null ? null : next.mapSatisfied(result -> result);
             }
@@ -26,41 +26,41 @@ public sealed interface ConditionResult<Result> {
         };
     }
 
-    default <Next> ConditionResult<Next> mapSatisfied(Function<? super Result, ? extends Next> mapping) {
+    default <NEXT> ConditionResult<NEXT> mapSatisfied(Function<? super RESULT, ? extends NEXT> mapping) {
         requireNonNull(mapping, "mapping must not be null");
         return switch (this) {
-            case Satisfied<? extends Result> value -> new Satisfied<>(mapping.apply(value.result()), value.context());
+            case Satisfied<? extends RESULT> value -> new Satisfied<>(mapping.apply(value.result()), value.context());
             case Unsatisfied<?> value -> new Unsatisfied<>(value.mismatch(), value.assertion(), value.context());
             case Uncontrolled<?> value -> new Uncontrolled<>(value.cause(), value.context());
         };
     }
 
-    default ConditionResult<Result> withContext(Context replacement) {
+    default ConditionResult<RESULT> withContext(Context replacement) {
         requireNonNull(replacement, "context must not be null");
         return switch (this) {
-            case Satisfied<? extends Result> value -> new Satisfied<>(value.result(), replacement);
+            case Satisfied<? extends RESULT> value -> new Satisfied<>(value.result(), replacement);
             case Unsatisfied<?> value -> new Unsatisfied<>(value.mismatch(), value.assertion(), replacement);
             case Uncontrolled<?> value -> new Uncontrolled<>(value.cause(), replacement);
         };
     }
 
-    static <Result> ConditionResult<Result> satisfied(Result result) {
+    static <RESULT> ConditionResult<RESULT> satisfied(RESULT result) {
         return new Satisfied<>(result, INSTANCE);
     }
 
-    static <Result> ConditionResult<Result> unsatisfied(String mismatch) {
+    static <RESULT> ConditionResult<RESULT> unsatisfied(String mismatch) {
         return new Unsatisfied<>(mismatch, null, INSTANCE);
     }
 
-    static <Result> ConditionResult<Result> assertionUnsatisfied(String mismatch, AssertionError cause) {
+    static <RESULT> ConditionResult<RESULT> assertionUnsatisfied(String mismatch, AssertionError cause) {
         return new Unsatisfied<>(nonBlank(mismatch, "mismatch"), requireNonNull(cause, "cause must not be null"), INSTANCE);
     }
 
-    static <Result> ConditionResult<Result> uncontrolled(Throwable cause) {
+    static <RESULT> ConditionResult<RESULT> uncontrolled(Throwable cause) {
         return new Uncontrolled<>(cause, INSTANCE);
     }
 
-    record Satisfied<Result>(Result result, Context context) implements ConditionResult<Result> {
+    record Satisfied<RESULT>(RESULT result, Context context) implements ConditionResult<RESULT> {
 
         public Satisfied {
             requireNonNull(context, "context must not be null");
@@ -68,7 +68,7 @@ public sealed interface ConditionResult<Result> {
 
     }
 
-    record Unsatisfied<Result>(String mismatch, AssertionError assertion, Context context) implements ConditionResult<Result> {
+    record Unsatisfied<RESULT>(String mismatch, AssertionError assertion, Context context) implements ConditionResult<RESULT> {
 
         public Unsatisfied {
             mismatch = nonBlank(mismatch, "mismatch");
@@ -77,7 +77,7 @@ public sealed interface ConditionResult<Result> {
 
     }
 
-    record Uncontrolled<Result>(Throwable cause, Context context) implements ConditionResult<Result> {
+    record Uncontrolled<RESULT>(Throwable cause, Context context) implements ConditionResult<RESULT> {
 
         public Uncontrolled {
             requireNonNull(cause, "cause must not be null");
@@ -110,7 +110,7 @@ public sealed interface ConditionResult<Result> {
         }
     }
 
-    record Reference<Value>(String label, Value value) {
+    record Reference<VALUE>(String label, VALUE value) {
 
         public Reference {
             label = nonBlank(label, "reference label");

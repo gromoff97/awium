@@ -97,9 +97,5 @@ class ObjectAndOptionalConditionsTest {
                 () -> hasValue((Condition<Object, Object>) null)).getMessage().contains("condition"));
         assertTrue(assertThrows(NullPointerException.class,
                 () -> hasValue((Condition.PreservingCondition<Object>) null)).getMessage().contains("condition"));
-        assertTrue(assertThrows(NullPointerException.class,
-                () -> hasValue((Condition.ExpectedCondition<Object>) null)).getMessage().contains("condition"));
-        assertTrue(assertThrows(NullPointerException.class,
-                () -> hasValue((Condition.NarrowingCondition<Object>) null)).getMessage().contains("condition"));
     }
 }

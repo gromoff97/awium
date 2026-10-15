@@ -18,6 +18,7 @@ import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -43,7 +44,7 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void namedConditionValidatesItsArgumentsAndPreservesNullEvaluation() {
+    void namedConditionValidatesItsArgumentsAndRejectsNullEvaluation() {
         assertTrue(assertThrows(NullPointerException.class,
                 () -> condition(null, payment -> satisfied(payment)))
                 .getMessage().contains("description"));
@@ -62,7 +63,9 @@ class AssertionAdapterTest {
 
         var condition = Conditions.<String, String>condition(
                 "nullable evaluation", value -> null);
-        assertNull(evaluate(condition, "42"));
+        var failure = assertInstanceOf(ConditionResult.Uncontrolled.class, evaluate(condition, "42"));
+        assertInstanceOf(NullPointerException.class, failure.cause());
+        assertEquals("condition returned null ConditionResult", failure.cause().getMessage());
     }
 
     @Test

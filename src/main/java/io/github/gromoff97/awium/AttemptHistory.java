@@ -5,15 +5,15 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-final class AttemptHistory<Observed, Result> implements Consumer<AwaitAttempt<Observed, Result>> {
+final class AttemptHistory<OBSERVED, RESULT> implements Consumer<AwaitAttempt<OBSERVED, RESULT>> {
 
     // ponytail: fixed cap; make it configurable only if consumers need longer diagnostic histories.
     private static final int MAX_RETAINED_ATTEMPTS = 256;
 
-    private final ArrayList<AwaitAttempt<Observed, Result>> attempts = new ArrayList<>();
+    private final ArrayList<AwaitAttempt<OBSERVED, RESULT>> attempts = new ArrayList<>();
 
     @Override
-    public void accept(AwaitAttempt<Observed, Result> attempt) {
+    public void accept(AwaitAttempt<OBSERVED, RESULT> attempt) {
         if (!attempts.isEmpty() && equivalent(attempts.getLast(), attempt)) {
             attempts.set(attempts.size() - 1, attempt);
             return;
@@ -24,7 +24,7 @@ final class AttemptHistory<Observed, Result> implements Consumer<AwaitAttempt<Ob
         attempts.add(attempt);
     }
 
-    List<AwaitAttempt<Observed, Result>> snapshot() {
+    List<AwaitAttempt<OBSERVED, RESULT>> snapshot() {
         return List.copyOf(attempts);
     }
 

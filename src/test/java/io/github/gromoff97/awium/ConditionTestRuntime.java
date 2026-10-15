@@ -1,7 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.ExpectedCondition;
-import io.github.gromoff97.awium.Condition.NarrowingCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 
@@ -19,24 +17,16 @@ final class ConditionTestRuntime {
         return condition.<S>preservingSession().apply(actual);
     }
 
-    static <S, T extends S> ConditionResult<? extends S> evaluate(ExpectedCondition<T> condition, S actual) {
-        return condition.<S>preservingSession().apply(actual);
-    }
-
-    static <S, R> ConditionResult<? extends R> evaluate(NarrowingCondition<R> condition, S actual) {
-        return condition.newSession().apply(actual);
-    }
-
-    static <S, R, F> ConditionResult<? extends R> evaluate(
-            SelectedCondition<? super S, F> condition, S actual) {
+    static <S, R> ConditionResult<? extends R> evaluate(
+            SelectedCondition<? super S> condition, S actual) {
         return condition.<R>selectionSession().apply(actual);
     }
 
-    static String description(ConditionDefinition<?, ?> condition) {
+    static String description(Condition<?, ?> condition) {
         return condition.metadata.description();
     }
 
-    static String explanation(ConditionDefinition<?, ?> condition) {
+    static String explanation(Condition<?, ?> condition) {
         return condition.metadata.explanation();
     }
 

@@ -15,13 +15,13 @@ final class ValueMatching {
     private ValueMatching() {}
 
     @FunctionalInterface
-    interface CheckedBiPredicate<Actual, Expected> {
-        boolean test(Actual actual, Expected expected) throws Exception;
+    interface CheckedBiPredicate<ACTUAL, EXPECTED> {
+        boolean test(ACTUAL actual, EXPECTED expected) throws Exception;
     }
 
-    static <Value> boolean matchesAny(Iterable<Value> values, CheckedFunction<? super Value, Boolean> matches) throws Exception {
+    static <VALUE> boolean matchesAny(Iterable<VALUE> values, CheckedFunction<? super VALUE, Boolean> matches) throws Exception {
         for (var iterator = call(values::iterator); call(iterator::hasNext);) {
-            Value value = call(iterator::next);
+            VALUE value = call(iterator::next);
             boolean matching = call(() -> matches.apply(value));
             if (matching) {
                 return true;
@@ -30,19 +30,19 @@ final class ValueMatching {
         return false;
     }
 
-    static <Value> boolean matchesAll(Iterable<Value> values, CheckedFunction<? super Value, Boolean> matches) throws Exception {
+    static <VALUE> boolean matchesAll(Iterable<VALUE> values, CheckedFunction<? super VALUE, Boolean> matches) throws Exception {
         return !matchesAny(values, value -> !matches.apply(value));
     }
 
-    static <Actual, Expected> boolean containsAll(Iterable<Actual> actual, Collection<Expected> expected,
-            CheckedBiPredicate<? super Actual, ? super Expected> matches) throws Exception {
+    static <ACTUAL, EXPECTED> boolean containsAll(Iterable<ACTUAL> actual, Collection<EXPECTED> expected,
+            CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) throws Exception {
         var remainingExpected = new ArrayList<>(expected);
         if (remainingExpected.isEmpty()) {
             return true;
         }
         for (var iterator = call(actual::iterator); call(iterator::hasNext);) {
-            Actual value = call(iterator::next);
-            Iterator<Expected> candidates = remainingExpected.iterator();
+            ACTUAL value = call(iterator::next);
+            Iterator<EXPECTED> candidates = remainingExpected.iterator();
             while (candidates.hasNext()) {
                 if (call(() -> matches.test(value, candidates.next()))) {
                     candidates.remove();
@@ -55,13 +55,13 @@ final class ValueMatching {
         return false;
     }
 
-    static <Actual, Expected> boolean exactly(Iterator<Actual> actual, Collection<Expected> expected,
-            CheckedBiPredicate<? super Actual, ? super Expected> matches) throws Exception {
+    static <ACTUAL, EXPECTED> boolean exactly(Iterator<ACTUAL> actual, Collection<EXPECTED> expected,
+            CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) throws Exception {
         var remainingExpected = new ArrayList<>(expected);
         while (call(actual::hasNext)) {
-            Actual value = call(actual::next);
+            ACTUAL value = call(actual::next);
             boolean found = false;
-            Iterator<Expected> candidates = remainingExpected.iterator();
+            Iterator<EXPECTED> candidates = remainingExpected.iterator();
             while (candidates.hasNext()) {
                 if (call(() -> matches.test(value, candidates.next()))) {
                     candidates.remove();

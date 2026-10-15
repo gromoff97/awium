@@ -1,5 +1,8 @@
 package io.github.gromoff97.awium;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -196,7 +199,39 @@ class TryUntilFailureTest {
         assertInstanceOf(ConditionResult.Uncontrolled.class,
                 assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, nullEvaluation.attempts().getLast().outcome()).evaluation());
         assertEquals(1, diagnostics.failure().suppressed().size());
-        assertInstanceOf(AssertionError.class, diagnostics.failure().suppressed().getFirst());
+        assertInstanceOf(AssertionError.class, diagnostics.failure().cause());
+        assertInstanceOf(IllegalStateException.class, diagnostics.failure().suppressed().getFirst());
+    }
+
+    @Test
+    void nullEvaluationHasTheSamePriorityAcrossConditionFamiliesAndComposition() {
+        List<Function<Condition<String, String>, AwaitResult<?, ?>>> paths = List.of(
+                check -> await(() -> "actual").tryUntil(check),
+                check -> await(() -> "actual").tryUntil(check, check),
+                check -> await(() -> Optional.of("actual")).tryUntil(OptionalConditions.hasValue(check)),
+                check -> await(() -> List.of("actual")).tryUntil(CollectionConditions.single(check)),
+                check -> await(() -> Map.of("key", "actual")).tryUntil(MapConditions.valueFor("key", check)));
+        for (boolean interrupt : List.of(false, true)) {
+            CheckedFunction<String, ConditionResult<String>> evaluation = actual -> {
+                if (interrupt) currentThread().interrupt();
+                return null;
+            };
+            for (Condition<String, String> check : List.of(condition("broken", evaluation),
+                    Conditions.preserving("broken", evaluation))) {
+                for (var path : paths) {
+                    try {
+                        var result = failed(path.apply(check));
+                        assertEquals(CONDITION_FAILED, result.failure().reason());
+                        assertInstanceOf(NullPointerException.class, result.failure().cause());
+                        assertEquals("condition returned null ConditionResult", result.failure().cause().getMessage());
+                        assertEquals(1, result.totalAttempts());
+                        assertEquals(interrupt, currentThread().isInterrupted());
+                    } finally {
+                        interrupted();
+                    }
+                }
+            }
+        }
     }
 
     @Test

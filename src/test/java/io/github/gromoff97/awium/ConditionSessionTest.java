@@ -46,6 +46,22 @@ class ConditionSessionTest {
     }
 
     @Test
+    void commonConditionTypePreservesTheObservationAcrossTerminalsAndComposition() {
+        var actual = new Object();
+        var replacement = new Object();
+        Condition<Object, Object> condition = Conditions.preserving("preserve", ignored -> satisfied(replacement));
+        condition = condition.because("original identity");
+        var waiting = await(() -> actual);
+
+        assertSame(actual, waiting.until(condition));
+        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, waiting.tryUntil(condition)).result());
+        assertSame(actual, await(() -> Optional.of(actual)).until(OptionalConditions.hasValue(condition)));
+        assertSame(actual, await(() -> List.of(actual)).until(CollectionConditions.single(condition)));
+        var time = new FakeTime(0);
+        assertEquals(List.of(actual, actual), waiting.usingTime(time, time).until(condition, condition));
+    }
+
+    @Test
     void mapAndOptionalCompositionCreateOneIndependentSessionPerWait() {
         int[] factories = {0};
         var nested = Conditions.condition("two observations", () -> {
@@ -75,7 +91,7 @@ class ConditionSessionTest {
                 });
         PreservingCondition<Integer> preserving =
                 Conditions.matches(value -> value > 0);
-        SelectedCondition<Collection<?>, ?> selected = CollectionConditions.single;
+        SelectedCondition<Collection<?>> selected = CollectionConditions.single;
         Condition<Collection<?>, List<Object>> sequence =
                 captured(CollectionConditions.single, CollectionConditions.single);
 

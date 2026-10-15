@@ -1,30 +1,61 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
+
 /**
  * Terminal outcome of a complete acquisition and optional persistence execution.
  *
- * @param <Observed> complete value returned by the source
- * @param <Result> value produced by the condition
+ * @param <OBSERVED> complete value returned by the source
+ * @param <RESULT> value produced by the condition
  */
-sealed interface WaitCompletion<Observed, Result> {
+sealed interface WaitCompletion<OBSERVED, RESULT> {
 
-    AwaitAttempt<Observed, Result> attempt();
+    AwaitAttempt<OBSERVED, RESULT> attempt();
 
-    record Satisfied<Observed, Result>(AwaitAttempt<Observed, Result> attempt) implements WaitCompletion<Observed, Result> {
+    default Throwable cause() {
+        return switch (attempt().outcome()) {
+            case AwaitAttempt.Outcome.WaitingFailed<?, ?> value -> value.failure();
+            case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> value -> value.failure();
+            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> value -> value.failure();
+            case AwaitAttempt.Outcome.Evaluated<?, ?> value -> switch (value.evaluation()) {
+                case ConditionResult.Satisfied<?> ignored -> null;
+                case ConditionResult.Unsatisfied<?> result -> result.assertion();
+                case ConditionResult.Uncontrolled<?> result -> result.cause();
+            };
+        };
+    }
 
-        Result result() {
-            var evaluated = (AwaitAttempt.Outcome.Evaluated<Observed, Result>) attempt.outcome();
-            return ((ConditionResult.Satisfied<? extends Result>) evaluated.evaluation()).result();
+    default AwaitFailure.Reason failureReason() {
+        return switch (this) {
+            case PersistenceFailure<?, ?> ignored -> PERSISTENCE_FAILED;
+            case Uncontrolled<?, ?> ignored -> cause() instanceof InterruptedException
+                    ? INTERRUPTED : switch (attempt().outcome()) {
+                        case AwaitAttempt.Outcome.WaitingFailed<?, ?> value -> WAIT_FAILED;
+                        case AwaitAttempt.Outcome.SourceRetrievalFailed<?, ?> value -> SOURCE_FAILED;
+                        case AwaitAttempt.Outcome.Evaluated<?, ?> value -> CONDITION_FAILED;
+                        default -> throw new IllegalArgumentException("attempt is not uncontrolled");
+                    };
+            case TimeoutBetweenObservations<?, ?> ignored -> TIMEOUT;
+            case LateTimeout<?, ?> ignored -> TIMEOUT;
+            case Satisfied<?, ?> ignored -> throw new IllegalArgumentException("successful outcomes have no failure diagnostics");
+        };
+    }
+
+    record Satisfied<OBSERVED, RESULT>(AwaitAttempt<OBSERVED, RESULT> attempt) implements WaitCompletion<OBSERVED, RESULT> {
+
+        RESULT result() {
+            var evaluated = (AwaitAttempt.Outcome.Evaluated<OBSERVED, RESULT>) attempt.outcome();
+            return ((ConditionResult.Satisfied<? extends RESULT>) evaluated.evaluation()).result();
         }
     }
 
-    record Uncontrolled<Observed, Result>(AwaitAttempt<Observed, Result> attempt) implements WaitCompletion<Observed, Result> {}
+    record Uncontrolled<OBSERVED, RESULT>(AwaitAttempt<OBSERVED, RESULT> attempt) implements WaitCompletion<OBSERVED, RESULT> {}
 
-    record TimeoutBetweenObservations<Observed, Result>(long elapsedNanos,
-            AwaitAttempt<Observed, Result> attempt) implements WaitCompletion<Observed, Result> {}
+    record TimeoutBetweenObservations<OBSERVED, RESULT>(long elapsedNanos,
+            AwaitAttempt<OBSERVED, RESULT> attempt) implements WaitCompletion<OBSERVED, RESULT> {}
 
-    record LateTimeout<Observed, Result>(AwaitAttempt<Observed, Result> attempt) implements WaitCompletion<Observed, Result> {}
+    record LateTimeout<OBSERVED, RESULT>(AwaitAttempt<OBSERVED, RESULT> attempt) implements WaitCompletion<OBSERVED, RESULT> {}
 
-    record PersistenceFailure<Observed, Result>(long acquiredAfterNanos,
-            AwaitAttempt<Observed, Result> attempt) implements WaitCompletion<Observed, Result> {}
+    record PersistenceFailure<OBSERVED, RESULT>(long acquiredAfterNanos,
+            AwaitAttempt<OBSERVED, RESULT> attempt) implements WaitCompletion<OBSERVED, RESULT> {}
 }

@@ -17,7 +17,7 @@ final class ValueRendering {
 
     private ValueRendering() {}
 
-    static <Element> List<Element> snapshot(Stream<? extends Element> values) {
+    static <ELEMENT> List<ELEMENT> snapshot(Stream<? extends ELEMENT> values) {
         return unmodifiableList(new SnapshotList<>(values.toList()));
     }
 
@@ -79,15 +79,15 @@ final class ValueRendering {
         }
     }
 
-    private static final class SnapshotList<Element> extends AbstractList<Element> {
-        private final List<? extends Element> values;
+    private static final class SnapshotList<ELEMENT> extends AbstractList<ELEMENT> {
+        private final List<? extends ELEMENT> values;
 
-        private SnapshotList(List<? extends Element> values) {
+        private SnapshotList(List<? extends ELEMENT> values) {
             this.values = values;
         }
 
         @Override
-        public Element get(int index) { return values.get(index); }
+        public ELEMENT get(int index) { return values.get(index); }
 
         @Override
         public int size() { return values.size(); }

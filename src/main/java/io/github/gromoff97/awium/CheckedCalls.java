@@ -6,7 +6,7 @@ final class CheckedCalls {
 
     private CheckedCalls() {}
 
-    static <Result> Result call(Callable<? extends Result> callback) throws Exception {
+    static <RESULT> RESULT call(Callable<? extends RESULT> callback) throws Exception {
         checkInterruption();
         return callback.call();
     }
