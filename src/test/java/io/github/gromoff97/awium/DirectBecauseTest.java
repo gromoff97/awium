@@ -22,46 +22,6 @@ import static org.junit.jupiter.api.Assertions.*;
 class DirectBecauseTest {
 
     @Test
-    void matchingConditionsPreserveTheirResultsAndSupportNestedExplanations() {
-        record User(String name) {}
-        var actual = new User("ready");
-
-        User user = await(() -> actual).until(matches(equalTo(actual)).because("expected user"));
-        String name = await(() -> actual).until(matches(yields(User::name)).because("user name"));
-        User selected = await(() -> List.of(actual)).until(
-                matches(single(matches(equalTo(actual)).because("inner"))).because("outer"));
-        AwaitResult<User, User> attempt = await(() -> actual).tryUntil(
-                matches(equalTo(actual)).because("expected user"));
-
-        assertSame(actual, user);
-        assertEquals("ready", name);
-        assertSame(actual, selected);
-        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, attempt).result());
-    }
-
-    @Test
-    void matchingSelectorsKeepTheResultTypeFromTheirSource() {
-        String optional = await(() -> Optional.of("ready")).until(matches(present).because("present value"));
-        String element = await(() -> List.of("ready")).until(matches(single).because("one element"));
-        Integer value = await(() -> Map.of("key", 1)).until(matches(valueFor("key")).because("mapped value"));
-        Map.Entry<String, Integer> entry = await(() -> Map.of("key", 1)).until(
-                matches(singleEntry).because("one entry"));
-        AwaitResult<Optional<String>, String> optionalAttempt = await(() -> Optional.of("ready")).tryUntil(
-                matches(present).because("present value"));
-        AwaitResult<Map<String, Integer>, Integer> mappedAttempt = await(() -> Map.of("key", 1)).tryUntil(
-                matches(valueFor("key")).because("mapped value"));
-
-        assertEquals("ready", optional);
-        assertEquals("ready", element);
-        assertEquals(1, value);
-        assertEquals(Map.entry("key", 1), entry);
-        assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, optionalAttempt).result());
-        assertEquals(1, assertInstanceOf(AwaitResult.Satisfied.class, mappedAttempt).result());
-        assertNull(ConditionTestRuntime.explanation(present));
-        assertNull(ConditionTestRuntime.explanation(single));
-    }
-
-    @Test
     void explainedComparisonsPreserveTheObservedTypeInBothTerminalsAndSequences() {
         Number actual = Integer.valueOf(1000);
         var time = new FakeTime(0);

@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Source.CollectionSource;
@@ -59,10 +58,6 @@ class FactoryGrammarTest {
         var object = await((Source<String>) () -> "value").usingTime(pollingTime, pollingTime).every(ofSeconds(20));
         assertNull("predicate", () -> object.until(matches((Predicate<String>) null)));
         assertNull("predicate", () -> object.tryUntil(matches((Predicate<String>) null)));
-        assertNull("condition", () -> matches((Condition<String, Integer>) null));
-        assertNull("condition", () -> matches((PreservingCondition<String>) null));
-        assertNull("condition", () -> matches((SelectedCondition<Optional<?>>) null));
-        assertNull("condition", () -> matches((MapValueCondition<Map<?, ?>>) null));
         assertNull("condition", () -> object.until((PreservingCondition<String>) null));
         assertNull("condition", () -> object.until((Condition<String, String>) null));
 

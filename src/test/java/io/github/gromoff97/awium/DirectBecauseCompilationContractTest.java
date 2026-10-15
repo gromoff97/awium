@@ -14,17 +14,13 @@ class DirectBecauseCompilationContractTest {
     Path directory;
 
     @Test
-    void matchingConditionsCannotInventInputOrResultTypes() throws IOException {
+    void matchesRejectsExistingConditions() throws IOException {
         for (String expression : List.of(
-                "String wrong = await(numbers).until(matches(equalTo(1)).because(\"wrong\"));",
-                "String wrong = await(optional).until(matches(present).because(\"wrong\"));",
-                "String wrong = await(collection).until(matches(single).because(\"wrong\"));",
-                "Map.Entry<String, Number> wrong = await(map).until(matches(valueFor(\"key\")).because(\"wrong\"));",
-                "Number wrong = await(map).until(matches(entryFor(\"key\")).because(\"wrong\"));",
-                "await(numbers).until(matches(yields(String::length)).because(\"wrong\"));",
-                "Integer wrong = await(numbers).until(matches(yields(Number::toString)).because(\"wrong\"));",
-                "AwaitResult<Map<String, Number>, String> wrong = await(map).tryUntil(matches(valueFor(\"key\")).because(\"wrong\"));",
-                "Source<Optional<Number>> plain = optional; Object wrong = await(plain).until(matches(present).because(\"wrong\"));")) {
+                "matches(equalTo(1));",
+                "matches(yields(Number::toString));",
+                "matches(present);",
+                "matches(single);",
+                "matches(valueFor(\"key\"));")) {
             assertFalse(compiles(expression), expression);
         }
     }
