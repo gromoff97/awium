@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.time.Duration;
 import java.util.List;
@@ -57,12 +58,20 @@ public sealed class ValueAwait<OBSERVED> permits Await {
         return complete(required(condition).preservingSession());
     }
 
+    public OBSERVED until(ComparisonCondition<? extends OBSERVED> condition) {
+        return complete(required(condition).definition.preservingSession());
+    }
+
     public <RESULT> RESULT until(Condition<? super OBSERVED, ? extends RESULT> condition) {
         return complete(required(condition).newSession());
     }
 
     public AwaitResult<OBSERVED, OBSERVED> tryUntil(PreservingCondition<? super OBSERVED> condition) {
         return capture(required(condition).preservingSession());
+    }
+
+    public AwaitResult<OBSERVED, OBSERVED> tryUntil(ComparisonCondition<? extends OBSERVED> condition) {
+        return capture(required(condition).definition.preservingSession());
     }
 
     public <RESULT> AwaitResult<OBSERVED, RESULT> tryUntil(Condition<? super OBSERVED, ? extends RESULT> condition) {
@@ -77,20 +86,20 @@ public sealed class ValueAwait<OBSERVED> permits Await {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final <RESULT> List<RESULT> until(Condition<? super OBSERVED, ? extends RESULT> first, Condition<? super OBSERVED, ? extends RESULT> second, Condition<? super OBSERVED, ? extends RESULT>... rest) {
-        return until(CapturedEvaluator.<OBSERVED, RESULT>captured(first, second, rest));
-    }
-
-    @SafeVarargs
-    @SuppressWarnings("varargs")
     public final AwaitResult<OBSERVED, List<OBSERVED>> tryUntil(PreservingCondition<? super OBSERVED> first, PreservingCondition<? super OBSERVED> second, PreservingCondition<? super OBSERVED>... rest) {
         return tryUntil(CapturedEvaluator.<OBSERVED>captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final <RESULT> AwaitResult<OBSERVED, List<RESULT>> tryUntil(Condition<? super OBSERVED, ? extends RESULT> first, Condition<? super OBSERVED, ? extends RESULT> second, Condition<? super OBSERVED, ? extends RESULT>... rest) {
-        return tryUntil(CapturedEvaluator.<OBSERVED, RESULT>captured(first, second, rest));
+    public final List<OBSERVED> until(ComparisonCondition<? extends OBSERVED> first, ComparisonCondition<? extends OBSERVED> second, ComparisonCondition<? extends OBSERVED>... rest) {
+        return until(CapturedEvaluator.<OBSERVED>captured(first, second, rest));
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public final AwaitResult<OBSERVED, List<OBSERVED>> tryUntil(ComparisonCondition<? extends OBSERVED> first, ComparisonCondition<? extends OBSERVED> second, ComparisonCondition<? extends OBSERVED>... rest) {
+        return tryUntil(CapturedEvaluator.<OBSERVED>captured(first, second, rest));
     }
 
     final <RESULT> RESULT complete(ConditionSession<? super OBSERVED, ? extends RESULT> session) {

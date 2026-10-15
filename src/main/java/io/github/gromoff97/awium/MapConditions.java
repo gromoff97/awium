@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
@@ -14,6 +15,7 @@ import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.CheckedCalls.call;
+import static io.github.gromoff97.awium.Condition.required;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
@@ -24,7 +26,6 @@ import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.selected;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
-import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.ValueMatching.containsAll;
 import static io.github.gromoff97.awium.ValueMatching.equal;
 import static io.github.gromoff97.awium.ValueMatching.exactly;
@@ -104,14 +105,20 @@ public final class MapConditions {
 
     public static <KEY, VALUE> SelectedCondition<Map<? extends KEY, ? extends VALUE>> singleEntry(
             PreservingCondition<? super Entry<? extends KEY, ? extends VALUE>> nested) {
-        return selected(ConditionSupport.single("map", nested, Map::entrySet,
+        return selected(ConditionSupport.single("map", required(nested).metadata, Map::entrySet,
                 () -> nested.preservingSession()));
     }
 
     public static <KEY, VALUE, RESULT> Condition<Map<? extends KEY, ? extends VALUE>, RESULT> singleEntry(
             Condition<? super Entry<? extends KEY, ? extends VALUE>, ? extends RESULT> nested) {
-        return ConditionSupport.single("map", nested, Map::entrySet,
+        return ConditionSupport.single("map", required(nested).metadata, Map::entrySet,
                 () -> nested.newSession());
+    }
+
+    public static <KEY, VALUE> SelectedCondition<Map<? super KEY, ? super VALUE>> singleEntry(
+            ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
+        return selected(ConditionSupport.single("map", required(nested).definition.metadata, Map::entrySet,
+                () -> nested.definition.preservingSession()));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> allEntries(BiPredicate<? super KEY, ? super VALUE> predicate) {
@@ -165,27 +172,33 @@ public final class MapConditions {
         return preserving("no map value matches", "a map value matched", actual -> !matchesAny(call(actual::values), predicate::test));
     }
 
-    public static MapValueCondition<Map<?, ?>> valueFor(Object key) {
+    public static <KEY> MapValueCondition<Map<? super KEY, ?>> valueFor(KEY key) {
         return mapValue(ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> value(actual, key)));
     }
 
-    public static <VALUE, RESULT> Condition<Map<?, ? extends VALUE>, RESULT> valueFor(Object key,
+    public static <KEY, VALUE, RESULT> Condition<Map<? super KEY, ? extends VALUE>, RESULT> valueFor(KEY key,
             Condition<? super VALUE, ? extends RESULT> nested) {
-        return compose("map value ", nested, actual -> value(actual, key),
+        return compose("map value ", required(nested).metadata, actual -> value(actual, key),
                 () -> nested.newSession());
     }
 
-    public static <VALUE> MapValueCondition<Map<?, ? extends VALUE>> valueFor(Object key,
+    public static <KEY, VALUE> MapValueCondition<Map<? super KEY, ? extends VALUE>> valueFor(KEY key,
             PreservingCondition<? super VALUE> nested) {
-        return mapValue(compose("map value ", nested, actual -> value(actual, key),
+        return mapValue(compose("map value ", required(nested).metadata, actual -> value(actual, key),
                 () -> nested.preservingSession()));
     }
 
-    public static SelectedCondition<Map<?, ?>> entryFor(Object key) {
+    public static <KEY, EXPECTED> MapValueCondition<Map<? super KEY, ? super EXPECTED>> valueFor(KEY key,
+            ComparisonCondition<EXPECTED> nested) {
+        return mapValue(compose("map value ", required(nested).definition.metadata, actual -> value(actual, key),
+                () -> nested.definition.preservingSession()));
+    }
+
+    public static <KEY> SelectedCondition<Map<? super KEY, ?>> entryFor(KEY key) {
         return selected(ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> findEntry(actual, key)));
     }
 
-    public static MapValueCondition<Map<?, ?>> onlyValueFor(Object key) {
+    public static <KEY> MapValueCondition<Map<? super KEY, ?>> onlyValueFor(KEY key) {
         return mapValue(ConditionSupport.condition("map contains only the expected key", expectedReference(key), actual -> {
             if (actual == null) {
                 return unsatisfied("map was null");

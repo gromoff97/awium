@@ -1,20 +1,21 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import java.util.Optional;
 
+import static io.github.gromoff97.awium.Condition.required;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
 import static io.github.gromoff97.awium.ConditionSupport.selected;
-import static io.github.gromoff97.awium.Conditions.condition;
 
 public final class OptionalConditions {
 
     public static final SelectedCondition<Optional<?>> present =
             ConditionSupport.selected("optional is present", OptionalConditions::present);
-    public static final Condition<Optional<?>, Void> absent = condition("optional is absent", actual -> {
+    public static final Condition<Optional<?>, Void> absent = ConditionSupport.condition("optional is absent", null, actual -> {
         if (actual == null) {
             return unsatisfied("optional was null");
         }
@@ -24,13 +25,18 @@ public final class OptionalConditions {
     private OptionalConditions() {}
 
     public static <VALUE, RESULT> Condition<Optional<? extends VALUE>, RESULT> hasValue(Condition<? super VALUE, ? extends RESULT> nested) {
-        return compose("optional value: ", nested, OptionalConditions::present,
+        return compose("optional value: ", required(nested).metadata, OptionalConditions::present,
                 () -> nested.newSession());
     }
 
     public static <VALUE> SelectedCondition<Optional<? extends VALUE>> hasValue(PreservingCondition<? super VALUE> nested) {
-        return selected(compose("optional value: ", nested, OptionalConditions::present,
+        return selected(compose("optional value: ", required(nested).metadata, OptionalConditions::present,
                 () -> nested.preservingSession()));
+    }
+
+    public static <EXPECTED> SelectedCondition<Optional<? super EXPECTED>> hasValue(ComparisonCondition<EXPECTED> nested) {
+        return selected(compose("optional value: ", required(nested).definition.metadata, OptionalConditions::present,
+                () -> nested.definition.preservingSession()));
     }
 
     private static <VALUE> ConditionResult<VALUE> present(Optional<? extends VALUE> actual) {

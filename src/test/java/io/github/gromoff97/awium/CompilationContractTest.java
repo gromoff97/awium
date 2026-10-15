@@ -244,24 +244,22 @@ class CompilationContractTest {
     @Test
     void lazyConditionsRejectAnIncompatibleObservedType() throws IOException {
         for (String terminal : List.of("until", "tryUntil")) {
-            for (String factory : List.of("condition", "preserving")) {
-                assertFalse(compiles("""
-                        import static io.github.gromoff97.awium.Await.await;
-                        import static io.github.gromoff97.awium.Conditions.*;
-                        import io.github.gromoff97.awium.CheckedFunction;
-                        import io.github.gromoff97.awium.ConditionResult;
-                        import io.github.gromoff97.awium.Source;
+            assertFalse(compiles("""
+                    import static io.github.gromoff97.awium.Await.await;
+                    import static io.github.gromoff97.awium.Conditions.*;
+                    import io.github.gromoff97.awium.CheckedFunction;
+                    import io.github.gromoff97.awium.ConditionResult;
+                    import io.github.gromoff97.awium.Source;
 
-                        final class Contract {
-                            static CheckedFunction<String, ConditionResult<String>> evaluator() {
-                                return ConditionResult::satisfied;
-                            }
-                            void check(Source<Integer> source) {
-                                await(source).%s(%s("typed", Contract::evaluator));
-                            }
+                    final class Contract {
+                        static CheckedFunction<String, ConditionResult<String>> evaluator() {
+                            return ConditionResult::satisfied;
                         }
-                        """.formatted(terminal, factory)), terminal + ": " + factory);
-            }
+                        void check(Source<Integer> source) {
+                            await(source).%s(condition("typed", Contract::evaluator));
+                        }
+                    }
+                    """.formatted(terminal)), terminal);
         }
     }
 

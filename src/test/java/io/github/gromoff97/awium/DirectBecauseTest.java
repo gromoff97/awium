@@ -44,6 +44,31 @@ class DirectBecauseTest {
     }
 
     @Test
+    void inferredResultsStayTypedAcrossSeparateSequenceFamilies() {
+        var time = new FakeTime(0);
+        var value = await(() -> "ready").until(equalTo("ready").because("ready value"));
+        var comparisons = await(() -> "ready").usingTime(time, time)
+                .until(equalTo("ready").because("ready"), notIn("failed").because("successful"));
+        var checks = await(() -> "ready").usingTime(time, time)
+                .until(isNotNull.because("present"), matches(valueToCheck -> true).because("accepted"));
+        assertEquals(5, value.length());
+        assertEquals(5, comparisons.getFirst().length());
+        assertEquals(5, checks.getLast().length());
+    }
+
+    @Test
+    void typedNullableOperandsKeepTheirTypesAfterBecause() {
+        String missing = null;
+        var value = await(() -> missing).until(equalTo(missing).because("missing value"));
+        var actual = java.util.Collections.singletonMap(missing, "ready");
+        var selected = await(() -> actual).until(valueFor(missing).because("nullable key"));
+
+        String nullableResult = value;
+        assertNull(nullableResult);
+        assertEquals(5, selected.length());
+    }
+
+    @Test
     void explainedOptionalSelectionsReturnContainedNumbers() {
         Number actual = 1;
         var time = new FakeTime(0);
@@ -107,16 +132,14 @@ class DirectBecauseTest {
     }
 
     @Test
-    void explainedConditionsNarrowAndTransformNestedValues() {
+    void explainedConditionsNarrowNestedValues() {
         Number actual = 1;
         Integer direct = await(() -> actual).until(instanceOf(Integer.class).because("integer"));
         Integer optional = await(() -> Optional.of(actual)).until(hasValue(instanceOf(Integer.class)).because("integer"));
         Integer element = await(() -> List.of(actual)).until(single(instanceOf(Integer.class)).because("integer"));
         Integer mapped = await(() -> Map.of("key", actual)).until(valueFor("key", instanceOf(Integer.class)).because("integer"));
-        String transformed = await(() -> List.of(actual)).until(single(yields(Number::toString)).because("text"));
 
         assertEquals(List.of(1, 1, 1, 1), List.of(direct, optional, element, mapped));
-        assertEquals("1", transformed);
     }
 
     @Test
@@ -163,28 +186,45 @@ class DirectBecauseTest {
     }
 
     @Test
-    void standaloneConditionsKeepTheirTypesWhenExplainedAndNested() {
+    void customChecksKeepInferredTypesThroughBecauseAndComposition() {
         record Payment(String id, boolean paid) {}
         var actual = new Payment("receipt", true);
-        var paid = matches(Payment::paid);
-        var id = yields(Payment::id);
-        var onePaid = single(paid.because("paid payment"));
-        var oneId = single(id.because("payment id"));
-        var optionalId = hasValue(id.because("optional payment id"));
-        var mappedId = valueFor("key", id.because("mapped payment id"));
+        var check = condition("identity", ConditionResult::satisfied);
+        var time = new FakeTime(0);
 
-        Payment payment = await(() -> actual).until(paid.because("required payment"));
-        Payment selected = await(() -> List.of(actual)).until(onePaid.because("one payment"));
-        String value = await(() -> actual).until(id.because("required id"));
-        String nested = await(() -> List.of(actual)).until(oneId.because("one id"));
-        String optional = await(() -> Optional.of(actual)).until(optionalId.because("optional id"));
-        String mapped = await(() -> Map.of("key", actual)).until(mappedId.because("mapped id"));
+        var payment = await(() -> actual).until(condition("inline", value -> ConditionResult.satisfied(value)).because("required"));
+        var created = await(() -> actual).until(condition("factory", () -> ConditionResult::satisfied).because("required"));
+        var selected = await(() -> List.of(actual)).until(single(check.because("inner")).because("outer"));
+        var optional = await(() -> Optional.of(actual)).until(hasValue(check).because("optional"));
+        var mapped = await(() -> Map.of("key", actual)).until(valueFor("key", check).because("mapped"));
+        var sequence = await(() -> actual).usingTime(time, time)
+                .until(check.because("first"), condition("second", ConditionResult::satisfied).because("second"));
+        var diagnostic = await(() -> actual).tryUntil(check.because("diagnostic"));
 
+        assertEquals(List.of("receipt", "receipt", "receipt", "receipt", "receipt", "receipt"),
+                List.of(payment.id(), created.id(), selected.id(), optional.id(), mapped.id(), sequence.getLast().id()));
+        if (diagnostic instanceof AwaitResult.Satisfied(var history, var attempts, var value)) {
+            assertEquals("receipt", value.id());
+            assertSame(actual, value);
+        } else {
+            fail("custom check must succeed");
+        }
         assertSame(actual, payment);
         assertSame(actual, selected);
-        assertEquals(List.of("receipt", "receipt", "receipt", "receipt"), List.of(value, nested, optional, mapped));
-        assertNull(ConditionTestRuntime.explanation(paid));
-        assertNull(ConditionTestRuntime.explanation(id));
+        assertNull(ConditionTestRuntime.explanation(check));
+    }
+
+    @Test
+    void sourceProjectionsKeepTheirTypesWithExplainedChecks() {
+        record User(String name) {}
+        var user = new User("Alice");
+        var entries = Map.of("key", 1);
+
+        var name = await(user::name).until(isNotNull.because("required name"));
+        var key = await(entries::keySet).until(single.because("single key"));
+
+        assertEquals(5, name.length());
+        assertEquals(3, key.length());
     }
 
     @Test
@@ -197,40 +237,31 @@ class DirectBecauseTest {
         var entry = new Receipt("key", 1);
         var actual = new ProbeContainers.EntryMap<String, Integer>(List.of(entry));
         var receipt = singleEntry(instanceOf(Receipt.class).because("receipt entry"));
-        var key = singleEntry(yields(DirectBecauseTest::entryKey).because("entry key"));
         var ordered = sorted(Comparator.comparingInt(Number::intValue));
         var numbers = new ArrayList<>(List.of(1, 2));
 
         Receipt result = await(() -> actual).until(receipt.because("required receipt"));
-        String resultKey = await(() -> actual).until(key.because("required key"));
         ArrayList<Integer> sortedNumbers = await(() -> numbers).until(ordered.because("ordered numbers"));
 
         assertSame(entry, result);
-        assertEquals("key", resultKey);
         assertSame(numbers, sortedNumbers);
-    }
-
-    private static String entryKey(Map.Entry<? extends String, ?> entry) {
-        return entry.getKey();
     }
 
     @Test
     void explainedSelectionsAcceptCovariantViewsAndTypedEntryCallbacks() {
         Source<List<? extends Number>> values = () -> List.of(1);
-        Source<Map<? extends CharSequence, ? extends Number>> entries = () -> Map.of("key", 1);
+        Source<Map<CharSequence, ? extends Number>> entries = () -> Map.of("key", 1);
         var collection = new CollectionViewSource<Number, List<? extends Number>>(values);
-        var map = new MapViewSource<CharSequence, Number, Map<? extends CharSequence, ? extends Number>>(entries);
+        var map = new MapViewSource<CharSequence, Number, Map<CharSequence, ? extends Number>>(entries);
 
-        Number value = await(collection).until(single(equalTo(1)).because("one"));
-        Number mapped = await(map).until(valueFor("key", equalTo(1)).because("one"));
+        Number value = await(collection).until(single(isNotNull).because("one"));
+        Number mapped = await(map).until(valueFor("key", isNotNull).because("one"));
         Map.Entry<? extends CharSequence, ? extends Number> entry = await(map).until(entryFor("key").because("entry"));
         Map.Entry<String, Number> checked = await(() -> Map.<String, Number>of("key", 1)).until(singleEntry(matches(
                 (Map.Entry<? extends String, ? extends Number> candidate) -> candidate.getValue() != null)).because("checked"));
-        Number transformed = await(() -> Map.<String, Number>of("key", 1)).until(singleEntry(yields(
-                (Map.Entry<? extends String, ? extends Number> candidate) -> candidate.getValue())).because("transformed"));
         Integer subtype = await(() -> List.of(1)).until(first((Number number) -> true).because("first"));
 
-        assertEquals(List.of(1, 1, 1, 1), List.of(value, mapped, transformed, subtype));
+        assertEquals(List.of(1, 1, 1), List.of(value, mapped, subtype));
         assertEquals(Map.entry("key", 1), entry);
         assertEquals(entry, checked);
     }

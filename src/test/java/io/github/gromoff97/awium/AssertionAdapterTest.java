@@ -19,7 +19,6 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -29,16 +28,17 @@ class AssertionAdapterTest {
     @Test
     void namedConditionDelegatesOnceAndSuppliesItsDescription() {
         var invocations = new int[1];
-        var condition = Conditions.<String, Long>condition(
+        var condition = Conditions.<String>condition(
                 "payment id", value -> {
                     invocations[0]++;
-                    return satisfied(parseLong(value));
+                    parseLong(value);
+                    return satisfied(value);
                 });
 
-        ConditionResult<? extends Long> evaluation = evaluate(condition, "42");
+        ConditionResult<? extends String> evaluation = evaluate(condition, "42");
 
         assertEquals(Satisfied.class, evaluation.getClass());
-        assertEquals(42L, result(evaluation));
+        assertEquals("42", result(evaluation));
         assertEquals(1, invocations[0]);
         assertEquals("payment id", description(condition));
     }
@@ -61,7 +61,7 @@ class AssertionAdapterTest {
                 () -> condition("payment", (Callable<CheckedFunction<Object, ConditionResult<Object>>>) null))
                 .getMessage().contains("evaluator factory"));
 
-        var condition = Conditions.<String, String>condition(
+        var condition = Conditions.<String>condition(
                 "nullable evaluation", value -> null);
         var failure = assertInstanceOf(ConditionResult.Uncontrolled.class, evaluate(condition, "42"));
         assertInstanceOf(NullPointerException.class, failure.cause());
@@ -85,23 +85,7 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void yieldsMayReturnNullAndInvokesItsCallbackOnce() {
-        var invocations = new int[1];
-        var condition = Conditions.<String, String>yields(value -> {
-            invocations[0]++;
-            return null;
-        });
-
-        ConditionResult<? extends String> evaluation = evaluate(condition, "42");
-
-        assertEquals(Satisfied.class, evaluation.getClass());
-        assertNull(result(evaluation));
-        assertEquals(1, invocations[0]);
-        assertFalse(description(condition).isBlank());
-    }
-
-    @Test
-    void yieldsAssertionStopsImmediatelyWithItsOriginalCauseAndStackTrace() {
+    void customAssertionStopsImmediatelyWithItsOriginalCauseAndStackTrace() {
         var time = new FakeTime(0);
         var assertion = new AssertionError("selection failed");
         var frame = new StackTraceElement("PaymentSelector", "select",
@@ -111,7 +95,7 @@ class AssertionAdapterTest {
 
         var failure = assertFailure(CONDITION_FAILED, () -> timedAwait(
                 (Source<String>) () -> "42",
-                DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(10)), time, time).until(Conditions.<String, Long>yields(value -> {
+                DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(10)), time, time).until(Conditions.<String>condition("checked value", value -> {
                             invocations[0]++;
                             throw assertion;
                         }).because("payment selection")));
@@ -123,9 +107,9 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void runtimeExceptionIsRetainedAsYieldsFailure() {
+    void runtimeExceptionIsRetainedAsConditionFailure() {
         var failure = new RuntimeException("runtime");
-        var condition = Conditions.<String, Long>yields(value -> {
+        var condition = Conditions.<String>condition("checked value", value -> {
             throw failure;
         });
 
@@ -134,10 +118,10 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void nonAssertionErrorIsRetainedAsYieldsFailure() {
+    void nonAssertionErrorIsRetainedAsConditionFailure() {
         var failure = new LinkageError("error");
 
-        var condition = Conditions.<String, Long>yields(value -> {
+        var condition = Conditions.<String>condition("checked value", value -> {
             throw failure;
         });
 
@@ -150,8 +134,5 @@ class AssertionAdapterTest {
         assertTrue(assertThrows(NullPointerException.class,
                 () -> asserted((CheckedConsumer<String>) null))
                 .getMessage().contains("assertion"));
-        assertTrue(assertThrows(NullPointerException.class,
-                () -> yields((CheckedFunction<String, String>) null))
-                .getMessage().contains("callback"));
     }
 }

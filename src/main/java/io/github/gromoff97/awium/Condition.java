@@ -11,7 +11,7 @@ import static java.util.Objects.requireNonNull;
  * @param <OBSERVED> value supplied to the condition
  * @param <RESULT> value returned when the condition is satisfied
  */
-public sealed class Condition<OBSERVED, RESULT> {
+public final class Condition<OBSERVED, RESULT> {
 
     final ConditionMetadata metadata;
     final Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory;
@@ -50,16 +50,15 @@ public sealed class Condition<OBSERVED, RESULT> {
         return because(formattedExplanation(format, arguments));
     }
 
-    public static final class PreservingCondition<OBSERVED> extends Condition<OBSERVED, OBSERVED> {
+    public static final class PreservingCondition<OBSERVED> {
+
+        final ConditionMetadata metadata;
+        final Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory;
 
         PreservingCondition(ConditionMetadata metadata,
                 Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory) {
-            super(metadata, evaluatorFactory);
-        }
-
-        @Override
-        ConditionSession<OBSERVED, OBSERVED> newSession() {
-            return preservingSession();
+            this.metadata = requireNonNull(metadata, "metadata must not be null");
+            this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
         }
 
         final <ACTUAL extends OBSERVED> ConditionSession<ACTUAL, ACTUAL> preservingSession() {
@@ -72,13 +71,28 @@ public sealed class Condition<OBSERVED, RESULT> {
             });
         }
 
-        @Override
         public PreservingCondition<OBSERVED> because(String explanation) {
             return new PreservingCondition<>(metadata.because(explanation), evaluatorFactory);
         }
 
-        @Override
         public PreservingCondition<OBSERVED> because(String format, Object... arguments) {
+            return because(formattedExplanation(format, arguments));
+        }
+    }
+
+    public static final class ComparisonCondition<EXPECTED> {
+
+        final PreservingCondition<Object> definition;
+
+        ComparisonCondition(PreservingCondition<Object> definition) {
+            this.definition = required(definition);
+        }
+
+        public ComparisonCondition<EXPECTED> because(String explanation) {
+            return new ComparisonCondition<>(definition.because(explanation));
+        }
+
+        public ComparisonCondition<EXPECTED> because(String format, Object... arguments) {
             return because(formattedExplanation(format, arguments));
         }
     }

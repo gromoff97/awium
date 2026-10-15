@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.ConditionResult.Reference;
@@ -15,6 +16,7 @@ import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.CheckedCalls.call;
 import static io.github.gromoff97.awium.CheckedCalls.checkInterruption;
+import static io.github.gromoff97.awium.Condition.required;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
@@ -110,13 +112,18 @@ public final class CollectionConditions {
     }
 
     public static <ELEMENT> SelectedCondition<Collection<? extends ELEMENT>> single(PreservingCondition<? super ELEMENT> nested) {
-        return selected(ConditionSupport.single("collection", nested, actual -> actual,
+        return selected(ConditionSupport.single("collection", required(nested).metadata, actual -> actual,
                 () -> nested.preservingSession()));
     }
 
     public static <ELEMENT, RESULT> Condition<Collection<? extends ELEMENT>, RESULT> single(Condition<? super ELEMENT, ? extends RESULT> nested) {
-        return ConditionSupport.single("collection", nested, actual -> actual,
+        return ConditionSupport.single("collection", required(nested).metadata, actual -> actual,
                 () -> nested.newSession());
+    }
+
+    public static <EXPECTED> SelectedCondition<Collection<? super EXPECTED>> single(ComparisonCondition<EXPECTED> nested) {
+        return selected(ConditionSupport.single("collection", required(nested).definition.metadata, actual -> actual,
+                () -> nested.definition.preservingSession()));
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> all(Predicate<? super ELEMENT> predicate) {

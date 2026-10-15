@@ -158,7 +158,7 @@ class WaitEngineTest {
                 ignored -> {}, () -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, Conditions.<String, String>condition("test condition", actual -> satisfied(actual)).newSession()).waitFor();
+                }, Conditions.<String>condition("test condition", actual -> satisfied(actual)).preservingSession()).waitFor();
 
         assertInstanceOf(LateTimeout.class, outcome);
         assertEquals(1, sourceCalls[0]);
@@ -345,7 +345,7 @@ class WaitEngineTest {
         var outcome = new WaitEngine<String, String>(config(5, 20, 0), clock,
                 nanos -> { throw new AssertionError("parker must not be called"); },
                 () -> { sourceCalls[0]++; return "actual"; },
-                Conditions.<String, String>condition("ready", ConditionResult::satisfied).newSession(), 0).waitFor();
+                Conditions.<String>condition("ready", ConditionResult::satisfied).preservingSession(), 0).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = assertInstanceOf(AwaitAttempt.Outcome.WaitingFailed.class, failure.attempt().outcome());
@@ -368,7 +368,7 @@ class WaitEngineTest {
         var outcome = new WaitEngine<String, String>(config(1, 2, 0), clock, nanos -> {}, () -> {
             sourceCalls[0]++;
             return "actual";
-        }, Conditions.<String, String>condition("not ready", value -> unsatisfied("not yet")).newSession()).waitFor();
+        }, Conditions.<String>condition("not ready", value -> unsatisfied("not yet")).preservingSession()).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = assertInstanceOf(AwaitAttempt.Outcome.WaitingFailed.class, failure.attempt().outcome());
@@ -394,10 +394,10 @@ class WaitEngineTest {
         };
         var outcome = new WaitEngine<String, String>(config(5, 20, persistence), clock,
                 nanos -> parkCalls[0]++, () -> { sourceCalls[0]++; return "actual"; },
-                Conditions.<String, String>condition("ready", actual -> {
+                Conditions.<String>condition("ready", actual -> {
                     evaluated[0] = true;
                     return persistence == 0 ? unsatisfied("not yet") : satisfied("ready");
-                }).newSession(), 0).waitFor();
+                }).preservingSession(), 0).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = assertInstanceOf(AwaitAttempt.Outcome.WaitingFailed.class, failure.attempt().outcome());
@@ -621,7 +621,7 @@ class WaitEngineTest {
             Source<S> source,
             Function<S, ConditionResult<R>> condition) {
         return new WaitEngine<S, R>(config, time, parker, source,
-                Conditions.<S, R>condition("test condition", condition::apply).newSession()).waitFor();
+                ConditionSupport.<S, R>condition("test condition", null, condition::apply).newSession()).waitFor();
     }
 
     private static long completed(AwaitAttempt<?, ?> attempt) {

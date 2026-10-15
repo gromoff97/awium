@@ -60,6 +60,13 @@ class FactoryGrammarTest {
         assertNull("predicate", () -> object.tryUntil(matches((Predicate<String>) null)));
         assertNull("condition", () -> object.until((PreservingCondition<String>) null));
         assertNull("condition", () -> object.until((Condition<String, String>) null));
+        assertNull("condition", () -> object.until((Condition.ComparisonCondition<String>) null));
+        assertNull("condition", () -> object.tryUntil((Condition.ComparisonCondition<String>) null));
+        assertNull("condition", () -> object.until(equalTo("value"), equalTo("value"), (Condition.ComparisonCondition<String>) null));
+        assertNull("condition", () -> OptionalConditions.hasValue((Condition.ComparisonCondition<String>) null));
+        assertNull("condition", () -> CollectionConditions.single((Condition.ComparisonCondition<String>) null));
+        assertNull("condition", () -> MapConditions.valueFor("key", (Condition.ComparisonCondition<String>) null));
+        assertNull("condition", () -> MapConditions.singleEntry((Condition.ComparisonCondition<Map.Entry<String, String>>) null));
 
         var optional = await((OptionalSource<String>) Optional::empty).usingTime(pollingTime, pollingTime).every(ofSeconds(20));
         assertNull("condition", () -> optional.until((SelectedCondition<Optional<?>>) null));

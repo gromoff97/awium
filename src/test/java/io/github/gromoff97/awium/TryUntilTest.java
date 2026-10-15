@@ -11,7 +11,6 @@ import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.Conditions.isNotNull;
 import static io.github.gromoff97.awium.Conditions.isNull;
 import static io.github.gromoff97.awium.Conditions.matches;
-import static io.github.gromoff97.awium.Conditions.yields;
 import static io.github.gromoff97.awium.OptionalConditions.present;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -43,8 +42,8 @@ class TryUntilTest {
         var results = List.of("acquired", "persisting", "boundary");
         int[] calls = {0};
 
-        AwaitResult<String, String> result = timedAwait(() -> "actual",
-                config(2, 10, 3), time, time).tryUntil(yields(actual -> results.get(calls[0]++)));
+        AwaitResult<String, String> result = timedAwait(() -> results.get(calls[0]++),
+                config(2, 10, 3), time, time).tryUntil(isNotNull);
 
         var success = satisfied(result);
         assertEquals("boundary", success.result());
@@ -57,7 +56,7 @@ class TryUntilTest {
     @Test
     void retainsLegitimateNullAndSelectedOptionalValue() {
         var pollingTime = new FakeTime(0);
-        AwaitResult<String, String> nullable = await((Source<String>) () -> "actual").usingTime(pollingTime, pollingTime).tryUntil(yields(actual -> null));
+        AwaitResult<String, String> nullable = await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(matches(actual -> true));
         AwaitResult<String, Void> nullSource = await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(isNull);
         AwaitResult<String, String> nullPredicate = await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(matches(actual -> actual == null));
         AwaitResult<Optional<String>, String> selected =

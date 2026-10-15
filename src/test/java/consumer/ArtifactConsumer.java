@@ -22,7 +22,7 @@ public final class ArtifactConsumer {
         var values = List.of("ready");
         String optional = await(() -> Optional.of("ready")).until(present.because("optional %s", "value"));
         String selected = await(() -> values).until(single.because("one value"));
-        int length = await(ArtifactConsumer::text).until(yields(ArtifactConsumer::length));
+        int length = await(() -> length(text())).until(isNotNull);
         String narrowed = await((Source<Object>) ArtifactConsumer::text).until(instanceOf(String.class));
         long[] time = {0};
         List<String> stages = await(ArtifactConsumer::text).usingTime(() -> time[0], nanos -> time[0] += nanos).every(ofNanos(1)).upTo(ofNanos(5)).until(

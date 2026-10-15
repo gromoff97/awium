@@ -22,10 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ObjectOptionalAndScalarConditionsTest {
 
     @Test
-    void unrelatedEqualityAndTypeChecksRemainOrdinaryMismatches() {
-        for (var check : List.<Condition<? super String, ?>>of(Conditions.equalTo(42),
-                Conditions.sameAs(42), Conditions.in(1, 2),
-                Conditions.instanceOf(Integer.class), Conditions.exactInstanceOf(Integer.class))) {
+    void unrelatedTypeChecksRemainOrdinaryMismatches() {
+        for (var check : List.<Condition<? super String, ?>>of(Conditions.instanceOf(Integer.class), Conditions.exactInstanceOf(Integer.class))) {
             var time = new FakeTime(0);
             var waiting = await(() -> "actual").usingTime(time, time)
                     .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(2));
@@ -34,9 +32,9 @@ class ObjectOptionalAndScalarConditionsTest {
             assertThrows(AwaitAssertionError.class, () -> waiting.until(check));
         }
         String actual = "actual";
-        assertSame(actual, await(() -> actual).until(Conditions.notEqualTo(42)));
-        assertSame(actual, await(() -> actual).until(Conditions.notSameAs(42)));
-        assertSame(actual, await(() -> actual).until(Conditions.notIn(1, 2)));
+        assertSame(actual, await(() -> actual).until(Conditions.notEqualTo("different")));
+        assertSame(actual, await(() -> actual).until(Conditions.notSameAs("different")));
+        assertSame(actual, await(() -> actual).until(Conditions.notIn("one", "two")));
     }
 
     @Test
@@ -69,7 +67,7 @@ class ObjectOptionalAndScalarConditionsTest {
         Object selected = await(source).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(Conditions.matches(value -> value.toString().startsWith("r"))));
         String narrowed = await(source).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(instanceOf(String.class)));
         String nested = await((OptionalSource<String>) () -> Optional.of("ready")).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(StringConditions.startsWith("rea")));
-        Integer transformed = await((OptionalSource<String>) () -> Optional.of("ready")).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(Conditions.yields(String::length)));
+        Integer transformed = await(() -> Optional.of("ready").map(String::length)).usingTime(pollingTime, pollingTime).until(OptionalConditions.present);
 
         assertEquals("ready", expected);
         assertEquals("ready", selected);
@@ -212,6 +210,11 @@ class ObjectOptionalAndScalarConditionsTest {
         assertThrows(IllegalArgumentException.class, StringConditions::contains);
         assertThrows(NullPointerException.class, () -> StringConditions.contains((String[]) null));
         assertThrows(NullPointerException.class, () -> StringConditions.contains("ready", null));
+    }
+
+    private static <S> void assertPreserving(Condition.ComparisonCondition<? extends S> condition, S matching, S mismatching) {
+        assertEquals(Satisfied.class, evaluate(condition, matching).getClass());
+        assertEquals(Unsatisfied.class, evaluate(condition, mismatching).getClass());
     }
 
     private static <S> void assertPreserving(PreservingCondition<? super S> condition, S matching, S mismatching) {

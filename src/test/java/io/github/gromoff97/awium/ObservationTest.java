@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.PreservingCondition;
+
 import java.time.Duration;
 import java.util.List;
 import java.util.function.Function;
@@ -94,7 +96,7 @@ class ObservationTest {
         WaitCompletion<Object, Object> terminal = new WaitEngine<Object, Object>(config(1, 20, 0), time, time, () -> {
             time.advanceNanos(2);
             return actual;
-        }, Conditions.<Object, Object>condition("test condition", value -> {
+        }, ConditionSupport.<Object, Object>condition("test condition", null, value -> {
             time.advanceNanos(3);
             return satisfied(result);
         }).newSession()).waitFor();
@@ -278,10 +280,10 @@ class ObservationTest {
             sourceCalls[0]++;
             currentThread().interrupt();
             return actual;
-        }, Conditions.<Object, Object>condition("ready", value -> {
+        }, Conditions.<Object>condition("ready", value -> {
             conditionCalls[0]++;
             return satisfied(value);
-        }).newSession()).waitFor();
+        }).preservingSession()).waitFor();
 
         var failure = assertInstanceOf(WaitCompletion.Uncontrolled.class, outcome);
         var attempt = assertInstanceOf(AwaitAttempt.Outcome.SourceInterrupted.class, failure.attempt().outcome());
@@ -353,13 +355,13 @@ class ObservationTest {
                                 currentThread().interrupt();
                             }
                             return new Object();
-                        }, Conditions.<Object, Object>condition("ready", value -> {
+                        }, Conditions.<Object>condition("ready", value -> {
                             if (phase.equals("condition")) {
                                 armed[0] = true;
                                 currentThread().interrupt();
                             }
                             return ConditionResult.unsatisfied("not yet");
-                        }).newSession()).waitFor()));
+                        }).preservingSession()).waitFor()));
                 assertTrue(currentThread().isInterrupted(), phase);
             } finally {
                 interrupted();
@@ -494,7 +496,7 @@ class ObservationTest {
                 var interruption = new InterruptedException("condition stopped");
                 var clockFailure = new IllegalStateException("completion clock failed");
                 boolean[] failed = {false};
-                Condition<Object, Object> signal = switch (form) {
+                PreservingCondition<Object> signal = switch (form) {
                     case "thrown" -> condition("interruption", actual -> {
                         failed[0] = true;
                         throw interruption;
@@ -597,7 +599,7 @@ class ObservationTest {
     private static <R> AwaitAttempt<Object, R> attempt(Source<Object> source,
             Function<Object, ConditionResult<R>> condition) {
         var time = new FakeTime(0);
-        return new WaitEngine<Object, R>(config(1, 2, 0), time, time, source, Conditions.<Object, R>condition("test condition", actual -> {
+        return new WaitEngine<Object, R>(config(1, 2, 0), time, time, source, ConditionSupport.<Object, R>condition("test condition", null, actual -> {
             ConditionResult<R> evaluation = condition.apply(actual);
             time.advanceNanos(2);
             return evaluation;

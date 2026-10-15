@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.PreservingCondition;
+
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -38,13 +40,12 @@ class CheckedCallbackTest {
     }
 
     @Test
-    void checkedMethodReferencesPreserveAndTransformResults() {
+    void checkedMethodReferencesWorkInSourcesAndConditions() {
         var time = new FakeTime(0);
         var waiting = await(() -> "ready").usingTime(time, time);
         assertEquals("ready", waiting.until(asserted(CheckedCallbackTest::verify)));
-        assertEquals(5, waiting.until(yields(CheckedCallbackTest::length)));
+        assertEquals(5, await(() -> length("ready")).until(isNotNull));
         assertEquals("ready", waiting.until(condition("checked evaluation", CheckedCallbackTest::evaluate)));
-        assertEquals("ready", waiting.until(preserving("checked evaluation", CheckedCallbackTest::evaluate)));
     }
 
     @Test
@@ -56,13 +57,9 @@ class CheckedCallbackTest {
             var waiting = await(source).usingTime(time, time);
             Map<String, Executable> callbacks = Map.of(
                     "asserted", () -> waiting.until(asserted(actual -> { throw cause; })),
-                    "yields", () -> waiting.until(yields(actual -> { throw cause; })),
                     "condition", () -> waiting.until(condition("checked", actual -> { throw cause; })),
-                    "preserving", () -> waiting.until(preserving("checked", actual -> { throw cause; })),
                     "condition factory evaluator", () -> waiting.until(condition("checked", () -> actual -> { throw cause; })),
-                    "preserving factory evaluator", () -> waiting.until(preserving("checked", () -> actual -> { throw cause; })),
-                    "condition factory creation", () -> waiting.until(condition("checked", () -> { throw cause; })),
-                    "preserving factory creation", () -> waiting.until(preserving("checked", () -> { throw cause; })));
+                    "condition factory creation", () -> waiting.until(condition("checked", () -> { throw cause; })));
 
             for (var callback : callbacks.entrySet()) {
                 calls[0] = 0;
@@ -95,11 +92,8 @@ class CheckedCallbackTest {
     void interruptionDuringFactoryCreationSkipsItsEvaluator() {
         List<Function<Callable<CheckedFunction<String, ConditionResult<String>>>, AwaitResult<?, ?>>> waits = List.of(
                 factory -> await(() -> "ready").tryUntil(condition("lazy", factory)),
-                factory -> await(() -> "ready").tryUntil(preserving("lazy", factory)),
                 factory -> await(() -> Optional.of("ready")).tryUntil(hasValue(condition("lazy", factory))),
-                factory -> await(() -> Optional.of("ready")).tryUntil(hasValue(preserving("lazy", factory))),
-                factory -> await(() -> "ready").tryUntil(condition("lazy", factory), yields(String::trim)),
-                factory -> await(() -> "ready").tryUntil(preserving("lazy", factory), matches(value -> true)));
+                factory -> await(() -> "ready").tryUntil(condition("lazy", factory), matches(value -> true)));
         for (var wait : waits) {
             int[] factoryCalls = {0};
             int[] evaluatorCalls = {0};
@@ -467,7 +461,7 @@ class CheckedCallbackTest {
 
         var optional = await(() -> Optional.of("ready")).usingTime(time, time).tryUntil(hasValue(nested));
         var map = await(() -> Map.of("key", "ready")).usingTime(time, time).tryUntil(valueFor("key", nested));
-        var sequence = await(() -> "ready").usingTime(time, time).every(ofNanos(1)).tryUntil(yields(String::trim), nested);
+        var sequence = await(() -> "ready").usingTime(time, time).every(ofNanos(1)).tryUntil(isNotNull, nested);
         for (AwaitResult<?, ?> result : List.of(optional, map, sequence)) {
             var failure = assertInstanceOf(AwaitResult.Failed.class, result);
             assertSame(cause, failure.failure().cause());
@@ -554,9 +548,9 @@ class CheckedCallbackTest {
         Predicate<String> mismatching = matching.negate();
         List<Supplier<AwaitResult<?, ?>>> waits = List.of(
                 () -> await(() -> actual).tryUntil(single(matches(matching))),
-                () -> await(() -> actual).tryUntil(single(yields((String value) -> {
+                () -> await(() -> actual).tryUntil(single(condition("checked value", (String value) -> {
                     matching.test(value);
-                    return value.length();
+                    return satisfied(value);
                 }))),
                 () -> await(() -> actual).tryUntil(CollectionConditions.any(mismatching)),
                 () -> await(() -> actual).tryUntil(CollectionConditions.all(matching)),
@@ -660,7 +654,7 @@ class CheckedCallbackTest {
         assertEquals(2, actual);
     }
 
-    private static Condition<String, String> failing(IOException cause) {
+    private static PreservingCondition<String> failing(IOException cause) {
         return condition("checked receipt", () -> actual -> { throw cause; });
     }
 }

@@ -67,10 +67,10 @@ final class ConditionSupport {
         return new Reference<>("Unexpected", value);
     }
 
-    static <OBSERVED, VALUE, RESULT> Condition<OBSERVED, RESULT> compose(String prefix, Condition<?, ?> nested,
+    static <OBSERVED, VALUE, RESULT> Condition<OBSERVED, RESULT> compose(String prefix, ConditionMetadata metadata,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<VALUE>> extract,
             Supplier<? extends Function<? super VALUE, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory) {
-        return new Condition<>(Condition.required(nested).metadata.prefixed(prefix), () -> {
+        return new Condition<>(metadata.prefixed(prefix), () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> extract.apply(actual).continueIfSatisfied(evaluator);
         });
@@ -108,10 +108,10 @@ final class ConditionSupport {
         });
     }
 
-    static <OBSERVED, ELEMENT, RESULT> Condition<OBSERVED, RESULT> single(String subject, Condition<?, ?> nested,
+    static <OBSERVED, ELEMENT, RESULT> Condition<OBSERVED, RESULT> single(String subject, ConditionMetadata metadata,
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
             Supplier<? extends Function<? super ELEMENT, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory) {
-        return new Condition<>(Condition.required(nested).metadata.prefixed(subject + " has a single matching value: "), () -> {
+        return new Condition<>(metadata.prefixed(subject + " has a single matching value: "), () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> actual == null ? unsatisfied(subject + " was null")
                     : evaluateSingle(call(() -> elements.apply(actual)), evaluator);

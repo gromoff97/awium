@@ -133,7 +133,7 @@ class DiagnosticsSnapshotTest {
         var frame = new StackTraceElement("Payments", "verifyPending",
                 "Payments.java", 42);
         assertion.setStackTrace(new StackTraceElement[]{frame});
-        Condition<String, String> assertedPending = Conditions.<String, String>condition(
+        PreservingCondition<String> assertedPending = Conditions.<String>condition(
                 "payment status is pending", value -> assertionUnsatisfied(
                         "payment status was created", assertion))
                 .because("processing must begin before completion");
@@ -171,7 +171,7 @@ class DiagnosticsSnapshotTest {
     void capturedNestedUncontrolledRetainsCauseAndStage() {
         var time = new FakeTime(0);
         var cause = new IllegalStateException("status callback failed");
-        Condition<String, String> brokenPending = Conditions.<String, String>condition(
+        PreservingCondition<String> brokenPending = Conditions.<String>condition(
                 "payment status is pending", value -> {
                     throw cause;
                 }).because("processing must begin before completion");
@@ -394,7 +394,7 @@ class DiagnosticsSnapshotTest {
     void explicitUncontrolledRetainsInterruptFlagAfterDiagnosticsClearIt() {
         var pollingTime = new FakeTime(0);
         var cause = new IllegalStateException("condition failed");
-        Condition<Object, Object> condition = Conditions.condition("condition", actual -> {
+        PreservingCondition<Object> condition = Conditions.condition("condition", actual -> {
             currentThread().interrupt();
             return uncontrolled(cause);
         });
@@ -1022,7 +1022,7 @@ class DiagnosticsSnapshotTest {
             var original = new AssertionError("not ready");
             var time = new FakeTime(0);
             var waiting = timedAwait(() -> actual, config(1, 2, 0), time, time);
-            var condition = Conditions.<Object, Object>condition("ready", value -> assertionUnsatisfied("not ready", original));
+            var condition = Conditions.<Object>condition("ready", value -> assertionUnsatisfied("not ready", original));
             try {
                 var thrown = assertThrows(InternalError.class, () -> {
                     if (captured) waiting.tryUntil(condition);
@@ -1106,25 +1106,25 @@ class DiagnosticsSnapshotTest {
     }
 
     private static Condition<String, List<String>> lifecycle(
-            Condition<String, String> pending,
-            Condition<String, String> completed) {
+            PreservingCondition<String> pending,
+            PreservingCondition<String> completed) {
         return captured(status("created", "payment status is created", null),
                 pending, completed).because("payment must complete its lifecycle");
     }
 
-    private static Condition<String, String> pending() {
+    private static PreservingCondition<String> pending() {
         return status("pending", "payment status is pending",
                 "processing must begin before completion");
     }
 
-    private static Condition<String, String> completed() {
+    private static PreservingCondition<String> completed() {
         return status("completed", "payment status is completed",
                 "completion must remain stable");
     }
 
-    private static Condition<String, String> status(String expected,
+    private static PreservingCondition<String> status(String expected,
             String description, String importance) {
-        Condition<String, String> condition = condition(description,
+        PreservingCondition<String> condition = condition(description,
                 value -> value.equals(expected)
                         ? satisfied(value) : unsatisfied("payment status was " + value));
         return importance == null ? condition : condition.because(importance);

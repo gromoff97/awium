@@ -44,9 +44,27 @@ class OrderedWaitCompilationContractTest {
                 "String value = await(Contract::text).until(isNotNull, isNotNull);",
                 "AwaitResult<String, String> value = await(Contract::text).tryUntil(isNotNull, isNotNull);",
                 "List<Integer> value = await(Contract::collection).until(first, last);",
-                "List<Integer> result = await(Contract::text).until(yields(String::length), yields(value -> (long) value.length()));")) {
+                "List<Integer> result = await(Contract::text).until(instanceOf(String.class), instanceOf(String.class));")) {
             assertFalse(compiles(expression), expression);
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"until", "tryUntil"})
+    void genericResultSequencesAreNotAvailable(String terminal) throws IOException {
+        for (String decoration : List.of("", ".because(\"required type\")")) {
+            String expression = "await(Contract::text).%s(instanceOf(String.class)%s, instanceOf(String.class)%s);"
+                    .formatted(terminal, decoration, decoration);
+            assertFalse(compiles(expression), expression);
+        }
+    }
+
+    @Test
+    void transformationFactoriesAndPreservingAliasAreNotAvailable() throws IOException {
+        assertFalse(CompilationSupport.compiles(directory,
+                source("io.github.gromoff97.awium.Conditions.yields(String::trim);"), "yields"));
+        assertFalse(CompilationSupport.compiles(directory,
+                source("io.github.gromoff97.awium.Conditions.preserving(\"identity\", value -> io.github.gromoff97.awium.ConditionResult.satisfied(value));"), "preserving"));
     }
 
     @Test

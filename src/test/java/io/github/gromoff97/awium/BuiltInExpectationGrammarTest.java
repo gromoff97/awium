@@ -25,7 +25,6 @@ class BuiltInExpectationGrammarTest {
                 "optional value: value equals expected",
                 "optional value: value does not equal unexpected",
                 "value satisfies assertion",
-                "callback yields a result",
                 "collection has a single element",
                 "collection is empty",
                 "collection is not empty",
@@ -76,9 +75,6 @@ class BuiltInExpectationGrammarTest {
                         description(OptionalConditions.hasValue(equalTo("expected"))),
                         description(OptionalConditions.hasValue(notEqualTo("unexpected"))),
                         description(asserted(value -> {})),
-                        description(yields(value -> {
-                            return value;
-                        })),
                         description(CollectionConditions.single),
                         description(CollectionConditions.empty),
                         description(CollectionConditions.nonEmpty),

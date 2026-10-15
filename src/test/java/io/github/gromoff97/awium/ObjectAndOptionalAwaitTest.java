@@ -24,16 +24,16 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class ObjectAndOptionalAwaitTest {
 
     @Test
-    void crossTypeComparisonsAndNarrowingFailAtRuntimeWithoutChangingTheResultType() {
+    void comparisonsPreserveTheObservedTypeAndNarrowingCanFailAtRuntime() {
         var time = new FakeTime(0);
         var waiting = await(() -> "ready").usingTime(time, time).upTo(ofNanos(1));
-        for (var condition : List.of(equalTo(42), sameAs(42), in(1, 2))) {
+        for (var condition : List.of(equalTo("different"), sameAs("different"), in("one", "two"))) {
             AwaitResult<String, String> result = waiting.tryUntil(condition);
             assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
         }
-        String unequal = waiting.until(notEqualTo(42));
-        String different = waiting.until(notSameAs(42));
-        String excluded = waiting.until(notIn(1, 2));
+        String unequal = waiting.until(notEqualTo("different"));
+        String different = waiting.until(notSameAs("different"));
+        String excluded = waiting.until(notIn("one", "two"));
         AwaitResult<String, Integer> narrowed = waiting.tryUntil(instanceOf(Integer.class));
         AwaitResult<Optional<String>, Integer> nested = await(() -> Optional.of("ready"))
                 .usingTime(time, time).upTo(ofNanos(1)).tryUntil(hasValue(instanceOf(Integer.class)));
@@ -86,9 +86,7 @@ class ObjectAndOptionalAwaitTest {
         var pollingTime = new FakeTime(0);
         assertNull(await((Source<Object>) () -> null).usingTime(pollingTime, pollingTime).until(isNull));
         assertNull(await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).until(matches(actual -> actual == null)));
-        assertNull(await((Source<String>) () -> "value").usingTime(pollingTime, pollingTime).until(yields(value -> {
-            return null;
-        }).because("nullable property")));
+        assertNull(await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).until(condition("nullable property", ConditionResult::satisfied).because("nullable property")));
     }
 
     @Test
@@ -105,7 +103,7 @@ class ObjectAndOptionalAwaitTest {
         int[] calls = {0};
         FakeTime time = new FakeTime(0);
         ValueAwait<Integer> stage = stage(time, () -> ++calls[0]);
-        Condition<Integer, Integer> evenObservation = condition(
+        PreservingCondition<Integer> evenObservation = condition(
                 "even observation", value -> value % 2 == 0
                         ? satisfied(value)
                         : unsatisfied("odd observation"));
@@ -123,10 +121,10 @@ class ObjectAndOptionalAwaitTest {
             sourceCalls[0]++;
             return "value";
         });
-        Condition<String, String> never = condition(
+        PreservingCondition<String> never = condition(
                 "never", value -> unsatisfied("not yet"));
         var failure = new IllegalStateException("condition failed");
-        Condition<String, String> broken = condition(
+        PreservingCondition<String> broken = condition(
                 "broken", value -> {
                     throw failure;
                 });

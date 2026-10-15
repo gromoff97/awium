@@ -14,10 +14,87 @@ class DirectBecauseCompilationContractTest {
     Path directory;
 
     @Test
+    void customChecksCannotTransformTheObservedType() throws IOException {
+        for (String decoration : List.of("", ".because(\"required value\")")) {
+            for (String expression : List.of(
+                    "String wrong = await(numbers).until(condition(\"identity\", ConditionResult::satisfied)%s);",
+                    "AwaitResult<Number, String> wrong = await(numbers).tryUntil(condition(\"identity\", ConditionResult::satisfied)%s);",
+                    "List<String> wrong = await(numbers).until(condition(\"first\", ConditionResult::satisfied)%s, isNotNull);",
+                    "Condition<Number, String> wrong = condition(\"transform\", value -> ConditionResult.satisfied(\"text\"))%s;")) {
+                String call = expression.formatted(decoration);
+                assertFalse(compiles(call), call);
+            }
+        }
+    }
+
+    @Test
+    void comparisonsRejectIncompatibleExpectedTypes() throws IOException {
+        for (String terminal : List.of("until", "tryUntil")) {
+            for (String condition : List.of("equalTo(123)", "notEqualTo(123)", "sameAs(123)",
+                    "notSameAs(123)", "in(123, 456)", "notIn(123, 456)")) {
+                for (String decoration : List.of("", ".because(\"required value\")")) {
+                    String expression = "await(() -> \"ready\").%s(%s%s);".formatted(terminal, condition, decoration);
+                    assertFalse(compiles(expression), expression);
+                }
+            }
+        }
+    }
+
+    @Test
+    void nestedComparisonsRejectIncompatibleExpectedTypes() throws IOException {
+        for (String terminal : List.of("until", "tryUntil")) {
+            for (String decoration : List.of("", ".because(\"required value\")")) {
+                for (String expression : List.of(
+                        "await(optional).%s(hasValue(equalTo(\"wrong\")%s));",
+                        "await(collection).%s(single(equalTo(\"wrong\")%s));",
+                        "await(map).%s(valueFor(\"key\", equalTo(\"wrong\")%s));",
+                        "await(map).%s(singleEntry(equalTo(Map.entry(123, 1))%s));",
+                        "await(map).%s(singleEntry(equalTo(Map.entry(\"key\", \"wrong\"))%s));")) {
+                    String call = expression.formatted(terminal, decoration);
+                    assertFalse(compiles(call), call);
+                }
+            }
+        }
+    }
+
+    @Test
+    void sequencesRejectMixedConditionFamilies() throws IOException {
+        for (String terminal : List.of("until", "tryUntil")) {
+            for (String decoration : List.of("", ".because(\"required value\")")) {
+                var checks = List.of("equalTo(\"ready\")" + decoration,
+                        "matches(String::isBlank)" + decoration,
+                        "instanceOf(String.class)" + decoration);
+                for (String first : checks) {
+                    for (String second : checks) {
+                        if (first.equals(second)) continue;
+                        String call = "await(() -> \"ready\").%s(%s, %s);".formatted(terminal, first, second);
+                        assertFalse(compiles(call), call);
+                    }
+                }
+            }
+        }
+        assertFalse(compiles("Condition<Object, Object> erased = isNotNull;"));
+        assertFalse(compiles("Condition<String, String> erased = equalTo(\"ready\");"));
+    }
+
+    @Test
+    void mapLookupsRejectIncompatibleKeyTypes() throws IOException {
+        for (String terminal : List.of("until", "tryUntil")) {
+            for (String condition : List.of("valueFor(123)", "entryFor(123)", "onlyValueFor(123)",
+                    "valueFor(123, equalTo(1))", "valueFor(123, instanceOf(String.class))")) {
+                for (String decoration : List.of("", ".because(\"required key\")")) {
+                    String expression = "await(map).%s(%s%s);".formatted(terminal, condition, decoration);
+                    assertFalse(compiles(expression), expression);
+                }
+            }
+        }
+    }
+
+    @Test
     void matchesRejectsExistingConditions() throws IOException {
         for (String expression : List.of(
                 "matches(equalTo(1));",
-                "matches(yields(Number::toString));",
+                "matches(instanceOf(String.class));",
                 "matches(present);",
                 "matches(single);",
                 "matches(valueFor(\"key\"));")) {

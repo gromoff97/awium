@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -22,29 +23,19 @@ import static java.util.Objects.requireNonNull;
 
 public final class Conditions {
 
-    public static final Condition<Object, Void> isNull = condition("value is null",
+    public static final Condition<Object, Void> isNull = ConditionSupport.condition("value is null", null,
             actual -> actual == null ? satisfied(null) : unsatisfied("value was not null"));
     public static final PreservingCondition<Object> isNotNull = ConditionSupport.preserving("value is not null",
             "value was null", actual -> actual != null);
 
     private Conditions() {}
 
-    public static <OBSERVED, RESULT> Condition<OBSERVED, RESULT> condition(String description,
-            CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>> evaluation) {
-        return ConditionSupport.condition(description, null, evaluation);
-    }
-
-    public static <OBSERVED, RESULT> Condition<OBSERVED, RESULT> condition(String description,
-            Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory) {
-        return ConditionSupport.condition(description, evaluatorFactory);
-    }
-
-    public static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description,
+    public static <OBSERVED> PreservingCondition<OBSERVED> condition(String description,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>> evaluation) {
         return ConditionSupport.preserving(description, evaluation);
     }
 
-    public static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description,
+    public static <OBSERVED> PreservingCondition<OBSERVED> condition(String description,
             Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory) {
         return new PreservingCondition<>(new ConditionMetadata(description, null, null), evaluatorFactory);
     }
@@ -61,34 +52,29 @@ public final class Conditions {
         });
     }
 
-    public static <OBSERVED, RESULT> Condition<OBSERVED, RESULT> yields(CheckedFunction<? super OBSERVED, ? extends RESULT> callback) {
-        requireNonNull(callback, "callback must not be null");
-        return condition("callback yields a result", actual -> satisfied(callback.apply(actual)));
+    public static <EXPECTED> ComparisonCondition<EXPECTED> equalTo(EXPECTED expected) {
+        return new ComparisonCondition<>(ConditionSupport.preserving("value equals expected", expectedReference(expected), actual -> equal(actual, expected)
+                ? satisfied(actual) : unsatisfied("value was not equal")));
     }
 
-    public static PreservingCondition<Object> equalTo(Object expected) {
-        return ConditionSupport.preserving("value equals expected", expectedReference(expected), actual -> equal(actual, expected)
-                ? satisfied(actual) : unsatisfied("value was not equal"));
+    public static <EXPECTED> ComparisonCondition<EXPECTED> notEqualTo(EXPECTED unexpected) {
+        return new ComparisonCondition<>(ConditionSupport.preserving("value does not equal unexpected", unexpectedReference(unexpected), actual -> !equal(actual, unexpected)
+                ? satisfied(actual) : unsatisfied("value was equal")));
     }
 
-    public static PreservingCondition<Object> notEqualTo(Object unexpected) {
-        return ConditionSupport.preserving("value does not equal unexpected", unexpectedReference(unexpected), actual -> !equal(actual, unexpected)
-                ? satisfied(actual) : unsatisfied("value was equal"));
+    public static <EXPECTED> ComparisonCondition<EXPECTED> sameAs(EXPECTED expected) {
+        return new ComparisonCondition<>(ConditionSupport.preserving("value is the same instance", expectedReference(expected), actual -> actual == expected
+                ? satisfied(actual) : unsatisfied("value was a different instance")));
     }
 
-    public static PreservingCondition<Object> sameAs(Object expected) {
-        return ConditionSupport.preserving("value is the same instance", expectedReference(expected), actual -> actual == expected
-                ? satisfied(actual) : unsatisfied("value was a different instance"));
-    }
-
-    public static PreservingCondition<Object> notSameAs(Object unexpected) {
-        return ConditionSupport.preserving("value is not the same instance", unexpectedReference(unexpected), actual -> actual != unexpected
-                ? satisfied(actual) : unsatisfied("value was the same instance"));
+    public static <EXPECTED> ComparisonCondition<EXPECTED> notSameAs(EXPECTED unexpected) {
+        return new ComparisonCondition<>(ConditionSupport.preserving("value is not the same instance", unexpectedReference(unexpected), actual -> actual != unexpected
+                ? satisfied(actual) : unsatisfied("value was the same instance")));
     }
 
     public static <RESULT> Condition<Object, RESULT> instanceOf(Class<RESULT> type) {
         requireNonNull(type, "type must not be null");
-        return condition("value is an instance of " + type.getTypeName(), actual ->
+        return ConditionSupport.condition("value is an instance of " + type.getTypeName(), null, actual ->
                 actual != null && type.isInstance(actual)
                         ? satisfied(type.cast(actual))
                         : unsatisfied("value was not an instance of " + type.getTypeName()));
@@ -96,7 +82,7 @@ public final class Conditions {
 
     public static <RESULT> Condition<Object, RESULT> exactInstanceOf(Class<RESULT> type) {
         requireNonNull(type, "type must not be null");
-        return condition("value is exactly an instance of " + type.getTypeName(), actual ->
+        return ConditionSupport.condition("value is exactly an instance of " + type.getTypeName(), null, actual ->
                 actual != null && actual.getClass() == type
                         ? satisfied(type.cast(actual))
                         : unsatisfied("value was not exactly an instance of " + type.getTypeName()));
@@ -104,20 +90,20 @@ public final class Conditions {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <VALUE> PreservingCondition<Object> in(VALUE... expected) {
+    public static <EXPECTED> ComparisonCondition<EXPECTED> in(EXPECTED... expected) {
         List<?> values = snapshot(stream(nonEmpty(expected, "expected values")));
-        return ConditionSupport.preserving("value is in the expected values", expectedReference(values),
+        return new ComparisonCondition<>(ConditionSupport.preserving("value is in the expected values", expectedReference(values),
                 actual -> matchesAny(values, candidate -> equal(actual, candidate))
-                ? satisfied(actual) : unsatisfied("value was not in the expected values"));
+                ? satisfied(actual) : unsatisfied("value was not in the expected values")));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <VALUE> PreservingCondition<Object> notIn(VALUE... unexpected) {
+    public static <EXPECTED> ComparisonCondition<EXPECTED> notIn(EXPECTED... unexpected) {
         List<?> values = snapshot(stream(nonEmpty(unexpected, "unexpected values")));
-        return ConditionSupport.preserving("value is not in the unexpected values", unexpectedReference(values),
+        return new ComparisonCondition<>(ConditionSupport.preserving("value is not in the unexpected values", unexpectedReference(values),
                 actual -> !matchesAny(values, candidate -> equal(actual, candidate))
-                ? satisfied(actual) : unsatisfied("value was in the unexpected values"));
+                ? satisfied(actual) : unsatisfied("value was in the unexpected values")));
     }
 
     public static <OBSERVED> PreservingCondition<OBSERVED> matches(Predicate<? super OBSERVED> predicate) {

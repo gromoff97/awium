@@ -1,10 +1,13 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.PreservingCondition;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -205,30 +208,28 @@ class TryUntilFailureTest {
 
     @Test
     void nullEvaluationHasTheSamePriorityAcrossConditionFamiliesAndComposition() {
-        List<Function<Condition<String, String>, AwaitResult<?, ?>>> paths = List.of(
-                check -> await(() -> "actual").tryUntil(check),
-                check -> await(() -> "actual").tryUntil(check, check),
-                check -> await(() -> Optional.of("actual")).tryUntil(OptionalConditions.hasValue(check)),
-                check -> await(() -> List.of("actual")).tryUntil(CollectionConditions.single(check)),
-                check -> await(() -> Map.of("key", "actual")).tryUntil(MapConditions.valueFor("key", check)));
         for (boolean interrupt : List.of(false, true)) {
             CheckedFunction<String, ConditionResult<String>> evaluation = actual -> {
                 if (interrupt) currentThread().interrupt();
                 return null;
             };
-            for (Condition<String, String> check : List.of(condition("broken", evaluation),
-                    Conditions.preserving("broken", evaluation))) {
-                for (var path : paths) {
-                    try {
-                        var result = failed(path.apply(check));
-                        assertEquals(CONDITION_FAILED, result.failure().reason());
-                        assertInstanceOf(NullPointerException.class, result.failure().cause());
-                        assertEquals("condition returned null ConditionResult", result.failure().cause().getMessage());
-                        assertEquals(1, result.totalAttempts());
-                        assertEquals(interrupt, currentThread().isInterrupted());
-                    } finally {
-                        interrupted();
-                    }
+            var preserved = Conditions.condition("broken", evaluation);
+            List<Supplier<AwaitResult<?, ?>>> paths = List.of(
+                    () -> await(() -> "actual").tryUntil(preserved),
+                    () -> await(() -> "actual").tryUntil(preserved, preserved),
+                    () -> await(() -> Optional.of("actual")).tryUntil(OptionalConditions.hasValue(preserved)),
+                    () -> await(() -> List.of("actual")).tryUntil(CollectionConditions.single(preserved)),
+                    () -> await(() -> Map.of("key", "actual")).tryUntil(MapConditions.valueFor("key", preserved)));
+            for (var path : paths) {
+                try {
+                    var result = failed(path.get());
+                    assertEquals(CONDITION_FAILED, result.failure().reason());
+                    assertInstanceOf(NullPointerException.class, result.failure().cause());
+                    assertEquals("condition returned null ConditionResult", result.failure().cause().getMessage());
+                    assertEquals(1, result.totalAttempts());
+                    assertEquals(interrupt, currentThread().isInterrupted());
+                } finally {
+                    interrupted();
                 }
             }
         }
@@ -350,33 +351,33 @@ class TryUntilFailureTest {
         return (AwaitResult.Failed<?, ?>) assertInstanceOf(AwaitResult.Failed.class, result);
     }
 
-    private static Condition<Object, Object> unstableCondition() {
+    private static PreservingCondition<Object> unstableCondition() {
         int[] calls = {0};
         return condition("value remains ready", actual -> calls[0]++ == 0
                 ? satisfied(actual) : unsatisfied("not ready"));
     }
 
-    private static Condition<Object, Object> throwingCondition() {
+    private static PreservingCondition<Object> throwingCondition() {
         return condition("condition succeeds", actual -> {
             throw new IllegalStateException("condition failed");
         });
     }
 
-    private static Condition<Object, Object> neverReady() {
+    private static PreservingCondition<Object> neverReady() {
         return condition("never", actual -> unsatisfied("not ready"));
     }
 
-    private static Condition<Object, Object> failingFactory() {
+    private static PreservingCondition<Object> failingFactory() {
         return condition("condition succeeds", () -> {
             throw new IllegalStateException("condition factory failed");
         });
     }
 
-    private static Condition<Object, Object> nullFactory() {
+    private static PreservingCondition<Object> nullFactory() {
         return condition("condition succeeds", () -> null);
     }
 
-    private static Condition<Object, Object> assertionThrowingCondition() {
+    private static PreservingCondition<Object> assertionThrowingCondition() {
         return condition("condition succeeds", actual -> {
             throw new AssertionError("condition assertion");
         });
@@ -395,14 +396,14 @@ class TryUntilFailureTest {
         });
     }
 
-    private static Condition<Object, Object> interruptingCondition() {
+    private static PreservingCondition<Object> interruptingCondition() {
         return condition("condition succeeds", actual -> {
             currentThread().interrupt();
             return satisfied(actual);
         });
     }
 
-    private static Condition<Object, Object> nullEvaluation() {
+    private static PreservingCondition<Object> nullEvaluation() {
         return condition("condition succeeds", actual -> null);
     }
 
@@ -415,7 +416,7 @@ class TryUntilFailureTest {
         };
     }
 
-    private static Condition<Object, Object> brokenDiagnostics() {
+    private static PreservingCondition<Object> brokenDiagnostics() {
         return condition("condition", actual ->
                 assertionUnsatisfied("not ready", new AssertionError("engine")));
     }

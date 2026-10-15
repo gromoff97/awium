@@ -24,7 +24,7 @@ class ConditionDecorationTest {
     @Test
     void customConditionFactoryCreatesFreshEvaluatorForEveryWait() {
         var factories = new AtomicInteger();
-        Condition<String, String> condition = condition("first evaluation succeeds", () -> {
+        PreservingCondition<String> condition = condition("first evaluation succeeds", () -> {
             factories.incrementAndGet();
             var evaluations = new AtomicInteger();
             return actual -> evaluations.incrementAndGet() == 1
@@ -39,7 +39,7 @@ class ConditionDecorationTest {
 
     @Test
     void customPreservingConditionParticipatesInPreservingSequences() {
-        PreservingCondition<String> custom = preserving("value is ready", actual -> actual.equals("ready")
+        PreservingCondition<String> custom = condition("value is ready", actual -> actual.equals("ready")
                 ? satisfied(actual) : unsatisfied("value was not ready"));
         var time = new FakeTime(0);
 
@@ -50,26 +50,10 @@ class ConditionDecorationTest {
     }
 
     @Test
-    void customPreservingFactoryCreatesFreshEvaluatorForEveryWait() {
-        var factories = new AtomicInteger();
-        PreservingCondition<String> condition = preserving("first evaluation succeeds", () -> {
-            factories.incrementAndGet();
-            var evaluations = new AtomicInteger();
-            return actual -> evaluations.incrementAndGet() == 1
-                    ? satisfied(actual) : unsatisfied("evaluation was repeated");
-        });
-        var time = new FakeTime(0);
-
-        assertEquals("ready", timedAwait(() -> "ready", DEFAULT, time, time).until(condition));
-        assertEquals("ready", timedAwait(() -> "ready", DEFAULT, time, time).until(condition));
-        assertEquals(2, factories.get());
-    }
-
-    @Test
     void plainAndExplainedConditionsReturnTheObservedValue() {
         var actual = new Object();
-        Condition<Object, Object> plain = condition("plain", ConditionResult::satisfied);
-        Condition<Object, Object> explained = condition("explained", ConditionResult::satisfied)
+        PreservingCondition<Object> plain = condition("plain", ConditionResult::satisfied);
+        PreservingCondition<Object> explained = condition("explained", ConditionResult::satisfied)
                 .because("first").because("second");
 
         assertSame(actual, Await.await(() -> actual).until(plain));
@@ -79,7 +63,7 @@ class ConditionDecorationTest {
 
     @Test
     void everyConditionKindFormatsItsExplanationEagerly() {
-        Condition<Object, Object> condition = condition(
+        PreservingCondition<Object> condition = condition(
                 "custom condition", ConditionResult::satisfied);
         var preserving = asserted(actual -> {});
         var selected = OptionalConditions.present;
@@ -105,20 +89,24 @@ class ConditionDecorationTest {
     @Test
     void replacingAnExplanationLeavesTheOriginalAndConstantsUnchanged() {
         var conditions = List.<Condition<?, ?>>of(
-                condition("custom", ConditionResult::satisfied),
-                isNotNull, equalTo("ready"), instanceOf(String.class),
+                instanceOf(String.class),
                 captured(equalTo("first"), equalTo("last")),
                 captured(CollectionConditions.first, CollectionConditions.last));
         var replacements = List.<Condition<?, ?>>of(
-                condition("custom", ConditionResult::satisfied).because("old").because("new %d", 42),
-                isNotNull.because("old").because("new %d", 42),
-                equalTo("ready").because("old").because("new %d", 42),
                 instanceOf(String.class).because("old").because("new %d", 42),
                 captured(equalTo("first"), equalTo("last")).because("old").because("new %d", 42),
                 captured(CollectionConditions.first, CollectionConditions.last).because("old").because("new %d", 42));
 
         for (var condition : conditions) assertNull(explanation(condition));
         for (var replacement : replacements) assertEquals("new 42", explanation(replacement));
+        var custom = condition("custom", ConditionResult::satisfied);
+        assertNull(explanation(custom));
+        assertEquals("new 42", explanation(custom.because("old").because("new %d", 42)));
+        assertNull(explanation(isNotNull));
+        assertEquals("new 42", explanation(isNotNull.because("old").because("new %d", 42)));
+        var comparison = equalTo("ready");
+        assertNull(explanation(comparison));
+        assertEquals("new 42", explanation(comparison.because("old").because("new %d", 42)));
         var first = OptionalConditions.present.because("first");
         var second = first.because("second");
         assertEquals("first", explanation(first));
@@ -140,7 +128,7 @@ class ConditionDecorationTest {
 
     @Test
     void explanationValidationHappensBeforeEvaluation() {
-        Condition<Object, Object> condition = condition("custom condition",
+        PreservingCondition<Object> condition = condition("custom condition",
                 actual -> {
                     throw new AssertionError("condition evaluated");
                 });
@@ -172,9 +160,9 @@ class ConditionDecorationTest {
         };
         var waiting = Await.await(source);
         assertEquals("condition must not be null",
-                assertThrows(NullPointerException.class, () -> waiting.until(null)).getMessage());
+                assertThrows(NullPointerException.class, () -> waiting.until((PreservingCondition<String>) null)).getMessage());
         assertEquals("condition must not be null",
-                assertThrows(NullPointerException.class, () -> waiting.tryUntil(null)).getMessage());
+                assertThrows(NullPointerException.class, () -> waiting.tryUntil((PreservingCondition<String>) null)).getMessage());
     }
 
     @Test
@@ -183,6 +171,10 @@ class ConditionDecorationTest {
                 () -> asserted((Object actual) -> {}).because(" \n "));
         assertValidation("explanation", NullPointerException.class,
                 () -> asserted((Object actual) -> {}).because((String) null));
+        assertValidation("explanation", NullPointerException.class,
+                () -> equalTo("ready").because((String) null));
+        assertValidation("explanation", IllegalArgumentException.class,
+                () -> equalTo("ready").because("%s", " "));
         assertValidation("explanation", IllegalArgumentException.class,
                 () -> MapConditions.valueFor("key").because("%s", " "));
         assertValidation("explanation", NullPointerException.class,

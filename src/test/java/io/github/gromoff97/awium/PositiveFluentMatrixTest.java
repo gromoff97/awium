@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.PreservingCondition;
+
 import io.github.gromoff97.awium.Source.CollectionSource;
 import io.github.gromoff97.awium.Source.CollectionViewSource;
 import io.github.gromoff97.awium.Source.MapSource;
@@ -51,7 +53,7 @@ class PositiveFluentMatrixTest {
                 await(source).usingTime(pollingTime, pollingTime).persisting(ZERO).upTo(UP_TO).every(EVERY).until(isNotNull),
                 await(source).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).every(EVERY).upTo(UP_TO).persisting(ZERO).until(isNotNull));
 
-        Condition<Object, Object> selecting = condition(
+        PreservingCondition<Object> selecting = condition(
                 "select actual", ConditionResult::satisfied);
         assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(selecting));
         assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(selecting.because("selected object")));
@@ -179,8 +181,8 @@ class PositiveFluentMatrixTest {
         BiPredicate<String, Integer> entry = (key, value) -> value > 0;
 
         String matched = await(() -> "ready").until(matches(Predicate.not(text).negate()));
-        String transformed = await(() -> " ready ").until(yields(Function.<String>identity().andThen(trim)::apply));
-        String custom = await(() -> " ready ").until(condition("trimmed", trim.andThen(ConditionResult::satisfied)::apply));
+        String transformed = await(() -> trim.apply(" ready ")).until(isNotNull);
+        String custom = await(() -> trim.apply(" ready ")).until(condition("ready", ConditionResult::satisfied));
         String asserted = await(() -> "ready").until(asserted(first.andThen(value -> calls.add("second " + value))::accept));
         Map<String, Integer> matchingEntry = await(() -> Map.of("ready", 1))
                 .until(MapConditions.anyEntry(entry.and((key, value) -> !key.isBlank())));
@@ -193,11 +195,12 @@ class PositiveFluentMatrixTest {
     @Test
     void optionalValuesCanThemselvesBeClassesConditionsOrPredicates() {
         Class<?> expectedClass = String.class;
-        Condition<String, String> expectedCondition = yields(String::trim);
+        PreservingCondition<String> expectedCondition = matches(String::isBlank);
         Predicate<String> expectedPredicate = String::isBlank;
 
-        Class<?> type = await(() -> Optional.of(expectedClass)).until(hasValue(equalTo(expectedClass)));
-        Condition<String, String> condition = await(() -> Optional.of(expectedCondition)).until(hasValue(equalTo(expectedCondition)));
+        Optional<Class<?>> actualClass = Optional.of(expectedClass);
+        Class<?> type = await(() -> actualClass).until(hasValue(equalTo(expectedClass)));
+        PreservingCondition<String> condition = await(() -> Optional.of(expectedCondition)).until(hasValue(equalTo(expectedCondition)));
         Predicate<String> predicate = await(() -> Optional.of(expectedPredicate)).until(hasValue(equalTo(expectedPredicate)));
 
         assertSame(expectedClass, type);
@@ -206,22 +209,19 @@ class PositiveFluentMatrixTest {
     }
 
     @Test
-    void evaluatorFactoriesPreserveOrTransformResultsAccordingToTheirContract() {
-        Callable<CheckedFunction<String, ConditionResult<Integer>>> factory = () -> value -> ConditionResult.satisfied(value.length());
+    void evaluatorFactoriesPreserveObservationsInSingleAndOrderedWaits() {
         Callable<CheckedFunction<CharSequence, ConditionResult<CharSequence>>> broadFactory = () -> ignored -> ConditionResult.satisfied("replacement");
         var time = new FakeTime(0);
         var waiting = await(() -> "ready").usingTime(time, time);
 
         String direct = waiting.until(condition("direct", ConditionResult::satisfied));
         String created = waiting.until(condition("created", PositiveFluentMatrixTest::evaluator).because("ready"));
-        Integer transformed = waiting.until(condition("transformed", factory));
-        String preserved = waiting.until(preserving("preserved", PositiveFluentMatrixTest::evaluator));
-        String concrete = waiting.until(preserving("broad", broadFactory));
+        String preserved = waiting.until(condition("preserved", PositiveFluentMatrixTest::evaluator));
+        String concrete = waiting.until(condition("broad", broadFactory));
         List<String> captured = waiting.until(condition("first", PositiveFluentMatrixTest::evaluator),
                 condition("second", PositiveFluentMatrixTest::evaluator));
 
         assertEquals(List.of("ready", "ready", "ready", "ready"), List.of(direct, created, preserved, concrete));
-        assertEquals(5, transformed);
         assertEquals(List.of("ready", "ready"), captured);
     }
 

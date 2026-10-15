@@ -12,7 +12,6 @@ import static io.github.gromoff97.awium.CollectionConditions.single;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.*;
-import static io.github.gromoff97.awium.MapConditions.singleEntry;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -21,7 +20,7 @@ class NestedSelectionTest {
     record Payment(int id, boolean paid) {}
 
     @Test
-    void nestedConditionsSelectAndTransformTheUniqueMatchingValue() {
+    void nestedConditionsSelectAndNarrowTheUniqueMatchingValue() {
         var pending = new Payment(1, false);
         var paid = new Payment(2, true);
         var time = new FakeTime(0);
@@ -30,7 +29,7 @@ class NestedSelectionTest {
         assertSame(paid, waiting.until(single(asserted(payment -> { assertTrue(payment.paid()); }))));
         assertEquals(paid, waiting.until(single(equalTo(paid))));
         assertEquals(42, await(() -> List.<Number>of(1L, 42)).usingTime(time, time).until(single(instanceOf(Integer.class))));
-        assertEquals("key", await(() -> Map.of("key", 42)).usingTime(time, time).until(singleEntry(yields(Map.Entry::getKey))));
+        assertEquals("key", await(() -> Map.of("key", 42).keySet()).usingTime(time, time).until(single));
         assertNull(await(() -> java.util.Collections.singletonList((String) null)).usingTime(time, time).until(single(isNull)));
     }
 
@@ -76,17 +75,17 @@ class NestedSelectionTest {
     @Test
     void eachTerminalAndSequenceStageGetsAFreshLazyCallback() {
         var factories = new AtomicInteger();
-        Condition<String, Integer> length = condition("length after retry", () -> {
+        PreservingCondition<String> ready = condition("ready after retry", () -> {
             factories.incrementAndGet();
             var calls = new AtomicInteger();
-            return value -> calls.incrementAndGet() == 2 ? satisfied(value.length()) : unsatisfied("retry");
+            return value -> calls.incrementAndGet() == 2 ? satisfied(value) : unsatisfied("retry");
         });
         var time = new FakeTime(0);
-        await(() -> List.<String>of()).usingTime(time, time).upTo(ofNanos(1)).tryUntil(single(length));
+        await(() -> List.<String>of()).usingTime(time, time).upTo(ofNanos(1)).tryUntil(single(ready));
         assertEquals(0, factories.get());
         var waiting = await(() -> List.of("ready")).usingTime(time, time).every(ofNanos(1));
-        assertEquals(5, waiting.until(single(length)));
-        assertEquals(List.of(5, 5), assertInstanceOf(AwaitResult.Satisfied.class, waiting.tryUntil(single(length), single(length))).result());
+        assertEquals("ready", waiting.until(single(ready)));
+        assertEquals(List.of("ready", "ready"), assertInstanceOf(AwaitResult.Satisfied.class, waiting.tryUntil(single(ready), single(ready))).result());
         assertEquals(3, factories.get());
     }
 
@@ -123,6 +122,6 @@ class NestedSelectionTest {
         assertInstanceOf(NullPointerException.class, assertInstanceOf(AwaitResult.Failed.class, invalid).failure().cause());
         var fatal = new OutOfMemoryError("fatal");
         assertSame(fatal, assertThrows(OutOfMemoryError.class,
-                () -> await(() -> List.of("ready")).usingTime(time, time).tryUntil(single(yields(value -> { throw fatal; })))));
+                () -> await(() -> List.of("ready")).usingTime(time, time).tryUntil(single(condition("fatal", value -> { throw fatal; })))));
     }
 }

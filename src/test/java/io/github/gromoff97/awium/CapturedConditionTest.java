@@ -15,7 +15,6 @@ import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedOptionalAwait;
 import static io.github.gromoff97.awium.CapturedEvaluator.captured;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
@@ -28,26 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CapturedConditionTest {
-
-    @Test
-    void heterogeneousConditionsCaptureTheirCommonResultType() {
-        var time = new FakeTime(0);
-        var waiting = Await.await(() -> "ready").usingTime(time, time);
-        Condition<Object, Object> common = Conditions.equalTo("ready").because("common model");
-
-        Object value = waiting.until(common);
-        List<Number> numbers = waiting.until(Conditions.yields(String::length), Conditions.yields(text -> (long) text.length()));
-        AwaitResult<String, List<Number>> numberAttempts = waiting.tryUntil(
-                Conditions.yields(String::length), Conditions.yields(text -> (long) text.length()));
-        List<Object> mixed = waiting.until(common, Conditions.yields(String::length));
-        AwaitResult<String, List<Object>> mixedAttempts = waiting.tryUntil(common, Conditions.yields(String::length));
-
-        assertEquals("ready", value);
-        assertEquals(List.of(5, 5L), numbers);
-        assertEquals(numbers, assertInstanceOf(AwaitResult.Satisfied.class, numberAttempts).result());
-        assertEquals(List.of("ready", 5), mixed);
-        assertEquals(mixed, assertInstanceOf(AwaitResult.Satisfied.class, mixedAttempts).result());
-    }
 
     @Test
     void explainedMapValueSequenceCapturesNullAndRefreshesOnlyTheLastStage() {
@@ -82,9 +61,9 @@ class CapturedConditionTest {
         int[] reads = {0};
         var time = new FakeTime(0);
         var waiting = timedAwait(() -> observations[reads[0]++], config(1, 5, 0), time, time);
-        Condition.PreservingCondition<Object> firstStage = Conditions.equalTo(new BigDecimal("1.00"));
-        Condition.PreservingCondition<Object> secondStage = Conditions.equalTo(new BigInteger("2"));
-        Condition.PreservingCondition<Object> finalStage = Conditions.equalTo(1024L);
+        var firstStage = Conditions.equalTo(new BigDecimal("1.00"));
+        var secondStage = Conditions.equalTo(new BigInteger("2"));
+        var finalStage = Conditions.equalTo(1024L);
 
         List<Number> values = waiting.until(firstStage, secondStage, finalStage);
         AwaitResult<Number, List<Number>> captured = waiting.tryUntil(firstStage, secondStage, finalStage);
@@ -311,16 +290,13 @@ class CapturedConditionTest {
     }
 
     @Test
-    void capturesConditionResults() {
+    void capturesProjectedObservations() {
         var time = new FakeTime(0);
         String[] observations = {"a", "bb"};
         int[] next = {0};
 
-        List<Integer> result = timedAwait(() -> observations[next[0]++],
-                config(1, 10, 0), time, time).until(condition("length 1", value -> value.length() == 1
-                        ? satisfied(value.length()) : unsatisfied("length was not 1")),
-                condition("length 2", value -> value.length() == 2
-                        ? satisfied(value.length()) : unsatisfied("length was not 2")));
+        List<Integer> result = timedAwait(() -> observations[next[0]++].length(),
+                config(1, 10, 0), time, time).until(Conditions.equalTo(1), Conditions.equalTo(2));
 
         assertEquals(List.of(1, 2), result);
     }
@@ -339,29 +315,8 @@ class CapturedConditionTest {
     }
 
     @Test
-    void nestedSequenceFailureRetainsTheInnerStageContext() {
-        var time = new FakeTime(0);
-        Condition<String, List<String>> inner = captured(
-                Conditions.<String, String>condition("inner first", value -> satisfied(value)),
-                Conditions.<String, String>condition("inner second", value -> unsatisfied("inner mismatch"))
-                        .because("inner business reason"));
-
-        var result = timedAwait(() -> "actual", config(1, 3, 0), time, time).tryUntil(Conditions.<String, List<String>>condition("outer first", value -> satisfied(List.of(value))), inner);
-        var outcome = assertInstanceOf(ConditionResult.Unsatisfied.class,
-                assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, result.attempts().getLast().outcome()).evaluation());
-        var context = assertInstanceOf(ConditionResult.Context.Sequence.class,
-                outcome.context());
-
-        assertEquals("inner mismatch", outcome.mismatch());
-        assertEquals("inner second", context.expectation());
-        assertEquals("inner business reason", context.importance());
-    }
-
-    @Test
     void validatesEveryStageBeforeEvaluation() {
         PreservingCondition<String> preserving = matches(value -> true);
-        Condition<String, Integer> transforming = condition("length",
-                value -> satisfied(value.length()));
 
         assertThrows(NullPointerException.class,
                 () -> captured((PreservingCondition<String>) null, preserving));
@@ -371,20 +326,15 @@ class CapturedConditionTest {
                 () -> captured(preserving, preserving, (PreservingCondition<String>) null));
         assertThrows(NullPointerException.class,
                 () -> captured(preserving, preserving, (PreservingCondition<String>[]) null));
-        assertThrows(NullPointerException.class,
-                () -> captured((Condition<String, Integer>) null, transforming));
-        assertThrows(NullPointerException.class,
-                () -> captured(transforming, transforming,
-                        (Condition<String, Integer>) null));
     }
 
     @Test
     void returnsAnImmutableCapturedCopyThatAllowsNull() {
         var time = new FakeTime(0);
 
-        List<String> result = timedAwait(() -> "observed", config(1, 10, 0),
-                time, time).until(condition("first null", value -> satisfied((String) null)),
-                condition("second null", value -> satisfied((String) null)));
+        List<String> result = timedAwait((Source<String>) () -> null, config(1, 10, 0),
+                time, time).until(condition("first null", ConditionResult::satisfied),
+                condition("second null", ConditionResult::satisfied));
 
         assertEquals(2, result.size());
         assertNull(result.get(0));
