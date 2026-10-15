@@ -147,17 +147,17 @@ class MapSelectionConditionsTest {
                 (String key, Integer value) -> value > 2), actual).getClass());
         assertEquals(Unsatisfied.class, evaluate(MapConditions.noEntry(
                 (String key, Integer value) -> value == 2), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.<String, Integer>allKeys(
+        assertEquals(Unsatisfied.class, evaluate(MapConditions.allKeys(
                 key -> key.equals("a")), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.<String, Integer>anyKey(
+        assertEquals(Unsatisfied.class, evaluate(MapConditions.anyKey(
                 key -> key.equals("missing")), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.<String, Integer>noKey(
+        assertEquals(Unsatisfied.class, evaluate(MapConditions.noKey(
                 key -> key.equals("a")), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.<String, Integer>allValues(
+        assertEquals(Unsatisfied.class, evaluate(MapConditions.allValues(
                 value -> value < 2), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.<String, Integer>anyValue(
+        assertEquals(Unsatisfied.class, evaluate(MapConditions.anyValue(
                 value -> value > 2), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.<String, Integer>noValue(
+        assertEquals(Unsatisfied.class, evaluate(MapConditions.noValue(
                 value -> value == 2), actual).getClass());
         assertEquals(Unsatisfied.class,
                 evaluate(MapConditions.containsKeys("a", "missing"), actual).getClass());
@@ -207,7 +207,7 @@ class MapSelectionConditionsTest {
         assertEquals(Unsatisfied.class, evaluate(
                 MapConditions.onlyValueFor("first"), null).getClass());
         assertThrows(NullPointerException.class, () -> MapConditions.singleEntry(
-                (Condition.PreservingCondition<Map.Entry<Object, Object>>) null));
+                (Condition.PreservingCondition<Map.Entry<?, ?>>) null));
         assertThrows(NullPointerException.class, () -> MapConditions.allEntries(null));
     }
 }

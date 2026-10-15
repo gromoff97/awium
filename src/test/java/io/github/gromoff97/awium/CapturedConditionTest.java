@@ -41,19 +41,12 @@ class CapturedConditionTest {
                 Conditions.yields(String::length), Conditions.yields(text -> (long) text.length()));
         List<Object> mixed = waiting.until(common, Conditions.yields(String::length));
         AwaitResult<String, List<Object>> mixedAttempts = waiting.tryUntil(common, Conditions.yields(String::length));
-        var collection = List.of("ready");
-        List<Object> selectedAndPreserved = Await.await(() -> collection).usingTime(time, time)
-                .until(CollectionConditions.single, Conditions.isNotNull);
-        AwaitResult<List<String>, List<Object>> selectedAttempts = Await.await(() -> collection).usingTime(time, time)
-                .tryUntil(CollectionConditions.single, Conditions.isNotNull);
 
         assertEquals("ready", value);
         assertEquals(List.of(5, 5L), numbers);
         assertEquals(numbers, assertInstanceOf(AwaitResult.Satisfied.class, numberAttempts).result());
         assertEquals(List.of("ready", 5), mixed);
         assertEquals(mixed, assertInstanceOf(AwaitResult.Satisfied.class, mixedAttempts).result());
-        assertEquals(List.of("ready", collection), selectedAndPreserved);
-        assertEquals(selectedAndPreserved, assertInstanceOf(AwaitResult.Satisfied.class, selectedAttempts).result());
     }
 
     @Test

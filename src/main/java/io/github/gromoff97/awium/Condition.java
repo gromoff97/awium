@@ -32,7 +32,7 @@ public sealed class Condition<OBSERVED, RESULT> {
         return (ConditionSession<OBSERVED, SELECTED>) (ConditionSession<?, ?>) newSession();
     }
 
-    static <C extends Condition<?, ?>> C required(C condition) {
+    static <C> C required(C condition) {
         return requireNonNull(condition, "condition must not be null");
     }
 
@@ -83,37 +83,43 @@ public sealed class Condition<OBSERVED, RESULT> {
         }
     }
 
-    public static final class SelectedCondition<OBSERVED> extends Condition<OBSERVED, Object> {
+    public static final class SelectedCondition<OBSERVED> {
 
-        SelectedCondition(ConditionMetadata metadata,
-                Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends Object>>> evaluatorFactory) {
-            super(metadata, evaluatorFactory);
+        final Condition<OBSERVED, ?> definition;
+
+        SelectedCondition(Condition<OBSERVED, ?> definition) {
+            this.definition = required(definition);
         }
 
-        @Override
+        <SELECTED> ConditionSession<OBSERVED, SELECTED> selectionSession() {
+            return definition.selectionSession();
+        }
+
         public SelectedCondition<OBSERVED> because(String explanation) {
-            return new SelectedCondition<>(metadata.because(explanation), evaluatorFactory);
+            return new SelectedCondition<>(definition.because(explanation));
         }
 
-        @Override
         public SelectedCondition<OBSERVED> because(String format, Object... arguments) {
             return because(formattedExplanation(format, arguments));
         }
     }
 
-    public static final class MapValueCondition<OBSERVED> extends Condition<OBSERVED, Object> {
+    public static final class MapValueCondition<OBSERVED> {
 
-        MapValueCondition(ConditionMetadata metadata,
-                Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<?>>> evaluatorFactory) {
-            super(metadata, evaluatorFactory);
+        final Condition<OBSERVED, ?> definition;
+
+        MapValueCondition(Condition<OBSERVED, ?> definition) {
+            this.definition = required(definition);
         }
 
-        @Override
+        <VALUE> ConditionSession<OBSERVED, VALUE> selectionSession() {
+            return definition.selectionSession();
+        }
+
         public MapValueCondition<OBSERVED> because(String explanation) {
-            return new MapValueCondition<>(metadata.because(explanation), evaluatorFactory);
+            return new MapValueCondition<>(definition.because(explanation));
         }
 
-        @Override
         public MapValueCondition<OBSERVED> because(String format, Object... arguments) {
             return because(formattedExplanation(format, arguments));
         }

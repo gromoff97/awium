@@ -33,9 +33,9 @@ class PublicSurfaceTest {
             stream(stage.getMethods()).forEach(method ->
                     assertFalse(runtimeMethods.contains(method.getName()), method.toGenericString()));
         }
-        assertTrue(Condition.class.isAssignableFrom(SelectedCondition.class));
+        assertFalse(Condition.class.isAssignableFrom(SelectedCondition.class));
         assertTrue(Condition.class.isAssignableFrom(PreservingCondition.class));
-        assertTrue(Condition.class.isAssignableFrom(MapValueCondition.class));
+        assertFalse(Condition.class.isAssignableFrom(MapValueCondition.class));
         assertFalse(SelectedCondition.class.isAssignableFrom(MapValueCondition.class));
         assertTrue(Condition.class.isSealed());
     }

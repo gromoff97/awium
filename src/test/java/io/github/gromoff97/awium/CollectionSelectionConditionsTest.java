@@ -127,7 +127,7 @@ class CollectionSelectionConditionsTest {
         assertEquals(Satisfied.class, evaluate(CollectionConditions.containsSequence(1, 2),
                 List.of(1, 2)).getClass());
         assertSame(values, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.containsSubsequence(1, 3, 5)));
-        assertSame(values, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.sorted()));
+        assertSame(values, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.sorted(Integer::compareTo)));
 
         assertEquals(Unsatisfied.class,
                 evaluate(CollectionConditions.startsWith(1, 3), values).getClass());
@@ -145,12 +145,12 @@ class CollectionSelectionConditionsTest {
                 CollectionConditions.doesNotContainSubsequence(1, 4), values).getClass());
         assertEquals(Unsatisfied.class, evaluate(
                 CollectionConditions.doesNotContainSubsequence(1, 3, 5), values).getClass());
-        assertEquals(Unsatisfied.class, evaluate(CollectionConditions.<Integer>sorted(),
+        assertEquals(Unsatisfied.class, evaluate(CollectionConditions.sorted(Integer::compareTo),
                 List.of(1, 3, 2)).getClass());
-        assertEquals(Satisfied.class, evaluate(CollectionConditions.<Integer>sorted(),
+        assertEquals(Satisfied.class, evaluate(CollectionConditions.sorted(Integer::compareTo),
                 List.of(1, 1)).getClass());
-        assertEquals(Satisfied.class, evaluate(CollectionConditions.<Integer>sorted(
-                java.util.Comparator.reverseOrder()), List.of(3, 2, 1)).getClass());
+        assertEquals(Satisfied.class, evaluate(CollectionConditions.sorted(
+                java.util.Comparator.comparingInt(Integer::intValue).reversed()), List.of(3, 2, 1)).getClass());
 
         var sequencedSet = new LinkedHashSet<>(List.of(1, 2, 3));
         assertEquals(1, await((CollectionSource<LinkedHashSet<Integer>>) () -> sequencedSet).usingTime(pollingTime, pollingTime).until(first));
@@ -180,7 +180,7 @@ class CollectionSelectionConditionsTest {
             assertSame(actual, ((Satisfied<?>) evaluate(CollectionConditions.doesNotContainSequence(1, 2, 3), actual)).result());
         }
         var empty = new ArrayDeque<Integer>();
-        assertSame(empty, ((Satisfied<?>) evaluate(CollectionConditions.<Integer>sorted(), empty)).result());
+        assertSame(empty, ((Satisfied<?>) evaluate(CollectionConditions.sorted(Integer::compareTo), empty)).result());
     }
 
     @Test

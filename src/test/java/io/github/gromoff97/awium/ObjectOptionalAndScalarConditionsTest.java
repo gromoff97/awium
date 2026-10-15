@@ -219,6 +219,11 @@ class ObjectOptionalAndScalarConditionsTest {
         assertStatus(condition, mismatching, Unsatisfied.class);
     }
 
+    private static <S> void assertStatus(Condition.SelectedCondition<? super S> condition, S actual,
+            Class<?> expected) {
+        assertEquals(expected, evaluate(condition, actual).getClass());
+    }
+
     private static <S> void assertStatus(Condition<? super S, ?> condition, S actual,
             Class<?> expected) {
         assertEquals(expected, evaluate(condition, actual).getClass());

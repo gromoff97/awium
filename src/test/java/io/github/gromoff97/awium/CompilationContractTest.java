@@ -75,7 +75,7 @@ class CompilationContractTest {
     }
 
     @Test
-    void ambiguousNullSourcesAndConditionsDoNotCompile() throws IOException {
+    void ambiguousNullSourcesDoNotCompile() throws IOException {
         assertFalse(compiles("""
                 import static io.github.gromoff97.awium.Await.await;
                 final class Contract { void check() { await(() -> null); } }
@@ -83,15 +83,6 @@ class CompilationContractTest {
         assertFalse(compiles("""
                 import static io.github.gromoff97.awium.Await.await;
                 final class Contract { void check() { await(null); } }
-                """));
-        assertFalse(compiles("""
-                import static io.github.gromoff97.awium.Await.await;
-                import io.github.gromoff97.awium.Source;
-                final class Contract {
-                    void check(Source<String> source) {
-                        await(source).until(null);
-                    }
-                }
                 """));
     }
 
@@ -116,10 +107,9 @@ class CompilationContractTest {
     }
 
     @Test
-    void plainSourcesExposeSelectionsAsObjectsWithoutInventingElementTypes() throws IOException {
+    void plainSourcesRejectSelectionsInsteadOfReturningObjects() throws IOException {
         for (String condition : List.of("present", "single", "first", "last", "singleEntry")) {
             String source = condition.equals("present") ? "optional" : condition.equals("singleEntry") ? "map" : "collection";
-            String selectedType = condition.equals("singleEntry") ? "Map.Entry<String, String>" : "String";
             String contract = """
                     import static io.github.gromoff97.awium.Await.await;
                     import static io.github.gromoff97.awium.CollectionConditions.*;
@@ -135,10 +125,8 @@ class CompilationContractTest {
                         }
                     }
                     """;
-            assertFalse(compiles(contract.formatted(selectedType, source, condition)), condition);
-            String containerType = condition.equals("present") ? "Optional<String>"
-                    : condition.equals("singleEntry") ? "Map<String, String>" : "List<String>";
-            assertFalse(compiles(contract.formatted(containerType, source, condition)), condition);
+            assertFalse(compiles(contract.formatted("Object", source, condition)), condition);
+            assertFalse(compiles(contract.formatted("Object", source, condition + ".because(\"required\")")), condition);
         }
     }
 

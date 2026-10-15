@@ -2,6 +2,7 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
+import io.github.gromoff97.awium.Condition.MapValueCondition;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -17,9 +18,25 @@ final class ConditionTestRuntime {
         return condition.<S>preservingSession().apply(actual);
     }
 
-    static <S, R> ConditionResult<? extends R> evaluate(
+    static <S> ConditionResult<?> evaluate(
             SelectedCondition<? super S> condition, S actual) {
-        return condition.<R>selectionSession().apply(actual);
+        return condition.definition.newSession().apply(actual);
+    }
+
+    static <S> ConditionResult<?> evaluate(MapValueCondition<? super S> condition, S actual) {
+        return condition.definition.newSession().apply(actual);
+    }
+
+    static String description(SelectedCondition<?> condition) {
+        return description(condition.definition);
+    }
+
+    static String explanation(SelectedCondition<?> condition) {
+        return explanation(condition.definition);
+    }
+
+    static String explanation(MapValueCondition<?> condition) {
+        return explanation(condition.definition);
     }
 
     static String description(Condition<?, ?> condition) {

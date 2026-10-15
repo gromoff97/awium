@@ -485,7 +485,7 @@ class CheckedCallbackTest {
         List<Function<Predicate<Integer>, AwaitResult<?, ?>>> waits = List.of(
                 predicate -> await(() -> List.of(1, 2)).tryUntil(single(matches(predicate))),
                 predicate -> await(() -> Map.of("a", 1, "b", 2)).tryUntil(singleEntry(matches(
-                        (Map.Entry<String, Integer> entry) -> predicate.test(entry.getValue())))),
+                        (Map.Entry<? extends String, ? extends Integer> entry) -> predicate.test(entry.getValue())))),
                 predicate -> await(() -> List.of(1, 2)).tryUntil(CollectionConditions.first(predicate)),
                 predicate -> await(() -> List.of(1, 2)).tryUntil(CollectionConditions.last(predicate)),
                 predicate -> await(() -> List.of(1, 2)).tryUntil(CollectionConditions.all(predicate)),

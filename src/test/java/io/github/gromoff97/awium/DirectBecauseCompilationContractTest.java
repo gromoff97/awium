@@ -30,6 +30,46 @@ class DirectBecauseCompilationContractTest {
         }
     }
 
+    @Test
+    void explainedQuantifiersRejectIncompatibleCallbacks() throws IOException {
+        for (String terminal : List.of("until", "tryUntil")) {
+            for (String expression : List.of(
+                    "await(map).%s(allKeys((Integer key) -> key > 0).because(\"wrong\"));",
+                    "await(map).%s(anyKey((Integer key) -> key > 0).because(\"wrong\"));",
+                    "await(map).%s(noKey((Integer key) -> key > 0).because(\"wrong\"));",
+                    "await(map).%s(allValues(String::isBlank).because(\"wrong\"));",
+                    "await(map).%s(anyValue(String::isBlank).because(\"wrong\"));",
+                    "await(map).%s(noValue(String::isBlank).because(\"wrong\"));",
+                    "await(map).%s(allEntries((String key, String value) -> value.isBlank()).because(\"wrong\"));",
+                    "await(map).%s(anyEntry((String key, String value) -> value.isBlank()).because(\"wrong\"));",
+                    "await(map).%s(noEntry((String key, String value) -> value.isBlank()).because(\"wrong\"));",
+                    "await(collection).%s(CollectionConditions.all(String::isBlank).because(\"wrong\"));",
+                    "await(collection).%s(CollectionConditions.any(String::isBlank).because(\"wrong\"));",
+                    "await(collection).%s(CollectionConditions.none(String::isBlank).because(\"wrong\"));")) {
+                String call = expression.formatted(terminal);
+                assertFalse(compiles(call), call);
+            }
+        }
+    }
+
+    @Test
+    void selectorsCannotMasqueradeAsTypedTransformations() throws IOException {
+        for (String expression : List.of(
+                "Condition<Optional<?>, Object> erased = present;",
+                "Condition<Map<?, ?>, Object> erased = valueFor(\"key\");",
+                "Object value = await(() -> List.of(Optional.of(1))).until(single(present));",
+                "Object value = await(() -> List.of(Optional.of(1))).until(single(present.because(\"inner\")).because(\"outer\"));",
+                "Object value = await(() -> Optional.of(Map.of(\"key\", 1))).until(hasValue(valueFor(\"key\")));",
+                "Object value = await(() -> Optional.of(Map.of(\"key\", 1))).until(hasValue(valueFor(\"key\").because(\"inner\")).because(\"outer\"));",
+                "List<Object> values = await(collection).until(single, isNotNull);",
+                "List<Object> values = await(collection).until(single.because(\"first\"), isNotNull.because(\"second\"));",
+                "Source<Map<String, Number>> plain = map; Object value = await(plain).until(valueFor(\"key\"));",
+                "Source<Map<String, Number>> plain = map; Object value = await(plain).until(valueFor(\"key\").because(\"required\"));",
+                "await(collection).until(CollectionConditions.sorted(String::compareTo).because(\"wrong type\"));")) {
+            assertFalse(compiles(expression), expression);
+        }
+    }
+
     private boolean compiles(String body) throws IOException {
         return CompilationSupport.compiles(directory, """
                 import java.util.*;

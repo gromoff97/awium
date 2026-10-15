@@ -2,9 +2,13 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Source.CollectionViewSource;
 import io.github.gromoff97.awium.Source.MapViewSource;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiPredicate;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -12,6 +16,7 @@ import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.MapConditions.*;
 import static io.github.gromoff97.awium.OptionalConditions.*;
+import static java.util.function.Predicate.not;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DirectBecauseTest {
@@ -115,6 +120,101 @@ class DirectBecauseTest {
     }
 
     @Test
+    void explainedMapQuantifiersPreserveBothTypeArgumentsAndTheConcreteMap() {
+        var actual = new LinkedHashMap<>(Map.of(" ", "\t"));
+        var waiting = await(() -> actual);
+
+        List<LinkedHashMap<String, String>> results = List.of(
+                waiting.until(allKeys(String::isBlank).because("blank keys")),
+                waiting.until(anyKey(String::isBlank).because("a blank key")),
+                waiting.until(noKey(String::isEmpty).because("nonempty keys")),
+                waiting.until(allValues(String::isBlank).because("blank values")),
+                waiting.until(anyValue(String::isBlank).because("a blank value")),
+                waiting.until(noValue(String::isEmpty).because("nonempty values")));
+
+        results.forEach(result -> assertSame(actual, result));
+    }
+
+    @Test
+    void explainedEntryQuantifiersAcceptPredicatesForSupertypes() {
+        var actual = new LinkedHashMap<>(Map.of("key", 1));
+        var waiting = await(() -> actual);
+        BiPredicate<CharSequence, Number> valid = (key, value) -> !key.isEmpty() && value.intValue() > 0;
+
+        List<LinkedHashMap<String, Integer>> results = List.of(
+                waiting.until(allEntries(valid).because("valid entries")),
+                waiting.until(anyEntry(valid).because("a valid entry")),
+                waiting.until(noEntry(valid.negate()).because("no invalid entries")));
+
+        results.forEach(result -> assertSame(actual, result));
+    }
+
+    @Test
+    void explainedCollectionQuantifiersAcceptPredicatesForSupertypes() {
+        var actual = new ArrayList<>(List.of(""));
+        var waiting = await(() -> actual);
+
+        List<ArrayList<String>> results = List.of(
+                waiting.until(all(CharSequence::isEmpty).because("empty elements")),
+                waiting.until(any(CharSequence::isEmpty).because("an empty element")),
+                waiting.until(none(not(CharSequence::isEmpty)).because("no nonempty elements")));
+
+        results.forEach(result -> assertSame(actual, result));
+    }
+
+    @Test
+    void standaloneConditionsKeepTheirTypesWhenExplainedAndNested() {
+        record Payment(String id, boolean paid) {}
+        var actual = new Payment("receipt", true);
+        var paid = matches(Payment::paid);
+        var id = yields(Payment::id);
+        var onePaid = single(paid.because("paid payment"));
+        var oneId = single(id.because("payment id"));
+        var optionalId = hasValue(id.because("optional payment id"));
+        var mappedId = valueFor("key", id.because("mapped payment id"));
+
+        Payment payment = await(() -> actual).until(paid.because("required payment"));
+        Payment selected = await(() -> List.of(actual)).until(onePaid.because("one payment"));
+        String value = await(() -> actual).until(id.because("required id"));
+        String nested = await(() -> List.of(actual)).until(oneId.because("one id"));
+        String optional = await(() -> Optional.of(actual)).until(optionalId.because("optional id"));
+        String mapped = await(() -> Map.of("key", actual)).until(mappedId.because("mapped id"));
+
+        assertSame(actual, payment);
+        assertSame(actual, selected);
+        assertEquals(List.of("receipt", "receipt", "receipt", "receipt"), List.of(value, nested, optional, mapped));
+        assertNull(ConditionTestRuntime.explanation(paid));
+        assertNull(ConditionTestRuntime.explanation(id));
+    }
+
+    @Test
+    void standaloneSortingAndEntryConditionsDoNotNeedSourceTypeHints() {
+        record Receipt(String key, Integer value) implements Map.Entry<String, Integer> {
+            @Override public String getKey() { return key; }
+            @Override public Integer getValue() { return value; }
+            @Override public Integer setValue(Integer value) { throw new UnsupportedOperationException(); }
+        }
+        var entry = new Receipt("key", 1);
+        var actual = new ProbeContainers.EntryMap<String, Integer>(List.of(entry));
+        var receipt = singleEntry(instanceOf(Receipt.class).because("receipt entry"));
+        var key = singleEntry(yields(DirectBecauseTest::entryKey).because("entry key"));
+        var ordered = sorted(Comparator.comparingInt(Number::intValue));
+        var numbers = new ArrayList<>(List.of(1, 2));
+
+        Receipt result = await(() -> actual).until(receipt.because("required receipt"));
+        String resultKey = await(() -> actual).until(key.because("required key"));
+        ArrayList<Integer> sortedNumbers = await(() -> numbers).until(ordered.because("ordered numbers"));
+
+        assertSame(entry, result);
+        assertEquals("key", resultKey);
+        assertSame(numbers, sortedNumbers);
+    }
+
+    private static String entryKey(Map.Entry<? extends String, ?> entry) {
+        return entry.getKey();
+    }
+
+    @Test
     void explainedSelectionsAcceptCovariantViewsAndTypedEntryCallbacks() {
         Source<List<? extends Number>> values = () -> List.of(1);
         Source<Map<? extends CharSequence, ? extends Number>> entries = () -> Map.of("key", 1);
@@ -125,9 +225,9 @@ class DirectBecauseTest {
         Number mapped = await(map).until(valueFor("key", equalTo(1)).because("one"));
         Map.Entry<? extends CharSequence, ? extends Number> entry = await(map).until(entryFor("key").because("entry"));
         Map.Entry<String, Number> checked = await(() -> Map.<String, Number>of("key", 1)).until(singleEntry(matches(
-                (Map.Entry<String, Number> candidate) -> candidate.getValue() != null)).because("checked"));
+                (Map.Entry<? extends String, ? extends Number> candidate) -> candidate.getValue() != null)).because("checked"));
         Number transformed = await(() -> Map.<String, Number>of("key", 1)).until(singleEntry(yields(
-                (Map.Entry<String, Number> candidate) -> candidate.getValue())).because("transformed"));
+                (Map.Entry<? extends String, ? extends Number> candidate) -> candidate.getValue())).because("transformed"));
         Integer subtype = await(() -> List.of(1)).until(first((Number number) -> true).because("first"));
 
         assertEquals(List.of(1, 1, 1, 1), List.of(value, mapped, transformed, subtype));

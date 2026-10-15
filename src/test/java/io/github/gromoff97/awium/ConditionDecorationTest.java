@@ -107,15 +107,13 @@ class ConditionDecorationTest {
         var conditions = List.<Condition<?, ?>>of(
                 condition("custom", ConditionResult::satisfied),
                 isNotNull, equalTo("ready"), instanceOf(String.class),
-                OptionalConditions.present, MapConditions.valueFor("key"), captured(equalTo("first"), equalTo("last")),
+                captured(equalTo("first"), equalTo("last")),
                 captured(CollectionConditions.first, CollectionConditions.last));
         var replacements = List.<Condition<?, ?>>of(
                 condition("custom", ConditionResult::satisfied).because("old").because("new %d", 42),
                 isNotNull.because("old").because("new %d", 42),
                 equalTo("ready").because("old").because("new %d", 42),
                 instanceOf(String.class).because("old").because("new %d", 42),
-                OptionalConditions.present.because("old").because("new %d", 42),
-                MapConditions.valueFor("key").because("old").because("new %d", 42),
                 captured(equalTo("first"), equalTo("last")).because("old").because("new %d", 42),
                 captured(CollectionConditions.first, CollectionConditions.last).because("old").because("new %d", 42));
 
@@ -125,6 +123,11 @@ class ConditionDecorationTest {
         var second = first.because("second");
         assertEquals("first", explanation(first));
         assertEquals("second", explanation(second));
+        assertNull(explanation(OptionalConditions.present));
+        var value = MapConditions.valueFor("key");
+        var explained = value.because("old").because("new %d", 42);
+        assertNull(explanation(value));
+        assertEquals("new 42", explanation(explained));
     }
 
     @Test
@@ -160,6 +163,18 @@ class ConditionDecorationTest {
                         throw new IllegalStateException();
                     }
                 }));
+    }
+
+    @Test
+    void missingConditionsAreRejectedBeforeReadingTheSource() {
+        Source<String> source = () -> {
+            throw new AssertionError("source must not be read");
+        };
+        var waiting = Await.await(source);
+        assertEquals("condition must not be null",
+                assertThrows(NullPointerException.class, () -> waiting.until(null)).getMessage());
+        assertEquals("condition must not be null",
+                assertThrows(NullPointerException.class, () -> waiting.tryUntil(null)).getMessage());
     }
 
     @Test

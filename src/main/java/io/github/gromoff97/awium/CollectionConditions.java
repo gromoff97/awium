@@ -119,19 +119,19 @@ public final class CollectionConditions {
                 () -> nested.newSession());
     }
 
-    public static <ELEMENT> PreservingCondition<Collection<ELEMENT>> all(Predicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> all(Predicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all collection elements match", "not all collection elements matched",
                 actual -> matchesAll(actual, predicate::test));
     }
 
-    public static <ELEMENT> PreservingCondition<Collection<ELEMENT>> any(Predicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> any(Predicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any collection element matches", "no collection element matched",
                 actual -> matchesAny(actual, predicate::test));
     }
 
-    public static <ELEMENT> PreservingCondition<Collection<ELEMENT>> none(Predicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> none(Predicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no collection element matches", "a collection element matched",
                 actual -> !matchesAny(actual, predicate::test));
@@ -337,11 +337,7 @@ public final class CollectionConditions {
         });
     }
 
-    public static <ELEMENT extends Comparable<? super ELEMENT>> PreservingCondition<SequencedCollection<ELEMENT>> sorted() {
-        return sorted(Comparator.naturalOrder());
-    }
-
-    public static <ELEMENT> PreservingCondition<SequencedCollection<ELEMENT>> sorted(Comparator<? super ELEMENT> comparator) {
+    public static <ELEMENT> PreservingCondition<SequencedCollection<? extends ELEMENT>> sorted(Comparator<? super ELEMENT> comparator) {
         requireNonNull(comparator, "comparator must not be null");
         return preserving("collection is sorted", "collection was not sorted", actual -> isSorted(actual, comparator));
     }

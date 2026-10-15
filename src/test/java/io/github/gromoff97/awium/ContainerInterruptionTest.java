@@ -75,7 +75,7 @@ class ContainerInterruptionTest {
 
     @Test
     void interruptionAtEveryIteratorBoundaryStopsCollectionConditions() {
-        List<Function<Await<SignallingList, String, Object>, AwaitResult<?, ?>>> waits = List.of(
+        List<Function<Await<SignallingList, String, Void>, AwaitResult<?, ?>>> waits = List.of(
                 waiting -> waiting.tryUntil(all(value -> true)),
                 waiting -> waiting.tryUntil(any(value -> true)),
                 waiting -> waiting.tryUntil(none(value -> false)),

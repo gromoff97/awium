@@ -48,15 +48,15 @@ final class ConditionSupport {
 
     static <OBSERVED> SelectedCondition<OBSERVED> selected(String description,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<?>> evaluator) {
-        return new SelectedCondition<>(new ConditionMetadata(description, null, null), () -> evaluator);
+        return selected(condition(description, null, evaluator));
     }
 
     static <OBSERVED> SelectedCondition<OBSERVED> selected(Condition<OBSERVED, ?> condition) {
-        return new SelectedCondition<>(condition.metadata, condition.evaluatorFactory);
+        return new SelectedCondition<>(condition);
     }
 
     static <OBSERVED> MapValueCondition<OBSERVED> mapValue(Condition<OBSERVED, ?> condition) {
-        return new MapValueCondition<>(condition.metadata, condition.evaluatorFactory);
+        return new MapValueCondition<>(condition);
     }
 
     static <VALUE> Reference<VALUE> expectedReference(VALUE value) {

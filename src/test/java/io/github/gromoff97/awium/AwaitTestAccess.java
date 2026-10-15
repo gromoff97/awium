@@ -16,19 +16,19 @@ final class AwaitTestAccess {
         return new WaitConfiguration(every, upTo, persistence);
     }
 
-    static <S> Await<S, Object, Object> timedAwait(Source<? extends S> source,
+    static <S> ValueAwait<S> timedAwait(Source<? extends S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {
         return configured(Await.<S>await(source::get), configuration, clock, parker);
     }
 
-    static <E, C extends Collection<E>> Await<C, E, Object> timedCollectionAwait(
+    static <E, C extends Collection<E>> Await<C, E, Void> timedCollectionAwait(
             Source<? extends C> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         return configured(Await.<E, C>await(source::get), configuration, clock, parker);
     }
 
-    static <E> Await<Optional<E>, E, Object> timedOptionalAwait(
+    static <E> Await<Optional<E>, E, Void> timedOptionalAwait(
             Source<? extends Optional<E>> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         return configured(Await.<E>await((Source.OptionalSource<E>) source::get), configuration, clock, parker);
@@ -38,6 +38,14 @@ final class AwaitTestAccess {
             Source<? extends M> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         return configured(Await.<K, V, M>await(source::get), configuration, clock, parker);
+    }
+
+    private static <OBSERVED> ValueAwait<OBSERVED> configured(
+            ValueAwait<OBSERVED> await, WaitConfiguration configuration,
+            LongSupplier clock, LongConsumer parker) {
+        return await.usingTime(clock, parker)
+                .every(ofNanos(configuration.everyNanos())).upTo(ofNanos(configuration.upToNanos()))
+                .persisting(ofNanos(configuration.persistenceNanos()));
     }
 
     private static <OBSERVED, ELEMENT, MAP_VALUE> Await<OBSERVED, ELEMENT, MAP_VALUE> configured(

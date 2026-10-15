@@ -140,20 +140,14 @@ class PositiveFluentMatrixTest {
         Source<ArrayList<String>> collection = () -> new ArrayList<>(List.of("ready"));
         Source<LinkedHashMap<String, Integer>> map = () -> new LinkedHashMap<>(Map.of("ready", 1));
 
-        Object untypedOptional = await(optional).until(present);
-        Object untypedElement = await(collection).until(single);
-        Object untypedEntry = await(map).until(MapConditions.singleEntry);
         String optionalValue = await(optional::get).until(present.because("required value"));
         String element = await(collection::get).until(single.because("unique value"));
         Map.Entry<String, Integer> entry = await(map::get).until(MapConditions.singleEntry.because("unique entry"));
         AwaitResult<Optional<String>, String> attempt = await(optional::get).tryUntil(present);
 
         assertEquals("ready", optionalValue);
-        assertEquals(optionalValue, untypedOptional);
         assertEquals("ready", element);
-        assertEquals(element, untypedElement);
         assertEquals(Map.entry("ready", 1), entry);
-        assertEquals(entry, untypedEntry);
         assertEquals(optionalValue, assertInstanceOf(AwaitResult.Satisfied.class, attempt).result());
     }
 
