@@ -1,11 +1,9 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
-import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
-import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -31,28 +29,27 @@ class PublicSurfaceTest {
     void conditionStagesDoNotExposeRuntimeMechanicsOrFictitiousResults() {
         Set<String> runtimeMethods = Set.of("description", "explanation", "evaluatorFactory", "newEvaluator", "newSession", "preservingSession", "selectionSession");
         for (Class<?> stage : List.of(Condition.class, PreservingCondition.class,
-                SelectedCondition.class)) {
+                SelectedCondition.class, MapValueCondition.class)) {
             stream(stage.getMethods()).forEach(method ->
                     assertFalse(runtimeMethods.contains(method.getName()), method.toGenericString()));
         }
         assertTrue(Condition.class.isAssignableFrom(SelectedCondition.class));
         assertTrue(Condition.class.isAssignableFrom(PreservingCondition.class));
+        assertTrue(Condition.class.isAssignableFrom(MapValueCondition.class));
+        assertFalse(SelectedCondition.class.isAssignableFrom(MapValueCondition.class));
         assertTrue(Condition.class.isSealed());
     }
 
     @Test
-    void expectedValueFactoriesUseGenericOperands() {
+    void expectedValueFactoriesDoNotBindTheObservedTypeToTheOperand() {
         Set<String> names = Set.of("equalTo", "notEqualTo", "sameAs", "notSameAs", "in", "notIn");
         List<Method> factories = stream(Conditions.class.getDeclaredMethods())
                 .filter(method -> names.contains(method.getName())).toList();
 
         assertEquals(names.size(), factories.size());
         for (Method factory : factories) {
-            assertEquals(1, factory.getTypeParameters().length, factory.toGenericString());
-            Type operand = factory.getGenericParameterTypes()[0];
-            assertFalse(operand == Object.class, factory.toGenericString());
-            assertTrue(operand instanceof TypeVariable<?> || operand instanceof GenericArrayType,
-                    factory.toGenericString());
+            assertEquals("io.github.gromoff97.awium.Condition$PreservingCondition<java.lang.Object>",
+                    factory.getGenericReturnType().getTypeName(), factory.toGenericString());
         }
     }
 }

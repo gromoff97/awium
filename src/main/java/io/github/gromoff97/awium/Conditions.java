@@ -66,22 +66,22 @@ public final class Conditions {
         return condition("callback yields a result", actual -> satisfied(callback.apply(actual)));
     }
 
-    public static <VALUE> PreservingCondition<VALUE> equalTo(VALUE expected) {
+    public static PreservingCondition<Object> equalTo(Object expected) {
         return ConditionSupport.preserving("value equals expected", expectedReference(expected), actual -> equal(actual, expected)
                 ? satisfied(actual) : unsatisfied("value was not equal"));
     }
 
-    public static <VALUE> PreservingCondition<VALUE> notEqualTo(VALUE unexpected) {
+    public static PreservingCondition<Object> notEqualTo(Object unexpected) {
         return ConditionSupport.preserving("value does not equal unexpected", unexpectedReference(unexpected), actual -> !equal(actual, unexpected)
                 ? satisfied(actual) : unsatisfied("value was equal"));
     }
 
-    public static <VALUE> PreservingCondition<VALUE> sameAs(VALUE expected) {
+    public static PreservingCondition<Object> sameAs(Object expected) {
         return ConditionSupport.preserving("value is the same instance", expectedReference(expected), actual -> actual == expected
                 ? satisfied(actual) : unsatisfied("value was a different instance"));
     }
 
-    public static <VALUE> PreservingCondition<VALUE> notSameAs(VALUE unexpected) {
+    public static PreservingCondition<Object> notSameAs(Object unexpected) {
         return ConditionSupport.preserving("value is not the same instance", unexpectedReference(unexpected), actual -> actual != unexpected
                 ? satisfied(actual) : unsatisfied("value was the same instance"));
     }
@@ -104,8 +104,8 @@ public final class Conditions {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <VALUE> PreservingCondition<VALUE> in(VALUE... expected) {
-        List<VALUE> values = snapshot(stream(nonEmpty(expected, "expected values")));
+    public static <VALUE> PreservingCondition<Object> in(VALUE... expected) {
+        List<?> values = snapshot(stream(nonEmpty(expected, "expected values")));
         return ConditionSupport.preserving("value is in the expected values", expectedReference(values),
                 actual -> matchesAny(values, candidate -> equal(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was not in the expected values"));
@@ -113,8 +113,8 @@ public final class Conditions {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <VALUE> PreservingCondition<VALUE> notIn(VALUE... unexpected) {
-        List<VALUE> values = snapshot(stream(nonEmpty(unexpected, "unexpected values")));
+    public static <VALUE> PreservingCondition<Object> notIn(VALUE... unexpected) {
+        List<?> values = snapshot(stream(nonEmpty(unexpected, "unexpected values")));
         return ConditionSupport.preserving("value is not in the unexpected values", unexpectedReference(values),
                 actual -> !matchesAny(values, candidate -> equal(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was in the unexpected values"));

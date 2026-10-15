@@ -23,7 +23,6 @@ import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.selected;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
-import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.ValueMatching.equal;
 import static io.github.gromoff97.awium.ValueMatching.exactly;
 import static io.github.gromoff97.awium.ValueMatching.matchesAll;
@@ -110,12 +109,12 @@ public final class CollectionConditions {
                 });
     }
 
-    public static <ELEMENT> Condition<Collection<ELEMENT>, ELEMENT> single(PreservingCondition<? super ELEMENT> nested) {
-        return ConditionSupport.single("collection", nested, actual -> actual,
-                () -> nested.preservingSession());
+    public static <ELEMENT> SelectedCondition<Collection<? extends ELEMENT>> single(PreservingCondition<? super ELEMENT> nested) {
+        return selected(ConditionSupport.single("collection", nested, actual -> actual,
+                () -> nested.preservingSession()));
     }
 
-    public static <ELEMENT, RESULT> Condition<Collection<ELEMENT>, RESULT> single(Condition<? super ELEMENT, ? extends RESULT> nested) {
+    public static <ELEMENT, RESULT> Condition<Collection<? extends ELEMENT>, RESULT> single(Condition<? super ELEMENT, ? extends RESULT> nested) {
         return ConditionSupport.single("collection", nested, actual -> actual,
                 () -> nested.newSession());
     }
@@ -303,29 +302,29 @@ public final class CollectionConditions {
 
     public static final SelectedCondition<SequencedCollection<?>> first = position("first", SequencedCollection::getFirst);
 
-    public static <ELEMENT> Condition<SequencedCollection<ELEMENT>, ELEMENT> first(Predicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> SelectedCondition<SequencedCollection<? extends ELEMENT>> first(Predicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return condition("collection has a matching element", actual -> selectFirst(actual, predicate));
+        return selected("collection has a matching element", actual -> selectFirst(actual, predicate));
     }
 
     public static final SelectedCondition<SequencedCollection<?>> last = position("last", SequencedCollection::getLast);
 
-    public static <ELEMENT> Condition<SequencedCollection<ELEMENT>, ELEMENT> last(Predicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> SelectedCondition<SequencedCollection<? extends ELEMENT>> last(Predicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return condition("collection has a last matching element",
+        return selected("collection has a last matching element",
                 actual -> selectFirst(actual == null ? null : call(actual::reversed), predicate));
     }
 
-    public static <ELEMENT> Condition<List<ELEMENT>, ELEMENT> element(int index) {
+    public static SelectedCondition<List<?>> element(int index) {
         return element(index, value -> true);
     }
 
-    public static <ELEMENT> Condition<List<ELEMENT>, ELEMENT> element(int index, Predicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> SelectedCondition<List<? extends ELEMENT>> element(int index, Predicate<? super ELEMENT> predicate) {
         if (index < 0) {
             throw new IllegalArgumentException("index must be non-negative");
         }
         requireNonNull(predicate, "predicate must not be null");
-        return condition("list has a matching element at index " + index, actual -> {
+        return selected("list has a matching element at index " + index, actual -> {
             if (actual == null) {
                 return unsatisfied("list was null");
             }
@@ -347,7 +346,7 @@ public final class CollectionConditions {
         return preserving("collection is sorted", "collection was not sorted", actual -> isSorted(actual, comparator));
     }
 
-    private static <ELEMENT> ConditionResult<ELEMENT> selectFirst(Iterable<ELEMENT> actual,
+    private static <ELEMENT> ConditionResult<ELEMENT> selectFirst(Iterable<? extends ELEMENT> actual,
             Predicate<? super ELEMENT> predicate) throws Exception {
         if (actual == null) {
             return unsatisfied("collection was null");

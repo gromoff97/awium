@@ -4,18 +4,14 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
 import io.github.gromoff97.awium.Source.CollectionSource;
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.CollectionConditions.*;
-import static io.github.gromoff97.awium.CompilationSupport.compiles;
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
@@ -29,9 +25,6 @@ import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CollectionMembershipTest {
-
-    @TempDir
-    Path temporaryDirectory;
 
     @Test
     void positiveAndNegativeMembershipConditionsAreComplements() {
@@ -135,32 +128,15 @@ class CollectionMembershipTest {
     }
 
     @Test
-    void ordinaryConsumerCallsAreWarningFree()
-            throws IOException {
-        assertTrue(compiles(temporaryDirectory, """
-                import static io.github.gromoff97.awium.Await.await;
-                import static io.github.gromoff97.awium.CollectionConditions.*;
-                import io.github.gromoff97.awium.Condition.PreservingCondition;
-                import io.github.gromoff97.awium.Source.CollectionSource;
-                import java.util.*;
+    void aggregateConditionsPreserveTheConcreteCollectionType() {
+        Collection<Integer> integers = List.of(1, 2);
+        var actual = new ArrayList<Number>(integers);
+        CollectionSource<ArrayList<Number>> source = () -> actual;
+        PreservingCondition<Collection<? super Integer>> typed = contains(integers);
 
-                final class Contract {
-                    void check() {
-                        String nil = null;
-                        Collection<Integer> integers = List.of(1, 2);
-                        contains("a", "b");
-                        doesNotContainAll("a", "b");
-                        containsAny("a", "b");
-                        doesNotContain("a", "b");
-                        contains(nil);
-                        PreservingCondition<Collection<? super Integer>> typed =
-                                contains(integers);
-                        CollectionSource<ArrayList<Number>> source =
-                                () -> new ArrayList<>(integers);
-                        ArrayList<Number> result = await(source).until(contains(integers));
-                    }
-                }
-                """));
+        ArrayList<Number> result = Await.await(source).until(typed);
+
+        assertSame(actual, result);
     }
 
     private static void assertPair(Pair pair, List<String> values,

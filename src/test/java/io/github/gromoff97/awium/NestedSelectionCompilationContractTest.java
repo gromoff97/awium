@@ -7,35 +7,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NestedSelectionCompilationContractTest {
 
     @TempDir
     Path directory;
-
-    @Test
-    void nestedSelectionInfersValuesAndSequencesWithoutPreparatoryVariables() throws IOException {
-        assertTrue(compiles("""
-                await(Contract::payments).until(single(equalTo(42)));
-                await(Contract::payments).tryUntil(single(equalTo(42)));
-                await(Contract::payments).until(single(instanceOf(String.class)));
-                await(Contract::map).until(singleEntry(equalTo(42)));
-                Payment one = await(Contract::payments).until(single(matches(Payment::paid)));
-                Payment checked = await(Contract::payments).until(single(matches(Payment::paid).because("paid")));
-                var inferred = await(Contract::payments).until(single(matches(value -> value.paid())));
-                boolean paid = inferred.paid();
-                int id = await(Contract::payments).until(single(yields(Payment::id)));
-                Payment expected = await(Contract::payments).until(single(equalTo(new Payment(1, true))));
-                Integer narrowed = await(() -> List.<Number>of(1)).until(single(instanceOf(Integer.class)));
-                Number number = await(() -> List.<Number>of(1)).until(single(equalTo(1)));
-                String key = await(Contract::map).until(singleEntry(yields(Map.Entry::getKey)));
-                List<Payment> stages = await(Contract::payments).until(single(matches(Payment::paid)), single(matches(Payment::paid).because("final")));
-                AwaitResult<List<Payment>, Payment> diagnostic = await(Contract::payments).tryUntil(single(matches(Payment::paid).because("paid")));
-                AwaitResult<List<Payment>, List<Integer>> ids = await(Contract::payments).tryUntil(single(yields(Payment::id)), single(yields(Payment::id)));
-                AwaitResult<Map<String, Payment>, String> map = await(Contract::map).tryUntil(singleEntry(yields(Map.Entry::getKey)));
-                """));
-    }
 
     @Test
     void nestedSelectionRejectsIncompatibleChecksAndResults() throws IOException {

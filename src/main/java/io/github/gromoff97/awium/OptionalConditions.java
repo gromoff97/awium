@@ -7,6 +7,7 @@ import java.util.Optional;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
+import static io.github.gromoff97.awium.ConditionSupport.selected;
 import static io.github.gromoff97.awium.Conditions.condition;
 
 public final class OptionalConditions {
@@ -22,17 +23,17 @@ public final class OptionalConditions {
 
     private OptionalConditions() {}
 
-    public static <VALUE, RESULT> Condition<Optional<VALUE>, RESULT> hasValue(Condition<? super VALUE, ? extends RESULT> nested) {
+    public static <VALUE, RESULT> Condition<Optional<? extends VALUE>, RESULT> hasValue(Condition<? super VALUE, ? extends RESULT> nested) {
         return compose("optional value: ", nested, OptionalConditions::present,
                 () -> nested.newSession());
     }
 
-    public static <VALUE> Condition<Optional<VALUE>, VALUE> hasValue(PreservingCondition<? super VALUE> nested) {
-        return compose("optional value: ", nested, OptionalConditions::present,
-                () -> nested.preservingSession());
+    public static <VALUE> SelectedCondition<Optional<? extends VALUE>> hasValue(PreservingCondition<? super VALUE> nested) {
+        return selected(compose("optional value: ", nested, OptionalConditions::present,
+                () -> nested.preservingSession()));
     }
 
-    private static <VALUE> ConditionResult<VALUE> present(Optional<VALUE> actual) {
+    private static <VALUE> ConditionResult<VALUE> present(Optional<? extends VALUE> actual) {
         if (actual == null) {
             return unsatisfied("optional was null");
         }

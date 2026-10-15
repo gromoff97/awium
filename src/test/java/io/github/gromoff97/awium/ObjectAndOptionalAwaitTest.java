@@ -24,6 +24,28 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class ObjectAndOptionalAwaitTest {
 
     @Test
+    void crossTypeComparisonsAndNarrowingFailAtRuntimeWithoutChangingTheResultType() {
+        var time = new FakeTime(0);
+        var waiting = await(() -> "ready").usingTime(time, time).upTo(ofNanos(1));
+        for (var condition : List.of(equalTo(42), sameAs(42), in(1, 2))) {
+            AwaitResult<String, String> result = waiting.tryUntil(condition);
+            assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
+        }
+        String unequal = waiting.until(notEqualTo(42));
+        String different = waiting.until(notSameAs(42));
+        String excluded = waiting.until(notIn(1, 2));
+        AwaitResult<String, Integer> narrowed = waiting.tryUntil(instanceOf(Integer.class));
+        AwaitResult<Optional<String>, Integer> nested = await(() -> Optional.of("ready"))
+                .usingTime(time, time).upTo(ofNanos(1)).tryUntil(hasValue(instanceOf(Integer.class)));
+        Number broadened = await(() -> 1).until(instanceOf(Number.class));
+
+        assertEquals(List.of("ready", "ready", "ready"), List.of(unequal, different, excluded));
+        assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, narrowed).failure().reason());
+        assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, nested).failure().reason());
+        assertEquals(1, broadened);
+    }
+
+    @Test
     void matchingConditionsRetryAndReturnTheExactSuccessfulObservationInBothTerminals() {
         var time = new FakeTime(0);
         var first = new Object();
@@ -82,7 +104,7 @@ class ObjectAndOptionalAwaitTest {
     void reusableStageRetainsTheExactSourceAndStartsEachTerminalFresh() {
         int[] calls = {0};
         FakeTime time = new FakeTime(0);
-        Await<Integer, Object> stage = stage(time, () -> ++calls[0]);
+        Await<Integer, Object, Object> stage = stage(time, () -> ++calls[0]);
         Condition<Integer, Integer> evenObservation = condition(
                 "even observation", value -> value % 2 == 0
                         ? satisfied(value)
@@ -97,7 +119,7 @@ class ObjectAndOptionalAwaitTest {
     void reusableStageStartsFreshAfterControlledAndUncontrolledFailures() {
         FakeTime time = new FakeTime(0);
         int[] sourceCalls = {0};
-        Await<String, Object> stage = stage(time, () -> {
+        Await<String, Object, Object> stage = stage(time, () -> {
             sourceCalls[0]++;
             return "value";
         });
@@ -118,7 +140,7 @@ class ObjectAndOptionalAwaitTest {
         assertEquals(5, sourceCalls[0]);
     }
 
-    private static <T> Await<T, Object> stage(
+    private static <T> Await<T, Object, Object> stage(
             FakeTime time, Source<T> source) {
         return timedAwait(source, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(3)), time, time);
     }

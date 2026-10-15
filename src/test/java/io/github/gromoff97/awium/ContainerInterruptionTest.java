@@ -75,7 +75,7 @@ class ContainerInterruptionTest {
 
     @Test
     void interruptionAtEveryIteratorBoundaryStopsCollectionConditions() {
-        List<Function<Await<SignallingList, String>, AwaitResult<?, ?>>> waits = List.of(
+        List<Function<Await<SignallingList, String, Object>, AwaitResult<?, ?>>> waits = List.of(
                 waiting -> waiting.tryUntil(all(value -> true)),
                 waiting -> waiting.tryUntil(any(value -> true)),
                 waiting -> waiting.tryUntil(none(value -> false)),
@@ -102,7 +102,7 @@ class ContainerInterruptionTest {
 
     @Test
     void interruptionAtEveryMapBoundaryStopsTheFollowingCallback() {
-        List<Function<Await<SignallingMap, Map.Entry<String, String>>, AwaitResult<?, ?>>> waits = List.of(
+        List<Function<Await<SignallingMap, Map.Entry<String, String>, String>, AwaitResult<?, ?>>> waits = List.of(
                 waiting -> waiting.tryUntil(MapConditions.singleEntry),
                 waiting -> waiting.tryUntil(MapConditions.singleEntry(matches(value -> true))),
                 waiting -> waiting.tryUntil(MapConditions.valueFor("key")),

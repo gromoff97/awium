@@ -30,41 +30,17 @@ final class CompilationSupport {
             "compiler.err.cant.resolve.location.args");
 
     static boolean compiles(Path directory, String source) throws IOException {
-        return compiles(directory, source,
-                System.getProperty("java.class.path"), null);
+        return compiles(directory, source, null);
     }
 
     static boolean compiles(Path directory, String source,
-            String expectedMissingMethod) throws IOException {
-        return compiles(directory, source,
-                System.getProperty("java.class.path"), expectedMissingMethod);
-    }
-
-    static boolean compiles(Path directory, String source, Path classpath)
-            throws IOException {
-        return compiles(directory, source, classpath.toString(), null);
-    }
-
-    private static boolean compiles(Path directory, String source, String classpath,
             String expectedMissingMethod) throws IOException {
         Path sourceFile = directory.resolve("Contract.java");
         writeString(sourceFile, source);
         return compile(List.of("--release", "21", "-Xlint:all",
                         "-Werror", "-proc:none", "-classpath",
-                        classpath, "-d", directory.toString()),
+                        System.getProperty("java.class.path"), "-d", directory.toString()),
                 expectedMissingMethod, TYPE_REJECTION_CODES, sourceFile);
-    }
-
-    static boolean compilesModule(Path directory, String descriptor,
-            String source, Path modulePath) throws IOException {
-        Path moduleFile = directory.resolve("module-info.java");
-        Path sourceFile = directory.resolve("Contract.java");
-        writeString(moduleFile, descriptor);
-        writeString(sourceFile, source);
-        return compile(List.of("--release", "21", "-Xlint:all", "-Werror",
-                        "-proc:none", "--module-path", modulePath.toString(),
-                        "-d", directory.toString()), null, Set.of("compiler.err.package.not.visible"),
-                moduleFile, sourceFile);
     }
 
     private static boolean compile(List<String> options, String expectedMissingMethod,

@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.ConditionResult.Context;
@@ -17,6 +18,7 @@ import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
+import static io.github.gromoff97.awium.ConditionSupport.mapValue;
 import static io.github.gromoff97.awium.ConditionSupport.nonEmpty;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.selected;
@@ -100,9 +102,10 @@ public final class MapConditions {
                 });
     }
 
-    public static <KEY, VALUE> Condition<Map<KEY, VALUE>, Entry<KEY, VALUE>> singleEntry(PreservingCondition<? super Entry<KEY, VALUE>> nested) {
-        return ConditionSupport.single("map", nested, Map::entrySet,
-                () -> nested.preservingSession());
+    public static <KEY, VALUE> SelectedCondition<Map<? extends KEY, ? extends VALUE>> singleEntry(
+            PreservingCondition<? super Entry<? extends KEY, ? extends VALUE>> nested) {
+        return selected(ConditionSupport.single("map", nested, Map::entrySet,
+                () -> nested.preservingSession()));
     }
 
     public static <KEY, VALUE, RESULT> Condition<Map<KEY, VALUE>, RESULT> singleEntry(Condition<? super Entry<KEY, VALUE>, ? extends RESULT> nested) {
@@ -161,28 +164,28 @@ public final class MapConditions {
         return preserving("no map value matches", "a map value matched", actual -> !matchesAny(call(actual::values), predicate::test));
     }
 
-    public static <KEY, VALUE> Condition<Map<KEY, VALUE>, VALUE> valueFor(KEY key) {
-        return ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> value(actual, key));
+    public static MapValueCondition<Map<?, ?>> valueFor(Object key) {
+        return mapValue(ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> value(actual, key)));
     }
 
-    public static <KEY, VALUE, RESULT> Condition<Map<KEY, VALUE>, RESULT> valueFor(KEY key,
+    public static <VALUE, RESULT> Condition<Map<?, ? extends VALUE>, RESULT> valueFor(Object key,
             Condition<? super VALUE, ? extends RESULT> nested) {
         return compose("map value ", nested, actual -> value(actual, key),
                 () -> nested.newSession());
     }
 
-    public static <KEY, VALUE> Condition<Map<KEY, VALUE>, VALUE> valueFor(KEY key,
+    public static <VALUE> MapValueCondition<Map<?, ? extends VALUE>> valueFor(Object key,
             PreservingCondition<? super VALUE> nested) {
-        return compose("map value ", nested, actual -> value(actual, key),
-                () -> nested.preservingSession());
+        return mapValue(compose("map value ", nested, actual -> value(actual, key),
+                () -> nested.preservingSession()));
     }
 
-    public static <KEY, VALUE> Condition<Map<KEY, VALUE>, Entry<KEY, VALUE>> entryFor(KEY key) {
-        return ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> findEntry(actual, key));
+    public static SelectedCondition<Map<?, ?>> entryFor(Object key) {
+        return selected(ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> findEntry(actual, key)));
     }
 
-    public static <KEY, VALUE> Condition<Map<KEY, VALUE>, VALUE> onlyValueFor(KEY key) {
-        return ConditionSupport.condition("map contains only the expected key", expectedReference(key), actual -> {
+    public static MapValueCondition<Map<?, ?>> onlyValueFor(Object key) {
+        return mapValue(ConditionSupport.condition("map contains only the expected key", expectedReference(key), actual -> {
             if (actual == null) {
                 return unsatisfied("map was null");
             }
@@ -190,10 +193,10 @@ public final class MapConditions {
             if (size != 1) {
                 return unsatisfied("map size was " + size);
             }
-            Entry<KEY, VALUE> entry = firstEntry(actual);
+            var entry = firstEntry(actual);
             return equal(call(entry::getKey), key)
                     ? satisfied(call(entry::getValue)) : unsatisfied("map contained a different key");
-        });
+        }));
     }
 
     @SafeVarargs
@@ -287,11 +290,11 @@ public final class MapConditions {
         return call(iterator::next);
     }
 
-    private static <KEY, VALUE> ConditionResult<VALUE> value(Map<KEY, VALUE> actual, KEY key) throws Exception {
+    private static <VALUE> ConditionResult<VALUE> value(Map<?, ? extends VALUE> actual, Object key) throws Exception {
         return findEntry(actual, key).mapSatisfied(Entry::getValue);
     }
 
-    private static <KEY, VALUE> ConditionResult<Entry<KEY, VALUE>> findEntry(Map<KEY, VALUE> actual, KEY key) throws Exception {
+    private static <KEY, VALUE> ConditionResult<Entry<KEY, VALUE>> findEntry(Map<KEY, VALUE> actual, Object key) throws Exception {
         if (actual != null) {
             var entries = call(actual::entrySet);
             for (var iterator = call(entries::iterator); call(iterator::hasNext);) {

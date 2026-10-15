@@ -32,7 +32,7 @@ class CompositionDiagnosticsTest {
     @Test
     void missingKeyInsideCapturedKeepsLookupContextAndDoesNotCreateTheNestedSession() {
         var time = new FakeTime(0);
-        Condition<Map<String, String>, String> selected = valueFor("customerId", condition("nested", () -> {
+        Condition<Map<?, ? extends String>, String> selected = valueFor("customerId", condition("nested", () -> {
             throw new AssertionError("nested factory must not run before extraction succeeds");
         }));
         var failure = assertFailure(TIMEOUT, () -> await(() -> Map.<String, String>of())
@@ -52,7 +52,7 @@ class CompositionDiagnosticsTest {
                 throw formattingFailure;
             }
         };
-        Condition<Map<Object, String>, String> selected = valueFor(key, equalTo("Bob"));
+        var selected = valueFor(key, equalTo("Bob"));
         assertEquals(0, renders[0]);
         var failure = assertFailure(TIMEOUT, () -> await(() -> Map.<Object, String>of())
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).until(selected));

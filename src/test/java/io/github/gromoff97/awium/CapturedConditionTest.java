@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +30,57 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CapturedConditionTest {
 
     @Test
+    void heterogeneousConditionsCaptureTheirCommonResultType() {
+        var time = new FakeTime(0);
+        var waiting = Await.await(() -> "ready").usingTime(time, time);
+        Condition<Object, Object> common = Conditions.equalTo("ready").because("common model");
+
+        Object value = waiting.until(common);
+        List<Number> numbers = waiting.until(Conditions.yields(String::length), Conditions.yields(text -> (long) text.length()));
+        AwaitResult<String, List<Number>> numberAttempts = waiting.tryUntil(
+                Conditions.yields(String::length), Conditions.yields(text -> (long) text.length()));
+        List<Object> mixed = waiting.until(common, Conditions.yields(String::length));
+        AwaitResult<String, List<Object>> mixedAttempts = waiting.tryUntil(common, Conditions.yields(String::length));
+        var collection = List.of("ready");
+        List<Object> selectedAndPreserved = Await.await(() -> collection).usingTime(time, time)
+                .until(CollectionConditions.single, Conditions.isNotNull);
+        AwaitResult<List<String>, List<Object>> selectedAttempts = Await.await(() -> collection).usingTime(time, time)
+                .tryUntil(CollectionConditions.single, Conditions.isNotNull);
+
+        assertEquals("ready", value);
+        assertEquals(List.of(5, 5L), numbers);
+        assertEquals(numbers, assertInstanceOf(AwaitResult.Satisfied.class, numberAttempts).result());
+        assertEquals(List.of("ready", 5), mixed);
+        assertEquals(mixed, assertInstanceOf(AwaitResult.Satisfied.class, mixedAttempts).result());
+        assertEquals(List.of("ready", collection), selectedAndPreserved);
+        assertEquals(selectedAndPreserved, assertInstanceOf(AwaitResult.Satisfied.class, selectedAttempts).result());
+    }
+
+    @Test
+    void explainedMapValueSequenceCapturesNullAndRefreshesOnlyTheLastStage() {
+        var first = java.util.Collections.<String, Number>singletonMap("first", null);
+        Number acquired = new BigDecimal("2.00");
+        Number persisted = new BigDecimal("3.00");
+        var observations = List.of(first, Map.of("last", acquired), Map.of("last", persisted));
+        int[] reads = {0};
+        var time = new FakeTime(0);
+        var waiting = Await.await(() -> observations.get(reads[0]++ % observations.size()))
+                .usingTime(time, time).every(java.time.Duration.ofNanos(1))
+                .persisting(java.time.Duration.ofNanos(1));
+        var start = MapConditions.valueFor("first").because("first value");
+        var finish = MapConditions.valueFor("last", Conditions.isNotNull).because("last value");
+
+        List<Number> values = waiting.until(start, finish);
+        AwaitResult<Map<String, Number>, List<Number>> attempt = waiting.tryUntil(start, finish);
+
+        assertNull(values.getFirst());
+        assertSame(persisted, values.getLast());
+        assertEquals(values, assertInstanceOf(AwaitResult.Satisfied.class, attempt).result());
+        assertEquals(3, attempt.totalAttempts());
+        assertEquals(6, reads[0]);
+    }
+
+    @Test
     void expectedSequencesCaptureTheOriginalObservationsInBothTerminals() {
         Number first = new BigDecimal("1.00");
         Number second = new BigInteger("2");
@@ -37,9 +89,9 @@ class CapturedConditionTest {
         int[] reads = {0};
         var time = new FakeTime(0);
         var waiting = timedAwait(() -> observations[reads[0]++], config(1, 5, 0), time, time);
-        Condition<Number, Number> firstStage = Conditions.equalTo(new BigDecimal("1.00"));
-        Condition<Number, Number> secondStage = Conditions.equalTo(new BigInteger("2"));
-        Condition<Number, Number> finalStage = Conditions.equalTo(1024L);
+        Condition.PreservingCondition<Object> firstStage = Conditions.equalTo(new BigDecimal("1.00"));
+        Condition.PreservingCondition<Object> secondStage = Conditions.equalTo(new BigInteger("2"));
+        Condition.PreservingCondition<Object> finalStage = Conditions.equalTo(1024L);
 
         List<Number> values = waiting.until(firstStage, secondStage, finalStage);
         AwaitResult<Number, List<Number>> captured = waiting.tryUntil(firstStage, secondStage, finalStage);

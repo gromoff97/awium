@@ -12,6 +12,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.function.BiPredicate;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -127,6 +132,107 @@ class PositiveFluentMatrixTest {
                 await(mapSource).usingTime(time, time).tryUntil(MapConditions.singleEntry)).result());
         assertEquals(3, collectionCalls[0]);
         assertEquals(3, mapCalls[0]);
+    }
+
+    @Test
+    void methodReferencesRecoverSelectionTypesFromPlainSources() {
+        Source<Optional<String>> optional = () -> Optional.of("ready");
+        Source<ArrayList<String>> collection = () -> new ArrayList<>(List.of("ready"));
+        Source<LinkedHashMap<String, Integer>> map = () -> new LinkedHashMap<>(Map.of("ready", 1));
+
+        Object untypedOptional = await(optional).until(present);
+        Object untypedElement = await(collection).until(single);
+        Object untypedEntry = await(map).until(MapConditions.singleEntry);
+        String optionalValue = await(optional::get).until(present.because("required value"));
+        String element = await(collection::get).until(single.because("unique value"));
+        Map.Entry<String, Integer> entry = await(map::get).until(MapConditions.singleEntry.because("unique entry"));
+        AwaitResult<Optional<String>, String> attempt = await(optional::get).tryUntil(present);
+
+        assertEquals("ready", optionalValue);
+        assertEquals(optionalValue, untypedOptional);
+        assertEquals("ready", element);
+        assertEquals(element, untypedElement);
+        assertEquals(Map.entry("ready", 1), entry);
+        assertEquals(entry, untypedEntry);
+        assertEquals(optionalValue, assertInstanceOf(AwaitResult.Satisfied.class, attempt).result());
+    }
+
+    @Test
+    void diagnosticTerminalsRetainSpecializedSourceAndResultTypes() {
+        OptionalSource<String> optional = () -> Optional.of("ready");
+        CollectionSource<List<String>> collection = () -> List.of("ready");
+        MapSource<Map<String, Integer>> map = () -> Map.of("ready", 1);
+
+        AwaitResult<Optional<String>, String> optionalResult = await(optional).tryUntil(present);
+        AwaitResult<List<String>, String> collectionResult = await(collection).tryUntil(single);
+        AwaitResult<List<String>, String> firstResult = await(collection).tryUntil(first);
+        AwaitResult<List<String>, String> lastResult = await(collection).tryUntil(last);
+        AwaitResult<Map<String, Integer>, Map.Entry<String, Integer>> mapResult = await(map).tryUntil(MapConditions.singleEntry);
+
+        for (var result : List.of(optionalResult, collectionResult, firstResult, lastResult)) {
+            assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        }
+        assertEquals(Map.entry("ready", 1), assertInstanceOf(AwaitResult.Satisfied.class, mapResult).result());
+    }
+
+    @Test
+    void callbackConditionsComposeWithJdkFunctions() {
+        Predicate<String> nonNull = value -> value != null;
+        Predicate<String> text = nonNull.and(value -> !value.isBlank());
+        Function<String, String> trim = String::trim;
+        var calls = new ArrayList<String>();
+        Consumer<String> first = value -> calls.add("first " + value);
+        BiPredicate<String, Integer> entry = (key, value) -> value > 0;
+
+        String matched = await(() -> "ready").until(matches(Predicate.not(text).negate()));
+        String transformed = await(() -> " ready ").until(yields(Function.<String>identity().andThen(trim)::apply));
+        String custom = await(() -> " ready ").until(condition("trimmed", trim.andThen(ConditionResult::satisfied)::apply));
+        String asserted = await(() -> "ready").until(asserted(first.andThen(value -> calls.add("second " + value))::accept));
+        Map<String, Integer> matchingEntry = await(() -> Map.of("ready", 1))
+                .until(MapConditions.anyEntry(entry.and((key, value) -> !key.isBlank())));
+
+        assertEquals(List.of("ready", "ready", "ready", "ready"), List.of(matched, transformed, custom, asserted));
+        assertEquals(List.of("first ready", "second ready"), calls);
+        assertEquals(Map.of("ready", 1), matchingEntry);
+    }
+
+    @Test
+    void optionalValuesCanThemselvesBeClassesConditionsOrPredicates() {
+        Class<?> expectedClass = String.class;
+        Condition<String, String> expectedCondition = yields(String::trim);
+        Predicate<String> expectedPredicate = String::isBlank;
+
+        Class<?> type = await(() -> Optional.of(expectedClass)).until(hasValue(equalTo(expectedClass)));
+        Condition<String, String> condition = await(() -> Optional.of(expectedCondition)).until(hasValue(equalTo(expectedCondition)));
+        Predicate<String> predicate = await(() -> Optional.of(expectedPredicate)).until(hasValue(equalTo(expectedPredicate)));
+
+        assertSame(expectedClass, type);
+        assertSame(expectedCondition, condition);
+        assertSame(expectedPredicate, predicate);
+    }
+
+    @Test
+    void evaluatorFactoriesPreserveOrTransformResultsAccordingToTheirContract() {
+        Callable<CheckedFunction<String, ConditionResult<Integer>>> factory = () -> value -> ConditionResult.satisfied(value.length());
+        Callable<CheckedFunction<CharSequence, ConditionResult<CharSequence>>> broadFactory = () -> ignored -> ConditionResult.satisfied("replacement");
+        var time = new FakeTime(0);
+        var waiting = await(() -> "ready").usingTime(time, time);
+
+        String direct = waiting.until(condition("direct", ConditionResult::satisfied));
+        String created = waiting.until(condition("created", PositiveFluentMatrixTest::evaluator).because("ready"));
+        Integer transformed = waiting.until(condition("transformed", factory));
+        String preserved = waiting.until(preserving("preserved", PositiveFluentMatrixTest::evaluator));
+        String concrete = waiting.until(preserving("broad", broadFactory));
+        List<String> captured = waiting.until(condition("first", PositiveFluentMatrixTest::evaluator),
+                condition("second", PositiveFluentMatrixTest::evaluator));
+
+        assertEquals(List.of("ready", "ready", "ready", "ready"), List.of(direct, created, preserved, concrete));
+        assertEquals(5, transformed);
+        assertEquals(List.of("ready", "ready"), captured);
+    }
+
+    private static CheckedFunction<String, ConditionResult<String>> evaluator() {
+        return ConditionResult::satisfied;
     }
 
     private static void assertAllSame(Object expected, Object... actuals) {

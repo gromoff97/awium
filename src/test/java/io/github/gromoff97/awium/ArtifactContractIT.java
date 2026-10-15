@@ -15,8 +15,6 @@ import java.util.spi.ToolProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import static io.github.gromoff97.awium.CompilationSupport.compiles;
-import static io.github.gromoff97.awium.CompilationSupport.compilesModule;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.Files.isRegularFile;
 import static java.util.Objects.requireNonNull;
@@ -89,200 +87,32 @@ class ArtifactContractIT {
     }
 
     @Test
-    void packagedJarCompilesDirectMethodReferences(@TempDir Path directory)
-            throws Exception {
-        assertTrue(compiles(directory, """
-                import static io.github.gromoff97.awium.Await.await;
-                import static io.github.gromoff97.awium.CollectionConditions.*;
-                import static io.github.gromoff97.awium.Conditions.*;
-                import static io.github.gromoff97.awium.MapConditions.*;
-                import static io.github.gromoff97.awium.OptionalConditions.*;
-                import static io.github.gromoff97.awium.StringConditions.*;
-
-                import io.github.gromoff97.awium.CollectionConditions;
-                import io.github.gromoff97.awium.MapConditions;
-
-                import java.util.List;
-                import java.util.Map;
-                import java.util.Optional;
-
-                final class Contract {
-                    String object() {
-                        return await(this::loadObject).until(equalTo("value"));
-                    }
-                    String predicate() {
-                        return await(this::loadObject).until(matches(String::isBlank));
-                    }
-                    String optional() {
-                        return await(this::loadOptional).until(present);
-                    }
-                    List<String> collection() {
-                        return await(this::loadCollection).until(CollectionConditions.nonEmpty);
-                    }
-                    String single() {
-                        return await(this::loadCollection).until(single);
-                    }
-                    Map<String, Integer> map() {
-                        return await(this::loadMap).until(MapConditions.nonEmpty);
-                    }
-                    Map.Entry<String, Integer> singleEntry() {
-                        return await(this::loadMap).until(singleEntry);
-                    }
-                    String loadObject() { return "value"; }
-                    Optional<String> loadOptional() {
-                        return Optional.of("value");
-                    }
-                    List<String> loadCollection() { return List.of("value"); }
-                    Map<String, Integer> loadMap() { return Map.of("value", 1); }
-                }
-                """, JAR));
-    }
-
-    @Test
-    void packagedJarExposesTypedObservationsAndStructuredFailures(@TempDir Path directory) throws Exception {
-        assertTrue(compiles(directory, """
-                import io.github.gromoff97.awium.*;
-                import static io.github.gromoff97.awium.Await.await;
-                import static io.github.gromoff97.awium.Conditions.isNotNull;
-
-                final class Contract {
-                    AwaitFailure.Reason reason() {
-                        AwaitResult<String, String> result = await(() -> "ready").tryUntil(isNotNull);
-                        return switch (result) {
-                            case AwaitResult.Satisfied<String, String> success -> null;
-                            case AwaitResult.Failed<String, String> failed -> failed.failure().reason();
-                        };
-                    }
-                    String observed(AwaitAttempt<String, String> attempt) {
-                        return switch (attempt.outcome()) {
-                            case AwaitAttempt.Outcome.Evaluated<String, String> value -> {
-                                ConditionResult<? extends String> result = value.evaluation();
-                                yield result instanceof ConditionResult.Satisfied<? extends String> success
-                                        ? success.result() : value.observed();
-                            }
-                            default -> null;
-                        };
-                    }
-                    AwaitFailure untilFailure() {
-                        try {
-                            await(() -> "ready").until(isNotNull);
-                            return null;
-                        } catch (AwaitAssertionError failure) {
-                            return failure.failure();
-                        } catch (AwaitExecutionException failure) {
-                            return failure.failure();
-                        }
-                    }
-                }
-                """, JAR));
-    }
-
-    @Test
-    void packagedJarCompilesAsAnExplicitModule(@TempDir Path directory) throws Exception {
-        assertTrue(compilesModule(directory, """
-                module consumer {
-                    requires io.github.gromoff97.awium;
-                }
-                """, """
-                package consumer;
-
-                import static io.github.gromoff97.awium.Await.await;
-                import static io.github.gromoff97.awium.Conditions.*;
-                import static io.github.gromoff97.awium.OptionalConditions.present;
-                import static io.github.gromoff97.awium.CollectionConditions.single;
-                import static io.github.gromoff97.awium.MapConditions.singleEntry;
-                import static java.time.Duration.ofNanos;
-                import java.util.List;
-                import java.util.Map;
-                import java.util.Optional;
-                import java.io.IOException;
-                import io.github.gromoff97.awium.AwaitResult;
-
-                final class Contract {
-                    String value() {
-                        return await(() -> "ready").usingTime(() -> 0L, nanos -> {}).until(isNotNull);
-                    }
-                    AwaitResult<String, String> predicate() {
-                        return await(() -> "ready").tryUntil(matches(String::isBlank));
-                    }
-                    String optional() {
-                        return await(() -> Optional.of("ready")).upTo(ofNanos(5))
-                                .usingTime(() -> 0L, nanos -> {}).every(ofNanos(1)).until(present);
-                    }
-                    String collection() {
-                        return await(() -> List.of("ready")).usingTime(() -> 0L, nanos -> {}).until(single);
-                    }
-                    Map.Entry<String, Integer> map() {
-                        return await(() -> Map.of("ready", 1)).usingTime(() -> 0L, nanos -> {}).until(singleEntry);
-                    }
-                    AwaitResult<Optional<String>, String> attempted() {
-                        return await(() -> Optional.of("ready")).usingTime(() -> 0L, nanos -> {}).tryUntil(present);
-                    }
-                    String checkedAssertion() {
-                        return await(() -> "ready").until(asserted(this::verify).because("checked verification"));
-                    }
-                    int checkedSelection() {
-                        return await(() -> "ready").until(yields(this::length).because("checked selection"));
-                    }
-                    int composition() {
-                        return await(() -> List.of("ready")).until(single(yields(this::length).because("checked length")));
-                    }
-                    AwaitResult<Optional<String>, String> diagnosticComposition() {
-                        return await(() -> Optional.of("ready")).tryUntil(io.github.gromoff97.awium.OptionalConditions.hasValue(
-                                equalTo("ready").because("required value")));
-                    }
-                    AwaitResult<Optional<String>, List<String>> ordered() {
-                        return await(() -> Optional.of("ready")).tryUntil(present.because("first"), present.because("second"));
-                    }
-                    List<Integer> orderedLengths() {
-                        return await(() -> List.of("ready")).until(single(yields(this::length)), single(yields(this::length)));
-                    }
-                    void verify(String value) throws IOException {}
-                    int length(String value) throws IOException { return value.length(); }
-                }
-                """, JAR));
-    }
-
-    @Test
-    void packagedJarExecutesConsumerCodeInAnIndependentClassLoader(@TempDir Path directory) throws Exception {
-        assertTrue(compiles(directory, """
-                import io.github.gromoff97.awium.AwaitResult;
-                import io.github.gromoff97.awium.Source;
-                import java.io.IOException;
-                import java.util.List;
-                import java.util.Optional;
-                import static io.github.gromoff97.awium.Await.await;
-                import static io.github.gromoff97.awium.CollectionConditions.*;
-                import static io.github.gromoff97.awium.Conditions.*;
-                import static io.github.gromoff97.awium.OptionalConditions.*;
-                import static java.time.Duration.ofNanos;
-
-                public final class Contract {
-                    public static Object[] run() {
-                        var values = List.of("ready");
-                        String optional = await(() -> Optional.of("ready")).until(present.because("optional %s", "value"));
-                        String selected = await(() -> values).until(single.because("one value"));
-                        int length = await(Contract::text).until(yields(Contract::length));
-                        String narrowed = await((Source<Object>) Contract::text).until(instanceOf(String.class));
-                        long[] time = {0};
-                        List<String> stages = await(Contract::text).usingTime(() -> time[0], nanos -> time[0] += nanos).every(ofNanos(1)).upTo(ofNanos(5)).until(
-                                equalTo("ready"), equalTo("ready"));
-                        boolean preserved = await(() -> values).until(asserted(actual -> {
-                            if (actual.size() != 1) throw new AssertionError("one value expected");
-                        })) == values;
-                        AwaitResult<Optional<String>, String> result = await(() -> Optional.of("ready")).tryUntil(present);
-                        String captured = ((AwaitResult.Satisfied<Optional<String>, String>) result).result();
-                        return new Object[]{optional, selected, length, narrowed, stages, preserved, captured};
-                    }
-                    private static String text() throws IOException { return "ready"; }
-                    private static int length(String value) throws IOException { return value.length(); }
-                }
-                """, JAR));
-        try (var loader = new URLClassLoader(new java.net.URL[]{directory.toUri().toURL(), JAR.toUri().toURL()},
+    void packagedJarExecutesConsumerCodeInAnIndependentClassLoader() throws Exception {
+        var testClasses = consumer.ArtifactConsumer.class.getProtectionDomain().getCodeSource().getLocation();
+        try (var loader = new URLClassLoader(new java.net.URL[]{testClasses, JAR.toUri().toURL()},
                 ClassLoader.getPlatformClassLoader())) {
-            Object[] result = (Object[]) loader.loadClass("Contract").getMethod("run").invoke(null);
-            assertArrayEquals(new Object[]{"ready", "ready", 5, "ready", List.of("ready", "ready"), true, "ready"}, result);
+            assertConsumerResult(loader);
         }
+    }
+
+    @Test
+    void packagedJarExecutesAsANamedModule() throws Exception {
+        var finder = ModuleFinder.of(JAR);
+        var configuration = ModuleLayer.boot().configuration().resolve(
+                finder, ModuleFinder.of(), Set.of("io.github.gromoff97.awium"));
+        var layer = ModuleLayer.boot().defineModulesWithOneLoader(configuration, ClassLoader.getPlatformClassLoader());
+        var moduleLoader = layer.findLoader("io.github.gromoff97.awium");
+        assertEquals("io.github.gromoff97.awium", moduleLoader.loadClass(Await.class.getName()).getModule().getName());
+        var testClasses = consumer.ArtifactConsumer.class.getProtectionDomain().getCodeSource().getLocation();
+        try (var loader = new URLClassLoader(new java.net.URL[]{testClasses}, moduleLoader)) {
+            assertConsumerResult(loader);
+        }
+    }
+
+    private static void assertConsumerResult(ClassLoader loader) throws Exception {
+        Object[] result = (Object[]) loader.loadClass("consumer.ArtifactConsumer").getMethod("run").invoke(null);
+        assertArrayEquals(new Object[]{"ready", "ready", 5, "ready", List.of("ready", "ready"), true, "ready",
+                1, Map.entry("key", 1), "ready", "ready", "ready"}, result);
     }
 
     @Test

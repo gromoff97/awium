@@ -1,14 +1,11 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.IllegalFormatException;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.CapturedEvaluator.captured;
@@ -18,13 +15,11 @@ import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConditionDecorationTest {
-
-    @TempDir
-    Path temporaryDirectory;
 
     @Test
     void customConditionFactoryCreatesFreshEvaluatorForEveryWait() {
@@ -71,28 +66,15 @@ class ConditionDecorationTest {
     }
 
     @Test
-    void plainAndExplainedConditionsKeepTheSameType() throws IOException {
-        assertTrue(compiles("""
-                import static io.github.gromoff97.awium.Conditions.condition;
-                import io.github.gromoff97.awium.ConditionResult;
-                import io.github.gromoff97.awium.Condition;
-                final class Contract {
-                    void check() {
-                        accept(condition("plain", ConditionResult::satisfied));
-                        accept(condition("explained", ConditionResult::satisfied).because("reason"));
-                    }
-                    void accept(Condition<Object, Object> condition) {}
-                }
-                """));
-        assertTrue(compiles("""
-                import static io.github.gromoff97.awium.Conditions.condition;
-                import io.github.gromoff97.awium.ConditionResult;
-                final class Contract {
-                    void check() {
-                        condition("condition", ConditionResult::satisfied).because("first").because("second");
-                    }
-                }
-                """));
+    void plainAndExplainedConditionsReturnTheObservedValue() {
+        var actual = new Object();
+        Condition<Object, Object> plain = condition("plain", ConditionResult::satisfied);
+        Condition<Object, Object> explained = condition("explained", ConditionResult::satisfied)
+                .because("first").because("second");
+
+        assertSame(actual, Await.await(() -> actual).until(plain));
+        assertSame(actual, Await.await(() -> actual).until(explained));
+        assertEquals("second", explanation(explained));
     }
 
     @Test
@@ -125,7 +107,7 @@ class ConditionDecorationTest {
         var conditions = List.<Condition<?, ?>>of(
                 condition("custom", ConditionResult::satisfied),
                 isNotNull, equalTo("ready"), instanceOf(String.class),
-                OptionalConditions.present, captured(equalTo("first"), equalTo("last")),
+                OptionalConditions.present, MapConditions.valueFor("key"), captured(equalTo("first"), equalTo("last")),
                 captured(CollectionConditions.first, CollectionConditions.last));
         var replacements = List.<Condition<?, ?>>of(
                 condition("custom", ConditionResult::satisfied).because("old").because("new %d", 42),
@@ -133,6 +115,7 @@ class ConditionDecorationTest {
                 equalTo("ready").because("old").because("new %d", 42),
                 instanceOf(String.class).because("old").because("new %d", 42),
                 OptionalConditions.present.because("old").because("new %d", 42),
+                MapConditions.valueFor("key").because("old").because("new %d", 42),
                 captured(equalTo("first"), equalTo("last")).because("old").because("new %d", 42),
                 captured(CollectionConditions.first, CollectionConditions.last).because("old").because("new %d", 42));
 
@@ -185,6 +168,10 @@ class ConditionDecorationTest {
                 () -> asserted((Object actual) -> {}).because(" \n "));
         assertValidation("explanation", NullPointerException.class,
                 () -> asserted((Object actual) -> {}).because((String) null));
+        assertValidation("explanation", IllegalArgumentException.class,
+                () -> MapConditions.valueFor("key").because("%s", " "));
+        assertValidation("explanation", NullPointerException.class,
+                () -> MapConditions.valueFor("key").because((String) null));
     }
 
     @Test
@@ -202,10 +189,6 @@ class ConditionDecorationTest {
     private static <T extends Throwable> void assertValidation(String context,
             Class<T> type, org.junit.jupiter.api.function.Executable action) {
         assertTrue(assertThrows(type, action).getMessage().contains(context));
-    }
-
-    private boolean compiles(String source) throws IOException {
-        return CompilationSupport.compiles(temporaryDirectory, source);
     }
 
 }

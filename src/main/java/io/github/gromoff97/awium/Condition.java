@@ -26,6 +26,12 @@ public sealed class Condition<OBSERVED, RESULT> {
         return new ConditionSession<>(metadata, evaluatorFactory);
     }
 
+    // Only library-created selectors use this bridge; Await binds their result to the source type.
+    @SuppressWarnings("unchecked")
+    final <SELECTED> ConditionSession<OBSERVED, SELECTED> selectionSession() {
+        return (ConditionSession<OBSERVED, SELECTED>) (ConditionSession<?, ?>) newSession();
+    }
+
     static <C extends Condition<?, ?>> C required(C condition) {
         return requireNonNull(condition, "condition must not be null");
     }
@@ -93,11 +99,23 @@ public sealed class Condition<OBSERVED, RESULT> {
         public SelectedCondition<OBSERVED> because(String format, Object... arguments) {
             return because(formattedExplanation(format, arguments));
         }
+    }
 
-        // The await facade binds ELEMENT to this condition's source family.
-        @SuppressWarnings("unchecked")
-        <ELEMENT> ConditionSession<OBSERVED, ELEMENT> selectionSession() {
-            return (ConditionSession<OBSERVED, ELEMENT>) (ConditionSession<?, ?>) newSession();
+    public static final class MapValueCondition<OBSERVED> extends Condition<OBSERVED, Object> {
+
+        MapValueCondition(ConditionMetadata metadata,
+                Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<?>>> evaluatorFactory) {
+            super(metadata, evaluatorFactory);
+        }
+
+        @Override
+        public MapValueCondition<OBSERVED> because(String explanation) {
+            return new MapValueCondition<>(metadata.because(explanation), evaluatorFactory);
+        }
+
+        @Override
+        public MapValueCondition<OBSERVED> because(String format, Object... arguments) {
+            return because(formattedExplanation(format, arguments));
         }
     }
 }

@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Source.CollectionSource;
@@ -27,7 +28,7 @@ import static java.util.Objects.requireNonNull;
  * @param <OBSERVED> complete value returned by the source
  * @param <ELEMENT> value selected from an optional, collection, or map
  */
-public final class Await<OBSERVED, ELEMENT> {
+public final class Await<OBSERVED, ELEMENT, MAP_VALUE> {
 
     private final Source<? extends OBSERVED> source;
     private final WaitConfiguration configuration;
@@ -39,29 +40,29 @@ public final class Await<OBSERVED, ELEMENT> {
                 DEFAULT, System::nanoTime, LockSupport::parkNanos);
     }
 
-    public static <VALUE> Await<VALUE, Object> await(Source<VALUE> source) {
+    public static <VALUE> Await<VALUE, Object, Object> await(Source<VALUE> source) {
         return new Await<>(source);
     }
 
-    public static <VALUE> Await<Optional<VALUE>, VALUE> await(OptionalSource<VALUE> source) {
+    public static <VALUE> Await<Optional<VALUE>, VALUE, Object> await(OptionalSource<VALUE> source) {
         return new Await<>(source);
     }
 
-    public static <ELEMENT, VALUES extends Collection<ELEMENT>> Await<VALUES, ELEMENT> await(CollectionSource<VALUES> source) {
+    public static <ELEMENT, VALUES extends Collection<ELEMENT>> Await<VALUES, ELEMENT, Object> await(CollectionSource<VALUES> source) {
         return new Await<>(source);
     }
 
     public static <ELEMENT, VALUES extends Collection<? extends ELEMENT>>
-            Await<VALUES, ELEMENT> await(CollectionViewSource<ELEMENT, VALUES> source) {
+            Await<VALUES, ELEMENT, Object> await(CollectionViewSource<ELEMENT, VALUES> source) {
         return new Await<>(source);
     }
 
-    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> Await<ENTRIES, Map.Entry<KEY, VALUE>> await(MapSource<ENTRIES> source) {
+    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> Await<ENTRIES, Map.Entry<KEY, VALUE>, VALUE> await(MapSource<ENTRIES> source) {
         return new Await<>(source);
     }
 
     public static <KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>
-            Await<ENTRIES, Map.Entry<? extends KEY, ? extends VALUE>> await(MapViewSource<KEY, VALUE, ENTRIES> source) {
+            Await<ENTRIES, Map.Entry<? extends KEY, ? extends VALUE>, VALUE> await(MapViewSource<KEY, VALUE, ENTRIES> source) {
         return new Await<>(source);
     }
 
@@ -73,15 +74,15 @@ public final class Await<OBSERVED, ELEMENT> {
         this.parker = parker;
     }
 
-    public Await<OBSERVED, ELEMENT> every(Duration interval) {
+    public Await<OBSERVED, ELEMENT, MAP_VALUE> every(Duration interval) {
         return reconfigured(configuration.withEvery(interval));
     }
 
-    public Await<OBSERVED, ELEMENT> upTo(Duration timeout) {
+    public Await<OBSERVED, ELEMENT, MAP_VALUE> upTo(Duration timeout) {
         return reconfigured(configuration.withUpTo(timeout));
     }
 
-    public Await<OBSERVED, ELEMENT> persisting(Duration persistence) {
+    public Await<OBSERVED, ELEMENT, MAP_VALUE> persisting(Duration persistence) {
         return reconfigured(configuration.withPersistence(persistence));
     }
 
@@ -89,13 +90,13 @@ public final class Await<OBSERVED, ELEMENT> {
      * Uses a monotonic nanosecond clock and a wait operation receiving a duration in nanoseconds.
      * Both operations must share the same time base; a wait may return early.
      */
-    public Await<OBSERVED, ELEMENT> usingTime(LongSupplier clock, LongConsumer parker) {
+    public Await<OBSERVED, ELEMENT, MAP_VALUE> usingTime(LongSupplier clock, LongConsumer parker) {
         return new Await<>(source, configuration,
                 requireNonNull(clock, "clock must not be null"),
                 requireNonNull(parker, "parker must not be null"));
     }
 
-    private Await<OBSERVED, ELEMENT> reconfigured(WaitConfiguration configuration) {
+    private Await<OBSERVED, ELEMENT, MAP_VALUE> reconfigured(WaitConfiguration configuration) {
         return new Await<>(source, configuration, clock, parker);
     }
 
@@ -111,6 +112,10 @@ public final class Await<OBSERVED, ELEMENT> {
         return complete(required(condition).<ELEMENT>selectionSession());
     }
 
+    public MAP_VALUE until(MapValueCondition<? super OBSERVED> condition) {
+        return complete(required(condition).<MAP_VALUE>selectionSession());
+    }
+
     public AwaitResult<OBSERVED, OBSERVED> tryUntil(PreservingCondition<? super OBSERVED> condition) {
         return capture(required(condition).preservingSession());
     }
@@ -121,6 +126,10 @@ public final class Await<OBSERVED, ELEMENT> {
 
     public AwaitResult<OBSERVED, ELEMENT> tryUntil(SelectedCondition<? super OBSERVED> condition) {
         return capture(required(condition).<ELEMENT>selectionSession());
+    }
+
+    public AwaitResult<OBSERVED, MAP_VALUE> tryUntil(MapValueCondition<? super OBSERVED> condition) {
+        return capture(required(condition).<MAP_VALUE>selectionSession());
     }
 
     @SafeVarargs
@@ -143,6 +152,12 @@ public final class Await<OBSERVED, ELEMENT> {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
+    public final List<MAP_VALUE> until(MapValueCondition<? super OBSERVED> first, MapValueCondition<? super OBSERVED> second, MapValueCondition<? super OBSERVED>... rest) {
+        return until(CapturedEvaluator.<OBSERVED, MAP_VALUE>captured(first, second, rest));
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
     public final AwaitResult<OBSERVED, List<OBSERVED>> tryUntil(PreservingCondition<? super OBSERVED> first, PreservingCondition<? super OBSERVED> second, PreservingCondition<? super OBSERVED>... rest) {
         return tryUntil(CapturedEvaluator.<OBSERVED>captured(first, second, rest));
     }
@@ -157,6 +172,12 @@ public final class Await<OBSERVED, ELEMENT> {
     @SuppressWarnings("varargs")
     public final AwaitResult<OBSERVED, List<ELEMENT>> tryUntil(SelectedCondition<? super OBSERVED> first, SelectedCondition<? super OBSERVED> second, SelectedCondition<? super OBSERVED>... rest) {
         return tryUntil(CapturedEvaluator.<OBSERVED, ELEMENT>captured(first, second, rest));
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public final AwaitResult<OBSERVED, List<MAP_VALUE>> tryUntil(MapValueCondition<? super OBSERVED> first, MapValueCondition<? super OBSERVED> second, MapValueCondition<? super OBSERVED>... rest) {
+        return tryUntil(CapturedEvaluator.<OBSERVED, MAP_VALUE>captured(first, second, rest));
     }
 
     private <RESULT> RESULT complete(ConditionSession<? super OBSERVED, ? extends RESULT> session) {

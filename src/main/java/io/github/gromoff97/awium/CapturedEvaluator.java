@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import java.util.ArrayList;
@@ -45,6 +46,18 @@ final class CapturedEvaluator<OBSERVED, RESULT> implements CheckedFunction<OBSER
         return condition("conditions are satisfied in order",
                 () -> new CapturedEvaluator<>(stages.stream()
                         .map(stage -> stage.<ELEMENT>selectionSession()).toList()));
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    static <OBSERVED, MAP_VALUE> Condition<OBSERVED, List<MAP_VALUE>> captured(MapValueCondition<? super OBSERVED> first,
+            MapValueCondition<? super OBSERVED> second,
+            MapValueCondition<? super OBSERVED>... rest) {
+        List<MapValueCondition<? super OBSERVED>> stages =
+                stages(first, second, rest);
+        return condition("conditions are satisfied in order",
+                () -> new CapturedEvaluator<>(stages.stream()
+                        .map(stage -> stage.<MAP_VALUE>selectionSession()).toList()));
     }
 
     private static <STAGE> List<STAGE> stages(STAGE first, STAGE second, STAGE[] rest) {

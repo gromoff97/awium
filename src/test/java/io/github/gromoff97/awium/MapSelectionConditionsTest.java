@@ -94,7 +94,7 @@ class MapSelectionConditionsTest {
             }
         };
 
-        var result = evaluate(MapConditions.<String, String>onlyValueFor("key"), actual);
+        var result = evaluate(MapConditions.onlyValueFor("key"), actual);
         assertEquals("map size was 0", ((Unsatisfied<?>) result).mismatch());
     }
 
@@ -106,11 +106,11 @@ class MapSelectionConditionsTest {
 
         assertNull(await((MapSource<LinkedHashMap<String, String>>) () -> actual).usingTime(pollingTime, pollingTime).until(MapConditions.valueFor("nullable")));
         assertEquals(Satisfied.class,
-                evaluate(MapConditions.<String, String>valueFor("nullable"), actual).getClass());
+                evaluate(MapConditions.valueFor("nullable"), actual).getClass());
         assertEquals("map did not contain the expected key",
-                ((Unsatisfied<?>) evaluate(MapConditions.<String, String>valueFor("missing"), actual)).mismatch());
+                ((Unsatisfied<?>) evaluate(MapConditions.valueFor("missing"), actual)).mismatch());
         assertEquals("map was null",
-                ((Unsatisfied<?>) evaluate(MapConditions.<String, String>valueFor("missing"), null)).mismatch());
+                ((Unsatisfied<?>) evaluate(MapConditions.valueFor("missing"), null)).mismatch());
     }
 
     @Test
@@ -195,17 +195,17 @@ class MapSelectionConditionsTest {
         assertEquals("value did not match", ((Unsatisfied<?>) none).mismatch());
         assertEquals("more than one value matched", ((Unsatisfied<?>) many).mismatch());
         assertEquals(Unsatisfied.class,
-                evaluate(MapConditions.<String, Integer>valueFor("missing"), actual).getClass());
+                evaluate(MapConditions.valueFor("missing"), actual).getClass());
         assertEquals(Unsatisfied.class, evaluate(
-                MapConditions.<String, Integer>valueFor(
+                MapConditions.valueFor(
                         "first", Conditions.greaterThan(1)), actual).getClass());
         assertEquals(Unsatisfied.class, evaluate(
-                MapConditions.<String, Integer>onlyValueFor("first"), actual).getClass());
+                MapConditions.onlyValueFor("first"), actual).getClass());
         assertEquals(Unsatisfied.class, evaluate(
-                MapConditions.<String, Integer>onlyValueFor("other"),
+                MapConditions.onlyValueFor("other"),
                 Map.of("first", 1)).getClass());
         assertEquals(Unsatisfied.class, evaluate(
-                MapConditions.<String, Integer>onlyValueFor("first"), null).getClass());
+                MapConditions.onlyValueFor("first"), null).getClass());
         assertThrows(NullPointerException.class, () -> MapConditions.singleEntry(
                 (Condition.PreservingCondition<Map.Entry<Object, Object>>) null));
         assertThrows(NullPointerException.class, () -> MapConditions.allEntries(null));

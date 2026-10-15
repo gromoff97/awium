@@ -62,6 +62,36 @@ class ConditionSessionTest {
     }
 
     @Test
+    void explainedNestedChecksPreserveSelectedIdentityAndIndependentSessions() {
+        int[] factories = {0};
+        Number actual = new java.math.BigDecimal("1.00");
+        var nested = Conditions.<Number>preserving("second observation", () -> {
+            factories[0]++;
+            int[] calls = {0};
+            return ignored -> ++calls[0] == 2 ? satisfied(42) : ConditionResult.unsatisfied("first observation");
+        });
+        var optional = OptionalConditions.hasValue(nested).because("optional reason");
+        var collection = CollectionConditions.single(nested).because("collection reason");
+        var map = MapConditions.valueFor("key", nested).because("map reason");
+        assertEquals(0, factories[0]);
+
+        for (int run = 0; run < 2; run++) {
+            var time = new FakeTime(0);
+            Number optionalValue = await(() -> Optional.of(actual)).usingTime(time, time)
+                    .every(ofNanos(1)).until(optional);
+            Number element = await(() -> List.of(actual)).usingTime(time, time)
+                    .every(ofNanos(1)).until(collection);
+            AwaitResult<Map<String, Number>, Number> mapValue = await(() -> Map.of("key", actual))
+                    .usingTime(time, time).every(ofNanos(1)).tryUntil(map);
+            assertSame(actual, optionalValue);
+            assertSame(actual, element);
+            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, mapValue).result());
+            assertEquals(2, mapValue.totalAttempts());
+        }
+        assertEquals(6, factories[0]);
+    }
+
+    @Test
     void mapAndOptionalCompositionCreateOneIndependentSessionPerWait() {
         int[] factories = {0};
         var nested = Conditions.condition("two observations", () -> {
@@ -69,7 +99,7 @@ class ConditionSessionTest {
             int[] calls = {0};
             return (String value) -> ++calls[0] == 2 ? satisfied(value) : ConditionResult.unsatisfied("first observation");
         });
-        Condition<Map<String, String>, String> map = MapConditions.valueFor("key", nested);
+        Condition<Map<?, ? extends String>, String> map = MapConditions.valueFor("key", nested);
         var optional = OptionalConditions.hasValue(nested);
         assertEquals(0, factories[0]);
         for (int run = 0; run < 2; run++) {

@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.ConditionResult.Reference;
@@ -48,6 +49,14 @@ final class ConditionSupport {
     static <OBSERVED> SelectedCondition<OBSERVED> selected(String description,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<?>> evaluator) {
         return new SelectedCondition<>(new ConditionMetadata(description, null, null), () -> evaluator);
+    }
+
+    static <OBSERVED> SelectedCondition<OBSERVED> selected(Condition<OBSERVED, ?> condition) {
+        return new SelectedCondition<>(condition.metadata, condition.evaluatorFactory);
+    }
+
+    static <OBSERVED> MapValueCondition<OBSERVED> mapValue(Condition<OBSERVED, ?> condition) {
+        return new MapValueCondition<>(condition.metadata, condition.evaluatorFactory);
     }
 
     static <VALUE> Reference<VALUE> expectedReference(VALUE value) {
@@ -100,7 +109,7 @@ final class ConditionSupport {
     }
 
     static <OBSERVED, ELEMENT, RESULT> Condition<OBSERVED, RESULT> single(String subject, Condition<?, ?> nested,
-            Function<? super OBSERVED, ? extends Iterable<ELEMENT>> elements,
+            Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
             Supplier<? extends Function<? super ELEMENT, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory) {
         return new Condition<>(Condition.required(nested).metadata.prefixed(subject + " has a single matching value: "), () -> {
             var evaluator = evaluatorFactory.get();
@@ -109,7 +118,7 @@ final class ConditionSupport {
         });
     }
 
-    private static <ELEMENT, RESULT> ConditionResult<? extends RESULT> evaluateSingle(Iterable<ELEMENT> values,
+    private static <ELEMENT, RESULT> ConditionResult<? extends RESULT> evaluateSingle(Iterable<? extends ELEMENT> values,
             Function<? super ELEMENT, ? extends ConditionResult<? extends RESULT>> evaluator) throws Exception {
         ConditionResult<? extends RESULT> result = unsatisfied("no value matched");
         for (var iterator = call(values::iterator); call(iterator::hasNext);) {

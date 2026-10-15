@@ -66,8 +66,8 @@ class ObjectAndOptionalConditionsTest {
         var expected = new String("1");
         var equalActual = new String("1");
         var differentActual = "2";
-        Condition<Optional<String>, String> equal = hasValue(equalTo(expected));
-        Condition<Optional<String>, String> notEqual = hasValue(notEqualTo(expected));
+        var equal = hasValue(equalTo(expected));
+        var notEqual = hasValue(notEqualTo(expected));
 
         assertUnsatisfied(evaluate(equal, null));
         assertUnsatisfied(evaluate(equal, Optional.empty()));
