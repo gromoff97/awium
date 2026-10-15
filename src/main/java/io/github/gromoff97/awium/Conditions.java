@@ -1,12 +1,15 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.Condition.SelectedCondition;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static io.github.gromoff97.awium.CheckedCalls.checkInterruption;
+import static io.github.gromoff97.awium.Condition.required;
 import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
@@ -123,6 +126,22 @@ public final class Conditions {
     public static <OBSERVED> PreservingCondition<OBSERVED> matches(Predicate<? super OBSERVED> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return ConditionSupport.preserving("value matches", "value did not match", predicate::test);
+    }
+
+    public static <OBSERVED, RESULT> Condition<OBSERVED, RESULT> matches(Condition<OBSERVED, RESULT> condition) {
+        return required(condition);
+    }
+
+    public static <OBSERVED> PreservingCondition<OBSERVED> matches(PreservingCondition<OBSERVED> condition) {
+        return required(condition);
+    }
+
+    public static <OBSERVED> SelectedCondition<OBSERVED> matches(SelectedCondition<OBSERVED> condition) {
+        return required(condition);
+    }
+
+    public static <OBSERVED> MapValueCondition<OBSERVED> matches(MapValueCondition<OBSERVED> condition) {
+        return required(condition);
     }
 
     public static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> greaterThan(VALUE bound) {
