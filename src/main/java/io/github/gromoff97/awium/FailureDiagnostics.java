@@ -47,7 +47,7 @@ final class FailureDiagnostics {
         };
         mismatch = evaluation instanceof ConditionResult.Unsatisfied<?> value ? value.mismatch() : null;
         reason = outcome.failureReason();
-        cause = outcome.cause();
+        cause = attempt.cause();
         if (attempt instanceof AttemptRecord.Outcome.Evaluated<?, ?> value) {
             sequence = value.progress();
             this.condition = value.condition();

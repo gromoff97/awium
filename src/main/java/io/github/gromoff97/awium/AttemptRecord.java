@@ -30,6 +30,8 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
 
         Timing timing();
 
+        Throwable cause();
+
         /** An observation and the exact result returned by its condition evaluation. */
         record Evaluated<OBSERVED, RESULT>(Timing timing,
                 OBSERVED observed, ConditionResult<? extends RESULT> evaluation,
@@ -40,43 +42,48 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
                 requireNonNull(evaluation, "evaluation must not be null");
                 requireNonNull(condition, "condition must not be null");
             }
+
+            @Override
+            public Throwable cause() {
+                return evaluation.cause();
+            }
         }
 
         record ConditionFailed<OBSERVED, RESULT>(Timing timing,
-                OBSERVED observed, Throwable failure, Condition<?, ?> condition,
+                OBSERVED observed, Throwable cause, Condition<?, ?> condition,
                 Progress progress) implements Outcome<OBSERVED, RESULT> {
 
             public ConditionFailed {
                 requireNonNull(timing, "timing must not be null");
-                requireNonNull(failure, "failure must not be null");
+                requireNonNull(cause, "cause must not be null");
                 requireNonNull(condition, "condition must not be null");
             }
         }
 
         record WaitingFailed<OBSERVED, RESULT>(Timing timing,
-                Throwable failure) implements Outcome<OBSERVED, RESULT> {
+                Throwable cause) implements Outcome<OBSERVED, RESULT> {
 
             public WaitingFailed {
                 requireNonNull(timing, "timing must not be null");
-                requireNonNull(failure, "failure must not be null");
+                requireNonNull(cause, "cause must not be null");
             }
         }
 
         record SourceRetrievalFailed<OBSERVED, RESULT>(Timing timing,
-                Throwable failure) implements Outcome<OBSERVED, RESULT> {
+                Throwable cause) implements Outcome<OBSERVED, RESULT> {
 
             public SourceRetrievalFailed {
                 requireNonNull(timing, "timing must not be null");
-                requireNonNull(failure, "failure must not be null");
+                requireNonNull(cause, "cause must not be null");
             }
         }
 
         record SourceInterrupted<OBSERVED, RESULT>(Timing timing, OBSERVED observed,
-                Throwable failure) implements Outcome<OBSERVED, RESULT> {
+                Throwable cause) implements Outcome<OBSERVED, RESULT> {
 
             public SourceInterrupted {
                 requireNonNull(timing, "timing must not be null");
-                requireNonNull(failure, "failure must not be null");
+                requireNonNull(cause, "cause must not be null");
             }
         }
     }

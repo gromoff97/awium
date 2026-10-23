@@ -11,6 +11,10 @@ import static java.util.Objects.requireNonNull;
  */
 public sealed interface ConditionResult<RESULT> {
 
+    default Throwable cause() {
+        return null;
+    }
+
     default <NEXT> ConditionResult<NEXT> mapSatisfied(Function<? super RESULT, ? extends NEXT> mapping) {
         requireNonNull(mapping, "mapping must not be null");
         return switch (this) {

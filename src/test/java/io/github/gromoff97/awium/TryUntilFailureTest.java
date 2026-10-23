@@ -241,8 +241,8 @@ class TryUntilFailureTest {
         var progress = observation.progress();
 
         assertEquals(INTERRUPTED, result.failure().reason());
-        assertEquals(NullPointerException.class, observation.failure().getClass());
-        assertEquals("condition returned null ConditionResult", observation.failure().getMessage());
+        assertEquals(NullPointerException.class, observation.cause().getClass());
+        assertEquals("condition returned null ConditionResult", observation.cause().getMessage());
         assertEquals(1, progress.evaluatedStageNumber());
         assertEquals("first stage", progress.condition().description());
     }

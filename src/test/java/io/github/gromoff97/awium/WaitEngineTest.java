@@ -265,7 +265,7 @@ class WaitEngineTest {
         var attempt = assertInstanceOf(
                 AttemptRecord.Outcome.SourceRetrievalFailed.class,
                 uncontrolled.attempt().outcome());
-        assertSame(failure, attempt.failure());
+        assertSame(failure, attempt.cause());
         assertEquals(1, uncontrolled.attempt().number());
     }
 
@@ -288,7 +288,7 @@ class WaitEngineTest {
                 AttemptRecord.Outcome.WaitingFailed.class,
                 uncontrolled.attempt().outcome());
         assertEquals(2, uncontrolled.attempt().number());
-        assertSame(failure, attempt.failure());
+        assertSame(failure, attempt.cause());
         assertEquals(0, attempt.timing().startOffset().toNanos());
         assertEquals(0, attempt.timing().completionOffset().toNanos());
     }
@@ -314,7 +314,7 @@ class WaitEngineTest {
                 uncontrolled.attempt().outcome());
         assertEquals(2, uncontrolled.attempt().number());
         assertEquals(InterruptedException.class,
-                attempt.failure().getClass());
+                attempt.cause().getClass());
         assertEquals(1, parkCalls[0]);
         assertTrue(currentThread().isInterrupted());
     }
@@ -332,7 +332,7 @@ class WaitEngineTest {
         var attempt = assertInstanceOf(AttemptRecord.Outcome.WaitingFailed.class,
                 uncontrolled.attempt().outcome());
         assertEquals(2, uncontrolled.attempt().number());
-        assertSame(interruption, attempt.failure());
+        assertSame(interruption, attempt.cause());
         assertFalse(currentThread().isInterrupted());
     }
 
@@ -352,7 +352,7 @@ class WaitEngineTest {
         var attempt = assertInstanceOf(AttemptRecord.Outcome.WaitingFailed.class, failure.attempt().outcome());
         assertEquals(0, sourceCalls[0]);
         assertEquals(1, failure.attempt().number());
-        assertInstanceOf(InterruptedException.class, attempt.failure());
+        assertInstanceOf(InterruptedException.class, attempt.cause());
         assertTrue(currentThread().isInterrupted());
     }
 
@@ -375,7 +375,7 @@ class WaitEngineTest {
         var attempt = assertInstanceOf(AttemptRecord.Outcome.WaitingFailed.class, failure.attempt().outcome());
         assertEquals(1, sourceCalls[0]);
         assertEquals(2, failure.attempt().number());
-        assertInstanceOf(InterruptedException.class, attempt.failure());
+        assertInstanceOf(InterruptedException.class, attempt.cause());
         assertTrue(currentThread().isInterrupted());
     }
 
@@ -407,7 +407,7 @@ class WaitEngineTest {
         assertEquals(2, failure.attempt().number());
         assertEquals(persistence == 0 ? AttemptRecord.Phase.ACQUISITION : AttemptRecord.Phase.PERSISTENCE,
                 failure.attempt().phase());
-        assertInstanceOf(InterruptedException.class, attempt.failure());
+        assertInstanceOf(InterruptedException.class, attempt.cause());
         assertTrue(currentThread().isInterrupted());
     }
 
@@ -420,7 +420,7 @@ class WaitEngineTest {
                     throw fatal;
                 }, () -> "actual",
                         actual -> unsatisfied("not yet"));
-        assertSame(fatal, assertInstanceOf(Uncontrolled.class, outcome).cause());
+        assertSame(fatal, assertInstanceOf(Uncontrolled.class, outcome).attempt().outcome().cause());
     }
 
     @Test
@@ -439,7 +439,7 @@ class WaitEngineTest {
                 uncontrolled.attempt().outcome());
         assertEquals(1, uncontrolled.attempt().number());
         assertEquals(InterruptedException.class,
-                attempt.failure().getClass());
+                attempt.cause().getClass());
         assertTrue(currentThread().isInterrupted());
     }
 
@@ -596,7 +596,7 @@ class WaitEngineTest {
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
         var attempt = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, uncontrolled.attempt().outcome());
-        assertSame(failure, attempt.failure());
+        assertSame(failure, attempt.cause());
         assertEquals(2, uncontrolled.attempt().number());
     }
 

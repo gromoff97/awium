@@ -12,19 +12,6 @@ sealed interface WaitCompletion<OBSERVED, RESULT> {
 
     AttemptRecord<OBSERVED, RESULT> attempt();
 
-    default Throwable cause() {
-        return switch (attempt().outcome()) {
-            case AttemptRecord.Outcome.WaitingFailed<?, ?> value -> value.failure();
-            case AttemptRecord.Outcome.SourceRetrievalFailed<?, ?> value -> value.failure();
-            case AttemptRecord.Outcome.SourceInterrupted<?, ?> value -> value.failure();
-            case AttemptRecord.Outcome.ConditionFailed<?, ?> value -> value.failure();
-            case AttemptRecord.Outcome.Evaluated<?, ?> value -> switch (value.evaluation()) {
-                case ConditionResult.Satisfied<?> ignored -> null;
-                case ConditionResult.Unsatisfied<?> result -> result.cause();
-            };
-        };
-    }
-
     default AwaitFailure.Reason failureReason() {
         return switch (this) {
             case PersistenceFailure<?, ?> ignored -> PERSISTENCE_FAILED;

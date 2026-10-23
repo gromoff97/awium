@@ -81,7 +81,7 @@ class ObservationTest {
                     assertEquals(2, attempt.number());
                     assertEquals(1, sources[0]);
                     assertEquals(boundary.equals("afterPark") ? 1 : 0, parks[0]);
-                    assertInstanceOf(InterruptedException.class, outcome.failure());
+                    assertInstanceOf(InterruptedException.class, outcome.cause());
                     assertTrue(currentThread().isInterrupted());
                 } finally {
                     interrupted();
@@ -147,10 +147,10 @@ class ObservationTest {
                 assertedObservation.evaluation());
         assertSame(actual, ordinaryObservation.observed());
         assertEquals("not ready", ordinaryOutcome.mismatch());
-        assertNull(ordinaryOutcome.cause());
+        assertNull(ordinary.outcome().cause());
         assertSame(actual, assertedObservation.observed());
         assertEquals("assertion did not pass", assertedOutcome.mismatch());
-        assertSame(assertion, assertedOutcome.cause());
+        assertSame(assertion, asserted.outcome().cause());
     }
 
     @ParameterizedTest
@@ -159,7 +159,7 @@ class ObservationTest {
         var attempt = attempt(() -> throwFailure(failure), ObservationTest::failIfCalled);
 
         var outcome = assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class, attempt.outcome());
-        assertSame(failure, outcome.failure());
+        assertSame(failure, outcome.cause());
         assertEquals(Duration.ZERO, outcome.timing().startOffset());
         assertEquals(Duration.ZERO, outcome.timing().retrievalOffset());
         assertNull(outcome.timing().observationOffset());
@@ -173,7 +173,7 @@ class ObservationTest {
         var attempt = attempt(() -> actual, value -> throwUnchecked(failure));
 
         var observation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, attempt.outcome());
-        assertSame(failure, observation.failure());
+        assertSame(failure, observation.cause());
         assertSame(actual, observation.observed());
     }
 
@@ -199,7 +199,7 @@ class ObservationTest {
                 assertSame(cause, result.failure().cause());
                 var attempt = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class,
                         result.attempts().getLast().outcome());
-                assertSame(cause, attempt.failure());
+                assertSame(cause, attempt.cause());
             }
         }
     }
@@ -215,8 +215,8 @@ class ObservationTest {
 
         var observation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, attempt.outcome());
         assertSame(actual, observation.observed());
-        assertEquals(NullPointerException.class, observation.failure().getClass());
-        assertEquals("condition returned null ConditionResult", observation.failure().getMessage());
+        assertEquals(NullPointerException.class, observation.cause().getClass());
+        assertEquals("condition returned null ConditionResult", observation.cause().getMessage());
         assertEquals(1, conditionCalls[0]);
     }
 
@@ -228,7 +228,7 @@ class ObservationTest {
         }, ObservationTest::failIfCalled);
 
         var outcome = assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class, attempt.outcome());
-        assertSame(interruption, outcome.failure());
+        assertSame(interruption, outcome.cause());
         assertFalse(currentThread().isInterrupted());
     }
 
@@ -239,7 +239,7 @@ class ObservationTest {
         var attempt = attempt(() -> actual, value -> throwUnchecked(interruption));
 
         var observation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, attempt.outcome());
-        assertSame(interruption, observation.failure());
+        assertSame(interruption, observation.cause());
         assertSame(actual, observation.observed());
         assertFalse(currentThread().isInterrupted());
     }
@@ -254,7 +254,7 @@ class ObservationTest {
 
         var outcome = assertInstanceOf(AttemptRecord.Outcome.SourceInterrupted.class, attempt.outcome());
         assertSame(actual, outcome.observed());
-        assertEquals("caller thread interrupt flag was set", outcome.failure().getMessage());
+        assertEquals("caller thread interrupt flag was set", outcome.cause().getMessage());
         assertTrue(currentThread().isInterrupted());
     }
 
@@ -419,7 +419,7 @@ class ObservationTest {
 
         var observation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, attempt.outcome());
         assertSame(actual, observation.observed());
-        assertEquals(InterruptedException.class, observation.failure().getClass());
+        assertEquals(InterruptedException.class, observation.cause().getClass());
         assertTrue(currentThread().isInterrupted());
     }
 
@@ -432,7 +432,7 @@ class ObservationTest {
         }, ObservationTest::failIfCalled);
 
         var outcome = assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class, attempt.outcome());
-        assertSame(failure, outcome.failure());
+        assertSame(failure, outcome.cause());
         assertTrue(currentThread().isInterrupted());
     }
 
@@ -446,7 +446,7 @@ class ObservationTest {
         });
 
         var observation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, attempt.outcome());
-        assertSame(failure, observation.failure());
+        assertSame(failure, observation.cause());
         assertSame(actual, observation.observed());
         assertTrue(currentThread().isInterrupted());
     }
@@ -455,7 +455,7 @@ class ObservationTest {
     @MethodSource("fatalSignals")
     void sourceErrorsBecomeUncontrolledAndSkipCondition(Error fatal) {
         var result = attempt(() -> throwFailure(fatal), ObservationTest::failIfCalled);
-        assertSame(fatal, assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class, result.outcome()).failure());
+        assertSame(fatal, assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class, result.outcome()).cause());
     }
 
     @Test
@@ -502,7 +502,7 @@ class ObservationTest {
             currentThread().interrupt();
             throw sourceFatal;
         }, ObservationTest::failIfCalled);
-        assertSame(sourceFatal, assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class, result.outcome()).failure());
+        assertSame(sourceFatal, assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class, result.outcome()).cause());
         assertTrue(currentThread().isInterrupted());
     }
 
