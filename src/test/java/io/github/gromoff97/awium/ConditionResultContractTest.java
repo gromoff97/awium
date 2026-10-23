@@ -3,11 +3,12 @@ package io.github.gromoff97.awium;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.ConditionResult.*;
+import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConditionResultContractTest {
@@ -25,7 +26,7 @@ class ConditionResultContractTest {
     @Test
     void mappingUnsatisfiedSkipsTheCallbackAndKeepsItsCause() {
         var cause = new IllegalStateException("cause");
-        ConditionResult<String> mapped = ConditionResult.<Integer>unsatisfied("mismatch", cause).mapSatisfied(value -> {
+        ConditionResult<String> mapped = unsatisfied("mismatch", cause).mapSatisfied(value -> {
             throw new AssertionError("mapping must not run");
         });
         var failure = assertInstanceOf(ConditionResult.Unsatisfied.class, mapped);
@@ -34,19 +35,29 @@ class ConditionResultContractTest {
     }
 
     @Test
-    void unsatisfiedValidatesMismatch() {
-        assertTrue(assertThrows(NullPointerException.class,
-                () -> unsatisfied(null)).getMessage().contains("mismatch"));
-        assertTrue(assertThrows(IllegalArgumentException.class,
-                () -> unsatisfied("  \n")).getMessage().contains("mismatch"));
+    void conditionsCanFailWithoutDuplicatingTheirDescription() {
+        var time = new FakeTime(0);
+        AwaitResult<String, String> result = Await.await(() -> "pending")
+                .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
+                .tryUntil(Conditions.condition("status is ready", value -> unsatisfied())
+                        .because("delivery must complete"));
+        var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+        assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+        assertTrue(failure.message().contains("Condition: status is ready"));
+        assertTrue(failure.message().contains("Importance: delivery must complete"));
+        assertTrue(failure.message().contains("Actual: pending"));
+        assertFalse(failure.message().contains("Mismatch:"));
     }
 
     @Test
-    void unsatisfiedWithCauseValidatesItsArguments() {
-        assertEquals("mismatch must not be null", assertThrows(NullPointerException.class,
-                () -> unsatisfied(null, null)).getMessage());
-        assertThrows(NullPointerException.class,
-                () -> unsatisfied("failed", null));
+    void unsatisfiedAcceptsOptionalDiagnostics() {
+        var plain = unsatisfied();
+        assertEquals(new Unsatisfied<>(null, null), plain);
+        assertEquals(plain, unsatisfied(null));
+        assertEquals(plain, unsatisfied(null, null));
+        var cause = new IllegalStateException("details");
+        assertSame(cause, unsatisfied(null, cause).cause());
+        assertEquals(new Unsatisfied<>("failed", null), unsatisfied("failed", null));
     }
 
 }
