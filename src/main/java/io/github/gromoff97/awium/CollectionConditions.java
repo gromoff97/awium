@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.SequencedCollection;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
@@ -23,7 +24,7 @@ import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.selected;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
-import static io.github.gromoff97.awium.ValueMatching.equal;
+import static java.util.Objects.deepEquals;
 import static io.github.gromoff97.awium.ValueMatching.exactly;
 import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
@@ -140,7 +141,7 @@ public final class CollectionConditions {
         Collection<? extends ELEMENT> values = nonEmpty(expected, "expected elements").stream().toList();
         String target = values.size() == 1 ? "expected element" : "all expected elements";
         return preserving("collection contains " + target, "collection did not contain " + target, expectedReference(values),
-                actual -> ValueMatching.containsAll(actual, values, ValueMatching::equal));
+                actual -> ValueMatching.containsAll(actual, values, Objects::deepEquals));
     }
 
     @SafeVarargs
@@ -153,7 +154,7 @@ public final class CollectionConditions {
         String target = values.size() == 1 ? "expected element" : "an expected element";
         return preserving("collection does not contain " + target, "collection contained " + target, unexpectedReference(values),
                 actual -> !matchesAny(actual,
-                        value -> matchesAny(values, candidate -> equal(value, candidate))));
+                        value -> matchesAny(values, candidate -> deepEquals(value, candidate))));
     }
 
     @SafeVarargs
@@ -165,7 +166,7 @@ public final class CollectionConditions {
         Collection<? extends ELEMENT> values = nonEmpty(unexpected, "unexpected elements").stream().toList();
         String target = values.size() == 1 ? "expected element" : "all expected elements";
         return preserving("collection does not contain " + target, "collection contained " + target, unexpectedReference(values),
-                actual -> !ValueMatching.containsAll(actual, values, ValueMatching::equal));
+                actual -> !ValueMatching.containsAll(actual, values, Objects::deepEquals));
     }
 
     @SafeVarargs
@@ -178,7 +179,7 @@ public final class CollectionConditions {
         String target = values.size() == 1 ? "expected element" : "an expected element";
         return preserving("collection contains " + target, "collection did not contain " + target, expectedReference(values),
                 actual -> matchesAny(actual,
-                        value -> matchesAny(values, candidate -> equal(value, candidate))));
+                        value -> matchesAny(values, candidate -> deepEquals(value, candidate))));
     }
 
     @SafeVarargs
@@ -245,7 +246,7 @@ public final class CollectionConditions {
         Collection<? extends ELEMENT> values = requireNonNull(expected, "expected elements must not be null").stream().toList();
         return preserving("collection is a subset of the expected elements",
                 "collection was not a subset of the expected elements", expectedReference(values),
-                actual -> matchesAll(actual, value -> matchesAny(values, candidate -> equal(value, candidate))));
+                actual -> matchesAll(actual, value -> matchesAny(values, candidate -> deepEquals(value, candidate))));
     }
 
     @SafeVarargs
@@ -383,7 +384,7 @@ public final class CollectionConditions {
         Iterator<?> left = actual.iterator();
         Iterator<?> right = expected.iterator();
         while (left.hasNext() && right.hasNext()) {
-            if (!equal(left.next(), right.next())) {
+            if (!deepEquals(left.next(), right.next())) {
                 return false;
             }
         }
@@ -392,7 +393,7 @@ public final class CollectionConditions {
 
     private static boolean exactContentInAnyOrder(Collection<?> actual, Collection<?> expected) {
         return actual.size() == expected.size()
-                && exactly(actual.iterator(), expected, ValueMatching::equal);
+                && exactly(actual.iterator(), expected, Objects::deepEquals);
     }
 
     private static List<?> elements(SequencedCollection<?> actual) {
@@ -411,7 +412,7 @@ public final class CollectionConditions {
     private static boolean containsSubsequence(List<?> actual, List<?> expected) {
         int expectedIndex = 0;
         for (Object value : actual) {
-            if (equal(value, expected.get(expectedIndex)) && ++expectedIndex == expected.size()) {
+            if (deepEquals(value, expected.get(expectedIndex)) && ++expectedIndex == expected.size()) {
                 return true;
             }
         }
@@ -423,7 +424,7 @@ public final class CollectionConditions {
             return false;
         }
         for (int index = 0; index < expected.size(); index++) {
-            if (!equal(actual.get(start + index), expected.get(index))) {
+            if (!deepEquals(actual.get(start + index), expected.get(index))) {
                 return false;
             }
         }
@@ -433,7 +434,7 @@ public final class CollectionConditions {
     private static boolean hasUniqueElements(Collection<?> actual) {
         List<Object> seen = new ArrayList<>();
         for (Object value : actual) {
-            if (matchesAny(seen, previous -> equal(previous, value))) {
+            if (matchesAny(seen, previous -> deepEquals(previous, value))) {
                 return false;
             }
             seen.add(value);

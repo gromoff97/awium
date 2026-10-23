@@ -13,7 +13,7 @@ import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.nonEmpty;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
-import static io.github.gromoff97.awium.ValueMatching.equal;
+import static java.util.Objects.deepEquals;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
@@ -50,12 +50,12 @@ public final class Conditions {
     }
 
     public static <EXPECTED> ComparisonCondition<EXPECTED> equalTo(EXPECTED expected) {
-        return new ComparisonCondition<>(ConditionSupport.condition("value equals expected", expectedReference(expected), actual -> equal(actual, expected)
+        return new ComparisonCondition<>(ConditionSupport.condition("value equals expected", expectedReference(expected), actual -> deepEquals(actual, expected)
                 ? satisfied(actual) : unsatisfied("value was not equal")));
     }
 
     public static <EXPECTED> ComparisonCondition<EXPECTED> notEqualTo(EXPECTED unexpected) {
-        return new ComparisonCondition<>(ConditionSupport.condition("value does not equal unexpected", unexpectedReference(unexpected), actual -> !equal(actual, unexpected)
+        return new ComparisonCondition<>(ConditionSupport.condition("value does not equal unexpected", unexpectedReference(unexpected), actual -> !deepEquals(actual, unexpected)
                 ? satisfied(actual) : unsatisfied("value was equal")));
     }
 
@@ -90,7 +90,7 @@ public final class Conditions {
     public static <EXPECTED> ComparisonCondition<EXPECTED> in(EXPECTED... expected) {
         List<?> values = stream(nonEmpty(expected, "expected values")).toList();
         return new ComparisonCondition<>(ConditionSupport.condition("value is in the expected values", expectedReference(values),
-                actual -> matchesAny(values, candidate -> equal(actual, candidate))
+                actual -> matchesAny(values, candidate -> deepEquals(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was not in the expected values")));
     }
 
@@ -99,7 +99,7 @@ public final class Conditions {
     public static <EXPECTED> ComparisonCondition<EXPECTED> notIn(EXPECTED... unexpected) {
         List<?> values = stream(nonEmpty(unexpected, "unexpected values")).toList();
         return new ComparisonCondition<>(ConditionSupport.condition("value is not in the unexpected values", unexpectedReference(values),
-                actual -> !matchesAny(values, candidate -> equal(actual, candidate))
+                actual -> !matchesAny(values, candidate -> deepEquals(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was in the unexpected values")));
     }
 

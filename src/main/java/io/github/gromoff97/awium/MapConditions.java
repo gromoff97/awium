@@ -7,6 +7,7 @@ import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Condition.Reference;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
+import java.util.Objects;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiPredicate;
@@ -25,7 +26,7 @@ import static io.github.gromoff97.awium.ConditionSupport.selected;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
 import static io.github.gromoff97.awium.ValueMatching.containsAll;
-import static io.github.gromoff97.awium.ValueMatching.equal;
+import static java.util.Objects.deepEquals;
 import static io.github.gromoff97.awium.ValueMatching.exactly;
 import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
@@ -197,7 +198,7 @@ public final class MapConditions {
                 return unsatisfied("map size was " + size);
             }
             var entry = firstEntry(actual);
-            return equal(entry.getKey(), key)
+            return deepEquals(entry.getKey(), key)
                     ? satisfied(entry.getValue()) : unsatisfied("map contained a different key");
         }));
     }
@@ -206,14 +207,14 @@ public final class MapConditions {
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsKeys(KEY... expected) {
         List<KEY> keys = stream(nonEmpty(expected, "expected keys")).toList();
         return preserving("map contains all expected keys", "map did not contain all expected keys", expectedReference(keys),
-                actual -> containsAll(actual.keySet(), keys, ValueMatching::equal));
+                actual -> containsAll(actual.keySet(), keys, Objects::deepEquals));
     }
 
     @SafeVarargs
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> doesNotContainKeys(KEY... unexpected) {
         List<KEY> keys = stream(nonEmpty(unexpected, "unexpected keys")).toList();
         return preserving("map does not contain unexpected keys", "map contained an unexpected key", unexpectedReference(keys),
-                actual -> !matchesAny(actual.keySet(), value -> matchesAny(keys, key -> equal(value, key))));
+                actual -> !matchesAny(actual.keySet(), value -> matchesAny(keys, key -> deepEquals(value, key))));
     }
 
     @SafeVarargs
@@ -227,14 +228,14 @@ public final class MapConditions {
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> containsValues(VALUE... expected) {
         List<VALUE> values = stream(nonEmpty(expected, "expected values")).toList();
         return preserving("map contains all expected values", "map did not contain all expected values", expectedReference(values),
-                actual -> containsAll(actual.values(), values, ValueMatching::equal));
+                actual -> containsAll(actual.values(), values, Objects::deepEquals));
     }
 
     @SafeVarargs
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> doesNotContainValues(VALUE... unexpected) {
         List<VALUE> values = stream(nonEmpty(unexpected, "unexpected values")).toList();
         return preserving("map does not contain unexpected values", "map contained an unexpected value", unexpectedReference(values),
-                actual -> !matchesAny(actual.values(), value -> matchesAny(values, candidate -> equal(value, candidate))));
+                actual -> !matchesAny(actual.values(), value -> matchesAny(values, candidate -> deepEquals(value, candidate))));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsEntries(KEY key, VALUE value) {
@@ -296,7 +297,7 @@ public final class MapConditions {
     private static <KEY, VALUE> ConditionResult<Entry<KEY, VALUE>> findEntry(Map<KEY, VALUE> actual, Object key) {
         if (actual != null) {
             for (Entry<KEY, VALUE> entry : actual.entrySet()) {
-                if (equal(entry.getKey(), key)) {
+                if (deepEquals(entry.getKey(), key)) {
                     return satisfied(entry);
                 }
             }
@@ -332,7 +333,7 @@ public final class MapConditions {
     }
 
     private static boolean entryMatches(Entry<?, ?> actual, Entry<?, ?> expected) {
-        return equal(actual.getKey(), expected.getKey()) && equal(actual.getValue(), expected.getValue());
+        return deepEquals(actual.getKey(), expected.getKey()) && deepEquals(actual.getValue(), expected.getValue());
     }
 
 }

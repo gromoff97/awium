@@ -55,7 +55,7 @@ class ArtifactContractIT {
         Map<String, Set<String>> classes = classDependencies(dependencies);
         assertFalse(classes.isEmpty(), dependencies);
         Set<String> facade = Set.of("Await", "Conditions", "CollectionConditions", "MapConditions",
-                "OptionalConditions", "StringConditions", "FailureDiagnostics", "ValueRendering");
+                "OptionalConditions", "StringConditions", "FailureDiagnostics");
         for (String execution : Set.of("Condition", "AwaitAttempt", "ConditionAwaitAttempt", "ConditionSupport",
                 "ConditionResult", "AttemptResult", "SequenceExecution", "WaitEngine",
                 "WaitCompletion", "WaitConfiguration")) {
@@ -83,8 +83,6 @@ class ArtifactContractIT {
         Set<String> terminals = Set.of("Await", "AwaitResult", "AwaitAssertionError", "AwaitExecutionException");
         Set<String> diagnostics = classes.get("FailureDiagnostics");
         assertTrue(diagnostics.stream().noneMatch(terminals::contains), "FailureDiagnostics -> " + diagnostics);
-        Set<String> rendering = classes.getOrDefault("ValueRendering", Set.of());
-        assertTrue(rendering.stream().allMatch("ValueRendering"::equals), "ValueRendering -> " + rendering);
     }
 
     @Test
@@ -121,7 +119,7 @@ class ArtifactContractIT {
         for (Class<?> internal : List.of(ConditionSupport.class, AwaitAttempt.class, ConditionAwaitAttempt.class,
                 AttemptResult.class, SequenceExecution.class, WaitEngine.class, WaitConfiguration.class,
                 WaitCompletion.class,
-                FailureDiagnostics.class, ValueMatching.class, ValueRendering.class)) {
+                FailureDiagnostics.class, ValueMatching.class)) {
             assertFalse(java.lang.reflect.Modifier.isPublic(internal.getModifiers()), internal.getName());
         }
         for (boolean modulePath : List.of(false, true)) {

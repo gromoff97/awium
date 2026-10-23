@@ -8,8 +8,8 @@ import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import static io.github.gromoff97.awium.ValueRendering.renderValue;
 import static java.lang.Thread.currentThread;
+import static java.util.Arrays.deepToString;
 import static java.util.Objects.requireNonNull;
 
 final class FailureDiagnostics {
@@ -150,6 +150,11 @@ final class FailureDiagnostics {
         } finally {
             if (interrupted) currentThread().interrupt();
         }
+    }
+
+    private static String renderValue(Object value) {
+        String rendered = deepToString(new Object[] {value});
+        return rendered.substring(1, rendered.length() - 1);
     }
 
     private void timing(StringBuilder out) {

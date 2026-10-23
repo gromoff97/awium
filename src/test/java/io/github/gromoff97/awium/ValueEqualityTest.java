@@ -4,11 +4,14 @@ import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.AwaitFailure.Reason.CONDITION_FAILED;
 import static io.github.gromoff97.awium.Conditions.equalTo;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ValueEqualityTest {
@@ -60,7 +63,7 @@ class ValueEqualityTest {
     }
 
     @Test
-    void comparesMutualCyclesWithoutRecursion() {
+    void reportsJdkComparisonFailureForDistinctCyclicArrays() {
         Object[] leftFirst = new Object[2];
         Object[] leftSecond = new Object[2];
         leftFirst[0] = "first";
@@ -74,17 +77,22 @@ class ValueEqualityTest {
         rightFirst[1] = rightSecond;
         rightSecond[0] = "second";
         rightSecond[1] = rightFirst;
-        assertTrue(equal(leftFirst, rightFirst));
+        var result = await(() -> leftFirst).tryUntil(equalTo(rightFirst));
+        var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+        assertEquals(CONDITION_FAILED, failure.reason());
+        assertInstanceOf(StackOverflowError.class, failure.cause());
+        assertEquals(1, result.totalAttempts());
+        assertTrue(equal(leftFirst, leftFirst));
 
         rightSecond[0] = "different";
         assertFalse(equal(leftFirst, rightFirst));
     }
 
     @Test
-    void comparesVeryDeepNestingWithoutUsingTheJavaStack() {
+    void comparesNestedArraysUsingStandardJdkSemantics() {
         Object left = "leaf";
         Object right = "leaf";
-        for (int index = 0; index < 50_000; index++) {
+        for (int index = 0; index < 64; index++) {
             left = new Object[]{left};
             right = new Object[]{right};
         }
