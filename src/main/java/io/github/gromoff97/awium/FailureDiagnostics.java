@@ -75,19 +75,9 @@ final class FailureDiagnostics {
     }
 
     static AwaitFailure failure(WaitCompletion<?, ?> outcome, Condition<?, ?> condition, WaitConfiguration configuration) {
-        return new FailureDiagnostics(outcome, condition, configuration).failure();
-    }
-
-    private AwaitFailure failure() {
-        boolean restoreInterrupt = currentThread().isInterrupted() || reason == AwaitFailure.Reason.INTERRUPTED;
-        try {
-            String message = message();
-            return new AwaitFailure(reason, message, cause, diagnosticFailures);
-        } finally {
-            if (restoreInterrupt) {
-                currentThread().interrupt();
-            }
-        }
+        var diagnostics = new FailureDiagnostics(outcome, condition, configuration);
+        return new AwaitFailure(diagnostics.reason, diagnostics.message(), diagnostics.cause,
+                diagnostics.diagnosticFailures);
     }
 
     private String uncontrolledHeading() {
