@@ -74,7 +74,7 @@ class DiagnosticsSnapshotTest {
                 () -> timedAwait(() -> "created", config(1, 2, 0), time, time).until(lifecycle(pending(), completed())));
 
         assertEquals("""
-                Acquisition deadline elapsed before the next attempt
+                Acquisition deadline elapsed
 
                 Condition: conditions are satisfied in order
                     Importance: payment must complete its lifecycle
@@ -142,7 +142,7 @@ class DiagnosticsSnapshotTest {
                 () -> timedAwait(() -> "created", config(1, 2, 0), time, time).until(lifecycle(assertedPending, completed())));
 
         assertEquals("""
-                Acquisition deadline elapsed before the next attempt
+                Acquisition deadline elapsed
 
                 Condition: conditions are satisfied in order
                     Importance: payment must complete its lifecycle
@@ -201,14 +201,14 @@ class DiagnosticsSnapshotTest {
     void controlledFailuresRetainTheirSemanticContext() {
         var betweenAssertion = new AssertionError("collection was empty");
         var persistenceAssertion = new AssertionError("optional was empty");
-        WaitCompletion<Object, Object> between = new TimeoutBetweenObservations<>(
+        WaitCompletion<Object, Object> between = new Timeout<>(
                 10 * SECOND, assertionUnsatisfiedAttempt(diagnosticCondition("collection to be non-empty", "Settlement requires an eligible payment", null),
                         null, "collection was empty",
                         betweenAssertion, 4, 9 * SECOND));
-        WaitCompletion<Object, Object> lateUnsatisfied = new LateTimeout<>(
+        WaitCompletion<Object, Object> lateUnsatisfied = new Timeout<>(
                 unsatisfiedAttempt(diagnosticCondition("status equals COMPLETED", "payment must complete", null), "Payment[PENDING]", "status was PENDING",
                         100, 10 * SECOND + 200 * MILLISECOND));
-        WaitCompletion<Object, Object> lateSatisfied = new LateTimeout<>(
+        WaitCompletion<Object, Object> lateSatisfied = new Timeout<>(
                 satisfiedAttempt(diagnosticCondition("status equals COMPLETED", "payment must complete", null), "Payment[COMPLETED]", new Object(), 100,
                         10 * SECOND + 200 * MILLISECOND));
         WaitCompletion<Object, Object> persistence = new PersistenceFailure<>(7 * SECOND,
@@ -234,7 +234,7 @@ class DiagnosticsSnapshotTest {
                         config(100 * MILLISECOND, 10 * SECOND, 5 * SECOND)));
 
         assertEquals("""
-                Acquisition deadline elapsed before the next attempt
+                Acquisition deadline elapsed
 
                 Condition: collection to be non-empty
                     Importance: Settlement requires an eligible payment
@@ -252,7 +252,7 @@ class DiagnosticsSnapshotTest {
                 Cause: AssertionError
                     Message: collection was empty""", betweenFailure.getMessage());
         assertEquals("""
-                Condition remained unsatisfied at or after the acquisition deadline
+                Acquisition deadline elapsed
 
                 Condition: status equals COMPLETED
                     Importance: payment must complete
@@ -267,7 +267,7 @@ class DiagnosticsSnapshotTest {
                     Polling interval: 100 milliseconds""",
                 lateUnsatisfiedFailure.getMessage());
         assertEquals("""
-                Condition became satisfied at or after the acquisition deadline
+                Acquisition deadline elapsed
 
                 Condition: status equals COMPLETED
                     Importance: payment must complete
@@ -416,7 +416,7 @@ class DiagnosticsSnapshotTest {
     @Test
     void assertionCauseIsRetainedAndItsMessageIsReadOnce() {
         var assertion = new CountingAssertion("assertion failed");
-        WaitCompletion<Object, Object> outcome = new LateTimeout<>(
+        WaitCompletion<Object, Object> outcome = new Timeout<>(
                 assertionUnsatisfiedAttempt(CONDITION, "actual", "business mismatch", assertion,
                         2, 3 * SECOND));
 
@@ -426,7 +426,7 @@ class DiagnosticsSnapshotTest {
 
         assertSame(assertion, failure.getCause());
         assertEquals("""
-                Condition remained unsatisfied at or after the acquisition deadline
+                Acquisition deadline elapsed
 
                 Condition: condition
 
@@ -496,7 +496,7 @@ class DiagnosticsSnapshotTest {
     void diagnosticRenderingFailuresPreserveTheTimeoutWithoutACause() {
         var valueCause = new IllegalArgumentException("toString failed");
         var actual = new ThrowingValue(valueCause);
-        WaitCompletion<Object, Object> outcome = new LateTimeout<>(
+        WaitCompletion<Object, Object> outcome = new Timeout<>(
                 unsatisfiedAttempt(diagnosticCondition("condition", "business reason", null), actual, "not ready", 1, 2));
 
         var valueFailure = assertFailure(TIMEOUT,
@@ -506,7 +506,7 @@ class DiagnosticsSnapshotTest {
         assertNull(valueFailure.getCause());
         assertArrayEquals(new Throwable[]{valueCause}, valueFailure.getSuppressed());
         assertEquals("""
-                Condition remained unsatisfied at or after the acquisition deadline
+                Acquisition deadline elapsed
 
                 Condition: condition
                     Importance: business reason
@@ -537,7 +537,7 @@ class DiagnosticsSnapshotTest {
 
         try {
             var failure = assertFailure(TIMEOUT,
-                    () -> complete(new LateTimeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
+                    () -> complete(new Timeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
                             "condition", null, config(1, 2, 0)));
 
             assertNull(failure.getCause());
@@ -577,7 +577,7 @@ class DiagnosticsSnapshotTest {
                         diagnosticCondition("conditions are satisfied in order", null, null), progress));
 
         var failure = assertFailure(TIMEOUT,
-                () -> complete(new LateTimeout<>(attempt), "conditions are satisfied in order",
+                () -> complete(new Timeout<>(attempt), "conditions are satisfied in order",
                         null, config(1, 2, 0)));
 
         assertMessage(failure, "Sequence (captured 1 of 2)",
@@ -605,7 +605,7 @@ class DiagnosticsSnapshotTest {
                         diagnosticCondition("ordered conditions", null, null), progress));
 
         var failure = assertFailure(TIMEOUT,
-                () -> complete(new LateTimeout<>(attempt), "ordered conditions", null, config(1, 2, 0)));
+                () -> complete(new Timeout<>(attempt), "ordered conditions", null, config(1, 2, 0)));
 
         assertNull(failure.getCause());
         assertArrayEquals(new Throwable[]{cause}, failure.getSuppressed());
@@ -708,7 +708,7 @@ class DiagnosticsSnapshotTest {
     void diagnosticRenderingFailureRetainsTheEngineCauseAsPrimary() {
         var diagnosticCause = new IllegalStateException("toString failed");
         var engineCause = new AssertionError("assertion failed");
-        WaitCompletion<Object, Object> outcome = new LateTimeout<>(
+        WaitCompletion<Object, Object> outcome = new Timeout<>(
                 assertionUnsatisfiedAttempt(CONDITION, new ThrowingValue(diagnosticCause),
                         "not ready", engineCause, 1, 2));
 
@@ -736,7 +736,7 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void invalidRenderedValueIsSuppressedOnTheTimeout() {
-        WaitCompletion<Object, Object> rendered = new LateTimeout<>(
+        WaitCompletion<Object, Object> rendered = new Timeout<>(
                 unsatisfiedAttempt(CONDITION, new NullStringValue(), "not ready", 1, 2));
 
         var valueFailure = assertFailure(TIMEOUT,
@@ -992,7 +992,7 @@ class DiagnosticsSnapshotTest {
     void diagnosticErrorsAreRetainedAlongsideTheOriginalFailure() {
         var valueFatal = new InternalError("value fatal");
         var engineCause = new AssertionError("assertion failed");
-        WaitCompletion<Object, Object> valueFailure = new LateTimeout<>(
+        WaitCompletion<Object, Object> valueFailure = new Timeout<>(
                 assertionUnsatisfiedAttempt(CONDITION, new ThrowingValue(valueFatal), "not ready",
                         engineCause, 1, 2));
 
@@ -1025,7 +1025,7 @@ class DiagnosticsSnapshotTest {
                         "condition\rdescription", "business\nreason",
                         config(1, 2, 0)));
         var arrayFailure = assertFailure(TIMEOUT,
-                () -> complete(new LateTimeout<>(
+                () -> complete(new Timeout<>(
                                 unsatisfiedAttempt(CONDITION, new int[] {1, 2}, "not ready", 1, 2)),
                         "condition", null,
                         config(1, 2, 0)));
@@ -1064,7 +1064,7 @@ class DiagnosticsSnapshotTest {
             }
         }};
         var failure = assertThrows(AwaitAssertionError.class,
-                () -> complete(new LateTimeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
+                () -> complete(new Timeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
                         "condition", null, config(1, 2, 0)));
         assertArrayEquals(new Throwable[]{fatal}, failure.getSuppressed());
     }
@@ -1076,7 +1076,7 @@ class DiagnosticsSnapshotTest {
         cycle[0] = cycle;
         Object[] actual = {shared, shared, new Object[] {null, new char[] {'a', 'b'}}, cycle};
         var failure = assertFailure(TIMEOUT,
-                () -> complete(new LateTimeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
+                () -> complete(new Timeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
                         "condition", null, config(1, 2, 0)));
         assertMessage(failure, "[[[1, 2], leaf], [[1, 2], leaf], [null, [a, b]], [[...]]]");
     }

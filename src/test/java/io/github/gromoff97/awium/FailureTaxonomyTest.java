@@ -78,7 +78,7 @@ class FailureTaxonomyTest {
             var attempt = new AttemptRecord<>(1, reason == AwaitFailure.Reason.PERSISTENCE_FAILED
                     ? AttemptRecord.Phase.PERSISTENCE : AttemptRecord.Phase.ACQUISITION, observation);
             WaitCompletion<Object, Object> outcome = switch (reason) {
-                case TIMEOUT -> new WaitCompletion.LateTimeout<>(attempt);
+                case TIMEOUT -> new WaitCompletion.Timeout<>(attempt);
                 case PERSISTENCE_FAILED -> new WaitCompletion.PersistenceFailure<>(0, attempt);
                 default -> new WaitCompletion.Uncontrolled<>(attempt, reason == AwaitFailure.Reason.INTERRUPTED);
             };

@@ -35,8 +35,7 @@ sealed interface WaitCompletion<OBSERVED, RESULT> {
                         case AttemptRecord.Outcome.ConditionFailed<?, ?> value -> CONDITION_FAILED;
                         default -> throw new IllegalArgumentException("attempt is not uncontrolled");
                     };
-            case TimeoutBetweenObservations<?, ?> ignored -> TIMEOUT;
-            case LateTimeout<?, ?> ignored -> TIMEOUT;
+            case Timeout<?, ?> ignored -> TIMEOUT;
             case Satisfied<?, ?> ignored -> throw new IllegalArgumentException("successful outcomes have no failure diagnostics");
         };
     }
@@ -57,10 +56,13 @@ sealed interface WaitCompletion<OBSERVED, RESULT> {
         }
     }
 
-    record TimeoutBetweenObservations<OBSERVED, RESULT>(long elapsedNanos,
-            AttemptRecord<OBSERVED, RESULT> attempt) implements WaitCompletion<OBSERVED, RESULT> {}
+    record Timeout<OBSERVED, RESULT>(long elapsedNanos,
+            AttemptRecord<OBSERVED, RESULT> attempt) implements WaitCompletion<OBSERVED, RESULT> {
 
-    record LateTimeout<OBSERVED, RESULT>(AttemptRecord<OBSERVED, RESULT> attempt) implements WaitCompletion<OBSERVED, RESULT> {}
+        Timeout(AttemptRecord<OBSERVED, RESULT> attempt) {
+            this(attempt.outcome().timing().completionOffset().toNanos(), attempt);
+        }
+    }
 
     record PersistenceFailure<OBSERVED, RESULT>(long acquiredAfterNanos,
             AttemptRecord<OBSERVED, RESULT> attempt) implements WaitCompletion<OBSERVED, RESULT> {}

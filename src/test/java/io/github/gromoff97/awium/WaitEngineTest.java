@@ -136,7 +136,7 @@ class WaitEngineTest {
         });
 
         var timeout = assertInstanceOf(
-                TimeoutBetweenObservations.class, outcome);
+                Timeout.class, outcome);
         var unsatisfied = timeout.attempt();
         assertEquals(List.of(100L, 104L, 108L), starts);
         assertEquals(List.of(4L, 4L, 2L), time.parkRequests);
@@ -159,7 +159,7 @@ class WaitEngineTest {
                     return "actual";
                 }, Conditions.<String>condition("test condition", actual -> satisfied(actual)).preservingAttempt()).waitFor();
 
-        assertInstanceOf(LateTimeout.class, outcome);
+        assertInstanceOf(Timeout.class, outcome);
         assertEquals(1, sourceCalls[0]);
         assertEquals(1, outcome.attempt().number());
     }
@@ -177,10 +177,11 @@ class WaitEngineTest {
                 });
 
         var timeout = assertInstanceOf(
-                LateTimeout.class, outcome);
+                Timeout.class, outcome);
         var unsatisfied = timeout.attempt();
         assertEquals(1, timeout.attempt().number());
         assertEquals(10, completed(unsatisfied));
+        assertEquals(10, timeout.elapsedNanos());
         assertSame(actual, observed(unsatisfied));
         assertEquals("late", mismatch(unsatisfied));
         assertSame(assertion, assertion(unsatisfied));
@@ -199,10 +200,11 @@ class WaitEngineTest {
                 });
 
         var timeout = assertInstanceOf(
-                LateTimeout.class, outcome);
+                Timeout.class, outcome);
         var satisfied = timeout.attempt();
         assertEquals(1, timeout.attempt().number());
         assertEquals(11, completed(satisfied));
+        assertEquals(11, timeout.elapsedNanos());
         assertSame(actual, observed(satisfied));
         assertSame(result, result(satisfied));
     }

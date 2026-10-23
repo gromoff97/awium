@@ -105,13 +105,7 @@ final class FailureDiagnostics {
 
     private String title() {
         return switch (outcome) {
-            case WaitCompletion.TimeoutBetweenObservations<?, ?> ignored ->
-                    "Acquisition deadline elapsed before the next attempt";
-            case WaitCompletion.LateTimeout<?, ?> value ->
-                    value.attempt().outcome() instanceof AttemptRecord.Outcome.Evaluated<?, ?> evaluated
-                            && evaluated.evaluation() instanceof ConditionResult.Satisfied<?>
-                            ? "Condition became satisfied at or after the acquisition deadline"
-                            : "Condition remained unsatisfied at or after the acquisition deadline";
+            case WaitCompletion.Timeout<?, ?> ignored -> "Acquisition deadline elapsed";
             case WaitCompletion.PersistenceFailure<?, ?> ignored ->
                     "Condition did not persist for the required duration";
             case WaitCompletion.Uncontrolled<?, ?> ignored ->
@@ -162,12 +156,12 @@ final class FailureDiagnostics {
                 duration(configuration.upToNanos()));
         long completedAfter = outcome.attempt().outcome().timing().completionOffset().toNanos();
         switch (outcome) {
-            case WaitCompletion.TimeoutBetweenObservations<?, ?> outcome -> {
-                field(out, "Last attempt completed after", duration(completedAfter));
+            case WaitCompletion.Timeout<?, ?> outcome -> {
+                if (outcome.elapsedNanos() != completedAfter) {
+                    field(out, "Last attempt completed after", duration(completedAfter));
+                }
                 field(out, "Elapsed", duration(outcome.elapsedNanos()));
             }
-            case WaitCompletion.LateTimeout<?, ?> outcome ->
-                    field(out, "Elapsed", duration(completedAfter));
             case WaitCompletion.PersistenceFailure<?, ?> outcome -> {
                 long acquiredAfter = outcome.acquiredAfterNanos();
                 field(out, "Acquired after", duration(acquiredAfter));

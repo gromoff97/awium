@@ -52,7 +52,7 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplie
 
             long retrievalStarted = now(clock);
             if (number > 1 && reached(retrievalStarted, deadline) && !currentThread().isInterrupted()) {
-                return new WaitCompletion.TimeoutBetweenObservations<>(retrievalStarted - started, lastUnsatisfied);
+                return new WaitCompletion.Timeout<>(retrievalStarted - started, lastUnsatisfied);
             }
 
             AttemptRecord<OBSERVED, RESULT> attempt = evaluate(ACQUISITION,
@@ -63,7 +63,7 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplie
                 return new WaitCompletion.Uncontrolled<>(attempt);
             }
             if (reached(completed, deadline)) {
-                return new WaitCompletion.LateTimeout<>(attempt);
+                return new WaitCompletion.Timeout<>(attempt);
             }
             if (satisfied(attempt)) {
                 return new WaitCompletion.Satisfied<>(attempt);
