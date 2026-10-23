@@ -157,6 +157,10 @@ class CollectionSelectionConditionsTest {
         assertEquals(3, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.last(value -> value < 5)));
         assertSame(values, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.startsWith(1, 2)));
         assertSame(values, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.endsWith(3, 5)));
+        var pair = List.of(1, 2);
+        var exact = await(() -> pair).usingTime(pollingTime, pollingTime).upTo(java.time.Duration.ofNanos(1));
+        assertSame(pair, exact.until(CollectionConditions.startsWith(1, 2)));
+        assertSame(pair, exact.until(CollectionConditions.endsWith(1, 2)));
         assertSame(values, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.containsSequence(2, 3)));
         assertEquals(Satisfied.class, evaluate(CollectionConditions.containsSequence(1, 2),
                 List.of(1, 2)).getClass());
