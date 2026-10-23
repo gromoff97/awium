@@ -36,9 +36,10 @@ public final class StringConditions {
 
     public static PreservingCondition<String> containsIgnoringCase(String expected) {
         requireNonNull(expected, "expected string must not be null");
+        var pattern = Pattern.compile(expected, Pattern.LITERAL | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         return matching("string contains expected string ignoring case",
                 "string did not contain expected string ignoring case", expectedReference(expected),
-                actual -> containsIgnoringCase(actual, expected));
+                actual -> pattern.matcher(actual).find());
     }
 
     public static PreservingCondition<String> startsWith(String prefix) {
@@ -140,15 +141,6 @@ public final class StringConditions {
     private static PreservingCondition<String> matching(String description, String mismatch,
             Reference<?> reference, Predicate<String> matches) {
         return preservingNonNull("string", description, mismatch, reference, matches);
-    }
-
-    private static boolean containsIgnoringCase(String actual, String expected) {
-        for (int index = 0; index <= actual.length() - expected.length(); index++) {
-            if (actual.regionMatches(true, index, expected, 0, expected.length())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static List<String> nonEmpty(String[] values, String name) {
