@@ -49,7 +49,7 @@ class DiagnosticsSnapshotTest {
         assertMessage(failure,
                 "Condition: value equals expected",
                 "Expected: expected",
-                "Importance: payment must reach the target state");
+                "Because: payment must reach the target state");
     }
 
     @Test
@@ -62,7 +62,7 @@ class DiagnosticsSnapshotTest {
 
         assertMessage(failure,
                 "Sequence (captured 0 of 2)",
-                "Expectation: value equals expected",
+                "Condition: value equals expected",
                 "Expected: first");
     }
 
@@ -77,14 +77,14 @@ class DiagnosticsSnapshotTest {
                 Acquisition deadline elapsed
 
                 Condition: conditions are satisfied in order
-                    Importance: payment must complete its lifecycle
+                    Because: payment must complete its lifecycle
 
                 Attempt: 2
                     Actual: created
 
                 Sequence (captured 1 of 3):
-                    Expectation: payment status is pending
-                    Importance: processing must begin before completion
+                    Condition: payment status is pending
+                    Because: processing must begin before completion
                     Mismatch: payment status was created
 
                 Timing:
@@ -108,14 +108,14 @@ class DiagnosticsSnapshotTest {
                 Condition did not persist for the required duration
 
                 Condition: conditions are satisfied in order
-                    Importance: payment must complete its lifecycle
+                    Because: payment must complete its lifecycle
 
                 Attempt: 4
                     Actual: created
 
                 Sequence (captured 2 of 3):
-                    Expectation: payment status is completed
-                    Importance: completion must remain stable
+                    Condition: payment status is completed
+                    Because: completion must remain stable
                     Mismatch: payment status was created
 
                 Timing:
@@ -145,14 +145,14 @@ class DiagnosticsSnapshotTest {
                 Acquisition deadline elapsed
 
                 Condition: conditions are satisfied in order
-                    Importance: payment must complete its lifecycle
+                    Because: payment must complete its lifecycle
 
                 Attempt: 2
                     Actual: created
 
                 Sequence (captured 1 of 3):
-                    Expectation: payment status is pending
-                    Importance: processing must begin before completion
+                    Condition: payment status is pending
+                    Because: processing must begin before completion
                     Mismatch: payment status was created
 
                 Timing:
@@ -183,14 +183,14 @@ class DiagnosticsSnapshotTest {
                 Condition evaluation failed
 
                 Condition: conditions are satisfied in order
-                    Importance: payment must complete its lifecycle
+                    Because: payment must complete its lifecycle
 
                 Attempt: 2
                     Actual: created
 
                 Sequence (captured 1 of 3):
-                    Expectation: payment status is pending
-                    Importance: processing must begin before completion
+                    Condition: payment status is pending
+                    Because: processing must begin before completion
 
                 Cause: java.lang.IllegalStateException
                     Message: status callback failed""", failure.getMessage());
@@ -237,7 +237,7 @@ class DiagnosticsSnapshotTest {
                 Acquisition deadline elapsed
 
                 Condition: collection to be non-empty
-                    Importance: Settlement requires an eligible payment
+                    Because: Settlement requires an eligible payment
 
                 Attempt: 4
                     Actual: null
@@ -255,7 +255,7 @@ class DiagnosticsSnapshotTest {
                 Acquisition deadline elapsed
 
                 Condition: status equals COMPLETED
-                    Importance: payment must complete
+                    Because: payment must complete
 
                 Attempt: 100
                     Actual: Payment[PENDING]
@@ -270,7 +270,7 @@ class DiagnosticsSnapshotTest {
                 Acquisition deadline elapsed
 
                 Condition: status equals COMPLETED
-                    Importance: payment must complete
+                    Because: payment must complete
 
                 Attempt: 100
                     Actual: Payment[COMPLETED]
@@ -284,7 +284,7 @@ class DiagnosticsSnapshotTest {
                 Condition did not persist for the required duration
 
                 Condition: optional to remain present
-                    Importance: payment must remain available
+                    Because: payment must remain available
 
                 Attempt: 71
                     Actual: Optional.empty
@@ -333,7 +333,7 @@ class DiagnosticsSnapshotTest {
                 Source retrieval failed
 
                 Condition: condition
-                    Importance: business reason
+                    Because: business reason
 
                 Attempt: 2
 
@@ -343,7 +343,7 @@ class DiagnosticsSnapshotTest {
                 Condition evaluation failed
 
                 Condition: condition
-                    Importance: business reason
+                    Because: business reason
 
                 Attempt: 3
                     Actual: actual
@@ -509,7 +509,7 @@ class DiagnosticsSnapshotTest {
                 Acquisition deadline elapsed
 
                 Condition: condition
-                    Importance: business reason
+                    Because: business reason
 
                 Attempt: 1
                     Actual: <value unavailable: diagnostics failed>
@@ -581,7 +581,7 @@ class DiagnosticsSnapshotTest {
                         null, config(1, 2, 0)));
 
         assertMessage(failure, "Sequence (captured 1 of 2)",
-                "Expectation: inner second", "Importance: inner business reason",
+                "Condition: inner second", "Because: inner business reason",
                 "Mismatch: inner mismatch");
     }
 
@@ -659,7 +659,7 @@ class DiagnosticsSnapshotTest {
             assertEquals(List.of(diagnostic), failure.suppressed());
             assertTrue(failure.message().contains("Condition: ordered conditions\n    Expected: root operand"));
             assertTrue(failure.message().contains("Actual: observed value"));
-            assertTrue(failure.message().contains("Expectation: second stage\n    Expected: stage operand"));
+            assertTrue(failure.message().contains("Condition: second stage\n    Expected: stage operand"));
             assertArrayEquals(new int[]{1, 1, 1}, renders);
             assertEquals(1, messageCalls[0]);
         }
@@ -694,8 +694,8 @@ class DiagnosticsSnapshotTest {
 
             assertSame(original, failure.cause());
             assertEquals(List.of(expectedFailure, actualFailure, causeFailure), failure.suppressed());
-            assertTrue(failure.message().contains("Importance: business reason"));
-            assertTrue(failure.message().contains("Expectation: second stage\n    Expected: stage operand"));
+            assertTrue(failure.message().contains("Because: business reason"));
+            assertTrue(failure.message().contains("Condition: second stage\n    Expected: stage operand"));
             assertTrue(failure.message().contains("Mismatch: not ready"));
             assertTrue(failure.message().contains("Message: <value unavailable: diagnostics failed>"));
             assertEquals(1, expected.calls);

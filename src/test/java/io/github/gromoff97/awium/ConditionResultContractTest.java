@@ -44,7 +44,7 @@ class ConditionResultContractTest {
         var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
         assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
         assertTrue(failure.message().contains("Condition: status is ready"));
-        assertTrue(failure.message().contains("Importance: delivery must complete"));
+        assertTrue(failure.message().contains("Because: delivery must complete"));
         assertTrue(failure.message().contains("Actual: pending"));
         assertFalse(failure.message().contains("Mismatch:"));
     }

@@ -164,7 +164,7 @@ class CapturedConditionTest {
                         assertEquals(INTERRUPTED, failure.reason());
                         assertInstanceOf(InterruptedException.class, failure.cause());
                         assertTrue(failure.message().contains("Sequence (captured " + (stage - 1) + " of 2)"));
-                        assertTrue(failure.message().contains("Importance: " + (stage == 1 ? "first" : "second") + " stage"));
+                        assertTrue(failure.message().contains("Because: " + (stage == 1 ? "first" : "second") + " stage"));
                         assertEquals(stage, sources[0]);
                         assertTrue(Thread.currentThread().isInterrupted());
                     } finally {

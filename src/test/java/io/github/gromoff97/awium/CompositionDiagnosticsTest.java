@@ -24,7 +24,7 @@ class CompositionDiagnosticsTest {
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
             assertEquals(TIMEOUT, failure.reason());
             assertTrue(failure.message().contains("Expected: " + (actual == null || actual.isEmpty() ? "customerId" : "Bob")), failure.message());
-            assertTrue(failure.message().contains("Importance: customer is required"), failure.message());
+            assertTrue(failure.message().contains("Because: customer is required"), failure.message());
             assertEquals(3, result.attempts().size());
             assertEquals(3, result.totalAttempts());
         }

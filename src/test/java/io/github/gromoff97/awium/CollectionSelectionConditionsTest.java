@@ -325,7 +325,7 @@ class CollectionSelectionConditionsTest {
                         time, time).until(first.because("a first result is required")));
 
         assertTrue(failure.getMessage().contains("Condition: collection has a first element"));
-        assertTrue(failure.getMessage().contains("Importance: a first result is required"));
+        assertTrue(failure.getMessage().contains("Because: a first result is required"));
         assertTrue(failure.getMessage().contains("Mismatch: collection was empty"));
     }
 

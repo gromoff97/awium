@@ -107,7 +107,7 @@ final class FailureDiagnostics {
     private String message() {
         AttemptRecord<?, ?> attempt = outcome.attempt();
         StringBuilder out = new StringBuilder(title()).append("\n\n");
-        condition(out);
+        condition(out, condition, "");
         String actual = attempt.outcome().timing().observationOffset() != null
                 ? render(() -> renderValue(observed)) : null;
         attempt(out, attempt.number(), actual, sequence == null ? mismatch : null);
@@ -184,11 +184,11 @@ final class FailureDiagnostics {
         }
     }
 
-    private void condition(StringBuilder out) {
-        field(out, "", "Condition", condition.description());
+    private void condition(StringBuilder out, Condition<?, ?> condition, String indentation) {
+        field(out, indentation, "Condition", condition.description());
         reference(out, condition.reference());
         if (condition.explanation() != null) {
-            field(out, "Importance", condition.explanation());
+            field(out, "Because", condition.explanation());
         }
     }
 
@@ -198,11 +198,7 @@ final class FailureDiagnostics {
         }
         out.append('\n').append("Sequence (captured ").append(sequence.capturedStages())
                 .append(" of ").append(sequence.totalStages()).append("):\n");
-        field(out, "Expectation", sequence.condition().description());
-        reference(out, sequence.condition().reference());
-        if (sequence.condition().explanation() != null) {
-            field(out, "Importance", sequence.condition().explanation());
-        }
+        condition(out, sequence.condition(), "    ");
         if (mismatch != null) {
             field(out, "Mismatch", mismatch);
         }
