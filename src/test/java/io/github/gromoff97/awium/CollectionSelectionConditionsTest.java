@@ -7,7 +7,9 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.SequencedCollection;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -22,6 +24,7 @@ import static io.github.gromoff97.awium.Conditions.instanceOf;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -212,6 +215,23 @@ class CollectionSelectionConditionsTest {
         }
         var empty = new ArrayDeque<Integer>();
         assertSame(empty, ((Satisfied<?>) evaluate(CollectionConditions.sorted(Integer::compareTo), empty)).result());
+    }
+
+    @Test
+    void orderedChecksPreserveSequentialAndSequencedContainersWithNullsAndArrays() {
+        var elements = Arrays.asList(null, new int[] {1, 2}, "gap", new int[] {3, 4});
+        List<SequencedCollection<Object>> containers = List.of(
+                new LinkedList<>(elements), new LinkedHashSet<>(elements));
+        for (var actual : containers) {
+            var time = new FakeTime(0);
+            var waiting = await(() -> actual).usingTime(time, time);
+
+            assertSame(actual, waiting.until(CollectionConditions.startsWith(null, new int[] {1, 2}).because("prefix")));
+            assertSame(actual, waiting.until(CollectionConditions.endsWith("gap", new int[] {3, 4}).because("suffix")));
+            assertSame(actual, waiting.until(CollectionConditions.containsSequence(new int[] {1, 2}, "gap")));
+            var captured = waiting.tryUntil(CollectionConditions.containsSubsequence(null, new int[] {3, 4}));
+            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+        }
     }
 
     @Test

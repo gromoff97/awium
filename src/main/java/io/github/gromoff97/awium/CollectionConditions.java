@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.SequencedCollection;
@@ -253,38 +254,35 @@ public final class CollectionConditions {
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> startsWith(ELEMENT... expected) {
         List<? extends ELEMENT> values = stream(nonEmpty(expected, "expected elements")).toList();
         return preserving("collection contains expected prefix", "collection did not contain expected prefix", expectedReference(values),
-                actual -> regionMatches(elements(actual), 0, values));
+                actual -> actual.size() >= values.size() && prefixMatches(actual.iterator(), values));
     }
 
     @SafeVarargs
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> endsWith(ELEMENT... expected) {
         List<? extends ELEMENT> values = stream(nonEmpty(expected, "expected elements")).toList();
         return preserving("collection contains expected suffix", "collection did not contain expected suffix", expectedReference(values),
-                actual -> {
-                    List<?> actualElements = elements(actual);
-                    return regionMatches(actualElements, actualElements.size() - values.size(), values);
-                });
+                actual -> actual.size() >= values.size() && prefixMatches(actual.reversed().iterator(), values.reversed()));
     }
 
     @SafeVarargs
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> containsSequence(ELEMENT... expected) {
         List<? extends ELEMENT> values = stream(nonEmpty(expected, "expected elements")).toList();
         return preserving("collection contains expected sequence", "collection did not contain expected sequence", expectedReference(values),
-                actual -> containsSequence(elements(actual), values));
+                actual -> containsSequence(actual, values));
     }
 
     @SafeVarargs
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> doesNotContainSequence(ELEMENT... expected) {
         List<? extends ELEMENT> values = stream(nonEmpty(expected, "expected elements")).toList();
         return preserving("collection does not contain expected sequence", "collection contained expected sequence", expectedReference(values),
-                actual -> !containsSequence(elements(actual), values));
+                actual -> !containsSequence(actual, values));
     }
 
     @SafeVarargs
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> containsSubsequence(ELEMENT... expected) {
         List<? extends ELEMENT> values = stream(nonEmpty(expected, "expected elements")).toList();
         return preserving("collection contains expected subsequence", "collection did not contain expected subsequence", expectedReference(values),
-                actual -> containsSubsequence(elements(actual), values));
+                actual -> containsSubsequence(actual, values));
     }
 
     @SafeVarargs
@@ -292,7 +290,7 @@ public final class CollectionConditions {
         List<? extends ELEMENT> values = stream(nonEmpty(expected, "expected elements")).toList();
         return preserving("collection does not contain expected subsequence",
                 "collection contained expected subsequence", expectedReference(values),
-                actual -> !containsSubsequence(elements(actual), values));
+                actual -> !containsSubsequence(actual, values));
     }
 
     public static final SelectedCondition<SequencedCollection<?>> first = position("first", SequencedCollection::getFirst);
@@ -396,20 +394,19 @@ public final class CollectionConditions {
                 && exactly(actual.iterator(), expected, Objects::deepEquals);
     }
 
-    private static List<?> elements(SequencedCollection<?> actual) {
-        return actual instanceof List<?> list ? list : new ArrayList<>(actual);
-    }
-
-    private static boolean containsSequence(List<?> actual, List<?> expected) {
-        for (int start = 0; start <= actual.size() - expected.size(); start++) {
-            if (regionMatches(actual, start, expected)) {
-                return true;
-            }
+    private static boolean containsSequence(SequencedCollection<?> actual, List<?> expected) {
+        if (actual.size() < expected.size()) return false;
+        var window = new LinkedList<Object>();
+        for (Object value : actual) {
+            window.addLast(value);
+            if (window.size() < expected.size()) continue;
+            if (prefixMatches(window.iterator(), expected)) return true;
+            window.removeFirst();
         }
         return false;
     }
 
-    private static boolean containsSubsequence(List<?> actual, List<?> expected) {
+    private static boolean containsSubsequence(Iterable<?> actual, List<?> expected) {
         int expectedIndex = 0;
         for (Object value : actual) {
             if (deepEquals(value, expected.get(expectedIndex)) && ++expectedIndex == expected.size()) {
@@ -419,12 +416,9 @@ public final class CollectionConditions {
         return false;
     }
 
-    private static boolean regionMatches(List<?> actual, int start, List<?> expected) {
-        if (start < 0 || start + expected.size() > actual.size()) {
-            return false;
-        }
-        for (int index = 0; index < expected.size(); index++) {
-            if (!deepEquals(actual.get(start + index), expected.get(index))) {
+    private static boolean prefixMatches(Iterator<?> actual, List<?> expected) {
+        for (Object value : expected) {
+            if (!actual.hasNext() || !deepEquals(actual.next(), value)) {
                 return false;
             }
         }
