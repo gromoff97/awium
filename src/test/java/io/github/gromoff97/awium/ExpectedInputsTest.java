@@ -151,7 +151,11 @@ class ExpectedInputsTest {
         var condition = MapConditions.containsEntries(expected);
         expected.put("b", "after");
         expected.remove("a");
-        assertEquals("{b=before, a=null}", condition.definition.reference().value().toString());
+        assertEquals("[b=before, a=null]", condition.definition.reference().value().toString());
+        var entries = assertInstanceOf(List.class, condition.definition.reference().value());
+        assertThrows(UnsupportedOperationException.class, entries::clear);
+        Map.Entry<?, ?> first = assertInstanceOf(Map.Entry.class, entries.getFirst());
+        assertThrows(UnsupportedOperationException.class, () -> first.setValue(null));
     }
 
     @Test

@@ -847,7 +847,7 @@ class DiagnosticsSnapshotTest {
                                 ? ((AwaitResult.Failed<?, ?>) waiting.tryUntil(check)).failure()
                                 : assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure();
                         assertEquals(TIMEOUT, failure.reason());
-                        assertTrue(failure.message().contains("{key=value}"));
+                        assertTrue(failure.message().contains("[key=value]"));
                         assertEquals(1, renders[0]);
                         assertEquals(1, renders[1]);
                         assertFalse(currentThread().isInterrupted());
