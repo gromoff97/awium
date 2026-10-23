@@ -11,13 +11,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
-import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
-import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.WaitCompletion.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -131,7 +131,7 @@ class WaitEngineTest {
         }, actual -> {
             int call = ++calls[0];
             return call == 3
-                    ? assertionUnsatisfied("mismatch " + call, assertion)
+                    ? unsatisfied("mismatch " + call, assertion)
                     : unsatisfied("mismatch " + call);
         });
 
@@ -173,7 +173,7 @@ class WaitEngineTest {
         WaitCompletion<?, Object> outcome = wait(time, config(3, 10, 0),
                 () -> actual, value -> {
                     time.advanceNanos(10);
-                    return assertionUnsatisfied("late", assertion);
+                    return unsatisfied("late", assertion);
                 });
 
         var timeout = assertInstanceOf(
@@ -318,7 +318,7 @@ class WaitEngineTest {
     }
 
     @Test
-    void restoresAnInterruptedExceptionThrownWhileParking() {
+    void recordsAParkingThrowableWithoutSettingTheInterruptFlag() {
         var time = new FakeTime(0);
         var interruption = new InterruptedException("waiting stopped");
 
@@ -331,7 +331,7 @@ class WaitEngineTest {
                 uncontrolled.attempt().outcome());
         assertEquals(2, uncontrolled.attempt().number());
         assertSame(interruption, attempt.failure());
-        assertTrue(currentThread().isInterrupted());
+        assertFalse(currentThread().isInterrupted());
     }
 
     @Test
@@ -410,15 +410,15 @@ class WaitEngineTest {
     }
 
     @Test
-    void fatalParkingSignalsEscapeUnchanged() {
+    void parkingErrorsBecomeUncontrolled() {
         var time = new FakeTime(0);
         var fatal = new InternalError("fatal park");
 
-        assertSame(fatal, assertThrows(InternalError.class,
-                () -> wait(time, config(5, 20, 0), nanos -> {
+        var outcome = wait(time, config(5, 20, 0), nanos -> {
                     throw fatal;
                 }, () -> "actual",
-                        actual -> unsatisfied("not yet"))));
+                        actual -> unsatisfied("not yet"));
+        assertSame(fatal, assertInstanceOf(Uncontrolled.class, outcome).cause());
     }
 
     @Test
@@ -563,7 +563,7 @@ class WaitEngineTest {
                 () -> calls[0] == 0 ? new Object() : failingActual,
                 actual -> calls[0]++ == 0
                         ? satisfied(new Object())
-                        : assertionUnsatisfied("lost", assertion));
+                        : unsatisfied("lost", assertion));
 
         var loss = assertInstanceOf(PersistenceFailure.class, outcome);
         var unsatisfied = loss.attempt();
@@ -645,8 +645,8 @@ class WaitEngineTest {
         return assertInstanceOf(ConditionResult.Unsatisfied.class, evaluated.evaluation()).mismatch();
     }
 
-    private static AssertionError assertion(AttemptRecord<?, ?> attempt) {
+    private static Throwable assertion(AttemptRecord<?, ?> attempt) {
         var evaluated = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, attempt.outcome());
-        return assertInstanceOf(ConditionResult.Unsatisfied.class, evaluated.evaluation()).assertion();
+        return assertInstanceOf(ConditionResult.Unsatisfied.class, evaluated.evaluation()).cause();
     }
 }

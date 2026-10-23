@@ -16,17 +16,17 @@ class AwaitResultTest {
 
     @Test
     void successRetainsLegitimateNullAndCopiesHistory() {
-        var attempt = new AttemptRecord<String, String>(1, ACQUISITION,
+        var attempt = new AttemptRecord<String, String>(300, ACQUISITION,
                 new AttemptRecord.Outcome.Evaluated<>(new AttemptRecord.Timing.AfterObservation(
                                 Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ZERO), null,
                         new ConditionResult.Satisfied<>(null), diagnosticCondition("ready", null, null), null));
         var mutable = new ArrayList<>(List.of(attempt));
 
-        var result = new AwaitResult.Satisfied<>(mutable, 1, null);
+        var result = new AwaitResult.Satisfied<>(mutable, null);
         mutable.clear();
 
         assertEquals(List.of(attempt), result.attempts());
-        assertEquals(1, result.totalAttempts());
+        assertEquals(300, result.totalAttempts());
         assertNull(result.result());
         assertThrows(UnsupportedOperationException.class, () -> result.attempts().clear());
     }
@@ -35,24 +35,19 @@ class AwaitResultTest {
     void failedResultRequiresStructuredFailure() {
         var failure = new AwaitFailure(AwaitFailure.Reason.SOURCE_FAILED, "failed",
                 new IllegalStateException("failed"), List.of());
-        var result = new AwaitResult.Failed<String, String>(List.of(), 0, failure);
+        var result = new AwaitResult.Failed<String, String>(List.of(), failure);
 
         assertSame(failure, result.failure());
+        assertEquals(0, result.totalAttempts());
         assertThrows(NullPointerException.class,
-                () -> new AwaitResult.Failed<String, String>(List.of(), 0, null));
+                () -> new AwaitResult.Failed<String, String>(List.of(), null));
     }
 
     @Test
-    void attemptAndResultCountsHaveConciseValidationMessages() {
+    void attemptNumbersHaveConciseValidationMessages() {
         assertEquals("attempt number must be positive", assertThrows(
                 IllegalArgumentException.class,
                 () -> new AttemptRecord<>(0, null, null)).getMessage());
-        assertEquals("total attempts must be non-negative", assertThrows(
-                IllegalArgumentException.class,
-                () -> new AwaitResult.Satisfied<>(List.of(), -1, null)).getMessage());
-        assertEquals("total attempts must be non-negative", assertThrows(
-                IllegalArgumentException.class,
-                () -> new AwaitResult.Failed<>(List.of(), -1, null)).getMessage());
     }
 
     @Test

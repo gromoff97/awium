@@ -16,9 +16,8 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
-import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.Conditions.asserted;
 import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.Conditions.isNotNull;
@@ -217,7 +216,7 @@ class TryUntilFailureTest {
             for (var path : paths) {
                 try {
                     var result = failed(path.get());
-                    assertEquals(CONDITION_FAILED, result.failure().reason());
+                    assertEquals(interrupt ? INTERRUPTED : CONDITION_FAILED, result.failure().reason());
                     assertInstanceOf(NullPointerException.class, result.failure().cause());
                     assertEquals("condition returned null ConditionResult", result.failure().cause().getMessage());
                     assertEquals(1, result.totalAttempts());
@@ -230,7 +229,7 @@ class TryUntilFailureTest {
     }
 
     @Test
-    void capturedNullEvaluationWinsOverInterruptWithSequenceProgress() {
+    void capturedNullEvaluationRetainsCauseAndProgressWhenInterrupted() {
         var time = new FakeTime(0);
 
         var result = failed(timedAwait(() -> "actual", config(1, 2, 0), time, time).tryUntil(condition("first stage", actual -> {
@@ -241,7 +240,7 @@ class TryUntilFailureTest {
         var observation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, result.attempts().getFirst().outcome());
         var progress = observation.progress();
 
-        assertEquals(CONDITION_FAILED, result.failure().reason());
+        assertEquals(INTERRUPTED, result.failure().reason());
         assertEquals(NullPointerException.class, observation.failure().getClass());
         assertEquals("condition returned null ConditionResult", observation.failure().getMessage());
         assertEquals(1, progress.evaluatedStageNumber());
@@ -268,36 +267,29 @@ class TryUntilFailureTest {
     }
 
     @Test
-    @SuppressWarnings("removal")
-    void fatalSignalsEscapeDiagnosticExecutionUnchanged() {
+    void sourceWaitingAndDiagnosticErrorsAreCapturedUniformly() {
         var pollingTime = new FakeTime(0);
         var sourceFatal = new InternalError("fatal source");
-        var conditionFatal = new ThreadDeath();
         var parkerFatal = new InternalError("fatal parker");
-        var factoryFatal = new InternalError("fatal factory");
         var diagnosticsFatal = new InternalError("fatal diagnostics");
 
-        assertSame(sourceFatal, assertThrows(InternalError.class,
-                () -> await((Source<Object>) () -> { throw sourceFatal; }).usingTime(pollingTime, pollingTime).tryUntil(isNotNull)));
-        assertSame(conditionFatal, assertThrows(ThreadDeath.class,
-                () -> await((Source<Object>) Object::new).usingTime(pollingTime, pollingTime).tryUntil(condition("fatal", actual -> { throw conditionFatal; }))));
+        var source = failed(await((Source<Object>) () -> { throw sourceFatal; })
+                .usingTime(pollingTime, pollingTime).tryUntil(isNotNull));
+        assertSame(sourceFatal, source.failure().cause());
+        assertEquals(SOURCE_FAILED, source.failure().reason());
         var time = new FakeTime(0);
-        assertSame(parkerFatal, assertThrows(InternalError.class,
-                () -> timedAwait(Object::new, config(1, 2, 0), time,
-                        nanos -> { throw parkerFatal; }).tryUntil(condition("never", actual -> unsatisfied("not ready")))));
-        assertSame(factoryFatal, assertThrows(InternalError.class,
-                () -> await((Source<Object>) Object::new).usingTime(pollingTime, pollingTime).tryUntil(condition("fatal factory", () -> { throw factoryFatal; }))));
-        assertSame(diagnosticsFatal, assertThrows(InternalError.class, () -> {
-            var diagnosticTime = new FakeTime(0);
-            Object actual = new Object() {
-                    @Override
-                    public String toString() {
-                        throw diagnosticsFatal;
-                    }
-                };
-            timedAwait(() -> actual, config(1, 2, 0),
-                    diagnosticTime, diagnosticTime).tryUntil(brokenDiagnostics());
-        }));
+        var parking = failed(timedAwait(Object::new, config(1, 2, 0), time,
+                nanos -> { throw parkerFatal; }).tryUntil(condition("never", actual -> unsatisfied("not ready"))));
+        assertSame(parkerFatal, parking.failure().cause());
+        assertEquals(WAIT_FAILED, parking.failure().reason());
+        var diagnosticTime = new FakeTime(0);
+        Object actual = new Object() {
+            @Override
+            public String toString() { throw diagnosticsFatal; }
+        };
+        var diagnostics = failed(timedAwait(() -> actual, config(1, 2, 0),
+                diagnosticTime, diagnosticTime).tryUntil(brokenDiagnostics()));
+        assertSame(diagnosticsFatal, diagnostics.failure().suppressed().getFirst());
     }
 
     private static AwaitResult.Failed<?, ?> assertParity(
@@ -410,6 +402,6 @@ class TryUntilFailureTest {
 
     private static PreservingCondition<Object> brokenDiagnostics() {
         return condition("condition", actual ->
-                assertionUnsatisfied("not ready", new AssertionError("engine")));
+                unsatisfied("not ready", new AssertionError("engine")));
     }
 }

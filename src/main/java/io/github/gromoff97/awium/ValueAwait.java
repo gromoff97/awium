@@ -3,6 +3,7 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.LongConsumer;
@@ -13,6 +14,8 @@ import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.util.Objects.requireNonNull;
 
 public sealed class ValueAwait<OBSERVED> permits Await {
+
+    private static final int MAX_RETAINED_ATTEMPTS = 256;
 
     final Source<? extends OBSERVED> source;
     final WaitConfiguration configuration;
@@ -120,12 +123,17 @@ public sealed class ValueAwait<OBSERVED> permits Await {
     }
 
     final <RESULT> AwaitResult<OBSERVED, RESULT> capture(ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> session) {
-        var history = new AttemptHistory<OBSERVED, RESULT>();
-        var outcome = new WaitEngine<OBSERVED, RESULT>(configuration, clock, parker, source, session).waitFor(history);
+        var attempts = new ArrayList<AttemptRecord<OBSERVED, RESULT>>();
+        var outcome = new WaitEngine<OBSERVED, RESULT>(configuration, clock, parker, source, session).waitFor(attempt -> {
+            if (attempts.size() == MAX_RETAINED_ATTEMPTS) {
+                attempts.remove(1);
+            }
+            attempts.add(attempt);
+        });
         if (outcome instanceof WaitCompletion.Satisfied<OBSERVED, RESULT> success) {
-            return new AwaitResult.Satisfied<>(history.snapshot(), success.attempt().number(), success.result());
+            return new AwaitResult.Satisfied<>(attempts, success.result());
         }
-        return new AwaitResult.Failed<>(history.snapshot(), outcome.attempt().number(),
+        return new AwaitResult.Failed<>(attempts,
                 FailureDiagnostics.failure(outcome, session.condition, configuration));
     }
 }

@@ -101,6 +101,12 @@ class CapturedConditionTest {
         var values = assertInstanceOf(List.class, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
         assertSame(first, values.get(0));
         assertSame(persisted, values.get(1));
+        var earlier = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, result.attempts().get(1).outcome());
+        var earlierValues = assertInstanceOf(List.class,
+                assertInstanceOf(ConditionResult.Satisfied.class, earlier.evaluation()).result());
+        assertSame(first, earlierValues.get(0));
+        assertSame(acquired, earlierValues.get(1));
+        assertThrows(UnsupportedOperationException.class, earlierValues::clear);
         assertEquals(3, reads[0]);
         assertEquals(List.of(AttemptRecord.Phase.ACQUISITION, AttemptRecord.Phase.ACQUISITION, AttemptRecord.Phase.PERSISTENCE),
                 result.attempts().stream().map(AttemptRecord::phase).toList());

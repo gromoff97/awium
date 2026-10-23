@@ -72,7 +72,7 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
         }
 
         record SourceInterrupted<OBSERVED, RESULT>(Timing.AfterObservation timing, OBSERVED observed,
-                InterruptedException failure) implements Outcome<OBSERVED, RESULT> {
+                Throwable failure) implements Outcome<OBSERVED, RESULT> {
 
             public SourceInterrupted {
                 requireNonNull(timing, "timing must not be null");

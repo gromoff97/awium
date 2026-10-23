@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -83,22 +82,13 @@ class WaitConfigTest {
         assertEquals(Long.MAX_VALUE,
                 DEFAULT.withEvery(maximum).everyNanos());
 
-        Duration overflow = ofSeconds(Long.MAX_VALUE);
-        var intervalFailure = assertThrows(IllegalArgumentException.class,
-                () -> DEFAULT.withEvery(overflow));
-        var timeoutFailure = assertThrows(IllegalArgumentException.class,
-                () -> DEFAULT.withUpTo(overflow));
-        var persistenceFailure = assertThrows(IllegalArgumentException.class,
-                () -> DEFAULT.withPersistence(overflow));
-        assertEquals("polling interval exceeds the supported nanosecond range",
-                intervalFailure.getMessage());
-        assertEquals("acquisition timeout exceeds the supported nanosecond range",
-                timeoutFailure.getMessage());
-        assertEquals("persistence duration exceeds the supported nanosecond range",
-                persistenceFailure.getMessage());
-        assertInstanceOf(ArithmeticException.class, intervalFailure.getCause());
-        assertInstanceOf(ArithmeticException.class, timeoutFailure.getCause());
-        assertInstanceOf(ArithmeticException.class, persistenceFailure.getCause());
+        for (Duration overflow : List.of(maximum.plusNanos(1), ofSeconds(Long.MAX_VALUE),
+                ofNanos(Long.MIN_VALUE).minusNanos(1))) {
+            assertThrows(ArithmeticException.class, () -> DEFAULT.withEvery(overflow));
+            assertThrows(ArithmeticException.class, () -> DEFAULT.withUpTo(overflow));
+            assertThrows(ArithmeticException.class, () -> DEFAULT.withPersistence(overflow));
+        }
+        assertThrows(IllegalArgumentException.class, () -> DEFAULT.withEvery(ofNanos(Long.MIN_VALUE)));
     }
 
     @Test

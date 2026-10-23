@@ -14,7 +14,6 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
-import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -156,49 +155,17 @@ class ExpectedInputsTest {
     }
 
     @Test
-    void sameSizeAsReadsOnlySizeDuringEvaluation() {
+    void explicitSizeReadsTheExpectedContainerOnlyDuringConstruction() {
         var collection = new ProbeContainers.ProbeCollection<String>(1);
         var map = new ProbeContainers.ProbeMap<String, String>();
-        var collectionCondition = sameSizeAs(collection);
-        var mapCondition = MapConditions.sameSizeAs(map);
-        assertEquals(0, collection.sizeCalls);
-        assertEquals(0, map.sizeCalls);
-        assertInstanceOf(Unsatisfied.class, evaluate(collectionCondition, null));
-        assertInstanceOf(Unsatisfied.class, evaluate(mapCondition, null));
-        assertEquals(0, collection.sizeCalls);
-        assertEquals(0, map.sizeCalls);
-        assertInstanceOf(Satisfied.class, evaluate(collectionCondition, List.of("a")));
-        assertInstanceOf(Satisfied.class, evaluate(mapCondition, Map.of("a", "b")));
+        var collectionCondition = size(collection.size()).because("same size");
+        var mapCondition = MapConditions.size(map.size()).because("same size");
+        var actualCollection = List.of("a");
+        var actualMap = Map.of("a", "b");
+        assertSame(actualCollection, await(() -> actualCollection).until(collectionCondition));
+        assertSame(actualMap, await(() -> actualMap).until(mapCondition));
         assertEquals(1, collection.sizeCalls);
         assertEquals(1, map.sizeCalls);
-    }
-
-    @Test
-    void sameSizeAsSeesCollectionChangesBetweenPollingAttempts() {
-        var expected = new ArrayList<>(List.of(1, 2));
-        var condition = sameSizeAs(expected);
-        var time = new FakeTime(0);
-        var execution = await(() -> List.of(1)).usingTime(time, nanos -> {
-            time.accept(nanos);
-            expected.remove(Integer.valueOf(2));
-        }).every(ofNanos(1)).upTo(ofNanos(5)).tryUntil(condition);
-
-        assertInstanceOf(AwaitResult.Satisfied.class, execution);
-        assertEquals(2, execution.totalAttempts());
-    }
-
-    @Test
-    void sameSizeAsSeesMapChangesBetweenPollingAttempts() {
-        var expected = new LinkedHashMap<>(Map.of(1, 1, 2, 2));
-        var condition = MapConditions.sameSizeAs(expected);
-        var time = new FakeTime(0);
-        var execution = await(() -> Map.of(1, 1)).usingTime(time, nanos -> {
-            time.accept(nanos);
-            expected.remove(2);
-        }).every(ofNanos(1)).upTo(ofNanos(5)).tryUntil(condition);
-
-        assertInstanceOf(AwaitResult.Satisfied.class, execution);
-        assertEquals(2, execution.totalAttempts());
     }
 
     private static <ACTUAL> void assertStable(List<? extends PreservingCondition<? super ACTUAL>> conditions,

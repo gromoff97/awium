@@ -4,8 +4,10 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -15,14 +17,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AttemptRecord.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
-import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
-import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.Conditions.condition;
 import static java.time.Duration.ofNanos;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -119,7 +121,7 @@ class ObservationTest {
     void evaluatedAttemptsRetainTheExactConditionResult() {
         var actual = new Object();
         for (ConditionResult<Object> original : List.of(satisfied(null),
-                assertionUnsatisfied("not ready", new AssertionError("assertion")))) {
+                unsatisfied("not ready", new AssertionError("assertion")))) {
             var attempt = attempt(() -> actual, value -> original);
             var observation = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, attempt.outcome());
             assertSame(actual, observation.observed());
@@ -133,7 +135,7 @@ class ObservationTest {
         var assertion = new AssertionError("failed");
 
         var ordinary = attempt(() -> actual, value -> ConditionResult.unsatisfied("not ready"));
-        var asserted = attempt(() -> actual, value -> assertionUnsatisfied("assertion did not pass", assertion));
+        var asserted = attempt(() -> actual, value -> unsatisfied("assertion did not pass", assertion));
 
         var ordinaryObservation = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, ordinary.outcome());
         var ordinaryOutcome = assertInstanceOf(ConditionResult.Unsatisfied.class,
@@ -143,10 +145,10 @@ class ObservationTest {
                 assertedObservation.evaluation());
         assertSame(actual, ordinaryObservation.observed());
         assertEquals("not ready", ordinaryOutcome.mismatch());
-        assertNull(ordinaryOutcome.assertion());
+        assertNull(ordinaryOutcome.cause());
         assertSame(actual, assertedObservation.observed());
         assertEquals("assertion did not pass", assertedOutcome.mismatch());
-        assertSame(assertion, assertedOutcome.assertion());
+        assertSame(assertion, assertedOutcome.cause());
     }
 
     @ParameterizedTest
@@ -162,14 +164,41 @@ class ObservationTest {
     }
 
     @ParameterizedTest
-    @MethodSource("uncheckedNonFatalThrowables")
-    void classifiesEveryOtherConditionThrowableAfterObservation(Throwable failure) {
+    @MethodSource("conditionThrowables")
+    void classifiesEveryConditionThrowableAfterObservation(Throwable failure) {
         var actual = new Object();
         var attempt = attempt(() -> actual, value -> throwUnchecked(failure));
 
         var observation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, attempt.outcome());
         assertSame(failure, observation.failure());
         assertSame(actual, observation.observed());
+    }
+
+    @ParameterizedTest
+    @MethodSource("conditionThrowables")
+    void conditionThrowablesStayUncontrolledThroughTerminalsAndComposition(Throwable cause) {
+        PreservingCondition<String> callback = condition("callback", actual -> throwUnchecked(cause));
+        PreservingCondition<String> factory = condition("factory", () -> throwUnchecked(cause));
+        for (var check : List.of(callback, factory)) {
+            var time = new FakeTime(0);
+            var waiting = await(() -> "actual").usingTime(time, time).every(ofNanos(1));
+            assertSame(cause, assertThrows(AwaitExecutionException.class, () -> waiting.until(check)).getCause());
+            List<Supplier<AwaitResult<?, ?>>> waits = List.of(
+                    () -> waiting.tryUntil(check),
+                    () -> await(() -> Optional.of("actual")).usingTime(time, time)
+                            .tryUntil(OptionalConditions.hasValue(check)),
+                    () -> await(() -> List.of("actual", "later")).usingTime(time, time)
+                            .tryUntil(CollectionConditions.single(check)),
+                    () -> waiting.tryUntil(Conditions.isNotNull, check));
+            for (var wait : waits) {
+                AwaitResult.Failed<?, ?> result = assertInstanceOf(AwaitResult.Failed.class, wait.get());
+                assertEquals(AwaitFailure.Reason.CONDITION_FAILED, result.failure().reason());
+                assertSame(cause, result.failure().cause());
+                var attempt = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class,
+                        result.attempts().getLast().outcome());
+                assertSame(cause, attempt.failure());
+            }
+        }
     }
 
     @Test
@@ -189,7 +218,7 @@ class ObservationTest {
     }
 
     @Test
-    void thrownSourceInterruptionIsPreservedAndRestored() {
+    void thrownSourceInterruptionDoesNotSetTheThreadFlag() {
         var interruption = new InterruptedException("source stopped");
         var attempt = attempt(() -> {
             throw interruption;
@@ -197,11 +226,11 @@ class ObservationTest {
 
         var outcome = assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class, attempt.outcome());
         assertSame(interruption, outcome.failure());
-        assertTrue(currentThread().isInterrupted());
+        assertFalse(currentThread().isInterrupted());
     }
 
     @Test
-    void thrownConditionInterruptionIsPreservedWithActualAndRestored() {
+    void thrownConditionInterruptionKeepsTheCauseWithoutSettingTheFlag() {
         var actual = new Object();
         var interruption = new InterruptedException("condition stopped");
         var attempt = attempt(() -> actual, value -> throwUnchecked(interruption));
@@ -209,7 +238,7 @@ class ObservationTest {
         var observation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, attempt.outcome());
         assertSame(interruption, observation.failure());
         assertSame(actual, observation.observed());
-        assertTrue(currentThread().isInterrupted());
+        assertFalse(currentThread().isInterrupted());
     }
 
     @Test
@@ -252,7 +281,7 @@ class ObservationTest {
     }
 
     @Test
-    void clockInterruptionRestoresTheFlagAtEveryExecutionPhase() {
+    void clockThrowableDoesNotSetTheFlagAtAnyExecutionPhase() {
         for (String phase : List.of("initial", "source", "condition", "waiting")) {
             for (boolean capture : List.of(false, true)) {
                 var interruption = new InterruptedException("clock stopped");
@@ -279,7 +308,7 @@ class ObservationTest {
                         if (capture) waiting.tryUntil(condition);
                         else waiting.until(condition);
                     }));
-                    assertTrue(currentThread().isInterrupted(), phase);
+                    assertFalse(currentThread().isInterrupted(), phase);
                     assertEquals(phase.equals("initial") ? 0 : 1, calls[0]);
                     assertEquals(phase.equals("condition") || phase.equals("waiting") ? 1 : 0, calls[1]);
                     assertEquals(phase.equals("waiting") ? 1 : 0, calls[2]);
@@ -360,7 +389,7 @@ class ObservationTest {
                             failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(check)).failure();
                         }
                         if (form.equals("null")) {
-                            assertEquals(AwaitFailure.Reason.CONDITION_FAILED, failure.reason());
+                            assertEquals(AwaitFailure.Reason.INTERRUPTED, failure.reason());
                             assertInstanceOf(NullPointerException.class, failure.cause());
                             assertEquals("condition returned null ConditionResult", failure.cause().getMessage());
                         } else {
@@ -405,7 +434,7 @@ class ObservationTest {
     }
 
     @ParameterizedTest
-    @MethodSource("uncheckedNonFatalThrowables")
+    @MethodSource("conditionThrowables")
     void abruptConditionThrowableWinsOverCallbackSetFlag(Throwable failure) {
         var actual = new Object();
         var attempt = attempt(() -> actual, value -> {
@@ -421,20 +450,13 @@ class ObservationTest {
 
     @ParameterizedTest
     @MethodSource("fatalSignals")
-    void fatalSignalsFromSourceEscapeRawAndSkipCondition(Error fatal) {
-        assertSame(fatal, assertThrows(fatal.getClass(),
-                () -> attempt(() -> throwFailure(fatal), ObservationTest::failIfCalled)));
-    }
-
-    @ParameterizedTest
-    @MethodSource("fatalSignals")
-    void fatalSignalsFromConditionEscapeRaw(Error fatal) {
-        assertSame(fatal, assertThrows(fatal.getClass(),
-                () -> attempt(Object::new, value -> throwUnchecked(fatal))));
+    void sourceErrorsBecomeUncontrolledAndSkipCondition(Error fatal) {
+        var result = attempt(() -> throwFailure(fatal), ObservationTest::failIfCalled);
+        assertSame(fatal, assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class, result.outcome()).failure());
     }
 
     @Test
-    void conditionInterruptionIsRestoredBeforeAnyLaterClockFailure() {
+    void conditionThrowableDoesNotSetTheFlagBeforeALaterClockFailure() {
         for (boolean capture : List.of(false, true)) {
             for (String form : List.of("thrown", "factory")) {
                 var interruption = new InterruptedException("condition stopped");
@@ -452,7 +474,7 @@ class ObservationTest {
                 };
                 var waiting = await(Object::new).usingTime(() -> {
                     if (failed[0]) {
-                        assertTrue(currentThread().isInterrupted(), form);
+                        assertFalse(currentThread().isInterrupted(), form);
                         throw clockFailure;
                     }
                     return 0;
@@ -462,7 +484,7 @@ class ObservationTest {
                         if (capture) waiting.tryUntil(signal);
                         else waiting.until(signal);
                     }));
-                    assertTrue(currentThread().isInterrupted());
+                    assertFalse(currentThread().isInterrupted());
                 } finally {
                     interrupted();
                 }
@@ -470,41 +492,14 @@ class ObservationTest {
         }
     }
 
-    @ParameterizedTest
-    @MethodSource("fatalSignals")
-    void thrownFatalSignalsEscapeBeforeAnotherClockRead(Error fatal) {
-        for (boolean capture : List.of(false, true)) {
-            boolean[] evaluated = {false};
-            var signal = condition("fatal", actual -> {
-                evaluated[0] = true;
-                throw fatal;
-            });
-            var waiting = await(Object::new).usingTime(() -> {
-                if (evaluated[0]) throw new IllegalStateException("completion clock failed");
-                return 0;
-            }, ignored -> {});
-            assertSame(fatal, assertThrows(fatal.getClass(), () -> {
-                if (capture) waiting.tryUntil(signal);
-                else waiting.until(signal);
-            }));
-        }
-    }
-
     @Test
-    void abruptFatalThrowableWinsOverCallbackSetFlag() {
+    void abruptSourceFatalThrowableWinsOverCallbackSetFlag() {
         var sourceFatal = new InternalError("source fatal");
-        assertSame(sourceFatal, assertThrows(InternalError.class, () -> attempt(() -> {
+        var result = attempt(() -> {
             currentThread().interrupt();
             throw sourceFatal;
-        }, ObservationTest::failIfCalled)));
-        assertTrue(currentThread().isInterrupted());
-        interrupted();
-
-        var conditionFatal = new InternalError("condition fatal");
-        assertSame(conditionFatal, assertThrows(InternalError.class, () -> attempt(Object::new, actual -> {
-            currentThread().interrupt();
-            throw conditionFatal;
-        })));
+        }, ObservationTest::failIfCalled);
+        assertSame(sourceFatal, assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class, result.outcome()).failure());
         assertTrue(currentThread().isInterrupted());
     }
 
@@ -512,8 +507,10 @@ class ObservationTest {
         return Stream.of(new Exception("checked"), new AssertionError("assertion"));
     }
 
-    private static Stream<Throwable> uncheckedNonFatalThrowables() {
-        return Stream.of(new RuntimeException("runtime"), new AssertionError("assertion"));
+    private static Stream<Throwable> conditionThrowables() {
+        return Stream.of(new Throwable("direct"), new Exception("checked"), new RuntimeException("runtime"),
+                new AssertionError("assertion"), new LinkageError("linkage"),
+                new InternalError("fatal"), new ThreadDeath());
     }
 
     private static Stream<Error> fatalSignals() {

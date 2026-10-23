@@ -15,7 +15,6 @@ import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 
-import static io.github.gromoff97.awium.CheckedCalls.call;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static java.util.Objects.requireNonNull;
@@ -101,17 +100,17 @@ final class ConditionSupport {
                 : matches.apply(actual) ? satisfied(actual) : unsatisfied(mismatch));
     }
 
-    static <OBSERVED> PreservingCondition<OBSERVED> sized(String subject, int bound, IntPredicate matches,
+    static <OBSERVED> PreservingCondition<OBSERVED> sized(String subject, String measure, int bound, IntPredicate matches,
             String description, ToIntFunction<? super OBSERVED> sizeOf) {
         if (bound < 0) {
-            throw new IllegalArgumentException("size must be non-negative");
+            throw new IllegalArgumentException(measure + " must be non-negative");
         }
         return preserving(description, actual -> {
             if (actual == null) {
                 return unsatisfied(subject + " was null");
             }
-            int size = call(() -> sizeOf.applyAsInt(actual));
-            return matches.test(size) ? satisfied(actual) : unsatisfied(subject + " size was " + size);
+            int size = sizeOf.applyAsInt(actual);
+            return matches.test(size) ? satisfied(actual) : unsatisfied(subject + " " + measure + " was " + size);
         });
     }
 
@@ -122,7 +121,7 @@ final class ConditionSupport {
                 condition.explanation(), condition.reference(), () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> actual == null ? AttemptResult.of(unsatisfied(subject + " was null"))
-                    : evaluateSingle(call(() -> elements.apply(actual)), evaluator);
+                    : evaluateSingle(elements.apply(actual), evaluator);
         });
     }
 
@@ -130,8 +129,8 @@ final class ConditionSupport {
             AwaitAttempt<? super ELEMENT, ? extends RESULT> evaluator) throws Exception {
         AttemptResult.Evaluated<? extends RESULT> result = new AttemptResult.Evaluated<>(
                 unsatisfied("no value matched"), null, null);
-        for (var iterator = call(values::iterator); call(iterator::hasNext);) {
-            ELEMENT value = call(iterator::next);
+        for (var iterator = values.iterator(); iterator.hasNext();) {
+            ELEMENT value = iterator.next();
             switch (evaluator.probe(value)) {
                 case AttemptResult.Uncontrolled<? extends RESULT> failure -> { return failure; }
                 case AttemptResult.Evaluated<? extends RESULT> evaluated -> {

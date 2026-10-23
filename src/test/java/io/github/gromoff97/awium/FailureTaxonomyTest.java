@@ -72,7 +72,7 @@ class FailureTaxonomyTest {
                 case SOURCE_FAILED -> new AttemptRecord.Outcome.SourceRetrievalFailed<>(
                         new AttemptRecord.Timing.BeforeObservation(Duration.ZERO, Duration.ZERO, ofNanos(2)), original);
                 case TIMEOUT, PERSISTENCE_FAILED -> new AttemptRecord.Outcome.Evaluated<>(timing, "actual",
-                        ConditionResult.assertionUnsatisfied("not ready", (AssertionError) original), metadata, null);
+                        ConditionResult.unsatisfied("not ready", original), metadata, null);
                 default -> new AttemptRecord.Outcome.ConditionFailed<>(timing, "actual", original, metadata, null);
             };
             var attempt = new AttemptRecord<>(1, reason == AwaitFailure.Reason.PERSISTENCE_FAILED
@@ -80,7 +80,7 @@ class FailureTaxonomyTest {
             WaitCompletion<Object, Object> outcome = switch (reason) {
                 case TIMEOUT -> new WaitCompletion.LateTimeout<>(attempt);
                 case PERSISTENCE_FAILED -> new WaitCompletion.PersistenceFailure<>(0, attempt);
-                default -> new WaitCompletion.Uncontrolled<>(attempt);
+                default -> new WaitCompletion.Uncontrolled<>(attempt, reason == AwaitFailure.Reason.INTERRUPTED);
             };
             var configuration = AwaitTestAccess.config(1, 2, 0);
             try {

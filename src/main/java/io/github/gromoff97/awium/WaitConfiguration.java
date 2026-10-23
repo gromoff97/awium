@@ -36,10 +36,7 @@ record WaitConfiguration(long everyNanos, long upToNanos, long persistenceNanos)
     }
 
     private static long nanos(Duration value, String label) {
-        try {
-            return requireNonNull(value, label + " must not be null").toNanos();
-        } catch (ArithmeticException overflow) {
-            throw new IllegalArgumentException(label + " exceeds the supported nanosecond range", overflow);
-        }
+        requireNonNull(value, label + " must not be null");
+        return value.toNanos();
     }
 }

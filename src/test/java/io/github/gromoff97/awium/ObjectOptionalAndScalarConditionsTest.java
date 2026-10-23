@@ -198,7 +198,7 @@ class ObjectOptionalAndScalarConditionsTest {
         assertStatus(StringConditions.lengthBetween(4, 6), "failure", Unsatisfied.class);
         assertStatus(StringConditions.nonBlank, null, Unsatisfied.class);
         assertEquals("string length is 5", description(StringConditions.length(5)));
-        assertEquals("string length was not 5",
+        assertEquals("string length was 4",
                 mismatch(evaluate(StringConditions.length(5), "read")));
 
         assertEquals("length must be non-negative",

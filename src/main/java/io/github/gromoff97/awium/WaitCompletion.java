@@ -20,7 +20,7 @@ sealed interface WaitCompletion<OBSERVED, RESULT> {
             case AttemptRecord.Outcome.ConditionFailed<?, ?> value -> value.failure();
             case AttemptRecord.Outcome.Evaluated<?, ?> value -> switch (value.evaluation()) {
                 case ConditionResult.Satisfied<?> ignored -> null;
-                case ConditionResult.Unsatisfied<?> result -> result.assertion();
+                case ConditionResult.Unsatisfied<?> result -> result.cause();
             };
         };
     }
@@ -28,7 +28,7 @@ sealed interface WaitCompletion<OBSERVED, RESULT> {
     default AwaitFailure.Reason failureReason() {
         return switch (this) {
             case PersistenceFailure<?, ?> ignored -> PERSISTENCE_FAILED;
-            case Uncontrolled<?, ?> ignored -> cause() instanceof InterruptedException
+            case Uncontrolled<?, ?> failure -> failure.interrupted()
                     ? INTERRUPTED : switch (attempt().outcome()) {
                         case AttemptRecord.Outcome.WaitingFailed<?, ?> value -> WAIT_FAILED;
                         case AttemptRecord.Outcome.SourceRetrievalFailed<?, ?> value -> SOURCE_FAILED;
@@ -49,7 +49,13 @@ sealed interface WaitCompletion<OBSERVED, RESULT> {
         }
     }
 
-    record Uncontrolled<OBSERVED, RESULT>(AttemptRecord<OBSERVED, RESULT> attempt) implements WaitCompletion<OBSERVED, RESULT> {}
+    record Uncontrolled<OBSERVED, RESULT>(AttemptRecord<OBSERVED, RESULT> attempt,
+            boolean interrupted) implements WaitCompletion<OBSERVED, RESULT> {
+
+        Uncontrolled(AttemptRecord<OBSERVED, RESULT> attempt) {
+            this(attempt, Thread.currentThread().isInterrupted());
+        }
+    }
 
     record TimeoutBetweenObservations<OBSERVED, RESULT>(long elapsedNanos,
             AttemptRecord<OBSERVED, RESULT> attempt) implements WaitCompletion<OBSERVED, RESULT> {}

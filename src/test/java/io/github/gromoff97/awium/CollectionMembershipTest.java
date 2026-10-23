@@ -35,6 +35,51 @@ class CollectionMembershipTest {
     }
 
     @Test
+    void containmentAgreesWithMembershipAcrossNullsDuplicatesAndMissingValues() {
+        var inputs = new ArrayList<List<String>>();
+        inputs.add(new ArrayList<>());
+        List<String> alphabet = asList(null, "a", "b");
+        for (int length = 1; length <= 3; length++) {
+            int size = length;
+            var prefixes = inputs.stream().filter(value -> value.size() == size - 1).toList();
+            for (var prefix : prefixes) {
+                for (String value : alphabet) {
+                    var next = new ArrayList<>(prefix);
+                    next.add(value);
+                    inputs.add(next);
+                }
+            }
+        }
+        for (var expected : inputs) {
+            if (expected.isEmpty()) continue;
+            var condition = contains(expected);
+            for (var actual : inputs) {
+                assertEquals(actual.containsAll(expected), evaluate(condition, actual) instanceof Satisfied<?>);
+            }
+        }
+    }
+
+    @Test
+    void containmentSearchesForEachExpectedValueUsingActualFirstEquality() {
+        record Value(String name, List<String> calls) {
+            @Override
+            public boolean equals(Object other) {
+                if (!(other instanceof Value value)) return false;
+                calls.add(name + "->" + value.name);
+                return name.equals(value.name);
+            }
+
+            @Override
+            public int hashCode() { throw new AssertionError("membership must not hash values"); }
+        }
+        var comparisons = new ArrayList<String>();
+        var actual = List.of(new Value("a", comparisons), new Value("b", comparisons));
+        var expected = List.of(new Value("b", List.of()), new Value("a", List.of()));
+        assertSame(actual, io.github.gromoff97.awium.Await.await(() -> actual).until(contains(expected)));
+        assertEquals(List.of("a->b", "b->b", "a->a"), comparisons);
+    }
+
+    @Test
     void nullAndRepeatedExpectedValuesKeepMembershipSemantics() {
         assertUnsatisfied(evaluate(contains("b"), null));
         assertPair(new Pair("repeated", contains("a", "a"),

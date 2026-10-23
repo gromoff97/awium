@@ -12,7 +12,6 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.CONDITION_FAILED;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.INTERRUPTED;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.matches;
@@ -41,16 +40,11 @@ class ContainerInterruptionTest {
                 };
                 try {
                     var waiting = await(() -> actual);
-                    if (cause instanceof VirtualMachineError) {
-                        Throwable actualCause = throwing
-                                ? assertThrows(VirtualMachineError.class, () -> waiting.until(single))
-                                : assertThrows(VirtualMachineError.class, () -> waiting.tryUntil(single));
-                        assertSame(cause, actualCause);
-                    } else if (throwing) {
-                        assertSame(cause, FailureTaxonomyTest.assertFailure(CONDITION_FAILED, () -> waiting.until(single)).getCause());
+                    if (throwing) {
+                        assertSame(cause, FailureTaxonomyTest.assertFailure(INTERRUPTED, () -> waiting.until(single)).getCause());
                     } else {
                         var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(single)).failure();
-                        assertEquals(CONDITION_FAILED, failure.reason());
+                        assertEquals(INTERRUPTED, failure.reason());
                         assertSame(cause, failure.cause());
                     }
                     assertTrue(Thread.currentThread().isInterrupted());
@@ -62,19 +56,18 @@ class ContainerInterruptionTest {
     }
 
     @Test
-    void interruptionDuringSecondElementExtractionSkipsTheComparator() {
+    void interruptionDuringExtractionStillAllowsTheComparator() {
         var actual = new SignallingList("secondNext");
         int[] comparisons = {0};
         assertInterrupted(() -> await(() -> actual).tryUntil(sorted((left, right) -> {
             comparisons[0]++;
-            Thread.interrupted();
             return 0;
         })), "next", actual.calls);
-        assertEquals(0, comparisons[0]);
+        assertEquals(1, comparisons[0]);
     }
 
     @Test
-    void interruptionAtEveryIteratorBoundaryStopsCollectionConditions() {
+    void interruptionsWithinCollectionTraversalsStopAtTheConditionBoundary() {
         List<Function<Await<SignallingList, String, Void>, AwaitResult<?, ?>>> waits = List.of(
                 waiting -> waiting.tryUntil(all(value -> true)),
                 waiting -> waiting.tryUntil(any(value -> true)),
@@ -101,7 +94,7 @@ class ContainerInterruptionTest {
     }
 
     @Test
-    void interruptionAtEveryMapBoundaryStopsTheFollowingCallback() {
+    void interruptionsWithinMapTraversalsStopAtTheConditionBoundary() {
         List<Function<Await<SignallingMap, Map.Entry<String, String>, String>, AwaitResult<?, ?>>> waits = List.of(
                 waiting -> waiting.tryUntil(MapConditions.singleEntry),
                 waiting -> waiting.tryUntil(MapConditions.singleEntry(matches(value -> true))),
@@ -132,12 +125,12 @@ class ContainerInterruptionTest {
     }
 
     @Test
-    void interruptionDuringMapSizeAndViewsStopsTheFollowingGetter() {
+    void interruptionsDuringMapSizeAndViewsAreDetectedAfterTheCheck() {
         List<Function<SignallingMap, AwaitResult<?, ?>>> waits = List.of(
                 actual -> await(() -> actual).tryUntil(MapConditions.singleEntry),
                 actual -> await(() -> actual).tryUntil(MapConditions.onlyValueFor("key")),
                 actual -> await(() -> actual).tryUntil(MapConditions.containsExactlyEntries(Map.of("key", "ready"))),
-                actual -> await(() -> actual).tryUntil(MapConditions.sameSizeAs(Map.of("key", "ready"))),
+                actual -> await(() -> actual).tryUntil(MapConditions.size(1)),
                 actual -> await(() -> actual).tryUntil(MapConditions.allKeys(value -> true)),
                 actual -> await(() -> actual).tryUntil(MapConditions.containsKeys("key")),
                 actual -> await(() -> actual).tryUntil(MapConditions.containsOnlyKeys("key")),
@@ -152,7 +145,7 @@ class ContainerInterruptionTest {
     }
 
     @Test
-    void interruptionDuringSelectionStopsTheFollowingGetter() {
+    void interruptionsDuringSelectionAreDetectedAfterTheCheck() {
         List<Function<SignallingList, AwaitResult<?, ?>>> waits = List.of(
                 actual -> await(() -> actual).tryUntil(first),
                 actual -> await(() -> actual).tryUntil(last),
@@ -161,7 +154,7 @@ class ContainerInterruptionTest {
                 actual -> await(() -> actual).tryUntil(containsSequence("ready")),
                 actual -> await(() -> actual).tryUntil(startsWith("ready")),
                 actual -> await(() -> actual).tryUntil(endsWith("other")),
-                actual -> await(() -> actual).tryUntil(sameSizeAs(List.of("ready", "other"))));
+                actual -> await(() -> actual).tryUntil(size(2)));
         List<String> boundaries = List.of("isEmpty", "isEmpty", "reversed", "size", "size", "size", "size", "size");
         for (int index = 0; index < waits.size(); index++) {
             var actual = new SignallingList(boundaries.get(index));
@@ -172,10 +165,12 @@ class ContainerInterruptionTest {
 
     private static void assertInterrupted(Supplier<AwaitResult<?, ?>> wait, String boundary, List<String> calls) {
         try {
-            var failure = assertInstanceOf(AwaitResult.Failed.class, wait.get()).failure();
+            var result = assertInstanceOf(AwaitResult.Failed.class, wait.get());
+            assertEquals(1, result.totalAttempts());
+            var failure = result.failure();
             assertEquals(INTERRUPTED, failure.reason(), calls.toString());
             assertInstanceOf(InterruptedException.class, failure.cause());
-            assertEquals(boundary, calls.getLast(), calls.toString());
+            assertTrue(calls.contains(boundary), calls.toString());
             assertTrue(Thread.currentThread().isInterrupted());
         } finally {
             Thread.interrupted();
@@ -190,7 +185,6 @@ class ContainerInterruptionTest {
 
         private void called(String method) {
             calls.add(method);
-            Thread.interrupted();
             if (method.equals(boundary)) Thread.currentThread().interrupt();
         }
 
@@ -251,7 +245,6 @@ class ContainerInterruptionTest {
 
         private void called(String method) {
             calls.add(method);
-            Thread.interrupted();
             if (method.equals(boundary)) Thread.currentThread().interrupt();
         }
 

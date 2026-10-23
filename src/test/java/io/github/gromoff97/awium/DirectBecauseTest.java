@@ -203,7 +203,7 @@ class DirectBecauseTest {
 
         assertEquals(List.of("receipt", "receipt", "receipt", "receipt", "receipt", "receipt"),
                 List.of(payment.id(), created.id(), selected.id(), optional.id(), mapped.id(), sequence.getLast().id()));
-        if (diagnostic instanceof AwaitResult.Satisfied(var history, var attempts, var value)) {
+        if (diagnostic instanceof AwaitResult.Satisfied(var attempts, var value)) {
             assertEquals("receipt", value.id());
             assertSame(actual, value);
         } else {

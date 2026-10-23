@@ -14,8 +14,6 @@ import java.util.function.Function;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 
-import static io.github.gromoff97.awium.CheckedCalls.call;
-import static io.github.gromoff97.awium.CheckedCalls.checkInterruption;
 import static io.github.gromoff97.awium.Condition.required;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
@@ -42,12 +40,12 @@ public final class CollectionConditions {
         if (actual == null) {
             return unsatisfied("collection was null");
         }
-        int size = call(actual::size);
+        int size = actual.size();
         if (size != 1) {
             return unsatisfied("collection size was " + size);
         }
-        var values = call(actual::iterator);
-        return satisfied(call(values::next));
+        var values = actual.iterator();
+        return satisfied(values.next());
     });
     public static final PreservingCondition<Collection<?>> empty = sized(0, size -> size == 0,
             "collection is empty");
@@ -59,7 +57,7 @@ public final class CollectionConditions {
             "collection contained null", actual -> !matchesAny(actual, value -> value == null));
     public static final PreservingCondition<Collection<?>> containsOnlyNulls = preserving("collection contains only nulls",
             "collection did not contain only nulls",
-            actual -> !call(actual::isEmpty) && matchesAll(actual, value -> value == null));
+            actual -> !actual.isEmpty() && matchesAll(actual, value -> value == null));
     public static final PreservingCondition<Collection<?>> hasNoDuplicates = preserving("collection has no duplicates",
             "collection contained duplicates", CollectionConditions::hasUniqueElements);
 
@@ -101,16 +99,6 @@ public final class CollectionConditions {
                 "collection size is between " + lowerBound + " and " + upperBound);
     }
 
-    public static PreservingCondition<Collection<?>> sameSizeAs(Collection<?> expected) {
-        requireNonNull(expected, "expected collection must not be null");
-        return preserving("collection has the same size as expected collection",
-                "collection size did not match expected collection", expectedReference(expected),
-                actual -> {
-                    int size = call(actual::size);
-                    return size == call(expected::size);
-                });
-    }
-
     public static <ELEMENT> SelectedCondition<Collection<? extends ELEMENT>> single(PreservingCondition<? super ELEMENT> nested) {
         return selected(ConditionSupport.single("collection", required(nested).definition, actual -> actual,
                 () -> nested.preservingAttempt()));
@@ -122,7 +110,7 @@ public final class CollectionConditions {
     }
 
     public static <EXPECTED> SelectedCondition<Collection<? super EXPECTED>> single(ComparisonCondition<EXPECTED> nested) {
-        return selected(ConditionSupport.single("collection", required(nested).definition.definition, actual -> actual,
+        return selected(ConditionSupport.single("collection", required(nested).definition, actual -> actual,
                 () -> nested.definition.preservingAttempt()));
     }
 
@@ -274,7 +262,7 @@ public final class CollectionConditions {
         return preserving("collection contains expected suffix", "collection did not contain expected suffix", expectedReference(values),
                 actual -> {
                     List<?> actualElements = elements(actual);
-                    return regionMatches(actualElements, call(actualElements::size) - values.size(), values);
+                    return regionMatches(actualElements, actualElements.size() - values.size(), values);
                 });
     }
 
@@ -319,7 +307,7 @@ public final class CollectionConditions {
     public static <ELEMENT> SelectedCondition<SequencedCollection<? extends ELEMENT>> last(Predicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return selected("collection has a last matching element",
-                actual -> selectFirst(actual == null ? null : call(actual::reversed), predicate));
+                actual -> selectFirst(actual == null ? null : actual.reversed(), predicate));
     }
 
     public static SelectedCondition<List<?>> element(int index) {
@@ -335,12 +323,12 @@ public final class CollectionConditions {
             if (actual == null) {
                 return unsatisfied("list was null");
             }
-            int size = call(actual::size);
+            int size = actual.size();
             if (size <= index) {
                 return unsatisfied("list size was " + size);
             }
-            ELEMENT value = call(() -> actual.get(index));
-            return call(() -> predicate.test(value)) ? satisfied(value) : unsatisfied("element at index " + index + " did not match");
+            ELEMENT value = actual.get(index);
+            return predicate.test(value) ? satisfied(value) : unsatisfied("element at index " + index + " did not match");
         });
     }
 
@@ -350,14 +338,12 @@ public final class CollectionConditions {
     }
 
     private static <ELEMENT> ConditionResult<ELEMENT> selectFirst(Iterable<? extends ELEMENT> actual,
-            Predicate<? super ELEMENT> predicate) throws Exception {
+            Predicate<? super ELEMENT> predicate) {
         if (actual == null) {
             return unsatisfied("collection was null");
         }
-        for (var iterator = call(actual::iterator); call(iterator::hasNext);) {
-            ELEMENT value = call(iterator::next);
-            boolean matching = call(() -> predicate.test(value));
-            if (matching) {
+        for (ELEMENT value : actual) {
+            if (predicate.test(value)) {
                 return satisfied(value);
             }
         }
@@ -370,15 +356,15 @@ public final class CollectionConditions {
             if (actual == null) {
                 return unsatisfied("collection was null");
             }
-            return call(actual::isEmpty)
+            return actual.isEmpty()
                     ? unsatisfied("collection was empty")
-                    : satisfied(call(() -> selector.apply(actual)));
+                    : satisfied(selector.apply(actual));
         });
     }
 
     private static PreservingCondition<Collection<?>> sized(int bound, IntPredicate matches,
             String description) {
-        return ConditionSupport.sized("collection", bound, matches, description, Collection::size);
+        return ConditionSupport.sized("collection", "size", bound, matches, description, Collection::size);
     }
 
     private static <VALUES extends Collection<?>> PreservingCondition<VALUES> preserving(String description, String mismatch,
@@ -391,31 +377,31 @@ public final class CollectionConditions {
         return preservingNonNull("collection", description, mismatch, reference, matches);
     }
 
-    private static boolean exactContent(Collection<?> actual, Collection<?> expected) throws Exception {
-        if (call(actual::size) != expected.size()) {
+    private static boolean exactContent(Collection<?> actual, Collection<?> expected) {
+        if (actual.size() != expected.size()) {
             return false;
         }
-        Iterator<?> left = call(actual::iterator);
+        Iterator<?> left = actual.iterator();
         Iterator<?> right = expected.iterator();
-        while (call(left::hasNext) && right.hasNext()) {
-            if (!equal(call(left::next), right.next())) {
+        while (left.hasNext() && right.hasNext()) {
+            if (!equal(left.next(), right.next())) {
                 return false;
             }
         }
-        return !call(left::hasNext) && !right.hasNext();
+        return !left.hasNext() && !right.hasNext();
     }
 
-    private static boolean exactContentInAnyOrder(Collection<?> actual, Collection<?> expected) throws Exception {
-        return call(actual::size) == expected.size()
-                && exactly(call(actual::iterator), expected, ValueMatching::equal);
+    private static boolean exactContentInAnyOrder(Collection<?> actual, Collection<?> expected) {
+        return actual.size() == expected.size()
+                && exactly(actual.iterator(), expected, ValueMatching::equal);
     }
 
-    private static List<?> elements(SequencedCollection<?> actual) throws Exception {
-        return actual instanceof List<?> list ? list : call(() -> new ArrayList<>(actual));
+    private static List<?> elements(SequencedCollection<?> actual) {
+        return actual instanceof List<?> list ? list : new ArrayList<>(actual);
     }
 
-    private static boolean containsSequence(List<?> actual, List<?> expected) throws Exception {
-        for (int start = 0; start <= call(actual::size) - expected.size(); start++) {
+    private static boolean containsSequence(List<?> actual, List<?> expected) {
+        for (int start = 0; start <= actual.size() - expected.size(); start++) {
             if (regionMatches(actual, start, expected)) {
                 return true;
             }
@@ -423,10 +409,9 @@ public final class CollectionConditions {
         return false;
     }
 
-    private static boolean containsSubsequence(List<?> actual, List<?> expected) throws Exception {
+    private static boolean containsSubsequence(List<?> actual, List<?> expected) {
         int expectedIndex = 0;
-        for (var iterator = call(actual::iterator); call(iterator::hasNext);) {
-            Object value = call(iterator::next);
+        for (Object value : actual) {
             if (equal(value, expected.get(expectedIndex)) && ++expectedIndex == expected.size()) {
                 return true;
             }
@@ -434,23 +419,21 @@ public final class CollectionConditions {
         return false;
     }
 
-    private static boolean regionMatches(List<?> actual, int start, List<?> expected) throws Exception {
-        if (start < 0 || start + expected.size() > call(actual::size)) {
+    private static boolean regionMatches(List<?> actual, int start, List<?> expected) {
+        if (start < 0 || start + expected.size() > actual.size()) {
             return false;
         }
         for (int index = 0; index < expected.size(); index++) {
-            int actualIndex = start + index;
-            if (!equal(call(() -> actual.get(actualIndex)), expected.get(index))) {
+            if (!equal(actual.get(start + index), expected.get(index))) {
                 return false;
             }
         }
         return true;
     }
 
-    private static boolean hasUniqueElements(Collection<?> actual) throws Exception {
+    private static boolean hasUniqueElements(Collection<?> actual) {
         List<Object> seen = new ArrayList<>();
-        for (var iterator = call(actual::iterator); call(iterator::hasNext);) {
-            Object value = call(iterator::next);
+        for (Object value : actual) {
             if (matchesAny(seen, previous -> equal(previous, value))) {
                 return false;
             }
@@ -459,17 +442,15 @@ public final class CollectionConditions {
         return true;
     }
 
-    private static <ELEMENT> boolean isSorted(SequencedCollection<ELEMENT> actual, Comparator<? super ELEMENT> comparator) throws Exception {
-        Iterator<ELEMENT> values = call(actual::iterator);
-        if (!call(values::hasNext)) {
+    private static <ELEMENT> boolean isSorted(SequencedCollection<ELEMENT> actual, Comparator<? super ELEMENT> comparator) {
+        Iterator<ELEMENT> values = actual.iterator();
+        if (!values.hasNext()) {
             return true;
         }
-        ELEMENT previous = call(values::next);
-        while (call(values::hasNext)) {
-            ELEMENT next = call(values::next);
-            checkInterruption();
-            int comparison = comparator.compare(previous, next);
-            if (comparison > 0) {
+        ELEMENT previous = values.next();
+        while (values.hasNext()) {
+            ELEMENT next = values.next();
+            if (comparator.compare(previous, next) > 0) {
                 return false;
             }
             previous = next;

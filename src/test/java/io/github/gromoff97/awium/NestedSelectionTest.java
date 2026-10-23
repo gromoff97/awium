@@ -106,7 +106,7 @@ class NestedSelectionTest {
                 assertTrue(failure.failure().message().contains("reason"));
                 assertEquals(1, checks.get());
                 assertTrue(time.parkRequests.isEmpty());
-                assertEquals(cause instanceof InterruptedException, Thread.currentThread().isInterrupted());
+                assertFalse(Thread.currentThread().isInterrupted());
             } finally {
                 Thread.interrupted();
             }
@@ -114,14 +114,15 @@ class NestedSelectionTest {
     }
 
     @Test
-    void invalidCallbacksAreValidatedAndFatalErrorsEscape() {
+    void invalidCallbacksAreValidatedAndErrorsBecomeUncontrolled() {
         assertEquals("condition must not be null",
                 assertThrows(NullPointerException.class, () -> single((PreservingCondition<String>) null)).getMessage());
         var time = new FakeTime(0);
         var invalid = await(() -> List.of("ready")).usingTime(time, time).tryUntil(single(condition("invalid", (String value) -> null)));
         assertInstanceOf(NullPointerException.class, assertInstanceOf(AwaitResult.Failed.class, invalid).failure().cause());
         var fatal = new OutOfMemoryError("fatal");
-        assertSame(fatal, assertThrows(OutOfMemoryError.class,
-                () -> await(() -> List.of("ready")).usingTime(time, time).tryUntil(single(condition("fatal", value -> { throw fatal; })))));
+        var failed = await(() -> List.of("ready")).usingTime(time, time)
+                .tryUntil(single(condition("fatal", value -> { throw fatal; })));
+        assertSame(fatal, assertInstanceOf(AwaitResult.Failed.class, failed).failure().cause());
     }
 }

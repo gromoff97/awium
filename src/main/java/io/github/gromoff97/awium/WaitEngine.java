@@ -12,7 +12,6 @@ import static java.lang.Math.min;
 import static java.lang.Thread.currentThread;
 
 /** One wait execution, including its observations, timing, and condition session. */
-@SuppressWarnings("removal")
 record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplier clock,
         LongConsumer parker, Source<? extends OBSERVED> source,
         ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> evaluator, long started) {
@@ -115,12 +114,7 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplie
         OBSERVED actual;
         try {
             actual = source.get();
-        } catch (VirtualMachineError | ThreadDeath fatal) {
-            throw fatal;
         } catch (Throwable failure) {
-            if (failure instanceof InterruptedException) {
-                currentThread().interrupt();
-            }
             long completed = now(clock);
             var timing = new AttemptRecord.Timing.BeforeObservation(offset(attemptStarted),
                     offset(retrievalStarted), offset(completed));
@@ -174,8 +168,6 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplie
             }
             try {
                 parker.accept(remaining);
-            } catch (VirtualMachineError | ThreadDeath fatal) {
-                throw fatal;
             } catch (Throwable failure) {
                 return waitingFailure(phase, number, attemptStarted, failure);
             }
@@ -198,9 +190,6 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplie
 
     private AttemptRecord<OBSERVED, RESULT> waitingFailure(AttemptRecord.Phase phase, long number,
             long attemptStarted, Throwable failure) {
-        if (failure instanceof InterruptedException) {
-            currentThread().interrupt();
-        }
         long completed = now(clock);
         var timing = new AttemptRecord.Timing.BeforeRetrieval(offset(attemptStarted), offset(completed));
         return new AttemptRecord<>(number, phase, new AttemptRecord.Outcome.WaitingFailed<>(timing, failure));
@@ -227,9 +216,6 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplie
         boolean interrupted = currentThread().isInterrupted();
         try {
             return clock.getAsLong();
-        } catch (Throwable failure) {
-            interrupted |= failure instanceof InterruptedException;
-            throw failure;
         } finally {
             if (interrupted) currentThread().interrupt();
         }

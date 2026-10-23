@@ -84,7 +84,7 @@ class CollectionSelectionConditionsTest {
                 selected.getFirst().length(), captured.getLast().getFirst().length()));
 
         var diagnostic = await(() -> actual).tryUntil(subsetOf(List.of("ready")).because("allowed states"));
-        if (diagnostic instanceof AwaitResult.Satisfied(var attempts, var count, var value)) {
+        if (diagnostic instanceof AwaitResult.Satisfied(var attempts, var value)) {
             assertSame(actual, value);
             assertEquals(5, value.getFirst().length());
         } else {
@@ -111,7 +111,7 @@ class CollectionSelectionConditionsTest {
         assertEquals(Satisfied.class,
                 evaluate(CollectionConditions.sizeBetween(2, 4), values).getClass());
         assertEquals(Satisfied.class, evaluate(
-                CollectionConditions.sameSizeAs(List.of(1, 2, 3)), values).getClass());
+                CollectionConditions.size(3), values).getClass());
         assertEquals(Unsatisfied.class,
                 evaluate(CollectionConditions.containsOnlyNulls, List.of()).getClass());
         assertEquals(Unsatisfied.class,
@@ -131,14 +131,14 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
-    void sameSizeAsReadsTheCurrentExpectedSizeOnEachEvaluation() {
+    void sizeKeepsTheExpectedSizeFromConstruction() {
         var expected = new ArrayList<>(List.of(1));
-        var condition = CollectionConditions.sameSizeAs(expected);
+        var condition = CollectionConditions.size(expected.size());
         assertEquals(Satisfied.class, evaluate(condition, List.of(1)).getClass());
         expected.add(2);
 
-        assertEquals(Unsatisfied.class, evaluate(condition, List.of(1)).getClass());
-        assertEquals(Satisfied.class, evaluate(condition, List.of(1, 2)).getClass());
+        assertEquals(Satisfied.class, evaluate(condition, List.of(1)).getClass());
+        assertEquals(Unsatisfied.class, evaluate(condition, List.of(1, 2)).getClass());
     }
 
     @Test

@@ -25,7 +25,7 @@ class CompositionDiagnosticsTest {
             assertEquals(TIMEOUT, failure.reason());
             assertTrue(failure.message().contains("Expected: " + (actual == null || actual.isEmpty() ? "customerId" : "Bob")), failure.message());
             assertTrue(failure.message().contains("Importance: customer is required"), failure.message());
-            assertEquals(1, result.attempts().size());
+            assertEquals(3, result.attempts().size());
             assertEquals(3, result.totalAttempts());
         }
     }

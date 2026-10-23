@@ -117,9 +117,9 @@ public final class Condition<OBSERVED, RESULT> {
 
     public static final class ComparisonCondition<EXPECTED> {
 
-        final PreservingCondition<Object> definition;
+        final Condition<Object, Object> definition;
 
-        ComparisonCondition(PreservingCondition<Object> definition) {
+        ComparisonCondition(Condition<Object, Object> definition) {
             this.definition = required(definition);
         }
 

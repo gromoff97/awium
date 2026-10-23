@@ -1,17 +1,18 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.Reference;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static io.github.gromoff97.awium.ValueRendering.preservingInterrupt;
 import static io.github.gromoff97.awium.ValueRendering.renderValue;
 import static java.lang.Thread.currentThread;
 import static java.util.Objects.requireNonNull;
 
-@SuppressWarnings("removal")
 final class FailureDiagnostics {
 
     private static final List<TimeUnit> DURATION_UNITS = List.of(
@@ -30,9 +31,7 @@ final class FailureDiagnostics {
     private final Throwable cause;
     private final AttemptRecord.Progress sequence;
 
-    private String actual;
-    private String referenceValue;
-    private String sequenceReference;
+    private final List<Throwable> diagnosticFailures = new ArrayList<>();
 
     private FailureDiagnostics(WaitCompletion<?, ?> outcome,
             Condition<?, ?> condition, WaitConfiguration configuration) {
@@ -81,33 +80,10 @@ final class FailureDiagnostics {
     }
 
     private AwaitFailure failure() {
-        if (cause instanceof Error fatal
-                && (fatal instanceof VirtualMachineError || fatal instanceof ThreadDeath)) {
-            throw fatal;
-        }
-        boolean restoreInterrupt = currentThread().isInterrupted() || cause instanceof InterruptedException;
+        boolean restoreInterrupt = currentThread().isInterrupted() || reason == AwaitFailure.Reason.INTERRUPTED;
         try {
-            String message;
-            try {
-                message = message(title(), null);
-            } catch (VirtualMachineError | ThreadDeath fatal) {
-                addSuppressed(fatal, cause);
-                throw fatal;
-            } catch (Throwable failure) {
-                restoreInterrupt |= failure instanceof InterruptedException;
-                try {
-                    message = message(title(), failure);
-                } catch (VirtualMachineError | ThreadDeath fatal) {
-                    addSuppressed(fatal, failure);
-                    if (cause != failure) {
-                        addSuppressed(fatal, cause);
-                    }
-                    throw fatal;
-                }
-                return new AwaitFailure(reason, message, cause,
-                        cause == failure ? List.of() : List.of(failure));
-            }
-            return new AwaitFailure(reason, message, cause, List.of());
+            String message = message();
+            return new AwaitFailure(reason, message, cause, diagnosticFailures);
         } finally {
             if (restoreInterrupt) {
                 currentThread().interrupt();
@@ -116,7 +92,7 @@ final class FailureDiagnostics {
     }
 
     private String uncontrolledHeading() {
-        boolean interrupted = cause instanceof InterruptedException;
+        boolean interrupted = reason == AwaitFailure.Reason.INTERRUPTED;
         return switch (outcome.attempt().outcome()) {
             case AttemptRecord.Outcome.WaitingFailed<?, ?> ignored -> interrupted
                     ? "Caller thread was interrupted while waiting" : "Waiting before the next attempt failed";
@@ -125,12 +101,6 @@ final class FailureDiagnostics {
             default -> interrupted
                     ? "Caller thread was interrupted during source retrieval" : "Source retrieval failed";
         };
-    }
-
-    private static void addSuppressed(Throwable failure, Throwable cause) {
-        if (cause != null && cause != failure) {
-            failure.addSuppressed(cause);
-        }
     }
 
     private String title() {
@@ -151,30 +121,39 @@ final class FailureDiagnostics {
         };
     }
 
-    private String message(String title, Throwable diagnosticFailure) {
-        boolean emergency = diagnosticFailure != null;
+    private String message() {
         AttemptRecord<?, ?> attempt = outcome.attempt();
-        StringBuilder out = new StringBuilder(title).append("\n\n");
-        condition(out, emergency);
-        String renderedActual = null;
-        if (attempt.outcome().timing() instanceof AttemptRecord.Timing.AfterObservation) {
-            if (!emergency) {
-                actual = renderValue(observed);
-            }
-            renderedActual = actual == null ? "<value unavailable: diagnostics failed>" : actual;
-        }
-        attempt(out, attempt.number(), renderedActual,
-                sequence == null ? mismatch : null);
-        sequence(out, emergency);
-        if (emergency || !(outcome instanceof WaitCompletion.Uncontrolled<?, ?>)) {
+        StringBuilder out = new StringBuilder(title()).append("\n\n");
+        condition(out);
+        String actual = attempt.outcome().timing() instanceof AttemptRecord.Timing.AfterObservation
+                ? render(() -> renderValue(observed)) : null;
+        attempt(out, attempt.number(), actual, sequence == null ? mismatch : null);
+        sequence(out);
+        if (!(outcome instanceof WaitCompletion.Uncontrolled<?, ?>) || !diagnosticFailures.isEmpty()) {
             timing(out);
         }
-        Throwable failure = emergency ? diagnosticFailure : cause;
-        if (failure != null) {
-            cause(out, emergency ? "Diagnostics failure" : "Cause",
-                    emergency ? emergencyDiagnostic(failure) : throwableDiagnostic(failure));
+        if (cause != null) {
+            out.append('\n');
+            field(out, "", "Cause", typeName(cause));
+            String message = render(() -> causeMessage(cause));
+            if (message != null) field(out, "Message", message);
+        }
+        for (Throwable failure : diagnosticFailures) {
+            out.append('\n');
+            field(out, "", "Diagnostics failure", typeName(failure));
         }
         return out.deleteCharAt(out.length() - 1).toString();
+    }
+
+    private String render(Supplier<String> rendering) {
+        try {
+            return preservingInterrupt(rendering);
+        } catch (Throwable failure) {
+            if (failure != cause && diagnosticFailures.stream().noneMatch(previous -> previous == failure)) {
+                diagnosticFailures.add(failure);
+            }
+            return "<value unavailable: diagnostics failed>";
+        }
     }
 
     private void timing(StringBuilder out) {
@@ -214,30 +193,22 @@ final class FailureDiagnostics {
         }
     }
 
-    private static void cause(StringBuilder out, String label, ThrowableDiagnostic cause) {
-        out.append('\n');
-        field(out, "", label, cause.type());
-        if (cause.message() != null) {
-            field(out, "Message", cause.message());
-        }
-    }
-
-    private void condition(StringBuilder out, boolean emergency) {
+    private void condition(StringBuilder out) {
         field(out, "", "Condition", condition.description());
-        referenceValue = reference(out, condition.reference(), referenceValue, emergency);
+        reference(out, condition.reference());
         if (condition.explanation() != null) {
             field(out, "Importance", condition.explanation());
         }
     }
 
-    private void sequence(StringBuilder out, boolean emergency) {
+    private void sequence(StringBuilder out) {
         if (sequence == null) {
             return;
         }
         out.append('\n').append("Sequence (captured ").append(sequence.capturedStages())
                 .append(" of ").append(sequence.totalStages()).append("):\n");
         field(out, "Expectation", sequence.condition().description());
-        sequenceReference = reference(out, sequence.condition().reference(), sequenceReference, emergency);
+        reference(out, sequence.condition().reference());
         if (sequence.condition().explanation() != null) {
             field(out, "Importance", sequence.condition().explanation());
         }
@@ -246,14 +217,10 @@ final class FailureDiagnostics {
         }
     }
 
-    private static String reference(StringBuilder out, Reference<?> reference,
-            String cached, boolean emergency) {
-        if (reference == null) {
-            return cached;
+    private void reference(StringBuilder out, Reference<?> reference) {
+        if (reference != null) {
+            field(out, reference.label(), render(() -> renderValue(reference.value())));
         }
-        String rendered = emergency ? cached : renderValue(reference.value());
-        field(out, reference.label(), rendered == null ? "<value unavailable: diagnostics failed>" : rendered);
-        return rendered;
     }
 
     private static void field(StringBuilder out, String label, String value) {
@@ -282,10 +249,6 @@ final class FailureDiagnostics {
         return simpleName.isBlank() ? failure.getClass().getName() : simpleName;
     }
 
-    private static ThrowableDiagnostic throwableDiagnostic(Throwable failure) {
-        return new ThrowableDiagnostic(typeName(failure), causeMessage(failure));
-    }
-
     private static String causeMessage(Throwable failure) {
         String message = preservingInterrupt(failure::getMessage);
         if (message == null || message.isBlank()) {
@@ -300,17 +263,4 @@ final class FailureDiagnostics {
         return normalized.substring(0, normalized.offsetByCodePoints(0, prefixLength))
                 .stripTrailing() + STACK_TRACE_HINT;
     }
-
-    private static ThrowableDiagnostic emergencyDiagnostic(Throwable failure) {
-        try {
-            return throwableDiagnostic(failure);
-        } catch (VirtualMachineError | ThreadDeath fatal) {
-            throw fatal;
-        } catch (Throwable ignored) {
-            if (ignored instanceof InterruptedException) currentThread().interrupt();
-            return new ThrowableDiagnostic(typeName(failure), null);
-        }
-    }
-
-    private record ThrowableDiagnostic(String type, String message) {}
 }

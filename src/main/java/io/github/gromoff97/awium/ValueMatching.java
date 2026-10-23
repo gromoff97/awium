@@ -5,65 +5,42 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
-import static io.github.gromoff97.awium.CheckedCalls.call;
-import static io.github.gromoff97.awium.CheckedCalls.checkInterruption;
 import static java.util.Objects.deepEquals;
 
 final class ValueMatching {
 
     private ValueMatching() {}
 
-    @FunctionalInterface
-    interface CheckedBiPredicate<ACTUAL, EXPECTED> {
-        boolean test(ACTUAL actual, EXPECTED expected) throws Exception;
-    }
-
-    static <VALUE> boolean matchesAny(Iterable<VALUE> values, CheckedFunction<? super VALUE, Boolean> matches) throws Exception {
-        for (var iterator = call(values::iterator); call(iterator::hasNext);) {
-            VALUE value = call(iterator::next);
-            boolean matching = call(() -> matches.apply(value));
-            if (matching) {
+    static <VALUE> boolean matchesAny(Iterable<VALUE> values, Predicate<? super VALUE> matches) {
+        for (VALUE value : values) {
+            if (matches.test(value)) {
                 return true;
             }
         }
         return false;
     }
 
-    static <VALUE> boolean matchesAll(Iterable<VALUE> values, CheckedFunction<? super VALUE, Boolean> matches) throws Exception {
-        return !matchesAny(values, value -> !matches.apply(value));
+    static <VALUE> boolean matchesAll(Iterable<VALUE> values, Predicate<? super VALUE> matches) {
+        return !matchesAny(values, value -> !matches.test(value));
     }
 
     static <ACTUAL, EXPECTED> boolean containsAll(Iterable<ACTUAL> actual, Collection<EXPECTED> expected,
-            CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) throws Exception {
-        var remainingExpected = new ArrayList<>(expected);
-        if (remainingExpected.isEmpty()) {
-            return true;
-        }
-        for (var iterator = call(actual::iterator); call(iterator::hasNext);) {
-            ACTUAL value = call(iterator::next);
-            Iterator<EXPECTED> candidates = remainingExpected.iterator();
-            while (candidates.hasNext()) {
-                if (call(() -> matches.test(value, candidates.next()))) {
-                    candidates.remove();
-                }
-            }
-            if (remainingExpected.isEmpty()) {
-                return true;
-            }
-        }
-        return false;
+            BiPredicate<? super ACTUAL, ? super EXPECTED> matches) {
+        return matchesAll(expected, candidate -> matchesAny(actual, value -> matches.test(value, candidate)));
     }
 
     static <ACTUAL, EXPECTED> boolean exactly(Iterator<ACTUAL> actual, Collection<EXPECTED> expected,
-            CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) throws Exception {
+            BiPredicate<? super ACTUAL, ? super EXPECTED> matches) {
         var remainingExpected = new ArrayList<>(expected);
-        while (call(actual::hasNext)) {
-            ACTUAL value = call(actual::next);
+        while (actual.hasNext()) {
+            ACTUAL value = actual.next();
             boolean found = false;
             Iterator<EXPECTED> candidates = remainingExpected.iterator();
             while (candidates.hasNext()) {
-                if (call(() -> matches.test(value, candidates.next()))) {
+                if (matches.test(value, candidates.next())) {
                     candidates.remove();
                     found = true;
                     break;
@@ -76,19 +53,18 @@ final class ValueMatching {
         return remainingExpected.isEmpty();
     }
 
-    static boolean sameDistinctElements(Collection<?> actual, Collection<?> expected) throws Exception {
+    static boolean sameDistinctElements(Collection<?> actual, Collection<?> expected) {
         return matchesAll(actual, value -> matchesAny(expected, candidate -> equal(value, candidate)))
                 && matchesAll(expected, value -> matchesAny(actual, candidate -> equal(candidate, value)));
     }
 
-    static boolean equal(Object actual, Object expected) throws InterruptedException {
+    static boolean equal(Object actual, Object expected) {
         record ValuePair(Object actual, Object expected) {}
 
         var pending = new ArrayDeque<ValuePair>();
         var visited = new HashSet<ValuePair>();
         pending.addLast(new ValuePair(actual, expected));
         while (!pending.isEmpty()) {
-            checkInterruption();
             ValuePair pair = pending.removeLast();
             Object left = pair.actual();
             Object right = pair.expected();
@@ -105,12 +81,8 @@ final class ValueMatching {
                 for (int index = leftObjects.length - 1; index >= 0; index--) {
                     pending.addLast(new ValuePair(leftObjects[index], rightObjects[index]));
                 }
-            } else {
-                boolean matching = deepEquals(left, right);
-                checkInterruption();
-                if (!matching) {
-                    return false;
-                }
+            } else if (!deepEquals(left, right)) {
+                return false;
             }
         }
         return true;

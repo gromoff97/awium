@@ -19,7 +19,6 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.empty;
 import static io.github.gromoff97.awium.MapConditions.nonEmpty;
-import static io.github.gromoff97.awium.MapConditions.sameSizeAs;
 import static io.github.gromoff97.awium.MapConditions.singleEntry;
 import static io.github.gromoff97.awium.MapConditions.size;
 import static io.github.gromoff97.awium.MapConditions.sizeAtLeast;
@@ -149,14 +148,14 @@ class MapSizeConditionsTest {
     }
 
     @Test
-    void sameSizeAsReadsTheCurrentExpectedSizeOnEachEvaluation() {
+    void sizeKeepsTheExpectedSizeFromConstruction() {
         var expected = new LinkedHashMap<>(Map.of(1, 1));
-        var condition = sameSizeAs(expected);
+        var condition = size(expected.size());
         assertEquals(Satisfied.class, evaluate(condition, Map.of(1, 1)).getClass());
         expected.put(2, 2);
 
-        assertUnsatisfied(evaluate(condition, Map.of(1, 1)));
-        assertEquals(Satisfied.class, evaluate(condition, Map.of(1, 1, 2, 2)).getClass());
+        assertEquals(Satisfied.class, evaluate(condition, Map.of(1, 1)).getClass());
+        assertUnsatisfied(evaluate(condition, Map.of(1, 1, 2, 2)));
     }
 
     @Test
@@ -189,8 +188,7 @@ class MapSizeConditionsTest {
                 new Case(sizeGreaterThan(2), 3, 2),
                 new Case(sizeAtLeast(2), 2, 1),
                 new Case(sizeLessThan(2), 1, 2),
-                new Case(sizeAtMost(2), 2, 3),
-                new Case(sameSizeAs(mapWithSize(2)), 2, 1));
+                new Case(sizeAtMost(2), 2, 3));
     }
 
     private record Case(PreservingCondition<Map<?, ?>> condition, int matchingSize,

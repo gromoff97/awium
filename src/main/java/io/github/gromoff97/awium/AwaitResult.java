@@ -14,30 +14,24 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
 
     List<AttemptRecord<OBSERVED, RESULT>> attempts();
 
-    long totalAttempts();
+    default long totalAttempts() {
+        return attempts().isEmpty() ? 0 : attempts().getLast().number();
+    }
 
     record Satisfied<OBSERVED, RESULT>(List<AttemptRecord<OBSERVED, RESULT>> attempts,
-            long totalAttempts, RESULT result) implements AwaitResult<OBSERVED, RESULT> {
+            RESULT result) implements AwaitResult<OBSERVED, RESULT> {
 
         public Satisfied {
             attempts = List.copyOf(attempts);
-            requireCount(totalAttempts);
         }
     }
 
     record Failed<OBSERVED, RESULT>(List<AttemptRecord<OBSERVED, RESULT>> attempts,
-            long totalAttempts, AwaitFailure failure) implements AwaitResult<OBSERVED, RESULT> {
+            AwaitFailure failure) implements AwaitResult<OBSERVED, RESULT> {
 
         public Failed {
             attempts = List.copyOf(attempts);
-            requireCount(totalAttempts);
             requireNonNull(failure, "failure must not be null");
-        }
-    }
-
-    private static void requireCount(long totalAttempts) {
-        if (totalAttempts < 0) {
-            throw new IllegalArgumentException("total attempts must be non-negative");
         }
     }
 }

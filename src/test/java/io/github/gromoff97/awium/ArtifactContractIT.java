@@ -58,7 +58,7 @@ class ArtifactContractIT {
                 "OptionalConditions", "StringConditions", "FailureDiagnostics", "ValueRendering");
         for (String execution : Set.of("Condition", "AwaitAttempt", "ConditionAwaitAttempt", "ConditionSupport",
                 "ConditionResult", "AttemptResult", "SequenceExecution", "WaitEngine",
-                "AttemptHistory", "WaitCompletion", "WaitConfiguration")) {
+                "WaitCompletion", "WaitConfiguration")) {
             Set<String> used = classes.getOrDefault(execution, Set.of());
             assertTrue(used.stream().noneMatch(facade::contains), execution + " -> " + used);
         }
@@ -85,8 +85,6 @@ class ArtifactContractIT {
         assertTrue(diagnostics.stream().noneMatch(terminals::contains), "FailureDiagnostics -> " + diagnostics);
         Set<String> rendering = classes.getOrDefault("ValueRendering", Set.of());
         assertTrue(rendering.stream().allMatch("ValueRendering"::equals), "ValueRendering -> " + rendering);
-        Set<String> callbacks = classes.getOrDefault("CheckedCalls", Set.of());
-        assertTrue(callbacks.stream().allMatch("CheckedCalls"::equals), "CheckedCalls -> " + callbacks);
     }
 
     @Test
@@ -122,8 +120,8 @@ class ArtifactContractIT {
     void implementationTypesAreNotAccessibleToConsumers(@TempDir Path directory) throws Exception {
         for (Class<?> internal : List.of(ConditionSupport.class, AwaitAttempt.class, ConditionAwaitAttempt.class,
                 AttemptResult.class, SequenceExecution.class, WaitEngine.class, WaitConfiguration.class,
-                WaitCompletion.class, AttemptHistory.class,
-                FailureDiagnostics.class, ValueMatching.class, ValueRendering.class, CheckedCalls.class)) {
+                WaitCompletion.class,
+                FailureDiagnostics.class, ValueMatching.class, ValueRendering.class)) {
             assertFalse(java.lang.reflect.Modifier.isPublic(internal.getModifiers()), internal.getName());
         }
         for (boolean modulePath : List.of(false, true)) {

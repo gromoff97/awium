@@ -97,47 +97,38 @@ public final class StringConditions {
     }
 
     public static PreservingCondition<String> length(int expected) {
-        return matchingLength(expected, actual -> actual == expected, "is " + expected, "was not " + expected);
+        return matchingLength(expected, actual -> actual == expected, "is " + expected);
     }
 
     public static PreservingCondition<String> lengthIsNot(int unexpected) {
-        return matchingLength(unexpected, actual -> actual != unexpected, "is not " + unexpected, "was " + unexpected);
+        return matchingLength(unexpected, actual -> actual != unexpected, "is not " + unexpected);
     }
 
     public static PreservingCondition<String> lengthGreaterThan(int lowerBound) {
-        return matchingLength(lowerBound, actual -> actual > lowerBound, "is greater than " + lowerBound,
-                "was not greater than " + lowerBound);
+        return matchingLength(lowerBound, actual -> actual > lowerBound, "is greater than " + lowerBound);
     }
 
     public static PreservingCondition<String> lengthAtLeast(int lowerBound) {
-        return matchingLength(lowerBound, actual -> actual >= lowerBound, "is at least " + lowerBound,
-                "was less than " + lowerBound);
+        return matchingLength(lowerBound, actual -> actual >= lowerBound, "is at least " + lowerBound);
     }
 
     public static PreservingCondition<String> lengthLessThan(int upperBound) {
-        return matchingLength(upperBound, actual -> actual < upperBound, "is less than " + upperBound,
-                "was not less than " + upperBound);
+        return matchingLength(upperBound, actual -> actual < upperBound, "is less than " + upperBound);
     }
 
     public static PreservingCondition<String> lengthAtMost(int upperBound) {
-        return matchingLength(upperBound, actual -> actual <= upperBound, "is at most " + upperBound,
-                "was greater than " + upperBound);
+        return matchingLength(upperBound, actual -> actual <= upperBound, "is at most " + upperBound);
     }
 
     public static PreservingCondition<String> lengthBetween(int lowerBound, int upperBound) {
         validateRange(lowerBound, upperBound, "length");
         return matchingLength(lowerBound, length -> length >= lowerBound && length <= upperBound,
-                "is between " + lowerBound + " and " + upperBound,
-                "was outside " + lowerBound + ".." + upperBound);
+                "is between " + lowerBound + " and " + upperBound);
     }
 
     private static PreservingCondition<String> matchingLength(int bound, IntPredicate matches,
-            String relation, String mismatch) {
-        if (bound < 0) {
-            throw new IllegalArgumentException("length must be non-negative");
-        }
-        return matching("string length " + relation, "string length " + mismatch,
-                actual -> matches.test(actual.length()));
+            String relation) {
+        return ConditionSupport.sized("string", "length", bound, matches, "string length " + relation, String::length);
     }
 
     private static PreservingCondition<String> matching(String description, String mismatch,

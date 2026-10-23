@@ -35,7 +35,7 @@ public final class OptionalConditions {
     }
 
     public static <EXPECTED> SelectedCondition<Optional<? super EXPECTED>> hasValue(ComparisonCondition<EXPECTED> nested) {
-        return selected(compose("optional value: ", required(nested).definition.definition, null, OptionalConditions::present,
+        return selected(compose("optional value: ", required(nested).definition, null, OptionalConditions::present,
                 () -> nested.definition.preservingAttempt()));
     }
 

@@ -16,9 +16,8 @@ import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedMapAwait;
 import static io.github.gromoff97.awium.ConditionSupport.captured;
-import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
-import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.Conditions.equalTo;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
@@ -135,7 +134,7 @@ class DiagnosticsSnapshotTest {
                 "Payments.java", 42);
         assertion.setStackTrace(new StackTraceElement[]{frame});
         PreservingCondition<String> assertedPending = Conditions.<String>condition(
-                "payment status is pending", value -> assertionUnsatisfied(
+                "payment status is pending", value -> unsatisfied(
                         "payment status was created", assertion))
                 .because("processing must begin before completion");
 
@@ -322,7 +321,7 @@ class DiagnosticsSnapshotTest {
         var waitingFailure = assertFailure(WAIT_FAILED,
                 () -> complete(waitingFailure(waitingCause, 4, SECOND), "condition", null,
                         config(SECOND, 10 * SECOND, 0)));
-        var interruptedFailure = assertFailure(INTERRUPTED,
+        var interruptedFailure = assertFailure(WAIT_FAILED,
                 () -> complete(waitingFailure(interruption, 5, SECOND), "condition", null,
                         config(SECOND, 10 * SECOND, 0)));
 
@@ -361,7 +360,7 @@ class DiagnosticsSnapshotTest {
                 Cause: IllegalStateException
                     Message: waiting failed""", waitingFailure.getMessage());
         assertEquals("""
-                Caller thread was interrupted while waiting
+                Waiting before the next attempt failed
 
                 Condition: condition
 
@@ -373,7 +372,7 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void interruptionFlagIsRestoredAfterUserDiagnosticsClearIt() {
-        var interruption = new InterruptedException("stopped") {
+        var interruption = new IllegalStateException("stopped") {
             @Override
             public String getMessage() {
                 assertTrue(interrupted());
@@ -404,7 +403,7 @@ class DiagnosticsSnapshotTest {
         });
 
         try {
-            var failure = assertFailure(CONDITION_FAILED,
+            var failure = assertFailure(INTERRUPTED,
                     () -> await((Source<Object>) Object::new).usingTime(pollingTime, pollingTime).until(condition));
 
             assertSame(cause, failure.getCause());
@@ -521,13 +520,12 @@ class DiagnosticsSnapshotTest {
                     Elapsed: 2 nanoseconds
                     Polling interval: 1 nanosecond
 
-                Diagnostics failure: IllegalArgumentException
-                    Message: toString failed""", valueFailure.getMessage());
+                Diagnostics failure: IllegalArgumentException""", valueFailure.getMessage());
         assertEquals(1, actual.calls);
     }
 
     @Test
-    void diagnosticRenderingInterruptionRestoresTheInterruptFlag() {
+    void diagnosticThrowableDoesNotSetTheInterruptFlag() {
         var interruption = new InterruptedException("diagnostics interrupted");
         Object actual = new Object() {
             @Override
@@ -544,7 +542,7 @@ class DiagnosticsSnapshotTest {
 
             assertNull(failure.getCause());
             assertArrayEquals(new Throwable[]{interruption}, failure.getSuppressed());
-            assertTrue(currentThread().isInterrupted());
+            assertFalse(currentThread().isInterrupted());
         } finally {
             interrupted();
         }
@@ -564,12 +562,12 @@ class DiagnosticsSnapshotTest {
         assertMessage(failure,
                 "Condition: value equals expected",
                 "Expected: <value unavailable: diagnostics failed>",
-                "Actual: <value unavailable: diagnostics failed>");
+                "Actual: java.lang.Object@");
         assertEquals(1, expected.calls);
     }
 
     @Test
-    void emergencyDiagnosticsRetainSequenceContext() {
+    void diagnosticFailureRetainsSequenceContext() {
         var cause = new IllegalArgumentException("actual toString failed");
         var progress = new AttemptRecord.Progress(1, 2, 2,
                 diagnosticCondition("inner second", "inner business reason", null));
@@ -588,7 +586,7 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void emergencyDiagnosticsReuseTheActualRenderedBeforeASequenceReferenceFails() {
+    void sequenceRenderingFailureDoesNotRepeatActualRendering() {
         int[] calls = {0};
         Object actual = new Object() {
             @Override
@@ -618,7 +616,7 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void emergencyDiagnosticsReuseEveryValueAfterTheOriginalCauseMessageFails() {
+    void causeMessageFailureDoesNotRepeatValueRendering() {
         for (boolean capture : List.of(false, true)) {
             int[] renders = {0, 0, 0};
             Object[] values = new Object[3];
@@ -646,7 +644,7 @@ class DiagnosticsSnapshotTest {
                     new Condition.Reference<>("Expected", values[2])));
             var check = new Condition<Object, Object>("ordered conditions", null,
                     new Condition.Reference<>("Expected", values[0]),
-                    () -> actual -> new AttemptResult.Evaluated<>(assertionUnsatisfied("not ready", original), null, progress));
+                    () -> actual -> new AttemptResult.Evaluated<>(unsatisfied("not ready", original), null, progress));
             var time = new FakeTime(0);
             var waiting = timedAwait(() -> {
                 time.advanceNanos(2);
@@ -663,6 +661,45 @@ class DiagnosticsSnapshotTest {
             assertTrue(failure.message().contains("Actual: observed value"));
             assertTrue(failure.message().contains("Expectation: second stage\n    Expected: stage operand"));
             assertArrayEquals(new int[]{1, 1, 1}, renders);
+            assertEquals(1, messageCalls[0]);
+        }
+    }
+
+    @Test
+    void failuresInSeveralFieldsDoNotHideLaterFieldsOrTheOriginalCause() {
+        for (boolean capture : List.of(false, true)) {
+            var expectedFailure = new IllegalStateException("expected rendering failed");
+            var actualFailure = new InternalError("actual rendering failed");
+            var causeFailure = new IllegalArgumentException("cause message failed");
+            var expected = new ThrowingValue(expectedFailure);
+            var actual = new ThrowingValue(actualFailure);
+            int[] messageCalls = {0};
+            var original = new AssertionError() {
+                @Override
+                public String getMessage() {
+                    messageCalls[0]++;
+                    throw causeFailure;
+                }
+            };
+            var progress = new AttemptRecord.Progress(1, 2, 2, diagnosticCondition("second stage", null,
+                    new Condition.Reference<>("Expected", "stage operand")));
+            var check = new Condition<Object, Object>("ordered conditions", "business reason",
+                    new Condition.Reference<>("Expected", expected),
+                    () -> value -> new AttemptResult.Evaluated<>(unsatisfied("not ready", original), null, progress));
+            var time = new FakeTime(0);
+            var waiting = timedAwait(() -> actual, config(1, 2, 0), time, time);
+            AwaitFailure failure = capture
+                    ? ((AwaitResult.Failed<?, ?>) waiting.tryUntil(check)).failure()
+                    : assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure();
+
+            assertSame(original, failure.cause());
+            assertEquals(List.of(expectedFailure, actualFailure, causeFailure), failure.suppressed());
+            assertTrue(failure.message().contains("Importance: business reason"));
+            assertTrue(failure.message().contains("Expectation: second stage\n    Expected: stage operand"));
+            assertTrue(failure.message().contains("Mismatch: not ready"));
+            assertTrue(failure.message().contains("Message: <value unavailable: diagnostics failed>"));
+            assertEquals(1, expected.calls);
+            assertEquals(1, actual.calls);
             assertEquals(1, messageCalls[0]);
         }
     }
@@ -708,8 +745,8 @@ class DiagnosticsSnapshotTest {
 
         assertNull(valueFailure.getCause());
         assertTrue(valueFailure.getSuppressed()[0] instanceof NullPointerException);
-        assertMessage(valueFailure, "value toString() must not return null",
-                "Timing:");
+        assertEquals("value toString() must not return null", valueFailure.getSuppressed()[0].getMessage());
+        assertMessage(valueFailure, "Diagnostics failure: NullPointerException", "Timing:");
     }
 
     @Test
@@ -852,7 +889,7 @@ class DiagnosticsSnapshotTest {
                 Object expected = array ? new Object[] {signalling, clearing} : signalling;
                 var check = ConditionSupport.condition("ready",
                         new Condition.Reference<>("Expected", expected),
-                        value -> assertionUnsatisfied("not ready", original));
+                        value -> unsatisfied("not ready", original));
                 var time = new FakeTime(0);
                 var waiting = timedAwait(() -> clearing, config(1, 2, 0), time, time);
                 try {
@@ -874,55 +911,45 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void emergencyRenderingPreservesInterruptionEvenWhenItsMessageThrowsAFatalError() {
+    void diagnosticFailurePreservesTheInterruptRaisedByRendering() {
         for (boolean capture : List.of(false, true)) {
-            for (boolean fatalMessage : List.of(false, true)) {
-                var fatal = new InternalError("fatal message");
-                var diagnostic = new IllegalStateException("diagnostic failed") {
-                    @Override
-                    public String getMessage() {
-                        interrupted();
-                        if (fatalMessage) throw fatal;
-                        return super.getMessage();
-                    }
-                };
-                Object actual = new Object() {
-                    @Override
-                    public String toString() {
-                        currentThread().interrupt();
-                        throw diagnostic;
-                    }
-                };
-                var original = new AssertionError("not ready");
-                var time = new FakeTime(0);
-                var waiting = timedAwait(() -> actual, config(1, 2, 0), time, time);
-                var check = condition("ready", value -> assertionUnsatisfied("not ready", original));
-                try {
-                    if (fatalMessage) {
-                        var thrown = assertThrows(InternalError.class, () -> {
-                            if (capture) waiting.tryUntil(check);
-                            else waiting.until(check);
-                        });
-                        assertSame(fatal, thrown);
-                        assertArrayEquals(new Throwable[] {diagnostic, original}, thrown.getSuppressed());
-                    } else {
-                        AwaitFailure failure = capture
-                                ? ((AwaitResult.Failed<?, ?>) waiting.tryUntil(check)).failure()
-                                : assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure();
-                        assertEquals(TIMEOUT, failure.reason());
-                        assertSame(original, failure.cause());
-                        assertSame(diagnostic, failure.suppressed().getFirst());
-                    }
-                    assertTrue(currentThread().isInterrupted());
-                } finally {
+            int[] messageCalls = {0};
+            var diagnostic = new IllegalStateException() {
+                @Override
+                public String getMessage() {
+                    messageCalls[0]++;
                     interrupted();
+                    throw new InternalError("diagnostic messages must not be evaluated");
                 }
+            };
+            Object actual = new Object() {
+                @Override
+                public String toString() {
+                    currentThread().interrupt();
+                    throw diagnostic;
+                }
+            };
+            var original = new AssertionError("not ready");
+            var time = new FakeTime(0);
+            var waiting = timedAwait(() -> actual, config(1, 2, 0), time, time);
+            var check = condition("ready", value -> unsatisfied("not ready", original));
+            try {
+                AwaitFailure failure = capture
+                        ? ((AwaitResult.Failed<?, ?>) waiting.tryUntil(check)).failure()
+                        : assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure();
+                assertEquals(TIMEOUT, failure.reason());
+                assertSame(original, failure.cause());
+                assertSame(diagnostic, failure.suppressed().getFirst());
+                assertEquals(0, messageCalls[0]);
+                assertTrue(currentThread().isInterrupted());
+            } finally {
+                interrupted();
             }
         }
     }
 
     @Test
-    void emergencyMessageInterruptionRetainsTheFlagAndOriginalCauses() {
+    void diagnosticErrorMessagesAreNotEvaluatedRecursively() {
         for (boolean capture : List.of(false, true)) {
             var interruption = new InterruptedException("diagnostic message interrupted");
             int[] messageCalls = {0};
@@ -941,7 +968,7 @@ class DiagnosticsSnapshotTest {
                 time.advanceNanos(2);
                 return actual;
             }).usingTime(time, time).upTo(Duration.ofNanos(2));
-            var check = condition("not ready", value -> assertionUnsatisfied("not ready", original));
+            var check = condition("not ready", value -> unsatisfied("not ready", original));
             try {
                 AwaitFailure failure;
                 if (capture) {
@@ -953,8 +980,8 @@ class DiagnosticsSnapshotTest {
                 assertSame(original, failure.cause());
                 assertSame(diagnostic, failure.suppressed().getFirst());
                 assertEquals(1, actual.calls);
-                assertEquals(1, messageCalls[0]);
-                assertTrue(currentThread().isInterrupted());
+                assertEquals(0, messageCalls[0]);
+                assertFalse(currentThread().isInterrupted());
             } finally {
                 interrupted();
             }
@@ -962,85 +989,32 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void fatalDiagnosticSignalsEscapeUnchanged() {
+    void diagnosticErrorsAreRetainedAlongsideTheOriginalFailure() {
         var valueFatal = new InternalError("value fatal");
         var engineCause = new AssertionError("assertion failed");
         WaitCompletion<Object, Object> valueFailure = new LateTimeout<>(
                 assertionUnsatisfiedAttempt(CONDITION, new ThrowingValue(valueFatal), "not ready",
                         engineCause, 1, 2));
 
-        InternalError thrown = assertThrows(InternalError.class,
+        var thrown = assertThrows(AwaitAssertionError.class,
                 () -> complete(valueFailure, "condition", null,
                         config(1, 2, 0)));
-        assertSame(valueFatal, thrown);
-        assertEquals(1, thrown.getSuppressed().length);
-        assertSame(engineCause, thrown.getSuppressed()[0]);
+        assertSame(engineCause, thrown.getCause());
+        assertArrayEquals(new Throwable[]{valueFatal}, thrown.getSuppressed());
     }
 
     @Test
     @SuppressWarnings("removal")
-    void fatalUncontrolledCausesEscapeUnchangedAtTheLowLevelBoundary() {
+    void uncontrolledCausesRemainDiagnosticDataRegardlessOfThrowableType() {
         var virtualMachineError = new InternalError("fatal");
         var threadDeath = new ThreadDeath();
 
-        assertSame(virtualMachineError, assertThrows(InternalError.class,
+        assertSame(virtualMachineError, assertThrows(AwaitExecutionException.class,
                 () -> complete(sourceFailure(virtualMachineError, 1, 0),
-                        "condition", null, config(1, 2, 0))));
-        assertSame(threadDeath, assertThrows(ThreadDeath.class,
+                        "condition", null, config(1, 2, 0))).getCause());
+        assertSame(threadDeath, assertThrows(AwaitExecutionException.class,
                 () -> complete(conditionFailure(CONDITION, null, threadDeath, 1, 0),
-                        "condition", null, config(1, 2, 0))));
-    }
-
-    @Test
-    void fatalEmergencyDiagnosticsRetainDiagnosticAndEngineCauses() {
-        var fatal = new InternalError("emergency diagnostics fatal");
-        var diagnosticCause = new FatalMessageException(fatal);
-        var engineCause = new AssertionError("assertion failed");
-        WaitCompletion<Object, Object> outcome = new LateTimeout<>(
-                assertionUnsatisfiedAttempt(CONDITION, new ThrowingValue(diagnosticCause),
-                        "not ready", engineCause, 1, 2));
-        InternalError thrown = assertThrows(InternalError.class,
-                () -> Await.complete(outcome, CONDITION, config(1, 2, 0)));
-
-        assertSame(fatal, thrown);
-        assertEquals(2, thrown.getSuppressed().length);
-        assertSame(diagnosticCause, thrown.getSuppressed()[0]);
-        assertSame(engineCause, thrown.getSuppressed()[1]);
-    }
-
-    @Test
-    void diagnosticInterruptionSurvivesFatalEmergencyFormatting() {
-        for (boolean captured : List.of(false, true)) {
-            var fatal = new InternalError("emergency message fatal");
-            var interruption = new InterruptedException("diagnostics stopped") {
-                @Override
-                public String getMessage() {
-                    throw fatal;
-                }
-            };
-            Object actual = new Object() {
-                @Override
-                public String toString() {
-                    throwUnchecked(interruption);
-                    return "unreachable";
-                }
-            };
-            var original = new AssertionError("not ready");
-            var time = new FakeTime(0);
-            var waiting = timedAwait(() -> actual, config(1, 2, 0), time, time);
-            var condition = Conditions.<Object>condition("ready", value -> assertionUnsatisfied("not ready", original));
-            try {
-                var thrown = assertThrows(InternalError.class, () -> {
-                    if (captured) waiting.tryUntil(condition);
-                    else waiting.until(condition);
-                });
-                assertSame(fatal, thrown);
-                assertArrayEquals(new Throwable[] {interruption, original}, thrown.getSuppressed());
-                assertTrue(currentThread().isInterrupted());
-            } finally {
-                interrupted();
-            }
-        }
+                        "condition", null, config(1, 2, 0))).getCause());
     }
 
     @Test
@@ -1081,7 +1055,7 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void fatalErrorsFromArrayElementToStringStillEscapeUnchanged() {
+    void errorsFromArrayElementToStringAreRetainedAsDiagnosticFailures() {
         var fatal = new InternalError("array element fatal");
         Object[] actual = {new Object() {
             @Override
@@ -1089,9 +1063,10 @@ class DiagnosticsSnapshotTest {
                 throw fatal;
             }
         }};
-        assertSame(fatal, assertThrows(InternalError.class,
+        var failure = assertThrows(AwaitAssertionError.class,
                 () -> complete(new LateTimeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
-                        "condition", null, config(1, 2, 0))));
+                        "condition", null, config(1, 2, 0)));
+        assertArrayEquals(new Throwable[]{fatal}, failure.getSuppressed());
     }
 
     @Test
@@ -1239,20 +1214,6 @@ class DiagnosticsSnapshotTest {
         public String getMessage() {
             calls++;
             return message;
-        }
-    }
-
-    private static final class FatalMessageException extends RuntimeException {
-
-        private final Error fatal;
-
-        private FatalMessageException(Error fatal) {
-            this.fatal = fatal;
-        }
-
-        @Override
-        public String getMessage() {
-            throw fatal;
         }
     }
 }

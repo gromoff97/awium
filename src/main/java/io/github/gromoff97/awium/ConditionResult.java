@@ -11,22 +11,11 @@ import static java.util.Objects.requireNonNull;
  */
 public sealed interface ConditionResult<RESULT> {
 
-    default <NEXT> ConditionResult<NEXT> continueIfSatisfied(Function<? super RESULT, ? extends ConditionResult<? extends NEXT>> continuation) {
-        requireNonNull(continuation, "continuation must not be null");
-        return switch (this) {
-            case Satisfied<? extends RESULT> value -> {
-                var next = continuation.apply(value.result());
-                yield next == null ? null : next.mapSatisfied(result -> result);
-            }
-            case Unsatisfied<?> value -> new Unsatisfied<>(value.mismatch(), value.assertion());
-        };
-    }
-
     default <NEXT> ConditionResult<NEXT> mapSatisfied(Function<? super RESULT, ? extends NEXT> mapping) {
         requireNonNull(mapping, "mapping must not be null");
         return switch (this) {
             case Satisfied<? extends RESULT> value -> new Satisfied<>(mapping.apply(value.result()));
-            case Unsatisfied<?> value -> new Unsatisfied<>(value.mismatch(), value.assertion());
+            case Unsatisfied<?> value -> new Unsatisfied<>(value.mismatch(), value.cause());
         };
     }
 
@@ -38,13 +27,13 @@ public sealed interface ConditionResult<RESULT> {
         return new Unsatisfied<>(mismatch, null);
     }
 
-    static <RESULT> ConditionResult<RESULT> assertionUnsatisfied(String mismatch, AssertionError cause) {
+    static <RESULT> ConditionResult<RESULT> unsatisfied(String mismatch, Throwable cause) {
         return new Unsatisfied<>(nonBlank(mismatch, "mismatch"), requireNonNull(cause, "cause must not be null"));
     }
 
     record Satisfied<RESULT>(RESULT result) implements ConditionResult<RESULT> {}
 
-    record Unsatisfied<RESULT>(String mismatch, AssertionError assertion) implements ConditionResult<RESULT> {
+    record Unsatisfied<RESULT>(String mismatch, Throwable cause) implements ConditionResult<RESULT> {
 
         public Unsatisfied {
             mismatch = nonBlank(mismatch, "mismatch");
