@@ -17,7 +17,7 @@ class AwaitResultTest {
     @Test
     void successRetainsLegitimateNullAndCopiesHistory() {
         var attempt = new AttemptRecord<String, String>(300, ACQUISITION,
-                new AttemptRecord.Outcome.Evaluated<>(new AttemptRecord.Timing.AfterObservation(
+                new AttemptRecord.Outcome.Evaluated<>(new AttemptRecord.Timing(
                                 Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ZERO), null,
                         new ConditionResult.Satisfied<>(null), diagnosticCondition("ready", null, null), null));
         var mutable = new ArrayList<>(List.of(attempt));

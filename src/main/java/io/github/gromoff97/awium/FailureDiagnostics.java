@@ -108,7 +108,7 @@ final class FailureDiagnostics {
         AttemptRecord<?, ?> attempt = outcome.attempt();
         StringBuilder out = new StringBuilder(title()).append("\n\n");
         condition(out);
-        String actual = attempt.outcome().timing() instanceof AttemptRecord.Timing.AfterObservation
+        String actual = attempt.outcome().timing().observationOffset() != null
                 ? render(() -> renderValue(observed)) : null;
         attempt(out, attempt.number(), actual, sequence == null ? mismatch : null);
         sequence(out);

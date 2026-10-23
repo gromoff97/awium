@@ -116,8 +116,8 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplie
             actual = source.get();
         } catch (Throwable failure) {
             long completed = now(clock);
-            var timing = new AttemptRecord.Timing.BeforeObservation(offset(attemptStarted),
-                    offset(retrievalStarted), offset(completed));
+            var timing = new AttemptRecord.Timing(offset(attemptStarted),
+                    offset(retrievalStarted), null, offset(completed));
             return new AttemptRecord<>(number, phase,
                     new AttemptRecord.Outcome.SourceRetrievalFailed<>(timing, failure));
         }
@@ -136,7 +136,7 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplie
 
         var evaluation = ConditionAwaitAttempt.withInterruption(execution);
 
-        AttemptRecord.Timing.AfterObservation timing = afterObservation(attemptStarted,
+        AttemptRecord.Timing timing = afterObservation(attemptStarted,
                 retrievalStarted, observed, completed);
         var condition = evaluation.conditionOr(evaluator.condition);
         AttemptRecord.Outcome<OBSERVED, RESULT> outcome = switch (evaluation) {
@@ -148,9 +148,9 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplie
         return new AttemptRecord<>(number, phase, outcome);
     }
 
-    private AttemptRecord.Timing.AfterObservation afterObservation(long attemptStarted, long retrievalStarted,
+    private AttemptRecord.Timing afterObservation(long attemptStarted, long retrievalStarted,
             long observed, long completed) {
-        return new AttemptRecord.Timing.AfterObservation(offset(attemptStarted),
+        return new AttemptRecord.Timing(offset(attemptStarted),
                 offset(retrievalStarted),
                 offset(observed),
                 offset(completed));
@@ -191,7 +191,7 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplie
     private AttemptRecord<OBSERVED, RESULT> waitingFailure(AttemptRecord.Phase phase, long number,
             long attemptStarted, Throwable failure) {
         long completed = now(clock);
-        var timing = new AttemptRecord.Timing.BeforeRetrieval(offset(attemptStarted), offset(completed));
+        var timing = new AttemptRecord.Timing(offset(attemptStarted), null, null, offset(completed));
         return new AttemptRecord<>(number, phase, new AttemptRecord.Outcome.WaitingFailed<>(timing, failure));
     }
 

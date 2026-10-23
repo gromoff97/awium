@@ -74,6 +74,8 @@ class ObservationTest {
                     AwaitResult.Failed<?, ?> failure = assertInstanceOf(AwaitResult.Failed.class, result);
                     var attempt = failure.attempts().getLast();
                     var outcome = assertInstanceOf(AttemptRecord.Outcome.WaitingFailed.class, attempt.outcome());
+                    assertNull(outcome.timing().retrievalOffset());
+                    assertNull(outcome.timing().observationOffset());
                     assertEquals(boundary.equals("afterInterval") ? 6 : 2, outcome.timing().completionOffset().toNanos());
                     assertEquals(persistence == 0 ? ACQUISITION : AttemptRecord.Phase.PERSISTENCE, attempt.phase());
                     assertEquals(2, attempt.number());
@@ -160,6 +162,7 @@ class ObservationTest {
         assertSame(failure, outcome.failure());
         assertEquals(Duration.ZERO, outcome.timing().startOffset());
         assertEquals(Duration.ZERO, outcome.timing().retrievalOffset());
+        assertNull(outcome.timing().observationOffset());
         assertEquals(Duration.ZERO, outcome.timing().completionOffset());
     }
 

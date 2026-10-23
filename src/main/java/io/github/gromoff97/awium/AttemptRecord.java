@@ -31,7 +31,7 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
         Timing timing();
 
         /** An observation and the exact result returned by its condition evaluation. */
-        record Evaluated<OBSERVED, RESULT>(Timing.AfterObservation timing,
+        record Evaluated<OBSERVED, RESULT>(Timing timing,
                 OBSERVED observed, ConditionResult<? extends RESULT> evaluation,
                 Condition<?, ?> condition, Progress progress) implements Outcome<OBSERVED, RESULT> {
 
@@ -42,7 +42,7 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
             }
         }
 
-        record ConditionFailed<OBSERVED, RESULT>(Timing.AfterObservation timing,
+        record ConditionFailed<OBSERVED, RESULT>(Timing timing,
                 OBSERVED observed, Throwable failure, Condition<?, ?> condition,
                 Progress progress) implements Outcome<OBSERVED, RESULT> {
 
@@ -53,7 +53,7 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
             }
         }
 
-        record WaitingFailed<OBSERVED, RESULT>(Timing.BeforeRetrieval timing,
+        record WaitingFailed<OBSERVED, RESULT>(Timing timing,
                 Throwable failure) implements Outcome<OBSERVED, RESULT> {
 
             public WaitingFailed {
@@ -62,7 +62,7 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
             }
         }
 
-        record SourceRetrievalFailed<OBSERVED, RESULT>(Timing.BeforeObservation timing,
+        record SourceRetrievalFailed<OBSERVED, RESULT>(Timing timing,
                 Throwable failure) implements Outcome<OBSERVED, RESULT> {
 
             public SourceRetrievalFailed {
@@ -71,7 +71,7 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
             }
         }
 
-        record SourceInterrupted<OBSERVED, RESULT>(Timing.AfterObservation timing, OBSERVED observed,
+        record SourceInterrupted<OBSERVED, RESULT>(Timing timing, OBSERVED observed,
                 Throwable failure) implements Outcome<OBSERVED, RESULT> {
 
             public SourceInterrupted {
@@ -93,38 +93,13 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
         }
     }
 
-    public sealed interface Timing {
+    // A null checkpoint means this stage was not reached.
+    public record Timing(Duration startOffset, Duration retrievalOffset,
+            Duration observationOffset, Duration completionOffset) {
 
-        Duration startOffset();
-
-        Duration completionOffset();
-
-        record BeforeRetrieval(Duration startOffset, Duration completionOffset) implements Timing {
-
-            public BeforeRetrieval {
-                requireNonNull(startOffset, "start offset must not be null");
-                requireNonNull(completionOffset, "completion offset must not be null");
-            }
-        }
-
-        record BeforeObservation(Duration startOffset, Duration retrievalOffset, Duration completionOffset) implements Timing {
-
-            public BeforeObservation {
-                requireNonNull(startOffset, "start offset must not be null");
-                requireNonNull(retrievalOffset, "retrieval offset must not be null");
-                requireNonNull(completionOffset, "completion offset must not be null");
-            }
-        }
-
-        record AfterObservation(Duration startOffset, Duration retrievalOffset,
-                Duration observationOffset, Duration completionOffset) implements Timing {
-
-            public AfterObservation {
-                requireNonNull(startOffset, "start offset must not be null");
-                requireNonNull(retrievalOffset, "retrieval offset must not be null");
-                requireNonNull(observationOffset, "observation offset must not be null");
-                requireNonNull(completionOffset, "completion offset must not be null");
-            }
+        public Timing {
+            requireNonNull(startOffset, "start offset must not be null");
+            requireNonNull(completionOffset, "completion offset must not be null");
         }
     }
 }

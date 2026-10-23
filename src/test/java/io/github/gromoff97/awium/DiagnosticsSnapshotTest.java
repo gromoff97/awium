@@ -1136,16 +1136,14 @@ class DiagnosticsSnapshotTest {
 
     private static WaitCompletion<Object, Object> sourceFailure(
             Throwable failure, long number, long completedNanos) {
-        var timing = new AttemptRecord.Timing.BeforeObservation(
-                Duration.ZERO, Duration.ZERO, Duration.ofNanos(completedNanos));
+        var timing = new AttemptRecord.Timing(Duration.ZERO, Duration.ZERO, null, Duration.ofNanos(completedNanos));
         return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION,
                 new AttemptRecord.Outcome.SourceRetrievalFailed<>(timing, failure)));
     }
 
     private static WaitCompletion<Object, Object> waitingFailure(
             Throwable failure, long number, long completedNanos) {
-        var timing = new AttemptRecord.Timing.BeforeRetrieval(
-                Duration.ZERO, Duration.ofNanos(completedNanos));
+        var timing = new AttemptRecord.Timing(Duration.ZERO, null, null, Duration.ofNanos(completedNanos));
         return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION,
                 new AttemptRecord.Outcome.WaitingFailed<>(timing, failure)));
     }
@@ -1157,10 +1155,9 @@ class DiagnosticsSnapshotTest {
                         failure, expectation, null)));
     }
 
-    private static AttemptRecord.Timing.AfterObservation afterObservation(
+    private static AttemptRecord.Timing afterObservation(
             long completedNanos) {
-        return new AttemptRecord.Timing.AfterObservation(Duration.ZERO,
-                Duration.ZERO, Duration.ZERO, Duration.ofNanos(completedNanos));
+        return new AttemptRecord.Timing(Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ofNanos(completedNanos));
     }
 
     private static void assertMessage(Throwable failure, String... fragments) {

@@ -63,14 +63,13 @@ class FailureTaxonomyTest {
                 case INTERRUPTED -> new InterruptedException("interrupted");
                 default -> new IllegalStateException("operation failed");
             };
-            var timing = new AttemptRecord.Timing.AfterObservation(Duration.ZERO,
-                    Duration.ZERO, Duration.ZERO, ofNanos(2));
+            var timing = new AttemptRecord.Timing(Duration.ZERO, Duration.ZERO, Duration.ZERO, ofNanos(2));
             var metadata = diagnosticCondition("ready", null, new Condition.Reference<>("Expected", expected));
             AttemptRecord.Outcome<Object, Object> observation = switch (reason) {
                 case WAIT_FAILED -> new AttemptRecord.Outcome.WaitingFailed<>(
-                        new AttemptRecord.Timing.BeforeRetrieval(Duration.ZERO, ofNanos(2)), original);
+                        new AttemptRecord.Timing(Duration.ZERO, null, null, ofNanos(2)), original);
                 case SOURCE_FAILED -> new AttemptRecord.Outcome.SourceRetrievalFailed<>(
-                        new AttemptRecord.Timing.BeforeObservation(Duration.ZERO, Duration.ZERO, ofNanos(2)), original);
+                        new AttemptRecord.Timing(Duration.ZERO, Duration.ZERO, null, ofNanos(2)), original);
                 case TIMEOUT, PERSISTENCE_FAILED -> new AttemptRecord.Outcome.Evaluated<>(timing, "actual",
                         ConditionResult.unsatisfied("not ready", original), metadata, null);
                 default -> new AttemptRecord.Outcome.ConditionFailed<>(timing, "actual", original, metadata, null);
