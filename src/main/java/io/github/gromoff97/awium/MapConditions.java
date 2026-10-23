@@ -131,32 +131,32 @@ public final class MapConditions {
 
     public static <KEY> PreservingCondition<Map<? extends KEY, ?>> allKeys(Predicate<? super KEY> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return preserving("all map keys match", "not all map keys matched", actual -> matchesAll(actual.keySet(), predicate::test));
+        return preserving("all map keys match", "not all map keys matched", actual -> matchesAll(actual.keySet(), predicate));
     }
 
     public static <KEY> PreservingCondition<Map<? extends KEY, ?>> anyKey(Predicate<? super KEY> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return preserving("any map key matches", "no map key matched", actual -> matchesAny(actual.keySet(), predicate::test));
+        return preserving("any map key matches", "no map key matched", actual -> matchesAny(actual.keySet(), predicate));
     }
 
     public static <KEY> PreservingCondition<Map<? extends KEY, ?>> noKey(Predicate<? super KEY> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return preserving("no map key matches", "a map key matched", actual -> !matchesAny(actual.keySet(), predicate::test));
+        return preserving("no map key matches", "a map key matched", actual -> !matchesAny(actual.keySet(), predicate));
     }
 
     public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> allValues(Predicate<? super VALUE> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return preserving("all map values match", "not all map values matched", actual -> matchesAll(actual.values(), predicate::test));
+        return preserving("all map values match", "not all map values matched", actual -> matchesAll(actual.values(), predicate));
     }
 
     public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> anyValue(Predicate<? super VALUE> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return preserving("any map value matches", "no map value matched", actual -> matchesAny(actual.values(), predicate::test));
+        return preserving("any map value matches", "no map value matched", actual -> matchesAny(actual.values(), predicate));
     }
 
     public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> noValue(Predicate<? super VALUE> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return preserving("no map value matches", "a map value matched", actual -> !matchesAny(actual.values(), predicate::test));
+        return preserving("no map value matches", "a map value matched", actual -> !matchesAny(actual.values(), predicate));
     }
 
     public static <KEY> MapValueCondition<Map<? super KEY, ?>> valueFor(KEY key) {
@@ -311,12 +311,12 @@ public final class MapConditions {
     }
 
     private static <ENTRIES extends Map<?, ?>> PreservingCondition<ENTRIES> preserving(String description, String mismatch,
-            CheckedFunction<? super ENTRIES, Boolean> matches) {
+            Predicate<? super ENTRIES> matches) {
         return preservingNonNull("map", description, mismatch, matches);
     }
 
     private static <ENTRIES extends Map<?, ?>> PreservingCondition<ENTRIES> preserving(String description, String mismatch,
-            Reference<?> reference, CheckedFunction<? super ENTRIES, Boolean> matches) {
+            Reference<?> reference, Predicate<? super ENTRIES> matches) {
         return preservingNonNull("map", description, mismatch, reference, matches);
     }
 

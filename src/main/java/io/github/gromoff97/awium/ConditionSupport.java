@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
@@ -83,21 +84,21 @@ final class ConditionSupport {
     }
 
     static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description, String mismatch,
-            CheckedFunction<? super OBSERVED, Boolean> matches) {
-        return preserving(description, actual -> matches.apply(actual)
+            Predicate<? super OBSERVED> matches) {
+        return preserving(description, actual -> matches.test(actual)
                 ? satisfied(actual) : unsatisfied(mismatch));
     }
 
     static <OBSERVED> PreservingCondition<OBSERVED> preservingNonNull(String subject, String description,
-            String mismatch, CheckedFunction<? super OBSERVED, Boolean> matches) {
+            String mismatch, Predicate<? super OBSERVED> matches) {
         return preservingNonNull(subject, description, mismatch, null, matches);
     }
 
     static <OBSERVED> PreservingCondition<OBSERVED> preservingNonNull(String subject, String description,
-            String mismatch, Reference<?> reference, CheckedFunction<? super OBSERVED, Boolean> matches) {
+            String mismatch, Reference<?> reference, Predicate<? super OBSERVED> matches) {
         return preserving(description, reference, actual -> actual == null
                 ? unsatisfied(subject + " was null")
-                : matches.apply(actual) ? satisfied(actual) : unsatisfied(mismatch));
+                : matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch));
     }
 
     static <OBSERVED> PreservingCondition<OBSERVED> sized(String subject, String measure, int bound, IntPredicate matches,

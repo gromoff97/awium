@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.Reference;
 import java.util.List;
 import java.util.function.IntPredicate;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
@@ -132,12 +133,12 @@ public final class StringConditions {
     }
 
     private static PreservingCondition<String> matching(String description, String mismatch,
-            CheckedFunction<String, Boolean> matches) {
+            Predicate<String> matches) {
         return preservingNonNull("string", description, mismatch, matches);
     }
 
     private static PreservingCondition<String> matching(String description, String mismatch,
-            Reference<?> reference, CheckedFunction<String, Boolean> matches) {
+            Reference<?> reference, Predicate<String> matches) {
         return preservingNonNull("string", description, mismatch, reference, matches);
     }
 

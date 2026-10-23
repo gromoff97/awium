@@ -117,19 +117,19 @@ public final class CollectionConditions {
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> all(Predicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all collection elements match", "not all collection elements matched",
-                actual -> matchesAll(actual, predicate::test));
+                actual -> matchesAll(actual, predicate));
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> any(Predicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any collection element matches", "no collection element matched",
-                actual -> matchesAny(actual, predicate::test));
+                actual -> matchesAny(actual, predicate));
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> none(Predicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no collection element matches", "a collection element matched",
-                actual -> !matchesAny(actual, predicate::test));
+                actual -> !matchesAny(actual, predicate));
     }
 
     @SafeVarargs
@@ -368,12 +368,12 @@ public final class CollectionConditions {
     }
 
     private static <VALUES extends Collection<?>> PreservingCondition<VALUES> preserving(String description, String mismatch,
-            CheckedFunction<? super VALUES, Boolean> matches) {
+            Predicate<? super VALUES> matches) {
         return preservingNonNull("collection", description, mismatch, matches);
     }
 
     private static <VALUES extends Collection<?>> PreservingCondition<VALUES> preserving(String description, String mismatch,
-            Reference<?> reference, CheckedFunction<? super VALUES, Boolean> matches) {
+            Reference<?> reference, Predicate<? super VALUES> matches) {
         return preservingNonNull("collection", description, mismatch, reference, matches);
     }
 
