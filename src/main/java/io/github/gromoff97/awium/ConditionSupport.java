@@ -194,7 +194,7 @@ final class ConditionSupport {
     private static <STAGE> List<STAGE> stages(STAGE first, STAGE second, STAGE[] rest) {
         return Stream.concat(Stream.of(first, second),
                         Arrays.stream(requireNonNull(rest, "conditions must not be null")))
-                .map(stage -> requireNonNull(stage, "condition must not be null"))
+                .map(Condition::required)
                 .toList();
     }
 

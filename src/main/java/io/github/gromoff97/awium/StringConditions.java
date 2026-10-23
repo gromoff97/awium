@@ -35,7 +35,6 @@ public final class StringConditions {
     }
 
     public static PreservingCondition<String> containsIgnoringCase(String expected) {
-        requireNonNull(expected, "expected string must not be null");
         var pattern = Pattern.compile(expected, Pattern.LITERAL | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         return matching("string contains expected string ignoring case",
                 "string did not contain expected string ignoring case", expectedReference(expected),
@@ -67,7 +66,7 @@ public final class StringConditions {
     }
 
     public static PreservingCondition<String> matchesRegex(String regex) {
-        return matchesRegex(Pattern.compile(requireNonNull(regex, "regex must not be null")));
+        return matchesRegex(Pattern.compile(regex));
     }
 
     public static PreservingCondition<String> matchesRegex(Pattern expected) {
@@ -77,7 +76,7 @@ public final class StringConditions {
     }
 
     public static PreservingCondition<String> doesNotMatchRegex(String regex) {
-        return doesNotMatchRegex(Pattern.compile(requireNonNull(regex, "regex must not be null")));
+        return doesNotMatchRegex(Pattern.compile(regex));
     }
 
     public static PreservingCondition<String> doesNotMatchRegex(Pattern unexpected) {
@@ -144,10 +143,6 @@ public final class StringConditions {
     }
 
     private static List<String> nonEmpty(String[] values, String name) {
-        ConditionSupport.nonEmpty(values, name);
-        for (String value : values) {
-            requireNonNull(value, name + " must not contain null");
-        }
-        return List.of(values);
+        return List.of(ConditionSupport.nonEmpty(values, name));
     }
 }
