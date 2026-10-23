@@ -15,12 +15,8 @@ public final class OptionalConditions {
 
     public static final SelectedCondition<Optional<?>> present =
             ConditionSupport.selected("optional is present", OptionalConditions::present);
-    public static final PreservingCondition<Optional<?>> absent = ConditionSupport.preserving("optional is absent", actual -> {
-        if (actual == null) {
-            return unsatisfied("optional was null");
-        }
-        return actual.isEmpty() ? satisfied(actual) : unsatisfied("optional was present");
-    });
+    public static final PreservingCondition<Optional<?>> absent = ConditionSupport.preservingNonNull(
+            "optional", "optional is absent", "optional was present", Optional::isEmpty);
 
     private OptionalConditions() {}
 

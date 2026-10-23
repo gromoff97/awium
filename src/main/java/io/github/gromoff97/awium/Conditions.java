@@ -5,7 +5,6 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
 
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
@@ -127,14 +126,14 @@ public final class Conditions {
     public static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> between(VALUE lowerBound, VALUE upperBound) {
         validateRange(lowerBound, upperBound);
         return preservingNonNull("value", "value is between the inclusive bounds", "value was outside the inclusive range",
-                expectedReference(Stream.of(lowerBound, upperBound).toList()),
+                expectedReference(List.of(lowerBound, upperBound)),
                 actual -> actual.compareTo(lowerBound) >= 0 && actual.compareTo(upperBound) <= 0);
     }
 
     public static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> strictlyBetween(VALUE lowerBound, VALUE upperBound) {
         validateRange(lowerBound, upperBound);
         return preservingNonNull("value", "value is strictly between the bounds", "value was outside the exclusive range",
-                expectedReference(Stream.of(lowerBound, upperBound).toList()),
+                expectedReference(List.of(lowerBound, upperBound)),
                 actual -> actual.compareTo(lowerBound) > 0 && actual.compareTo(upperBound) < 0);
     }
 
