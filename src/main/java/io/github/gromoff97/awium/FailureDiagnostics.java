@@ -117,13 +117,13 @@ final class FailureDiagnostics {
         }
         if (cause != null) {
             out.append('\n');
-            field(out, "", "Cause", typeName(cause));
+            field(out, "", "Cause", cause.getClass().getName());
             String message = render(() -> causeMessage(cause));
             if (message != null) field(out, "Message", message);
         }
         for (Throwable failure : diagnosticFailures) {
             out.append('\n');
-            field(out, "", "Diagnostics failure", typeName(failure));
+            field(out, "", "Diagnostics failure", failure.getClass().getName());
         }
         return out.deleteCharAt(out.length() - 1).toString();
     }
@@ -233,11 +233,6 @@ final class FailureDiagnostics {
             }
             out.append('\n');
         }
-    }
-
-    private static String typeName(Throwable failure) {
-        String simpleName = failure.getClass().getSimpleName();
-        return simpleName.isBlank() ? failure.getClass().getName() : simpleName;
     }
 
     private static String causeMessage(Throwable failure) {

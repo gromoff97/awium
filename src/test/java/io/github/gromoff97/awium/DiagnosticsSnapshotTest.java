@@ -161,7 +161,7 @@ class DiagnosticsSnapshotTest {
                     Elapsed: 2 nanoseconds
                     Polling interval: 1 nanosecond
 
-                Cause: AssertionError
+                Cause: java.lang.AssertionError
                     Message: pending assertion failed""", failure.getMessage());
         assertSame(assertion, failure.getCause());
         assertArrayEquals(new StackTraceElement[]{frame}, failure.getCause().getStackTrace());
@@ -192,7 +192,7 @@ class DiagnosticsSnapshotTest {
                     Expectation: payment status is pending
                     Importance: processing must begin before completion
 
-                Cause: IllegalStateException
+                Cause: java.lang.IllegalStateException
                     Message: status callback failed""", failure.getMessage());
         assertSame(cause, failure.getCause());
     }
@@ -249,7 +249,7 @@ class DiagnosticsSnapshotTest {
                     Elapsed: 10 seconds
                     Polling interval: 3 seconds
 
-                Cause: AssertionError
+                Cause: java.lang.AssertionError
                     Message: collection was empty""", betweenFailure.getMessage());
         assertEquals("""
                 Acquisition deadline elapsed
@@ -297,7 +297,7 @@ class DiagnosticsSnapshotTest {
                     Failure detected after: 2 seconds 100 milliseconds
                     Polling interval: 100 milliseconds
 
-                Cause: AssertionError
+                Cause: java.lang.AssertionError
                     Message: optional was empty""", persistenceFailure.getMessage());
         assertSame(betweenAssertion, betweenFailure.getCause());
         assertSame(persistenceAssertion, persistenceFailure.getCause());
@@ -337,7 +337,7 @@ class DiagnosticsSnapshotTest {
 
                 Attempt: 2
 
-                Cause: IllegalStateException
+                Cause: java.lang.IllegalStateException
                     Message: source failed""", sourceFailure.getMessage());
         assertEquals("""
                 Condition evaluation failed
@@ -348,7 +348,7 @@ class DiagnosticsSnapshotTest {
                 Attempt: 3
                     Actual: actual
 
-                Cause: IllegalArgumentException
+                Cause: java.lang.IllegalArgumentException
                     Message: condition failed""", conditionFailure.getMessage());
         assertEquals("""
                 Waiting before the next attempt failed
@@ -357,7 +357,7 @@ class DiagnosticsSnapshotTest {
 
                 Attempt: 4
 
-                Cause: IllegalStateException
+                Cause: java.lang.IllegalStateException
                     Message: waiting failed""", waitingFailure.getMessage());
         assertEquals("""
                 Waiting before the next attempt failed
@@ -366,7 +366,7 @@ class DiagnosticsSnapshotTest {
 
                 Attempt: 5
 
-                Cause: InterruptedException
+                Cause: java.lang.InterruptedException
                     Message: stopped""", interruptedFailure.getMessage());
     }
 
@@ -439,7 +439,7 @@ class DiagnosticsSnapshotTest {
                     Elapsed: 3 seconds
                     Polling interval: 1 second
 
-                Cause: CountingAssertion
+                Cause: io.github.gromoff97.awium.DiagnosticsSnapshotTest$CountingAssertion
                     Message: assertion failed""", failure.getMessage());
         assertEquals(1, assertion.calls);
     }
@@ -520,7 +520,7 @@ class DiagnosticsSnapshotTest {
                     Elapsed: 2 nanoseconds
                     Polling interval: 1 nanosecond
 
-                Diagnostics failure: IllegalArgumentException""", valueFailure.getMessage());
+                Diagnostics failure: java.lang.IllegalArgumentException""", valueFailure.getMessage());
         assertEquals(1, actual.calls);
     }
 
@@ -1002,6 +1002,35 @@ class DiagnosticsSnapshotTest {
                         config(1, 2, 0)));
         assertSame(engineCause, thrown.getCause());
         assertArrayEquals(new Throwable[]{valueFatal}, thrown.getSuppressed());
+    }
+
+    @Test
+    void isolatedExceptionClassDoesNotRequireItsEnclosingClassForDiagnostics() throws Exception {
+        byte[] bytes;
+        try (var resource = CountingAssertion.class.getResourceAsStream("DiagnosticsSnapshotTest$CountingAssertion.class")) {
+            bytes = resource.readAllBytes();
+        }
+        var loader = new ClassLoader(null) {
+            Class<?> isolatedClass() {
+                return defineClass(null, bytes, 0, bytes.length);
+            }
+        };
+        var constructor = loader.isolatedClass().getDeclaredConstructor(String.class);
+        constructor.setAccessible(true);
+        var cause = (AssertionError) constructor.newInstance("isolated cause");
+
+        var sourceFailure = assertFailure(SOURCE_FAILED,
+                () -> await((Source<String>) () -> { throw cause; }).until(Conditions.isNotNull));
+        assertSame(cause, sourceFailure.getCause());
+        assertMessage(sourceFailure, cause.getClass().getName(), "isolated cause");
+
+        var time = new FakeTime(0);
+        var diagnosticFailure = assertFailure(TIMEOUT,
+                () -> timedAwait(() -> new ThrowingValue(cause), config(1, 2, 0), time, time)
+                        .until(condition("not ready", actual -> unsatisfied())));
+        assertNull(diagnosticFailure.getCause());
+        assertArrayEquals(new Throwable[]{cause}, diagnosticFailure.getSuppressed());
+        assertMessage(diagnosticFailure, "Diagnostics failure: " + cause.getClass().getName());
     }
 
     @Test
