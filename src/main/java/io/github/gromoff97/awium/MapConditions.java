@@ -93,19 +93,19 @@ public final class MapConditions {
     public static <KEY, VALUE> SelectedCondition<Map<? extends KEY, ? extends VALUE>> singleEntry(
             PreservingCondition<? super Entry<? extends KEY, ? extends VALUE>> nested) {
         return selected(ConditionSupport.single("map", required(nested).definition, Map::entrySet,
-                () -> nested.preservingAttempt()));
+                nested::preservingAttempt));
     }
 
     public static <KEY, VALUE, RESULT> Condition<Map<? extends KEY, ? extends VALUE>, RESULT> singleEntry(
             Condition<? super Entry<? extends KEY, ? extends VALUE>, ? extends RESULT> nested) {
         return ConditionSupport.single("map", required(nested), Map::entrySet,
-                () -> nested.newAttempt());
+                nested::newAttempt);
     }
 
     public static <KEY, VALUE> SelectedCondition<Map<? super KEY, ? super VALUE>> singleEntry(
             ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
         return selected(ConditionSupport.single("map", required(nested).definition, Map::entrySet,
-                () -> nested.definition.preservingAttempt()));
+                nested.definition::preservingAttempt));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> allEntries(BiPredicate<? super KEY, ? super VALUE> predicate) {
@@ -167,21 +167,21 @@ public final class MapConditions {
             Condition<? super VALUE, ? extends RESULT> nested) {
         return compose("map value ", required(nested),
                 valueFor(key).definition, actual -> value(actual, key),
-                () -> nested.newAttempt());
+                nested::newAttempt);
     }
 
     public static <KEY, VALUE> MapValueCondition<Map<? super KEY, ? extends VALUE>> valueFor(KEY key,
             PreservingCondition<? super VALUE> nested) {
         return mapValue(compose("map value ", required(nested).definition,
                 valueFor(key).definition, actual -> value(actual, key),
-                () -> nested.preservingAttempt()));
+                nested::preservingAttempt));
     }
 
     public static <KEY, EXPECTED> MapValueCondition<Map<? super KEY, ? super EXPECTED>> valueFor(KEY key,
             ComparisonCondition<EXPECTED> nested) {
         return mapValue(compose("map value ", required(nested).definition,
                 valueFor(key).definition, actual -> value(actual, key),
-                () -> nested.definition.preservingAttempt()));
+                nested.definition::preservingAttempt));
     }
 
     public static <KEY> SelectedCondition<Map<? super KEY, ?>> entryFor(KEY key) {
