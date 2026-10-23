@@ -2,8 +2,6 @@ package io.github.gromoff97.awium;
 
 import java.util.concurrent.Callable;
 
-import static java.util.Objects.requireNonNull;
-
 /** Lazily executes a condition, converting nonfatal callback failures into uncontrolled results. */
 final class ConditionAwaitAttempt<OBSERVED, RESULT> implements AwaitAttempt<OBSERVED, RESULT> {
 
@@ -22,10 +20,10 @@ final class ConditionAwaitAttempt<OBSERVED, RESULT> implements AwaitAttempt<OBSE
         try {
             if (evaluator == null) {
                 checkInterruption();
-                evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
+                evaluator = evaluatorFactory.call();
             }
             checkInterruption();
-            var result = requireNonNull(evaluator.probe(actual), "condition returned null ConditionResult");
+            var result = evaluator.probe(actual);
             return withInterruption(result);
         } catch (Throwable failure) {
             return new AttemptResult.Uncontrolled<>(failure, null, null);

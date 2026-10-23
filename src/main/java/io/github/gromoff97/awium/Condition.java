@@ -32,7 +32,7 @@ public final class Condition<OBSERVED, RESULT> {
 
     final <ACTUAL extends OBSERVED> ConditionAwaitAttempt<ACTUAL, ACTUAL> preservingAttempt() {
         return new ConditionAwaitAttempt<>(this, () -> {
-            var evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
+            var evaluator = evaluatorFactory.call();
             return actual -> {
                 var evaluation = evaluator.probe(actual);
                 return switch (evaluation) {
