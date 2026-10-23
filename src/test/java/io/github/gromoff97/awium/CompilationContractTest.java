@@ -15,11 +15,14 @@ class CompilationContractTest {
     Path temporaryDirectory;
 
     @Test
-    void conditionResultsCannotBeAssignedToUnrelatedTypes() throws IOException {
+    void conditionsAndResultsRejectUnrelatedTypes() throws IOException {
         for (String expression : List.of(
                 "Integer wrong = await(strings).until(equalTo(42));",
                 "String wrong = await(objects).until(instanceOf(Integer.class));",
-                "AwaitResult<Optional<Integer>, String> wrong = await(optional).tryUntil(present);")) {
+                "AwaitResult<Optional<Integer>, String> wrong = await(optional).tryUntil(present);",
+                "await(characters).until(equalTo(42));",
+                "await(characters).until(equalTo(42).because(\"incompatible\"));",
+                "await(characters).tryUntil(equalTo(42).because(\"%s\", \"incompatible\"));")) {
             assertFalse(compiles("""
                     import io.github.gromoff97.awium.*;
                     import io.github.gromoff97.awium.Source.OptionalSource;
@@ -28,7 +31,8 @@ class CompilationContractTest {
                     import static io.github.gromoff97.awium.Conditions.*;
                     import static io.github.gromoff97.awium.OptionalConditions.present;
                     final class Contract {
-                        void check(Source<String> strings, Source<Object> objects, OptionalSource<Integer> optional) {
+                        void check(Source<String> strings, Source<Object> objects,
+                                Source<CharSequence> characters, OptionalSource<Integer> optional) {
                             %s
                         }
                     }
