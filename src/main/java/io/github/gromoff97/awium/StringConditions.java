@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.ConditionResult.Reference;
+import io.github.gromoff97.awium.Condition.Reference;
 import java.util.List;
 import java.util.function.IntPredicate;
 import java.util.regex.Pattern;

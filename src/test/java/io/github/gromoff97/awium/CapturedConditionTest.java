@@ -13,7 +13,7 @@ import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedOptionalAwait;
-import static io.github.gromoff97.awium.CapturedEvaluator.captured;
+import static io.github.gromoff97.awium.ConditionSupport.captured;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.Conditions.matches;
@@ -50,6 +50,13 @@ class CapturedConditionTest {
         assertEquals(values, assertInstanceOf(AwaitResult.Satisfied.class, attempt).result());
         assertEquals(3, attempt.totalAttempts());
         assertEquals(6, reads[0]);
+        var acquisition = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, attempt.attempts().get(1).outcome());
+        var acquiredValues = assertInstanceOf(List.class,
+                assertInstanceOf(ConditionResult.Satisfied.class, acquisition.evaluation()).result());
+        assertEquals(2, acquiredValues.size());
+        assertNull(acquiredValues.getFirst());
+        assertSame(acquired, acquiredValues.getLast());
+        assertThrows(UnsupportedOperationException.class, acquiredValues::clear);
     }
 
     @Test
@@ -95,19 +102,22 @@ class CapturedConditionTest {
         assertSame(first, values.get(0));
         assertSame(persisted, values.get(1));
         assertEquals(3, reads[0]);
-        assertEquals(List.of(AwaitAttempt.Phase.ACQUISITION, AwaitAttempt.Phase.ACQUISITION, AwaitAttempt.Phase.PERSISTENCE),
-                result.attempts().stream().map(AwaitAttempt::phase).toList());
+        assertEquals(List.of(AttemptRecord.Phase.ACQUISITION, AttemptRecord.Phase.ACQUISITION, AttemptRecord.Phase.PERSISTENCE),
+                result.attempts().stream().map(AttemptRecord::phase).toList());
     }
 
     @Test
     void successfulSequenceReportsAllCapturedStages() {
         var sequence = captured(Conditions.<String>matches(value -> true), matches(value -> true));
-        var evaluator = sequence.newSession();
-        evaluator.apply("first");
-        var success = assertInstanceOf(ConditionResult.Satisfied.class, evaluator.apply("last"));
-        var context = assertInstanceOf(ConditionResult.Context.Sequence.class, success.context());
-        assertEquals(2, context.capturedStages());
-        assertEquals(2, context.evaluatedStageNumber());
+        var evaluator = sequence.newAttempt();
+        var first = evaluator.probe("first");
+        var last = evaluator.probe("last");
+        assertInstanceOf(ConditionResult.Unsatisfied.class, ConditionTestRuntime.evaluated(first));
+        assertInstanceOf(ConditionResult.Satisfied.class, ConditionTestRuntime.evaluated(last));
+        assertEquals(1, first.progress().capturedStages());
+        assertEquals(1, first.progress().evaluatedStageNumber());
+        assertEquals(2, last.progress().capturedStages());
+        assertEquals(2, last.progress().evaluatedStageNumber());
     }
 
     @Test
@@ -137,11 +147,11 @@ class CapturedConditionTest {
                         if (capture) {
                             var result = waiting.tryUntil(first, second);
                             failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
-                            var evaluation = assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class,
-                                    result.attempts().getLast().outcome()).evaluation();
-                            var context = assertInstanceOf(ConditionResult.Context.Sequence.class, evaluation.context());
-                            assertEquals(stage - 1, context.capturedStages());
-                            assertEquals(stage, context.evaluatedStageNumber());
+                            var evaluation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class,
+                                    result.attempts().getLast().outcome());
+                            var progress = evaluation.progress();
+                            assertEquals(stage - 1, progress.capturedStages());
+                            assertEquals(stage, progress.evaluatedStageNumber());
                         } else {
                             failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(first, second)).failure();
                         }
@@ -205,7 +215,7 @@ class CapturedConditionTest {
             return "observed";
         }, config(1, 2, 0), time, time).tryUntil(matches(value -> true), matches(value -> true));
         var outcome = assertInstanceOf(ConditionResult.Unsatisfied.class,
-                assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, result.attempts().getFirst().outcome()).evaluation());
+                assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, result.attempts().getFirst().outcome()).evaluation());
 
         assertEquals("waiting for sequence stage 2", outcome.mismatch());
     }

@@ -5,15 +5,15 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-final class AttemptHistory<OBSERVED, RESULT> implements Consumer<AwaitAttempt<OBSERVED, RESULT>> {
+final class AttemptHistory<OBSERVED, RESULT> implements Consumer<AttemptRecord<OBSERVED, RESULT>> {
 
     // ponytail: fixed cap; make it configurable only if consumers need longer diagnostic histories.
     private static final int MAX_RETAINED_ATTEMPTS = 256;
 
-    private final ArrayList<AwaitAttempt<OBSERVED, RESULT>> attempts = new ArrayList<>();
+    private final ArrayList<AttemptRecord<OBSERVED, RESULT>> attempts = new ArrayList<>();
 
     @Override
-    public void accept(AwaitAttempt<OBSERVED, RESULT> attempt) {
+    public void accept(AttemptRecord<OBSERVED, RESULT> attempt) {
         if (!attempts.isEmpty() && equivalent(attempts.getLast(), attempt)) {
             attempts.set(attempts.size() - 1, attempt);
             return;
@@ -24,48 +24,45 @@ final class AttemptHistory<OBSERVED, RESULT> implements Consumer<AwaitAttempt<OB
         attempts.add(attempt);
     }
 
-    List<AwaitAttempt<OBSERVED, RESULT>> snapshot() {
+    List<AttemptRecord<OBSERVED, RESULT>> snapshot() {
         return List.copyOf(attempts);
     }
 
-    private static boolean equivalent(AwaitAttempt<?, ?> left, AwaitAttempt<?, ?> right) {
+    private static boolean equivalent(AttemptRecord<?, ?> left, AttemptRecord<?, ?> right) {
         if (left.phase() != right.phase()
-                || !(left.outcome() instanceof AwaitAttempt.Outcome.Evaluated<?, ?> value)
-                || !(right.outcome() instanceof AwaitAttempt.Outcome.Evaluated<?, ?> other)
-                || value.observed() != other.observed()) {
+                || !(left.outcome() instanceof AttemptRecord.Outcome.Evaluated<?, ?> value)
+                || !(right.outcome() instanceof AttemptRecord.Outcome.Evaluated<?, ?> other)
+                || value.observed() != other.observed()
+                || !equivalent(value.condition(), other.condition())
+                || !equivalent(value.progress(), other.progress())) {
             return false;
         }
         return switch (value.evaluation()) {
             case ConditionResult.Satisfied<?> result
                     when other.evaluation() instanceof ConditionResult.Satisfied<?> next ->
-                    result.result() == next.result() && equivalent(result.context(), next.context());
+                    result.result() == next.result();
             case ConditionResult.Unsatisfied<?> result
                     when other.evaluation() instanceof ConditionResult.Unsatisfied<?> next ->
-                    result.mismatch().equals(next.mismatch()) && result.assertion() == next.assertion()
-                            && equivalent(result.context(), next.context());
+                    result.mismatch().equals(next.mismatch()) && result.assertion() == next.assertion();
             default -> false;
         };
     }
 
-    private static boolean equivalent(ConditionResult.Context left, ConditionResult.Context right) {
-        if (left == right) {
-            return true;
-        }
-        if (left instanceof ConditionResult.Context.Expectation value
-                && right instanceof ConditionResult.Context.Expectation other) {
-            return value.description().equals(other.description()) && equivalent(value.reference(), other.reference());
-        }
-        return left instanceof ConditionResult.Context.Sequence value
-                && right instanceof ConditionResult.Context.Sequence other
-                && value.capturedStages() == other.capturedStages()
-                && value.totalStages() == other.totalStages()
-                && value.evaluatedStageNumber() == other.evaluatedStageNumber()
-                && value.expectation().equals(other.expectation())
-                && Objects.equals(value.importance(), other.importance())
-                && equivalent(value.reference(), other.reference());
+    private static boolean equivalent(AttemptRecord.Progress left, AttemptRecord.Progress right) {
+        return left == right || left != null && right != null
+                && left.capturedStages() == right.capturedStages()
+                && left.totalStages() == right.totalStages()
+                && left.evaluatedStageNumber() == right.evaluatedStageNumber()
+                && equivalent(left.condition(), right.condition());
     }
 
-    private static boolean equivalent(ConditionResult.Reference<?> left, ConditionResult.Reference<?> right) {
+    private static boolean equivalent(Condition<?, ?> left, Condition<?, ?> right) {
+        return left == right || left.description().equals(right.description())
+                && Objects.equals(left.explanation(), right.explanation())
+                && equivalent(left.reference(), right.reference());
+    }
+
+    private static boolean equivalent(Condition.Reference<?> left, Condition.Reference<?> right) {
         // Record equality would call user equals(); history only compares user values by identity.
         return left == right || left != null && right != null
                 && left.label().equals(right.label()) && left.value() == right.value();

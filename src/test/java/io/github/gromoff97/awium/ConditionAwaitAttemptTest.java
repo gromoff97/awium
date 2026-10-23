@@ -6,11 +6,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.CapturedEvaluator.captured;
+import static io.github.gromoff97.awium.ConditionSupport.captured;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static java.time.Duration.ofNanos;
@@ -20,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-class ConditionSessionTest {
+class ConditionAwaitAttemptTest {
 
     @Test
     void preservingFactoryIsLazyIndependentAndReturnsTheOriginalObservation() {
@@ -113,11 +112,11 @@ class ConditionSessionTest {
     }
 
     @Test
-    void conditionFamiliesKeepMetadataAndIndependentEvaluators() {
-        Condition<Integer, Integer> ordinary = ConditionSupport.condition(
-                "counted", () -> {
+    void conditionFamiliesKeepMetadataAndIndependentEvaluators() throws Exception {
+        Condition<Integer, Integer> ordinary = new Condition<>(
+                "counted", null, null, () -> {
                     int[] calls = {0};
-                    return ignored -> satisfied(++calls[0]);
+                    return ignored -> AttemptResult.of(satisfied(++calls[0]));
                 });
         PreservingCondition<Integer> preserving =
                 Conditions.matches(value -> value > 0);
@@ -125,16 +124,14 @@ class ConditionSessionTest {
         Condition<Collection<?>, List<Object>> sequence =
                 captured(CollectionConditions.single, CollectionConditions.single);
 
-        assertEquals("counted", ordinary.metadata.description());
-        assertNull(ordinary.metadata.explanation());
-        Function<? super Integer, ? extends ConditionResult<? extends Integer>> first =
-                ordinary.newSession();
-        Function<? super Integer, ? extends ConditionResult<? extends Integer>> second =
-                ordinary.newSession();
+        assertEquals("counted", ordinary.description());
+        assertNull(ordinary.explanation());
+        AwaitAttempt<Integer, Integer> first = ordinary.newAttempt();
+        AwaitAttempt<Integer, Integer> second = ordinary.newAttempt();
 
-        assertEquals(1, result(first.apply(0)));
-        assertEquals(2, result(first.apply(0)));
-        assertEquals(1, result(second.apply(0)));
+        assertEquals(1, result(ConditionTestRuntime.evaluated(first.probe(0))));
+        assertEquals(2, result(ConditionTestRuntime.evaluated(first.probe(0))));
+        assertEquals(1, result(ConditionTestRuntime.evaluated(second.probe(0))));
         assertNotNull(preserving);
         assertNotNull(selected);
         assertNotNull(sequence);

@@ -65,11 +65,11 @@ class NestedSelectionTest {
         var result = await(() -> List.of(pending)).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).tryUntil(
                 single(matches((Payment value) -> !value.paid()).because("creation")),
                 single(matches(Payment::paid).because("payment")));
-        var outcome = assertInstanceOf(ConditionResult.Unsatisfied.class,
-                assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, result.attempts().getLast().outcome()).evaluation());
-        var context = assertInstanceOf(ConditionResult.Context.Sequence.class, outcome.context());
-        assertEquals(1, context.capturedStages());
-        assertEquals("payment", context.importance());
+        var observation = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, result.attempts().getLast().outcome());
+        var outcome = assertInstanceOf(ConditionResult.Unsatisfied.class, observation.evaluation());
+        var progress = observation.progress();
+        assertEquals(1, progress.capturedStages());
+        assertEquals("payment", progress.condition().explanation());
     }
 
     @Test

@@ -63,7 +63,7 @@ class AssertionAdapterTest {
 
         var condition = Conditions.<String>condition(
                 "nullable evaluation", value -> null);
-        var failure = assertInstanceOf(ConditionResult.Uncontrolled.class, evaluate(condition, "42"));
+        var failure = assertInstanceOf(AttemptResult.Uncontrolled.class, condition.preservingAttempt().probe("42"));
         assertInstanceOf(NullPointerException.class, failure.cause());
         assertEquals("condition returned null ConditionResult", failure.cause().getMessage());
     }
@@ -114,7 +114,7 @@ class AssertionAdapterTest {
         });
 
         assertSame(failure, org.junit.jupiter.api.Assertions.assertInstanceOf(
-                ConditionResult.Uncontrolled.class, evaluate(condition, "42")).cause());
+                AttemptResult.Uncontrolled.class, condition.preservingAttempt().probe("42")).cause());
     }
 
     @Test
@@ -126,7 +126,7 @@ class AssertionAdapterTest {
         });
 
         assertSame(failure, org.junit.jupiter.api.Assertions.assertInstanceOf(
-                ConditionResult.Uncontrolled.class, evaluate(condition, "42")).cause());
+                AttemptResult.Uncontrolled.class, condition.preservingAttempt().probe("42")).cause());
     }
 
     @Test

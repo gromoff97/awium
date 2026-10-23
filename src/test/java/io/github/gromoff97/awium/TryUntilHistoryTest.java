@@ -1,11 +1,13 @@
 package io.github.gromoff97.awium;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.function.IntFunction;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.AwaitAttempt.Phase.ACQUISITION;
-import static io.github.gromoff97.awium.AwaitAttempt.Phase.PERSISTENCE;
+import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
+import static io.github.gromoff97.awium.AttemptRecord.Phase.ACQUISITION;
+import static io.github.gromoff97.awium.AttemptRecord.Phase.PERSISTENCE;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
@@ -15,28 +17,25 @@ import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.Conditions.isNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TryUntilHistoryTest {
 
     @Test
-    void successfulHistoryKeepsContextChangesWithoutCallingUserEquality() {
+    void successfulHistoryKeepsExpectationChangesWithoutCallingUserEquality() {
         for (boolean sequence : new boolean[]{true, false}) {
-            var time = new FakeTime(0);
+            var history = new AttemptHistory<Object, Object>();
             var actual = new Object();
             var first = new ThrowingProbe();
             var second = new ThrowingProbe();
-            int[] calls = {0};
-            var result = timedAwait(() -> actual, config(1, 10, 4), time, time).tryUntil(condition("ready", value -> {
-                var reference = new ConditionResult.Reference<>(new String("Expected"), ++calls[0] <= 3 ? first : second);
-                ConditionResult.Context context = sequence
-                        ? new ConditionResult.Context.Sequence(0, 2, 1, new String("stage"), null, reference)
-                        : new ConditionResult.Context.Expectation(new String("stage"), reference);
-                return satisfied(value).withContext(context);
-            }));
-            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
-            assertEquals(List.of(1L, 3L, 5L), result.attempts().stream().map(AwaitAttempt::number).toList());
+            var root = diagnosticCondition("ready", null, null);
+            for (int number = 1; number <= 5; number++) {
+                var expectation = diagnosticCondition(new String("stage"), null,
+                        new Condition.Reference<>(new String("Expected"), number <= 3 ? first : second));
+                history.accept(attempt(number, number == 1 ? ACQUISITION : PERSISTENCE, actual, satisfied(actual),
+                        sequence ? root : expectation, sequence ? new AttemptRecord.Progress(2, 2, 2, expectation) : null));
+            }
+            assertEquals(List.of(1L, 3L, 5L), history.snapshot().stream().map(AttemptRecord::number).toList());
         }
     }
 
@@ -52,9 +51,9 @@ class TryUntilHistoryTest {
 
         assertEquals(4, execution.totalAttempts());
         assertEquals(List.of(1L, 3L, 4L), execution.attempts().stream()
-                .map(AwaitAttempt::number).toList());
+                .map(AttemptRecord::number).toList());
         assertEquals(List.of(ACQUISITION, PERSISTENCE, PERSISTENCE),
-                execution.attempts().stream().map(AwaitAttempt::phase).toList());
+                execution.attempts().stream().map(AttemptRecord::phase).toList());
         assertThrows(UnsupportedOperationException.class, execution.attempts()::clear);
     }
 
@@ -85,23 +84,20 @@ class TryUntilHistoryTest {
     }
 
     @Test
-    void compressionComparesContextValuesByIdentityWithoutCallingUserMethods() {
-        var time = new FakeTime(0);
+    void compressionComparesExpectedValuesByIdentityWithoutCallingUserMethods() {
+        var history = new AttemptHistory<Object, Object>();
         var actual = new Object();
         var first = new ThrowingProbe();
         var second = new ThrowingProbe();
-        int[] calls = {0};
-
-        var result = timedAwait(() -> actual, config(1, 10, 0), time, time).tryUntil(condition("ready", value -> {
-            int call = ++calls[0];
-            return call == 5 ? satisfied(value) : ConditionResult.<Object>unsatisfied("not ready").withContext(
-                    new ConditionResult.Context.Sequence(0, 2, 1, new String("stage"), new String("reason"),
-                            new ConditionResult.Reference<>(new String("Expected"), call <= 2 ? first : second)));
-        }));
-
-        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
-        assertEquals(5, result.totalAttempts());
-        assertEquals(List.of(2L, 4L, 5L), result.attempts().stream().map(AwaitAttempt::number).toList());
+        var root = diagnosticCondition("ready", null, null);
+        for (int number = 1; number <= 5; number++) {
+            var stage = diagnosticCondition(new String("stage"), new String("reason"),
+                    new Condition.Reference<>(new String("Expected"), number <= 2 ? first : second));
+            history.accept(attempt(number, ACQUISITION, actual,
+                    number == 5 ? satisfied(actual) : unsatisfied("not ready"),
+                    root, new AttemptRecord.Progress(0, 2, 1, stage)));
+        }
+        assertEquals(List.of(2L, 4L, 5L), history.snapshot().stream().map(AttemptRecord::number).toList());
     }
 
     @Test
@@ -123,24 +119,17 @@ class TryUntilHistoryTest {
 
     @Test
     void sequenceStageChangesAreNotCompressed() {
-        var time = new FakeTime(0);
+        var history = new AttemptHistory<Object, Object>();
         var actual = new Object();
-        int[] stage = {0};
-
-        var execution = timedAwait(() -> actual, config(1, 3, 0), time, time).tryUntil(condition("sequence", value -> {
-            int current = ++stage[0];
-            return ConditionResult.<Object>unsatisfied("same mismatch").withContext(
-                    new ConditionResult.Context.Sequence(current - 1, 3, current,
-                            "stage " + current, null, null));
-        }));
-
-        assertEquals(List.of(1L, 2L, 3L), numbers(execution));
-        assertEquals(List.of(1, 2, 3), execution.attempts().stream()
-                .map(AwaitAttempt::outcome)
-                .map(outcome -> ((AwaitAttempt.Outcome.Evaluated<?, ?>) outcome)
-                        .evaluation().context())
-                .map(ConditionResult.Context.Sequence.class::cast)
-                .map(ConditionResult.Context.Sequence::evaluatedStageNumber)
+        var expectation = diagnosticCondition("same stage description", null, null);
+        for (int stage = 1; stage <= 3; stage++) {
+            history.accept(attempt(stage, ACQUISITION, actual, unsatisfied("same mismatch"),
+                    expectation, new AttemptRecord.Progress(stage - 1, 3, stage, expectation)));
+        }
+        assertEquals(List.of(1L, 2L, 3L), history.snapshot().stream().map(AttemptRecord::number).toList());
+        assertEquals(List.of(1, 2, 3), history.snapshot().stream()
+                .map(AttemptRecord::outcome)
+                .map(outcome -> ((AttemptRecord.Outcome.Evaluated<?, ?>) outcome).progress().evaluatedStageNumber())
                 .toList());
     }
 
@@ -155,7 +144,15 @@ class TryUntilHistoryTest {
 
         assertEquals(3, result.totalAttempts());
         assertEquals(List.of(1L, 2L, 3L), result.attempts().stream()
-                .map(AwaitAttempt::number).toList());
+                .map(AttemptRecord::number).toList());
+    }
+
+    private static AttemptRecord<Object, Object> attempt(int number, AttemptRecord.Phase phase, Object actual,
+            ConditionResult<Object> result, Condition<?, ?> expectation, AttemptRecord.Progress progress) {
+        var timing = new AttemptRecord.Timing.AfterObservation(
+                Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ofNanos(number));
+        return new AttemptRecord<>(number, phase,
+                new AttemptRecord.Outcome.Evaluated<>(timing, actual, result, expectation, progress));
     }
 
     private static AwaitResult<Object, Object> recordUnsatisfied(
@@ -166,7 +163,7 @@ class TryUntilHistoryTest {
     }
 
     private static List<Long> numbers(AwaitResult<?, ?> execution) {
-        return execution.attempts().stream().map(AwaitAttempt::number).toList();
+        return execution.attempts().stream().map(AttemptRecord::number).toList();
     }
 
     private static final class ThrowingProbe {

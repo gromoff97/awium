@@ -6,6 +6,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Conditions.asserted;
 import static java.time.Duration.ofNanos;
@@ -62,25 +63,25 @@ class FailureTaxonomyTest {
                 case INTERRUPTED -> new InterruptedException("interrupted");
                 default -> new IllegalStateException("operation failed");
             };
-            var timing = new AwaitAttempt.Timing.AfterObservation(Duration.ZERO,
+            var timing = new AttemptRecord.Timing.AfterObservation(Duration.ZERO,
                     Duration.ZERO, Duration.ZERO, ofNanos(2));
-            AwaitAttempt.Outcome<Object, Object> observation = switch (reason) {
-                case WAIT_FAILED -> new AwaitAttempt.Outcome.WaitingFailed<>(
-                        new AwaitAttempt.Timing.BeforeRetrieval(Duration.ZERO, ofNanos(2)), original);
-                case SOURCE_FAILED -> new AwaitAttempt.Outcome.SourceRetrievalFailed<>(
-                        new AwaitAttempt.Timing.BeforeObservation(Duration.ZERO, Duration.ZERO, ofNanos(2)), original);
-                case TIMEOUT, PERSISTENCE_FAILED -> new AwaitAttempt.Outcome.Evaluated<>(timing, "actual",
-                        ConditionResult.assertionUnsatisfied("not ready", (AssertionError) original));
-                default -> new AwaitAttempt.Outcome.Evaluated<>(timing, "actual", ConditionResult.uncontrolled(original));
+            var metadata = diagnosticCondition("ready", null, new Condition.Reference<>("Expected", expected));
+            AttemptRecord.Outcome<Object, Object> observation = switch (reason) {
+                case WAIT_FAILED -> new AttemptRecord.Outcome.WaitingFailed<>(
+                        new AttemptRecord.Timing.BeforeRetrieval(Duration.ZERO, ofNanos(2)), original);
+                case SOURCE_FAILED -> new AttemptRecord.Outcome.SourceRetrievalFailed<>(
+                        new AttemptRecord.Timing.BeforeObservation(Duration.ZERO, Duration.ZERO, ofNanos(2)), original);
+                case TIMEOUT, PERSISTENCE_FAILED -> new AttemptRecord.Outcome.Evaluated<>(timing, "actual",
+                        ConditionResult.assertionUnsatisfied("not ready", (AssertionError) original), metadata, null);
+                default -> new AttemptRecord.Outcome.ConditionFailed<>(timing, "actual", original, metadata, null);
             };
-            var attempt = new AwaitAttempt<>(1, reason == AwaitFailure.Reason.PERSISTENCE_FAILED
-                    ? AwaitAttempt.Phase.PERSISTENCE : AwaitAttempt.Phase.ACQUISITION, observation);
+            var attempt = new AttemptRecord<>(1, reason == AwaitFailure.Reason.PERSISTENCE_FAILED
+                    ? AttemptRecord.Phase.PERSISTENCE : AttemptRecord.Phase.ACQUISITION, observation);
             WaitCompletion<Object, Object> outcome = switch (reason) {
                 case TIMEOUT -> new WaitCompletion.LateTimeout<>(attempt);
                 case PERSISTENCE_FAILED -> new WaitCompletion.PersistenceFailure<>(0, attempt);
                 default -> new WaitCompletion.Uncontrolled<>(attempt);
             };
-            var metadata = new ConditionMetadata("ready", null, new ConditionResult.Reference<>("Expected", expected));
             var configuration = AwaitTestAccess.config(1, 2, 0);
             try {
                 var captured = FailureDiagnostics.failure(outcome, metadata, configuration);

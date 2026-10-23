@@ -55,77 +55,77 @@ public sealed class ValueAwait<OBSERVED> permits Await {
     }
 
     public OBSERVED until(PreservingCondition<? super OBSERVED> condition) {
-        return complete(required(condition).preservingSession());
+        return complete(required(condition).preservingAttempt());
     }
 
     public OBSERVED until(ComparisonCondition<? extends OBSERVED> condition) {
-        return complete(required(condition).definition.preservingSession());
+        return complete(required(condition).definition.preservingAttempt());
     }
 
     public <RESULT> RESULT until(Condition<? super OBSERVED, ? extends RESULT> condition) {
-        return complete(required(condition).newSession());
+        return complete(required(condition).newAttempt());
     }
 
     public AwaitResult<OBSERVED, OBSERVED> tryUntil(PreservingCondition<? super OBSERVED> condition) {
-        return capture(required(condition).preservingSession());
+        return capture(required(condition).preservingAttempt());
     }
 
     public AwaitResult<OBSERVED, OBSERVED> tryUntil(ComparisonCondition<? extends OBSERVED> condition) {
-        return capture(required(condition).definition.preservingSession());
+        return capture(required(condition).definition.preservingAttempt());
     }
 
     public <RESULT> AwaitResult<OBSERVED, RESULT> tryUntil(Condition<? super OBSERVED, ? extends RESULT> condition) {
-        return capture(required(condition).newSession());
+        return capture(required(condition).newAttempt());
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final List<OBSERVED> until(PreservingCondition<? super OBSERVED> first, PreservingCondition<? super OBSERVED> second, PreservingCondition<? super OBSERVED>... rest) {
-        return until(CapturedEvaluator.<OBSERVED>captured(first, second, rest));
+        return until(ConditionSupport.<OBSERVED>captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final AwaitResult<OBSERVED, List<OBSERVED>> tryUntil(PreservingCondition<? super OBSERVED> first, PreservingCondition<? super OBSERVED> second, PreservingCondition<? super OBSERVED>... rest) {
-        return tryUntil(CapturedEvaluator.<OBSERVED>captured(first, second, rest));
+        return tryUntil(ConditionSupport.<OBSERVED>captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final List<OBSERVED> until(ComparisonCondition<? extends OBSERVED> first, ComparisonCondition<? extends OBSERVED> second, ComparisonCondition<? extends OBSERVED>... rest) {
-        return until(CapturedEvaluator.<OBSERVED>captured(first, second, rest));
+        return until(ConditionSupport.<OBSERVED>captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final AwaitResult<OBSERVED, List<OBSERVED>> tryUntil(ComparisonCondition<? extends OBSERVED> first, ComparisonCondition<? extends OBSERVED> second, ComparisonCondition<? extends OBSERVED>... rest) {
-        return tryUntil(CapturedEvaluator.<OBSERVED>captured(first, second, rest));
+        return tryUntil(ConditionSupport.<OBSERVED>captured(first, second, rest));
     }
 
-    final <RESULT> RESULT complete(ConditionSession<? super OBSERVED, ? extends RESULT> session) {
+    final <RESULT> RESULT complete(ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> session) {
         return complete(new WaitEngine<OBSERVED, RESULT>(configuration, clock, parker, source, session).waitFor(),
-                session.metadata, configuration);
+                session.condition, configuration);
     }
 
     static <OBSERVED, RESULT> RESULT complete(WaitCompletion<OBSERVED, RESULT> outcome,
-            ConditionMetadata metadata, WaitConfiguration configuration) {
+            Condition<?, ?> condition, WaitConfiguration configuration) {
         if (outcome instanceof WaitCompletion.Satisfied<OBSERVED, RESULT> success) {
             return success.result();
         }
-        AwaitFailure failure = FailureDiagnostics.failure(outcome, metadata, configuration);
+        AwaitFailure failure = FailureDiagnostics.failure(outcome, condition, configuration);
         switch (failure.reason()) {
             case TIMEOUT, PERSISTENCE_FAILED -> throw new AwaitAssertionError(failure);
             default -> throw new AwaitExecutionException(failure);
         }
     }
 
-    final <RESULT> AwaitResult<OBSERVED, RESULT> capture(ConditionSession<? super OBSERVED, ? extends RESULT> session) {
+    final <RESULT> AwaitResult<OBSERVED, RESULT> capture(ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> session) {
         var history = new AttemptHistory<OBSERVED, RESULT>();
         var outcome = new WaitEngine<OBSERVED, RESULT>(configuration, clock, parker, source, session).waitFor(history);
         if (outcome instanceof WaitCompletion.Satisfied<OBSERVED, RESULT> success) {
             return new AwaitResult.Satisfied<>(history.snapshot(), success.attempt().number(), success.result());
         }
         return new AwaitResult.Failed<>(history.snapshot(), outcome.attempt().number(),
-                FailureDiagnostics.failure(outcome, session.metadata, configuration));
+                FailureDiagnostics.failure(outcome, session.condition, configuration));
     }
 }

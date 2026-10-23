@@ -25,18 +25,18 @@ public final class OptionalConditions {
     private OptionalConditions() {}
 
     public static <VALUE, RESULT> Condition<Optional<? extends VALUE>, RESULT> hasValue(Condition<? super VALUE, ? extends RESULT> nested) {
-        return compose("optional value: ", required(nested).metadata, OptionalConditions::present,
-                () -> nested.newSession());
+        return compose("optional value: ", required(nested), null, OptionalConditions::present,
+                () -> nested.newAttempt());
     }
 
     public static <VALUE> SelectedCondition<Optional<? extends VALUE>> hasValue(PreservingCondition<? super VALUE> nested) {
-        return selected(compose("optional value: ", required(nested).metadata, OptionalConditions::present,
-                () -> nested.preservingSession()));
+        return selected(compose("optional value: ", required(nested).definition, null, OptionalConditions::present,
+                () -> nested.preservingAttempt()));
     }
 
     public static <EXPECTED> SelectedCondition<Optional<? super EXPECTED>> hasValue(ComparisonCondition<EXPECTED> nested) {
-        return selected(compose("optional value: ", required(nested).definition.metadata, OptionalConditions::present,
-                () -> nested.definition.preservingSession()));
+        return selected(compose("optional value: ", required(nested).definition.definition, null, OptionalConditions::present,
+                () -> nested.definition.preservingAttempt()));
     }
 
     private static <VALUE> ConditionResult<VALUE> present(Optional<? extends VALUE> actual) {

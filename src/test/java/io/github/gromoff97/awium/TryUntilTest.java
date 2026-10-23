@@ -32,7 +32,7 @@ class TryUntilTest {
         AwaitResult<Number, BigDecimal> result = await(source).usingTime(time, time).tryUntil(Conditions.instanceOf(BigDecimal.class));
 
         assertSame(actual, satisfied(result).result());
-        assertSame(actual, assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, result.attempts().getFirst().outcome()).observed());
+        assertSame(actual, assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, result.attempts().getFirst().outcome()).observed());
         assertEquals(1, reads[0]);
     }
 
@@ -47,10 +47,10 @@ class TryUntilTest {
 
         var success = satisfied(result);
         assertEquals("boundary", success.result());
-        assertEquals(List.of(AwaitAttempt.Phase.ACQUISITION,
-                        AwaitAttempt.Phase.PERSISTENCE,
-                        AwaitAttempt.Phase.PERSISTENCE),
-                success.attempts().stream().map(AwaitAttempt::phase).toList());
+        assertEquals(List.of(AttemptRecord.Phase.ACQUISITION,
+                        AttemptRecord.Phase.PERSISTENCE,
+                        AttemptRecord.Phase.PERSISTENCE),
+                success.attempts().stream().map(AttemptRecord::phase).toList());
     }
 
     @Test
@@ -66,8 +66,8 @@ class TryUntilTest {
         assertNull(satisfied(nullSource).result());
         assertNull(satisfied(nullPredicate).result());
         assertInstanceOf(ConditionResult.Satisfied.class,
-                assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, satisfied(nullSource).attempts().getFirst().outcome()).evaluation());
-        assertNull(assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, satisfied(nullSource).attempts().getFirst().outcome()).observed());
+                assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, satisfied(nullSource).attempts().getFirst().outcome()).evaluation());
+        assertNull(assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, satisfied(nullSource).attempts().getFirst().outcome()).observed());
         assertEquals("payment", satisfied(selected).result());
     }
 
@@ -79,8 +79,8 @@ class TryUntilTest {
         var first = satisfied(stage.tryUntil(isNotNull));
         var second = satisfied(stage.tryUntil(isNotNull));
 
-        assertEquals(List.of(1L), first.attempts().stream().map(AwaitAttempt::number).toList());
-        assertEquals(List.of(1L), second.attempts().stream().map(AwaitAttempt::number).toList());
+        assertEquals(List.of(1L), first.attempts().stream().map(AttemptRecord::number).toList());
+        assertEquals(List.of(1L), second.attempts().stream().map(AttemptRecord::number).toList());
     }
 
     @SuppressWarnings("unchecked")

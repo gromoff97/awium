@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +27,29 @@ class CompositionDiagnosticsTest {
             assertTrue(failure.message().contains("Importance: customer is required"), failure.message());
             assertEquals(1, result.attempts().size());
             assertEquals(3, result.totalAttempts());
+        }
+    }
+
+    @Test
+    void historyRetainsLookupAndNestedExpectationsAfterTheKeyAppears() {
+        var observations = List.of(Map.<String, String>of(), Map.of("customerId", "Alice"), Map.of("customerId", "Bob"));
+        int[] calls = {0};
+        var time = new FakeTime(0);
+        var result = await(() -> observations.get(calls[0]++)).usingTime(time, time).every(ofNanos(1)).tryUntil(
+                valueFor("customerId", equalTo("Bob")).because("customer is required"));
+
+        assertEquals("Bob", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals(3, result.attempts().size());
+        AttemptRecord.Outcome.Evaluated<?, ?> lookup = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, result.attempts().get(0).outcome());
+        AttemptRecord.Outcome.Evaluated<?, ?> nested = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, result.attempts().get(1).outcome());
+        AttemptRecord.Outcome.Evaluated<?, ?> success = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, result.attempts().get(2).outcome());
+        assertEquals("map contains the expected key", lookup.condition().description());
+        assertEquals("customerId", lookup.condition().reference().value());
+        assertEquals("Bob", nested.condition().reference().value());
+        assertEquals(nested.condition(), success.condition());
+        for (var attempt : List.of(lookup, nested, success)) {
+            assertEquals("customer is required", attempt.condition().explanation());
+            assertNull(attempt.progress());
         }
     }
 

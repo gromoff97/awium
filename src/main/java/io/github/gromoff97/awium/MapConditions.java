@@ -4,8 +4,7 @@ import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
-import io.github.gromoff97.awium.ConditionResult.Context;
-import io.github.gromoff97.awium.ConditionResult.Reference;
+import io.github.gromoff97.awium.Condition.Reference;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import java.util.Map;
@@ -105,20 +104,20 @@ public final class MapConditions {
 
     public static <KEY, VALUE> SelectedCondition<Map<? extends KEY, ? extends VALUE>> singleEntry(
             PreservingCondition<? super Entry<? extends KEY, ? extends VALUE>> nested) {
-        return selected(ConditionSupport.single("map", required(nested).metadata, Map::entrySet,
-                () -> nested.preservingSession()));
+        return selected(ConditionSupport.single("map", required(nested).definition, Map::entrySet,
+                () -> nested.preservingAttempt()));
     }
 
     public static <KEY, VALUE, RESULT> Condition<Map<? extends KEY, ? extends VALUE>, RESULT> singleEntry(
             Condition<? super Entry<? extends KEY, ? extends VALUE>, ? extends RESULT> nested) {
-        return ConditionSupport.single("map", required(nested).metadata, Map::entrySet,
-                () -> nested.newSession());
+        return ConditionSupport.single("map", required(nested), Map::entrySet,
+                () -> nested.newAttempt());
     }
 
     public static <KEY, VALUE> SelectedCondition<Map<? super KEY, ? super VALUE>> singleEntry(
             ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
-        return selected(ConditionSupport.single("map", required(nested).definition.metadata, Map::entrySet,
-                () -> nested.definition.preservingSession()));
+        return selected(ConditionSupport.single("map", required(nested).definition.definition, Map::entrySet,
+                () -> nested.definition.preservingAttempt()));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> allEntries(BiPredicate<? super KEY, ? super VALUE> predicate) {
@@ -178,20 +177,23 @@ public final class MapConditions {
 
     public static <KEY, VALUE, RESULT> Condition<Map<? super KEY, ? extends VALUE>, RESULT> valueFor(KEY key,
             Condition<? super VALUE, ? extends RESULT> nested) {
-        return compose("map value ", required(nested).metadata, actual -> value(actual, key),
-                () -> nested.newSession());
+        return compose("map value ", required(nested),
+                valueFor(key).definition, actual -> value(actual, key),
+                () -> nested.newAttempt());
     }
 
     public static <KEY, VALUE> MapValueCondition<Map<? super KEY, ? extends VALUE>> valueFor(KEY key,
             PreservingCondition<? super VALUE> nested) {
-        return mapValue(compose("map value ", required(nested).metadata, actual -> value(actual, key),
-                () -> nested.preservingSession()));
+        return mapValue(compose("map value ", required(nested).definition,
+                valueFor(key).definition, actual -> value(actual, key),
+                () -> nested.preservingAttempt()));
     }
 
     public static <KEY, EXPECTED> MapValueCondition<Map<? super KEY, ? super EXPECTED>> valueFor(KEY key,
             ComparisonCondition<EXPECTED> nested) {
-        return mapValue(compose("map value ", required(nested).definition.metadata, actual -> value(actual, key),
-                () -> nested.definition.preservingSession()));
+        return mapValue(compose("map value ", required(nested).definition.definition,
+                valueFor(key).definition, actual -> value(actual, key),
+                () -> nested.definition.preservingAttempt()));
     }
 
     public static <KEY> SelectedCondition<Map<? super KEY, ?>> entryFor(KEY key) {
@@ -318,8 +320,7 @@ public final class MapConditions {
                 }
             }
         }
-        return ConditionResult.<Entry<KEY, VALUE>>unsatisfied(actual == null ? "map was null" : "map did not contain the expected key")
-                .withContext(new Context.Expectation("map contains the expected key", expectedReference(key)));
+        return unsatisfied(actual == null ? "map was null" : "map did not contain the expected key");
     }
 
     private static PreservingCondition<Map<?, ?>> sized(int bound, IntPredicate matches,

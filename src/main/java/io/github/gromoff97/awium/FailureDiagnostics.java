@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.ConditionResult.Reference;
+import io.github.gromoff97.awium.Condition.Reference;
 import java.util.List;
 import java.util.Locale;
 import java.util.StringJoiner;
@@ -22,38 +22,44 @@ final class FailureDiagnostics {
     private static final String STACK_TRACE_HINT = "… <see stack trace>";
 
     private final WaitCompletion<?, ?> outcome;
-    private final ConditionMetadata metadata;
+    private final Condition<?, ?> condition;
     private final WaitConfiguration configuration;
     private final Object observed;
     private final String mismatch;
     private final AwaitFailure.Reason reason;
     private final Throwable cause;
-    private final ConditionResult.Context.Sequence sequence;
+    private final AttemptRecord.Progress sequence;
 
     private String actual;
     private String referenceValue;
     private String sequenceReference;
 
     private FailureDiagnostics(WaitCompletion<?, ?> outcome,
-            ConditionMetadata metadata, WaitConfiguration configuration) {
+            Condition<?, ?> condition, WaitConfiguration configuration) {
         this.outcome = requireNonNull(outcome, "outcome must not be null");
         this.configuration = requireNonNull(configuration, "configuration must not be null");
-        requireNonNull(metadata, "metadata must not be null");
+        requireNonNull(condition, "condition must not be null");
         var attempt = outcome.attempt().outcome();
-        var evaluation = attempt instanceof AwaitAttempt.Outcome.Evaluated<?, ?> value ? value.evaluation() : null;
+        var evaluation = attempt instanceof AttemptRecord.Outcome.Evaluated<?, ?> value ? value.evaluation() : null;
         observed = switch (attempt) {
-            case AwaitAttempt.Outcome.Evaluated<?, ?> value -> value.observed();
-            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> value -> value.observed();
+            case AttemptRecord.Outcome.Evaluated<?, ?> value -> value.observed();
+            case AttemptRecord.Outcome.ConditionFailed<?, ?> value -> value.observed();
+            case AttemptRecord.Outcome.SourceInterrupted<?, ?> value -> value.observed();
             default -> null;
         };
         mismatch = evaluation instanceof ConditionResult.Unsatisfied<?> value ? value.mismatch() : null;
         reason = outcome.failureReason();
         cause = outcome.cause();
-        var context = evaluation == null ? null : evaluation.context();
-        sequence = context instanceof ConditionResult.Context.Sequence value ? value : null;
-        this.metadata = context instanceof ConditionResult.Context.Expectation expectation
-                ? new ConditionMetadata(expectation.description(), metadata.explanation(), expectation.reference())
-                : metadata;
+        if (attempt instanceof AttemptRecord.Outcome.Evaluated<?, ?> value) {
+            sequence = value.progress();
+            this.condition = value.condition();
+        } else if (attempt instanceof AttemptRecord.Outcome.ConditionFailed<?, ?> value) {
+            sequence = value.progress();
+            this.condition = value.condition();
+        } else {
+            sequence = null;
+            this.condition = condition;
+        }
     }
 
     static String duration(long nanos) {
@@ -70,8 +76,8 @@ final class FailureDiagnostics {
         return result.length() == 0 ? "0 nanoseconds" : result.toString();
     }
 
-    static AwaitFailure failure(WaitCompletion<?, ?> outcome, ConditionMetadata metadata, WaitConfiguration configuration) {
-        return new FailureDiagnostics(outcome, metadata, configuration).failure();
+    static AwaitFailure failure(WaitCompletion<?, ?> outcome, Condition<?, ?> condition, WaitConfiguration configuration) {
+        return new FailureDiagnostics(outcome, condition, configuration).failure();
     }
 
     private AwaitFailure failure() {
@@ -112,9 +118,9 @@ final class FailureDiagnostics {
     private String uncontrolledHeading() {
         boolean interrupted = cause instanceof InterruptedException;
         return switch (outcome.attempt().outcome()) {
-            case AwaitAttempt.Outcome.WaitingFailed<?, ?> ignored -> interrupted
+            case AttemptRecord.Outcome.WaitingFailed<?, ?> ignored -> interrupted
                     ? "Caller thread was interrupted while waiting" : "Waiting before the next attempt failed";
-            case AwaitAttempt.Outcome.Evaluated<?, ?> ignored -> interrupted
+            case AttemptRecord.Outcome.ConditionFailed<?, ?> ignored -> interrupted
                     ? "Caller thread was interrupted during condition evaluation" : "Condition evaluation failed";
             default -> interrupted
                     ? "Caller thread was interrupted during source retrieval" : "Source retrieval failed";
@@ -132,7 +138,7 @@ final class FailureDiagnostics {
             case WaitCompletion.TimeoutBetweenObservations<?, ?> ignored ->
                     "Acquisition deadline elapsed before the next attempt";
             case WaitCompletion.LateTimeout<?, ?> value ->
-                    value.attempt().outcome() instanceof AwaitAttempt.Outcome.Evaluated<?, ?> evaluated
+                    value.attempt().outcome() instanceof AttemptRecord.Outcome.Evaluated<?, ?> evaluated
                             && evaluated.evaluation() instanceof ConditionResult.Satisfied<?>
                             ? "Condition became satisfied at or after the acquisition deadline"
                             : "Condition remained unsatisfied at or after the acquisition deadline";
@@ -147,11 +153,11 @@ final class FailureDiagnostics {
 
     private String message(String title, Throwable diagnosticFailure) {
         boolean emergency = diagnosticFailure != null;
-        AwaitAttempt<?, ?> attempt = outcome.attempt();
+        AttemptRecord<?, ?> attempt = outcome.attempt();
         StringBuilder out = new StringBuilder(title).append("\n\n");
         condition(out, emergency);
         String renderedActual = null;
-        if (attempt.outcome().timing() instanceof AwaitAttempt.Timing.AfterObservation) {
+        if (attempt.outcome().timing() instanceof AttemptRecord.Timing.AfterObservation) {
             if (!emergency) {
                 actual = renderValue(observed);
             }
@@ -217,10 +223,10 @@ final class FailureDiagnostics {
     }
 
     private void condition(StringBuilder out, boolean emergency) {
-        field(out, "", "Condition", metadata.description());
-        referenceValue = reference(out, metadata.reference(), referenceValue, emergency);
-        if (metadata.explanation() != null) {
-            field(out, "Importance", metadata.explanation());
+        field(out, "", "Condition", condition.description());
+        referenceValue = reference(out, condition.reference(), referenceValue, emergency);
+        if (condition.explanation() != null) {
+            field(out, "Importance", condition.explanation());
         }
     }
 
@@ -230,10 +236,10 @@ final class FailureDiagnostics {
         }
         out.append('\n').append("Sequence (captured ").append(sequence.capturedStages())
                 .append(" of ").append(sequence.totalStages()).append("):\n");
-        field(out, "Expectation", sequence.expectation());
-        sequenceReference = reference(out, sequence.reference(), sequenceReference, emergency);
-        if (sequence.importance() != null) {
-            field(out, "Importance", sequence.importance());
+        field(out, "Expectation", sequence.condition().description());
+        sequenceReference = reference(out, sequence.condition().reference(), sequenceReference, emergency);
+        if (sequence.condition().explanation() != null) {
+            field(out, "Importance", sequence.condition().explanation());
         }
         if (mismatch != null) {
             field(out, "Mismatch", mismatch);

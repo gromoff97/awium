@@ -12,11 +12,11 @@ import static java.util.Objects.requireNonNull;
  */
 public sealed interface AwaitResult<OBSERVED, RESULT> {
 
-    List<AwaitAttempt<OBSERVED, RESULT>> attempts();
+    List<AttemptRecord<OBSERVED, RESULT>> attempts();
 
     long totalAttempts();
 
-    record Satisfied<OBSERVED, RESULT>(List<AwaitAttempt<OBSERVED, RESULT>> attempts,
+    record Satisfied<OBSERVED, RESULT>(List<AttemptRecord<OBSERVED, RESULT>> attempts,
             long totalAttempts, RESULT result) implements AwaitResult<OBSERVED, RESULT> {
 
         public Satisfied {
@@ -25,7 +25,7 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
         }
     }
 
-    record Failed<OBSERVED, RESULT>(List<AwaitAttempt<OBSERVED, RESULT>> attempts,
+    record Failed<OBSERVED, RESULT>(List<AttemptRecord<OBSERVED, RESULT>> attempts,
             long totalAttempts, AwaitFailure failure) implements AwaitResult<OBSERVED, RESULT> {
 
         public Failed {

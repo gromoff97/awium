@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.CapturedEvaluator.captured;
+import static io.github.gromoff97.awium.ConditionSupport.captured;
 import static io.github.gromoff97.awium.ConditionResult.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.explanation;
 import static io.github.gromoff97.awium.Conditions.*;

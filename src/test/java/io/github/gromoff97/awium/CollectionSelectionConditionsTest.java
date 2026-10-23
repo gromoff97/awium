@@ -15,6 +15,8 @@ import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.CollectionConditions.first;
 import static io.github.gromoff97.awium.CollectionConditions.last;
+import static io.github.gromoff97.awium.CollectionConditions.single;
+import static io.github.gromoff97.awium.CollectionConditions.subsetOf;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
 import static io.github.gromoff97.awium.Conditions.matches;
@@ -62,6 +64,35 @@ class CollectionSelectionConditionsTest {
                 (Integer value) -> value == 4), List.of(1, 3)).getClass());
         assertEquals(Unsatisfied.class, evaluate(CollectionConditions.none(
                 (Integer value) -> value < 0), List.of(1, -1)).getClass());
+    }
+
+    @Test
+    void subsetPreservesTypedCollectionsAcrossTerminalsAndComposition() {
+        var actual = new ArrayList<>(List.of("ready"));
+        var time = new FakeTime(0);
+        var plain = await(() -> actual).until(subsetOf(List.of("ready", "done")));
+        var explained = await(() -> actual).until(subsetOf(List.of("ready", "done")).because("allowed states"));
+        var selected = await(() -> List.of(actual)).until(single(subsetOf(List.of("ready")).because("allowed states")));
+        var captured = await(() -> actual).usingTime(time, time)
+                .until(subsetOf(List.of("ready")), subsetOf(List.of("ready", "done")).because("allowed states"));
+
+        assertSame(actual, plain);
+        assertSame(actual, explained);
+        assertSame(actual, selected);
+        assertSame(actual, captured.getLast());
+        assertEquals(List.of(5, 5, 5, 5), List.of(plain.getFirst().length(), explained.getFirst().length(),
+                selected.getFirst().length(), captured.getLast().getFirst().length()));
+
+        var diagnostic = await(() -> actual).tryUntil(subsetOf(List.of("ready")).because("allowed states"));
+        if (diagnostic instanceof AwaitResult.Satisfied(var attempts, var count, var value)) {
+            assertSame(actual, value);
+            assertEquals(5, value.getFirst().length());
+        } else {
+            throw new AssertionError(diagnostic);
+        }
+
+        List<CharSequence> text = List.of("ready");
+        assertSame(text, await(() -> text).until(subsetOf(List.of("ready")).because("compatible subtype")));
     }
 
     @Test

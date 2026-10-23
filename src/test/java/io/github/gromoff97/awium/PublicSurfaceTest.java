@@ -29,7 +29,7 @@ class PublicSurfaceTest {
 
     @Test
     void conditionStagesDoNotExposeRuntimeMechanicsOrFictitiousResults() {
-        Set<String> runtimeMethods = Set.of("description", "explanation", "evaluatorFactory", "newEvaluator", "newSession", "preservingSession", "selectionSession");
+        Set<String> runtimeMethods = Set.of("evaluatorFactory", "newEvaluator", "newAttempt", "preservingAttempt", "selectionAttempt");
         for (Class<?> stage : List.of(Condition.class, PreservingCondition.class, ComparisonCondition.class,
                 SelectedCondition.class, MapValueCondition.class)) {
             stream(stage.getMethods()).forEach(method ->

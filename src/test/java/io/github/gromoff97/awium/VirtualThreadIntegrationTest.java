@@ -86,7 +86,7 @@ class VirtualThreadIntegrationTest {
                 assertTrue(caller.isVirtual());
                 assertEquals(2, result.totalAttempts());
                 for (var attempt : result.attempts()) {
-                    assertSame(caller, assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, attempt.outcome()).observed());
+                    assertSame(caller, assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, attempt.outcome()).observed());
                 }
                 resultThreads.add(caller);
             }

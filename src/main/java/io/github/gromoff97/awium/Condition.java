@@ -13,23 +13,58 @@ import static java.util.Objects.requireNonNull;
  */
 public final class Condition<OBSERVED, RESULT> {
 
-    final ConditionMetadata metadata;
-    final Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory;
+    private final String description;
+    private final String explanation;
+    private final Reference<?> reference;
+    final Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory;
 
-    Condition(ConditionMetadata metadata,
-            Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory) {
-        this.metadata = requireNonNull(metadata, "metadata must not be null");
+    Condition(String description, String explanation, Reference<?> reference,
+            Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
+        this.description = nonBlank(description, "description");
+        this.explanation = explanation;
+        this.reference = reference;
         this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
     }
 
-    ConditionSession<OBSERVED, RESULT> newSession() {
-        return new ConditionSession<>(metadata, evaluatorFactory);
+    ConditionAwaitAttempt<OBSERVED, RESULT> newAttempt() {
+        return new ConditionAwaitAttempt<>(this, evaluatorFactory);
+    }
+
+    final <ACTUAL extends OBSERVED> ConditionAwaitAttempt<ACTUAL, ACTUAL> preservingAttempt() {
+        return new ConditionAwaitAttempt<>(this, () -> {
+            var evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
+            return actual -> {
+                var evaluation = evaluator.probe(actual);
+                return switch (evaluation) {
+                    case AttemptResult.Evaluated<?> value -> new AttemptResult.Evaluated<>(
+                            value.result().mapSatisfied(ignored -> actual), value.condition(), value.progress());
+                    case AttemptResult.Uncontrolled<?> failure -> new AttemptResult.Uncontrolled<ACTUAL>(
+                            failure.cause(), failure.condition(), failure.progress());
+                };
+            };
+        });
+    }
+
+    public String description() {
+        return description;
+    }
+
+    public String explanation() {
+        return explanation;
+    }
+
+    public Reference<?> reference() {
+        return reference;
+    }
+
+    Condition<OBSERVED, RESULT> withExplanation(String explanation) {
+        return new Condition<>(description, explanation, reference, evaluatorFactory);
     }
 
     // Only library-created selectors use this bridge; Await binds their result to the source type.
     @SuppressWarnings("unchecked")
-    final <SELECTED> ConditionSession<OBSERVED, SELECTED> selectionSession() {
-        return (ConditionSession<OBSERVED, SELECTED>) (ConditionSession<?, ?>) newSession();
+    final <SELECTED> ConditionAwaitAttempt<OBSERVED, SELECTED> selectionAttempt() {
+        return (ConditionAwaitAttempt<OBSERVED, SELECTED>) (ConditionAwaitAttempt<?, ?>) newAttempt();
     }
 
     static <C> C required(C condition) {
@@ -43,7 +78,7 @@ public final class Condition<OBSERVED, RESULT> {
     }
 
     public Condition<OBSERVED, RESULT> because(String explanation) {
-        return new Condition<>(metadata.because(explanation), evaluatorFactory);
+        return withExplanation(nonBlank(explanation, "explanation"));
     }
 
     public Condition<OBSERVED, RESULT> because(String format, Object... arguments) {
@@ -52,27 +87,27 @@ public final class Condition<OBSERVED, RESULT> {
 
     public static final class PreservingCondition<OBSERVED> {
 
-        final ConditionMetadata metadata;
-        final Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory;
+        final Condition<OBSERVED, OBSERVED> definition;
 
-        PreservingCondition(ConditionMetadata metadata,
+        PreservingCondition(String description, Reference<?> reference,
                 Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory) {
-            this.metadata = requireNonNull(metadata, "metadata must not be null");
-            this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
+            this.definition = new Condition<>(description, null, reference, () -> {
+                var evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
+                return actual -> AttemptResult.of(evaluator.apply(actual));
+            });
+            requireNonNull(evaluatorFactory, "evaluator factory must not be null");
         }
 
-        final <ACTUAL extends OBSERVED> ConditionSession<ACTUAL, ACTUAL> preservingSession() {
-            return new ConditionSession<>(metadata, () -> {
-                var evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
-                return actual -> {
-                    var result = evaluator.apply(actual);
-                    return result == null ? null : result.mapSatisfied(ignored -> actual);
-                };
-            });
+        private PreservingCondition(Condition<OBSERVED, OBSERVED> definition) {
+            this.definition = definition;
+        }
+
+        final <ACTUAL extends OBSERVED> ConditionAwaitAttempt<ACTUAL, ACTUAL> preservingAttempt() {
+            return definition.preservingAttempt();
         }
 
         public PreservingCondition<OBSERVED> because(String explanation) {
-            return new PreservingCondition<>(metadata.because(explanation), evaluatorFactory);
+            return new PreservingCondition<>(definition.because(explanation));
         }
 
         public PreservingCondition<OBSERVED> because(String format, Object... arguments) {
@@ -105,8 +140,8 @@ public final class Condition<OBSERVED, RESULT> {
             this.definition = required(definition);
         }
 
-        <SELECTED> ConditionSession<OBSERVED, SELECTED> selectionSession() {
-            return definition.selectionSession();
+        <SELECTED> ConditionAwaitAttempt<OBSERVED, SELECTED> selectionAttempt() {
+            return definition.selectionAttempt();
         }
 
         public SelectedCondition<OBSERVED> because(String explanation) {
@@ -126,8 +161,8 @@ public final class Condition<OBSERVED, RESULT> {
             this.definition = required(definition);
         }
 
-        <VALUE> ConditionSession<OBSERVED, VALUE> selectionSession() {
-            return definition.selectionSession();
+        <VALUE> ConditionAwaitAttempt<OBSERVED, VALUE> selectionAttempt() {
+            return definition.selectionAttempt();
         }
 
         public MapValueCondition<OBSERVED> because(String explanation) {
@@ -138,4 +173,19 @@ public final class Condition<OBSERVED, RESULT> {
             return because(formattedExplanation(format, arguments));
         }
     }
+
+    public record Reference<VALUE>(String label, VALUE value) {
+
+        public Reference {
+            label = nonBlank(label, "reference label");
+        }
+    }
+
+    private static String nonBlank(String value, String name) {
+        if (requireNonNull(value, name + " must not be null").isBlank()) {
+            throw new IllegalArgumentException(name + " must not be blank");
+        }
+        return value;
+    }
+
 }

@@ -1,16 +1,19 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
-import io.github.gromoff97.awium.ConditionResult.Reference;
+import io.github.gromoff97.awium.Condition.Reference;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
+import java.util.stream.Stream;
 
 import static io.github.gromoff97.awium.CheckedCalls.call;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
@@ -24,14 +27,10 @@ final class ConditionSupport {
 
     static <OBSERVED, RESULT> Condition<OBSERVED, RESULT> condition(String description, Reference<?> reference,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>> evaluation) {
-        var metadata = new ConditionMetadata(description, null, reference);
+        var condition = new Condition<OBSERVED, RESULT>(description, null, reference,
+                () -> actual -> AttemptResult.of(evaluation.apply(actual)));
         requireNonNull(evaluation, "evaluation must not be null");
-        return new Condition<>(metadata, () -> evaluation);
-    }
-
-    static <OBSERVED, RESULT> Condition<OBSERVED, RESULT> condition(String description,
-            Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory) {
-        return new Condition<>(new ConditionMetadata(description, null, null), evaluatorFactory);
+        return condition;
     }
 
     static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description,
@@ -41,9 +40,9 @@ final class ConditionSupport {
 
     static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description, Reference<?> reference,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>> evaluator) {
-        var metadata = new ConditionMetadata(description, null, reference);
+        var condition = new PreservingCondition<OBSERVED>(description, reference, () -> evaluator);
         requireNonNull(evaluator, "evaluation must not be null");
-        return new PreservingCondition<>(metadata, () -> evaluator);
+        return condition;
     }
 
     static <OBSERVED> SelectedCondition<OBSERVED> selected(String description,
@@ -67,12 +66,20 @@ final class ConditionSupport {
         return new Reference<>("Unexpected", value);
     }
 
-    static <OBSERVED, VALUE, RESULT> Condition<OBSERVED, RESULT> compose(String prefix, ConditionMetadata metadata,
+    static <OBSERVED, VALUE, RESULT> Condition<OBSERVED, RESULT> compose(String prefix, Condition<?, ?> condition,
+            Condition<?, ?> extractionCondition,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<VALUE>> extract,
-            Supplier<? extends Function<? super VALUE, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory) {
-        return new Condition<>(metadata.prefixed(prefix), () -> {
+            Supplier<? extends AwaitAttempt<? super VALUE, ? extends RESULT>> evaluatorFactory) {
+        return new Condition<>(prefix + condition.description(), condition.explanation(), condition.reference(), () -> {
             var evaluator = evaluatorFactory.get();
-            return actual -> extract.apply(actual).continueIfSatisfied(evaluator);
+            return actual -> {
+                var extracted = extract.apply(actual);
+                if (extracted instanceof ConditionResult.Satisfied<VALUE> value) {
+                    return evaluator.probe(value.result());
+                }
+                return new AttemptResult.Evaluated<>(extracted.<RESULT>mapSatisfied(ignored -> null),
+                        extractionCondition, null);
+            };
         });
     }
 
@@ -108,31 +115,87 @@ final class ConditionSupport {
         });
     }
 
-    static <OBSERVED, ELEMENT, RESULT> Condition<OBSERVED, RESULT> single(String subject, ConditionMetadata metadata,
+    static <OBSERVED, ELEMENT, RESULT> Condition<OBSERVED, RESULT> single(String subject, Condition<?, ?> condition,
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
-            Supplier<? extends Function<? super ELEMENT, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory) {
-        return new Condition<>(metadata.prefixed(subject + " has a single matching value: "), () -> {
+            Supplier<? extends AwaitAttempt<? super ELEMENT, ? extends RESULT>> evaluatorFactory) {
+        return new Condition<>(subject + " has a single matching value: " + condition.description(),
+                condition.explanation(), condition.reference(), () -> {
             var evaluator = evaluatorFactory.get();
-            return actual -> actual == null ? unsatisfied(subject + " was null")
+            return actual -> actual == null ? AttemptResult.of(unsatisfied(subject + " was null"))
                     : evaluateSingle(call(() -> elements.apply(actual)), evaluator);
         });
     }
 
-    private static <ELEMENT, RESULT> ConditionResult<? extends RESULT> evaluateSingle(Iterable<? extends ELEMENT> values,
-            Function<? super ELEMENT, ? extends ConditionResult<? extends RESULT>> evaluator) throws Exception {
-        ConditionResult<? extends RESULT> result = unsatisfied("no value matched");
+    private static <ELEMENT, RESULT> AttemptResult<? extends RESULT> evaluateSingle(Iterable<? extends ELEMENT> values,
+            AwaitAttempt<? super ELEMENT, ? extends RESULT> evaluator) throws Exception {
+        AttemptResult.Evaluated<? extends RESULT> result = new AttemptResult.Evaluated<>(
+                unsatisfied("no value matched"), null, null);
         for (var iterator = call(values::iterator); call(iterator::hasNext);) {
             ELEMENT value = call(iterator::next);
-            var evaluated = evaluator.apply(value);
-            if (evaluated instanceof ConditionResult.Uncontrolled<?>) return evaluated;
-            if (evaluated instanceof ConditionResult.Satisfied<?>
-                    && result instanceof ConditionResult.Satisfied<?>) return unsatisfied("more than one value matched");
-            // Keep the first match, otherwise the last mismatch.
-            if (!(result instanceof ConditionResult.Satisfied<?>)) {
-                result = evaluated;
+            switch (evaluator.probe(value)) {
+                case AttemptResult.Uncontrolled<? extends RESULT> failure -> { return failure; }
+                case AttemptResult.Evaluated<? extends RESULT> evaluated -> {
+                    if (evaluated.result() instanceof ConditionResult.Satisfied<?>
+                            && result.result() instanceof ConditionResult.Satisfied<?>) return AttemptResult.of(unsatisfied("more than one value matched"));
+                    // Keep the first match, otherwise the last mismatch.
+                    if (!(result.result() instanceof ConditionResult.Satisfied<?>)) {
+                        result = evaluated;
+                    }
+                }
             }
         }
         return result;
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    static <OBSERVED> Condition<OBSERVED, List<OBSERVED>> captured(PreservingCondition<? super OBSERVED> first,
+            PreservingCondition<? super OBSERVED> second, PreservingCondition<? super OBSERVED>... rest) {
+        List<PreservingCondition<? super OBSERVED>> stages = stages(first, second, rest);
+        return new Condition<>("conditions are satisfied in order", null, null, () ->
+                new SequenceExecution<OBSERVED, OBSERVED>(stages.stream()
+                        .map(stage -> stage.<OBSERVED>preservingAttempt()).toList())::step);
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    static <OBSERVED, ELEMENT> Condition<OBSERVED, List<ELEMENT>> captured(SelectedCondition<? super OBSERVED> first,
+            SelectedCondition<? super OBSERVED> second,
+            SelectedCondition<? super OBSERVED>... rest) {
+        List<SelectedCondition<? super OBSERVED>> stages =
+                stages(first, second, rest);
+        return new Condition<>("conditions are satisfied in order", null, null,
+                () -> new SequenceExecution<OBSERVED, ELEMENT>(stages.stream()
+                        .map(stage -> stage.<ELEMENT>selectionAttempt()).toList())::step);
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    static <OBSERVED, MAP_VALUE> Condition<OBSERVED, List<MAP_VALUE>> captured(MapValueCondition<? super OBSERVED> first,
+            MapValueCondition<? super OBSERVED> second,
+            MapValueCondition<? super OBSERVED>... rest) {
+        List<MapValueCondition<? super OBSERVED>> stages =
+                stages(first, second, rest);
+        return new Condition<>("conditions are satisfied in order", null, null,
+                () -> new SequenceExecution<OBSERVED, MAP_VALUE>(stages.stream()
+                        .map(stage -> stage.<MAP_VALUE>selectionAttempt()).toList())::step);
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    static <OBSERVED> Condition<OBSERVED, List<OBSERVED>> captured(ComparisonCondition<? extends OBSERVED> first,
+            ComparisonCondition<? extends OBSERVED> second, ComparisonCondition<? extends OBSERVED>... rest) {
+        List<ComparisonCondition<? extends OBSERVED>> stages = stages(first, second, rest);
+        return new Condition<>("conditions are satisfied in order", null, null, () ->
+                new SequenceExecution<OBSERVED, OBSERVED>(stages.stream()
+                        .map(stage -> stage.definition.<OBSERVED>preservingAttempt()).toList())::step);
+    }
+
+    private static <STAGE> List<STAGE> stages(STAGE first, STAGE second, STAGE[] rest) {
+        return Stream.concat(Stream.of(first, second),
+                        Arrays.stream(requireNonNull(rest, "conditions must not be null")))
+                .map(stage -> requireNonNull(stage, "condition must not be null"))
+                .toList();
     }
 
     static void validateRange(int lowerBound, int upperBound, String measure) {

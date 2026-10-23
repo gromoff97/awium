@@ -1,49 +1,47 @@
 package io.github.gromoff97.awium;
 
 import java.util.concurrent.Callable;
-import java.util.function.Function;
 
-import static io.github.gromoff97.awium.ConditionResult.uncontrolled;
 import static io.github.gromoff97.awium.CheckedCalls.checkInterruption;
 import static java.util.Objects.requireNonNull;
 
 /** Lazily executes a condition, converting nonfatal callback failures into uncontrolled results. */
 @SuppressWarnings("removal")
-final class ConditionSession<OBSERVED, RESULT> implements Function<OBSERVED, ConditionResult<? extends RESULT>> {
+final class ConditionAwaitAttempt<OBSERVED, RESULT> implements AwaitAttempt<OBSERVED, RESULT> {
 
-    final ConditionMetadata metadata;
-    private final Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory;
-    private CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>> evaluator;
+    final Condition<?, ?> condition;
+    private final Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory;
+    private AwaitAttempt<? super OBSERVED, ? extends RESULT> evaluator;
 
-    ConditionSession(ConditionMetadata metadata,
-            Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory) {
-        this.metadata = metadata;
+    ConditionAwaitAttempt(Condition<?, ?> condition,
+            Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
+        this.condition = condition;
         this.evaluatorFactory = evaluatorFactory;
     }
 
     @Override
-    public ConditionResult<? extends RESULT> apply(OBSERVED actual) {
+    public AttemptResult<? extends RESULT> probe(OBSERVED actual) {
         try {
             if (evaluator == null) {
                 checkInterruption();
                 evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
             }
             checkInterruption();
-            var result = requireNonNull(evaluator.apply(actual), "condition returned null ConditionResult");
-            if (result instanceof ConditionResult.Uncontrolled<?> failure) {
+            var result = requireNonNull(evaluator.probe(actual), "condition returned null ConditionResult");
+            if (result instanceof AttemptResult.Uncontrolled<?> failure) {
                 rethrowFatalOrRestoreInterrupt(failure.cause());
             }
             return withInterruption(result);
         } catch (Throwable failure) {
             rethrowFatalOrRestoreInterrupt(failure);
-            return uncontrolled(failure);
+            return new AttemptResult.Uncontrolled<>(failure, null, null);
         }
     }
 
-    static <RESULT> ConditionResult<? extends RESULT> withInterruption(ConditionResult<? extends RESULT> result) {
-        if (!(result instanceof ConditionResult.Uncontrolled<?>) && Thread.currentThread().isInterrupted()) {
+    static <RESULT> AttemptResult<? extends RESULT> withInterruption(AttemptResult<? extends RESULT> result) {
+        if (!(result instanceof AttemptResult.Uncontrolled<?>) && Thread.currentThread().isInterrupted()) {
             var interruption = new InterruptedException("caller thread interrupt flag was set");
-            return new ConditionResult.Uncontrolled<>(interruption, result.context());
+            return new AttemptResult.Uncontrolled<>(interruption, result.condition(), result.progress());
         }
         return result;
     }

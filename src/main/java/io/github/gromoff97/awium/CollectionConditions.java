@@ -3,7 +3,7 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
-import io.github.gromoff97.awium.ConditionResult.Reference;
+import io.github.gromoff97.awium.Condition.Reference;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -112,18 +112,18 @@ public final class CollectionConditions {
     }
 
     public static <ELEMENT> SelectedCondition<Collection<? extends ELEMENT>> single(PreservingCondition<? super ELEMENT> nested) {
-        return selected(ConditionSupport.single("collection", required(nested).metadata, actual -> actual,
-                () -> nested.preservingSession()));
+        return selected(ConditionSupport.single("collection", required(nested).definition, actual -> actual,
+                () -> nested.preservingAttempt()));
     }
 
     public static <ELEMENT, RESULT> Condition<Collection<? extends ELEMENT>, RESULT> single(Condition<? super ELEMENT, ? extends RESULT> nested) {
-        return ConditionSupport.single("collection", required(nested).metadata, actual -> actual,
-                () -> nested.newSession());
+        return ConditionSupport.single("collection", required(nested), actual -> actual,
+                () -> nested.newAttempt());
     }
 
     public static <EXPECTED> SelectedCondition<Collection<? super EXPECTED>> single(ComparisonCondition<EXPECTED> nested) {
-        return selected(ConditionSupport.single("collection", required(nested).definition.metadata, actual -> actual,
-                () -> nested.definition.preservingSession()));
+        return selected(ConditionSupport.single("collection", required(nested).definition.definition, actual -> actual,
+                () -> nested.definition.preservingAttempt()));
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> all(Predicate<? super ELEMENT> predicate) {
@@ -254,7 +254,7 @@ public final class CollectionConditions {
                 actual -> sameDistinctElements(actual, values));
     }
 
-    public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> subsetOf(Collection<? extends ELEMENT> expected) {
+    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> subsetOf(Collection<? extends ELEMENT> expected) {
         Collection<? extends ELEMENT> values = snapshot(requireNonNull(expected, "expected elements must not be null").stream());
         return preserving("collection is a subset of the expected elements",
                 "collection was not a subset of the expected elements", expectedReference(values),

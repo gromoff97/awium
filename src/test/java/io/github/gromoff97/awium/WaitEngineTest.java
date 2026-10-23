@@ -13,7 +13,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.ConditionResult.assertionUnsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.ConditionResult.uncontrolled;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.WaitCompletion.*;
 import static java.lang.Thread.currentThread;
@@ -158,7 +157,7 @@ class WaitEngineTest {
                 ignored -> {}, () -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, Conditions.<String>condition("test condition", actual -> satisfied(actual)).preservingSession()).waitFor();
+                }, Conditions.<String>condition("test condition", actual -> satisfied(actual)).preservingAttempt()).waitFor();
 
         assertInstanceOf(LateTimeout.class, outcome);
         assertEquals(1, sourceCalls[0]);
@@ -262,7 +261,7 @@ class WaitEngineTest {
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
         var attempt = assertInstanceOf(
-                AwaitAttempt.Outcome.SourceRetrievalFailed.class,
+                AttemptRecord.Outcome.SourceRetrievalFailed.class,
                 uncontrolled.attempt().outcome());
         assertSame(failure, attempt.failure());
         assertEquals(1, uncontrolled.attempt().number());
@@ -284,7 +283,7 @@ class WaitEngineTest {
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
         var attempt = assertInstanceOf(
-                AwaitAttempt.Outcome.WaitingFailed.class,
+                AttemptRecord.Outcome.WaitingFailed.class,
                 uncontrolled.attempt().outcome());
         assertEquals(2, uncontrolled.attempt().number());
         assertSame(failure, attempt.failure());
@@ -309,7 +308,7 @@ class WaitEngineTest {
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
         var attempt = assertInstanceOf(
-                AwaitAttempt.Outcome.WaitingFailed.class,
+                AttemptRecord.Outcome.WaitingFailed.class,
                 uncontrolled.attempt().outcome());
         assertEquals(2, uncontrolled.attempt().number());
         assertEquals(InterruptedException.class,
@@ -328,7 +327,7 @@ class WaitEngineTest {
                 actual -> unsatisfied("not yet"));
 
         var uncontrolled = assertInstanceOf(Uncontrolled.class, outcome);
-        var attempt = assertInstanceOf(AwaitAttempt.Outcome.WaitingFailed.class,
+        var attempt = assertInstanceOf(AttemptRecord.Outcome.WaitingFailed.class,
                 uncontrolled.attempt().outcome());
         assertEquals(2, uncontrolled.attempt().number());
         assertSame(interruption, attempt.failure());
@@ -345,10 +344,10 @@ class WaitEngineTest {
         var outcome = new WaitEngine<String, String>(config(5, 20, 0), clock,
                 nanos -> { throw new AssertionError("parker must not be called"); },
                 () -> { sourceCalls[0]++; return "actual"; },
-                Conditions.<String>condition("ready", ConditionResult::satisfied).preservingSession(), 0).waitFor();
+                Conditions.<String>condition("ready", ConditionResult::satisfied).preservingAttempt(), 0).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
-        var attempt = assertInstanceOf(AwaitAttempt.Outcome.WaitingFailed.class, failure.attempt().outcome());
+        var attempt = assertInstanceOf(AttemptRecord.Outcome.WaitingFailed.class, failure.attempt().outcome());
         assertEquals(0, sourceCalls[0]);
         assertEquals(1, failure.attempt().number());
         assertInstanceOf(InterruptedException.class, attempt.failure());
@@ -368,10 +367,10 @@ class WaitEngineTest {
         var outcome = new WaitEngine<String, String>(config(1, 2, 0), clock, nanos -> {}, () -> {
             sourceCalls[0]++;
             return "actual";
-        }, Conditions.<String>condition("not ready", value -> unsatisfied("not yet")).preservingSession()).waitFor();
+        }, Conditions.<String>condition("not ready", value -> unsatisfied("not yet")).preservingAttempt()).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
-        var attempt = assertInstanceOf(AwaitAttempt.Outcome.WaitingFailed.class, failure.attempt().outcome());
+        var attempt = assertInstanceOf(AttemptRecord.Outcome.WaitingFailed.class, failure.attempt().outcome());
         assertEquals(1, sourceCalls[0]);
         assertEquals(2, failure.attempt().number());
         assertInstanceOf(InterruptedException.class, attempt.failure());
@@ -397,14 +396,14 @@ class WaitEngineTest {
                 Conditions.<String>condition("ready", actual -> {
                     evaluated[0] = true;
                     return persistence == 0 ? unsatisfied("not yet") : satisfied("ready");
-                }).preservingSession(), 0).waitFor();
+                }).preservingAttempt(), 0).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
-        var attempt = assertInstanceOf(AwaitAttempt.Outcome.WaitingFailed.class, failure.attempt().outcome());
+        var attempt = assertInstanceOf(AttemptRecord.Outcome.WaitingFailed.class, failure.attempt().outcome());
         assertEquals(1, sourceCalls[0]);
         assertEquals(0, parkCalls[0]);
         assertEquals(2, failure.attempt().number());
-        assertEquals(persistence == 0 ? AwaitAttempt.Phase.ACQUISITION : AwaitAttempt.Phase.PERSISTENCE,
+        assertEquals(persistence == 0 ? AttemptRecord.Phase.ACQUISITION : AttemptRecord.Phase.PERSISTENCE,
                 failure.attempt().phase());
         assertInstanceOf(InterruptedException.class, attempt.failure());
         assertTrue(currentThread().isInterrupted());
@@ -434,7 +433,7 @@ class WaitEngineTest {
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
         var attempt = assertInstanceOf(
-                AwaitAttempt.Outcome.WaitingFailed.class,
+                AttemptRecord.Outcome.WaitingFailed.class,
                 uncontrolled.attempt().outcome());
         assertEquals(1, uncontrolled.attempt().number());
         assertEquals(InterruptedException.class,
@@ -594,9 +593,8 @@ class WaitEngineTest {
 
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
-        var attempt = assertInstanceOf(ConditionResult.Uncontrolled.class,
-                assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, uncontrolled.attempt().outcome()).evaluation());
-        assertSame(failure, attempt.cause());
+        var attempt = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, uncontrolled.attempt().outcome());
+        assertSame(failure, attempt.failure());
         assertEquals(2, uncontrolled.attempt().number());
     }
 
@@ -621,33 +619,34 @@ class WaitEngineTest {
             Source<S> source,
             Function<S, ConditionResult<R>> condition) {
         return new WaitEngine<S, R>(config, time, parker, source,
-                ConditionSupport.<S, R>condition("test condition", null, condition::apply).newSession()).waitFor();
+                ConditionSupport.<S, R>condition("test condition", null, condition::apply).newAttempt()).waitFor();
     }
 
-    private static long completed(AwaitAttempt<?, ?> attempt) {
+    private static long completed(AttemptRecord<?, ?> attempt) {
         return attempt.outcome().timing().completionOffset().toNanos();
     }
 
-    private static Object observed(AwaitAttempt<?, ?> attempt) {
+    private static Object observed(AttemptRecord<?, ?> attempt) {
         return switch (attempt.outcome()) {
-            case AwaitAttempt.Outcome.Evaluated<?, ?> outcome -> outcome.observed();
-            case AwaitAttempt.Outcome.SourceInterrupted<?, ?> outcome -> outcome.observed();
+            case AttemptRecord.Outcome.Evaluated<?, ?> outcome -> outcome.observed();
+            case AttemptRecord.Outcome.ConditionFailed<?, ?> outcome -> outcome.observed();
+            case AttemptRecord.Outcome.SourceInterrupted<?, ?> outcome -> outcome.observed();
             default -> throw new IllegalArgumentException("attempt has no observed value");
         };
     }
 
-    private static Object result(AwaitAttempt<?, ?> attempt) {
-        var evaluated = assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, attempt.outcome());
+    private static Object result(AttemptRecord<?, ?> attempt) {
+        var evaluated = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, attempt.outcome());
         return assertInstanceOf(ConditionResult.Satisfied.class, evaluated.evaluation()).result();
     }
 
-    private static String mismatch(AwaitAttempt<?, ?> attempt) {
-        var evaluated = assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, attempt.outcome());
+    private static String mismatch(AttemptRecord<?, ?> attempt) {
+        var evaluated = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, attempt.outcome());
         return assertInstanceOf(ConditionResult.Unsatisfied.class, evaluated.evaluation()).mismatch();
     }
 
-    private static AssertionError assertion(AwaitAttempt<?, ?> attempt) {
-        var evaluated = assertInstanceOf(AwaitAttempt.Outcome.Evaluated.class, attempt.outcome());
+    private static AssertionError assertion(AttemptRecord<?, ?> attempt) {
+        var evaluated = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, attempt.outcome());
         return assertInstanceOf(ConditionResult.Unsatisfied.class, evaluated.evaluation()).assertion();
     }
 }

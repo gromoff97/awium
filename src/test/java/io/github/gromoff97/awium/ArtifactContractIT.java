@@ -56,21 +56,24 @@ class ArtifactContractIT {
         assertFalse(classes.isEmpty(), dependencies);
         Set<String> facade = Set.of("Await", "Conditions", "CollectionConditions", "MapConditions",
                 "OptionalConditions", "StringConditions", "FailureDiagnostics", "ValueRendering");
-        for (String execution : Set.of("Condition", "ConditionSession", "ConditionSupport",
-                "ConditionResult", "ConditionMetadata", "CapturedEvaluator", "WaitEngine",
+        for (String execution : Set.of("Condition", "AwaitAttempt", "ConditionAwaitAttempt", "ConditionSupport",
+                "ConditionResult", "AttemptResult", "SequenceExecution", "WaitEngine",
                 "AttemptHistory", "WaitCompletion", "WaitConfiguration")) {
             Set<String> used = classes.getOrDefault(execution, Set.of());
             assertTrue(used.stream().noneMatch(facade::contains), execution + " -> " + used);
         }
-        for (String condition : Set.of("Condition", "ConditionSession", "ConditionResult",
-                "ConditionMetadata", "ConditionSupport", "CapturedEvaluator")) {
-            assertTrue(classes.get(condition).stream().noneMatch(Set.of("AwaitAttempt", "AwaitResult")::contains),
+        for (String condition : Set.of("ConditionResult")) {
+            assertTrue(classes.get(condition).stream().noneMatch(Set.of("AttemptRecord", "AwaitResult")::contains),
                     condition + " -> " + classes.get(condition));
         }
-        // Condition construction and composition are independent of source protocols, execution, and value comparison.
+        // Condition construction is independent of source protocols, timing, diagnostics, and value comparison.
         Set<String> support = classes.get("ConditionSupport");
-        assertTrue(support.stream().noneMatch(Set.of("Source", "CapturedEvaluator", "ConditionSession", "ValueMatching")::contains),
+        assertTrue(support.stream().noneMatch(Set.of("Source", "WaitEngine", "WaitCompletion", "FailureDiagnostics", "ValueMatching")::contains),
                 "ConditionSupport -> " + support);
+        Set<String> sequence = classes.get("SequenceExecution");
+        assertFalse(AwaitAttempt.class.isAssignableFrom(SequenceExecution.class));
+        assertTrue(sequence.stream().noneMatch(Set.of("ConditionSupport", "Source", "WaitEngine", "WaitConfiguration")::contains),
+                "SequenceExecution -> " + sequence);
         for (String catalog : Set.of("Conditions", "CollectionConditions", "MapConditions",
                 "OptionalConditions", "StringConditions")) {
             assertTrue(classes.get(catalog).stream().noneMatch(Set.of("Source", "FailureDiagnostics")::contains),
@@ -117,8 +120,8 @@ class ArtifactContractIT {
 
     @Test
     void implementationTypesAreNotAccessibleToConsumers(@TempDir Path directory) throws Exception {
-        for (Class<?> internal : List.of(ConditionSupport.class, ConditionSession.class,
-                ConditionMetadata.class, CapturedEvaluator.class, WaitEngine.class, WaitConfiguration.class,
+        for (Class<?> internal : List.of(ConditionSupport.class, AwaitAttempt.class, ConditionAwaitAttempt.class,
+                AttemptResult.class, SequenceExecution.class, WaitEngine.class, WaitConfiguration.class,
                 WaitCompletion.class, AttemptHistory.class,
                 FailureDiagnostics.class, ValueMatching.class, ValueRendering.class, CheckedCalls.class)) {
             assertFalse(java.lang.reflect.Modifier.isPublic(internal.getModifiers()), internal.getName());
@@ -128,7 +131,7 @@ class ArtifactContractIT {
             Path source = consumer.resolve("Contract.java");
             java.nio.file.Files.writeString(source, """
                     package consumer;
-                    import io.github.gromoff97.awium.ConditionSession;
+                    import io.github.gromoff97.awium.ConditionAwaitAttempt;
                     final class Contract {}
                     """);
             var arguments = new java.util.ArrayList<>(List.of("--release", "21", "-proc:none", "-XDrawDiagnostics",

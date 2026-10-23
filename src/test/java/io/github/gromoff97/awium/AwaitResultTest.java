@@ -5,7 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.AwaitAttempt.Phase.ACQUISITION;
+import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
+import static io.github.gromoff97.awium.AttemptRecord.Phase.ACQUISITION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -15,10 +16,10 @@ class AwaitResultTest {
 
     @Test
     void successRetainsLegitimateNullAndCopiesHistory() {
-        var attempt = new AwaitAttempt<String, String>(1, ACQUISITION,
-                new AwaitAttempt.Outcome.Evaluated<>(new AwaitAttempt.Timing.AfterObservation(
+        var attempt = new AttemptRecord<String, String>(1, ACQUISITION,
+                new AttemptRecord.Outcome.Evaluated<>(new AttemptRecord.Timing.AfterObservation(
                                 Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ZERO), null,
-                        new ConditionResult.Satisfied<>(null, ConditionResult.Context.Plain.INSTANCE)));
+                        new ConditionResult.Satisfied<>(null), diagnosticCondition("ready", null, null), null));
         var mutable = new ArrayList<>(List.of(attempt));
 
         var result = new AwaitResult.Satisfied<>(mutable, 1, null);
@@ -45,7 +46,7 @@ class AwaitResultTest {
     void attemptAndResultCountsHaveConciseValidationMessages() {
         assertEquals("attempt number must be positive", assertThrows(
                 IllegalArgumentException.class,
-                () -> new AwaitAttempt<>(0, null, null)).getMessage());
+                () -> new AttemptRecord<>(0, null, null)).getMessage());
         assertEquals("total attempts must be non-negative", assertThrows(
                 IllegalArgumentException.class,
                 () -> new AwaitResult.Satisfied<>(List.of(), -1, null)).getMessage());
@@ -55,8 +56,19 @@ class AwaitResultTest {
     }
 
     @Test
-    void dynamicExpectationsRejectDescriptionsThatCannotBeRendered() {
-        assertThrows(NullPointerException.class, () -> new ConditionResult.Context.Expectation(null, null));
-        assertThrows(IllegalArgumentException.class, () -> new ConditionResult.Context.Expectation(" \n", null));
+    void expectationsRejectDescriptionsThatCannotBeRendered() {
+        assertThrows(NullPointerException.class, () -> diagnosticCondition(null, null, null));
+        assertThrows(IllegalArgumentException.class, () -> diagnosticCondition(" \n", null, null));
+    }
+
+    @Test
+    void sequenceProgressRequiresAnExistingEvaluatedStage() {
+        var expectation = diagnosticCondition("first stage", null, null);
+        assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(0, 2, 0, expectation));
+        assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(0, 0, 1, expectation));
+        assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(-1, 2, 1, expectation));
+        assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(3, 2, 1, expectation));
+        assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(1, 2, 3, expectation));
+        assertThrows(NullPointerException.class, () -> new AttemptRecord.Progress(0, 2, 1, null));
     }
 }

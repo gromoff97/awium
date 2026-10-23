@@ -10,22 +10,34 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 final class ConditionTestRuntime {
 
+    static Condition<Object, Object> diagnosticCondition(String description, String explanation, Condition.Reference<?> reference) {
+        return new Condition<>(description, explanation, reference,
+                () -> actual -> AttemptResult.of(ConditionResult.satisfied(actual)));
+    }
+
     static <S, R> ConditionResult<? extends R> evaluate(
             Condition<? super S, ? extends R> condition, S actual) {
-        return condition.newSession().apply(actual);
+        return evaluated(condition.newAttempt().probe(actual));
     }
 
     static <S> ConditionResult<? extends S> evaluate(PreservingCondition<? super S> condition, S actual) {
-        return condition.<S>preservingSession().apply(actual);
+        return evaluated(condition.<S>preservingAttempt().probe(actual));
     }
 
     static <S> ConditionResult<?> evaluate(
             SelectedCondition<? super S> condition, S actual) {
-        return condition.definition.newSession().apply(actual);
+        return evaluated(condition.definition.newAttempt().probe(actual));
     }
 
     static <S> ConditionResult<?> evaluate(MapValueCondition<? super S> condition, S actual) {
-        return condition.definition.newSession().apply(actual);
+        return evaluated(condition.definition.newAttempt().probe(actual));
+    }
+
+    static <RESULT> ConditionResult<? extends RESULT> evaluated(AttemptResult<? extends RESULT> attempt) {
+        return switch (attempt) {
+            case AttemptResult.Evaluated<? extends RESULT> value -> value.result();
+            case AttemptResult.Uncontrolled<?> failure -> throw new AssertionError("condition failed", failure.cause());
+        };
     }
 
     static String description(SelectedCondition<?> condition) {
@@ -41,7 +53,7 @@ final class ConditionTestRuntime {
     }
 
     static <S> ConditionResult<? extends S> evaluate(ComparisonCondition<? extends S> condition, S actual) {
-        return condition.definition.<S>preservingSession().apply(actual);
+        return evaluated(condition.definition.<S>preservingAttempt().probe(actual));
     }
 
     static String description(ComparisonCondition<?> condition) {
@@ -53,19 +65,19 @@ final class ConditionTestRuntime {
     }
 
     static String description(PreservingCondition<?> condition) {
-        return condition.metadata.description();
+        return condition.definition.description();
     }
 
     static String explanation(PreservingCondition<?> condition) {
-        return condition.metadata.explanation();
+        return condition.definition.explanation();
     }
 
     static String description(Condition<?, ?> condition) {
-        return condition.metadata.description();
+        return condition.description();
     }
 
     static String explanation(Condition<?, ?> condition) {
-        return condition.metadata.explanation();
+        return condition.explanation();
     }
 
     static void assertUnsatisfied(ConditionResult<?> evaluation) {

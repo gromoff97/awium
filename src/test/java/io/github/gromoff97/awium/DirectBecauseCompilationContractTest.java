@@ -14,6 +14,23 @@ class DirectBecauseCompilationContractTest {
     Path directory;
 
     @Test
+    void customChecksCannotReturnAnAttemptFailure() throws IOException {
+        for (String expression : List.of(
+                "Conditions.condition(\"failed\", value -> failure);",
+                "Conditions.condition(\"failed\", () -> value -> failure);")) {
+            assertFalse(CompilationSupport.compiles(directory, """
+                    package io.github.gromoff97.awium;
+                    final class Contract {
+                        void check() {
+                            var failure = new AttemptResult.Uncontrolled<String>(new IllegalStateException(), null, null);
+                            %s
+                        }
+                    }
+                    """.formatted(expression)), expression);
+        }
+    }
+
+    @Test
     void customChecksCannotTransformTheObservedType() throws IOException {
         for (String decoration : List.of("", ".because(\"required value\")")) {
             for (String expression : List.of(
@@ -35,6 +52,21 @@ class DirectBecauseCompilationContractTest {
                 for (String decoration : List.of("", ".because(\"required value\")")) {
                     String expression = "await(() -> \"ready\").%s(%s%s);".formatted(terminal, condition, decoration);
                     assertFalse(compiles(expression), expression);
+                }
+            }
+        }
+    }
+
+    @Test
+    void subsetRejectsIncompatibleElementTypes() throws IOException {
+        for (String terminal : List.of("until", "tryUntil")) {
+            for (String decoration : List.of("", ".because(\"allowed values\")")) {
+                for (String expression : List.of(
+                        "await(() -> List.of(\"ready\")).%s(CollectionConditions.subsetOf(List.of(123))%s);",
+                        "await(() -> List.of(\"ready\")).%s(CollectionConditions.subsetOf(List.of(123))%s, isNotNull);",
+                        "await(() -> List.of(List.of(\"ready\"))).%s(single(CollectionConditions.subsetOf(List.of(123))%s));")) {
+                    String call = expression.formatted(terminal, decoration);
+                    assertFalse(compiles(call), call);
                 }
             }
         }

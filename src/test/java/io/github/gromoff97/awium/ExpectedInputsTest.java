@@ -31,7 +31,7 @@ class ExpectedInputsTest {
             }
         };
         var condition = contains(expected);
-        assertEquals(List.of(), condition.metadata.reference().value());
+        assertEquals(List.of(), condition.definition.reference().value());
         expected.add("after");
         for (var actual : List.of(List.<String>of(), List.of("unrelated"))) {
             assertSame(actual, result(evaluate(condition, actual)));
@@ -131,7 +131,7 @@ class ExpectedInputsTest {
         var element = new StringBuilder("before");
         var expected = new ArrayList<>(List.of(element));
         var condition = contains(expected);
-        var reference = assertInstanceOf(List.class, condition.metadata.reference().value());
+        var reference = assertInstanceOf(List.class, condition.definition.reference().value());
         expected.clear();
         element.append(" changed");
         assertSame(element, reference.getFirst());
@@ -141,7 +141,7 @@ class ExpectedInputsTest {
 
         var strings = StringConditions.contains("before");
         assertThrows(UnsupportedOperationException.class,
-                assertInstanceOf(List.class, strings.metadata.reference().value())::clear);
+                assertInstanceOf(List.class, strings.definition.reference().value())::clear);
     }
 
     @Test
@@ -152,7 +152,7 @@ class ExpectedInputsTest {
         var condition = MapConditions.containsEntries(expected);
         expected.put("b", "after");
         expected.remove("a");
-        assertEquals("{b=before, a=null}", condition.metadata.reference().value().toString());
+        assertEquals("{b=before, a=null}", condition.definition.reference().value().toString());
     }
 
     @Test

@@ -1,6 +1,6 @@
 package consumer;
 
-import io.github.gromoff97.awium.AwaitAttempt;
+import io.github.gromoff97.awium.AttemptRecord;
 import io.github.gromoff97.awium.AwaitResult;
 import io.github.gromoff97.awium.ConditionResult;
 import io.github.gromoff97.awium.Source;
@@ -43,12 +43,14 @@ public final class ArtifactConsumer {
                 mapped, entry, text, regex, observed(result.attempts().getFirst())};
     }
 
-    private static String observed(AwaitAttempt<Optional<String>, String> attempt) {
+    private static String observed(AttemptRecord<Optional<String>, String> attempt) {
         return switch (attempt.outcome()) {
-            case AwaitAttempt.Outcome.Evaluated<Optional<String>, String> value -> {
+            case AttemptRecord.Outcome.Evaluated<Optional<String>, String> value -> {
                 ConditionResult<? extends String> evaluation = value.evaluation();
-                yield evaluation instanceof ConditionResult.Satisfied<? extends String> success
-                        ? success.result() : value.observed().orElse(null);
+                yield switch (evaluation) {
+                    case ConditionResult.Satisfied<? extends String> success -> success.result();
+                    case ConditionResult.Unsatisfied<?> ignored -> value.observed().orElse(null);
+                };
             }
             default -> null;
         };
