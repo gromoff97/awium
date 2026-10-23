@@ -2,7 +2,9 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Source.OptionalSource;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -105,6 +107,24 @@ class ObjectAndOptionalAwaitTest {
         assertEquals(values, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
         assertEquals(2, captured.totalAttempts());
         assertEquals(4, reads[0]);
+    }
+
+    @Test
+    void nestedAbsenceChecksPreserveTheSelectedTypes() {
+        var time = new FakeTime(0);
+        var items = Arrays.asList("value", null);
+        Optional<String> empty = Optional.empty();
+
+        String missing = await(() -> items).usingTime(time, time).upTo(ofNanos(1))
+                .until(CollectionConditions.single(isNull).because("one missing value"));
+        Optional<String> nested = await(() -> Optional.of(empty)).usingTime(time, time).upTo(ofNanos(1))
+                .until(hasValue(absent).because("inner optional is empty"));
+        Optional<String> mapped = await(() -> Map.of("key", empty)).usingTime(time, time).upTo(ofNanos(1))
+                .until(MapConditions.valueFor("key", absent).because("mapped optional is empty"));
+
+        assertNull(missing);
+        assertSame(empty, nested);
+        assertSame(empty, mapped);
     }
 
     @Test

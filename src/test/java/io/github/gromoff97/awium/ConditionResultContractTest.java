@@ -52,6 +52,7 @@ class ConditionResultContractTest {
     @Test
     void unsatisfiedAcceptsOptionalDiagnostics() {
         var plain = unsatisfied();
+        ConditionTestRuntime.assertUnsatisfied(plain);
         assertEquals(new Unsatisfied<>(null, null), plain);
         assertEquals(plain, unsatisfied(null));
         assertEquals(plain, unsatisfied(null, null));

@@ -5,7 +5,6 @@ import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 final class ConditionTestRuntime {
@@ -81,7 +80,7 @@ final class ConditionTestRuntime {
     }
 
     static void assertUnsatisfied(ConditionResult<?> evaluation) {
-        assertFalse(mismatch(evaluation).isBlank());
+        assertInstanceOf(ConditionResult.Unsatisfied.class, evaluation);
     }
 
     static Object result(ConditionResult<?> evaluation) {
