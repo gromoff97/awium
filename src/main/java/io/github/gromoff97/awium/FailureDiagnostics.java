@@ -8,7 +8,6 @@ import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import static io.github.gromoff97.awium.ValueRendering.preservingInterrupt;
 import static io.github.gromoff97.awium.ValueRendering.renderValue;
 import static java.lang.Thread.currentThread;
 import static java.util.Objects.requireNonNull;
@@ -140,13 +139,16 @@ final class FailureDiagnostics {
     }
 
     private String render(Supplier<String> rendering) {
+        boolean interrupted = currentThread().isInterrupted();
         try {
-            return preservingInterrupt(rendering);
+            return rendering.get();
         } catch (Throwable failure) {
             if (failure != cause && diagnosticFailures.stream().noneMatch(previous -> previous == failure)) {
                 diagnosticFailures.add(failure);
             }
             return "<value unavailable: diagnostics failed>";
+        } finally {
+            if (interrupted) currentThread().interrupt();
         }
     }
 
@@ -244,7 +246,7 @@ final class FailureDiagnostics {
     }
 
     private static String causeMessage(Throwable failure) {
-        String message = preservingInterrupt(failure::getMessage);
+        String message = failure.getMessage();
         if (message == null || message.isBlank()) {
             return null;
         }

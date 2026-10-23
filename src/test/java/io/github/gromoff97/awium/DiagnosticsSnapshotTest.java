@@ -736,21 +736,23 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void invalidRenderedValueIsSuppressedOnTheTimeout() {
-        WaitCompletion<Object, Object> rendered = new Timeout<>(
-                unsatisfiedAttempt(CONDITION, new NullStringValue(), "not ready", 1, 2));
+        for (Object actual : List.of(new NullStringValue(), new Object[] {new NullStringValue()})) {
+            WaitCompletion<Object, Object> rendered = new Timeout<>(
+                    unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2));
 
-        var valueFailure = assertFailure(TIMEOUT,
-                () -> complete(rendered, "condition", null,
-                        config(1, 2, 0)));
+            var valueFailure = assertFailure(TIMEOUT,
+                    () -> complete(rendered, "condition", null,
+                            config(1, 2, 0)));
 
-        assertNull(valueFailure.getCause());
-        assertTrue(valueFailure.getSuppressed()[0] instanceof NullPointerException);
-        assertEquals("value toString() must not return null", valueFailure.getSuppressed()[0].getMessage());
-        assertMessage(valueFailure, "Diagnostics failure: NullPointerException", "Timing:");
+            assertNull(valueFailure.getCause());
+            assertTrue(valueFailure.getSuppressed()[0] instanceof NullPointerException);
+            assertEquals("value toString() must not return null", valueFailure.getSuppressed()[0].getMessage());
+            assertMessage(valueFailure, "Diagnostics failure: NullPointerException", "Timing:");
+        }
     }
 
     @Test
-    void expectedListFormattingPreservesInterruptionBetweenValues() {
+    void expectedListFormattingUsesTheFinalInterruptFlagOfTheField() {
         for (boolean capture : List.of(false, true)) {
             for (boolean negative : List.of(false, true)) {
                 int[] renders = {0, 0};
@@ -794,7 +796,7 @@ class DiagnosticsSnapshotTest {
                     assertTrue(failure.message().contains("[signalling, clearing]"));
                     assertEquals(1, renders[0]);
                     assertEquals(1, renders[1]);
-                    assertTrue(currentThread().isInterrupted());
+                    assertFalse(currentThread().isInterrupted());
                 } finally {
                     interrupted();
                 }
@@ -803,7 +805,7 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void expectedEntryFormattingPreservesInterruptionBetweenKeyAndValue() {
+    void expectedEntryFormattingUsesTheFinalInterruptFlagOfTheField() {
         for (boolean capture : List.of(false, true)) {
             for (boolean negative : List.of(false, true)) {
                 int[] renders = {0, 0};
@@ -848,7 +850,7 @@ class DiagnosticsSnapshotTest {
                         assertTrue(failure.message().contains("{key=value}"));
                         assertEquals(1, renders[0]);
                         assertEquals(1, renders[1]);
-                        assertTrue(currentThread().isInterrupted());
+                        assertFalse(currentThread().isInterrupted());
                     } finally {
                         interrupted();
                     }
@@ -858,7 +860,7 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void renderingCallbacksPreserveInterruptionFromEarlierDiagnosticValues() {
+    void renderingPreservesInterruptionBetweenFieldsButUsesTheFinalFlagWithinAnArray() {
         for (boolean capture : List.of(false, true)) {
             for (boolean array : List.of(false, true)) {
                 int[] renders = {0, 0, 0};
@@ -902,7 +904,7 @@ class DiagnosticsSnapshotTest {
                     assertEquals(1, renders[0]);
                     assertEquals(array ? 2 : 1, renders[1]);
                     assertEquals(1, renders[2]);
-                    assertTrue(currentThread().isInterrupted());
+                    assertEquals(!array, currentThread().isInterrupted());
                 } finally {
                     interrupted();
                 }

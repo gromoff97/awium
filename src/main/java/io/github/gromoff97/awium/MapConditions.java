@@ -30,8 +30,6 @@ import static io.github.gromoff97.awium.ValueMatching.exactly;
 import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
-import static io.github.gromoff97.awium.ValueRendering.snapshot;
-import static io.github.gromoff97.awium.ValueRendering.stringValue;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
@@ -206,35 +204,35 @@ public final class MapConditions {
 
     @SafeVarargs
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsKeys(KEY... expected) {
-        List<KEY> keys = snapshot(stream(nonEmpty(expected, "expected keys")));
+        List<KEY> keys = stream(nonEmpty(expected, "expected keys")).toList();
         return preserving("map contains all expected keys", "map did not contain all expected keys", expectedReference(keys),
                 actual -> containsAll(actual.keySet(), keys, ValueMatching::equal));
     }
 
     @SafeVarargs
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> doesNotContainKeys(KEY... unexpected) {
-        List<KEY> keys = snapshot(stream(nonEmpty(unexpected, "unexpected keys")));
+        List<KEY> keys = stream(nonEmpty(unexpected, "unexpected keys")).toList();
         return preserving("map does not contain unexpected keys", "map contained an unexpected key", unexpectedReference(keys),
                 actual -> !matchesAny(actual.keySet(), value -> matchesAny(keys, key -> equal(value, key))));
     }
 
     @SafeVarargs
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsOnlyKeys(KEY... expected) {
-        List<KEY> keys = snapshot(stream(requireNonNull(expected, "expected keys must not be null")));
+        List<KEY> keys = stream(requireNonNull(expected, "expected keys must not be null")).toList();
         return preserving("map contains only the expected keys", "map did not contain only the expected keys", expectedReference(keys),
                 actual -> sameDistinctElements(actual.keySet(), keys));
     }
 
     @SafeVarargs
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> containsValues(VALUE... expected) {
-        List<VALUE> values = snapshot(stream(nonEmpty(expected, "expected values")));
+        List<VALUE> values = stream(nonEmpty(expected, "expected values")).toList();
         return preserving("map contains all expected values", "map did not contain all expected values", expectedReference(values),
                 actual -> containsAll(actual.values(), values, ValueMatching::equal));
     }
 
     @SafeVarargs
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> doesNotContainValues(VALUE... unexpected) {
-        List<VALUE> values = snapshot(stream(nonEmpty(unexpected, "unexpected values")));
+        List<VALUE> values = stream(nonEmpty(unexpected, "unexpected values")).toList();
         return preserving("map does not contain unexpected values", "map contained an unexpected value", unexpectedReference(values),
                 actual -> !matchesAny(actual.values(), value -> matchesAny(values, candidate -> equal(value, candidate))));
     }
@@ -339,7 +337,7 @@ public final class MapConditions {
 
         @Override
         public String toString() {
-            return entries.stream().map(entry -> stringValue(entry.getKey()) + "=" + stringValue(entry.getValue()))
+            return entries.stream().map(entry -> String.valueOf(entry.getKey()) + "=" + String.valueOf(entry.getValue()))
                     .collect(joining(", ", "{", "}"));
         }
     }

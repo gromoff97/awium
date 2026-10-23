@@ -1,25 +1,14 @@
 package io.github.gromoff97.awium;
 
-import java.util.AbstractList;
 import java.util.ArrayDeque;
 import java.util.HashSet;
-import java.util.List;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
 
-import static java.lang.Thread.currentThread;
 import static java.util.Arrays.deepToString;
-import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.joining;
 
 final class ValueRendering {
 
     private ValueRendering() {}
-
-    static <ELEMENT> List<ELEMENT> snapshot(Stream<? extends ELEMENT> values) {
-        return unmodifiableList(new SnapshotList<>(values.toList()));
-    }
 
     static String renderValue(Object value) {
         if (value instanceof Object[] values) {
@@ -29,7 +18,7 @@ final class ValueRendering {
             String array = deepToString(new Object[]{value});
             return array.substring(1, array.length() - 1);
         }
-        return requireNonNull(stringValue(value),
+        return requireNonNull(String.valueOf(value),
                 "value toString() must not return null");
     }
 
@@ -59,43 +48,10 @@ final class ValueRendering {
                     out.append("[...]");
                 }
             } else {
-                out.append(value != null && value.getClass().isArray()
-                        ? renderValue(value) : stringValue(value));
+                out.append(renderValue(value));
             }
         }
         return out.toString();
-    }
-
-    static String stringValue(Object value) {
-        return preservingInterrupt(() -> String.valueOf(value));
-    }
-
-    static String preservingInterrupt(Supplier<String> rendering) {
-        boolean interrupted = currentThread().isInterrupted();
-        try {
-            return rendering.get();
-        } finally {
-            if (interrupted) currentThread().interrupt();
-        }
-    }
-
-    private static final class SnapshotList<ELEMENT> extends AbstractList<ELEMENT> {
-        private final List<? extends ELEMENT> values;
-
-        private SnapshotList(List<? extends ELEMENT> values) {
-            this.values = values;
-        }
-
-        @Override
-        public ELEMENT get(int index) { return values.get(index); }
-
-        @Override
-        public int size() { return values.size(); }
-
-        @Override
-        public String toString() {
-            return values.stream().map(ValueRendering::stringValue).collect(joining(", ", "[", "]"));
-        }
     }
 
 }
