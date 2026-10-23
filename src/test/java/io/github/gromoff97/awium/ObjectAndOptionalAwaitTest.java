@@ -82,11 +82,29 @@ class ObjectAndOptionalAwaitTest {
     }
 
     @Test
-    void voidAndNullableSelectingTerminalsReturnNullOnSuccess() {
+    void nullablePreservingTerminalsReturnNullOnSuccess() {
         var pollingTime = new FakeTime(0);
         assertNull(await((Source<Object>) () -> null).usingTime(pollingTime, pollingTime).until(isNull));
         assertNull(await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).until(matches(actual -> actual == null)));
         assertNull(await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).until(condition("nullable property", ConditionResult::satisfied).because("nullable property")));
+    }
+
+    @Test
+    void capturesNullThenPresentWithTheObservedTypeAndExplanations() {
+        String[] observations = {null, "ready", null, "ready"};
+        int[] reads = {0};
+        var time = new FakeTime(0);
+        var waiting = await(() -> observations[reads[0]++]).usingTime(time, time).every(ofNanos(1));
+
+        List<String> values = waiting.until(isNull.because("initially missing"), isNotNull.because("then created"));
+        AwaitResult<String, List<String>> captured = waiting.tryUntil(
+                isNull.because("initially missing"), isNotNull.because("then created"));
+
+        assertNull(values.getFirst());
+        assertEquals("ready", values.getLast());
+        assertEquals(values, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+        assertEquals(2, captured.totalAttempts());
+        assertEquals(4, reads[0]);
     }
 
     @Test

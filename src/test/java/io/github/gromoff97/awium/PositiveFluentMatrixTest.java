@@ -57,7 +57,7 @@ class PositiveFluentMatrixTest {
                 "select actual", ConditionResult::satisfied);
         assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(selecting));
         assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(selecting.because("selected object")));
-        Void nil = await((Source<Object>) () -> null).usingTime(pollingTime, pollingTime).until(isNull);
+        String nil = await(() -> (String) null).usingTime(pollingTime, pollingTime).until(isNull.because("value is absent"));
         assertSame(null, nil);
     }
 
@@ -68,10 +68,11 @@ class PositiveFluentMatrixTest {
         OptionalSource<String> source = () -> Optional.of(value);
 
         String selected = await(source).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).until(present.because("optional full chain"));
-        Void absentValue = await((OptionalSource<String>) Optional::empty).usingTime(pollingTime, pollingTime).until(absent);
+        Optional<String> empty = Optional.empty();
+        Optional<String> absentValue = await(() -> empty).usingTime(pollingTime, pollingTime).until(absent.because("optional is empty"));
 
         assertSame(value, selected);
-        assertSame(null, absentValue);
+        assertSame(empty, absentValue);
     }
 
     @Test

@@ -56,7 +56,7 @@ class ObjectAndOptionalConditionsTest {
         assertUnsatisfied(evaluate(present, null));
         assertUnsatisfied(evaluate(absent, null));
         assertUnsatisfied(evaluate(present, empty));
-        assertNull(result(evaluate(absent, empty)));
+        assertSame(empty, result(evaluate(absent, empty)));
         assertSame("value", result(evaluate(present, presentValue)));
         assertUnsatisfied(evaluate(absent, presentValue));
     }

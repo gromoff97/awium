@@ -20,8 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 public final class Conditions {
 
-    public static final Condition<Object, Void> isNull = ConditionSupport.condition("value is null", null,
-            actual -> actual == null ? satisfied(null) : unsatisfied("value was not null"));
+    public static final PreservingCondition<Object> isNull = ConditionSupport.preserving("value is null",
+            "value was not null", actual -> actual == null);
     public static final PreservingCondition<Object> isNotNull = ConditionSupport.preserving("value is not null",
             "value was null", actual -> actual != null);
 
