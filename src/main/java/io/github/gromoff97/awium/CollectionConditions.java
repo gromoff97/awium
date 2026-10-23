@@ -101,7 +101,7 @@ public final class CollectionConditions {
     }
 
     public static <ELEMENT> SelectedCondition<Collection<? extends ELEMENT>> single(PreservingCondition<? super ELEMENT> nested) {
-        return selected(ConditionSupport.single("collection", required(nested).definition, actual -> actual,
+        return new SelectedCondition<>(ConditionSupport.single("collection", required(nested).definition, actual -> actual,
                 nested::preservingAttempt));
     }
 
@@ -111,7 +111,7 @@ public final class CollectionConditions {
     }
 
     public static <EXPECTED> SelectedCondition<Collection<? super EXPECTED>> single(ComparisonCondition<EXPECTED> nested) {
-        return selected(ConditionSupport.single("collection", required(nested).definition, actual -> actual,
+        return new SelectedCondition<>(ConditionSupport.single("collection", required(nested).definition, actual -> actual,
                 nested.definition::preservingAttempt));
     }
 

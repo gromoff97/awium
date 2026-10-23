@@ -19,7 +19,6 @@ import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
-import static io.github.gromoff97.awium.ConditionSupport.mapValue;
 import static io.github.gromoff97.awium.ConditionSupport.nonEmpty;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.selected;
@@ -92,7 +91,7 @@ public final class MapConditions {
 
     public static <KEY, VALUE> SelectedCondition<Map<? extends KEY, ? extends VALUE>> singleEntry(
             PreservingCondition<? super Entry<? extends KEY, ? extends VALUE>> nested) {
-        return selected(ConditionSupport.single("map", required(nested).definition, Map::entrySet,
+        return new SelectedCondition<>(ConditionSupport.single("map", required(nested).definition, Map::entrySet,
                 nested::preservingAttempt));
     }
 
@@ -104,7 +103,7 @@ public final class MapConditions {
 
     public static <KEY, VALUE> SelectedCondition<Map<? super KEY, ? super VALUE>> singleEntry(
             ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
-        return selected(ConditionSupport.single("map", required(nested).definition, Map::entrySet,
+        return new SelectedCondition<>(ConditionSupport.single("map", required(nested).definition, Map::entrySet,
                 nested.definition::preservingAttempt));
     }
 
@@ -160,7 +159,7 @@ public final class MapConditions {
     }
 
     public static <KEY> MapValueCondition<Map<? super KEY, ?>> valueFor(KEY key) {
-        return mapValue(ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> value(actual, key)));
+        return new MapValueCondition<>(ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> value(actual, key)));
     }
 
     public static <KEY, VALUE, RESULT> Condition<Map<? super KEY, ? extends VALUE>, RESULT> valueFor(KEY key,
@@ -172,24 +171,24 @@ public final class MapConditions {
 
     public static <KEY, VALUE> MapValueCondition<Map<? super KEY, ? extends VALUE>> valueFor(KEY key,
             PreservingCondition<? super VALUE> nested) {
-        return mapValue(compose("map value ", required(nested).definition,
+        return new MapValueCondition<>(compose("map value ", required(nested).definition,
                 valueFor(key).definition, actual -> value(actual, key),
                 nested::preservingAttempt));
     }
 
     public static <KEY, EXPECTED> MapValueCondition<Map<? super KEY, ? super EXPECTED>> valueFor(KEY key,
             ComparisonCondition<EXPECTED> nested) {
-        return mapValue(compose("map value ", required(nested).definition,
+        return new MapValueCondition<>(compose("map value ", required(nested).definition,
                 valueFor(key).definition, actual -> value(actual, key),
                 nested.definition::preservingAttempt));
     }
 
     public static <KEY> SelectedCondition<Map<? super KEY, ?>> entryFor(KEY key) {
-        return selected(ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> findEntry(actual, key)));
+        return new SelectedCondition<>(ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> findEntry(actual, key)));
     }
 
     public static <KEY> MapValueCondition<Map<? super KEY, ?>> onlyValueFor(KEY key) {
-        return mapValue(ConditionSupport.condition("map contains only the expected key", expectedReference(key), actual -> {
+        return new MapValueCondition<>(ConditionSupport.condition("map contains only the expected key", expectedReference(key), actual -> {
             if (actual == null) {
                 return unsatisfied("map was null");
             }

@@ -9,7 +9,6 @@ import static io.github.gromoff97.awium.Condition.required;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
-import static io.github.gromoff97.awium.ConditionSupport.selected;
 
 public final class OptionalConditions {
 
@@ -26,12 +25,12 @@ public final class OptionalConditions {
     }
 
     public static <VALUE> SelectedCondition<Optional<? extends VALUE>> hasValue(PreservingCondition<? super VALUE> nested) {
-        return selected(compose("optional value: ", required(nested).definition, null, OptionalConditions::present,
+        return new SelectedCondition<>(compose("optional value: ", required(nested).definition, null, OptionalConditions::present,
                 nested::preservingAttempt));
     }
 
     public static <EXPECTED> SelectedCondition<Optional<? super EXPECTED>> hasValue(ComparisonCondition<EXPECTED> nested) {
-        return selected(compose("optional value: ", required(nested).definition, null, OptionalConditions::present,
+        return new SelectedCondition<>(compose("optional value: ", required(nested).definition, null, OptionalConditions::present,
                 nested.definition::preservingAttempt));
     }
 
