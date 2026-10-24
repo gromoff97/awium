@@ -514,3 +514,15 @@ assertion про фрагменты, CR и пробелы: полное срав
 callback-вызовов и suppressed: текст сам по себе их не гарантирует.
 Все 37 диагностических тестов и генерация Javadoc прошли.
 `/tmp/awium-seven-hour-pass/progress-doc-and-snapshot-report.json`.
+
+### Очистка interrupt flag проверяется в сквозном сценарии
+
+Исправлена неточность теста thrownConditionFailureRetainsInterruptFlagAfterDiagnosticsClearIt:
+его прежний getMessage не снимал флаг, несмотря на название проверки. Соседний
+ручной waiting-исход объединён с ним: единственный cause.getMessage проверяет
+и снимает установленный callback флаг; настоящий await должен вернуть исходную
+причину и восстановленный флаг. Явное приведение Callable для Object::new
+убрано, finally очищает состояние после теста. Удалены одна отдельная проверка
+и 17 строк при более сильном сквозном сценарии. Диагностика, checked callbacks
+и Observation прошли совместно.
+`/tmp/awium-seven-hour-pass/diagnostic-interruption-report.json`.

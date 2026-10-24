@@ -399,32 +399,15 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void interruptionFlagIsRestoredAfterUserDiagnosticsClearIt() {
-        var interruption = new IllegalStateException("stopped") {
+    void thrownConditionFailureRetainsInterruptFlagAfterDiagnosticsClearIt() {
+        var pollingTime = new FakeTime(0);
+        var cause = new IllegalStateException("condition failed") {
             @Override
             public String getMessage() {
                 assertTrue(interrupted());
                 return super.getMessage();
             }
         };
-        currentThread().interrupt();
-
-        try {
-            var failure = assertFailure(INTERRUPTED,
-                    () -> Await.complete(waitingFailure(interruption, 1, 0),
-                            CONDITION, config(1, 2, 0)));
-
-            assertSame(interruption, failure.getCause());
-            assertTrue(currentThread().isInterrupted());
-        } finally {
-            interrupted();
-        }
-    }
-
-    @Test
-    void thrownConditionFailureRetainsInterruptFlagAfterDiagnosticsClearIt() {
-        var pollingTime = new FakeTime(0);
-        var cause = new IllegalStateException("condition failed");
         PreservingCondition<Object> condition = Conditions.condition("condition", actual -> {
             currentThread().interrupt();
             throw cause;
@@ -432,7 +415,7 @@ class DiagnosticsSnapshotTest {
 
         try {
             var failure = assertFailure(INTERRUPTED,
-                    () -> await((Callable<Object>) Object::new).usingTime(pollingTime, pollingTime).until(condition));
+                    () -> await(Object::new).usingTime(pollingTime, pollingTime).until(condition));
 
             assertSame(cause, failure.getCause());
             assertTrue(currentThread().isInterrupted());
