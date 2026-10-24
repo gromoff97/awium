@@ -29,6 +29,20 @@ import static org.junit.jupiter.api.Assertions.*;
 class MapConditionsTest {
 
     @Test
+    void exactComparisonRejectsDifferentSizesWithoutTraversingEntries() {
+        for (var expected : List.of(Map.<String, String>of(), Map.of("a", "1", "b", "2"))) {
+            for (boolean negative : List.of(false, true)) {
+                var actual = new ProbeContainers.ProbeMap<String, String>();
+                var condition = negative ? doesNotContainExactlyEntries(expected) : containsExactlyEntries(expected);
+                var evaluation = evaluate(condition, actual);
+                assertEquals(negative ? Satisfied.class : Unsatisfied.class, evaluation.getClass());
+                if (negative) assertSame(actual, result(evaluation));
+                assertEquals(1, actual.sizeCalls);
+            }
+        }
+    }
+
+    @Test
     void exactComparisonRejectsChangesBetweenSizeAndEntryTraversal() {
         for (boolean shrink : List.of(false, true)) {
             for (boolean negative : List.of(false, true)) {
