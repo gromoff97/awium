@@ -2,6 +2,7 @@ package io.github.gromoff97.awium;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
@@ -12,8 +13,8 @@ final class SequenceExecution<OBSERVED, RESULT> {
     private final List<? extends ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT>> stages;
     private final List<RESULT> results = new ArrayList<>();
 
-    SequenceExecution(List<? extends ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT>> stages) {
-        this.stages = stages;
+    SequenceExecution(Stream<? extends ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT>> stages) {
+        this.stages = stages.toList();
     }
 
     AttemptResult<List<RESULT>> step(OBSERVED actual) {

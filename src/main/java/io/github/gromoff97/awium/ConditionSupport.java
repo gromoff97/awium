@@ -145,7 +145,7 @@ final class ConditionSupport {
         List<PreservingCondition<? super OBSERVED>> stages = stages(first, second, rest);
         return new Condition<>("conditions are satisfied in order", null, null, () ->
                 new SequenceExecution<OBSERVED, OBSERVED>(stages.stream()
-                        .map(stage -> stage.<OBSERVED>preservingAttempt()).toList())::step);
+                        .map(PreservingCondition::preservingAttempt))::step);
     }
 
     @SafeVarargs
@@ -157,7 +157,7 @@ final class ConditionSupport {
                 stages(first, second, rest);
         return new Condition<>("conditions are satisfied in order", null, null,
                 () -> new SequenceExecution<OBSERVED, ELEMENT>(stages.stream()
-                        .map(stage -> stage.<ELEMENT>selectionAttempt()).toList())::step);
+                        .map(SelectedCondition::selectionAttempt))::step);
     }
 
     @SafeVarargs
@@ -169,7 +169,7 @@ final class ConditionSupport {
                 stages(first, second, rest);
         return new Condition<>("conditions are satisfied in order", null, null,
                 () -> new SequenceExecution<OBSERVED, MAP_VALUE>(stages.stream()
-                        .map(stage -> stage.<MAP_VALUE>selectionAttempt()).toList())::step);
+                        .map(MapValueCondition::selectionAttempt))::step);
     }
 
     @SafeVarargs
@@ -179,7 +179,7 @@ final class ConditionSupport {
         List<ComparisonCondition<? extends OBSERVED>> stages = stages(first, second, rest);
         return new Condition<>("conditions are satisfied in order", null, null, () ->
                 new SequenceExecution<OBSERVED, OBSERVED>(stages.stream()
-                        .map(stage -> stage.definition.<OBSERVED>preservingAttempt()).toList())::step);
+                        .map(stage -> stage.definition.preservingAttempt()))::step);
     }
 
     private static <STAGE> List<STAGE> stages(STAGE first, STAGE second, STAGE[] rest) {
