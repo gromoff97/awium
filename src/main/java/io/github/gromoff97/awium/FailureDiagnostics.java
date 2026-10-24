@@ -110,11 +110,9 @@ final class FailureDiagnostics {
         condition(out, condition, "");
         String actual = attempt.outcome().timing().observationOffset() != null
                 ? render(() -> renderValue(observed)) : null;
-        attempt(out, attempt.number(), actual, sequence == null ? mismatch : null);
+        attempt(out, attempt, actual, sequence == null ? mismatch : null);
         sequence(out);
-        if (!(outcome instanceof WaitCompletion.Uncontrolled<?, ?>) || !diagnosticFailures.isEmpty()) {
-            timing(out);
-        }
+        timing(out);
         if (cause != null) {
             out.append('\n');
             field(out, "", "Cause", cause.getClass().getName());
@@ -152,30 +150,26 @@ final class FailureDiagnostics {
         field(out, "Acquisition timeout",
                 duration(configuration.upToNanos()));
         long completedAfter = outcome.attempt().outcome().timing().completionOffset().toNanos();
-        switch (outcome) {
-            case WaitCompletion.Timeout<?, ?> outcome -> {
-                if (outcome.elapsedNanos() != completedAfter) {
-                    field(out, "Last attempt completed after", duration(completedAfter));
-                }
-                field(out, "Elapsed", duration(outcome.elapsedNanos()));
-            }
-            case WaitCompletion.PersistenceFailure<?, ?> outcome -> {
-                long acquiredAfter = outcome.acquiredAfterNanos();
-                field(out, "Acquired after", duration(acquiredAfter));
-                field(out, "Required persistence",
-                        duration(configuration.persistenceNanos()));
-                field(out, "Failure detected after", duration(completedAfter - acquiredAfter));
-            }
-            case WaitCompletion.Uncontrolled<?, ?> ignored -> {}
-            case WaitCompletion.Satisfied<?, ?> ignored -> {}
+        long elapsed = outcome instanceof WaitCompletion.Timeout<?, ?> timeout
+                ? timeout.elapsedNanos() : completedAfter;
+        if (elapsed != completedAfter) {
+            field(out, "Last attempt completed after", duration(completedAfter));
+        }
+        field(out, "Elapsed", duration(elapsed));
+        if (outcome instanceof WaitCompletion.PersistenceFailure<?, ?> failure) {
+            long acquiredAfter = failure.acquiredAfterNanos();
+            field(out, "Acquired after", duration(acquiredAfter));
+            field(out, "Required persistence", duration(configuration.persistenceNanos()));
+            field(out, "Failure detected after", duration(completedAfter - acquiredAfter));
         }
         field(out, "Polling interval",
                 duration(configuration.everyNanos()));
     }
 
-    private static void attempt(StringBuilder out, long number, String actual,
+    private static void attempt(StringBuilder out, AttemptRecord<?, ?> attempt, String actual,
             String mismatch) {
-        out.append('\n').append("Attempt: ").append(number).append('\n');
+        out.append('\n').append("Attempt: ").append(attempt.number())
+                .append(" (").append(attempt.phase()).append(")\n");
         if (actual != null) {
             field(out, "Actual", actual);
         }

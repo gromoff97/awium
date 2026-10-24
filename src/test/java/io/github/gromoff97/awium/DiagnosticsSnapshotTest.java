@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.IdentityHashMap;
@@ -80,7 +81,7 @@ class DiagnosticsSnapshotTest {
                 Condition: conditions are satisfied in order
                     Because: payment must complete its lifecycle
 
-                Attempt: 2
+                Attempt: 2 (ACQUISITION)
                     Actual: created
 
                 Sequence (captured 1 of 3):
@@ -111,7 +112,7 @@ class DiagnosticsSnapshotTest {
                 Condition: conditions are satisfied in order
                     Because: payment must complete its lifecycle
 
-                Attempt: 4
+                Attempt: 4 (PERSISTENCE)
                     Actual: created
 
                 Sequence (captured 2 of 3):
@@ -121,6 +122,7 @@ class DiagnosticsSnapshotTest {
 
                 Timing:
                     Acquisition timeout: 10 nanoseconds
+                    Elapsed: 3 nanoseconds
                     Acquired after: 2 nanoseconds
                     Required persistence: 5 nanoseconds
                     Failure detected after: 1 nanosecond
@@ -148,7 +150,7 @@ class DiagnosticsSnapshotTest {
                 Condition: conditions are satisfied in order
                     Because: payment must complete its lifecycle
 
-                Attempt: 2
+                Attempt: 2 (ACQUISITION)
                     Actual: created
 
                 Sequence (captured 1 of 3):
@@ -186,12 +188,17 @@ class DiagnosticsSnapshotTest {
                 Condition: conditions are satisfied in order
                     Because: payment must complete its lifecycle
 
-                Attempt: 2
+                Attempt: 2 (ACQUISITION)
                     Actual: created
 
                 Sequence (captured 1 of 3):
                     Condition: payment status is pending
                     Because: processing must begin before completion
+
+                Timing:
+                    Acquisition timeout: 10 nanoseconds
+                    Elapsed: 1 nanosecond
+                    Polling interval: 1 nanosecond
 
                 Cause: java.lang.IllegalStateException
                     Message: status callback failed""", failure.getMessage());
@@ -212,10 +219,11 @@ class DiagnosticsSnapshotTest {
         WaitCompletion<Object, Object> lateSatisfied = new Timeout<>(
                 satisfiedAttempt(diagnosticCondition("status equals COMPLETED", "payment must complete", null), "Payment[COMPLETED]", new Object(), 100,
                         10 * SECOND + 200 * MILLISECOND));
-        WaitCompletion<Object, Object> persistence = new PersistenceFailure<>(7 * SECOND,
-                assertionUnsatisfiedAttempt(diagnosticCondition("optional to remain present", "payment must remain available", null),
-                        "Optional.empty", "optional was empty",
-                        persistenceAssertion, 71, 9 * SECOND + 100 * MILLISECOND));
+        var persistedAttempt = assertionUnsatisfiedAttempt(diagnosticCondition("optional to remain present", "payment must remain available", null),
+                "Optional.empty", "optional was empty",
+                persistenceAssertion, 71, 9 * SECOND + 100 * MILLISECOND);
+        var persistence = new PersistenceFailure<>(7 * SECOND,
+                new AttemptRecord<>(persistedAttempt.number(), AttemptRecord.Phase.PERSISTENCE, persistedAttempt.outcome()));
 
         var betweenFailure = assertFailure(TIMEOUT,
                 () -> complete(between, "collection to be non-empty",
@@ -240,7 +248,7 @@ class DiagnosticsSnapshotTest {
                 Condition: collection to be non-empty
                     Because: Settlement requires an eligible payment
 
-                Attempt: 4
+                Attempt: 4 (ACQUISITION)
                     Actual: null
                     Mismatch: collection was empty
 
@@ -258,7 +266,7 @@ class DiagnosticsSnapshotTest {
                 Condition: status equals COMPLETED
                     Because: payment must complete
 
-                Attempt: 100
+                Attempt: 100 (ACQUISITION)
                     Actual: Payment[PENDING]
                     Mismatch: status was PENDING
 
@@ -273,7 +281,7 @@ class DiagnosticsSnapshotTest {
                 Condition: status equals COMPLETED
                     Because: payment must complete
 
-                Attempt: 100
+                Attempt: 100 (ACQUISITION)
                     Actual: Payment[COMPLETED]
 
                 Timing:
@@ -287,12 +295,13 @@ class DiagnosticsSnapshotTest {
                 Condition: optional to remain present
                     Because: payment must remain available
 
-                Attempt: 71
+                Attempt: 71 (PERSISTENCE)
                     Actual: Optional.empty
                     Mismatch: optional was empty
 
                 Timing:
                     Acquisition timeout: 10 seconds
+                    Elapsed: 9 seconds 100 milliseconds
                     Acquired after: 7 seconds
                     Required persistence: 5 seconds
                     Failure detected after: 2 seconds 100 milliseconds
@@ -336,7 +345,12 @@ class DiagnosticsSnapshotTest {
                 Condition: condition
                     Because: business reason
 
-                Attempt: 2
+                Attempt: 2 (ACQUISITION)
+
+                Timing:
+                    Acquisition timeout: 10 seconds
+                    Elapsed: 1 second
+                    Polling interval: 1 second
 
                 Cause: java.lang.IllegalStateException
                     Message: source failed""", sourceFailure.getMessage());
@@ -346,8 +360,13 @@ class DiagnosticsSnapshotTest {
                 Condition: condition
                     Because: business reason
 
-                Attempt: 3
+                Attempt: 3 (ACQUISITION)
                     Actual: actual
+
+                Timing:
+                    Acquisition timeout: 10 seconds
+                    Elapsed: 1 second
+                    Polling interval: 1 second
 
                 Cause: java.lang.IllegalArgumentException
                     Message: condition failed""", conditionFailure.getMessage());
@@ -356,7 +375,12 @@ class DiagnosticsSnapshotTest {
 
                 Condition: condition
 
-                Attempt: 4
+                Attempt: 4 (ACQUISITION)
+
+                Timing:
+                    Acquisition timeout: 10 seconds
+                    Elapsed: 1 second
+                    Polling interval: 1 second
 
                 Cause: java.lang.IllegalStateException
                     Message: waiting failed""", waitingFailure.getMessage());
@@ -365,7 +389,12 @@ class DiagnosticsSnapshotTest {
 
                 Condition: condition
 
-                Attempt: 5
+                Attempt: 5 (ACQUISITION)
+
+                Timing:
+                    Acquisition timeout: 10 seconds
+                    Elapsed: 1 second
+                    Polling interval: 1 second
 
                 Cause: java.lang.InterruptedException
                     Message: stopped""", interruptedFailure.getMessage());
@@ -431,7 +460,7 @@ class DiagnosticsSnapshotTest {
 
                 Condition: condition
 
-                Attempt: 2
+                Attempt: 2 (ACQUISITION)
                     Actual: actual
                     Mismatch: business mismatch
 
@@ -512,7 +541,7 @@ class DiagnosticsSnapshotTest {
                 Condition: condition
                     Because: business reason
 
-                Attempt: 1
+                Attempt: 1 (ACQUISITION)
                     Actual: <value unavailable: diagnostics failed>
                     Mismatch: not ready
 
@@ -724,15 +753,39 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void persistenceDiagnosticsDistinguishRequiredDurationFromDetectionTime() {
-        WaitCompletion<Object, Object> outcome = new PersistenceFailure<>(0,
-                unsatisfiedAttempt(CONDITION, "actual", "condition was false", 2, 11));
-
+        var time = new FakeTime(0);
+        int[] reads = {0};
         var failure = assertFailure(PERSISTENCE_FAILED,
-                () -> complete(outcome, "condition", null,
-                        config(1, 10, 2)));
+                () -> await(() -> {
+                    if (reads[0]++ == 0) return "ready";
+                    time.advanceNanos(10);
+                    return "gone";
+                }).usingTime(time, time).every(Duration.ofNanos(1)).upTo(Duration.ofNanos(10))
+                        .persisting(Duration.ofNanos(2)).until(equalTo("ready")));
 
-        assertMessage(failure, "Required persistence: 2 nanoseconds",
+        assertMessage(failure, "Attempt: 2 (PERSISTENCE)", "Elapsed: 11 nanoseconds",
+                "Required persistence: 2 nanoseconds",
                 "Failure detected after: 11 nanoseconds");
+    }
+
+    @Test
+    void sourceFailureDuringPersistenceIncludesItsPhaseAndElapsedTime() {
+        var time = new FakeTime(0);
+        var cause = new IOException("source failed after acquisition");
+        int[] reads = {0};
+
+        var failure = assertFailure(SOURCE_FAILED,
+                () -> await(() -> {
+                    if (++reads[0] == 3) {
+                        time.advanceNanos(3);
+                        throw cause;
+                    }
+                    return "ready";
+                }).usingTime(time, time).every(Duration.ofNanos(1)).upTo(Duration.ofNanos(10))
+                        .persisting(Duration.ofNanos(5)).until(equalTo("ready")));
+
+        assertSame(cause, failure.getCause());
+        assertMessage(failure, "Attempt: 3 (PERSISTENCE)", "Elapsed: 5 nanoseconds");
     }
 
     @Test
