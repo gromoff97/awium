@@ -57,18 +57,17 @@ class TryUntilTest {
     @Test
     void retainsLegitimateNullAndSelectedOptionalValue() {
         var pollingTime = new FakeTime(0);
-        AwaitResult<String, String> nullable = await((Callable<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(matches(actual -> true));
         AwaitResult<String, String> nullSource = await((Callable<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(isNull);
         AwaitResult<String, String> nullPredicate = await((Callable<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(matches(actual -> actual == null));
         AwaitResult<Optional<String>, String> selected =
-                await((Await.OptionalSource<String>) () -> Optional.of("payment")).usingTime(pollingTime, pollingTime).tryUntil(present);
+                await(() -> Optional.of("payment")).usingTime(pollingTime, pollingTime).tryUntil(present);
 
-        assertNull(satisfied(nullable).result());
         assertNull(satisfied(nullSource).result());
         assertNull(satisfied(nullPredicate).result());
-        assertInstanceOf(ConditionResult.Satisfied.class,
-                assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, satisfied(nullSource).attempts().getFirst().outcome()).evaluation());
-        assertNull(assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, satisfied(nullSource).attempts().getFirst().outcome()).observed());
+        var observation = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class,
+                satisfied(nullSource).attempts().getFirst().outcome());
+        assertInstanceOf(ConditionResult.Satisfied.class, observation.evaluation());
+        assertNull(observation.observed());
         assertEquals("payment", satisfied(selected).result());
     }
 

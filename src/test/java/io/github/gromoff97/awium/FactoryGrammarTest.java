@@ -28,10 +28,10 @@ class FactoryGrammarTest {
     @Test
     void everyTypedNullSourceUsesTheExactValidationMessage() {
         var pollingTime = new FakeTime(0);
-        assertNull("source", () -> await((Callable<Object>) null).usingTime(pollingTime, pollingTime));
-        assertNull("source", () -> await(
+        assertNullRejected("source", () -> await((Callable<Object>) null).usingTime(pollingTime, pollingTime));
+        assertNullRejected("source", () -> await(
                 (CollectionSource<Collection<Object>>) null).usingTime(pollingTime, pollingTime));
-        assertNull("source", () -> await(
+        assertNullRejected("source", () -> await(
                 (MapSource<Map<Object, Object>>) null).usingTime(pollingTime, pollingTime));
     }
 
@@ -57,29 +57,29 @@ class FactoryGrammarTest {
     void everyTerminalOverloadRejectsNullConditions() {
         var pollingTime = new FakeTime(0);
         var object = await(() -> "value").usingTime(pollingTime, pollingTime).every(ofSeconds(20));
-        assertNull("predicate", () -> object.until(matches((Predicate<String>) null)));
-        assertNull("predicate", () -> object.tryUntil(matches((Predicate<String>) null)));
-        assertNull("condition", () -> object.until((PreservingCondition<String>) null));
-        assertNull("condition", () -> object.until((Condition<String, String>) null));
-        assertNull("condition", () -> object.until((Condition.ComparisonCondition<String>) null));
-        assertNull("condition", () -> object.tryUntil((Condition.ComparisonCondition<String>) null));
-        assertNull("condition", () -> object.until(equalTo("value"), equalTo("value"), (Condition.ComparisonCondition<String>) null));
-        assertNull("condition", () -> OptionalConditions.hasValue((Condition.ComparisonCondition<String>) null));
-        assertNull("condition", () -> CollectionConditions.single((Condition.ComparisonCondition<String>) null));
-        assertNull("condition", () -> MapConditions.valueFor("key", (Condition.ComparisonCondition<String>) null));
-        assertNull("condition", () -> MapConditions.singleEntry((Condition.ComparisonCondition<Map.Entry<String, String>>) null));
+        assertNullRejected("predicate", () -> object.until(matches((Predicate<String>) null)));
+        assertNullRejected("predicate", () -> object.tryUntil(matches((Predicate<String>) null)));
+        assertNullRejected("condition", () -> object.until((PreservingCondition<String>) null));
+        assertNullRejected("condition", () -> object.until((Condition<String, String>) null));
+        assertNullRejected("condition", () -> object.until((Condition.ComparisonCondition<String>) null));
+        assertNullRejected("condition", () -> object.tryUntil((Condition.ComparisonCondition<String>) null));
+        assertNullRejected("condition", () -> object.until(equalTo("value"), equalTo("value"), (Condition.ComparisonCondition<String>) null));
+        assertNullRejected("condition", () -> OptionalConditions.hasValue((Condition.ComparisonCondition<String>) null));
+        assertNullRejected("condition", () -> CollectionConditions.single((Condition.ComparisonCondition<String>) null));
+        assertNullRejected("condition", () -> MapConditions.valueFor("key", (Condition.ComparisonCondition<String>) null));
+        assertNullRejected("condition", () -> MapConditions.singleEntry((Condition.ComparisonCondition<Map.Entry<String, String>>) null));
 
         var optional = await((OptionalSource<String>) Optional::empty).usingTime(pollingTime, pollingTime).every(ofSeconds(20));
-        assertNull("condition", () -> optional.until((SelectedCondition<Optional<?>>) null));
+        assertNullRejected("condition", () -> optional.until((SelectedCondition<Optional<?>>) null));
 
         var collection = await((CollectionSource<Collection<String>>) List::of).usingTime(pollingTime, pollingTime).every(ofSeconds(20));
-        assertNull("condition", () -> collection.until((SelectedCondition<Collection<?>>) null));
+        assertNullRejected("condition", () -> collection.until((SelectedCondition<Collection<?>>) null));
 
         var map = await((MapSource<Map<String, String>>) Map::of).usingTime(pollingTime, pollingTime).every(ofSeconds(20));
-        assertNull("condition", () -> map.until((SelectedCondition<Map<?, ?>>) null));
+        assertNullRejected("condition", () -> map.until((SelectedCondition<Map<?, ?>>) null));
     }
 
-    private static void assertNull(String context, Executable action) {
-        assertTrue(assertThrows(NullPointerException.class, action).getMessage().contains(context));
+    private static void assertNullRejected(String argument, Executable action) {
+        assertTrue(assertThrows(NullPointerException.class, action).getMessage().contains(argument));
     }
 }

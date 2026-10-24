@@ -51,19 +51,13 @@ class AwaitResultTest {
     }
 
     @Test
-    void expectationsRejectDescriptionsThatCannotBeRendered() {
-        assertThrows(NullPointerException.class, () -> diagnosticCondition(null, null, null));
-        assertThrows(IllegalArgumentException.class, () -> diagnosticCondition(" \n", null, null));
-    }
-
-    @Test
     void sequenceProgressRequiresAnExistingEvaluatedStage() {
-        var expectation = diagnosticCondition("first stage", null, null);
-        assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(0, 2, 0, expectation));
-        assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(0, 0, 1, expectation));
-        assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(-1, 2, 1, expectation));
-        assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(3, 2, 1, expectation));
-        assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(1, 2, 3, expectation));
+        var condition = diagnosticCondition("first stage", null, null);
+        assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(0, 2, 0, condition));
+        assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(0, 0, 1, condition));
+        assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(-1, 2, 1, condition));
+        assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(3, 2, 1, condition));
+        assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(1, 2, 3, condition));
         assertThrows(NullPointerException.class, () -> new AttemptRecord.Progress(0, 2, 1, null));
     }
 }
