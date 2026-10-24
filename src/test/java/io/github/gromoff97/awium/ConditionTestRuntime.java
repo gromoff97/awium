@@ -91,5 +91,10 @@ final class ConditionTestRuntime {
         return assertInstanceOf(ConditionResult.Unsatisfied.class, evaluation).mismatch();
     }
 
+    @SuppressWarnings("unchecked")
+    static <VALUE, FAILURE extends Throwable> VALUE throwUnchecked(Throwable failure) throws FAILURE {
+        throw (FAILURE) failure;
+    }
+
     private ConditionTestRuntime() {}
 }

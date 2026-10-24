@@ -11,6 +11,7 @@ import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
+import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AttemptRecord.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
@@ -561,8 +562,7 @@ class DiagnosticsSnapshotTest {
         Object actual = new Object() {
             @Override
             public String toString() {
-                throwUnchecked(interruption);
-                return "unreachable";
+                return throwUnchecked(interruption);
             }
         };
 
@@ -1013,8 +1013,7 @@ class DiagnosticsSnapshotTest {
                 @Override
                 public String getMessage() {
                     messageCalls[0]++;
-                    throwUnchecked(interruption);
-                    return null;
+                    return throwUnchecked(interruption);
                 }
             };
             var actual = new ThrowingValue(diagnostic);
@@ -1329,12 +1328,6 @@ class DiagnosticsSnapshotTest {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private static <FAILURE extends Throwable> void throwUnchecked(Throwable failure)
-            throws FAILURE {
-        throw (FAILURE) failure;
-    }
-
     private static final class EqualFailure extends RuntimeException {
         private EqualFailure(String message) {
             super(message);
@@ -1360,10 +1353,7 @@ class DiagnosticsSnapshotTest {
         @Override
         public String toString() {
             calls++;
-            if (failure instanceof RuntimeException runtime) {
-                throw runtime;
-            }
-            throw (Error) failure;
+            return throwUnchecked(failure);
         }
     }
 

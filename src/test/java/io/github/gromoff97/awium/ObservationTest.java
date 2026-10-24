@@ -5,7 +5,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
-import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -17,6 +16,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AttemptRecord.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
+import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.Conditions.condition;
@@ -154,9 +154,9 @@ class ObservationTest {
     }
 
     @ParameterizedTest
-    @MethodSource("nonFatalThrowables")
-    void classifiesEveryOtherSourceThrowableBeforeObservation(Throwable failure) {
-        var attempt = attempt(() -> throwFailure(failure), ObservationTest::failIfCalled);
+    @MethodSource("throwables")
+    void classifiesEverySourceThrowableBeforeObservation(Throwable failure) {
+        var attempt = attempt(() -> throwUnchecked(failure), ObservationTest::failIfCalled);
 
         var outcome = assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class, attempt.outcome());
         assertSame(failure, outcome.cause());
@@ -167,7 +167,7 @@ class ObservationTest {
     }
 
     @ParameterizedTest
-    @MethodSource("conditionThrowables")
+    @MethodSource("throwables")
     void classifiesEveryConditionThrowableAfterObservation(Throwable failure) {
         var actual = new Object();
         var attempt = attempt(() -> actual, value -> throwUnchecked(failure));
@@ -178,7 +178,7 @@ class ObservationTest {
     }
 
     @ParameterizedTest
-    @MethodSource("conditionThrowables")
+    @MethodSource("throwables")
     void conditionThrowablesStayUncontrolledThroughTerminalsAndComposition(Throwable cause) {
         PreservingCondition<String> callback = condition("callback", actual -> throwUnchecked(cause));
         PreservingCondition<String> factory = condition("factory", () -> throwUnchecked(cause));
@@ -236,7 +236,7 @@ class ObservationTest {
     void thrownConditionInterruptionKeepsTheCauseWithoutSettingTheFlag() {
         var actual = new Object();
         var interruption = new InterruptedException("condition stopped");
-        var attempt = attempt(() -> actual, value -> throwUnchecked(interruption));
+        var attempt = attempt(() -> actual, value -> { throw interruption; });
 
         var observation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, attempt.outcome());
         assertSame(interruption, observation.cause());
@@ -295,7 +295,7 @@ class ObservationTest {
                     if (phase.equals("source")) armed[0] = true;
                     return new Object();
                 }).usingTime(() -> {
-                    if (armed[0]) return ObservationTest.<Long, RuntimeException>throwUnchecked(interruption);
+                    if (armed[0]) return throwUnchecked(interruption);
                     return 0;
                 }, nanos -> {
                     calls[2]++;
@@ -424,11 +424,11 @@ class ObservationTest {
     }
 
     @ParameterizedTest
-    @MethodSource("nonFatalThrowables")
+    @MethodSource("throwables")
     void abruptSourceThrowableWinsOverCallbackSetFlag(Throwable failure) {
         var attempt = attempt(() -> {
             currentThread().interrupt();
-            return throwFailure(failure);
+            return throwUnchecked(failure);
         }, ObservationTest::failIfCalled);
 
         var outcome = assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class, attempt.outcome());
@@ -437,7 +437,7 @@ class ObservationTest {
     }
 
     @ParameterizedTest
-    @MethodSource("conditionThrowables")
+    @MethodSource("throwables")
     void abruptConditionThrowableWinsOverCallbackSetFlag(Throwable failure) {
         var actual = new Object();
         var attempt = attempt(() -> actual, value -> {
@@ -449,13 +449,6 @@ class ObservationTest {
         assertSame(failure, observation.cause());
         assertSame(actual, observation.observed());
         assertTrue(currentThread().isInterrupted());
-    }
-
-    @ParameterizedTest
-    @MethodSource("fatalSignals")
-    void sourceErrorsBecomeUncontrolledAndSkipCondition(Error fatal) {
-        var result = attempt(() -> throwFailure(fatal), ObservationTest::failIfCalled);
-        assertSame(fatal, assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class, result.outcome()).cause());
     }
 
     @Test
@@ -495,41 +488,10 @@ class ObservationTest {
         }
     }
 
-    @Test
-    void abruptSourceFatalThrowableWinsOverCallbackSetFlag() {
-        var sourceFatal = new InternalError("source fatal");
-        var result = attempt(() -> {
-            currentThread().interrupt();
-            throw sourceFatal;
-        }, ObservationTest::failIfCalled);
-        assertSame(sourceFatal, assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class, result.outcome()).cause());
-        assertTrue(currentThread().isInterrupted());
-    }
-
-    private static Stream<Throwable> nonFatalThrowables() {
-        return Stream.of(new Exception("checked"), new AssertionError("assertion"));
-    }
-
-    private static Stream<Throwable> conditionThrowables() {
+    private static Stream<Throwable> throwables() {
         return Stream.of(new Throwable("direct"), new Exception("checked"), new RuntimeException("runtime"),
                 new AssertionError("assertion"), new LinkageError("linkage"),
                 new InternalError("fatal"), new ThreadDeath());
-    }
-
-    private static Stream<Error> fatalSignals() {
-        return Stream.of(new InternalError("fatal"), new ThreadDeath());
-    }
-
-    private static <T> T throwFailure(Throwable failure) throws Exception {
-        if (failure instanceof Exception exception) {
-            throw exception;
-        }
-        throw (Error) failure;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T, E extends Throwable> T throwUnchecked(Throwable failure) throws E {
-        throw (E) failure;
     }
 
     private static <T, R> ConditionResult<R> failIfCalled(T ignored) {
@@ -537,7 +499,7 @@ class ObservationTest {
     }
 
     private static <R> AttemptRecord<Object, R> attempt(Callable<Object> source,
-            Function<Object, ConditionResult<R>> condition) {
+            CheckedFunction<Object, ConditionResult<R>> condition) {
         var time = new FakeTime(0);
         return new WaitEngine<Object, R>(config(1, 2, 0).withTime(time, time), source, ConditionSupport.<Object, R>condition("test condition", null, actual -> {
             ConditionResult<R> evaluation = condition.apply(actual);

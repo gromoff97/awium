@@ -3,7 +3,6 @@ package io.github.gromoff97.awium;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 import org.junit.jupiter.api.AfterEach;
@@ -12,6 +11,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
+import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.WaitCompletion.*;
@@ -601,17 +601,11 @@ class WaitEngineTest {
         assertEquals(2, uncontrolled.attempt().number());
     }
 
-    @SuppressWarnings("unchecked")
-    private static <E extends Throwable> void throwUnchecked(Throwable failure)
-            throws E {
-        throw (E) failure;
-    }
-
     private static <S, R> WaitCompletion<S, R> wait(
             FakeTime time,
             WaitConfiguration config,
             Callable<S> source,
-            Function<S, ConditionResult<R>> condition) {
+            CheckedFunction<S, ConditionResult<R>> condition) {
         return wait(time, config, time, source, condition);
     }
 
@@ -620,9 +614,9 @@ class WaitEngineTest {
             WaitConfiguration config,
             LongConsumer parker,
             Callable<S> source,
-            Function<S, ConditionResult<R>> condition) {
+            CheckedFunction<S, ConditionResult<R>> condition) {
         return new WaitEngine<S, R>(config.withTime(time, parker), source,
-                ConditionSupport.<S, R>condition("test condition", null, condition::apply).newAttempt()).waitFor();
+                ConditionSupport.<S, R>condition("test condition", null, condition).newAttempt()).waitFor();
     }
 
     private static long completed(AttemptRecord<?, ?> attempt) {

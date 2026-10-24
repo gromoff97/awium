@@ -982,3 +982,18 @@ FactoryGrammar/TimingConfiguration уже проверяют реальные и
 Целевые тесты: 27 без ошибок. STRONGER пяти затронутых продуктовых
 классов: 315 мутаций, статусы {'KILLED': 302, 'TIMED_OUT': 13}, без SURVIVED/NO_COVERAGE.
 `/tmp/awium-seven-hour-pass/redundant-tests-report.json`.
+
+### Единая матрица Throwable в тестах
+
+Раздельные nonfatal/fatal сценарии источника объединены с общим набором семи
+Throwable, уже используемым для condition. Проверки времени, пропуска condition,
+идентичности причины и флага прерывания сохранены и теперь выполняются для
+всего набора, включая непосредственный Throwable. Два дублирующих теста удалены.
+Разделение Exception/Error из throwFailure и три копии unchecked-shim удалены;
+одна общая функция используется только там, где сигнатура Java не позволяет
+бросить синтетический Throwable напрямую. Фикстуры engine принимают CheckedFunction
+вместо Function; InterruptedException в callback бросается непосредственно.
+В диагностических фикстурах убраны недостижимые return и повторное деление
+RuntimeException/Error. Тестовый код уменьшился на 49 строк без новых классов.
+Полный check: 432 теста без ошибок и пропусков.
+`/tmp/awium-seven-hour-pass/throwable-tests-report.json`.
