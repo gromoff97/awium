@@ -603,3 +603,14 @@ AwaitTestAccess создаёт все четыре семейства ожида
 сценариях. Null-time тест использует одну source и одно исходное ожидание.
 Полный check: 413 тестов без ошибок и пропусков.
 `/tmp/awium-seven-hour-pass/container-fixture-config-report.json`.
+
+### Паритет терминалов без двух копий каждого сценария
+
+TryUntilFailureTest принимает setup ожидания и factory условия. Оба терминала
+запускаются с отдельными FakeTime и свежим Condition; finally по-прежнему
+очищает interrupt между вызовами. AST подтвердил одинаковые setup/condition
+у 18 прежних пар; before-source interruption перенесён отдельно. Убраны
+восемь одноразовых методов, 48 строк, Consumer import. Все 11 тестов класса
+прошли; STRONGER ValueAwait/WaitEngine/ConditionAwaitAttempt/WaitCompletion*:
+148 мутаций, все KILLED, без NO_COVERAGE.
+`/tmp/awium-seven-hour-pass/terminal-parity-report.json`.
