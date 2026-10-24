@@ -64,7 +64,7 @@ public final class Condition<OBSERVED, RESULT> {
     // Only library-created selectors use this bridge; Await binds their result to the source type.
     @SuppressWarnings("unchecked")
     private <SELECTED> ConditionAwaitAttempt<OBSERVED, SELECTED> selectionAttempt() {
-        return (ConditionAwaitAttempt<OBSERVED, SELECTED>) (ConditionAwaitAttempt<?, ?>) newAttempt();
+        return (ConditionAwaitAttempt<OBSERVED, SELECTED>) newAttempt();
     }
 
     static <C> C required(C condition) {
