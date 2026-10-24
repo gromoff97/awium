@@ -89,43 +89,43 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
     }
 
     public ELEMENT until(SelectedCondition<? super OBSERVED> condition) {
-        return complete(required(condition).<ELEMENT>selectionAttempt());
+        return complete(required(condition).selectionAttempt());
     }
 
     public MAP_VALUE until(MapValueCondition<? super OBSERVED> condition) {
-        return complete(required(condition).<MAP_VALUE>selectionAttempt());
+        return complete(required(condition).selectionAttempt());
     }
 
     public AwaitResult<OBSERVED, ELEMENT> tryUntil(SelectedCondition<? super OBSERVED> condition) {
-        return capture(required(condition).<ELEMENT>selectionAttempt());
+        return capture(required(condition).selectionAttempt());
     }
 
     public AwaitResult<OBSERVED, MAP_VALUE> tryUntil(MapValueCondition<? super OBSERVED> condition) {
-        return capture(required(condition).<MAP_VALUE>selectionAttempt());
+        return capture(required(condition).selectionAttempt());
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final List<ELEMENT> until(SelectedCondition<? super OBSERVED> first, SelectedCondition<? super OBSERVED> second, SelectedCondition<? super OBSERVED>... rest) {
-        return until(ConditionSupport.<OBSERVED, ELEMENT>captured(first, second, rest));
+        return until(ConditionSupport.captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final List<MAP_VALUE> until(MapValueCondition<? super OBSERVED> first, MapValueCondition<? super OBSERVED> second, MapValueCondition<? super OBSERVED>... rest) {
-        return until(ConditionSupport.<OBSERVED, MAP_VALUE>captured(first, second, rest));
+        return until(ConditionSupport.captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final AwaitResult<OBSERVED, List<ELEMENT>> tryUntil(SelectedCondition<? super OBSERVED> first, SelectedCondition<? super OBSERVED> second, SelectedCondition<? super OBSERVED>... rest) {
-        return tryUntil(ConditionSupport.<OBSERVED, ELEMENT>captured(first, second, rest));
+        return tryUntil(ConditionSupport.captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final AwaitResult<OBSERVED, List<MAP_VALUE>> tryUntil(MapValueCondition<? super OBSERVED> first, MapValueCondition<? super OBSERVED> second, MapValueCondition<? super OBSERVED>... rest) {
-        return tryUntil(ConditionSupport.<OBSERVED, MAP_VALUE>captured(first, second, rest));
+        return tryUntil(ConditionSupport.captured(first, second, rest));
     }
 
     @FunctionalInterface

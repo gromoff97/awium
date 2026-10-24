@@ -69,7 +69,7 @@ final class ConditionSupport {
                 if (extracted instanceof ConditionResult.Satisfied<VALUE> value) {
                     return evaluator.probe(value.result());
                 }
-                return new AttemptResult.Evaluated<>(extracted.<RESULT>mapSatisfied(ignored -> null),
+                return new AttemptResult.Evaluated<>(extracted.mapSatisfied(ignored -> null),
                         extractionCondition, null);
             };
         });

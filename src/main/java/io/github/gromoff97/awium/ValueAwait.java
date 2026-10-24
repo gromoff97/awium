@@ -85,25 +85,25 @@ public sealed class ValueAwait<OBSERVED> permits Await {
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final List<OBSERVED> until(PreservingCondition<? super OBSERVED> first, PreservingCondition<? super OBSERVED> second, PreservingCondition<? super OBSERVED>... rest) {
-        return until(ConditionSupport.<OBSERVED>captured(first, second, rest));
+        return until(ConditionSupport.captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final AwaitResult<OBSERVED, List<OBSERVED>> tryUntil(PreservingCondition<? super OBSERVED> first, PreservingCondition<? super OBSERVED> second, PreservingCondition<? super OBSERVED>... rest) {
-        return tryUntil(ConditionSupport.<OBSERVED>captured(first, second, rest));
+        return tryUntil(ConditionSupport.captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final List<OBSERVED> until(ComparisonCondition<? extends OBSERVED> first, ComparisonCondition<? extends OBSERVED> second, ComparisonCondition<? extends OBSERVED>... rest) {
-        return until(ConditionSupport.<OBSERVED>captured(first, second, rest));
+        return until(ConditionSupport.captured(first, second, rest));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     public final AwaitResult<OBSERVED, List<OBSERVED>> tryUntil(ComparisonCondition<? extends OBSERVED> first, ComparisonCondition<? extends OBSERVED> second, ComparisonCondition<? extends OBSERVED>... rest) {
-        return tryUntil(ConditionSupport.<OBSERVED>captured(first, second, rest));
+        return tryUntil(ConditionSupport.captured(first, second, rest));
     }
 
     final <RESULT> RESULT complete(ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> session) {
