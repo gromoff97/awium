@@ -532,8 +532,9 @@ too late.
 composition. Failed extraction carries its own expectation, so missing map
 keys remain distinguishable from mismatches in nested conditions.
 
-Catalog and fluent behavior tests use virtual time; dedicated real-time and
-virtual-thread integration tests exercise the platform wait operation.
+Catalog and fluent behavior tests use virtual time. Integration tests verify
+caller-thread execution and external cancellation on both platform and virtual
+threads, plus independent condition state during concurrent waits.
 
 The module exports one package. Implementation types are package-private on
 both the module path and the classpath; custom conditions use the factories in

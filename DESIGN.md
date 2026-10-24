@@ -723,3 +723,10 @@ satisfiedAttempt, unsatisfiedAttempt и assertionUnsatisfiedAttempt объеди
 совместный запуск с ThreadIntegrationTest. AtomicInteger в реальном
 concurrent reuse сохранён. Стало на четыре строки меньше, новых типов нет.
 `/tmp/awium-seven-hour-pass/nested-observation-fixtures-report.json`.
+
+README описывает общие caller/cancellation проверки для platform и virtual
+threads и concurrent reuse. Текст синхронизирован с ThreadIntegrationTest;
+повторный запуск кода ради этого абзаца не нужен. Javac-поиск проверил 1701
+инициализированную локальную переменную продукта и тестов: новых
+неиспользуемых имён не обнаружено.
+`/tmp/awium-seven-hour-pass/unused-local-values-report.json`.
