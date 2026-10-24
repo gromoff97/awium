@@ -67,21 +67,17 @@ class ObjectAndOptionalAwaitTest {
     }
 
     @Test
-    void awaitReturnsTheObservationFromABroadPreservingCondition() {
-        var pollingTime = new FakeTime(0);
-        Callable<String> source = () -> "observed";
+    void broadPreservingConditionsRetainTheConcreteObservationInBothTerminals() {
+        var time = new FakeTime(0);
+        var actual = new String("observed");
+        var waiting = await(() -> actual).usingTime(time, time);
+        PreservingCondition<Object> condition = Conditions.asserted(ignored -> {});
 
-        assertEquals("observed", await(source).usingTime(pollingTime, pollingTime).until(broadPreservingCondition()));
-    }
+        String value = waiting.until(condition);
+        AwaitResult<String, String> result = waiting.tryUntil(condition);
 
-    @Test
-    void tryUntilReturnsTheObservationFromABroadPreservingCondition() {
-        var pollingTime = new FakeTime(0);
-        Callable<String> source = () -> "observed";
-
-        AwaitResult<String, String> result = await(source).usingTime(pollingTime, pollingTime).tryUntil(broadPreservingCondition());
-        assertInstanceOf(AwaitResult.Satisfied.class, result);
-        assertEquals("observed", ((AwaitResult.Satisfied<?, ?>) result).result());
+        assertSame(actual, value);
+        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
     }
 
     @Test
@@ -182,7 +178,4 @@ class ObjectAndOptionalAwaitTest {
         return timedAwait(source, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(3)), time, time);
     }
 
-    private static PreservingCondition<Object> broadPreservingCondition() {
-        return Conditions.asserted(actual -> {});
-    }
 }
