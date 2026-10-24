@@ -18,13 +18,18 @@ final class ConditionAwaitAttempt<OBSERVED, RESULT> implements AwaitAttempt<OBSE
     @Override
     public AttemptResult<? extends RESULT> probe(OBSERVED actual) {
         try {
-            if (evaluator == null) {
-                checkInterruption();
-                evaluator = evaluatorFactory.call();
+            if (Thread.currentThread().isInterrupted()) {
+                return new AttemptResult.Uncontrolled<>(
+                        new InterruptedException("caller thread interrupt flag was set"), null, null);
             }
-            checkInterruption();
-            var result = evaluator.probe(actual);
-            return withInterruption(result);
+            if (evaluator == null) {
+                evaluator = evaluatorFactory.call();
+                if (Thread.currentThread().isInterrupted()) {
+                    return new AttemptResult.Uncontrolled<>(
+                            new InterruptedException("caller thread interrupt flag was set"), null, null);
+                }
+            }
+            return withInterruption(evaluator.probe(actual));
         } catch (Throwable failure) {
             return new AttemptResult.Uncontrolled<>(failure, null, null);
         }
@@ -36,11 +41,5 @@ final class ConditionAwaitAttempt<OBSERVED, RESULT> implements AwaitAttempt<OBSE
             return new AttemptResult.Uncontrolled<>(interruption, result.condition(), result.progress());
         }
         return result;
-    }
-
-    private static void checkInterruption() throws InterruptedException {
-        if (Thread.currentThread().isInterrupted()) {
-            throw new InterruptedException("caller thread interrupt flag was set");
-        }
     }
 }
