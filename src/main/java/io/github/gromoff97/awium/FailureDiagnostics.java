@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.Reference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -180,9 +179,13 @@ final class FailureDiagnostics {
 
     private void condition(StringBuilder out, Condition<?, ?> condition, String indentation) {
         field(out, indentation, "Condition", condition.description());
-        reference(out, condition.reference());
+        String detailsIndentation = indentation + "    ";
+        var reference = condition.reference();
+        if (reference != null) {
+            field(out, detailsIndentation, reference.label(), render(() -> renderValue(reference.value())));
+        }
         if (condition.explanation() != null) {
-            field(out, "Because", condition.explanation());
+            field(out, detailsIndentation, "Because", condition.explanation());
         }
     }
 
@@ -194,13 +197,7 @@ final class FailureDiagnostics {
                 .append(" of ").append(sequence.totalStages()).append("):\n");
         condition(out, sequence.condition(), "    ");
         if (mismatch != null) {
-            field(out, "Mismatch", mismatch);
-        }
-    }
-
-    private void reference(StringBuilder out, Reference<?> reference) {
-        if (reference != null) {
-            field(out, reference.label(), render(() -> renderValue(reference.value())));
+            field(out, "        ", "Mismatch", mismatch);
         }
     }
 

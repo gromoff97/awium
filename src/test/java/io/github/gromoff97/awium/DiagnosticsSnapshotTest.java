@@ -86,8 +86,8 @@ class DiagnosticsSnapshotTest {
 
                 Sequence (captured 1 of 3):
                     Condition: payment status is pending
-                    Because: processing must begin before completion
-                    Mismatch: payment status was created
+                        Because: processing must begin before completion
+                        Mismatch: payment status was created
 
                 Timing:
                     Acquisition timeout: 2 nanoseconds
@@ -117,8 +117,8 @@ class DiagnosticsSnapshotTest {
 
                 Sequence (captured 2 of 3):
                     Condition: payment status is completed
-                    Because: completion must remain stable
-                    Mismatch: payment status was created
+                        Because: completion must remain stable
+                        Mismatch: payment status was created
 
                 Timing:
                     Acquisition timeout: 10 nanoseconds
@@ -155,8 +155,8 @@ class DiagnosticsSnapshotTest {
 
                 Sequence (captured 1 of 3):
                     Condition: payment status is pending
-                    Because: processing must begin before completion
-                    Mismatch: payment status was created
+                        Because: processing must begin before completion
+                        Mismatch: payment status was created
 
                 Timing:
                     Acquisition timeout: 2 nanoseconds
@@ -193,7 +193,7 @@ class DiagnosticsSnapshotTest {
 
                 Sequence (captured 1 of 3):
                     Condition: payment status is pending
-                    Because: processing must begin before completion
+                        Because: processing must begin before completion
 
                 Timing:
                     Acquisition timeout: 10 nanoseconds
@@ -689,7 +689,7 @@ class DiagnosticsSnapshotTest {
             assertEquals(List.of(diagnostic), failure.suppressed());
             assertTrue(failure.message().contains("Condition: ordered conditions\n    Expected: root operand"));
             assertTrue(failure.message().contains("Actual: observed value"));
-            assertTrue(failure.message().contains("Condition: second stage\n    Expected: stage operand"));
+            assertTrue(failure.message().contains("Condition: second stage\n        Expected: stage operand"));
             assertArrayEquals(new int[]{1, 1, 1}, renders);
             assertEquals(1, messageCalls[0]);
         }
@@ -725,7 +725,7 @@ class DiagnosticsSnapshotTest {
             assertSame(original, failure.cause());
             assertEquals(List.of(expectedFailure, actualFailure, causeFailure), failure.suppressed());
             assertTrue(failure.message().contains("Because: business reason"));
-            assertTrue(failure.message().contains("Condition: second stage\n    Expected: stage operand"));
+            assertTrue(failure.message().contains("Condition: second stage\n        Expected: stage operand"));
             assertTrue(failure.message().contains("Mismatch: not ready"));
             assertTrue(failure.message().contains("Message: <value unavailable: diagnostics failed>"));
             assertEquals(1, expected.calls);
