@@ -256,6 +256,10 @@
 Вывод `javap -p -c -s` до и после совпадает; `check` прошёл с прежним байткодом
 тестов. `/tmp/awium-helper-inference-probe/report.json`.
 
+Удалены четыре игнорируемых `<String>` у не-generic `element(int)` в тестах.
+Байткод совпал; `check` прошёл с прежними результатами тестов.
+`/tmp/awium-unused-method-type-arguments/report.json`.
+
 ### Быстрый отказ точного сравнения карты
 
 Существующий `ProbeMap` проверяет, что несовпадающие размеры завершают положительное
