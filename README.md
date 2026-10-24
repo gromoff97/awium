@@ -378,7 +378,7 @@ Map.Entry<? extends String, ? extends Payment> entry = await(() -> paymentReposi
 ```
 
 The lambda works without explicit type arguments. A direct method reference to
-these wildcard-returning methods does not select the container overload.
+a wildcard-returning method can resolve to the scalar overload instead.
 When a stable observed container type is needed, use the view wrappers to fix
 both the container type and its selected bound. This matters for an explicitly
 typed `AwaitResult` or comparison with another covariant container:
@@ -393,6 +393,10 @@ var index = new MapViewSource<String, Payment, Map<? extends String, ? extends P
 Payment payment = await(payments).until(single);
 Map.Entry<? extends String, ? extends Payment> entry = await(index).until(singleEntry);
 ```
+
+Use typed views when collecting mutable covariant values across observations,
+too: they keep the observations' wildcard types independent despite
+[Java's lambda capture limitation](https://bugs.openjdk.org/browse/JDK-8170887).
 
 `until(...)` or `tryUntil(...)` starts the wait. Success never invokes the source again merely to
 obtain the return value. A retained stage may be reused sequentially; every

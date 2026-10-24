@@ -284,6 +284,27 @@ class CompilationContractTest {
                 """));
     }
 
+    @Test
+    void covariantEntryViewsKeepIndependentValueTypesAcrossStages() throws IOException {
+        for (String decoration : List.of("", ".because(\"independent entries\")")) {
+            assertFalse(compiles("""
+                    import java.util.*;
+                    import io.github.gromoff97.awium.Await.MapViewSource;
+                    import static io.github.gromoff97.awium.Await.await;
+                    import static io.github.gromoff97.awium.MapConditions.singleEntry;
+                    final class Contract {
+                        static <KEY, VALUE> void overwrite(List<Map.Entry<KEY, VALUE>> entries) {
+                            entries.getFirst().setValue(entries.getLast().getValue());
+                        }
+                        void check(MapViewSource<Number, CharSequence,
+                                Map<? extends Number, ? extends CharSequence>> source) {
+                            overwrite(await(source).until(singleEntry%s, singleEntry%s));
+                        }
+                    }
+                    """.formatted(decoration, decoration)));
+        }
+    }
+
     private boolean compiles(String source) throws IOException {
         return CompilationSupport.compiles(temporaryDirectory, source);
     }
