@@ -39,10 +39,8 @@ public final class CollectionConditions {
 
     public static final SelectedCondition<Collection<?>> single = selected("collection has a single element",
             actual -> ConditionSupport.single("collection", actual, ConditionResult::satisfied));
-    public static final PreservingCondition<Collection<?>> empty = sized(0, size -> size == 0,
-            "collection is empty");
-    public static final PreservingCondition<Collection<?>> nonEmpty = sized(0, size -> size > 0,
-            "collection is not empty");
+    public static final PreservingCondition<Collection<?>> empty = preserving("collection is empty", "collection was not empty", Collection::isEmpty);
+    public static final PreservingCondition<Collection<?>> nonEmpty = preserving("collection is not empty", "collection was empty", actual -> !actual.isEmpty());
     public static final PreservingCondition<Collection<?>> containsNull = preserving("collection contains null",
             "collection did not contain null", actual -> matchesAny(actual, value -> value == null));
     public static final PreservingCondition<Collection<?>> doesNotContainNull = preserving("collection does not contain null",

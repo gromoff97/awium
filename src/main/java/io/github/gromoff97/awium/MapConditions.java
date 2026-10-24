@@ -39,10 +39,8 @@ public final class MapConditions {
 
     public static final SelectedCondition<Map<?, ?>> singleEntry = selected("map has a single entry",
             actual -> ConditionSupport.single("map", actual == null ? null : actual.entrySet(), ConditionResult::satisfied));
-    public static final PreservingCondition<Map<?, ?>> empty = sized(0, size -> size == 0,
-            "map is empty");
-    public static final PreservingCondition<Map<?, ?>> nonEmpty = sized(0, size -> size > 0,
-            "map is not empty");
+    public static final PreservingCondition<Map<?, ?>> empty = preserving("map is empty", "map was not empty", Map::isEmpty);
+    public static final PreservingCondition<Map<?, ?>> nonEmpty = preserving("map is not empty", "map was empty", actual -> !actual.isEmpty());
 
     private MapConditions() {}
 
