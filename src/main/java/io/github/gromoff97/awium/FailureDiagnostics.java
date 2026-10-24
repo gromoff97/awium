@@ -45,7 +45,7 @@ final class FailureDiagnostics {
     }
 
     static String duration(long nanos) {
-        StringJoiner result = new StringJoiner(" ");
+        StringJoiner result = new StringJoiner(" ").setEmptyValue("0 nanoseconds");
         for (TimeUnit unit : DURATION_UNITS) {
             long unitNanos = unit.toNanos(1);
             long count = nanos / unitNanos;
@@ -55,7 +55,7 @@ final class FailureDiagnostics {
                 result.add(count + " " + (count == 1 ? name.substring(0, name.length() - 1) : name));
             }
         }
-        return result.length() == 0 ? "0 nanoseconds" : result.toString();
+        return result.toString();
     }
 
     static AwaitFailure failure(WaitCompletion<?, ?> outcome, Condition<?, ?> condition, WaitConfiguration configuration) {
