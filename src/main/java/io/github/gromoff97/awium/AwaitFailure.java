@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import java.io.Serializable;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
@@ -9,7 +10,7 @@ import static java.util.Objects.requireNonNull;
  * The cause is the original throwable, or {@code null} for an ordinary mismatch.
  * If diagnostics fail, their cause takes precedence and the original cause is suppressed.
  */
-public record AwaitFailure(Reason reason, String message, Throwable cause, List<Throwable> suppressed) {
+public record AwaitFailure(Reason reason, String message, Throwable cause, List<Throwable> suppressed) implements Serializable {
 
     public AwaitFailure {
         requireNonNull(reason, "reason must not be null");
