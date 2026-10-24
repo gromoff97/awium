@@ -11,6 +11,8 @@ import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
+import static io.github.gromoff97.awium.ValueMatching.matchesAll;
+import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static java.util.Objects.requireNonNull;
 
 public final class StringConditions {
@@ -25,13 +27,13 @@ public final class StringConditions {
     public static PreservingCondition<String> contains(String... expected) {
         List<String> values = nonEmpty(expected, "expected strings");
         return matching("string contains all expected strings", "string did not contain all expected strings", expectedReference(values),
-                actual -> values.stream().allMatch(actual::contains));
+                actual -> matchesAll(values, actual::contains));
     }
 
     public static PreservingCondition<String> doesNotContain(String... unexpected) {
         List<String> values = nonEmpty(unexpected, "unexpected strings");
         return matching("string does not contain unexpected strings", "string contained an unexpected string", unexpectedReference(values),
-                actual -> values.stream().noneMatch(actual::contains));
+                actual -> !matchesAny(values, actual::contains));
     }
 
     public static PreservingCondition<String> containsIgnoringCase(String expected) {
