@@ -104,6 +104,32 @@ class PositiveFluentMatrixTest {
     }
 
     @Test
+    void wildcardLambdasPreserveSelectionBoundsWithoutTypeArguments() {
+        Number number = Integer.valueOf(1000);
+        CharSequence text = new StringBuilder("ready");
+        List<? extends Number> values = List.of(number);
+        Map<? extends Number, ? extends CharSequence> index = Map.of(number, text);
+
+        var element = await(() -> values).until(single.because("one covariant element"));
+        var entry = await(() -> index).until(MapConditions.singleEntry.because("one covariant entry"));
+        var original = await(() -> values).until(nonEmpty.because("original covariant list"));
+        var result = await(() -> values).tryUntil(single.because("covariant result"));
+
+        assertEquals(1000, element.intValue());
+        assertEquals(1000, entry.getKey().intValue());
+        assertEquals(5, entry.getValue().length());
+        assertEquals(1000, original.getFirst().intValue());
+        assertSame(number, element);
+        assertSame(number, entry.getKey());
+        assertSame(text, entry.getValue());
+        assertSame(values, original);
+        assertEquals(1000, switch (result) {
+            case AwaitResult.Satisfied(var attempts, var selected) -> selected.intValue();
+            case AwaitResult.Failed(var attempts, var failure) -> throw new AssertionError(failure);
+        });
+    }
+
+    @Test
     void wildcardViewsPreserveContainersAndSelectOriginalElementsOncePerAttempt() {
         var time = new FakeTime(0);
         Number element = Integer.valueOf(1000);

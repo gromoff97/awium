@@ -639,3 +639,30 @@ SpotBugs 4.9.8 проверил актуальный JAR без ошибок и 
 Нового доказанного дефекта эти проверки не установили. Зависимостей и правил
 подавления в сборке не добавлено. Отчёт с версиями и хешами:
 `/tmp/awium-current-static-analysis/report.json`.
+
+
+### Короткие ковариантные источники без generics в цепочке
+
+На javac и текущем ECJ проверена короткая форма `await(() -> source()).until(...)`
+для `List<? extends Number>` и `Map<? extends Number, ? extends CharSequence>`.
+Выбор после `because` сохраняет границы `Number` / `CharSequence`, исходные
+объекты и точный наблюдаемый контейнер. `tryUntil` с `var` также сохраняет границу
+выбранного значения. Публичный API и код исполнения не изменялись.
+
+README показывает этот вариант первым для ковариантных источников. View-wrapper
+остаётся для явного инвариантного типа вроде
+`AwaitResult<List<? extends Number>, Number>`: lambda даёт capture-тип, а явно
+типизированный wrapper фиксирует обе координаты. Javadoc поясняет необходимость
+typed declaration или явных параметров у самого wrapper.
+
+`new CollectionViewSource<>(...)` без target type всё ещё выводит `Object`.
+Изолированный прототип замены `Callable<? extends VALUES>` на `Callable<VALUES>`
+это не исправил; сужение делегата не внесено. Прямой method reference к методу
+с wildcard-результатом тоже не выбирает контейнерную перегрузку. Эти ограничения
+проверены отдельными контрольными примерами, обходов с casts и новыми API нет.
+
+Реальный fluent-тест вызывает `intValue()` и `length()` без явных параметров
+типов; весь `PositiveFluentMatrixTest`: 11 тестов без ошибок. Новый тест также
+скомпилирован и выполнен ECJ 3.46.100. Все 23 Java-блока README скомпилированы
+и выполнены javac и ECJ. `javadoc` прошёл. Отчёт:
+`/tmp/awium-wildcard-lambda-api/report.json`.

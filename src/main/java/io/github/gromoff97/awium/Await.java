@@ -135,6 +135,7 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
     /**
      * Adapts a covariant collection source while retaining its element bound for selections.
      * The returned collection is neither copied nor changed.
+     * Use a typed declaration or explicit type arguments to establish the selected element bound.
      *
      * @param <ELEMENT> upper bound of selected elements
      * @param <VALUES> complete collection type returned by the source
@@ -161,6 +162,7 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
     /**
      * Adapts a covariant map source while retaining its key and value bounds for selections.
      * The returned map is neither copied nor changed.
+     * Use a typed declaration or explicit type arguments to establish the selected bounds.
      *
      * @param <KEY> upper bound of selected keys
      * @param <VALUE> upper bound of selected values

@@ -370,8 +370,17 @@ Payment onlyPayment = await(payments).until(single);
 Map.Entry<String, Payment> onlyEntry = await(index).until(singleEntry);
 ```
 
-Covariant containers use the explicit view wrappers so the selected wildcard
-types remain safe:
+For covariant containers, use a lambda to retain the selected wildcard bounds:
+
+```java
+Payment payment = await(() -> paymentRepository.findAllView()).until(single.because("One payment is required"));
+Map.Entry<? extends String, ? extends Payment> entry = await(() -> paymentRepository.indexView()).until(singleEntry);
+```
+
+The lambda works without explicit type arguments. A direct method reference to
+these wildcard-returning methods does not select the container overload.
+When an exact `AwaitResult` type must be named, use the view wrappers to fix both
+the observed container type and its selected bound:
 
 ```java
 import io.github.gromoff97.awium.Await.CollectionViewSource;
