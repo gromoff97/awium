@@ -145,6 +145,6 @@ public final class StringConditions {
     }
 
     private static List<String> nonEmpty(String[] values, String name) {
-        return List.of(ConditionSupport.nonEmpty(values, name));
+        return ConditionSupport.nonEmpty(List.of(requireNonNull(values, name + " must not be null")), name);
     }
 }

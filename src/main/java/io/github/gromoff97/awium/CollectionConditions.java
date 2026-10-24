@@ -20,6 +20,7 @@ import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.nonEmpty;
+import static io.github.gromoff97.awium.ConditionSupport.nonEmptySnapshot;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.selected;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
@@ -30,7 +31,6 @@ import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
 import static java.util.Arrays.asList;
-import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("varargs")
@@ -236,42 +236,42 @@ public final class CollectionConditions {
 
     @SafeVarargs
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> startsWith(ELEMENT... expected) {
-        List<? extends ELEMENT> values = stream(nonEmpty(expected, "expected elements")).toList();
+        List<? extends ELEMENT> values = nonEmptySnapshot(expected, "expected elements");
         return preserving("collection contains expected prefix", "collection did not contain expected prefix", expectedReference(values),
                 actual -> actual.size() >= values.size() && prefixMatches(actual.iterator(), values));
     }
 
     @SafeVarargs
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> endsWith(ELEMENT... expected) {
-        List<? extends ELEMENT> values = stream(nonEmpty(expected, "expected elements")).toList();
+        List<? extends ELEMENT> values = nonEmptySnapshot(expected, "expected elements");
         return preserving("collection contains expected suffix", "collection did not contain expected suffix", expectedReference(values),
                 actual -> actual.size() >= values.size() && prefixMatches(actual.reversed().iterator(), values.reversed()));
     }
 
     @SafeVarargs
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> containsSequence(ELEMENT... expected) {
-        List<? extends ELEMENT> values = stream(nonEmpty(expected, "expected elements")).toList();
+        List<? extends ELEMENT> values = nonEmptySnapshot(expected, "expected elements");
         return preserving("collection contains expected sequence", "collection did not contain expected sequence", expectedReference(values),
                 actual -> containsSequence(actual, values));
     }
 
     @SafeVarargs
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> doesNotContainSequence(ELEMENT... expected) {
-        List<? extends ELEMENT> values = stream(nonEmpty(expected, "expected elements")).toList();
+        List<? extends ELEMENT> values = nonEmptySnapshot(expected, "expected elements");
         return preserving("collection does not contain expected sequence", "collection contained expected sequence", expectedReference(values),
                 actual -> !containsSequence(actual, values));
     }
 
     @SafeVarargs
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> containsSubsequence(ELEMENT... expected) {
-        List<? extends ELEMENT> values = stream(nonEmpty(expected, "expected elements")).toList();
+        List<? extends ELEMENT> values = nonEmptySnapshot(expected, "expected elements");
         return preserving("collection contains expected subsequence", "collection did not contain expected subsequence", expectedReference(values),
                 actual -> containsSubsequence(actual, values));
     }
 
     @SafeVarargs
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> doesNotContainSubsequence(ELEMENT... expected) {
-        List<? extends ELEMENT> values = stream(nonEmpty(expected, "expected elements")).toList();
+        List<? extends ELEMENT> values = nonEmptySnapshot(expected, "expected elements");
         return preserving("collection does not contain expected subsequence",
                 "collection contained expected subsequence", expectedReference(values),
                 actual -> !containsSubsequence(actual, values));

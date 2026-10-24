@@ -182,9 +182,9 @@ final class ConditionSupport {
     }
 
     private static <STAGE> List<STAGE> stages(STAGE[] conditions) {
-        return Arrays.stream(nonEmpty(conditions, "conditions"))
-                .map(Condition::required)
-                .toList();
+        var stages = nonEmptySnapshot(conditions, "conditions");
+        stages.forEach(Condition::required);
+        return stages;
     }
 
     static void validateRange(int lowerBound, int upperBound, String measure) {
@@ -193,12 +193,8 @@ final class ConditionSupport {
         }
     }
 
-    static <ELEMENT> ELEMENT[] nonEmpty(ELEMENT[] values, String name) {
-        requireNonNull(values, name + " must not be null");
-        if (values.length == 0) {
-            throw new IllegalArgumentException(name + " must not be empty");
-        }
-        return values;
+    static <ELEMENT> List<ELEMENT> nonEmptySnapshot(ELEMENT[] values, String name) {
+        return nonEmpty(Arrays.stream(requireNonNull(values, name + " must not be null")).toList(), name);
     }
 
     static <ELEMENT> List<ELEMENT> nonEmpty(List<ELEMENT> values, String name) {

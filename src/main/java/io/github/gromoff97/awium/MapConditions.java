@@ -20,6 +20,7 @@ import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.nonEmpty;
+import static io.github.gromoff97.awium.ConditionSupport.nonEmptySnapshot;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.selected;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
@@ -187,14 +188,14 @@ public final class MapConditions {
 
     @SafeVarargs
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsKeys(KEY... expected) {
-        List<KEY> keys = stream(nonEmpty(expected, "expected keys")).toList();
+        List<KEY> keys = nonEmptySnapshot(expected, "expected keys");
         return preserving("map contains all expected keys", "map did not contain all expected keys", expectedReference(keys),
                 actual -> containsAll(actual.keySet(), keys, Objects::deepEquals));
     }
 
     @SafeVarargs
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> doesNotContainKeys(KEY... unexpected) {
-        List<KEY> keys = stream(nonEmpty(unexpected, "unexpected keys")).toList();
+        List<KEY> keys = nonEmptySnapshot(unexpected, "unexpected keys");
         return preserving("map does not contain unexpected keys", "map contained an unexpected key", unexpectedReference(keys),
                 actual -> !matchesAny(actual.keySet(), value -> matchesAny(keys, key -> deepEquals(value, key))));
     }
@@ -208,14 +209,14 @@ public final class MapConditions {
 
     @SafeVarargs
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> containsValues(VALUE... expected) {
-        List<VALUE> values = stream(nonEmpty(expected, "expected values")).toList();
+        List<VALUE> values = nonEmptySnapshot(expected, "expected values");
         return preserving("map contains all expected values", "map did not contain all expected values", expectedReference(values),
                 actual -> containsAll(actual.values(), values, Objects::deepEquals));
     }
 
     @SafeVarargs
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> doesNotContainValues(VALUE... unexpected) {
-        List<VALUE> values = stream(nonEmpty(unexpected, "unexpected values")).toList();
+        List<VALUE> values = nonEmptySnapshot(unexpected, "unexpected values");
         return preserving("map does not contain unexpected values", "map contained an unexpected value", unexpectedReference(values),
                 actual -> !matchesAny(actual.values(), value -> matchesAny(values, candidate -> deepEquals(value, candidate))));
     }

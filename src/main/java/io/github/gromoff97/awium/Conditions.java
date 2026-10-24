@@ -9,12 +9,11 @@ import java.util.function.Predicate;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
-import static io.github.gromoff97.awium.ConditionSupport.nonEmpty;
+import static io.github.gromoff97.awium.ConditionSupport.nonEmptySnapshot;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static java.util.Objects.deepEquals;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
-import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
 public final class Conditions {
@@ -87,7 +86,7 @@ public final class Conditions {
     @SafeVarargs
     @SuppressWarnings("varargs")
     public static <EXPECTED> ComparisonCondition<EXPECTED> in(EXPECTED... expected) {
-        List<?> values = stream(nonEmpty(expected, "expected values")).toList();
+        List<?> values = nonEmptySnapshot(expected, "expected values");
         return new ComparisonCondition<>(ConditionSupport.condition("value is in the expected values", expectedReference(values),
                 actual -> matchesAny(values, candidate -> deepEquals(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was not in the expected values")));
@@ -96,7 +95,7 @@ public final class Conditions {
     @SafeVarargs
     @SuppressWarnings("varargs")
     public static <EXPECTED> ComparisonCondition<EXPECTED> notIn(EXPECTED... unexpected) {
-        List<?> values = stream(nonEmpty(unexpected, "unexpected values")).toList();
+        List<?> values = nonEmptySnapshot(unexpected, "unexpected values");
         return new ComparisonCondition<>(ConditionSupport.condition("value is not in the unexpected values", unexpectedReference(values),
                 actual -> !matchesAny(values, candidate -> deepEquals(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was in the unexpected values")));
