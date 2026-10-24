@@ -10,7 +10,6 @@ import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
 import static io.github.gromoff97.awium.Condition.required;
-import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -26,12 +25,8 @@ public sealed class ValueAwait<OBSERVED> permits Await {
     final Callable<? extends OBSERVED> source;
     final WaitConfiguration configuration;
 
-    ValueAwait(Callable<? extends OBSERVED> source) {
-        this(requireNonNull(source, "source must not be null"), DEFAULT);
-    }
-
     ValueAwait(Callable<? extends OBSERVED> source, WaitConfiguration configuration) {
-        this.source = source;
+        this.source = requireNonNull(source, "source must not be null");
         this.configuration = configuration;
     }
 

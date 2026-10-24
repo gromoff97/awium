@@ -748,3 +748,13 @@ README уточняет правило. Полный check: 414 тестов б�
 STRONGER ConditionSupport/ConditionAwaitAttempt/SequenceExecution: 119 KILLED,
 без SURVIVED/NO_COVERAGE. Все 409 публичных деклараций совпадают.
 `/tmp/awium-seven-hour-pass/extraction-failure-context-report.json`.
+
+### Один конструктор полного состояния у каждого fluent-класса
+
+Одноаргументные Await/ValueAwait только делегировали с DEFAULT и удалены.
+Шесть await-фабрик выбирают DEFAULT явно; общий ValueAwait-конструктор
+проверяет source. Переконфигурация и тестовые входы используют тот же путь.
+Убраны два конструктора и восемь продуктовых строк без новых типов.
+Javap подтверждает по одному полному конструктору; публичные 409 деклараций
+совпадают. Полный check: 414 тестов без ошибок и пропусков.
+`/tmp/awium-seven-hour-pass/fluent-constructor-report.json`.

@@ -12,6 +12,7 @@ import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
 import static io.github.gromoff97.awium.Condition.required;
+import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -24,38 +25,34 @@ import static java.util.Objects.requireNonNull;
  */
 public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERVED> {
 
-    private Await(Callable<? extends OBSERVED> source) {
-        super(source);
-    }
-
     Await(Callable<? extends OBSERVED> source, WaitConfiguration configuration) {
         super(source, configuration);
     }
 
     public static <VALUE> ValueAwait<VALUE> await(Callable<VALUE> source) {
-        return new ValueAwait<>(source);
+        return new ValueAwait<>(source, DEFAULT);
     }
 
     public static <VALUE> Await<Optional<VALUE>, VALUE, Void> await(OptionalSource<VALUE> source) {
-        return new Await<>(source);
+        return new Await<>(source, DEFAULT);
     }
 
     public static <ELEMENT, VALUES extends Collection<ELEMENT>> Await<VALUES, ELEMENT, Void> await(CollectionSource<VALUES> source) {
-        return new Await<>(source);
+        return new Await<>(source, DEFAULT);
     }
 
     public static <ELEMENT, VALUES extends Collection<? extends ELEMENT>>
             Await<VALUES, ELEMENT, Void> await(CollectionViewSource<ELEMENT, VALUES> source) {
-        return new Await<>(source);
+        return new Await<>(source, DEFAULT);
     }
 
     public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> Await<ENTRIES, Map.Entry<KEY, VALUE>, VALUE> await(MapSource<ENTRIES> source) {
-        return new Await<>(source);
+        return new Await<>(source, DEFAULT);
     }
 
     public static <KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>
             Await<ENTRIES, Map.Entry<? extends KEY, ? extends VALUE>, VALUE> await(MapViewSource<KEY, VALUE, ENTRIES> source) {
-        return new Await<>(source);
+        return new Await<>(source, DEFAULT);
     }
 
     @Override
