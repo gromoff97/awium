@@ -62,12 +62,10 @@ final class ConditionSupport {
             Supplier<? extends ConditionAwaitAttempt<? super VALUE, ? extends RESULT>> evaluatorFactory) {
         return new Condition<>(prefix + condition.description(), condition.explanation(), condition.reference(), () -> {
             var evaluator = evaluatorFactory.get();
-            return actual -> {
-                var extracted = extract.apply(actual);
-                if (extracted instanceof ConditionResult.Satisfied<VALUE> value) {
-                    return evaluator.probe(value.result());
-                }
-                return new AttemptResult.Evaluated<>(extracted.mapSatisfied(ignored -> null),
+            return actual -> switch (extract.apply(actual)) {
+                case ConditionResult.Satisfied<VALUE> value -> evaluator.probe(value.result());
+                case ConditionResult.Unsatisfied<VALUE> mismatch -> new AttemptResult.Evaluated<>(
+                        new ConditionResult.Unsatisfied<>(mismatch.mismatch(), mismatch.cause()),
                         extractionCondition, null);
             };
         });
@@ -134,11 +132,11 @@ final class ConditionSupport {
             switch (evaluator.probe(value)) {
                 case AttemptResult.Uncontrolled<? extends RESULT> failure -> { return failure; }
                 case AttemptResult.Evaluated<? extends RESULT> evaluated -> {
-                    if (evaluated.result() instanceof ConditionResult.Satisfied<?>
-                            && result.result() instanceof ConditionResult.Satisfied<?>) return AttemptResult.of(unsatisfied("more than one value matched"));
                     // Keep the first match, otherwise the last mismatch.
-                    if (!(result.result() instanceof ConditionResult.Satisfied<?>)) {
+                    if (result.result() instanceof ConditionResult.Unsatisfied<?>) {
                         result = evaluated;
+                    } else if (evaluated.result() instanceof ConditionResult.Satisfied<?>) {
+                        return AttemptResult.of(unsatisfied("more than one value matched"));
                     }
                 }
             }
