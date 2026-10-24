@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.AttemptRecord.Outcome.Evaluated;
 import java.time.Duration;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
@@ -60,13 +61,13 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplie
                     number, attemptStarted, retrievalStarted);
             completed = completedNanos(attempt);
             recorder.accept(attempt);
-            if (failed(attempt)) {
+            if (!(attempt.outcome() instanceof Evaluated<OBSERVED, RESULT> evaluated)) {
                 return new WaitCompletion.Uncontrolled<>(attempt);
             }
             if (reached(completed, deadline)) {
                 return new WaitCompletion.Timeout<>(attempt);
             }
-            if (satisfied(attempt)) {
+            if (evaluated.evaluation() instanceof ConditionResult.Satisfied<?>) {
                 return new WaitCompletion.Satisfied<>(attempt);
             }
             lastUnsatisfied = attempt;
@@ -94,10 +95,10 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplie
                     number, attemptStarted, retrievalStarted);
             completed = completedNanos(attempt);
             recorder.accept(attempt);
-            if (failed(attempt)) {
+            if (!(attempt.outcome() instanceof Evaluated<OBSERVED, RESULT> evaluated)) {
                 return new WaitCompletion.Uncontrolled<>(attempt);
             }
-            if (!satisfied(attempt)) {
+            if (!(evaluated.evaluation() instanceof ConditionResult.Satisfied<?>)) {
                 return new WaitCompletion.PersistenceFailure<>(acquiredAt - started, attempt);
             }
             if (reached(completed, deadline)) {
@@ -141,7 +142,7 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplie
                 retrievalStarted, observed, completed);
         var condition = evaluation.conditionOr(evaluator.condition);
         AttemptRecord.Outcome<OBSERVED, RESULT> outcome = switch (evaluation) {
-            case AttemptResult.Evaluated<? extends RESULT> value -> new AttemptRecord.Outcome.Evaluated<>(
+            case AttemptResult.Evaluated<? extends RESULT> value -> new Evaluated<>(
                     timing, actual, value.result(), condition, value.progress());
             case AttemptResult.Uncontrolled<?> failure -> new AttemptRecord.Outcome.ConditionFailed<>(
                     timing, actual, failure.cause(), condition, failure.progress());
@@ -194,15 +195,6 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplie
         long completed = now(clock);
         var timing = new AttemptRecord.Timing(offset(attemptStarted), null, null, offset(completed));
         return new AttemptRecord<>(number, phase, new AttemptRecord.Outcome.WaitingFailed<>(timing, failure));
-    }
-
-    private static boolean satisfied(AttemptRecord<?, ?> attempt) {
-        return attempt.outcome() instanceof AttemptRecord.Outcome.Evaluated<?, ?> value
-                && value.evaluation() instanceof ConditionResult.Satisfied<?>;
-    }
-
-    private static boolean failed(AttemptRecord<?, ?> attempt) {
-        return !(attempt.outcome() instanceof AttemptRecord.Outcome.Evaluated<?, ?>);
     }
 
     private long completedNanos(AttemptRecord<?, ?> attempt) {
