@@ -36,7 +36,8 @@ class ObjectAndOptionalConditionsTest {
         var equalActual = new String("1");
         var differentActual = "2";
 
-        assertSame(equalActual, result(evaluate(equalTo(expected), equalActual)));
+        String selected = result(evaluate(equalTo(expected), equalActual));
+        assertSame(equalActual, selected);
         assertUnsatisfied(evaluate(notEqualTo(expected), equalActual));
         assertUnsatisfied(evaluate(equalTo(expected), differentActual));
         assertSame(differentActual, result(evaluate(notEqualTo(expected), differentActual)));

@@ -83,8 +83,9 @@ final class ConditionTestRuntime {
         assertInstanceOf(ConditionResult.Unsatisfied.class, evaluation);
     }
 
-    static Object result(ConditionResult<?> evaluation) {
-        return assertInstanceOf(ConditionResult.Satisfied.class, evaluation).result();
+    static <RESULT> RESULT result(ConditionResult<? extends RESULT> evaluation) {
+        assertInstanceOf(ConditionResult.Satisfied.class, evaluation);
+        return ((ConditionResult.Satisfied<? extends RESULT>) evaluation).result();
     }
 
     static String mismatch(ConditionResult<?> evaluation) {

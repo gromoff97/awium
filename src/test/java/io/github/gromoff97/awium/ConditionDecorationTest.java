@@ -194,8 +194,8 @@ class ConditionDecorationTest {
         }
     }
 
-    private static <T extends Throwable> void assertValidation(String context,
-            Class<T> type, org.junit.jupiter.api.function.Executable action) {
+    private static void assertValidation(String context,
+            Class<? extends Throwable> type, org.junit.jupiter.api.function.Executable action) {
         assertTrue(assertThrows(type, action).getMessage().contains(context));
     }
 

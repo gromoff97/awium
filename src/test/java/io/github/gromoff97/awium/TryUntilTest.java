@@ -84,9 +84,8 @@ class TryUntilTest {
         assertEquals(List.of(1L), second.attempts().stream().map(AttemptRecord::number).toList());
     }
 
-    @SuppressWarnings("unchecked")
     private static <S, R> AwaitResult.Satisfied<S, R> satisfied(AwaitResult<S, R> result) {
-        return (AwaitResult.Satisfied<S, R>) assertInstanceOf(
-                AwaitResult.Satisfied.class, result);
+        assertInstanceOf(AwaitResult.Satisfied.class, result);
+        return (AwaitResult.Satisfied<S, R>) result;
     }
 }

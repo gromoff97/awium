@@ -297,8 +297,8 @@ class MapConditionsTest {
         assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank());
     }
 
-    private static <K, V, M extends Map<K, V>> void assertStatus(
-            PreservingCondition<? super M> condition, M actual,
+    private static <ACTUAL extends Map<?, ?>> void assertStatus(
+            PreservingCondition<? super ACTUAL> condition, ACTUAL actual,
             Class<?> status) {
         assertFalse(description(condition).isBlank());
         assertEquals(status, evaluate(condition, actual).getClass());
