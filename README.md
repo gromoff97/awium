@@ -224,6 +224,10 @@ map entries; `hasValue(...)` checks an optional value.
 Structural single-value selections use one iterator to distinguish zero, one,
 and several values, without counting the whole collection. This also avoids
 using a stale size when a concurrent collection changes before iteration.
+`first` and `last` select through forward and reverse traversal; an empty
+traversal causes a retry. `element(index)` traverses up to the requested position,
+so its cost grows with the index even for an array-backed list. These selections
+use the values seen in one traversal instead of a separate size check and read.
 The observation remains a caller-owned object, not an atomic snapshot.
 
 The nested condition can preserve the selected value (`matches`, `asserted`,

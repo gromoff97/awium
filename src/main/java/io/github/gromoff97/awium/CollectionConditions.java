@@ -12,7 +12,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.SequencedCollection;
-import java.util.function.Function;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 
@@ -278,14 +277,16 @@ public final class CollectionConditions {
                 actual -> !containsSubsequence(actual, values));
     }
 
-    public static final SelectedCondition<SequencedCollection<?>> first = position("first", SequencedCollection::getFirst);
+    public static final SelectedCondition<SequencedCollection<?>> first = selected("collection has a first element",
+            actual -> selectFirst(actual, value -> true));
 
     public static <ELEMENT> SelectedCondition<SequencedCollection<? extends ELEMENT>> first(Predicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return selected("collection has a matching element", actual -> selectFirst(actual, predicate));
     }
 
-    public static final SelectedCondition<SequencedCollection<?>> last = position("last", SequencedCollection::getLast);
+    public static final SelectedCondition<SequencedCollection<?>> last = selected("collection has a last element",
+            actual -> selectFirst(actual == null ? null : actual.reversed(), value -> true));
 
     public static <ELEMENT> SelectedCondition<SequencedCollection<? extends ELEMENT>> last(Predicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
@@ -306,12 +307,13 @@ public final class CollectionConditions {
             if (actual == null) {
                 return unsatisfied("list was null");
             }
-            int size = actual.size();
-            if (size <= index) {
-                return unsatisfied("list size was " + size);
+            int position = 0;
+            for (ELEMENT value : actual) {
+                if (position++ == index) {
+                    return predicate.test(value) ? satisfied(value) : unsatisfied("element at index " + index + " did not match");
+                }
             }
-            ELEMENT value = actual.get(index);
-            return predicate.test(value) ? satisfied(value) : unsatisfied("element at index " + index + " did not match");
+            return unsatisfied("list size was " + position);
         });
     }
 
@@ -331,18 +333,6 @@ public final class CollectionConditions {
             }
         }
         return unsatisfied("no collection element matched");
-    }
-
-    private static SelectedCondition<SequencedCollection<?>> position(String name,
-            Function<SequencedCollection<?>, ?> selector) {
-        return selected("collection has a " + name + " element", actual -> {
-            if (actual == null) {
-                return unsatisfied("collection was null");
-            }
-            return actual.isEmpty()
-                    ? unsatisfied("collection was empty")
-                    : satisfied(selector.apply(actual));
-        });
     }
 
     private static PreservingCondition<Collection<?>> sized(int bound, IntPredicate matches,

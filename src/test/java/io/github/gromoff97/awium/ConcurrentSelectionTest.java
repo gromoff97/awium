@@ -4,7 +4,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -13,6 +15,42 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 class ConcurrentSelectionTest {
+
+    @Test
+    void indexedSelectionRetriesWhenTheListIsEmptiedBeforeSelection() {
+        var values = new ChangingList();
+        values.add("old");
+        int[] calls = {0};
+        var time = new FakeTime(0);
+
+        var result = await(() -> {
+            if (++calls[0] == 2) values.add("ready");
+            return values;
+        }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
+                .tryUntil(CollectionConditions.element(0));
+
+        assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals(2, calls[0]);
+    }
+
+    @Test
+    void firstAndLastRetryWhenTheDequeIsEmptiedBeforeSelection() {
+        for (boolean last : new boolean[] {false, true}) {
+            var values = new ChangingDeque();
+            values.add("old");
+            int[] calls = {0};
+            var time = new FakeTime(0);
+
+            var result = await(() -> {
+                if (++calls[0] == 2) values.add("ready");
+                return values;
+            }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
+                    .tryUntil(last ? CollectionConditions.last : CollectionConditions.first);
+
+            assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+            assertEquals(2, calls[0]);
+        }
+    }
 
     @Test
     void singleRetriesWhenTheQueueIsEmptiedBeforeItsIteratorIsCreated() {
@@ -73,6 +111,60 @@ class ConcurrentSelectionTest {
                 first = false;
                 removeConcurrently(this::clear);
             }
+            return super.iterator();
+        }
+    }
+
+    private static final class ChangingDeque extends ConcurrentLinkedDeque<String> {
+        private boolean first = true;
+
+        private void change() {
+            if (first) {
+                first = false;
+                removeConcurrently(this::clear);
+            }
+        }
+
+        @Override
+        public boolean isEmpty() {
+            boolean empty = super.isEmpty();
+            change();
+            return empty;
+        }
+
+        @Override
+        public Iterator<String> iterator() {
+            change();
+            return super.iterator();
+        }
+
+        @Override
+        public Iterator<String> descendingIterator() {
+            change();
+            return super.descendingIterator();
+        }
+    }
+
+    private static final class ChangingList extends CopyOnWriteArrayList<String> {
+        private boolean first = true;
+
+        private void change() {
+            if (first) {
+                first = false;
+                removeConcurrently(this::clear);
+            }
+        }
+
+        @Override
+        public int size() {
+            int size = super.size();
+            change();
+            return size;
+        }
+
+        @Override
+        public Iterator<String> iterator() {
+            change();
             return super.iterator();
         }
     }

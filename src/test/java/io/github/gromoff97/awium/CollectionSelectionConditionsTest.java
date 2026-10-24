@@ -315,21 +315,6 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
-    void indexedMismatchUsesTheSizeObservedByTheCheck() {
-        var actual = new ArrayList<String>() {
-            @Override
-            public int size() {
-                int observed = super.size();
-                if (observed == 0) add("ready");
-                return observed;
-            }
-        };
-
-        var result = evaluate(CollectionConditions.element(0), actual);
-        assertEquals("list size was 0", ((Unsatisfied<?>) result).mismatch());
-    }
-
-    @Test
     void lastReturnsTheFinalPersistenceObservation() {
         var observations = new ArrayDeque<>(List.of(List.of(1), List.of(2), List.of(3)));
         CollectionSource<List<Integer>> source = observations::removeFirst;
@@ -351,7 +336,7 @@ class CollectionSelectionConditionsTest {
 
         assertTrue(failure.getMessage().contains("Condition: collection has a first element"));
         assertTrue(failure.getMessage().contains("Because: a first result is required"));
-        assertTrue(failure.getMessage().contains("Mismatch: collection was empty"));
+        assertTrue(failure.getMessage().contains("Mismatch: no collection element matched"));
     }
 
     private record User(int id) {

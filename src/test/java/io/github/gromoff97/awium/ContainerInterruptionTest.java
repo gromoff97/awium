@@ -70,6 +70,10 @@ class ContainerInterruptionTest {
                 waiting -> waiting.tryUntil(any(value -> true)),
                 waiting -> waiting.tryUntil(none(value -> false)),
                 waiting -> waiting.tryUntil(first(value -> true)),
+                waiting -> waiting.tryUntil(first),
+                waiting -> waiting.tryUntil(last),
+                waiting -> waiting.tryUntil(last(value -> true)),
+                waiting -> waiting.tryUntil(element(0)),
                 waiting -> waiting.tryUntil(single(matches(value -> true))),
                 waiting -> waiting.tryUntil(contains("ready")),
                 waiting -> waiting.tryUntil(doesNotContain("absent")),
@@ -150,7 +154,7 @@ class ContainerInterruptionTest {
                 actual -> await(() -> actual).tryUntil(startsWith("ready")),
                 actual -> await(() -> actual).tryUntil(endsWith("other")),
                 actual -> await(() -> actual).tryUntil(size(2)));
-        List<String> boundaries = List.of("isEmpty", "isEmpty", "reversed", "size", "size", "size", "size", "size");
+        List<String> boundaries = List.of("iterator", "reversed", "reversed", "iterator", "size", "size", "size", "size");
         for (int index = 0; index < waits.size(); index++) {
             var actual = new SignallingList(boundaries.get(index));
             var wait = waits.get(index);
@@ -245,18 +249,6 @@ class ContainerInterruptionTest {
 
         @Override
         public int size() { called("size"); return super.size(); }
-
-        @Override
-        public boolean isEmpty() { called("isEmpty"); return false; }
-
-        @Override
-        public String get(int index) { called("get"); return super.get(index); }
-
-        @Override
-        public String getFirst() { called("getFirst"); return super.get(0); }
-
-        @Override
-        public String getLast() { called("getLast"); return super.get(1); }
 
         @Override
         public List<String> reversed() { called("reversed"); return this; }
