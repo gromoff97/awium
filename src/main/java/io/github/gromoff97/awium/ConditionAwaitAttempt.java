@@ -2,7 +2,7 @@ package io.github.gromoff97.awium;
 
 import java.util.concurrent.Callable;
 
-/** Lazily executes a condition, converting nonfatal callback failures into uncontrolled results. */
+/** Lazily executes a condition, converting any thrown failure into an uncontrolled result. */
 final class ConditionAwaitAttempt<OBSERVED, RESULT> implements AwaitAttempt<OBSERVED, RESULT> {
 
     final Condition<?, ?> condition;

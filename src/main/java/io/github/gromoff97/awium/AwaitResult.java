@@ -5,7 +5,7 @@ import java.util.List;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Public {@code tryUntil} result containing the terminal value or failure and its bounded, compressed attempt history.
+ * Public {@code tryUntil} result containing the terminal value or failure and its bounded attempt history.
  *
  * @param <OBSERVED> complete value returned by the source
  * @param <RESULT> value produced by the condition

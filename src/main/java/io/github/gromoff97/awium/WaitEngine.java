@@ -13,7 +13,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Thread.currentThread;
 
-/** One wait execution, including its observations, timing, and condition session. */
+/** One wait execution, including its observations, timing, and condition attempt. */
 record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplier clock,
         LongConsumer parker, Callable<? extends OBSERVED> source,
         ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> evaluator, long started) {

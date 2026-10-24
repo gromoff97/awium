@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-/** A failure while retrieving, evaluating, waiting, or rendering diagnostics. */
+/** An uncontrolled source, condition, waiting, or interruption failure. */
 public final class AwaitExecutionException extends RuntimeException {
 
     private final AwaitFailure failure;

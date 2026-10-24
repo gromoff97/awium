@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @param <OBSERVED> complete value returned by the source
  * @param <ELEMENT> value selected from an optional, collection, or map
+ * @param <MAP_VALUE> value selected from a map by key
  */
 public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERVED> {
 

@@ -7,7 +7,7 @@ import java.util.stream.Stream;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 
-/** Creates ordered conditions and owns the captured values of one execution. */
+/** Evaluates ordered stages and owns their progress and captured values for one execution. */
 final class SequenceExecution<OBSERVED, RESULT> {
 
     private final List<? extends ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT>> stages;

@@ -100,7 +100,11 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
         }
     }
 
-    // A null checkpoint means this stage was not reached.
+    /**
+     * Checkpoints measured from the start of the terminal call. The attempt starts before waiting;
+     * retrieval starts before calling the source, and observation marks its successful return.
+     * A null retrieval or observation offset means that checkpoint was not reached.
+     */
     public record Timing(Duration startOffset, Duration retrievalOffset,
             Duration observationOffset, Duration completionOffset) {
 

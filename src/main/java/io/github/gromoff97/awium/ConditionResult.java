@@ -5,7 +5,7 @@ import java.util.function.Function;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Result and diagnostic context of one condition invocation; polling and timeout policy belong to the wait engine.
+ * Satisfaction or mismatch from one condition invocation; polling and timeout policy belong to the wait engine.
  *
  * @param <RESULT> value produced by a satisfied condition
  */

@@ -8,7 +8,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * Structured failure returned by {@code tryUntil} and attached to exceptions from {@code until}.
  * The cause is the original throwable, or {@code null} for an ordinary mismatch.
- * If diagnostics fail, their cause takes precedence and the original cause is suppressed.
+ * Diagnostic failures are retained in {@code suppressed} without replacing the reason or cause.
  */
 public record AwaitFailure(Reason reason, String message, Throwable cause, List<Throwable> suppressed) implements Serializable {
 
