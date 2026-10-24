@@ -31,7 +31,7 @@ class ObjectAndOptionalConditionsTest {
     }
 
     @Test
-    void equalityConditionsAreComplementsAndReturnTheActualSnapshot() {
+    void equalityAndIdentityConditionsAreComplementsAndReturnTheActualSnapshot() {
         var expected = new String("1");
         var equalActual = new String("1");
         var differentActual = "2";
@@ -41,6 +41,10 @@ class ObjectAndOptionalConditionsTest {
         assertUnsatisfied(evaluate(notEqualTo(expected), equalActual));
         assertUnsatisfied(evaluate(equalTo(expected), differentActual));
         assertSame(differentActual, result(evaluate(notEqualTo(expected), differentActual)));
+        assertSame(equalActual, result(evaluate(sameAs(equalActual), equalActual)));
+        assertUnsatisfied(evaluate(sameAs(expected), equalActual));
+        assertSame(equalActual, result(evaluate(notSameAs(expected), equalActual)));
+        assertUnsatisfied(evaluate(notSameAs(equalActual), equalActual));
         assertNull(result(evaluate(equalTo(null), null)));
         ConditionResult<?> arrays = evaluate(equalTo(
                 new int[]{1, 2}), new int[]{1, 2});

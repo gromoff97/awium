@@ -127,43 +127,6 @@ class ObjectOptionalAndScalarConditionsTest {
     }
 
     @Test
-    void objectAndOptionalConditionsCoverBothTruthValues() {
-        Object actual = new String("ready");
-        Object equal = new String("ready");
-
-        assertStatus(Conditions.isNull, null, Satisfied.class);
-        assertStatus(Conditions.isNull, actual, Unsatisfied.class);
-        assertPreserving(Conditions.isNotNull, actual, null);
-        assertPreserving(Conditions.equalTo(equal), actual, "other");
-        assertPreserving(Conditions.notEqualTo(equal), "other", actual);
-        assertPreserving(Conditions.sameAs(actual), actual, equal);
-        assertPreserving(Conditions.notSameAs(equal), actual, equal);
-        assertPreserving(Conditions.in("other", equal), actual, new Object());
-        assertPreserving(Conditions.notIn("other"), actual, "other");
-        assertPreserving(Conditions.matches(value -> value.toString().startsWith("r")), actual, "failed");
-        assertStatus(Conditions.instanceOf(String.class), actual, Satisfied.class);
-        assertStatus(Conditions.instanceOf(Integer.class), actual, Unsatisfied.class);
-        assertStatus(Conditions.exactInstanceOf(String.class), actual, Satisfied.class);
-        assertStatus(Conditions.exactInstanceOf(Object.class), actual, Unsatisfied.class);
-
-        assertEquals(Satisfied.class,
-                evaluate(OptionalConditions.present, Optional.of("ready")).getClass());
-        assertEquals(Unsatisfied.class,
-                evaluate(OptionalConditions.present, Optional.empty()).getClass());
-        assertStatus(OptionalConditions.absent, Optional.empty(), Satisfied.class);
-        assertStatus(OptionalConditions.absent, Optional.of("ready"), Unsatisfied.class);
-        assertStatus(OptionalConditions.hasValue(Conditions.equalTo("ready")), Optional.of("ready"), Satisfied.class);
-        assertStatus(OptionalConditions.hasValue(Conditions.equalTo("ready")), Optional.of("failed"), Unsatisfied.class);
-        assertStatus(OptionalConditions.hasValue(Conditions.equalTo("ready")), Optional.empty(), Unsatisfied.class);
-        assertStatus(OptionalConditions.hasValue(Conditions.notEqualTo("failed")), Optional.of("ready"), Satisfied.class);
-        assertStatus(OptionalConditions.hasValue(Conditions.notEqualTo("ready")), Optional.of("ready"), Unsatisfied.class);
-        assertStatus(OptionalConditions.hasValue(Conditions.matches((String value) -> value.startsWith("r"))), Optional.of("ready"), Satisfied.class);
-        assertStatus(OptionalConditions.hasValue(Conditions.matches((String value) -> value.startsWith("r"))), Optional.of("failed"), Unsatisfied.class);
-        assertStatus(OptionalConditions.hasValue(instanceOf(String.class)), Optional.of("ready"), Satisfied.class);
-        assertStatus(OptionalConditions.hasValue(instanceOf(String.class)), Optional.of(42), Unsatisfied.class);
-    }
-
-    @Test
     void comparableConditionsCoverBoundariesAndInvalidRanges() {
         assertPreserving(Conditions.greaterThan(5), 6, 5);
         assertPreserving(Conditions.atLeast(5), 5, 4);
@@ -237,24 +200,9 @@ class ObjectOptionalAndScalarConditionsTest {
         assertThrows(NullPointerException.class, () -> StringConditions.contains("ready", null));
     }
 
-    private static <S> void assertPreserving(Condition.ComparisonCondition<? extends S> condition, S matching, S mismatching) {
-        assertEquals(Satisfied.class, evaluate(condition, matching).getClass());
-        assertEquals(Unsatisfied.class, evaluate(condition, mismatching).getClass());
-    }
-
     private static <S> void assertPreserving(PreservingCondition<? super S> condition, S matching, S mismatching) {
         assertStatus(condition, matching, Satisfied.class);
         assertStatus(condition, mismatching, Unsatisfied.class);
-    }
-
-    private static <S> void assertStatus(Condition.SelectedCondition<? super S> condition, S actual,
-            Class<?> expected) {
-        assertEquals(expected, evaluate(condition, actual).getClass());
-    }
-
-    private static <S> void assertStatus(Condition<? super S, ?> condition, S actual,
-            Class<?> expected) {
-        assertEquals(expected, evaluate(condition, actual).getClass());
     }
 
     private static <S> void assertStatus(PreservingCondition<? super S> condition, S actual,

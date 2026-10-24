@@ -1156,3 +1156,20 @@ Callable<String>/Callable<Integer> и одно OptionalSource<String>; typed sou
 finally; очистка внутри циклов сохранена. Публичный код не менялся.
 Целевые 25 тестов и полный check (427 тестов) прошли без ошибок.
 `/tmp/awium-seven-hour-pass/scalar-fixtures-report.json`.
+
+### Общая boolean-матрица не дублирует точные контракты
+
+Из ObjectOptionalAndScalarConditionsTest убрана повторная object/optional матрица.
+Nullability, равенство, наличие optional, сохранение наблюдаемого значения,
+сужение и predicate retry уже проверяются выделенными поведенческими тестами
+через API и отдельные исходы. В тест равенства добавлены четыре явные проверки
+идентичности: равные разные String не являются одной ссылкой, отрицательное
+условие отклоняет ту же ссылку. Сохранены общие type-narrowing сценарии.
+
+Стали не нужны три вспомогательные перегрузки assertStatus/assertPreserving
+и их generic-параметры; новые помощники не добавлены. Проверка javac-symbols
+для 172 неаннотированных методов и полей тестов не нашла неиспользуемых helpers
+(учтены отражение по строковому имени и неявные accessor/equals у record).
+Целевые поведенческие тесты прошли. STRONGER Conditions/OptionalConditions/
+ConditionSupport/ConditionAwaitAttempt: 198 мутаций, все KILLED.
+`/tmp/awium-seven-hour-pass/object-matrix-report.json`.
