@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
@@ -10,23 +10,27 @@ import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 final class SequenceExecution<OBSERVED, RESULT> {
 
     private final List<? extends ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT>> stages;
-    private List<RESULT> results = List.of();
+    private final List<RESULT> results = new ArrayList<>();
 
     SequenceExecution(List<? extends ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT>> stages) {
         this.stages = stages;
     }
 
     AttemptResult<List<RESULT>> step(OBSERVED actual) {
-        int stage = Math.min(results.size(), stages.size() - 1);
+        // Recheck the final stage after completion.
+        if (results.size() == stages.size()) {
+            results.removeLast();
+        }
+        int stage = results.size();
         var evaluation = stages.get(stage).probe(actual);
         return switch (evaluation) {
             case AttemptResult.Evaluated<? extends RESULT> value -> switch (value.result()) {
                 case ConditionResult.Satisfied<? extends RESULT> success -> {
-                    results = Stream.concat(results.stream().limit(stage), Stream.of(success.result())).toList();
+                    results.add(success.result());
                     int nextStage = Math.min(stage + 1, stages.size() - 1);
                     var progress = new AttemptRecord.Progress(results.size(), stages.size(), stage + 1,
                             stages.get(nextStage).condition);
-                    yield new AttemptResult.Evaluated<>(results.size() == stages.size() ? satisfied(results)
+                    yield new AttemptResult.Evaluated<>(results.size() == stages.size() ? satisfied(results.stream().toList())
                             : unsatisfied("waiting for sequence stage " + (nextStage + 1)), null, progress);
                 }
                 case ConditionResult.Unsatisfied<?> mismatch -> new AttemptResult.Evaluated<>(
