@@ -4,7 +4,6 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -36,14 +35,12 @@ class NestedSelectionTest {
     @Test
     void retriesEmptyAndAmbiguousSelectionsAndKeepsTheNestedReason() {
         var time = new FakeTime(0);
-        var attempts = new AtomicInteger();
-        int result = await(() -> switch (attempts.getAndIncrement()) {
-            case 0 -> List.of();
-            case 1 -> List.of(42, 42);
-            default -> List.of(1, 42);
-        }).usingTime(time, time).every(ofNanos(1)).until(single(equalTo(42).because("required answer")));
+        List<List<Integer>> observations = List.of(List.of(), List.of(42, 42), List.of(1, 42));
+        var source = observations.iterator();
+        int result = await(source::next).usingTime(time, time).every(ofNanos(1))
+                .until(single(equalTo(42).because("required answer")));
         assertEquals(42, result);
-        assertEquals(3, attempts.get());
+        assertFalse(source.hasNext());
         var failed = await(() -> List.of(1, 2)).usingTime(time, time).upTo(ofNanos(1)).tryUntil(single(equalTo(42).because("required answer")));
         var failure = assertInstanceOf(AwaitResult.Failed.class, failed);
         assertTrue(failure.failure().message().contains("required answer"));
@@ -54,19 +51,19 @@ class NestedSelectionTest {
     void orderedNestedConditionsCaptureDifferentObservationsAndKeepStageReasons() {
         var pending = new Payment(1, false);
         var paid = new Payment(1, true);
-        var calls = new AtomicInteger();
+        var observations = List.of(pending, paid).iterator();
         var time = new FakeTime(0);
-        List<Payment> values = await(() -> List.of(calls.getAndIncrement() == 0 ? pending : paid)).usingTime(time, time).every(ofNanos(1)).until(
+        List<Payment> values = await(() -> List.of(observations.next())).usingTime(time, time).every(ofNanos(1)).until(
                 single(matches((Payment value) -> !value.paid()).because("creation")),
                 single(matches(Payment::paid).because("payment")));
         assertEquals(List.of(pending, paid), values);
-        assertEquals(2, calls.get());
+        assertFalse(observations.hasNext());
 
         var result = await(() -> List.of(pending)).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).tryUntil(
                 single(matches((Payment value) -> !value.paid()).because("creation")),
                 single(matches(Payment::paid).because("payment")));
         var observation = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, result.attempts().getLast().outcome());
-        var outcome = assertInstanceOf(ConditionResult.Unsatisfied.class, observation.evaluation());
+        assertInstanceOf(ConditionResult.Unsatisfied.class, observation.evaluation());
         var progress = observation.progress();
         assertEquals(1, progress.capturedStages());
         assertEquals("payment", progress.condition().explanation());
@@ -74,19 +71,19 @@ class NestedSelectionTest {
 
     @Test
     void eachTerminalAndSequenceStageGetsAFreshLazyCallback() {
-        var factories = new AtomicInteger();
+        int[] factories = {0};
         PreservingCondition<String> ready = condition("ready after retry", () -> {
-            factories.incrementAndGet();
-            var calls = new AtomicInteger();
-            return value -> calls.incrementAndGet() == 2 ? satisfied(value) : unsatisfied("retry");
+            ++factories[0];
+            int[] calls = {0};
+            return value -> ++calls[0] == 2 ? satisfied(value) : unsatisfied("retry");
         });
         var time = new FakeTime(0);
         await(() -> List.<String>of()).usingTime(time, time).upTo(ofNanos(1)).tryUntil(single(ready));
-        assertEquals(0, factories.get());
+        assertEquals(0, factories[0]);
         var waiting = await(() -> List.of("ready")).usingTime(time, time).every(ofNanos(1));
         assertEquals("ready", waiting.until(single(ready)));
         assertEquals(List.of("ready", "ready"), assertInstanceOf(AwaitResult.Satisfied.class, waiting.tryUntil(single(ready), single(ready))).result());
-        assertEquals(3, factories.get());
+        assertEquals(3, factories[0]);
     }
 
     @Test
@@ -94,17 +91,16 @@ class NestedSelectionTest {
         for (Throwable cause : List.of(new IOException("checked"), new InterruptedException("interrupted"),
                 new IllegalStateException("runtime"), new AssertionError("uncontrolled assertion"))) {
             var time = new FakeTime(0);
-            var checks = new AtomicInteger();
+            int[] checks = {0};
             try {
                 var result = await(() -> List.of("a", "b")).usingTime(time, time).tryUntil(single(condition("broken", (String value) -> {
-                    checks.incrementAndGet();
-                    if (cause instanceof Error error) throw error;
-                    throw (Exception) cause;
+                    ++checks[0];
+                    throw cause;
                 }).because("reason")));
                 var failure = assertInstanceOf(AwaitResult.Failed.class, result);
                 assertSame(cause, failure.failure().cause());
                 assertTrue(failure.failure().message().contains("reason"));
-                assertEquals(1, checks.get());
+                assertEquals(1, checks[0]);
                 assertTrue(time.parkRequests.isEmpty());
                 assertFalse(Thread.currentThread().isInterrupted());
             } finally {

@@ -711,3 +711,15 @@ satisfiedAttempt, unsatisfiedAttempt и assertionUnsatisfiedAttempt объеди
 Новых типов нет, стало на 17 строк меньше. Все 36 диагностических тестов
 прошли с прежними сообщениями и проверками identity/числа callback-вызовов.
 `/tmp/awium-seven-hour-pass/diagnostic-attempt-fixtures-report.json`.
+
+### Однопоточные nested-фикстуры без AtomicInteger
+
+В NestedSelectionTest удалены пять AtomicInteger. Два источника используют
+заданные неизменяемые наблюдения и локальные итераторы вместо switch/ternary
+по счётчику; проверяется исчерпание наблюдений. Три счётчика callback/factory
+остаются локальными int[]. Checked callback бросает cause напрямую без
+ветки Error/Exception. Неиспользуемое имя результата assertInstanceOf удалено,
+сам assertion сохранён. 6 nested-тестов прошли, перед этим прошёл
+совместный запуск с ThreadIntegrationTest. AtomicInteger в реальном
+concurrent reuse сохранён. Стало на четыре строки меньше, новых типов нет.
+`/tmp/awium-seven-hour-pass/nested-observation-fixtures-report.json`.
