@@ -112,7 +112,7 @@ class ConditionAwaitAttemptTest {
     }
 
     @Test
-    void conditionFamiliesKeepMetadataAndIndependentEvaluators() throws Exception {
+    void conditionFamiliesKeepMetadataAndIndependentEvaluators() throws Throwable {
         Condition<Integer, Integer> ordinary = new Condition<>(
                 "counted", null, null, () -> {
                     int[] calls = {0};

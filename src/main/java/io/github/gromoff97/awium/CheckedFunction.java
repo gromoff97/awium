@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium;
 
-/** A condition callback that may propagate a checked exception to the wait's failure handling. */
+/** A condition callback that may propagate any throwable to the wait's failure handling. */
 @FunctionalInterface
 public interface CheckedFunction<VALUE, RESULT> {
 
-    RESULT apply(VALUE value) throws Exception;
+    RESULT apply(VALUE value) throws Throwable;
 }

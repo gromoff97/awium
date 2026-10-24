@@ -1056,3 +1056,21 @@ Uncontrolled сохраняются. Новых типов, полей и фла
 40 371 120 вызовов, прежний digest 981d57bed93f2d0b. STRONGER ConditionSupport:
 78 мутаций, {'KILLED': 78}, без SURVIVED/NO_COVERAGE.
 `/tmp/awium-seven-hour-pass/composition-report.json`.
+
+### Сигнатуры callback согласованы с обработкой Throwable
+
+CheckedFunction.apply, CheckedConsumer.accept и внутренний AwaitAttempt.probe
+теперь объявляют throws Throwable. Раньше ядро ловило любой Throwable, но
+передать method reference с таким объявлением не позволяли сами сигнатуры.
+Отдельный потребитель воспроизвёл отказ старого API и выполнение того же кода
+после изменения. Новых интерфейсов, адаптеров и runtime-ветвей нет.
+
+Действие asserted не меняется: AssertionError становится Unsatisfied, остальные
+выброшенные причины остаются Uncontrolled. CheckedCallback использует реальные
+method reference с throws Throwable; Observation бросает исходный Throwable
+в condition напрямую. JDK Callable источников/фабрик и интерфейсы времени
+не менялись. При непосредственном вызове публичного checked-callback его
+объявленный checked-тип теперь Throwable. Полный check: 431 тест без ошибок;
+внешний потребитель итогового JAR компилируется с -Werror, исходная причина
+и CONDITION_FAILED проверены для обеих callback-форм.
+`/tmp/awium-seven-hour-pass/throwable-contract-prototype/report.json`.

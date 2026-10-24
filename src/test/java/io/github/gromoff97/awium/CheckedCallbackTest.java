@@ -215,7 +215,7 @@ class CheckedCallbackTest {
         assertEquals(2, calls[0]);
     }
 
-    private static void verify(String actual) throws IOException {
+    private static void verify(String actual) throws Throwable {
         assertEquals("ready", actual);
     }
 
@@ -223,11 +223,11 @@ class CheckedCallbackTest {
         return actual.length();
     }
 
-    private static ConditionResult<String> evaluate(String actual) throws IOException {
+    private static ConditionResult<String> evaluate(String actual) throws Throwable {
         return satisfied(actual);
     }
 
-    private static void verifySecond(int actual) throws IOException {
+    private static void verifySecond(int actual) throws Throwable {
         assertEquals(2, actual);
     }
 

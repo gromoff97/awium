@@ -82,9 +82,9 @@ Payment payment = await(paymentRepository::load).until(asserted(actual -> {
 ```
 
 `asserted(...)` accepts a `CheckedConsumer`; `condition(...)` accepts a
-`CheckedFunction`. These callbacks may throw
-checked exceptions, so existing methods declaring `throws Exception` can be
-passed directly. Callback failures stop polling immediately and retain the
+`CheckedFunction`. Both callbacks may declare `throws Throwable`, so existing
+methods declaring `throws Exception` or `throws Throwable` can be passed directly.
+Callback failures stop polling immediately and retain the
 original cause; only `AssertionError` inside `asserted(...)` means retry.
 
 For callbacks already stored in JDK `Function` or `Consumer` variables, pass

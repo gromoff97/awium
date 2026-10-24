@@ -170,7 +170,7 @@ class ObservationTest {
     @MethodSource("throwables")
     void classifiesEveryConditionThrowableAfterObservation(Throwable failure) {
         var actual = new Object();
-        var attempt = attempt(() -> actual, value -> throwUnchecked(failure));
+        var attempt = attempt(() -> actual, value -> { throw failure; });
 
         var observation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, attempt.outcome());
         assertSame(failure, observation.cause());
@@ -180,7 +180,7 @@ class ObservationTest {
     @ParameterizedTest
     @MethodSource("throwables")
     void conditionThrowablesStayUncontrolledThroughTerminalsAndComposition(Throwable cause) {
-        PreservingCondition<String> callback = condition("callback", actual -> throwUnchecked(cause));
+        PreservingCondition<String> callback = condition("callback", actual -> { throw cause; });
         PreservingCondition<String> factory = condition("factory", () -> throwUnchecked(cause));
         for (var check : List.of(callback, factory)) {
             var time = new FakeTime(0);
@@ -442,7 +442,7 @@ class ObservationTest {
         var actual = new Object();
         var attempt = attempt(() -> actual, value -> {
             currentThread().interrupt();
-            return throwUnchecked(failure);
+            throw failure;
         });
 
         var observation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, attempt.outcome());
