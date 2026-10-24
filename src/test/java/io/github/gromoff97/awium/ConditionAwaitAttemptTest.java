@@ -22,7 +22,7 @@ class ConditionAwaitAttemptTest {
         int[] factories = {0};
         var actual = new Object();
         var replacement = new Object();
-        var condition = Conditions.<Object>condition("two observations", () -> {
+        var condition = Conditions.condition("two observations", () -> {
             factories[0]++;
             int[] calls = {0};
             return ignored -> ++calls[0] == 2 ? satisfied(replacement) : ConditionResult.unsatisfied("first observation");

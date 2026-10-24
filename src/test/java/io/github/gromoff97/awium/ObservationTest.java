@@ -99,7 +99,7 @@ class ObservationTest {
         WaitCompletion<Object, Object> terminal = new WaitEngine<Object, Object>(config(1, 20, 0).withTime(time, time), () -> {
             time.advanceNanos(2);
             return actual;
-        }, new ConditionAwaitAttempt<>(ConditionSupport.<Object, Object>condition("test condition", null, value -> {
+        }, new ConditionAwaitAttempt<>(ConditionSupport.condition("test condition", null, value -> {
             time.advanceNanos(3);
             return satisfied(result);
         }))).waitFor();
@@ -279,7 +279,7 @@ class ObservationTest {
             sourceCalls[0]++;
             currentThread().interrupt();
             return actual;
-        }, ConditionAwaitAttempt.preserving(Conditions.<Object>condition("ready", value -> {
+        }, ConditionAwaitAttempt.preserving(Conditions.condition("ready", value -> {
             conditionCalls[0]++;
             return satisfied(value);
         }).definition)).waitFor();
@@ -354,7 +354,7 @@ class ObservationTest {
                                 currentThread().interrupt();
                             }
                             return new Object();
-                        }, ConditionAwaitAttempt.preserving(Conditions.<Object>condition("ready", value -> {
+                        }, ConditionAwaitAttempt.preserving(Conditions.condition("ready", value -> {
                             if (phase.equals("condition")) {
                                 armed[0] = true;
                                 currentThread().interrupt();
@@ -510,7 +510,7 @@ class ObservationTest {
     private static <R> AttemptRecord<Object, R> attempt(Callable<Object> source,
             CheckedFunction<Object, ConditionResult<R>> condition) {
         var time = new FakeTime(0);
-        return new WaitEngine<Object, R>(config(1, 2, 0).withTime(time, time), source, new ConditionAwaitAttempt<>(ConditionSupport.<Object, R>condition("test condition", null, actual -> {
+        return new WaitEngine<Object, R>(config(1, 2, 0).withTime(time, time), source, new ConditionAwaitAttempt<>(ConditionSupport.condition("test condition", null, actual -> {
             ConditionResult<R> evaluation = condition.apply(actual);
             time.advanceNanos(2);
             return evaluation;

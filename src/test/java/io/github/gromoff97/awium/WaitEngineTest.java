@@ -616,7 +616,7 @@ class WaitEngineTest {
             Callable<S> source,
             CheckedFunction<S, ConditionResult<R>> condition) {
         return new WaitEngine<S, R>(config.withTime(time, parker), source,
-                new ConditionAwaitAttempt<>(ConditionSupport.<S, R>condition("test condition", null, condition))).waitFor();
+                new ConditionAwaitAttempt<>(ConditionSupport.condition("test condition", null, condition))).waitFor();
     }
 
     private static long completed(AttemptRecord<?, ?> attempt) {

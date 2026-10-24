@@ -584,3 +584,12 @@ getValue убран: поле проверяется у уже типизиро�
 тесты, типы и helpers не добавлены. 25 целевых тестов и отдельно все семь
 после явного String результата прошли.
 `/tmp/awium-seven-hour-pass/map-lookup-regression-control/report.json`.
+
+### Явные типы удалены только при неизменном выводе типов
+
+Семь из 50 generic-witnesses в тестах убраны после сравнения javac-типов
+переменных, lambda-параметров, результатов, выбранных методов и method references.
+43 оставлены. В частности, Map `<String, Integer>` сохранены: без них
+внутренний evaluate расширяет тип ключа до Object, хотя код компилируется.
+Полный check: 413 тестов, без ошибок и пропусков.
+`/tmp/awium-seven-hour-pass/redundant-test-witnesses-report.json`.

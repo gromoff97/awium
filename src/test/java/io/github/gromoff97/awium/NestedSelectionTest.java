@@ -38,7 +38,7 @@ class NestedSelectionTest {
         var time = new FakeTime(0);
         var attempts = new AtomicInteger();
         int result = await(() -> switch (attempts.getAndIncrement()) {
-            case 0 -> List.<Integer>of();
+            case 0 -> List.of();
             case 1 -> List.of(42, 42);
             default -> List.of(1, 42);
         }).usingTime(time, time).every(ofNanos(1)).until(single(equalTo(42).because("required answer")));
