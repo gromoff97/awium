@@ -123,7 +123,7 @@ public sealed class ValueAwait<OBSERVED> permits Await {
     }
 
     final <RESULT> RESULT complete(ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> session) {
-        return complete(new WaitEngine<OBSERVED, RESULT>(configuration, source, session).waitFor(),
+        return complete(new WaitEngine<>(configuration, source, session).waitFor(),
                 session.condition, configuration);
     }
 
