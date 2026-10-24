@@ -27,6 +27,7 @@ import static io.github.gromoff97.awium.ConditionSupport.selected;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
 import static io.github.gromoff97.awium.ValueMatching.containsAll;
+import static io.github.gromoff97.awium.ValueMatching.containsAny;
 import static java.util.Objects.deepEquals;
 import static io.github.gromoff97.awium.ValueMatching.exactly;
 import static io.github.gromoff97.awium.ValueMatching.matchesAll;
@@ -215,7 +216,7 @@ public final class MapConditions {
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> doesNotContainKeys(Collection<? extends KEY> unexpected) {
         var keys = nonEmpty(snapshot(unexpected, "unexpected keys"), "unexpected keys");
         return preserving("map does not contain unexpected keys", "map contained an unexpected key", unexpectedReference(keys),
-                actual -> !matchesAny(actual.keySet(), value -> matchesAny(keys, key -> deepEquals(value, key))));
+                actual -> !containsAny(actual.keySet(), keys, Objects::deepEquals));
     }
 
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsOnlyKeys(Collection<? extends KEY> expected) {
@@ -233,7 +234,7 @@ public final class MapConditions {
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> doesNotContainValues(Collection<? extends VALUE> unexpected) {
         var values = nonEmpty(snapshot(unexpected, "unexpected values"), "unexpected values");
         return preserving("map does not contain unexpected values", "map contained an unexpected value", unexpectedReference(values),
-                actual -> !matchesAny(actual.values(), value -> matchesAny(values, candidate -> deepEquals(value, candidate))));
+                actual -> !containsAny(actual.values(), values, Objects::deepEquals));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsEntries(KEY key, VALUE value) {
@@ -261,15 +262,13 @@ public final class MapConditions {
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsAnyEntries(Map<? extends KEY, ? extends VALUE> expected) {
         var entries = nonEmpty(snapshotEntries(expected), "expected entries");
         return preserving("map contains an expected entry", "map did not contain an expected entry", expectedReference(entries),
-                actual -> matchesAny(actual.entrySet(), value ->
-                        matchesAny(entries, candidate -> entryMatches(value, candidate))));
+                actual -> containsAny(actual.entrySet(), entries, MapConditions::entryMatches));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainEntries(Map<? extends KEY, ? extends VALUE> expected) {
         var entries = nonEmpty(snapshotEntries(expected), "expected entries");
         return preserving("map does not contain an expected entry", "map contained an expected entry", expectedReference(entries),
-                actual -> !matchesAny(actual.entrySet(), value ->
-                        matchesAny(entries, candidate -> entryMatches(value, candidate))));
+                actual -> !containsAny(actual.entrySet(), entries, MapConditions::entryMatches));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsExactlyEntries(Map<? extends KEY, ? extends VALUE> expected) {

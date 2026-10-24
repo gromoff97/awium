@@ -638,3 +638,16 @@ virtual ThreadFactory из одного MethodSource. Сценарий одно�
 ошибке ожидания TIMED_WAITING. Новых внутренних типов нет; стало на один
 тестовый класс меньше. Пять тестов прошли, PIT исключает единый новый класс.
 `/tmp/awium-seven-hour-pass/thread-integration-report.json`.
+
+### Проверка любого совпадения находится в ValueMatching
+
+Шесть вложенных обходов в CollectionConditions и MapConditions используют
+один внутренний containsAny рядом с containsAll. Порядок actual/expected,
+направление deepEquals, short-circuit и пользовательские исключения сохранены.
+Новых типов нет; появился один helper, общий код вырос на две строки,
+но вложенные comparator-lambda больше не дублируются в шести фабриках.
+409 публичных деклараций совпадают. Полный check: 414 тестов без ошибок
+и пропусков. STRONGER трёх изменённых классов: {'KILLED': 393, 'TIMED_OUT': 18}; недетектированных нет.
+Дополнительный javac-поиск не выявил неиспользуемых внутренних членов среди
+283 проверенных; удалений по этому поиску нет.
+`/tmp/awium-seven-hour-pass/any-matching-report.json`.

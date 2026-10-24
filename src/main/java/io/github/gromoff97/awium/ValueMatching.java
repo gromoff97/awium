@@ -30,6 +30,11 @@ final class ValueMatching {
         return matchesAll(expected, candidate -> matchesAny(actual, value -> matches.test(value, candidate)));
     }
 
+    static <ACTUAL, EXPECTED> boolean containsAny(Iterable<ACTUAL> actual, Iterable<EXPECTED> expected,
+            BiPredicate<? super ACTUAL, ? super EXPECTED> matches) {
+        return matchesAny(actual, value -> matchesAny(expected, candidate -> matches.test(value, candidate)));
+    }
+
     static <ACTUAL, EXPECTED> boolean exactly(Iterator<ACTUAL> actual, Collection<EXPECTED> expected,
             BiPredicate<? super ACTUAL, ? super EXPECTED> matches) {
         var remainingExpected = new ArrayList<>(expected);

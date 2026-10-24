@@ -143,8 +143,7 @@ public final class CollectionConditions {
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainAny(Collection<? extends ELEMENT> unexpected) {
         var values = nonEmpty(snapshot(unexpected, "unexpected elements"), "unexpected elements");
         return preserving("collection does not contain any unexpected elements", "collection contained an unexpected element", unexpectedReference(values),
-                actual -> !matchesAny(actual,
-                        value -> matchesAny(values, candidate -> deepEquals(value, candidate))));
+                actual -> !ValueMatching.containsAny(actual, values, Objects::deepEquals));
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainAll(Collection<? extends ELEMENT> unexpected) {
@@ -156,8 +155,7 @@ public final class CollectionConditions {
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsAny(Collection<? extends ELEMENT> expected) {
         var values = nonEmpty(snapshot(expected, "expected elements"), "expected elements");
         return preserving("collection contains an expected element", "collection did not contain an expected element", expectedReference(values),
-                actual -> matchesAny(actual,
-                        value -> matchesAny(values, candidate -> deepEquals(value, candidate))));
+                actual -> ValueMatching.containsAny(actual, values, Objects::deepEquals));
     }
 
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> containsExactly(Collection<? extends ELEMENT> expected) {
