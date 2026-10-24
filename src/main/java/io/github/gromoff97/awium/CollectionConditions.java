@@ -375,14 +375,8 @@ public final class CollectionConditions {
         if (actual.size() != expected.size()) {
             return false;
         }
-        Iterator<?> left = actual.iterator();
-        Iterator<?> right = expected.iterator();
-        while (left.hasNext() && right.hasNext()) {
-            if (!deepEquals(left.next(), right.next())) {
-                return false;
-            }
-        }
-        return !left.hasNext() && !right.hasNext();
+        Iterator<?> values = actual.iterator();
+        return prefixMatches(values, expected) && !values.hasNext();
     }
 
     private static boolean exactContentInAnyOrder(Collection<?> actual, Collection<?> expected) {
@@ -412,7 +406,7 @@ public final class CollectionConditions {
         return false;
     }
 
-    private static boolean prefixMatches(Iterator<?> actual, List<?> expected) {
+    private static boolean prefixMatches(Iterator<?> actual, Iterable<?> expected) {
         for (Object value : expected) {
             if (!actual.hasNext() || !deepEquals(actual.next(), value)) {
                 return false;

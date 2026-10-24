@@ -241,28 +241,32 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
-    void impossibleSequenceLengthDoesNotReenterContainerCallbacks() {
+    void impossiblePatternLengthDoesNotReenterContainerCallbacks() {
         for (var elements : List.of(List.<Integer>of(), List.of(1), List.of(1, 2))) {
             for (boolean negative : List.of(false, true)) {
-                var actual = new AbstractList<Integer>() {
-                    private int sizeReads;
+                var conditions = negative
+                        ? List.of(CollectionConditions.doesNotContainSequence(1, 2, 3))
+                        : List.of(CollectionConditions.startsWith(1, 2, 3), CollectionConditions.endsWith(1, 2, 3),
+                                CollectionConditions.containsSequence(1, 2, 3));
+                for (var condition : conditions) {
+                    var actual = new AbstractList<Integer>() {
+                        private int sizeReads;
 
-                    @Override
-                    public int size() {
-                        if (++sizeReads > 1) throw new AssertionError("an impossible sequence must not reenter size");
-                        return elements.size();
-                    }
+                        @Override
+                        public int size() {
+                            if (++sizeReads > 1) throw new AssertionError("an impossible pattern must not reenter size");
+                            return elements.size();
+                        }
 
-                    @Override
-                    public Integer get(int index) {
-                        throw new AssertionError("an impossible sequence must not retrieve elements");
-                    }
-                };
-                var condition = negative ? CollectionConditions.doesNotContainSequence(1, 2, 3)
-                        : CollectionConditions.containsSequence(1, 2, 3);
-                var evaluation = evaluate(condition, actual);
-                assertEquals(negative ? Satisfied.class : Unsatisfied.class, evaluation.getClass());
-                if (negative) assertSame(actual, ((Satisfied<?>) evaluation).result());
+                        @Override
+                        public Integer get(int index) {
+                            throw new AssertionError("an impossible pattern must not retrieve elements");
+                        }
+                    };
+                    var evaluation = evaluate(condition, actual);
+                    assertEquals(negative ? Satisfied.class : Unsatisfied.class, evaluation.getClass());
+                    if (negative) assertSame(actual, ((Satisfied<?>) evaluation).result());
+                }
             }
         }
     }
