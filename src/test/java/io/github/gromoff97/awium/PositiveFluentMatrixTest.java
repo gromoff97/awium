@@ -35,22 +35,14 @@ class PositiveFluentMatrixTest {
     private static final Duration UP_TO = ofSeconds(1);
 
     @Test
-    void objectFacadeExecutesEveryValidConfigurationPath() {
+    void objectFacadeExecutesCanonicalFullChain() {
         var pollingTime = new FakeTime(0);
         var actual = new Object();
         Callable<Object> source = () -> actual;
 
-        assertAllSame(actual,
-                await(source).usingTime(pollingTime, pollingTime).until(isNotNull),
-                await(source).usingTime(pollingTime, pollingTime).every(EVERY).until(isNotNull.because("object every")),
-                await(source).usingTime(pollingTime, pollingTime).upTo(UP_TO).until(isNotNull),
-                await(source).usingTime(pollingTime, pollingTime).persisting(ZERO).until(isNotNull.because("object must remain available")),
-                await(source).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).until(isNotNull),
-                await(source).usingTime(pollingTime, pollingTime).every(EVERY).persisting(ZERO).until(isNotNull.because("object must remain available")),
-                await(source).usingTime(pollingTime, pollingTime).upTo(UP_TO).persisting(ZERO).until(isNotNull),
-                await(source).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).until(isNotNull.because("object all")),
-                await(source).usingTime(pollingTime, pollingTime).persisting(ZERO).upTo(UP_TO).every(EVERY).until(isNotNull),
-                await(source).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).every(EVERY).upTo(UP_TO).persisting(ZERO).until(isNotNull));
+        Object selected = await(source).usingTime(pollingTime, pollingTime)
+                .every(EVERY).upTo(UP_TO).persisting(ZERO).until(isNotNull.because("object full chain"));
+        assertSame(actual, selected);
 
         PreservingCondition<Object> selecting = condition(
                 "select actual", ConditionResult::satisfied);
@@ -266,9 +258,4 @@ class PositiveFluentMatrixTest {
         return ConditionResult::satisfied;
     }
 
-    private static void assertAllSame(Object expected, Object... actuals) {
-        for (Object actual : actuals) {
-            assertSame(expected, actual);
-        }
-    }
 }

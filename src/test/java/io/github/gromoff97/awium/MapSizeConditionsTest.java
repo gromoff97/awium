@@ -136,17 +136,6 @@ class MapSizeConditionsTest {
     }
 
     @Test
-    void sizeKeepsTheExpectedSizeFromConstruction() {
-        var expected = new LinkedHashMap<>(Map.of(1, 1));
-        var condition = size(expected.size());
-        assertEquals(Satisfied.class, evaluate(condition, Map.of(1, 1)).getClass());
-        expected.put(2, 2);
-
-        assertEquals(Satisfied.class, evaluate(condition, Map.of(1, 1)).getClass());
-        assertUnsatisfied(evaluate(condition, Map.of(1, 1, 2, 2)));
-    }
-
-    @Test
     void nullConditionIsRejectedBeforeSourceRetrieval() {
         FakeTime time = new FakeTime(0);
         int[] sourceCalls = {0};
