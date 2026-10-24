@@ -13,7 +13,6 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedMapAwait;
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
-import static io.github.gromoff97.awium.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
@@ -54,7 +53,6 @@ class MapSizeConditionsTest {
         assertEquals("key", selected.getKey());
         assertEquals(42, selected.getValue());
         assertEquals(selected, explained);
-        assertEquals("map has a single entry", description(singleEntry));
         assertEquals("map size was 0",
                 mismatch(evaluate(singleEntry, Map.of())));
         assertEquals("map size was greater than 1",
@@ -67,12 +65,9 @@ class MapSizeConditionsTest {
             Map<Integer, Integer> matching = mapWithSize(testCase.matchingSize());
             Map<Integer, Integer> mismatching = mapWithSize(testCase.mismatchingSize());
 
-            ConditionResult<?> satisfied = evaluate(testCase.condition(), matching);
-            assertEquals(Satisfied.class, satisfied.getClass());
-            assertSame(matching, result(satisfied));
+            assertSame(matching, result(evaluate(testCase.condition(), matching)));
             assertUnsatisfied(evaluate(testCase.condition(), mismatching));
             assertEquals("map was null", mismatch(evaluate(testCase.condition(), null)));
-            assertFalse(description(testCase.condition()).isBlank());
         }
         assertEquals("map size was 1",
                 mismatch(evaluate(size(2), Map.of("key", "value"))));

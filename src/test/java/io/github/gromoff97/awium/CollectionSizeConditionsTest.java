@@ -24,7 +24,6 @@ import static io.github.gromoff97.awium.CollectionConditions.sizeGreaterThan;
 import static io.github.gromoff97.awium.CollectionConditions.sizeIsNot;
 import static io.github.gromoff97.awium.CollectionConditions.sizeLessThan;
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
-import static io.github.gromoff97.awium.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
@@ -55,7 +54,6 @@ class CollectionSizeConditionsTest {
         assertSame(element, selected);
         assertSame(element, explained);
         assertNull(nullElement);
-        assertEquals("collection has a single element", description(single));
         assertEquals("collection size was 0",
                 mismatch(evaluate(single, List.of())));
         assertEquals("collection size was greater than 1",
@@ -68,12 +66,9 @@ class CollectionSizeConditionsTest {
             var matching = new ProbeContainers.ProbeCollection<Object>(testCase.matchingSize());
             var mismatching = new ProbeContainers.ProbeCollection<Object>(testCase.mismatchingSize());
 
-            ConditionResult<?> satisfied = evaluate(testCase.condition(), matching);
-            assertEquals(Satisfied.class, satisfied.getClass());
-            assertSame(matching, result(satisfied));
+            assertSame(matching, result(evaluate(testCase.condition(), matching)));
             assertUnsatisfied(evaluate(testCase.condition(), mismatching));
             assertEquals("collection was null", mismatch(evaluate(testCase.condition(), null)));
-            assertFalse(description(testCase.condition()).isBlank());
             assertEquals(1, matching.sizeCalls);
             assertEquals(1, mismatching.sizeCalls);
         }

@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedMapAwait;
-import static io.github.gromoff97.awium.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
@@ -127,17 +126,6 @@ class MapConditionsTest {
             assertPair(pair, pair.matchingActual(), true);
             assertPair(pair, pair.mismatchingActual(), false);
         }
-    }
-
-    @Test
-    void exactAndAggregateConditionsKeepSetLikeEntrySemantics() {
-        assertStatus(containsEntries(map("a", "1")),
-                map("a", "1"), Satisfied.class);
-        assertStatus(containsExactlyEntries(map("a", "1", "b", "2")),
-                map("b", "2", "a", "1"), Satisfied.class);
-        assertStatus(containsExactlyEntries(Map.of()), Map.of(), Satisfied.class);
-        assertStatus(containsExactlyEntries(map("a", "1")),
-                map("a", "1", "b", "2"), Unsatisfied.class);
     }
 
     @Test
@@ -262,17 +250,14 @@ class MapConditionsTest {
             LinkedHashMap<String, String> actual, boolean positiveSatisfied) {
         ConditionResult<?> positive = evaluate(pair.positive(), actual);
         ConditionResult<?> negative = evaluate(pair.negative(), actual);
-        assertEquals(positiveSatisfied ? Satisfied.class : Unsatisfied.class,
-                positive.getClass(), pair.name());
-        assertNotEquals(positive.getClass(), negative.getClass(), pair.name());
-        assertSame(actual, result(positiveSatisfied ? positive : negative));
-        assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank());
+        assertAll(pair.name(),
+                () -> assertSame(actual, result(positiveSatisfied ? positive : negative)),
+                () -> assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank()));
     }
 
     private static <ACTUAL extends Map<?, ?>> void assertStatus(
             PreservingCondition<? super ACTUAL> condition, ACTUAL actual,
             Class<?> status) {
-        assertFalse(description(condition).isBlank());
         assertEquals(status, evaluate(condition, actual).getClass());
     }
 
@@ -326,6 +311,8 @@ class MapConditionsTest {
                         doesNotContainEntries(map("x", "9", "b", "2")),
                         map("a", "1", "b", "2"),
                         map("a", "1", "c", "3")),
+                new Pair("empty exact", containsExactlyEntries(Map.of()),
+                        doesNotContainExactlyEntries(Map.of()), map(), map("a", "1")),
                 new Pair("exact",
                         containsExactlyEntries(map("a", "1", "b", "2")),
                         doesNotContainExactlyEntries(

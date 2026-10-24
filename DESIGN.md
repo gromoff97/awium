@@ -661,3 +661,16 @@ ConditionDecorationTest строит replacements из исходного спи
 Тестов, helper и assertion не добавлено, три строки убраны. Продукт не менялся.
 ConditionDecorationTest и DirectBecauseTest прошли.
 `/tmp/awium-seven-hour-pass/decoration-immutability-control/report.json`.
+
+### Тип результата проверяется один раз
+
+В трёх assertPair убраны сравнение классов и их неравенство: result уже
+требует Satisfied, а mismatch — Unsatisfied; это final records. Проверки
+identity и непустого mismatch сохранены, assertAll сохраняет имя сценария.
+Size-сценарии используют тот же result без промежуточной переменной.
+Повторная проверка непустых описаний и двух single-строк убрана: точные
+описания проверяет BuiltInConditionGrammarTest, непустоту — Condition.
+Пустой exact Map включён в существующую таблицу вместе с отрицательной
+формой. Дублирующий метод удалён. Убраны 27 строк и один тест;
+53 целевых проверок прошли без ошибок.
+`/tmp/awium-seven-hour-pass/paired-result-assertions-report.json`.

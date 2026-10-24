@@ -197,11 +197,9 @@ class CollectionExactContentTest {
             boolean positiveSatisfied) {
         ConditionResult<?> positive = evaluate(pair.positive(), actual);
         ConditionResult<?> negative = evaluate(pair.negative(), actual);
-        assertEquals(positiveSatisfied ? Satisfied.class : Unsatisfied.class,
-                positive.getClass(), pair.name());
-        assertNotEquals(positive.getClass(), negative.getClass(), pair.name());
-        assertSame(actual, result(positiveSatisfied ? positive : negative));
-        assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank());
+        assertAll(pair.name(),
+                () -> assertSame(actual, result(positiveSatisfied ? positive : negative)),
+                () -> assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank()));
     }
 
     private static <E> void assertStatus(
