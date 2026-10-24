@@ -526,3 +526,9 @@ callback-вызовов и suppressed: текст сам по себе их не
 и 17 строк при более сильном сквозном сценарии. Диагностика, checked callbacks
 и Observation прошли совместно.
 `/tmp/awium-seven-hour-pass/diagnostic-interruption-report.json`.
+
+В FailureTaxonomy cleanup теперь проверяет возвращённый Thread.interrupted(),
+а не молча стирает его. Во всех шести синтетических категориях пользовательские
+рендереры не меняют флаг, поэтому неожиданное изменение состояния диагностикой
+становится видимым. Пять тестов класса прошли; очистка сохранена.
+`/tmp/awium-seven-hour-pass/diagnostic-category-flag.log`.

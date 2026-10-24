@@ -93,7 +93,7 @@ class FailureTaxonomyTest {
                 assertEquals(0, original.getSuppressed().length);
                 assertEquals(0, rendering.getSuppressed().length);
             } finally {
-                Thread.interrupted();
+                assertFalse(Thread.interrupted(), reason::name);
             }
         }
     }
