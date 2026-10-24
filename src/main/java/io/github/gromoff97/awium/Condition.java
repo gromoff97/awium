@@ -16,7 +16,7 @@ public final class Condition<OBSERVED, RESULT> {
     private final String description;
     private final String explanation;
     private final Reference<?> reference;
-    final Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory;
+    private final Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory;
 
     Condition(String description, String explanation, Reference<?> reference,
             Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
@@ -63,7 +63,7 @@ public final class Condition<OBSERVED, RESULT> {
 
     // Only library-created selectors use this bridge; Await binds their result to the source type.
     @SuppressWarnings("unchecked")
-    final <SELECTED> ConditionAwaitAttempt<OBSERVED, SELECTED> selectionAttempt() {
+    private <SELECTED> ConditionAwaitAttempt<OBSERVED, SELECTED> selectionAttempt() {
         return (ConditionAwaitAttempt<OBSERVED, SELECTED>) (ConditionAwaitAttempt<?, ?>) newAttempt();
     }
 
@@ -71,7 +71,7 @@ public final class Condition<OBSERVED, RESULT> {
         return requireNonNull(condition, "condition must not be null");
     }
 
-    static String formattedExplanation(String format, Object[] arguments) {
+    private static String formattedExplanation(String format, Object[] arguments) {
         requireNonNull(format, "format must not be null");
         requireNonNull(arguments, "arguments must not be null");
         return String.format(Locale.ROOT, format, arguments);
