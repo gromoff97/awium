@@ -379,8 +379,9 @@ Map.Entry<? extends String, ? extends Payment> entry = await(() -> paymentReposi
 
 The lambda works without explicit type arguments. A direct method reference to
 these wildcard-returning methods does not select the container overload.
-When an exact `AwaitResult` type must be named, use the view wrappers to fix both
-the observed container type and its selected bound:
+When a stable observed container type is needed, use the view wrappers to fix
+both the container type and its selected bound. This matters for an explicitly
+typed `AwaitResult` or comparison with another covariant container:
 
 ```java
 import io.github.gromoff97.awium.Await.CollectionViewSource;

@@ -151,20 +151,26 @@ class PositiveFluentMatrixTest {
                 });
 
         assertSame(values, await(collectionSource).usingTime(time, time).until(nonEmpty));
+        List<? extends Number> compared = await(collectionSource).usingTime(time, time)
+                .until(equalTo(values).because("the original covariant list"));
+        assertSame(values, compared);
         var selected = await(collectionSource).usingTime(time, time).until(single.because("covariant element"));
         assertEquals(1000, selected.intValue());
         assertSame(element, selected);
         assertSame(element, assertInstanceOf(AwaitResult.Satisfied.class,
                 await(collectionSource).usingTime(time, time).tryUntil(single)).result());
         assertSame(map, await(mapSource).usingTime(time, time).until(MapConditions.nonEmpty));
+        Map<? extends Number, ? extends CharSequence> comparedMap = await(mapSource).usingTime(time, time)
+                .until(equalTo(map).because("the original covariant map"));
+        assertSame(map, comparedMap);
         var selectedEntry = await(mapSource).usingTime(time, time).until(MapConditions.singleEntry.because("covariant entry"));
         assertEquals(1000, selectedEntry.getKey().intValue());
         assertEquals(5, selectedEntry.getValue().length());
         assertSame(entry, selectedEntry);
         assertSame(entry, assertInstanceOf(AwaitResult.Satisfied.class,
                 await(mapSource).usingTime(time, time).tryUntil(MapConditions.singleEntry)).result());
-        assertEquals(3, collectionCalls[0]);
-        assertEquals(3, mapCalls[0]);
+        assertEquals(4, collectionCalls[0]);
+        assertEquals(4, mapCalls[0]);
     }
 
     @Test
