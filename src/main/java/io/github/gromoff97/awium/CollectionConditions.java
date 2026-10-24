@@ -140,8 +140,7 @@ public final class CollectionConditions {
 
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> contains(Collection<? extends ELEMENT> expected) {
         Collection<? extends ELEMENT> values = nonEmpty(expected, "expected elements").stream().toList();
-        String target = values.size() == 1 ? "expected element" : "all expected elements";
-        return preserving("collection contains " + target, "collection did not contain " + target, expectedReference(values),
+        return preserving("collection contains all expected elements", "collection did not contain all expected elements", expectedReference(values),
                 actual -> ValueMatching.containsAll(actual, values, Objects::deepEquals));
     }
 
@@ -152,8 +151,7 @@ public final class CollectionConditions {
 
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContain(Collection<? extends ELEMENT> unexpected) {
         Collection<? extends ELEMENT> values = nonEmpty(unexpected, "unexpected elements").stream().toList();
-        String target = values.size() == 1 ? "expected element" : "an expected element";
-        return preserving("collection does not contain " + target, "collection contained " + target, unexpectedReference(values),
+        return preserving("collection does not contain any unexpected elements", "collection contained an unexpected element", unexpectedReference(values),
                 actual -> !matchesAny(actual,
                         value -> matchesAny(values, candidate -> deepEquals(value, candidate))));
     }
@@ -165,8 +163,7 @@ public final class CollectionConditions {
 
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainAll(Collection<? extends ELEMENT> unexpected) {
         Collection<? extends ELEMENT> values = nonEmpty(unexpected, "unexpected elements").stream().toList();
-        String target = values.size() == 1 ? "expected element" : "all expected elements";
-        return preserving("collection does not contain " + target, "collection contained " + target, unexpectedReference(values),
+        return preserving("collection does not contain all unexpected elements", "collection contained all unexpected elements", unexpectedReference(values),
                 actual -> !ValueMatching.containsAll(actual, values, Objects::deepEquals));
     }
 
@@ -177,8 +174,7 @@ public final class CollectionConditions {
 
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsAny(Collection<? extends ELEMENT> expected) {
         Collection<? extends ELEMENT> values = nonEmpty(expected, "expected elements").stream().toList();
-        String target = values.size() == 1 ? "expected element" : "an expected element";
-        return preserving("collection contains " + target, "collection did not contain " + target, expectedReference(values),
+        return preserving("collection contains an expected element", "collection did not contain an expected element", expectedReference(values),
                 actual -> matchesAny(actual,
                         value -> matchesAny(values, candidate -> deepEquals(value, candidate))));
     }
