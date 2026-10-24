@@ -96,7 +96,7 @@ class ObservationTest {
         var actual = new Object();
         var result = new Object();
 
-        WaitCompletion<Object, Object> terminal = new WaitEngine<Object, Object>(config(1, 20, 0), time, time, () -> {
+        WaitCompletion<Object, Object> terminal = new WaitEngine<Object, Object>(config(1, 20, 0).withTime(time, time), () -> {
             time.advanceNanos(2);
             return actual;
         }, ConditionSupport.<Object, Object>condition("test condition", null, value -> {
@@ -263,10 +263,10 @@ class ObservationTest {
         var actual = new Object();
         int[] sourceCalls = {0};
         int[] conditionCalls = {0};
-        var outcome = new WaitEngine<Object, Object>(config(1, 20, 0), () -> {
+        var outcome = new WaitEngine<Object, Object>(config(1, 20, 0).withTime(() -> {
             interrupted();
             return 0;
-        }, nanos -> { throw new AssertionError("parker must not be called"); }, () -> {
+        }, nanos -> { throw new AssertionError("parker must not be called"); }), () -> {
             sourceCalls[0]++;
             currentThread().interrupt();
             return actual;
@@ -330,7 +330,7 @@ class ObservationTest {
             try {
                 if (armed[0]) currentThread().interrupt();
                 assertSame(failure, assertThrows(IllegalStateException.class, () ->
-                        new WaitEngine<Object, Object>(config(1, 20, 0), () -> {
+                        new WaitEngine<Object, Object>(config(1, 20, 0).withTime(() -> {
                             if (armed[0]) {
                                 interrupted();
                                 throw failure;
@@ -339,7 +339,7 @@ class ObservationTest {
                         }, nanos -> {
                             armed[0] = true;
                             currentThread().interrupt();
-                        }, () -> {
+                        }), () -> {
                             if (phase.equals("source")) {
                                 armed[0] = true;
                                 currentThread().interrupt();
@@ -539,7 +539,7 @@ class ObservationTest {
     private static <R> AttemptRecord<Object, R> attempt(Callable<Object> source,
             Function<Object, ConditionResult<R>> condition) {
         var time = new FakeTime(0);
-        return new WaitEngine<Object, R>(config(1, 2, 0), time, time, source, ConditionSupport.<Object, R>condition("test condition", null, actual -> {
+        return new WaitEngine<Object, R>(config(1, 2, 0).withTime(time, time), source, ConditionSupport.<Object, R>condition("test condition", null, actual -> {
             ConditionResult<R> evaluation = condition.apply(actual);
             time.advanceNanos(2);
             return evaluation;

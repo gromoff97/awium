@@ -28,9 +28,8 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
         super(source);
     }
 
-    private Await(Callable<? extends OBSERVED> source, WaitConfiguration configuration,
-            LongSupplier clock, LongConsumer parker) {
-        super(source, configuration, clock, parker);
+    private Await(Callable<? extends OBSERVED> source, WaitConfiguration configuration) {
+        super(source, configuration);
     }
 
     public static <VALUE> ValueAwait<VALUE> await(Callable<VALUE> source) {
@@ -80,13 +79,11 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
      */
     @Override
     public Await<OBSERVED, ELEMENT, MAP_VALUE> usingTime(LongSupplier clock, LongConsumer parker) {
-        return new Await<>(source, configuration,
-                requireNonNull(clock, "clock must not be null"),
-                requireNonNull(parker, "parker must not be null"));
+        return reconfigured(configuration.withTime(clock, parker));
     }
 
     private Await<OBSERVED, ELEMENT, MAP_VALUE> reconfigured(WaitConfiguration configuration) {
-        return new Await<>(source, configuration, clock, parker);
+        return new Await<>(source, configuration);
     }
 
     public ELEMENT until(SelectedCondition<? super OBSERVED> condition) {

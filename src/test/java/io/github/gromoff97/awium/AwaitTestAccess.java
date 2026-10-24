@@ -14,7 +14,8 @@ final class AwaitTestAccess {
     private AwaitTestAccess() {}
 
     static WaitConfiguration config(long every, long upTo, long persistence) {
-        return new WaitConfiguration(every, upTo, persistence);
+        return new WaitConfiguration(every, upTo, persistence,
+                WaitConfiguration.DEFAULT.clock(), WaitConfiguration.DEFAULT.parker());
     }
 
     static <S> ValueAwait<S> timedAwait(Callable<? extends S> source,

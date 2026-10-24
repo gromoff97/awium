@@ -187,7 +187,7 @@ class CapturedConditionTest {
                         return satisfied(value);
                     }).because("final business reason"));
             var failure = assertFailure(TIMEOUT,
-                    () -> timedAwait(() -> "ready", new WaitConfiguration(1, 5, 0), time, time).until(sequence));
+                    () -> timedAwait(() -> "ready", config(1, 5, 0), time, time).until(sequence));
             assertTrue(failure.getMessage().contains("Sequence (captured 2 of 2)"), failure.getMessage());
             assertTrue(failure.getMessage().contains("final stage"), failure.getMessage());
             assertTrue(failure.getMessage().contains("final business reason"), failure.getMessage());

@@ -6,7 +6,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.locks.LockSupport;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
@@ -20,20 +19,14 @@ public sealed class ValueAwait<OBSERVED> permits Await {
 
     final Callable<? extends OBSERVED> source;
     final WaitConfiguration configuration;
-    final LongSupplier clock;
-    final LongConsumer parker;
 
     ValueAwait(Callable<? extends OBSERVED> source) {
-        this(requireNonNull(source, "source must not be null"),
-                DEFAULT, System::nanoTime, LockSupport::parkNanos);
+        this(requireNonNull(source, "source must not be null"), DEFAULT);
     }
 
-    ValueAwait(Callable<? extends OBSERVED> source, WaitConfiguration configuration,
-            LongSupplier clock, LongConsumer parker) {
+    ValueAwait(Callable<? extends OBSERVED> source, WaitConfiguration configuration) {
         this.source = source;
         this.configuration = configuration;
-        this.clock = clock;
-        this.parker = parker;
     }
 
     public ValueAwait<OBSERVED> every(Duration interval) {
@@ -49,13 +42,11 @@ public sealed class ValueAwait<OBSERVED> permits Await {
     }
 
     public ValueAwait<OBSERVED> usingTime(LongSupplier clock, LongConsumer parker) {
-        return new ValueAwait<>(source, configuration,
-                requireNonNull(clock, "clock must not be null"),
-                requireNonNull(parker, "parker must not be null"));
+        return reconfigured(configuration.withTime(clock, parker));
     }
 
     private ValueAwait<OBSERVED> reconfigured(WaitConfiguration configuration) {
-        return new ValueAwait<>(source, configuration, clock, parker);
+        return new ValueAwait<>(source, configuration);
     }
 
     public OBSERVED until(PreservingCondition<? super OBSERVED> condition) {
@@ -107,7 +98,7 @@ public sealed class ValueAwait<OBSERVED> permits Await {
     }
 
     final <RESULT> RESULT complete(ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> session) {
-        return complete(new WaitEngine<OBSERVED, RESULT>(configuration, clock, parker, source, session).waitFor(),
+        return complete(new WaitEngine<OBSERVED, RESULT>(configuration, source, session).waitFor(),
                 session.condition, configuration);
     }
 
@@ -125,7 +116,7 @@ public sealed class ValueAwait<OBSERVED> permits Await {
 
     final <RESULT> AwaitResult<OBSERVED, RESULT> capture(ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> session) {
         var attempts = new ArrayList<AttemptRecord<OBSERVED, RESULT>>();
-        var outcome = new WaitEngine<OBSERVED, RESULT>(configuration, clock, parker, source, session).waitFor(attempt -> {
+        var outcome = new WaitEngine<OBSERVED, RESULT>(configuration, source, session).waitFor(attempt -> {
             if (attempts.size() == MAX_RETAINED_ATTEMPTS) {
                 attempts.remove(1);
             }
