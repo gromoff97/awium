@@ -16,11 +16,27 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ObjectOptionalAndScalarConditionsTest {
+
+    @Test
+    void narrowingWaitsForANullSourceToProduceAValue() {
+        for (var check : List.of(Conditions.instanceOf(String.class), Conditions.exactInstanceOf(String.class))) {
+            var observations = java.util.Arrays.asList(null, "ready").iterator();
+            var time = new FakeTime(0);
+
+            String result = await(observations::next).usingTime(time, time)
+                    .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(3))
+                    .until(check.because("the value must arrive"));
+
+            assertEquals("ready", result);
+            assertFalse(observations.hasNext());
+        }
+    }
 
     @Test
     void unrelatedTypeChecksRemainOrdinaryMismatches() {

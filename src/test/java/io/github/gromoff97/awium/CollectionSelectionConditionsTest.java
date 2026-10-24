@@ -24,6 +24,7 @@ import static io.github.gromoff97.awium.Conditions.instanceOf;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -263,6 +264,21 @@ class CollectionSelectionConditionsTest {
                 if (negative) assertSame(actual, ((Satisfied<?>) evaluation).result());
             }
         }
+    }
+
+    @Test
+    void nestedSelectorsWaitForANullCollectionToBecomeAvailable() {
+        var observations = Arrays.asList(null, List.of(" "), null, List.of(" ")).iterator();
+        var time = new FakeTime(0);
+        var waiting = await(observations::next).usingTime(time, time)
+                .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(3));
+
+        String last = waiting.until(CollectionConditions.last(String::isBlank).because("latest blank value"));
+        String single = waiting.until(CollectionConditions.single(matches(String::isBlank)).because("only blank value"));
+
+        assertEquals(" ", last);
+        assertEquals(" ", single);
+        assertFalse(observations.hasNext());
     }
 
     @Test

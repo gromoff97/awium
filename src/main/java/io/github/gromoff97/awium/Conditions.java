@@ -71,7 +71,7 @@ public final class Conditions {
     public static <RESULT> Condition<Object, RESULT> instanceOf(Class<RESULT> type) {
         requireNonNull(type, "type must not be null");
         return ConditionSupport.condition("value is an instance of " + type.getTypeName(), null, actual ->
-                actual != null && type.isInstance(actual)
+                type.isInstance(actual)
                         ? satisfied(type.cast(actual))
                         : unsatisfied("value was not an instance of " + type.getTypeName()));
     }
