@@ -13,7 +13,6 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
-import static java.lang.Long.parseLong;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,7 +29,6 @@ class AssertionAdapterTest {
         var condition = Conditions.<String>condition(
                 "payment id", value -> {
                     invocations[0]++;
-                    parseLong(value);
                     return satisfied(value);
                 });
 

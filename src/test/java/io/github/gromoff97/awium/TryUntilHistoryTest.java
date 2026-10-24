@@ -19,16 +19,11 @@ class TryUntilHistoryTest {
     @Test
     void keepsEveryAttemptUntilTheLimit() {
         var time = new FakeTime(0);
-        var firstResult = new Object();
-        var finalResult = new Object();
-        int[] calls = {0};
-
-        var execution = timedAwait(() -> calls[0]++ < 3 ? firstResult : finalResult,
+        var execution = timedAwait(() -> "ready",
                 config(1, 10, 3), time, time).tryUntil(isNotNull);
 
         assertEquals(4, execution.totalAttempts());
-        assertEquals(List.of(1L, 2L, 3L, 4L), execution.attempts().stream()
-                .map(AttemptRecord::number).toList());
+        assertEquals(List.of(1L, 2L, 3L, 4L), numbers(execution));
         assertEquals(List.of(ACQUISITION, PERSISTENCE, PERSISTENCE, PERSISTENCE),
                 execution.attempts().stream().map(AttemptRecord::phase).toList());
         assertThrows(UnsupportedOperationException.class, execution.attempts()::clear);
@@ -73,8 +68,7 @@ class TryUntilHistoryTest {
                 condition("same description", ConditionResult::satisfied));
 
         assertEquals(3, result.totalAttempts());
-        assertEquals(List.of(1L, 2L, 3L), result.attempts().stream()
-                .map(AttemptRecord::number).toList());
+        assertEquals(List.of(1L, 2L, 3L), numbers(result));
     }
 
     private static List<Long> numbers(AwaitResult<?, ?> execution) {

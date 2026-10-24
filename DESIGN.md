@@ -1173,3 +1173,21 @@ Nullability, равенство, наличие optional, сохранение �
 Целевые поведенческие тесты прошли. STRONGER Conditions/OptionalConditions/
 ConditionSupport/ConditionAwaitAttempt: 198 мутаций, все KILLED.
 `/tmp/awium-seven-hour-pass/object-matrix-report.json`.
+
+### Тесты декорации отвечают за декорацию
+
+В ConditionDecorationTest удалены три повторных сценария выполнения: fresh
+factory, последовательность preserving-условий и сохранение исходного объекта.
+Они покрыты более строгими ConditionAwaitAttempt, TimingConfiguration,
+PositiveFluentMatrix и DirectBecause сценариями, в том числе обоими терминалами,
+заменяющим результатом callback и повторным использованием одного await.
+Из файла ушли AtomicInteger, привязка к тестовому времени и пять импортов.
+Форматирование, eager validation, замена объяснения и неизменяемость остаются.
+
+В проверке делегирования убран посторонний parseLong: факт единственного вызова
+уже проверяется счётчиком. История попыток проверяет номера и фазы без лишней
+смены неиспользуемых значений источника; номера читаются существующим helper.
+Всего тестового кода стало на 53 строки меньше. Полный check: 423 теста без
+ошибок и пропусков. STRONGER Condition*, ValueAwait, SequenceExecution и
+OptionalConditions: 262 мутации, все KILLED.
+`/tmp/awium-seven-hour-pass/test-ownership-report.json`.
