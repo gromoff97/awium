@@ -229,20 +229,16 @@ class DiagnosticsSnapshotTest {
                 new AttemptRecord<>(persistedAttempt.number(), AttemptRecord.Phase.PERSISTENCE, persistedAttempt.outcome()));
 
         var betweenFailure = assertFailure(TIMEOUT,
-                () -> complete(between, "collection to be non-empty",
-                        "Settlement requires an eligible payment",
+                () -> Await.complete(between, CONDITION,
                         config(3 * SECOND, 10 * SECOND, 0)));
         var lateUnsatisfiedFailure = assertFailure(TIMEOUT,
-                () -> complete(lateUnsatisfied, "status equals COMPLETED",
-                        "payment must complete",
+                () -> Await.complete(lateUnsatisfied, CONDITION,
                         config(100 * MILLISECOND, 10 * SECOND, 0)));
         var lateSatisfiedFailure = assertFailure(TIMEOUT,
-                () -> complete(lateSatisfied, "status equals COMPLETED",
-                        "payment must complete",
+                () -> Await.complete(lateSatisfied, CONDITION,
                         config(100 * MILLISECOND, 10 * SECOND, 0)));
         var persistenceFailure = assertFailure(PERSISTENCE_FAILED,
-                () -> complete(persistence, "optional to remain present",
-                        "payment must remain available",
+                () -> Await.complete(persistence, CONDITION,
                         config(100 * MILLISECOND, 10 * SECOND, 5 * SECOND)));
 
         assertEquals("""
@@ -324,18 +320,17 @@ class DiagnosticsSnapshotTest {
         var interruption = new InterruptedException("stopped");
 
         var sourceFailure = assertFailure(SOURCE_FAILED,
-                () -> complete(sourceFailure(sourceCause, 2, SECOND),
-                        "condition", "business reason",
+                () -> Await.complete(sourceFailure(sourceCause, 2, SECOND),
+                        diagnosticCondition("condition", "business reason", null),
                         config(SECOND, 10 * SECOND, 0)));
         var conditionFailure = assertFailure(CONDITION_FAILED,
-                () -> complete(conditionFailure(diagnosticCondition("condition", "business reason", null),
-                        "actual", conditionCause, 3, SECOND), "condition",
-                        "business reason", config(SECOND, 10 * SECOND, 0)));
+                () -> Await.complete(conditionFailure(diagnosticCondition("condition", "business reason", null),
+                        "actual", conditionCause, 3, SECOND), CONDITION, config(SECOND, 10 * SECOND, 0)));
         var waitingFailure = assertFailure(WAIT_FAILED,
-                () -> complete(waitingFailure(waitingCause, 4, SECOND), "condition", null,
+                () -> Await.complete(waitingFailure(waitingCause, 4, SECOND), CONDITION,
                         config(SECOND, 10 * SECOND, 0)));
         var interruptedFailure = assertFailure(WAIT_FAILED,
-                () -> complete(waitingFailure(interruption, 5, SECOND), "condition", null,
+                () -> Await.complete(waitingFailure(interruption, 5, SECOND), CONDITION,
                         config(SECOND, 10 * SECOND, 0)));
 
         assertSame(sourceCause, sourceFailure.getCause());
@@ -454,7 +449,7 @@ class DiagnosticsSnapshotTest {
                         2, 3 * SECOND));
 
         var failure = assertFailure(TIMEOUT,
-                () -> complete(outcome, "condition", null,
+                () -> Await.complete(outcome, CONDITION,
                         config(SECOND, 2 * SECOND, 0)));
 
         assertSame(assertion, failure.getCause());
@@ -532,7 +527,7 @@ class DiagnosticsSnapshotTest {
                 unsatisfiedAttempt(diagnosticCondition("condition", "business reason", null), actual, "not ready", 1, 2));
 
         var valueFailure = assertFailure(TIMEOUT,
-                () -> complete(outcome, "condition", "business reason",
+                () -> Await.complete(outcome, CONDITION,
                         config(1, 2, 0)));
 
         assertNull(valueFailure.getCause());
@@ -568,8 +563,8 @@ class DiagnosticsSnapshotTest {
 
         try {
             var failure = assertFailure(TIMEOUT,
-                    () -> complete(new Timeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
-                            "condition", null, config(1, 2, 0)));
+                    () -> Await.complete(new Timeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
+                            CONDITION, config(1, 2, 0)));
 
             assertNull(failure.getCause());
             assertArrayEquals(new Throwable[]{interruption}, failure.getSuppressed());
@@ -608,8 +603,7 @@ class DiagnosticsSnapshotTest {
                         diagnosticCondition("conditions are satisfied in order", null, null), progress));
 
         var failure = assertFailure(TIMEOUT,
-                () -> complete(new Timeout<>(attempt), "conditions are satisfied in order",
-                        null, config(1, 2, 0)));
+                () -> Await.complete(new Timeout<>(attempt), CONDITION, config(1, 2, 0)));
 
         assertMessage(failure, "Sequence (captured 1 of 2)",
                 "Condition: inner second", "Because: inner business reason",
@@ -636,7 +630,7 @@ class DiagnosticsSnapshotTest {
                         diagnosticCondition("ordered conditions", null, null), progress));
 
         var failure = assertFailure(TIMEOUT,
-                () -> complete(new Timeout<>(attempt), "ordered conditions", null, config(1, 2, 0)));
+                () -> Await.complete(new Timeout<>(attempt), CONDITION, config(1, 2, 0)));
 
         assertNull(failure.getCause());
         assertArrayEquals(new Throwable[]{cause}, failure.getSuppressed());
@@ -744,7 +738,7 @@ class DiagnosticsSnapshotTest {
                         "not ready", engineCause, 1, 2));
 
         var failure = assertFailure(TIMEOUT,
-                () -> complete(outcome, "condition", null,
+                () -> Await.complete(outcome, CONDITION,
                         config(1, 2, 0)));
 
         assertSame(engineCause, failure.getCause());
@@ -796,7 +790,7 @@ class DiagnosticsSnapshotTest {
                     unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2));
 
             var valueFailure = assertFailure(TIMEOUT,
-                    () -> complete(rendered, "condition", null,
+                    () -> Await.complete(rendered, CONDITION,
                             config(1, 2, 0)));
 
             assertNull(valueFailure.getCause());
@@ -1052,7 +1046,7 @@ class DiagnosticsSnapshotTest {
                         engineCause, 1, 2));
 
         var thrown = assertThrows(AwaitAssertionError.class,
-                () -> complete(valueFailure, "condition", null,
+                () -> Await.complete(valueFailure, CONDITION,
                         config(1, 2, 0)));
         assertSame(engineCause, thrown.getCause());
         assertArrayEquals(new Throwable[]{valueFatal}, thrown.getSuppressed());
@@ -1094,11 +1088,11 @@ class DiagnosticsSnapshotTest {
         var threadDeath = new ThreadDeath();
 
         assertSame(virtualMachineError, assertThrows(AwaitExecutionException.class,
-                () -> complete(sourceFailure(virtualMachineError, 1, 0),
-                        "condition", null, config(1, 2, 0))).getCause());
+                () -> Await.complete(sourceFailure(virtualMachineError, 1, 0),
+                        CONDITION, config(1, 2, 0))).getCause());
         assertSame(threadDeath, assertThrows(AwaitExecutionException.class,
-                () -> complete(conditionFailure(CONDITION, null, threadDeath, 1, 0),
-                        "condition", null, config(1, 2, 0))).getCause());
+                () -> Await.complete(conditionFailure(CONDITION, null, threadDeath, 1, 0),
+                        CONDITION, config(1, 2, 0))).getCause());
     }
 
     @Test
@@ -1163,9 +1157,9 @@ class DiagnosticsSnapshotTest {
                         .until(condition("condition\rdescription", ConditionResult::satisfied)
                                 .because("business\n\nreason")));
         var arrayFailure = assertFailure(TIMEOUT,
-                () -> complete(new Timeout<>(
+                () -> Await.complete(new Timeout<>(
                                 unsatisfiedAttempt(CONDITION, new int[] {1, 2}, "not ready", 1, 2)),
-                        "condition", null,
+                        CONDITION,
                         config(1, 2, 0)));
 
         assertFalse(sourceFailure.getMessage().contains("\r"));
@@ -1225,8 +1219,8 @@ class DiagnosticsSnapshotTest {
             }
         }};
         var failure = assertThrows(AwaitAssertionError.class,
-                () -> complete(new Timeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
-                        "condition", null, config(1, 2, 0)));
+                () -> Await.complete(new Timeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
+                        CONDITION, config(1, 2, 0)));
         assertArrayEquals(new Throwable[]{fatal}, failure.getSuppressed());
     }
 
@@ -1237,14 +1231,9 @@ class DiagnosticsSnapshotTest {
         cycle[0] = cycle;
         Object[] actual = {shared, shared, new Object[] {null, new char[] {'a', 'b'}}, cycle};
         var failure = assertFailure(TIMEOUT,
-                () -> complete(new Timeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
-                        "condition", null, config(1, 2, 0)));
+                () -> Await.complete(new Timeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
+                        CONDITION, config(1, 2, 0)));
         assertMessage(failure, "[[[1, 2], leaf], [[1, 2], leaf], [null, [a, b]], [[...]]]");
-    }
-
-    private static <S, R> R complete(WaitCompletion<S, R> outcome, String description,
-            String explanation, WaitConfiguration configuration) {
-        return Await.complete(outcome, diagnosticCondition(description, explanation, null), configuration);
     }
 
     private static Condition<String, List<String>> lifecycle(
@@ -1366,17 +1355,16 @@ class DiagnosticsSnapshotTest {
     }
 
     private static final class CountingAssertion extends AssertionError {
-        private final String message;
         private int calls;
 
         private CountingAssertion(String message) {
-            this.message = message;
+            super(message);
         }
 
         @Override
         public String getMessage() {
             calls++;
-            return message;
+            return super.getMessage();
         }
     }
 }

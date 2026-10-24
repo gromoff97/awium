@@ -472,3 +472,19 @@ ExpectedInputs. Список шести фабрик создаётся один
 параметр типа T: helper принимает Object, как его единственный тип источника.
 Целевые 97 тестов прошли; повторный PIT не нужен для совпадающих инструкций.
 `/tmp/awium-seven-hour-pass/container-source-inference/report.json`.
+
+### Диагностическая фикстура не дублирует данные Condition
+
+Из DiagnosticsSnapshotTest удалена complete-обёртка с четырьмя аргументами
+и двумя generic-параметрами. Вместо повторной передачи description/explanation
+тесты вызывают Await.complete прямо. Оценённый результат содержит своё Condition;
+резервный CONDITION теперь намеренно отличается в содержательных snapshots.
+Это проверяет правильный источник метаданных. Только source failure с бизнес-
+объяснением явно передаёт нужное резервное Condition. Повторные строки и
+создание неиспользуемых определений убраны.
+
+У CountingAssertion удалено своё поле message: сообщение хранится в стандартном
+AssertionError, override считает чтения и вызывает super.getMessage(). Сохранены
+проверка единственного чтения и загрузка исключения без его enclosing class.
+Все 39 тестов DiagnosticsSnapshotTest прошли; ожидаемые сообщения не менялись.
+`/tmp/awium-seven-hour-pass/diagnostic-fixtures-report.json`.
