@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import java.util.List;
+import java.util.stream.LongStream;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.AttemptRecord.Phase.ACQUISITION;
@@ -10,17 +11,17 @@ import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.Conditions.condition;
-import static io.github.gromoff97.awium.Conditions.isNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TryUntilHistoryTest {
 
     @Test
-    void keepsEveryAttemptUntilTheLimit() {
+    void keepsEveryAttemptWithoutCallingUserObjectMethods() {
         var time = new FakeTime(0);
-        var execution = timedAwait(() -> "ready",
-                config(1, 10, 3), time, time).tryUntil(isNotNull);
+        var probe = new ThrowingProbe();
+        var execution = timedAwait(() -> probe,
+                config(1, 10, 3), time, time).tryUntil(condition("ready", actual -> satisfied(probe)));
 
         assertEquals(4, execution.totalAttempts());
         assertEquals(List.of(1L, 2L, 3L, 4L), numbers(execution));
@@ -38,24 +39,11 @@ class TryUntilHistoryTest {
                     condition("never ready", value -> unsatisfied("not ready")));
 
             assertEquals(count, result.totalAttempts());
-            assertEquals(Math.min(256, count), result.attempts().size());
-            assertEquals(1, result.attempts().getFirst().number());
-            assertEquals(Math.max(2, count - 254), result.attempts().get(1).number());
-            assertEquals(count, result.attempts().getLast().number());
+            assertEquals(LongStream.rangeClosed(1, count)
+                    .filter(number -> number == 1 || number > count - 255)
+                    .boxed().toList(), numbers(result));
             assertThrows(UnsupportedOperationException.class, result.attempts()::clear);
         }
-    }
-
-    @Test
-    void recordingNeverCallsUserObjectMethods() {
-        var time = new FakeTime(0);
-        var probe = new ThrowingProbe();
-
-        var execution = timedAwait(() -> probe, config(1, 10, 2), time, time).tryUntil(condition("ready", actual -> satisfied(probe)));
-
-        assertEquals(3, execution.attempts().size());
-        assertEquals(List.of(1L, 2L, 3L), numbers(execution));
-        assertEquals(3, execution.totalAttempts());
     }
 
     @Test

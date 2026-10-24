@@ -614,3 +614,15 @@ TryUntilFailureTest принимает setup ожидания и factory усл�
 прошли; STRONGER ValueAwait/WaitEngine/ConditionAwaitAttempt/WaitCompletion*:
 148 мутаций, все KILLED, без NO_COVERAGE.
 `/tmp/awium-seven-hour-pass/terminal-parity-report.json`.
+
+### История проверяется целиком, включая середину
+
+TryUntilHistoryTest сравнивает все номера удержанных попыток с первым и
+последними 255 номерами. Размер и края отдельно больше не проверяются:
+они входят в сравнение списка. Сохранены totalAttempts и неизменяемость.
+Временная подмена, дублирующая среднюю запись при заполнении лимита,
+проходила прежний тест; новый её отклоняет. Продуктовый код не менялся.
+Проверка отсутствия вызовов пользовательских equals/hashCode/toString
+объединена с сохранением всех acquisition/persistence попыток. Убраны
+12 строк и один тест. Полный check: 412 тестов без ошибок и пропусков.
+`/tmp/awium-seven-hour-pass/history-content-regression-control/report.json`.
