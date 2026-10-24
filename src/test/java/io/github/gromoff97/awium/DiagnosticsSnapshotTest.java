@@ -213,18 +213,18 @@ class DiagnosticsSnapshotTest {
         var betweenAssertion = new AssertionError("collection was empty");
         var persistenceAssertion = new AssertionError("optional was empty");
         WaitCompletion<Object, Object> between = new Timeout<>(
-                10 * SECOND, assertionUnsatisfiedAttempt(diagnosticCondition("collection to be non-empty", "Settlement requires an eligible payment", null),
-                        null, "collection was empty",
-                        betweenAssertion, 4, 9 * SECOND));
+                10 * SECOND, evaluatedAttempt(diagnosticCondition("collection to be non-empty", "Settlement requires an eligible payment", null),
+                        null, unsatisfied("collection was empty",
+                        betweenAssertion), 4, 9 * SECOND));
         WaitCompletion<Object, Object> lateUnsatisfied = new Timeout<>(
-                unsatisfiedAttempt(diagnosticCondition("status equals COMPLETED", "payment must complete", null), "Payment[PENDING]", "status was PENDING",
+                evaluatedAttempt(diagnosticCondition("status equals COMPLETED", "payment must complete", null), "Payment[PENDING]", unsatisfied("status was PENDING"),
                         100, 10 * SECOND + 200 * MILLISECOND));
         WaitCompletion<Object, Object> lateSatisfied = new Timeout<>(
-                satisfiedAttempt(diagnosticCondition("status equals COMPLETED", "payment must complete", null), "Payment[COMPLETED]", new Object(), 100,
+                evaluatedAttempt(diagnosticCondition("status equals COMPLETED", "payment must complete", null), "Payment[COMPLETED]", satisfied(new Object()), 100,
                         10 * SECOND + 200 * MILLISECOND));
-        var persistedAttempt = assertionUnsatisfiedAttempt(diagnosticCondition("optional to remain present", "payment must remain available", null),
-                "Optional.empty", "optional was empty",
-                persistenceAssertion, 71, 9 * SECOND + 100 * MILLISECOND);
+        var persistedAttempt = evaluatedAttempt(diagnosticCondition("optional to remain present", "payment must remain available", null),
+                "Optional.empty", unsatisfied("optional was empty",
+                persistenceAssertion), 71, 9 * SECOND + 100 * MILLISECOND);
         var persistence = new PersistenceFailure<>(7 * SECOND,
                 new AttemptRecord<>(persistedAttempt.number(), AttemptRecord.Phase.PERSISTENCE, persistedAttempt.outcome()));
 
@@ -428,7 +428,7 @@ class DiagnosticsSnapshotTest {
     void assertionCauseIsRetainedAndItsMessageIsReadOnce() {
         var assertion = new CountingAssertion("assertion failed");
         WaitCompletion<Object, Object> outcome = new Timeout<>(
-                assertionUnsatisfiedAttempt(CONDITION, "actual", "business mismatch", assertion,
+                evaluatedAttempt(CONDITION, "actual", unsatisfied("business mismatch", assertion),
                         2, 3 * SECOND));
 
         var failure = assertFailure(TIMEOUT,
@@ -507,7 +507,7 @@ class DiagnosticsSnapshotTest {
         var valueCause = new IllegalArgumentException("toString failed");
         var actual = new ThrowingValue(valueCause);
         WaitCompletion<Object, Object> outcome = new Timeout<>(
-                unsatisfiedAttempt(diagnosticCondition("condition", "business reason", null), actual, "not ready", 1, 2));
+                evaluatedAttempt(diagnosticCondition("condition", "business reason", null), actual, unsatisfied("not ready"), 1, 2));
 
         var valueFailure = assertFailure(TIMEOUT,
                 () -> Await.complete(outcome, CONDITION,
@@ -546,7 +546,7 @@ class DiagnosticsSnapshotTest {
 
         try {
             var failure = assertFailure(TIMEOUT,
-                    () -> Await.complete(new Timeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
+                    () -> Await.complete(new Timeout<>(evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 1, 2)),
                             CONDITION, config(1, 2, 0)));
 
             assertNull(failure.getCause());
@@ -718,8 +718,8 @@ class DiagnosticsSnapshotTest {
                 new InternalError("value fatal"))) {
             var engineCause = new AssertionError("assertion failed");
             WaitCompletion<Object, Object> outcome = new Timeout<>(
-                    assertionUnsatisfiedAttempt(CONDITION, new ThrowingValue(diagnosticCause),
-                            "not ready", engineCause, 1, 2));
+                    evaluatedAttempt(CONDITION, new ThrowingValue(diagnosticCause),
+                            unsatisfied("not ready", engineCause), 1, 2));
 
             var failure = assertFailure(TIMEOUT,
                     () -> Await.complete(outcome, CONDITION,
@@ -772,7 +772,7 @@ class DiagnosticsSnapshotTest {
     void nullFromToStringUsesStandardArrayFormatting() {
         for (Object actual : List.of(new NullStringValue(), new Object[] {new NullStringValue()})) {
             WaitCompletion<Object, Object> rendered = new Timeout<>(
-                    unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2));
+                    evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 1, 2));
 
             var valueFailure = assertFailure(TIMEOUT,
                     () -> Await.complete(rendered, CONDITION,
@@ -1114,7 +1114,7 @@ class DiagnosticsSnapshotTest {
                                 .because("business\n\nreason")));
         var arrayFailure = assertFailure(TIMEOUT,
                 () -> Await.complete(new Timeout<>(
-                                unsatisfiedAttempt(CONDITION, new int[] {1, 2}, "not ready", 1, 2)),
+                                evaluatedAttempt(CONDITION, new int[] {1, 2}, unsatisfied("not ready"), 1, 2)),
                         CONDITION,
                         config(1, 2, 0)));
 
@@ -1165,7 +1165,7 @@ class DiagnosticsSnapshotTest {
         var fatal = new InternalError("array element fatal");
         Object[] actual = {new ThrowingValue(fatal)};
         var failure = assertThrows(AwaitAssertionError.class,
-                () -> Await.complete(new Timeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
+                () -> Await.complete(new Timeout<>(evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 1, 2)),
                         CONDITION, config(1, 2, 0)));
         assertArrayEquals(new Throwable[]{fatal}, failure.getSuppressed());
     }
@@ -1177,7 +1177,7 @@ class DiagnosticsSnapshotTest {
         cycle[0] = cycle;
         Object[] actual = {shared, shared, new Object[] {null, new char[] {'a', 'b'}}, cycle};
         var failure = assertFailure(TIMEOUT,
-                () -> Await.complete(new Timeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
+                () -> Await.complete(new Timeout<>(evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 1, 2)),
                         CONDITION, config(1, 2, 0)));
         assertMessage(failure, "[[[1, 2], leaf], [[1, 2], leaf], [null, [a, b]], [[...]]]");
     }
@@ -1185,48 +1185,31 @@ class DiagnosticsSnapshotTest {
     private static Condition<String, List<String>> lifecycle(
             PreservingCondition<String> pending,
             PreservingCondition<String> completed) {
-        return captured(status("created", "payment status is created", null),
+        return captured(status("created", "payment status is created"),
                 pending, completed).because("payment must complete its lifecycle");
     }
 
     private static PreservingCondition<String> pending() {
-        return status("pending", "payment status is pending",
-                "processing must begin before completion");
+        return status("pending", "payment status is pending")
+                .because("processing must begin before completion");
     }
 
     private static PreservingCondition<String> completed() {
-        return status("completed", "payment status is completed",
-                "completion must remain stable");
+        return status("completed", "payment status is completed")
+                .because("completion must remain stable");
     }
 
-    private static PreservingCondition<String> status(String expected,
-            String description, String importance) {
-        PreservingCondition<String> condition = condition(description,
+    private static PreservingCondition<String> status(String expected, String description) {
+        return condition(description,
                 value -> value.equals(expected)
                         ? satisfied(value) : unsatisfied("payment status was " + value));
-        return importance == null ? condition : condition.because(importance);
     }
 
-    private static <S, R> AttemptRecord<S, R> satisfiedAttempt(
-            Condition<?, ?> expectation, S observed, R result, long number, long completedNanos) {
+    private static <S, R> AttemptRecord<S, R> evaluatedAttempt(
+            Condition<?, ?> condition, S observed, ConditionResult<? extends R> result, long number, long completedNanos) {
         return new AttemptRecord<>(number, ACQUISITION,
                 new AttemptRecord.Outcome.Evaluated<>(afterObservation(completedNanos), observed,
-                        new ConditionResult.Satisfied<>(result), expectation, null));
-    }
-
-    private static <S> AttemptRecord<S, Object> unsatisfiedAttempt(
-            Condition<?, ?> expectation, S observed, String mismatch, long number, long completedNanos) {
-        return new AttemptRecord<>(number, ACQUISITION,
-                new AttemptRecord.Outcome.Evaluated<>(afterObservation(completedNanos), observed,
-                        new ConditionResult.Unsatisfied<>(mismatch, null), expectation, null));
-    }
-
-    private static <S> AttemptRecord<S, Object> assertionUnsatisfiedAttempt(
-            Condition<?, ?> expectation, S observed, String mismatch, AssertionError assertion,
-            long number, long completedNanos) {
-        return new AttemptRecord<>(number, ACQUISITION,
-                new AttemptRecord.Outcome.Evaluated<>(afterObservation(completedNanos), observed,
-                        new ConditionResult.Unsatisfied<>(mismatch, assertion), expectation, null));
+                        result, condition, null));
     }
 
     private static WaitCompletion<Object, Object> sourceFailure(

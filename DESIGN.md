@@ -700,3 +700,14 @@ ContainerInterruptionTest использует общий throwUnchecked вме�
 Error/RuntimeException и cast. Два метода, одна ветка и восемь строк убраны.
 Пять классов с metadata и шесть container interruption тестов прошли.
 `/tmp/awium-seven-hour-pass/test-primitives-report.json`.
+
+### Диагностические записи принимают готовый ConditionResult
+
+satisfiedAttempt, unsatisfiedAttempt и assertionUnsatisfiedAttempt объединены
+в evaluatedAttempt. В 12 местах явно передаётся satisfied либо unsatisfied
+с нужной причиной; helper только собирает общую запись с timing и condition.
+Убраны два метода и две generic-оси. У status удалены необязательный importance,
+ветка null и промежуточная переменная: pending/completed вызывают because сами.
+Новых типов нет, стало на 17 строк меньше. Все 36 диагностических тестов
+прошли с прежними сообщениями и проверками identity/числа callback-вызовов.
+`/tmp/awium-seven-hour-pass/diagnostic-attempt-fixtures-report.json`.
