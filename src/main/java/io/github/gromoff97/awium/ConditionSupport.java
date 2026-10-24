@@ -6,6 +6,7 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Condition.Reference;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
@@ -191,6 +192,10 @@ final class ConditionSupport {
         if (lowerBound < 0 || upperBound < lowerBound) {
             throw new IllegalArgumentException(measure + " range must be non-negative and ordered");
         }
+    }
+
+    static <ELEMENT> List<ELEMENT> snapshot(Collection<ELEMENT> values, String name) {
+        return requireNonNull(values, name + " must not be null").stream().toList();
     }
 
     static <ELEMENT> List<ELEMENT> nonEmptySnapshot(ELEMENT[] values, String name) {

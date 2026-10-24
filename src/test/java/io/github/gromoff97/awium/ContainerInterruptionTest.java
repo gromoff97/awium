@@ -131,10 +131,10 @@ class ContainerInterruptionTest {
                 actual -> await(() -> actual).tryUntil(MapConditions.containsExactlyEntries(Map.of("key", "ready"))),
                 actual -> await(() -> actual).tryUntil(MapConditions.size(1)),
                 actual -> await(() -> actual).tryUntil(MapConditions.allKeys(value -> true)),
-                actual -> await(() -> actual).tryUntil(MapConditions.containsKeys("key")),
-                actual -> await(() -> actual).tryUntil(MapConditions.containsOnlyKeys("key")),
+                actual -> await(() -> actual).tryUntil(MapConditions.containsKey("key")),
+                actual -> await(() -> actual).tryUntil(MapConditions.containsOnlyKeys(java.util.Collections.singletonList("key"))),
                 actual -> await(() -> actual).tryUntil(MapConditions.allValues(value -> true)),
-                actual -> await(() -> actual).tryUntil(MapConditions.containsValues("ready")));
+                actual -> await(() -> actual).tryUntil(MapConditions.containsValue("ready")));
         List<String> boundaries = List.of("entrySet", "entrySet", "size", "size", "keySet", "keySet", "keySet", "values", "values");
         for (int index = 0; index < waits.size(); index++) {
             var actual = new SignallingMap(boundaries.get(index));

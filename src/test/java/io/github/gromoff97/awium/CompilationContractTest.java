@@ -251,21 +251,28 @@ class CompilationContractTest {
     @Test
     void mapMembershipConditionsRejectIncompatibleKeysAndValues() throws IOException {
         for (String terminal : List.of("until", "tryUntil")) {
-            for (String condition : List.of("containsKeys(1)", "containsValues(\"wrong\")",
-                    "containsEntries(1, 1)", "containsEntries(\"x\", \"wrong\")",
-                    "containsEntries(Map.of(1, 1))", "containsEntries(Map.of(\"x\", \"wrong\"))")) {
-                assertFalse(compiles("""
-                        import static io.github.gromoff97.awium.Await.await;
-                        import static io.github.gromoff97.awium.MapConditions.*;
-                        import io.github.gromoff97.awium.Await.MapSource;
-                        import java.util.Map;
+            for (String explanation : List.of("", ".because(\"incompatible\")")) {
+                for (String condition : List.of("containsKey(1)", "containsValue(\"wrong\")",
+                        "containsKeys(List.of(1))", "containsValues(List.of(\"wrong\"))",
+                        "containsOnlyKeys(List.of(1))",
+                        "doesNotContainKey(1)", "doesNotContainValue(\"wrong\")",
+                        "doesNotContainKeys(List.of(1))", "doesNotContainValues(List.of(\"wrong\"))",
+                        "containsEntries(1, 1)", "containsEntries(\"x\", \"wrong\")",
+                        "containsEntries(Map.of(1, 1))", "containsEntries(Map.of(\"x\", \"wrong\"))")) {
+                    assertFalse(compiles("""
+                            import static io.github.gromoff97.awium.Await.await;
+                            import static io.github.gromoff97.awium.MapConditions.*;
+                            import io.github.gromoff97.awium.Await.MapSource;
+                            import java.util.Map;
+                            import java.util.List;
 
-                        final class Contract {
-                            void check(MapSource<Map<String, Integer>> source) {
-                                await(source).%s(%s);
+                            final class Contract {
+                                void check(MapSource<Map<String, Integer>> source) {
+                                    await(source).%s(%s%s);
+                                }
                             }
-                        }
-                        """.formatted(terminal, condition)), terminal + ": " + condition);
+                            """.formatted(terminal, condition, explanation)), terminal + ": " + condition);
+                }
             }
         }
     }

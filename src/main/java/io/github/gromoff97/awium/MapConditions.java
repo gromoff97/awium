@@ -6,6 +6,7 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Condition.Reference;
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Map;
@@ -20,7 +21,7 @@ import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.nonEmpty;
-import static io.github.gromoff97.awium.ConditionSupport.nonEmptySnapshot;
+import static io.github.gromoff97.awium.ConditionSupport.snapshot;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.selected;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
@@ -31,11 +32,10 @@ import static io.github.gromoff97.awium.ValueMatching.exactly;
 import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
-import static java.util.Arrays.stream;
+import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 import static java.util.Objects.requireNonNull;
 
-@SuppressWarnings("varargs")
 public final class MapConditions {
 
     public static final SelectedCondition<Map<?, ?>> singleEntry = selected("map has a single entry",
@@ -186,37 +186,52 @@ public final class MapConditions {
                                 : unsatisfied("map contained a different key"))));
     }
 
-    @SafeVarargs
-    public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsKeys(KEY... expected) {
-        List<KEY> keys = nonEmptySnapshot(expected, "expected keys");
+    /** Matches one key, including a collection or array as that single key. */
+    public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsKey(KEY expected) {
+        return containsKeys(singletonList(expected));
+    }
+
+    /** Matches when the single unexpected key is absent. */
+    public static <KEY> PreservingCondition<Map<? super KEY, ?>> doesNotContainKey(KEY unexpected) {
+        return doesNotContainKeys(singletonList(unexpected));
+    }
+
+    /** Matches one value, including a collection or array as that single value. */
+    public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> containsValue(VALUE expected) {
+        return containsValues(singletonList(expected));
+    }
+
+    /** Matches when the single unexpected value is absent. */
+    public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> doesNotContainValue(VALUE unexpected) {
+        return doesNotContainValues(singletonList(unexpected));
+    }
+
+    public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsKeys(Collection<? extends KEY> expected) {
+        var keys = nonEmpty(snapshot(expected, "expected keys"), "expected keys");
         return preserving("map contains all expected keys", "map did not contain all expected keys", expectedReference(keys),
                 actual -> containsAll(actual.keySet(), keys, Objects::deepEquals));
     }
 
-    @SafeVarargs
-    public static <KEY> PreservingCondition<Map<? super KEY, ?>> doesNotContainKeys(KEY... unexpected) {
-        List<KEY> keys = nonEmptySnapshot(unexpected, "unexpected keys");
+    public static <KEY> PreservingCondition<Map<? super KEY, ?>> doesNotContainKeys(Collection<? extends KEY> unexpected) {
+        var keys = nonEmpty(snapshot(unexpected, "unexpected keys"), "unexpected keys");
         return preserving("map does not contain unexpected keys", "map contained an unexpected key", unexpectedReference(keys),
                 actual -> !matchesAny(actual.keySet(), value -> matchesAny(keys, key -> deepEquals(value, key))));
     }
 
-    @SafeVarargs
-    public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsOnlyKeys(KEY... expected) {
-        List<KEY> keys = stream(requireNonNull(expected, "expected keys must not be null")).toList();
+    public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsOnlyKeys(Collection<? extends KEY> expected) {
+        var keys = snapshot(expected, "expected keys");
         return preserving("map contains only the expected keys", "map did not contain only the expected keys", expectedReference(keys),
                 actual -> sameDistinctElements(actual.keySet(), keys));
     }
 
-    @SafeVarargs
-    public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> containsValues(VALUE... expected) {
-        List<VALUE> values = nonEmptySnapshot(expected, "expected values");
+    public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> containsValues(Collection<? extends VALUE> expected) {
+        var values = nonEmpty(snapshot(expected, "expected values"), "expected values");
         return preserving("map contains all expected values", "map did not contain all expected values", expectedReference(values),
                 actual -> containsAll(actual.values(), values, Objects::deepEquals));
     }
 
-    @SafeVarargs
-    public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> doesNotContainValues(VALUE... unexpected) {
-        List<VALUE> values = nonEmptySnapshot(unexpected, "unexpected values");
+    public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> doesNotContainValues(Collection<? extends VALUE> unexpected) {
+        var values = nonEmpty(snapshot(unexpected, "unexpected values"), "unexpected values");
         return preserving("map does not contain unexpected values", "map contained an unexpected value", unexpectedReference(values),
                 actual -> !matchesAny(actual.values(), value -> matchesAny(values, candidate -> deepEquals(value, candidate))));
     }

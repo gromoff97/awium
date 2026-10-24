@@ -311,6 +311,12 @@ expected elements, use `containsAll(collection)` or `doesNotContainAny(collectio
 for example `containsAll(List.of("a", "b"))`. For null checks, use `containsNull`
 and `doesNotContainNull`.
 
+Maps follow the same rule: `containsKey(key)`, `doesNotContainKey(key)`,
+`containsValue(value)` and `doesNotContainValue(value)` check one object.
+`containsKeys(collection)`, `doesNotContainKeys(collection)`,
+`containsValues(collection)`, `doesNotContainValues(collection)` and
+`containsOnlyKeys(collection)` accept collections of expected keys or values.
+
 Factories accepting collections of expected elements, maps of expected entries,
 or varargs candidates take a shallow snapshot when the condition is created.
 Changing the original container afterwards does not change the condition or its
@@ -322,6 +328,7 @@ thrown there, before polling starts.
 Elements, keys, values, and callbacks remain caller-owned; they are not deeply
 copied. Single-value operands such as `equalTo(value)`, `sameAs(value)`,
 `contains(value)` and `doesNotContain(value)`
+as well as the single-key and single-value map conditions
 retain the supplied object, even if it is itself a container. This also applies
 when they are nested inside a selection such as `hasValue(equalTo(value))`.
 Observed values and successful results also retain their original identity.

@@ -5,10 +5,12 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
 import java.util.LinkedHashMap;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -27,6 +29,57 @@ import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MapConditionsTest {
+
+    @Test
+    void bulkKeyAndValueFactoriesRequireANonemptyCollection() {
+        List<Function<Collection<String>, PreservingCondition<?>>> factories = List.of(
+                MapConditions::containsKeys, MapConditions::doesNotContainKeys,
+                MapConditions::containsValues, MapConditions::doesNotContainValues);
+        for (var factory : factories) {
+            assertThrows(NullPointerException.class, () -> factory.apply(null));
+            assertThrows(IllegalArgumentException.class, () -> factory.apply(List.of()));
+        }
+        assertThrows(NullPointerException.class, () -> containsOnlyKeys(null));
+    }
+
+    @Test
+    void arrayKeysAndValuesRemainSingleObjectsInFluentChecks() {
+        var time = new FakeTime(0);
+        String[] key = {"a", "b"};
+        String[] value = {"x", "y"};
+        var actual = Map.of(key, value);
+
+        Map<String[], String[]> keyMatch = await(() -> actual).usingTime(time, time)
+                .until(containsKey(new String[] {"a", "b"}).because("one array key"));
+        Map<String[], String[]> valueMatch = await(() -> actual).usingTime(time, time)
+                .until(containsValue(new String[] {"x", "y"}).because("one array value"));
+        assertSame(actual, keyMatch);
+        assertSame(actual, valueMatch);
+        assertEquals(2, keyMatch.keySet().iterator().next().length);
+        assertEquals(2, valueMatch.get(key).length);
+        assertSame(actual, await(() -> actual).usingTime(time, time)
+                .until(doesNotContainKey(new String[] {"missing"}).because("the key must be absent")));
+        assertSame(actual, await(() -> actual).usingTime(time, time)
+                .until(doesNotContainValue(new String[] {"missing"}).because("the value must be absent")));
+    }
+
+    @Test
+    void singleMapOperandsCanBeEmptyOrNull() {
+        var time = new FakeTime(0);
+        String[] missing = null;
+        var actual = new LinkedHashMap<String[], String[]>();
+        actual.put(null, new String[0]);
+        actual.put(new String[0], null);
+
+        assertSame(actual, await(() -> actual).usingTime(time, time)
+                .until(containsKey(missing).because("one null key")));
+        assertSame(actual, await(() -> actual).usingTime(time, time)
+                .until(containsValue(missing).because("one null value")));
+        assertSame(actual, await(() -> actual).usingTime(time, time)
+                .until(containsKey(new String[0]).because("one empty array key")));
+        assertSame(actual, await(() -> actual).usingTime(time, time)
+                .until(containsValue(new String[0]).because("one empty array value")));
+    }
 
     @Test
     void exactComparisonRejectsDifferentSizesWithoutTraversingEntries() {
@@ -89,14 +142,14 @@ class MapConditionsTest {
 
     @Test
     void onlyKeysRejectMissingAndExtraKeysButIgnoreExpectedDuplicates() {
-        var condition = containsOnlyKeys("a", "b", "a");
+        var condition = containsOnlyKeys(List.of("a", "b", "a"));
         assertStatus(condition, Map.of(), Unsatisfied.class);
         assertStatus(condition, map("a", "1"), Unsatisfied.class);
         assertStatus(condition, map("b", "2"), Unsatisfied.class);
         assertStatus(condition, map("a", "1", "b", "2", "c", "3"), Unsatisfied.class);
         assertStatus(condition, map("b", "2", "a", "1"), Satisfied.class);
-        assertStatus(containsOnlyKeys(), Map.of(), Satisfied.class);
-        assertStatus(containsOnlyKeys(), map("a", "1"), Unsatisfied.class);
+        assertStatus(containsOnlyKeys(List.of()), Map.of(), Satisfied.class);
+        assertStatus(containsOnlyKeys(List.of()), map("a", "1"), Unsatisfied.class);
     }
 
     @Test
@@ -104,19 +157,19 @@ class MapConditionsTest {
         Directional actualKey = new Directional(true);
         Directional expectedKey = new Directional(false);
         var actual = entryMap(entry(actualKey, "value"));
-        assertStatus(containsKeys(expectedKey), actual, Satisfied.class);
+        assertStatus(containsKey(expectedKey), actual, Satisfied.class);
         assertEquals(1, actualKey.equalsCalls);
 
         var arrayActual = entryMap(entry(new int[] {1}, new int[] {2}));
-        assertStatus(containsKeys(new int[] {1}), arrayActual, Satisfied.class);
-        assertStatus(containsValues(new int[] {2}), arrayActual, Satisfied.class);
+        assertStatus(containsKey(new int[] {1}), arrayActual, Satisfied.class);
+        assertStatus(containsValue(new int[] {2}), arrayActual, Satisfied.class);
         assertStatus(containsEntries(new int[] {1}, new int[] {2}),
                 arrayActual, Satisfied.class);
 
         var objectArrayActual = entryMap(entry(new String[] {"key"}, new String[] {"value"}));
-        assertStatus(MapConditions.<String[]>containsKeys(new String[] {"key"}),
+        assertStatus(MapConditions.containsKey(new String[] {"key"}),
                 objectArrayActual, Satisfied.class);
-        assertStatus(MapConditions.<String[]>containsValues(new String[] {"value"}),
+        assertStatus(MapConditions.containsValue(new String[] {"value"}),
                 objectArrayActual, Satisfied.class);
 
         var valueFailure = new IllegalStateException("value equals");
@@ -127,7 +180,7 @@ class MapConditionsTest {
 
         Directional onlyActual = new Directional(true);
         Directional onlyExpected = new Directional(false);
-        assertStatus(containsOnlyKeys(onlyExpected),
+        assertStatus(containsOnlyKeys(java.util.Collections.singletonList(onlyExpected)),
                 entryMap(entry(onlyActual, "value")), Satisfied.class);
         assertEquals(2, onlyActual.equalsCalls);
         assertEquals(0, onlyExpected.equalsCalls);
@@ -136,8 +189,8 @@ class MapConditionsTest {
     @Test
     void nullKeysAndValuesUseScanSemantics() {
         var actual = entryMap(entry(null, "value"), entry("key", null));
-        assertStatus(containsKeys((String) null), actual, Satisfied.class);
-        assertStatus(containsValues((String) null), actual, Satisfied.class);
+        assertStatus(containsKey((String) null), actual, Satisfied.class);
+        assertStatus(containsValue((String) null), actual, Satisfied.class);
         assertStatus(containsEntries(null, "value"), actual, Satisfied.class);
         assertStatus(containsEntries("key", null), actual, Satisfied.class);
     }
@@ -183,12 +236,12 @@ class MapConditionsTest {
                 new ThrowingEquals(equalityCause), "1"));
 
         assertSame(actualCause, assertFailure(CONDITION_FAILED,
-                () -> awaitMap(brokenActual, doesNotContainKeys("a"))).getCause());
+                () -> awaitMap(brokenActual, doesNotContainKey("a"))).getCause());
         assertSame(expectedCause, assertThrows(IllegalStateException.class,
                 () -> doesNotContainEntries(brokenExpected)));
         assertSame(equalityCause, assertFailure(CONDITION_FAILED,
                 () -> awaitMap(brokenEquality,
-                        doesNotContainKeys(new ThrowingEquals(null)))).getCause());
+                        doesNotContainKey(new ThrowingEquals(null)))).getCause());
     }
 
     @Test
@@ -217,7 +270,7 @@ class MapConditionsTest {
                             time.advanceNanos(2);
                             return actual;
                         }, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
-                        time, time).until(doesNotContainKeys("a").because("business reason")));
+                        time, time).until(doesNotContainKey("a").because("business reason")));
 
         assertEquals(1, actual.entrySetCalls);
     }
@@ -286,9 +339,9 @@ class MapConditionsTest {
 
     private static List<Pair> pairs() {
         return List.of(
-                new Pair("key", containsKeys("b"), doesNotContainKeys("b"),
+                new Pair("key", containsKey("b"), doesNotContainKey("b"),
                         map("a", "1", "b", "2"), map("a", "1", "c", "2")),
-                new Pair("value", containsValues("2"), doesNotContainValues("2"),
+                new Pair("value", containsValue("2"), doesNotContainValue("2"),
                         map("a", "1", "b", "2"), map("a", "1", "b", "3")),
                 new Pair("entry", containsEntries("b", "2"),
                         doesNotContainEntries("b", "2"),

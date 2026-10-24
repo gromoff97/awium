@@ -23,6 +23,7 @@ import static io.github.gromoff97.awium.ConditionSupport.nonEmpty;
 import static io.github.gromoff97.awium.ConditionSupport.nonEmptySnapshot;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.selected;
+import static io.github.gromoff97.awium.ConditionSupport.snapshot;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
 import static java.util.Objects.deepEquals;
@@ -351,10 +352,6 @@ public final class CollectionConditions {
     private static <VALUES extends Collection<?>> PreservingCondition<VALUES> preserving(String description, String mismatch,
             Reference<?> reference, Predicate<? super VALUES> matches) {
         return preservingNonNull("collection", description, mismatch, reference, matches);
-    }
-
-    private static <ELEMENT> List<ELEMENT> snapshot(Collection<ELEMENT> values, String name) {
-        return requireNonNull(values, name + " must not be null").stream().toList();
     }
 
     private static boolean exactContent(Collection<?> actual, Collection<?> expected) {

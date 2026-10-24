@@ -47,7 +47,9 @@ class ExpectedInputsTest {
     void membershipConditionsNeverKeepAnEmptySnapshotAfterConcurrentRemoval() {
         List<Function<Collection<String>, PreservingCondition<?>>> factories = List.of(
                 CollectionConditions::containsAll, CollectionConditions::doesNotContainAny,
-                CollectionConditions::doesNotContainAll, CollectionConditions::containsAny);
+                CollectionConditions::doesNotContainAll, CollectionConditions::containsAny,
+                MapConditions::containsKeys, MapConditions::doesNotContainKeys,
+                MapConditions::containsValues, MapConditions::doesNotContainValues);
         for (var factory : factories) {
             var expected = new ChangingExpectedQueue();
             expected.add("before");
@@ -118,14 +120,14 @@ class ExpectedInputsTest {
     }
 
     @Test
-    void mapVarargsFactoriesFreezeKeysAndValues() {
+    void mapFactoriesFreezeArrayBackedKeysAndValues() {
         String[] expected = {"a", null};
         var original = new LinkedHashMap<String, String>();
         original.put("a", "a");
         original.put(null, null);
-        assertStable(List.of(MapConditions.containsKeys(expected), MapConditions.doesNotContainKeys(expected),
-                MapConditions.containsOnlyKeys(expected), MapConditions.containsValues(expected),
-                MapConditions.doesNotContainValues(expected)), original, Map.of("changed", "changed"),
+        assertStable(List.of(MapConditions.containsKeys(asList(expected)), MapConditions.doesNotContainKeys(asList(expected)),
+                MapConditions.containsOnlyKeys(asList(expected)), MapConditions.containsValues(asList(expected)),
+                MapConditions.doesNotContainValues(asList(expected))), original, Map.of("changed", "changed"),
                 () -> expected[0] = "changed");
     }
 
