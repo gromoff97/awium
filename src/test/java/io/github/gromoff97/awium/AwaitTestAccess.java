@@ -21,7 +21,7 @@ final class AwaitTestAccess {
     static <S> ValueAwait<S> timedAwait(Callable<? extends S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {
-        return new ValueAwait<>(source::call, configuration.withTime(clock, parker));
+        return new ValueAwait<>(source, configuration.withTime(clock, parker));
     }
 
     static <E, C extends Collection<E>> Await<C, E, Void> timedCollectionAwait(

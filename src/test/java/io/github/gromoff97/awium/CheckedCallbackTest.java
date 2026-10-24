@@ -27,19 +27,15 @@ class CheckedCallbackTest {
 
     @Test
     void interruptedSleepBecomesAnOrdinaryFailureWithoutRestoringTheFlag() {
-        try {
-            var result = await(() -> "ready").tryUntil(condition("sleep", value -> {
-                Thread.currentThread().interrupt();
-                Thread.sleep(0);
-                return satisfied(value);
-            }));
-            var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
-            assertEquals(CONDITION_FAILED, failure.reason());
-            assertInstanceOf(InterruptedException.class, failure.cause());
-            assertFalse(Thread.currentThread().isInterrupted());
-        } finally {
-            Thread.interrupted();
-        }
+        var result = await(() -> "ready").tryUntil(condition("sleep", value -> {
+            Thread.currentThread().interrupt();
+            Thread.sleep(0);
+            return satisfied(value);
+        }));
+        var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+        assertEquals(CONDITION_FAILED, failure.reason());
+        assertInstanceOf(InterruptedException.class, failure.cause());
+        assertFalse(Thread.currentThread().isInterrupted());
     }
 
     @AfterEach

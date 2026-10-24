@@ -59,15 +59,16 @@ class ObjectOptionalAndScalarConditionsTest {
         var pollingTime = new FakeTime(0);
         var actual = new Child();
         Callable<Parent> source = () -> actual;
+        var waiting = await(source).usingTime(pollingTime, pollingTime);
 
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(Conditions.sameAs(actual)));
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(Conditions.notSameAs(new Child())));
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(Conditions.in(actual, new Parent())));
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(Conditions.notIn(new Parent())));
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(Conditions.matches(value -> value instanceof Child)));
+        assertSame(actual, waiting.until(Conditions.sameAs(actual)));
+        assertSame(actual, waiting.until(Conditions.notSameAs(new Child())));
+        assertSame(actual, waiting.until(Conditions.in(actual, new Parent())));
+        assertSame(actual, waiting.until(Conditions.notIn(new Parent())));
+        assertSame(actual, waiting.until(Conditions.matches(value -> value instanceof Child)));
 
-        Child child = await(source).usingTime(pollingTime, pollingTime).until(Conditions.instanceOf(Child.class));
-        Child exact = await(source).usingTime(pollingTime, pollingTime).until(Conditions.exactInstanceOf(Child.class));
+        Child child = waiting.until(Conditions.instanceOf(Child.class));
+        Child exact = waiting.until(Conditions.exactInstanceOf(Child.class));
 
         assertSame(actual, child);
         assertSame(actual, exact);
@@ -79,11 +80,12 @@ class ObjectOptionalAndScalarConditionsTest {
     void optionalOverloadsReturnValuesAndNarrowedTypes() {
         var pollingTime = new FakeTime(0);
         OptionalSource<Object> source = () -> Optional.of("ready");
+        var waiting = await(source).usingTime(pollingTime, pollingTime);
 
-        Object expected = await(source).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(Conditions.equalTo((Object) "ready")));
-        Object selected = await(source).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(Conditions.matches(value -> value.toString().startsWith("r"))));
-        String narrowed = await(source).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(instanceOf(String.class)));
-        String nested = await((OptionalSource<String>) () -> Optional.of("ready")).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(StringConditions.startsWith("rea")));
+        Object expected = waiting.until(OptionalConditions.hasValue(Conditions.equalTo((Object) "ready")));
+        Object selected = waiting.until(OptionalConditions.hasValue(Conditions.matches(value -> value.toString().startsWith("r"))));
+        String narrowed = waiting.until(OptionalConditions.hasValue(instanceOf(String.class)));
+        String nested = await(() -> Optional.of("ready")).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(StringConditions.startsWith("rea")));
         Integer transformed = await(() -> Optional.of("ready").map(String::length)).usingTime(pollingTime, pollingTime).until(OptionalConditions.present);
 
         assertEquals("ready", expected);
@@ -96,28 +98,30 @@ class ObjectOptionalAndScalarConditionsTest {
     @Test
     void comparableConditionsCoverInclusiveAndExclusiveRelations() {
         var pollingTime = new FakeTime(0);
-        assertEquals(5, await((Callable<Integer>) () -> 5).usingTime(pollingTime, pollingTime).until(Conditions.greaterThan(4)));
-        assertEquals(5, await((Callable<Integer>) () -> 5).usingTime(pollingTime, pollingTime).until(Conditions.atLeast(5)));
-        assertEquals(5, await((Callable<Integer>) () -> 5).usingTime(pollingTime, pollingTime).until(Conditions.lessThan(6)));
-        assertEquals(5, await((Callable<Integer>) () -> 5).usingTime(pollingTime, pollingTime).until(Conditions.atMost(5)));
-        assertEquals(5, await((Callable<Integer>) () -> 5).usingTime(pollingTime, pollingTime).until(Conditions.between(5, 6)));
-        assertEquals(5, await((Callable<Integer>) () -> 5).usingTime(pollingTime, pollingTime).until(Conditions.strictlyBetween(4, 6)));
+        var waiting = await(() -> 5).usingTime(pollingTime, pollingTime);
+        assertEquals(5, waiting.until(Conditions.greaterThan(4)));
+        assertEquals(5, waiting.until(Conditions.atLeast(5)));
+        assertEquals(5, waiting.until(Conditions.lessThan(6)));
+        assertEquals(5, waiting.until(Conditions.atMost(5)));
+        assertEquals(5, waiting.until(Conditions.between(5, 6)));
+        assertEquals(5, waiting.until(Conditions.strictlyBetween(4, 6)));
     }
 
     @Test
     void stringConditionsCoverTextPatternsAndSizes() {
         var pollingTime = new FakeTime(0);
         String actual = "Ready 42";
+        var waiting = await(() -> actual).usingTime(pollingTime, pollingTime);
 
-        assertSame(actual, await((Callable<String>) () -> actual).usingTime(pollingTime, pollingTime).until(StringConditions.nonBlank));
-        assertSame(actual, await((Callable<String>) () -> actual).usingTime(pollingTime, pollingTime).until(StringConditions.contains("Ready", "42")));
-        assertSame(actual, await((Callable<String>) () -> actual).usingTime(pollingTime, pollingTime).until(StringConditions.doesNotContain("failed")));
-        assertSame(actual, await((Callable<String>) () -> actual).usingTime(pollingTime, pollingTime).until(StringConditions.containsIgnoringCase("READY")));
-        assertSame(actual, await((Callable<String>) () -> actual).usingTime(pollingTime, pollingTime).until(StringConditions.startsWith("Ready")));
-        assertSame(actual, await((Callable<String>) () -> actual).usingTime(pollingTime, pollingTime).until(StringConditions.endsWith("42")));
-        assertSame(actual, await((Callable<String>) () -> actual).usingTime(pollingTime, pollingTime).until(StringConditions.matchesRegex("Ready \\d+")));
-        assertSame(actual, await((Callable<String>) () -> actual).usingTime(pollingTime, pollingTime).until(StringConditions.equalToIgnoringCase("ready 42")));
-        assertSame(actual, await((Callable<String>) () -> actual).usingTime(pollingTime, pollingTime).until(StringConditions.lengthBetween(1, 20)));
+        assertSame(actual, waiting.until(StringConditions.nonBlank));
+        assertSame(actual, waiting.until(StringConditions.contains("Ready", "42")));
+        assertSame(actual, waiting.until(StringConditions.doesNotContain("failed")));
+        assertSame(actual, waiting.until(StringConditions.containsIgnoringCase("READY")));
+        assertSame(actual, waiting.until(StringConditions.startsWith("Ready")));
+        assertSame(actual, waiting.until(StringConditions.endsWith("42")));
+        assertSame(actual, waiting.until(StringConditions.matchesRegex("Ready \\d+")));
+        assertSame(actual, waiting.until(StringConditions.equalToIgnoringCase("ready 42")));
+        assertSame(actual, waiting.until(StringConditions.lengthBetween(1, 20)));
         assertEquals(Satisfied.class, evaluate(StringConditions.blank, " \n").getClass());
         assertEquals(Unsatisfied.class, evaluate(StringConditions.nonEmpty, "").getClass());
     }

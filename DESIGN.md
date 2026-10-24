@@ -1142,3 +1142,17 @@ optional/map. Сохраняются повторное использовани
 Тестового кода стало на 48 строк меньше, новых помощников нет. Полный check:
 427 тестов без ошибок. STRONGER ConditionSupport/ConditionAwaitAttempt/Conditions:
 192 мутации, все KILLED. `/tmp/awium-seven-hour-pass/attempt-test-merge-report.json`.
+
+### Сценарии каталогов читаются через один источник
+
+Повторная сборка одинаковых scalar/optional await-цепочек в четырёх сценариях
+заменена локальной неизменяемой конфигурацией. Assertions показывают условия,
+не повторяя перед каждым настройки источника и часов. Убраны ненужные приведения
+Callable<String>/Callable<Integer> и одно OptionalSource<String>; typed source
+для проверки Parent/Child и Optional<Object> остаётся. Реальные platform/virtual
+сценарии тоже используют вывод типа lambda без приведения. В timedAwait источник
+передаётся непосредственно, без лишнего method-reference адаптера. Одиночная
+проверка interruptedSleep использует существующий AfterEach вместо дублирующего
+finally; очистка внутри циклов сохранена. Публичный код не менялся.
+Целевые 25 тестов и полный check (427 тестов) прошли без ошибок.
+`/tmp/awium-seven-hour-pass/scalar-fixtures-report.json`.

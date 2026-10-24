@@ -56,7 +56,7 @@ class FactoryGrammarTest {
     @Test
     void everyTerminalOverloadRejectsNullConditions() {
         var pollingTime = new FakeTime(0);
-        var object = await((Callable<String>) () -> "value").usingTime(pollingTime, pollingTime).every(ofSeconds(20));
+        var object = await(() -> "value").usingTime(pollingTime, pollingTime).every(ofSeconds(20));
         assertNull("predicate", () -> object.until(matches((Predicate<String>) null)));
         assertNull("predicate", () -> object.tryUntil(matches((Predicate<String>) null)));
         assertNull("condition", () -> object.until((PreservingCondition<String>) null));
