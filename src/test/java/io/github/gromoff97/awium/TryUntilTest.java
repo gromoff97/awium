@@ -3,6 +3,7 @@ package io.github.gromoff97.awium;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -23,7 +24,7 @@ class TryUntilTest {
     void narrowingKeepsTheOriginalObservationAndReturnsItsConcreteType() {
         var actual = new BigDecimal("42.00");
         int[] reads = {0};
-        Source<Number> source = () -> {
+        Callable<Number> source = () -> {
             reads[0]++;
             return actual;
         };
@@ -56,11 +57,11 @@ class TryUntilTest {
     @Test
     void retainsLegitimateNullAndSelectedOptionalValue() {
         var pollingTime = new FakeTime(0);
-        AwaitResult<String, String> nullable = await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(matches(actual -> true));
-        AwaitResult<String, String> nullSource = await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(isNull);
-        AwaitResult<String, String> nullPredicate = await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(matches(actual -> actual == null));
+        AwaitResult<String, String> nullable = await((Callable<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(matches(actual -> true));
+        AwaitResult<String, String> nullSource = await((Callable<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(isNull);
+        AwaitResult<String, String> nullPredicate = await((Callable<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(matches(actual -> actual == null));
         AwaitResult<Optional<String>, String> selected =
-                await((Source.OptionalSource<String>) () -> Optional.of("payment")).usingTime(pollingTime, pollingTime).tryUntil(present);
+                await((Await.OptionalSource<String>) () -> Optional.of("payment")).usingTime(pollingTime, pollingTime).tryUntil(present);
 
         assertNull(satisfied(nullable).result());
         assertNull(satisfied(nullSource).result());

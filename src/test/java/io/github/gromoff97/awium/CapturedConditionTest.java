@@ -6,6 +6,7 @@ import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
@@ -348,7 +349,7 @@ class CapturedConditionTest {
     void returnsAnImmutableCapturedCopyThatAllowsNull() {
         var time = new FakeTime(0);
 
-        List<String> result = timedAwait((Source<String>) () -> null, config(1, 10, 0),
+        List<String> result = timedAwait((Callable<String>) () -> null, config(1, 10, 0),
                 time, time).until(condition("first null", ConditionResult::satisfied),
                 condition("second null", ConditionResult::satisfied));
 

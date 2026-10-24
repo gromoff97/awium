@@ -2,6 +2,7 @@ package io.github.gromoff97.awium;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
@@ -609,7 +610,7 @@ class WaitEngineTest {
     private static <S, R> WaitCompletion<S, R> wait(
             FakeTime time,
             WaitConfiguration config,
-            Source<S> source,
+            Callable<S> source,
             Function<S, ConditionResult<R>> condition) {
         return wait(time, config, time, source, condition);
     }
@@ -618,7 +619,7 @@ class WaitEngineTest {
             FakeTime time,
             WaitConfiguration config,
             LongConsumer parker,
-            Source<S> source,
+            Callable<S> source,
             Function<S, ConditionResult<R>> condition) {
         return new WaitEngine<S, R>(config, time, parker, source,
                 ConditionSupport.<S, R>condition("test condition", null, condition::apply).newAttempt()).waitFor();

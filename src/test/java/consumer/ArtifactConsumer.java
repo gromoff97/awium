@@ -3,12 +3,12 @@ package consumer;
 import io.github.gromoff97.awium.AttemptRecord;
 import io.github.gromoff97.awium.AwaitResult;
 import io.github.gromoff97.awium.ConditionResult;
-import io.github.gromoff97.awium.Source;
 import io.github.gromoff97.awium.StringConditions;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.*;
@@ -23,7 +23,7 @@ public final class ArtifactConsumer {
         String optional = await(() -> Optional.of("ready")).until(present.because("optional %s", "value"));
         String selected = await(() -> values).until(single.because("one value"));
         int length = await(() -> length(text())).until(isNotNull);
-        String narrowed = await((Source<Object>) ArtifactConsumer::text).until(instanceOf(String.class));
+        String narrowed = await((Callable<Object>) ArtifactConsumer::text).until(instanceOf(String.class));
         long[] time = {0};
         List<String> stages = await(ArtifactConsumer::text).usingTime(() -> time[0], nanos -> time[0] += nanos).every(ofNanos(1)).upTo(ofNanos(5)).until(
                 equalTo("ready"), equalTo("ready"));

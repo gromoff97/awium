@@ -3,6 +3,7 @@ package io.github.gromoff97.awium;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
@@ -16,28 +17,28 @@ final class AwaitTestAccess {
         return new WaitConfiguration(every, upTo, persistence);
     }
 
-    static <S> ValueAwait<S> timedAwait(Source<? extends S> source,
+    static <S> ValueAwait<S> timedAwait(Callable<? extends S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {
-        return configured(Await.<S>await(source::get), configuration, clock, parker);
+        return configured(Await.<S>await(source::call), configuration, clock, parker);
     }
 
     static <E, C extends Collection<E>> Await<C, E, Void> timedCollectionAwait(
-            Source<? extends C> source, WaitConfiguration configuration,
+            Callable<? extends C> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
-        return configured(Await.<E, C>await(source::get), configuration, clock, parker);
+        return configured(Await.<E, C>await(source::call), configuration, clock, parker);
     }
 
     static <E> Await<Optional<E>, E, Void> timedOptionalAwait(
-            Source<? extends Optional<E>> source, WaitConfiguration configuration,
+            Callable<? extends Optional<E>> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
-        return configured(Await.<E>await((Source.OptionalSource<E>) source::get), configuration, clock, parker);
+        return configured(Await.<E>await((Await.OptionalSource<E>) source::call), configuration, clock, parker);
     }
 
     static <K, V, M extends Map<K, V>> Await<M, Map.Entry<K, V>, V> timedMapAwait(
-            Source<? extends M> source, WaitConfiguration configuration,
+            Callable<? extends M> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
-        return configured(Await.<K, V, M>await(source::get), configuration, clock, parker);
+        return configured(Await.<K, V, M>await(source::call), configuration, clock, parker);
     }
 
     private static <OBSERVED> ValueAwait<OBSERVED> configured(

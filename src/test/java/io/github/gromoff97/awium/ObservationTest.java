@@ -1,10 +1,10 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
@@ -536,7 +536,7 @@ class ObservationTest {
         throw new AssertionError("condition must not be called");
     }
 
-    private static <R> AttemptRecord<Object, R> attempt(Source<Object> source,
+    private static <R> AttemptRecord<Object, R> attempt(Callable<Object> source,
             Function<Object, ConditionResult<R>> condition) {
         var time = new FakeTime(0);
         return new WaitEngine<Object, R>(config(1, 2, 0), time, time, source, ConditionSupport.<Object, R>condition("test condition", null, actual -> {

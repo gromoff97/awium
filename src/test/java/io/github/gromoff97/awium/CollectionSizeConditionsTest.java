@@ -1,12 +1,13 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Await.CollectionSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
-import io.github.gromoff97.awium.Source.CollectionSource;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -98,7 +99,7 @@ class CollectionSizeConditionsTest {
         FakeTime time = new FakeTime(0);
 
         assertFailure(TIMEOUT,
-                () -> timedCollectionAwait((Source<Collection<Object>>) () -> null,
+                () -> timedCollectionAwait((Callable<Collection<Object>>) () -> null,
                         DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
                         time, time).until(empty));
     }
@@ -110,7 +111,7 @@ class CollectionSizeConditionsTest {
 
         var failure = assertFailure(TIMEOUT,
                 () -> timedCollectionAwait(
-                        (Source<ProbeContainers.ProbeCollection<Object>>) () -> {
+                        (Callable<ProbeContainers.ProbeCollection<Object>>) () -> {
                             time.advanceNanos(2);
                             return actual;
                         }, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
@@ -156,7 +157,7 @@ class CollectionSizeConditionsTest {
     void nullConditionIsRejectedBeforeSourceRetrieval() {
         FakeTime time = new FakeTime(0);
         int[] sourceCalls = {0};
-        Source<List<String>> source = () -> {
+        Callable<List<String>> source = () -> {
             sourceCalls[0]++;
             return List.of();
         };

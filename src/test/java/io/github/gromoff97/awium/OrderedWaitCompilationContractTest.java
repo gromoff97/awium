@@ -33,7 +33,7 @@ class OrderedWaitCompilationContractTest {
                 "await(Contract::collection).%s(present, present);",
                 "await(Contract::map).%s(first, last);",
                 "await(Contract::collection).%s(singleEntry, singleEntry);",
-                "Source<List<String>> source = Contract::collection; List<String> wrong = await(source).%s(first, last);")) {
+                "Callable<List<String>> source = Contract::collection; List<String> wrong = await(source).%s(first, last);")) {
             assertFalse(compiles(expression.formatted(terminal)), expression);
         }
     }
@@ -82,10 +82,10 @@ class OrderedWaitCompilationContractTest {
     private static String source(String body) {
         return """
                 import java.util.*;
+                import java.util.concurrent.Callable;
                 import java.util.function.Predicate;
                 import io.github.gromoff97.awium.Condition;
                 import io.github.gromoff97.awium.AwaitResult;
-                import io.github.gromoff97.awium.Source;
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.ConditionResult.satisfied;
                 import static io.github.gromoff97.awium.Conditions.*;

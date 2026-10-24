@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import java.time.Duration;
+import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
@@ -13,11 +14,11 @@ import static java.lang.Thread.currentThread;
 
 /** One wait execution, including its observations, timing, and condition session. */
 record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplier clock,
-        LongConsumer parker, Source<? extends OBSERVED> source,
+        LongConsumer parker, Callable<? extends OBSERVED> source,
         ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> evaluator, long started) {
 
     WaitEngine(WaitConfiguration configuration, LongSupplier clock, LongConsumer parker,
-            Source<? extends OBSERVED> source, ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> evaluator) {
+            Callable<? extends OBSERVED> source, ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> evaluator) {
         this(configuration, clock, parker, source, evaluator, now(clock));
     }
 
@@ -113,7 +114,7 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, LongSupplie
         }
         OBSERVED actual;
         try {
-            actual = source.get();
+            actual = source.call();
         } catch (Throwable failure) {
             long completed = now(clock);
             var timing = new AttemptRecord.Timing(offset(attemptStarted),

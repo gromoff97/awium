@@ -1,11 +1,12 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Await.MapSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
-import io.github.gromoff97.awium.Source.MapSource;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -95,7 +96,7 @@ class MapSizeConditionsTest {
         FakeTime time = new FakeTime(0);
 
         assertFailure(TIMEOUT,
-                () -> timedMapAwait((Source<Map<Object, Object>>) () -> null,
+                () -> timedMapAwait((Callable<Map<Object, Object>>) () -> null,
                         DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
                         time, time).until(empty));
     }
@@ -107,7 +108,7 @@ class MapSizeConditionsTest {
 
         var failure = assertFailure(TIMEOUT,
                 () -> timedMapAwait(
-                        (Source<ProbeContainers.ProbeMap<Object, Object>>) () -> {
+                        (Callable<ProbeContainers.ProbeMap<Object, Object>>) () -> {
                             time.advanceNanos(2);
                             return actual;
                         }, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
@@ -162,7 +163,7 @@ class MapSizeConditionsTest {
     void nullConditionIsRejectedBeforeSourceRetrieval() {
         FakeTime time = new FakeTime(0);
         int[] sourceCalls = {0};
-        Source<Map<String, String>> source = () -> {
+        Callable<Map<String, String>> source = () -> {
             sourceCalls[0]++;
             return Map.of();
         };

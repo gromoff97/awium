@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Await.MapSource;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
-import io.github.gromoff97.awium.Source.MapSource;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.List;

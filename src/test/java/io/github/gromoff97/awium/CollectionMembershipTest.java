@@ -1,12 +1,13 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Await.CollectionSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
-import io.github.gromoff97.awium.Source.CollectionSource;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
@@ -149,7 +150,7 @@ class CollectionMembershipTest {
 
         assertFailure(TIMEOUT,
                 () -> timedCollectionAwait(
-                        (Source<ProbeContainers.MembershipCollection<String>>)
+                        (Callable<ProbeContainers.MembershipCollection<String>>)
                                 () -> {
                                     time.advanceNanos(2);
                                     return actual;

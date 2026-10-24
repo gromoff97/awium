@@ -1,14 +1,15 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Await.CollectionSource;
+import io.github.gromoff97.awium.Await.MapSource;
+import io.github.gromoff97.awium.Await.OptionalSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
-import io.github.gromoff97.awium.Source.CollectionSource;
-import io.github.gromoff97.awium.Source.MapSource;
-import io.github.gromoff97.awium.Source.OptionalSource;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -27,7 +28,7 @@ class FactoryGrammarTest {
     @Test
     void everyTypedNullSourceUsesTheExactValidationMessage() {
         var pollingTime = new FakeTime(0);
-        assertNull("source", () -> await((Source<Object>) null).usingTime(pollingTime, pollingTime));
+        assertNull("source", () -> await((Callable<Object>) null).usingTime(pollingTime, pollingTime));
         assertNull("source", () -> await(
                 (CollectionSource<Collection<Object>>) null).usingTime(pollingTime, pollingTime));
         assertNull("source", () -> await(
@@ -55,7 +56,7 @@ class FactoryGrammarTest {
     @Test
     void everyTerminalOverloadRejectsNullConditions() {
         var pollingTime = new FakeTime(0);
-        var object = await((Source<String>) () -> "value").usingTime(pollingTime, pollingTime).every(ofSeconds(20));
+        var object = await((Callable<String>) () -> "value").usingTime(pollingTime, pollingTime).every(ofSeconds(20));
         assertNull("predicate", () -> object.until(matches((Predicate<String>) null)));
         assertNull("predicate", () -> object.tryUntil(matches((Predicate<String>) null)));
         assertNull("condition", () -> object.until((PreservingCondition<String>) null));

@@ -5,6 +5,7 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
@@ -17,17 +18,17 @@ public sealed class ValueAwait<OBSERVED> permits Await {
 
     private static final int MAX_RETAINED_ATTEMPTS = 256;
 
-    final Source<? extends OBSERVED> source;
+    final Callable<? extends OBSERVED> source;
     final WaitConfiguration configuration;
     final LongSupplier clock;
     final LongConsumer parker;
 
-    ValueAwait(Source<? extends OBSERVED> source) {
+    ValueAwait(Callable<? extends OBSERVED> source) {
         this(requireNonNull(source, "source must not be null"),
                 DEFAULT, System::nanoTime, LockSupport::parkNanos);
     }
 
-    ValueAwait(Source<? extends OBSERVED> source, WaitConfiguration configuration,
+    ValueAwait(Callable<? extends OBSERVED> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         this.source = source;
         this.configuration = configuration;

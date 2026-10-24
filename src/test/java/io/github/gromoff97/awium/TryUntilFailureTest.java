@@ -1,14 +1,14 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -72,16 +72,16 @@ class TryUntilFailureTest {
 
     @Test
     void capturesSourceAndConditionFailuresWithoutChangingThem() {
-        var source = assertParity(time -> timedAwait((Source<Object>) () -> {
+        var source = assertParity(time -> timedAwait((Callable<Object>) () -> {
                     throw new IllegalStateException("source failed");
                 }, config(1, 2, 0), time, time).until(isNotNull),
-                time -> timedAwait((Source<Object>) () -> {
+                time -> timedAwait((Callable<Object>) () -> {
                     throw new IllegalStateException("source failed");
                 }, config(1, 2, 0), time, time).tryUntil(isNotNull));
-        var sourceAssertion = assertParity(time -> timedAwait((Source<Object>) () -> {
+        var sourceAssertion = assertParity(time -> timedAwait((Callable<Object>) () -> {
                     throw new AssertionError("source assertion");
                 }, config(1, 2, 0), time, time).until(isNotNull),
-                time -> timedAwait((Source<Object>) () -> {
+                time -> timedAwait((Callable<Object>) () -> {
                     throw new AssertionError("source assertion");
                 }, config(1, 2, 0), time, time).tryUntil(isNotNull));
         var condition = assertParity(time -> timedAwait(() -> "actual",
@@ -153,17 +153,17 @@ class TryUntilFailureTest {
                     currentThread().interrupt();
                     return timedAwait(() -> "actual", config(1, 2, 0), time, time).tryUntil(isNotNull);
                 });
-        assertParity(time -> timedAwait((Source<Object>) () -> {
+        assertParity(time -> timedAwait((Callable<Object>) () -> {
                     throw new InterruptedException("source interrupted");
                 }, config(1, 2, 0), time, time).until(isNotNull),
-                time -> timedAwait((Source<Object>) () -> {
+                time -> timedAwait((Callable<Object>) () -> {
                     throw new InterruptedException("source interrupted");
                 }, config(1, 2, 0), time, time).tryUntil(isNotNull));
-        assertParity(time -> timedAwait((Source<String>) () -> {
+        assertParity(time -> timedAwait((Callable<String>) () -> {
                     currentThread().interrupt();
                     return "actual";
                 }, config(1, 2, 0), time, time).until(isNotNull),
-                time -> timedAwait((Source<String>) () -> {
+                time -> timedAwait((Callable<String>) () -> {
                     currentThread().interrupt();
                     return "actual";
                 }, config(1, 2, 0), time, time).tryUntil(isNotNull));
@@ -273,7 +273,7 @@ class TryUntilFailureTest {
         var parkerFatal = new InternalError("fatal parker");
         var diagnosticsFatal = new InternalError("fatal diagnostics");
 
-        var source = failed(await((Source<Object>) () -> { throw sourceFatal; })
+        var source = failed(await((Callable<Object>) () -> { throw sourceFatal; })
                 .usingTime(pollingTime, pollingTime).tryUntil(isNotNull));
         assertSame(sourceFatal, source.failure().cause());
         assertEquals(SOURCE_FAILED, source.failure().reason());

@@ -2,16 +2,12 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
-import io.github.gromoff97.awium.Source.CollectionSource;
-import io.github.gromoff97.awium.Source.CollectionViewSource;
-import io.github.gromoff97.awium.Source.MapSource;
-import io.github.gromoff97.awium.Source.MapViewSource;
-import io.github.gromoff97.awium.Source.OptionalSource;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
@@ -27,16 +23,16 @@ import static java.util.Objects.requireNonNull;
  */
 public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERVED> {
 
-    private Await(Source<? extends OBSERVED> source) {
+    private Await(Callable<? extends OBSERVED> source) {
         super(source);
     }
 
-    private Await(Source<? extends OBSERVED> source, WaitConfiguration configuration,
+    private Await(Callable<? extends OBSERVED> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         super(source, configuration, clock, parker);
     }
 
-    public static <VALUE> ValueAwait<VALUE> await(Source<VALUE> source) {
+    public static <VALUE> ValueAwait<VALUE> await(Callable<VALUE> source) {
         return new ValueAwait<>(source);
     }
 
@@ -130,5 +126,43 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
     @SuppressWarnings("varargs")
     public final AwaitResult<OBSERVED, List<MAP_VALUE>> tryUntil(MapValueCondition<? super OBSERVED> first, MapValueCondition<? super OBSERVED> second, MapValueCondition<? super OBSERVED>... rest) {
         return tryUntil(ConditionSupport.<OBSERVED, MAP_VALUE>captured(first, second, rest));
+    }
+
+    @FunctionalInterface
+    public interface OptionalSource<VALUE> extends Callable<Optional<VALUE>> {
+    }
+
+    @FunctionalInterface
+    public interface CollectionSource<VALUES extends Collection<?>> extends Callable<VALUES> {
+    }
+
+    public record CollectionViewSource<ELEMENT, VALUES extends Collection<? extends ELEMENT>>(
+            Callable<? extends VALUES> delegate) implements CollectionSource<VALUES> {
+
+        public CollectionViewSource {
+            requireNonNull(delegate, "delegate must not be null");
+        }
+
+        @Override
+        public VALUES call() throws Exception {
+            return delegate.call();
+        }
+    }
+
+    @FunctionalInterface
+    public interface MapSource<ENTRIES extends Map<?, ?>> extends Callable<ENTRIES> {
+    }
+
+    public record MapViewSource<KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>(
+            Callable<? extends ENTRIES> delegate) implements MapSource<ENTRIES> {
+
+        public MapViewSource {
+            requireNonNull(delegate, "delegate must not be null");
+        }
+
+        @Override
+        public ENTRIES call() throws Exception {
+            return delegate.call();
+        }
     }
 }

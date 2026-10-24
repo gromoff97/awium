@@ -4,27 +4,31 @@ import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
-import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
-import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isFinal;
 import static java.util.Arrays.stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PublicSurfaceTest {
 
     @Test
-    void sourceRemainsASingleCheckedOperation() {
-        List<Method> operations = stream(Source.class.getMethods())
-                .filter(method -> isAbstract(method.getModifiers())).toList();
+    void acceptsJdkCallableOnTheEnteringThreadWithItsConcreteReturnType() {
+        Thread caller = Thread.currentThread();
+        Callable<String> source = () -> {
+            assertSame(caller, Thread.currentThread());
+            return "ready";
+        };
 
-        assertEquals(1, operations.size());
-        assertEquals(List.of(Exception.class), List.of(operations.getFirst().getExceptionTypes()));
+        String value = Await.await(source).until(Conditions.isNotNull.because("standard checked supplier"));
+
+        assertEquals("ready", value);
     }
 
     @Test

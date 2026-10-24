@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -62,7 +61,7 @@ class CheckedCallbackTest {
         for (Exception cause : List.of(new IOException("offline"), new InterruptedException("cancelled"))) {
             var time = new FakeTime(0);
             int[] calls = {0};
-            Source<String> source = () -> "value" + ++calls[0];
+            Callable<String> source = () -> "value" + ++calls[0];
             var waiting = await(source).usingTime(time, time);
             Map<String, Executable> callbacks = Map.of(
                     "asserted", () -> waiting.until(asserted(actual -> { throw cause; })),

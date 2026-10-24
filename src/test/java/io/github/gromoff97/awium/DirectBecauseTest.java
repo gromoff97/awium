@@ -1,13 +1,14 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Source.CollectionViewSource;
-import io.github.gromoff97.awium.Source.MapViewSource;
+import io.github.gromoff97.awium.Await.CollectionViewSource;
+import io.github.gromoff97.awium.Await.MapViewSource;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.function.BiPredicate;
 import org.junit.jupiter.api.Test;
 
@@ -249,8 +250,8 @@ class DirectBecauseTest {
 
     @Test
     void explainedSelectionsAcceptCovariantViewsAndTypedEntryCallbacks() {
-        Source<List<? extends Number>> values = () -> List.of(1);
-        Source<Map<CharSequence, ? extends Number>> entries = () -> Map.of("key", 1);
+        Callable<List<? extends Number>> values = () -> List.of(1);
+        Callable<Map<CharSequence, ? extends Number>> entries = () -> Map.of("key", 1);
         var collection = new CollectionViewSource<Number, List<? extends Number>>(values);
         var map = new MapViewSource<CharSequence, Number, Map<CharSequence, ? extends Number>>(entries);
 

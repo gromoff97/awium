@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -24,7 +25,7 @@ class RealTimeIntegrationTest {
         boolean[] interrupted = new boolean[1];
         Thread caller = ofPlatform().name("awium-platform-caller").unstarted(() -> {
             try {
-                await((Source<Integer>) () -> 1).every(ofSeconds(5)).upTo(ofSeconds(10)).until(condition(
+                await((Callable<Integer>) () -> 1).every(ofSeconds(5)).upTo(ofSeconds(10)).until(condition(
                                 "never satisfied", value ->
                                         unsatisfied("not ready")));
             } catch (Throwable failure) {

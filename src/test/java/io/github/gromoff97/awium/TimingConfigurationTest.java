@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -86,10 +87,10 @@ class TimingConfigurationTest {
     @Test
     void rejectsMissingTimeOperationsBeforePolling() {
         var time = new FakeTime(0);
-        assertThrows(NullPointerException.class, () -> await((Source<String>) () -> {
+        assertThrows(NullPointerException.class, () -> await((Callable<String>) () -> {
             throw new AssertionError("source must not run");
         }).usingTime(null, time));
-        assertThrows(NullPointerException.class, () -> await((Source<String>) () -> {
+        assertThrows(NullPointerException.class, () -> await((Callable<String>) () -> {
             throw new AssertionError("source must not run");
         }).usingTime(time, null));
     }

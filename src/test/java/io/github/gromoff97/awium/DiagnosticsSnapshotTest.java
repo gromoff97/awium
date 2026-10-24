@@ -6,6 +6,7 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
@@ -404,7 +405,7 @@ class DiagnosticsSnapshotTest {
 
         try {
             var failure = assertFailure(INTERRUPTED,
-                    () -> await((Source<Object>) Object::new).usingTime(pollingTime, pollingTime).until(condition));
+                    () -> await((Callable<Object>) Object::new).usingTime(pollingTime, pollingTime).until(condition));
 
             assertSame(cause, failure.getCause());
             assertTrue(currentThread().isInterrupted());
@@ -478,7 +479,7 @@ class DiagnosticsSnapshotTest {
                     }
                 };
                 var time = new FakeTime(0);
-                Source<Object> source = () -> { throw cause; };
+                Callable<Object> source = () -> { throw cause; };
                 var waiting = await(source).usingTime(time, time);
                 AwaitFailure failure = capture
                         ? ((AwaitResult.Failed<?, ?>) waiting.tryUntil(Conditions.isNotNull)).failure()
@@ -1020,7 +1021,7 @@ class DiagnosticsSnapshotTest {
         var cause = (AssertionError) constructor.newInstance("isolated cause");
 
         var sourceFailure = assertFailure(SOURCE_FAILED,
-                () -> await((Source<String>) () -> { throw cause; }).until(Conditions.isNotNull));
+                () -> await((Callable<String>) () -> { throw cause; }).until(Conditions.isNotNull));
         assertSame(cause, sourceFailure.getCause());
         assertMessage(sourceFailure, cause.getClass().getName(), "isolated cause");
 
@@ -1079,7 +1080,7 @@ class DiagnosticsSnapshotTest {
             Object expected = expectedArray ? nested : "other";
             var time = new FakeTime(0);
             var failure = assertFailure(TIMEOUT,
-                    () -> timedAwait((Source<Object>) () -> actual, config(1, 2, 0), time, time).until(equalTo(expected)));
+                    () -> timedAwait((Callable<Object>) () -> actual, config(1, 2, 0), time, time).until(equalTo(expected)));
             assertMessage(failure, rendered);
         }
     }

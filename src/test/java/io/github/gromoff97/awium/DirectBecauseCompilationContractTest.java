@@ -184,8 +184,8 @@ class DirectBecauseCompilationContractTest {
                 "Object value = await(() -> Optional.of(Map.of(\"key\", 1))).until(hasValue(valueFor(\"key\").because(\"inner\")).because(\"outer\"));",
                 "List<Object> values = await(collection).until(single, isNotNull);",
                 "List<Object> values = await(collection).until(single.because(\"first\"), isNotNull.because(\"second\"));",
-                "Source<Map<String, Number>> plain = map; Object value = await(plain).until(valueFor(\"key\"));",
-                "Source<Map<String, Number>> plain = map; Object value = await(plain).until(valueFor(\"key\").because(\"required\"));",
+                "Callable<Map<String, Number>> plain = map; Object value = await(plain).until(valueFor(\"key\"));",
+                "Callable<Map<String, Number>> plain = map; Object value = await(plain).until(valueFor(\"key\").because(\"required\"));",
                 "await(collection).until(CollectionConditions.sorted(String::compareTo).because(\"wrong type\"));")) {
             assertFalse(compiles(expression), expression);
         }
@@ -194,15 +194,16 @@ class DirectBecauseCompilationContractTest {
     private boolean compiles(String body) throws IOException {
         return CompilationSupport.compiles(directory, """
                 import java.util.*;
+                import java.util.concurrent.Callable;
                 import io.github.gromoff97.awium.*;
-                import io.github.gromoff97.awium.Source.*;
+                import io.github.gromoff97.awium.Await.*;
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.Conditions.*;
                 import static io.github.gromoff97.awium.OptionalConditions.*;
                 import static io.github.gromoff97.awium.CollectionConditions.single;
                 import static io.github.gromoff97.awium.MapConditions.*;
                 final class Contract {
-                    void check(Source<Number> numbers, OptionalSource<Number> optional,
+                    void check(Callable<Number> numbers, OptionalSource<Number> optional,
                             CollectionSource<List<Number>> collection, MapSource<Map<String, Number>> map) {
                         %s
                     }

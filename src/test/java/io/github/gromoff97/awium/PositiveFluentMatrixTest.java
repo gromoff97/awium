@@ -1,12 +1,11 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Await.CollectionSource;
+import io.github.gromoff97.awium.Await.CollectionViewSource;
+import io.github.gromoff97.awium.Await.MapSource;
+import io.github.gromoff97.awium.Await.MapViewSource;
+import io.github.gromoff97.awium.Await.OptionalSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-
-import io.github.gromoff97.awium.Source.CollectionSource;
-import io.github.gromoff97.awium.Source.CollectionViewSource;
-import io.github.gromoff97.awium.Source.MapSource;
-import io.github.gromoff97.awium.Source.MapViewSource;
-import io.github.gromoff97.awium.Source.OptionalSource;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -39,7 +38,7 @@ class PositiveFluentMatrixTest {
     void objectFacadeExecutesEveryValidConfigurationPath() {
         var pollingTime = new FakeTime(0);
         var actual = new Object();
-        Source<Object> source = () -> actual;
+        Callable<Object> source = () -> actual;
 
         assertAllSame(actual,
                 await(source).usingTime(pollingTime, pollingTime).until(isNotNull),
@@ -139,14 +138,14 @@ class PositiveFluentMatrixTest {
 
     @Test
     void methodReferencesRecoverSelectionTypesFromPlainSources() {
-        Source<Optional<String>> optional = () -> Optional.of("ready");
-        Source<ArrayList<String>> collection = () -> new ArrayList<>(List.of("ready"));
-        Source<LinkedHashMap<String, Integer>> map = () -> new LinkedHashMap<>(Map.of("ready", 1));
+        Callable<Optional<String>> optional = () -> Optional.of("ready");
+        Callable<ArrayList<String>> collection = () -> new ArrayList<>(List.of("ready"));
+        Callable<LinkedHashMap<String, Integer>> map = () -> new LinkedHashMap<>(Map.of("ready", 1));
 
-        String optionalValue = await(optional::get).until(present.because("required value"));
-        String element = await(collection::get).until(single.because("unique value"));
-        Map.Entry<String, Integer> entry = await(map::get).until(MapConditions.singleEntry.because("unique entry"));
-        AwaitResult<Optional<String>, String> attempt = await(optional::get).tryUntil(present);
+        String optionalValue = await(optional::call).until(present.because("required value"));
+        String element = await(collection::call).until(single.because("unique value"));
+        Map.Entry<String, Integer> entry = await(map::call).until(MapConditions.singleEntry.because("unique entry"));
+        AwaitResult<Optional<String>, String> attempt = await(optional::call).tryUntil(present);
 
         assertEquals("ready", optionalValue);
         assertEquals("ready", element);

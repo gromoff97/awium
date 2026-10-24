@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Await.CollectionSource;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
-import io.github.gromoff97.awium.Source.CollectionSource;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;

@@ -3,6 +3,7 @@ package io.github.gromoff97.awium;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,7 +31,7 @@ class VirtualThreadIntegrationTest {
         int[] observations = {0};
         int[] result = {0};
 
-        Thread caller = ofVirtual().name("awium-virtual-caller").start(() -> result[0] = await((Source<Integer>) () -> {
+        Thread caller = ofVirtual().name("awium-virtual-caller").start(() -> result[0] = await((Callable<Integer>) () -> {
             callbackThreads.add(currentThread());
             return ++observations[0];
         }).every(ofMillis(20)).upTo(ofSeconds(2)).until(condition("third observation", value -> {

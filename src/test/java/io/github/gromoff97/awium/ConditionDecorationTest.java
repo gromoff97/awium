@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.util.IllegalFormatException;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
@@ -155,7 +156,7 @@ class ConditionDecorationTest {
 
     @Test
     void missingConditionsAreRejectedBeforeReadingTheSource() {
-        Source<String> source = () -> {
+        Callable<String> source = () -> {
             throw new AssertionError("source must not be read");
         };
         var waiting = Await.await(source);

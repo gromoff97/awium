@@ -68,15 +68,15 @@ class ArtifactContractIT {
         }
         // Condition construction is independent of source protocols, timing, diagnostics, and value comparison.
         Set<String> support = classes.get("ConditionSupport");
-        assertTrue(support.stream().noneMatch(Set.of("Source", "WaitEngine", "WaitCompletion", "FailureDiagnostics", "ValueMatching")::contains),
+        assertTrue(support.stream().noneMatch(Set.of("WaitEngine", "WaitCompletion", "FailureDiagnostics", "ValueMatching")::contains),
                 "ConditionSupport -> " + support);
         Set<String> sequence = classes.get("SequenceExecution");
         assertFalse(AwaitAttempt.class.isAssignableFrom(SequenceExecution.class));
-        assertTrue(sequence.stream().noneMatch(Set.of("ConditionSupport", "Source", "WaitEngine", "WaitConfiguration")::contains),
+        assertTrue(sequence.stream().noneMatch(Set.of("ConditionSupport", "WaitEngine", "WaitConfiguration")::contains),
                 "SequenceExecution -> " + sequence);
         for (String catalog : Set.of("Conditions", "CollectionConditions", "MapConditions",
                 "OptionalConditions", "StringConditions")) {
-            assertTrue(classes.get(catalog).stream().noneMatch(Set.of("Source", "FailureDiagnostics")::contains),
+            assertTrue(classes.get(catalog).stream().noneMatch(Set.of("FailureDiagnostics")::contains),
                     catalog + " -> " + classes.get(catalog));
         }
         // Diagnostics describe failures; only the fluent facade chooses a terminal result or throws.
@@ -127,6 +127,7 @@ class ArtifactContractIT {
             Path source = consumer.resolve("Contract.java");
             java.nio.file.Files.writeString(source, """
                     package consumer;
+                    import java.util.concurrent.Callable;
                     import io.github.gromoff97.awium.ConditionAwaitAttempt;
                     final class Contract {}
                     """);

@@ -1,14 +1,15 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Await.CollectionSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
-import io.github.gromoff97.awium.Source.CollectionSource;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -200,7 +201,7 @@ class CollectionExactContentTest {
         FakeTime time = new FakeTime(0);
 
         var failure = assertFailure(TIMEOUT,
-                () -> timedCollectionAwait((Source<ProbeList<String>>) () -> {
+                () -> timedCollectionAwait((Callable<ProbeList<String>>) () -> {
                             time.advanceNanos(2);
                             return actual;
                         }, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),

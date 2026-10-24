@@ -1,11 +1,12 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Await.OptionalSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.Source.OptionalSource;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -68,7 +69,7 @@ class ObjectAndOptionalAwaitTest {
     @Test
     void awaitReturnsTheObservationFromABroadPreservingCondition() {
         var pollingTime = new FakeTime(0);
-        Source<String> source = () -> "observed";
+        Callable<String> source = () -> "observed";
 
         assertEquals("observed", await(source).usingTime(pollingTime, pollingTime).until(broadPreservingCondition()));
     }
@@ -76,7 +77,7 @@ class ObjectAndOptionalAwaitTest {
     @Test
     void tryUntilReturnsTheObservationFromABroadPreservingCondition() {
         var pollingTime = new FakeTime(0);
-        Source<String> source = () -> "observed";
+        Callable<String> source = () -> "observed";
 
         AwaitResult<String, String> result = await(source).usingTime(pollingTime, pollingTime).tryUntil(broadPreservingCondition());
         assertInstanceOf(AwaitResult.Satisfied.class, result);
@@ -86,9 +87,9 @@ class ObjectAndOptionalAwaitTest {
     @Test
     void nullablePreservingTerminalsReturnNullOnSuccess() {
         var pollingTime = new FakeTime(0);
-        assertNull(await((Source<Object>) () -> null).usingTime(pollingTime, pollingTime).until(isNull));
-        assertNull(await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).until(matches(actual -> actual == null)));
-        assertNull(await((Source<String>) () -> null).usingTime(pollingTime, pollingTime).until(condition("nullable property", ConditionResult::satisfied).because("nullable property")));
+        assertNull(await((Callable<Object>) () -> null).usingTime(pollingTime, pollingTime).until(isNull));
+        assertNull(await((Callable<String>) () -> null).usingTime(pollingTime, pollingTime).until(matches(actual -> actual == null)));
+        assertNull(await((Callable<String>) () -> null).usingTime(pollingTime, pollingTime).until(condition("nullable property", ConditionResult::satisfied).because("nullable property")));
     }
 
     @Test
@@ -177,7 +178,7 @@ class ObjectAndOptionalAwaitTest {
     }
 
     private static <T> ValueAwait<T> stage(
-            FakeTime time, Source<T> source) {
+            FakeTime time, Callable<T> source) {
         return timedAwait(source, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(3)), time, time);
     }
 

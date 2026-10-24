@@ -1,13 +1,14 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Await.MapSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
-import io.github.gromoff97.awium.Source.MapSource;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -197,7 +198,7 @@ class MapConditionsTest {
         FakeTime time = new FakeTime(0);
 
         assertFailure(TIMEOUT,
-                () -> timedMapAwait((Source<ProbeContainers.EntryMap<
+                () -> timedMapAwait((Callable<ProbeContainers.EntryMap<
                                 String, String>>) () -> {
                             time.advanceNanos(2);
                             return actual;
