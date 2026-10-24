@@ -171,6 +171,7 @@ class TryUntilFailureTest {
                     return "actual";
                 }, config(1, 2, 0), time, time).tryUntil(isNotNull));
         assertTrue(sourceFlag.failure().message().startsWith("Caller thread was interrupted during source retrieval"));
+        assertTrue(sourceFlag.failure().message().contains("Actual: actual"));
         var condition = assertParity(time -> timedAwait(() -> "actual", config(1, 2, 0), time, time).until(matches(actual -> {
             currentThread().interrupt();
             return true;
