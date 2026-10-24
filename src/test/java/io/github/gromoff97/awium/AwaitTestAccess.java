@@ -21,7 +21,7 @@ final class AwaitTestAccess {
     static <S> ValueAwait<S> timedAwait(Callable<? extends S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {
-        return configured(Await.await(source::call), configuration, clock, parker);
+        return new ValueAwait<>(source::call, configuration.withTime(clock, parker));
     }
 
     static <E, C extends Collection<E>> Await<C, E, Void> timedCollectionAwait(
@@ -40,14 +40,6 @@ final class AwaitTestAccess {
             Callable<? extends M> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         return configured(Await.await(source::call), configuration, clock, parker);
-    }
-
-    private static <OBSERVED> ValueAwait<OBSERVED> configured(
-            ValueAwait<OBSERVED> await, WaitConfiguration configuration,
-            LongSupplier clock, LongConsumer parker) {
-        return await.usingTime(clock, parker)
-                .every(ofNanos(configuration.everyNanos())).upTo(ofNanos(configuration.upToNanos()))
-                .persisting(ofNanos(configuration.persistenceNanos()));
     }
 
     private static <OBSERVED, ELEMENT, MAP_VALUE> Await<OBSERVED, ELEMENT, MAP_VALUE> configured(
