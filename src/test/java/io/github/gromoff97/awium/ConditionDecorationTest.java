@@ -48,21 +48,19 @@ class ConditionDecorationTest {
                 instanceOf(String.class),
                 captured(equalTo("first"), equalTo("last")),
                 captured(CollectionConditions.first, CollectionConditions.last));
-        var replacements = List.<Condition<?, ?>>of(
-                instanceOf(String.class).because("old").because("new %d", 42),
-                captured(equalTo("first"), equalTo("last")).because("old").because("new %d", 42),
-                captured(CollectionConditions.first, CollectionConditions.last).because("old").because("new %d", 42));
+        var replacements = conditions.stream()
+                .map(condition -> condition.because("old").because("new %d", 42)).toList();
 
         for (var condition : conditions) assertNull(explanation(condition));
         for (var replacement : replacements) assertEquals("new 42", explanation(replacement));
         var custom = condition("custom", ConditionResult::satisfied);
-        assertNull(explanation(custom));
         assertEquals("new 42", explanation(custom.because("old").because("new %d", 42)));
-        assertNull(explanation(isNotNull));
+        assertNull(explanation(custom));
         assertEquals("new 42", explanation(isNotNull.because("old").because("new %d", 42)));
+        assertNull(explanation(isNotNull));
         var comparison = equalTo("ready");
-        assertNull(explanation(comparison));
         assertEquals("new 42", explanation(comparison.because("old").because("new %d", 42)));
+        assertNull(explanation(comparison));
         var first = OptionalConditions.present.because("first");
         var second = first.because("second");
         assertEquals("first", explanation(first));

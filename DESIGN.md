@@ -651,3 +651,13 @@ virtual ThreadFactory из одного MethodSource. Сценарий одно�
 Дополнительный javac-поиск не выявил неиспользуемых внутренних членов среди
 283 проверенных; удалений по этому поиску нет.
 `/tmp/awium-seven-hour-pass/any-matching-report.json`.
+
+### Проверка immutability применяется к тем же экземплярам после because
+
+ConditionDecorationTest строит replacements из исходного списка Conditions,
+а не повторяет фабрики. Проверки исходных custom/isNotNull/comparison перенесены
+после because. Временный ComparisonCondition, меняющий свою definition,
+проходил прежний тест; новый его отклоняет с ожидаемым null против old.
+Тестов, helper и assertion не добавлено, три строки убраны. Продукт не менялся.
+ConditionDecorationTest и DirectBecauseTest прошли.
+`/tmp/awium-seven-hour-pass/decoration-immutability-control/report.json`.
