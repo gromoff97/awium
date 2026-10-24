@@ -361,23 +361,6 @@ class CapturedConditionTest {
     }
 
     @Test
-    void capturesTheStageArrayDefensively() {
-        var time = new FakeTime(0);
-        PreservingCondition<Integer> matchesOne = matches(value -> value == 1);
-        @SuppressWarnings("unchecked")
-        PreservingCondition<Integer>[] stages = (PreservingCondition<Integer>[]) new PreservingCondition<?>[]{
-                matchesOne, matchesOne, matchesOne};
-        Condition<Integer, List<Integer>> sequence = captured(stages);
-        stages[0] = matches(value -> false);
-        stages[2] = matches(value -> false);
-
-        List<Integer> result = timedAwait(() -> 1, config(1, 10, 0),
-                time, time).until(sequence);
-
-        assertEquals(List.of(1, 1, 1), result);
-    }
-
-    @Test
     void terminalSnapshotsTheArrayBeforePollingAndKeepsTheResultType() {
         var time = new FakeTime(0);
         @SuppressWarnings("unchecked")
@@ -386,6 +369,7 @@ class CapturedConditionTest {
                 matches((Integer value) -> value == 2)};
         int[] calls = {0};
         var waiting = Await.await(() -> {
+            stages[0] = matches(value -> false);
             stages[1] = matches(value -> false);
             return ++calls[0];
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5));
@@ -394,6 +378,7 @@ class CapturedConditionTest {
         assertEquals(List.of(1, 2), values);
 
         calls[0] = 0;
+        stages[0] = matches(value -> value == 1);
         stages[1] = matches(value -> value == 2);
         AwaitResult<Integer, List<Integer>> captured = waiting.tryUntil(stages);
         assertEquals(values, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
@@ -403,6 +388,7 @@ class CapturedConditionTest {
         assertEquals(2, calls[0]);
 
         calls[0] = 0;
+        stages[0] = matches(value -> value == 1);
         var singleton = waiting.until(java.util.Arrays.copyOf(stages, 1));
         assertEquals(1, singleton.size());
         assertEquals(1, singleton.getFirst().intValue());
@@ -422,31 +408,23 @@ class CapturedConditionTest {
     }
 
     @Test
-    void reusesOneSequenceDefinitionAcrossExecutions() {
+    void sequenceStartsFreshAfterSuccessAndTimeout() {
         Condition<Payment, List<Payment>> lifecycle = captured(matches(value -> value.status() == Status.CREATED),
                 matches(value -> value.status() == Status.FINISHED));
-        var created = new Payment(Status.CREATED, "accepted");
-        var firstFinished = new Payment(Status.FINISHED, "first");
-        var secondFinished = new Payment(Status.FINISHED, "second");
-
-        assertEquals(List.of(created, firstFinished), runLifecycle(
-                new Payment[]{created, firstFinished}, lifecycle, 10));
-        assertEquals(List.of(created, secondFinished), runLifecycle(
-                new Payment[]{created, secondFinished}, lifecycle, 10));
-    }
-
-    @Test
-    void timeoutDoesNotAdvanceTheNextExecution() {
-        Condition<Payment, List<Payment>> lifecycle = captured(matches(value -> value.status() == Status.CREATED),
-                matches(value -> value.status() == Status.FINISHED));
-        var created = new Payment(Status.CREATED, "accepted");
+        var firstCreated = new Payment(Status.CREATED, "first execution");
+        var nextCreated = new Payment(Status.CREATED, "next execution");
+        var firstFinished = new Payment(Status.FINISHED, "first completion");
+        var nextFinished = new Payment(Status.FINISHED, "next completion");
         var pending = new Payment(Status.PENDING, "waiting");
-        var finished = new Payment(Status.FINISHED, "paid");
 
+        assertEquals(List.of(firstCreated, firstFinished), runLifecycle(
+                new Payment[]{firstCreated, firstFinished}, lifecycle, 10));
+        assertEquals(List.of(nextCreated, nextFinished), runLifecycle(
+                new Payment[]{nextCreated, nextFinished}, lifecycle, 10));
         assertFailure(TIMEOUT, () -> runLifecycle(
-                new Payment[]{created, pending, pending}, lifecycle, 3));
-        assertEquals(List.of(created, finished), runLifecycle(
-                new Payment[]{created, finished}, lifecycle, 10));
+                new Payment[]{firstCreated, pending, pending}, lifecycle, 3));
+        assertEquals(List.of(nextCreated, firstFinished), runLifecycle(
+                new Payment[]{nextCreated, firstFinished}, lifecycle, 10));
     }
 
     private static List<Payment> runLifecycle(Payment[] observations,
