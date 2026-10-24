@@ -198,7 +198,6 @@ final class ConditionSupport {
     }
 
     static <ELEMENT> List<ELEMENT> nonEmpty(List<ELEMENT> values, String name) {
-        requireNonNull(values, name + " must not be null");
         if (values.isEmpty()) {
             throw new IllegalArgumentException(name + " must not be empty");
         }
