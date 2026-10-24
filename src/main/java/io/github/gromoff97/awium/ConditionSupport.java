@@ -61,7 +61,7 @@ final class ConditionSupport {
     static <OBSERVED, VALUE, RESULT> Condition<OBSERVED, RESULT> compose(String prefix, Condition<?, ?> condition,
             Condition<?, ?> extractionCondition,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<VALUE>> extract,
-            Supplier<? extends AwaitAttempt<? super VALUE, ? extends RESULT>> evaluatorFactory) {
+            Supplier<? extends ConditionAwaitAttempt<? super VALUE, ? extends RESULT>> evaluatorFactory) {
         return new Condition<>(prefix + condition.description(), condition.explanation(), condition.reference(), () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> {
@@ -109,7 +109,7 @@ final class ConditionSupport {
 
     static <OBSERVED, ELEMENT, RESULT> Condition<OBSERVED, RESULT> single(String subject, Condition<?, ?> condition,
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
-            Supplier<? extends AwaitAttempt<? super ELEMENT, ? extends RESULT>> evaluatorFactory) {
+            Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT>> evaluatorFactory) {
         return new Condition<>(subject + " has a single matching value: " + condition.description(),
                 condition.explanation(), condition.reference(), () -> {
             var evaluator = evaluatorFactory.get();
@@ -119,7 +119,7 @@ final class ConditionSupport {
     }
 
     private static <ELEMENT, RESULT> AttemptResult<? extends RESULT> evaluateSingle(Iterable<? extends ELEMENT> values,
-            AwaitAttempt<? super ELEMENT, ? extends RESULT> evaluator) throws Exception {
+            ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT> evaluator) {
         AttemptResult.Evaluated<? extends RESULT> result = new AttemptResult.Evaluated<>(
                 unsatisfied("no value matched"), null, null);
         for (ELEMENT value : values) {
