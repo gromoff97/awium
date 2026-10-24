@@ -8,6 +8,7 @@ import io.github.gromoff97.awium.Condition.Reference;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
@@ -38,9 +39,17 @@ final class ConditionSupport {
 
     static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description, Reference<?> reference,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>> evaluator) {
-        var condition = new PreservingCondition<OBSERVED>(description, reference, () -> evaluator);
-        requireNonNull(evaluator, "evaluation must not be null");
-        return condition;
+        return new PreservingCondition<>(condition(description, reference, evaluator));
+    }
+
+    static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description,
+            Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory) {
+        var definition = new Condition<OBSERVED, OBSERVED>(description, null, null, () -> {
+            var evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
+            return actual -> AttemptResult.of(evaluator.apply(actual));
+        });
+        requireNonNull(evaluatorFactory, "evaluator factory must not be null");
+        return new PreservingCondition<>(definition);
     }
 
     static <OBSERVED> SelectedCondition<OBSERVED> selected(String description,

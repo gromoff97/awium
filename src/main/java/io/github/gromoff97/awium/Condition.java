@@ -71,17 +71,8 @@ public final class Condition<OBSERVED, RESULT> {
 
         final Condition<OBSERVED, OBSERVED> definition;
 
-        PreservingCondition(String description, Reference<?> reference,
-                Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory) {
-            this.definition = new Condition<>(description, null, reference, () -> {
-                var evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
-                return actual -> AttemptResult.of(evaluator.apply(actual));
-            });
-            requireNonNull(evaluatorFactory, "evaluator factory must not be null");
-        }
-
-        private PreservingCondition(Condition<OBSERVED, OBSERVED> definition) {
-            this.definition = definition;
+        PreservingCondition(Condition<OBSERVED, OBSERVED> definition) {
+            this.definition = required(definition);
         }
 
         public PreservingCondition<OBSERVED> because(String explanation) {

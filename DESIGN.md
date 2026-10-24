@@ -1111,3 +1111,18 @@ AST: методов стало на три меньше, параметров т
 прежний digest 981d57bed93f2d0b. STRONGER восьми классов: 553 мутаций,
 {'KILLED': 534, 'TIMED_OUT': 19}, без SURVIVED/NO_COVERAGE.
 `/tmp/awium-seven-hour-pass/definition-attempt-report.json`.
+
+### Адаптация callback остаётся в сборке условий
+
+PreservingCondition теперь получает готовое определение, как остальные семейства.
+Адаптация ConditionResult в AttemptResult перенесена из конструктора модели
+в ConditionSupport. Обычный preserving-callback использует общую сборку condition:
+убраны лишняя фабрика и повторная проверка того же callback при каждом ожидании.
+Для пользовательской фабрики сохраняются отдельное создание evaluator на ожидание
+и проверка её результата. Внутренняя фабричная перегрузка не принимает всегда
+пустой Reference. Новых public-методов, классов и полей нет.
+
+Архитектурная проверка запрещает зависимости Condition от конкретной попытки
+и AttemptResult. Все 409 public-деклараций совпадают. Полный check: 430 тестов
+без ошибок и пропусков. STRONGER ConditionSupport: 83 мутации, все KILLED.
+`/tmp/awium-seven-hour-pass/preserving-definition-report.json`.

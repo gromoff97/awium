@@ -32,7 +32,7 @@ public final class Conditions {
 
     public static <OBSERVED> PreservingCondition<OBSERVED> condition(String description,
             Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory) {
-        return new PreservingCondition<>(description, null, evaluatorFactory);
+        return ConditionSupport.preserving(description, evaluatorFactory);
     }
 
     public static <OBSERVED> PreservingCondition<OBSERVED> asserted(CheckedConsumer<? super OBSERVED> assertion) {
