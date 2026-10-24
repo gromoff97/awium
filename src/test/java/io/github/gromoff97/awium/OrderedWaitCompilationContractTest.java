@@ -8,8 +8,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-
 class OrderedWaitCompilationContractTest {
 
     @TempDir
@@ -19,7 +17,7 @@ class OrderedWaitCompilationContractTest {
     @ValueSource(strings = {"until", "tryUntil"})
     void predicatesMustBeExpressedThroughConditions(String terminal) throws IOException {
         for (String arguments : List.of("value -> true", "String::isBlank", "value -> true, value -> false")) {
-            assertFalse(compiles("await(Contract::text).%s(%s);".formatted(terminal, arguments)), arguments);
+            assertRejected("await(Contract::text).%s(%s);".formatted(terminal, arguments));
         }
     }
 
@@ -34,7 +32,7 @@ class OrderedWaitCompilationContractTest {
                 "await(Contract::map).%s(first, last);",
                 "await(Contract::collection).%s(singleEntry, singleEntry);",
                 "Callable<List<String>> source = Contract::collection; List<String> wrong = await(source).%s(first, last);")) {
-            assertFalse(compiles(expression.formatted(terminal)), expression);
+            assertRejected(expression.formatted(terminal));
         }
     }
 
@@ -45,7 +43,7 @@ class OrderedWaitCompilationContractTest {
                 "AwaitResult<String, String> value = await(Contract::text).tryUntil(isNotNull, isNotNull);",
                 "List<Integer> value = await(Contract::collection).until(first, last);",
                 "List<Integer> result = await(Contract::text).until(instanceOf(String.class), instanceOf(String.class));")) {
-            assertFalse(compiles(expression), expression);
+            assertRejected(expression);
         }
     }
 
@@ -55,22 +53,18 @@ class OrderedWaitCompilationContractTest {
         for (String decoration : List.of("", ".because(\"required type\")")) {
             String expression = "await(Contract::text).%s(instanceOf(String.class)%s, instanceOf(String.class)%s);"
                     .formatted(terminal, decoration, decoration);
-            assertFalse(compiles(expression), expression);
+            assertRejected(expression);
         }
     }
 
     @Test
     void emptyTerminalsAreRejected() throws IOException {
-        assertFalse(compiles("await(Contract::text).until();"));
-        assertFalse(compiles("await(Contract::text).tryUntil();"));
+        assertRejected("await(Contract::text).until();");
+        assertRejected("await(Contract::text).tryUntil();");
     }
 
-    private boolean compiles(String body) throws IOException {
-        return CompilationSupport.compiles(directory, source(body));
-    }
-
-    private static String source(String body) {
-        return """
+    private void assertRejected(String body) throws IOException {
+        CompilationSupport.assertRejected(directory, """
                 import java.util.*;
                 import java.util.concurrent.Callable;
                 import java.util.function.Predicate;
@@ -89,6 +83,6 @@ class OrderedWaitCompilationContractTest {
                     static Map<String,Integer> map() { return Map.of("ready", 1); }
                     void check() { %s }
                 }
-                """.formatted(body);
+                """.formatted(body));
     }
 }

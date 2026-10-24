@@ -26,7 +26,7 @@ final class CompilationSupport {
             "compiler.err.ref.ambiguous",
             "compiler.err.type.found.req");
 
-    static boolean compiles(Path directory, String source) throws IOException {
+    static void assertRejected(Path directory, String source) throws IOException {
         Path sourceFile = directory.resolve("Contract.java");
         writeString(sourceFile, source);
         var options = List.of("--release", "21", "-Xlint:all",
@@ -38,10 +38,10 @@ final class CompilationSupport {
             boolean compiled = Boolean.TRUE.equals(compiler.getTask(null, files,
                     diagnostics, options, null,
                     files.getJavaFileObjects(sourceFile)).call());
-            if (!compiled) {
-                requireExpectedRejection(diagnostics.getDiagnostics());
+            if (compiled) {
+                throw new AssertionError("fixture unexpectedly compiled:\n" + source);
             }
-            return compiled;
+            requireExpectedRejection(diagnostics.getDiagnostics());
         }
     }
 

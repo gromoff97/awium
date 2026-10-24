@@ -6,8 +6,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-
 class NestedSelectionCompilationContractTest {
 
     @TempDir
@@ -20,12 +18,12 @@ class NestedSelectionCompilationContractTest {
                 "String wrong = await(Contract::payments).until(single(matches(Payment::paid)));",
                 "AwaitResult<List<Payment>, String> wrong = await(Contract::payments).tryUntil(single(matches(Payment::paid)));",
                 "List<String> wrong = await(Contract::payments).until(single(matches(Payment::paid)), single(matches(Payment::paid)));")) {
-            assertFalse(compiles(body), body);
+            assertRejected(body);
         }
     }
 
-    private boolean compiles(String body) throws IOException {
-        return CompilationSupport.compiles(directory, """
+    private void assertRejected(String body) throws IOException {
+        CompilationSupport.assertRejected(directory, """
                 import java.util.*;
                 import io.github.gromoff97.awium.AwaitResult;
                 import static io.github.gromoff97.awium.Await.await;

@@ -6,8 +6,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-
 class DirectBecauseCompilationContractTest {
 
     @TempDir
@@ -18,7 +16,7 @@ class DirectBecauseCompilationContractTest {
         for (String expression : List.of(
                 "Conditions.condition(\"failed\", value -> failure);",
                 "Conditions.condition(\"failed\", () -> value -> failure);")) {
-            assertFalse(CompilationSupport.compiles(directory, """
+            CompilationSupport.assertRejected(directory, """
                     package io.github.gromoff97.awium;
                     final class Contract {
                         void check() {
@@ -26,7 +24,7 @@ class DirectBecauseCompilationContractTest {
                             %s
                         }
                     }
-                    """.formatted(expression)), expression);
+                    """.formatted(expression));
         }
     }
 
@@ -39,7 +37,7 @@ class DirectBecauseCompilationContractTest {
                     "List<String> wrong = await(numbers).until(condition(\"first\", ConditionResult::satisfied)%s, isNotNull);",
                     "Condition<Number, String> wrong = condition(\"transform\", value -> ConditionResult.satisfied(\"text\"))%s;")) {
                 String call = expression.formatted(decoration);
-                assertFalse(compiles(call), call);
+                assertRejected(call);
             }
         }
     }
@@ -51,7 +49,7 @@ class DirectBecauseCompilationContractTest {
                     "notSameAs(123)", "in(123, 456)", "notIn(123, 456)")) {
                 for (String decoration : List.of("", ".because(\"required value\")")) {
                     String expression = "await(() -> \"ready\").%s(%s%s);".formatted(terminal, condition, decoration);
-                    assertFalse(compiles(expression), expression);
+                    assertRejected(expression);
                 }
             }
         }
@@ -66,7 +64,7 @@ class DirectBecauseCompilationContractTest {
                         "await(() -> List.of(\"ready\")).%s(CollectionConditions.subsetOf(List.of(123))%s, isNotNull);",
                         "await(() -> List.of(List.of(\"ready\"))).%s(single(CollectionConditions.subsetOf(List.of(123))%s));")) {
                     String call = expression.formatted(terminal, decoration);
-                    assertFalse(compiles(call), call);
+                    assertRejected(call);
                 }
             }
         }
@@ -83,7 +81,7 @@ class DirectBecauseCompilationContractTest {
                         "await(map).%s(singleEntry(equalTo(Map.entry(123, 1))%s));",
                         "await(map).%s(singleEntry(equalTo(Map.entry(\"key\", \"wrong\"))%s));")) {
                     String call = expression.formatted(terminal, decoration);
-                    assertFalse(compiles(call), call);
+                    assertRejected(call);
                 }
             }
         }
@@ -100,13 +98,13 @@ class DirectBecauseCompilationContractTest {
                     for (String second : checks) {
                         if (first.equals(second)) continue;
                         String call = "await(() -> \"ready\").%s(%s, %s);".formatted(terminal, first, second);
-                        assertFalse(compiles(call), call);
+                        assertRejected(call);
                     }
                 }
             }
         }
-        assertFalse(compiles("Condition<Object, Object> erased = isNotNull;"));
-        assertFalse(compiles("Condition<String, String> erased = equalTo(\"ready\");"));
+        assertRejected("Condition<Object, Object> erased = isNotNull;");
+        assertRejected("Condition<String, String> erased = equalTo(\"ready\");");
     }
 
     @Test
@@ -116,7 +114,7 @@ class DirectBecauseCompilationContractTest {
                     "valueFor(123, equalTo(1))", "valueFor(123, instanceOf(String.class))")) {
                 for (String decoration : List.of("", ".because(\"required key\")")) {
                     String expression = "await(map).%s(%s%s);".formatted(terminal, condition, decoration);
-                    assertFalse(compiles(expression), expression);
+                    assertRejected(expression);
                 }
             }
         }
@@ -130,7 +128,7 @@ class DirectBecauseCompilationContractTest {
                 "matches(present);",
                 "matches(single);",
                 "matches(valueFor(\"key\"));")) {
-            assertFalse(compiles(expression), expression);
+            assertRejected(expression);
         }
     }
 
@@ -147,7 +145,7 @@ class DirectBecauseCompilationContractTest {
                 "await(collection).until(single(matches(String::isBlank)).because(\"wrong\"));",
                 "AwaitResult<Map<String, Number>, String> wrong = await(map).tryUntil(valueFor(\"key\").because(\"wrong\"));",
                 "List<String> wrong = await(map).until(valueFor(\"key\").because(\"wrong\"), valueFor(\"key\"));")) {
-            assertFalse(compiles(expression), expression);
+            assertRejected(expression);
         }
     }
 
@@ -168,7 +166,7 @@ class DirectBecauseCompilationContractTest {
                     "await(collection).%s(CollectionConditions.any(String::isBlank).because(\"wrong\"));",
                     "await(collection).%s(CollectionConditions.none(String::isBlank).because(\"wrong\"));")) {
                 String call = expression.formatted(terminal);
-                assertFalse(compiles(call), call);
+                assertRejected(call);
             }
         }
     }
@@ -187,12 +185,12 @@ class DirectBecauseCompilationContractTest {
                 "Callable<Map<String, Number>> plain = map; Object value = await(plain).until(valueFor(\"key\"));",
                 "Callable<Map<String, Number>> plain = map; Object value = await(plain).until(valueFor(\"key\").because(\"required\"));",
                 "await(collection).until(CollectionConditions.sorted(String::compareTo).because(\"wrong type\"));")) {
-            assertFalse(compiles(expression), expression);
+            assertRejected(expression);
         }
     }
 
-    private boolean compiles(String body) throws IOException {
-        return CompilationSupport.compiles(directory, """
+    private void assertRejected(String body) throws IOException {
+        CompilationSupport.assertRejected(directory, """
                 import java.util.*;
                 import java.util.concurrent.Callable;
                 import io.github.gromoff97.awium.*;

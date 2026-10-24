@@ -6,7 +6,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class CompilationContractTest {
@@ -23,7 +22,7 @@ class CompilationContractTest {
                 "await(characters).until(equalTo(42));",
                 "await(characters).until(equalTo(42).because(\"incompatible\"));",
                 "await(characters).tryUntil(equalTo(42).because(\"%s\", \"incompatible\"));")) {
-            assertFalse(compiles("""
+            assertRejected("""
                     import java.util.concurrent.Callable;
                     import io.github.gromoff97.awium.*;
                     import io.github.gromoff97.awium.Await.OptionalSource;
@@ -37,7 +36,7 @@ class CompilationContractTest {
                             %s
                         }
                     }
-                    """.formatted(expression)), expression);
+                    """.formatted(expression));
         }
     }
 
@@ -49,7 +48,7 @@ class CompilationContractTest {
                 for (String terminal : List.of("until", "tryUntil")) {
                     String expression = "await(source)." + terminal + "(CollectionConditions."
                             + condition + explanation + ");";
-                    assertFalse(compiles("""
+                    assertRejected("""
                             import java.util.List;
                             import java.util.concurrent.Callable;
                             import io.github.gromoff97.awium.CollectionConditions;
@@ -59,21 +58,23 @@ class CompilationContractTest {
                                     %s
                                 }
                             }
-                            """.formatted(expression)), expression);
+                            """.formatted(expression));
                 }
             }
         }
     }
 
     @Test
-    void unrelatedFixtureFailuresCannotMasqueradeAsTypeRejections() {
+    void negativeFixturesRejectValidCodeAndUnrelatedErrors() {
         assertThrows(AssertionError.class,
-                () -> compiles("final class Contract { void broken( }"));
-        assertThrows(AssertionError.class, () -> compiles("""
+                () -> assertRejected("final class Contract {}"));
+        assertThrows(AssertionError.class,
+                () -> assertRejected("final class Contract { void broken( }"));
+        assertThrows(AssertionError.class, () -> assertRejected("""
                 import missing.Type;
                 final class Contract {}
                 """));
-        assertThrows(AssertionError.class, () -> compiles("""
+        assertThrows(AssertionError.class, () -> assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import java.util.concurrent.Callable;
 
@@ -91,7 +92,7 @@ class CompilationContractTest {
                 "String source = \"value\";",
                 "java.util.function.Supplier<String> source = () -> \"value\";"
         }) {
-            assertFalse(compiles("""
+            assertRejected("""
                     import static io.github.gromoff97.awium.Await.await;
                     final class Contract {
                         void check() {
@@ -99,20 +100,20 @@ class CompilationContractTest {
                             await(source);
                         }
                     }
-                    """.formatted(declaration)), declaration);
+                    """.formatted(declaration));
         }
     }
 
     @Test
     void ambiguousNullSourcesDoNotCompile() throws IOException {
-        assertFalse(compiles("""
+        assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 final class Contract { void check() { await(() -> null); } }
-                """));
-        assertFalse(compiles("""
+                """);
+        assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 final class Contract { void check() { await(null); } }
-                """));
+                """);
     }
 
     @Test
@@ -121,7 +122,7 @@ class CompilationContractTest {
                 "SelectedCondition<java.util.Optional<?>>",
                 "SelectedCondition<java.util.Collection<?>>",
                 "SelectedCondition<java.util.Map<?, ?>>")) {
-            assertFalse(compiles("""
+            assertRejected("""
                     import static io.github.gromoff97.awium.Await.await;
                     import java.util.concurrent.Callable;
                     import io.github.gromoff97.awium.*;
@@ -131,7 +132,7 @@ class CompilationContractTest {
                             await(source).until(condition);
                         }
                     }
-                    """.formatted(type)), type);
+                    """.formatted(type));
         }
     }
 
@@ -154,14 +155,14 @@ class CompilationContractTest {
                         }
                     }
                     """;
-            assertFalse(compiles(contract.formatted("Object", source, condition)), condition);
-            assertFalse(compiles(contract.formatted("Object", source, condition + ".because(\"required\")")), condition);
+            assertRejected(contract.formatted("Object", source, condition));
+            assertRejected(contract.formatted("Object", source, condition + ".because(\"required\")"));
         }
     }
 
     @Test
     void collectionAndMapConditionsCannotBeMixed() throws IOException {
-        assertFalse(compiles("""
+        assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import io.github.gromoff97.awium.MapConditions;
                 import io.github.gromoff97.awium.Await.CollectionSource;
@@ -171,8 +172,8 @@ class CompilationContractTest {
                         await(source).until(MapConditions.nonEmpty);
                     }
                 }
-                """));
-        assertFalse(compiles("""
+                """);
+        assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import io.github.gromoff97.awium.CollectionConditions;
                 import io.github.gromoff97.awium.Await.MapSource;
@@ -182,8 +183,8 @@ class CompilationContractTest {
                         await(source).until(CollectionConditions.nonEmpty);
                     }
                 }
-                """));
-        assertFalse(compiles("""
+                """);
+        assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import io.github.gromoff97.awium.MapConditions;
                 import io.github.gromoff97.awium.Await.CollectionSource;
@@ -193,8 +194,8 @@ class CompilationContractTest {
                         await(source).until(MapConditions.singleEntry);
                     }
                 }
-                """));
-        assertFalse(compiles("""
+                """);
+        assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import io.github.gromoff97.awium.CollectionConditions;
                 import io.github.gromoff97.awium.Await.MapSource;
@@ -204,12 +205,12 @@ class CompilationContractTest {
                         await(source).until(CollectionConditions.single);
                     }
                 }
-                """));
+                """);
     }
 
     @Test
     void collectionSelectionRejectsAnUnrelatedElementType() throws IOException {
-        assertFalse(compiles("""
+        assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.CollectionConditions.single;
                 import java.util.List;
@@ -219,12 +220,12 @@ class CompilationContractTest {
                                 () -> List.of("value")).until(single);
                     }
                 }
-                """));
+                """);
     }
 
     @Test
     void orderedSelectionRejectsUnrelatedResultsAndUnorderedSources() throws IOException {
-        assertFalse(compiles("""
+        assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.CollectionConditions.first;
                 import io.github.gromoff97.awium.Await.CollectionSource;
@@ -234,8 +235,8 @@ class CompilationContractTest {
                         Integer wrong = await(source).until(first);
                     }
                 }
-                """));
-        assertFalse(compiles("""
+                """);
+        assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.CollectionConditions.first;
                 import io.github.gromoff97.awium.Await.CollectionSource;
@@ -245,7 +246,7 @@ class CompilationContractTest {
                         await(source).until(first);
                     }
                 }
-                """));
+                """);
     }
 
     @Test
@@ -259,7 +260,7 @@ class CompilationContractTest {
                         "doesNotContainKeys(List.of(1))", "doesNotContainValues(List.of(\"wrong\"))",
                         "containsEntries(1, 1)", "containsEntries(\"x\", \"wrong\")",
                         "containsEntries(Map.of(1, 1))", "containsEntries(Map.of(\"x\", \"wrong\"))")) {
-                    assertFalse(compiles("""
+                    assertRejected("""
                             import static io.github.gromoff97.awium.Await.await;
                             import static io.github.gromoff97.awium.MapConditions.*;
                             import io.github.gromoff97.awium.Await.MapSource;
@@ -271,7 +272,7 @@ class CompilationContractTest {
                                     await(source).%s(%s%s);
                                 }
                             }
-                            """.formatted(terminal, condition, explanation)), terminal + ": " + condition);
+                            """.formatted(terminal, condition, explanation));
                 }
             }
         }
@@ -280,7 +281,7 @@ class CompilationContractTest {
     @Test
     void lazyConditionsRejectAnIncompatibleObservedType() throws IOException {
         for (String terminal : List.of("until", "tryUntil")) {
-            assertFalse(compiles("""
+            assertRejected("""
                     import static io.github.gromoff97.awium.Await.await;
                     import static io.github.gromoff97.awium.Conditions.*;
                     import io.github.gromoff97.awium.CheckedFunction;
@@ -295,13 +296,13 @@ class CompilationContractTest {
                             await(source).%s(condition("typed", Contract::evaluator));
                         }
                     }
-                    """.formatted(terminal)), terminal);
+                    """.formatted(terminal));
         }
     }
 
     @Test
     void orderedExactFactoriesRejectCollectionOnlySources() throws IOException {
-        assertFalse(compiles("""
+        assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.CollectionConditions.*;
                 import io.github.gromoff97.awium.Await.CollectionSource;
@@ -312,13 +313,13 @@ class CompilationContractTest {
                         await(source).until(containsExactly("a"));
                     }
                 }
-                """));
+                """);
     }
 
     @Test
     void covariantEntryViewsKeepIndependentValueTypesAcrossStages() throws IOException {
         for (String decoration : List.of("", ".because(\"independent entries\")")) {
-            assertFalse(compiles("""
+            assertRejected("""
                     import java.util.*;
                     import io.github.gromoff97.awium.Await.MapViewSource;
                     import static io.github.gromoff97.awium.Await.await;
@@ -332,12 +333,12 @@ class CompilationContractTest {
                             overwrite(await(source).until(singleEntry%s, singleEntry%s));
                         }
                     }
-                    """.formatted(decoration, decoration)));
+                    """.formatted(decoration, decoration));
         }
     }
 
-    private boolean compiles(String source) throws IOException {
-        return CompilationSupport.compiles(temporaryDirectory, source);
+    private void assertRejected(String source) throws IOException {
+        CompilationSupport.assertRejected(temporaryDirectory, source);
     }
 
 }
