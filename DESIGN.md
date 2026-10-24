@@ -1074,3 +1074,12 @@ method reference с throws Throwable; Observation бросает исходны�
 внешний потребитель итогового JAR компилируется с -Werror, исходная причина
 и CONDITION_FAILED проверены для обеих callback-форм.
 `/tmp/awium-seven-hour-pass/throwable-contract-prototype/report.json`.
+
+### Фикстуры должны участвовать в проверяемом поведении
+
+В ConditionAwaitAttemptTest удалены три посторонние фикстуры и assertNotNull,
+которые не проверяли ни выполнение, ни независимость семейств. Существующие
+реальные сценарии композиции и captured выполняют эти семейства. Оставшийся
+тест прямо проверяет метаданные ordinary condition и две независимые попытки.
+Тестовый код уменьшился на 13 строк, удалены три импорта. Целевые проверки
+ConditionAwaitAttempt, CapturedCondition и DirectBecause: 40 без ошибок.

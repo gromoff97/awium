@@ -1,21 +1,17 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.Condition.SelectedCondition;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.ConditionSupport.captured;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -112,18 +108,12 @@ class ConditionAwaitAttemptTest {
     }
 
     @Test
-    void conditionFamiliesKeepMetadataAndIndependentEvaluators() throws Throwable {
+    void ordinaryConditionKeepsMetadataAndCreatesIndependentEvaluators() throws Throwable {
         Condition<Integer, Integer> ordinary = new Condition<>(
                 "counted", null, null, () -> {
                     int[] calls = {0};
                     return ignored -> AttemptResult.of(satisfied(++calls[0]));
                 });
-        PreservingCondition<Integer> preserving =
-                Conditions.matches(value -> value > 0);
-        SelectedCondition<Collection<?>> selected = CollectionConditions.single;
-        Condition<Collection<?>, List<Object>> sequence =
-                captured(CollectionConditions.single, CollectionConditions.single);
-
         assertEquals("counted", ordinary.description());
         assertNull(ordinary.explanation());
         AwaitAttempt<Integer, Integer> first = ordinary.newAttempt();
@@ -132,8 +122,5 @@ class ConditionAwaitAttemptTest {
         assertEquals(1, result(ConditionTestRuntime.evaluated(first.probe(0))));
         assertEquals(2, result(ConditionTestRuntime.evaluated(first.probe(0))));
         assertEquals(1, result(ConditionTestRuntime.evaluated(second.probe(0))));
-        assertNotNull(preserving);
-        assertNotNull(selected);
-        assertNotNull(sequence);
     }
 }
