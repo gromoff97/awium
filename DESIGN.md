@@ -502,3 +502,15 @@ Source-матрица ObservationTest теперь вызывает оба те�
 проверки при сохранении их сценариев. Полный check: 418 тестов без ошибок.
 STRONGER FailureDiagnostics/WaitCompletion*: 107 мутаций, все KILLED.
 `/tmp/awium-seven-hour-pass/diagnostic-throwable-report.json`.
+
+### Progress объясняет различие проверенного и активного этапа
+
+Javadoc публичного Progress определяет каждый компонент. После промежуточного
+успеха condition описывает следующий этап, а evaluatedStageNumber — только что
+проверенный; последний этап остаётся активным для persistence. Исполнение
+и публичные сигнатуры не менялись. В multiline snapshot удалены три повторных
+assertion про фрагменты, CR и пробелы: полное сравнение с ожидаемым сообщением
+уже проверяет все эти свойства. Сохранены отдельные проверки identity, числа
+callback-вызовов и suppressed: текст сам по себе их не гарантирует.
+Все 37 диагностических тестов и генерация Javadoc прошли.
+`/tmp/awium-seven-hour-pass/progress-doc-and-snapshot-report.json`.

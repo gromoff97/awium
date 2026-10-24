@@ -1135,11 +1135,6 @@ class DiagnosticsSnapshotTest {
                         CONDITION,
                         config(1, 2, 0)));
 
-        assertFalse(sourceFailure.getMessage().contains("\r"));
-        assertTrue(sourceFailure.getMessage().lines()
-                .noneMatch(line -> line.endsWith(" ")));
-        assertMessage(sourceFailure, "condition", "description", "business",
-                "reason", "first", "second");
         assertEquals("""
                 Source retrieval failed
 

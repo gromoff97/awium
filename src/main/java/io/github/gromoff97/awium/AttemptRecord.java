@@ -88,6 +88,16 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
         }
     }
 
+    /**
+     * Sequence progress after a check. An intermediate success moves the diagnostic condition
+     * to the next stage; the final stage remains active for persistence checks.
+     *
+     * @param capturedStages number of stages whose successful values are currently captured
+     * @param totalStages number of stages in the sequence
+     * @param evaluatedStageNumber one-based stage number checked by this attempt
+     * @param condition diagnostic condition for the next stage after an intermediate success,
+     *                  otherwise for the evaluated stage
+     */
     public record Progress(int capturedStages, int totalStages, int evaluatedStageNumber,
             Condition<?, ?> condition) {
 
