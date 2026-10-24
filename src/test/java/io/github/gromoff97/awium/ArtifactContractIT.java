@@ -54,7 +54,7 @@ class ArtifactContractIT {
         assertEquals(0, exit, dependencies);
         Map<String, Set<String>> classes = classDependencies(dependencies);
         assertFalse(classes.isEmpty(), dependencies);
-        Set<String> facade = Set.of("Await", "Conditions", "CollectionConditions", "MapConditions",
+        Set<String> facade = Set.of("Await", "ValueAwait", "Conditions", "CollectionConditions", "MapConditions",
                 "OptionalConditions", "StringConditions", "FailureDiagnostics");
         for (String execution : Set.of("Condition", "AwaitAttempt", "ConditionAwaitAttempt", "ConditionSupport",
                 "ConditionResult", "AttemptResult", "SequenceExecution", "WaitEngine",
@@ -62,10 +62,9 @@ class ArtifactContractIT {
             Set<String> used = classes.getOrDefault(execution, Set.of());
             assertTrue(used.stream().noneMatch(facade::contains), execution + " -> " + used);
         }
-        for (String condition : Set.of("ConditionResult")) {
-            assertTrue(classes.get(condition).stream().noneMatch(Set.of("AttemptRecord", "AwaitResult")::contains),
-                    condition + " -> " + classes.get(condition));
-        }
+        Set<String> conditionResult = classes.get("ConditionResult");
+        assertTrue(conditionResult.stream().noneMatch(Set.of("AttemptRecord", "AwaitResult")::contains),
+                "ConditionResult -> " + conditionResult);
         Set<String> definition = classes.get("Condition");
         assertTrue(definition.stream().noneMatch(Set.of("ConditionAwaitAttempt", "AttemptResult")::contains),
                 "Condition -> " + definition);
@@ -83,7 +82,7 @@ class ArtifactContractIT {
                     catalog + " -> " + classes.get(catalog));
         }
         // Diagnostics describe failures; only the fluent facade chooses a terminal result or throws.
-        Set<String> terminals = Set.of("Await", "AwaitResult", "AwaitAssertionError", "AwaitExecutionException");
+        Set<String> terminals = Set.of("Await", "ValueAwait", "AwaitResult", "AwaitAssertionError", "AwaitExecutionException");
         Set<String> diagnostics = classes.get("FailureDiagnostics");
         assertTrue(diagnostics.stream().noneMatch(terminals::contains), "FailureDiagnostics -> " + diagnostics);
     }
@@ -130,7 +129,6 @@ class ArtifactContractIT {
             Path source = consumer.resolve("Contract.java");
             java.nio.file.Files.writeString(source, """
                     package consumer;
-                    import java.util.concurrent.Callable;
                     import io.github.gromoff97.awium.ConditionAwaitAttempt;
                     final class Contract {}
                     """);

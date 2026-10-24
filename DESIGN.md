@@ -674,3 +674,11 @@ Size-сценарии используют тот же result без проме�
 формой. Дублирующий метод удалён. Убраны 27 строк и один тест;
 53 целевых проверок прошли без ошибок.
 `/tmp/awium-seven-hour-pass/paired-result-assertions-report.json`.
+
+### Архитектурный guard охватывает оба fluent-фасада
+
+ArtifactContractIT включает ValueAwait рядом с Await в запрещённых зависимостях
+исполнения и диагностики. Прежний набор пропускал этот публичный фасад.
+Одноэлементный цикл ConditionResult заменён прямой проверкой, из отрицательной
+фикстуры удалён неиспользуемый Callable import. 5 тестов JAR, JPMS и границ
+доступа прошли. `/tmp/awium-seven-hour-pass/complete-facade-dependencies-report.json`.
