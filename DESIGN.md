@@ -593,3 +593,13 @@ getValue убран: поле проверяется у уже типизиро�
 внутренний evaluate расширяет тип ключа до Object, хотя код компилируется.
 Полный check: 413 тестов, без ошибок и пропусков.
 `/tmp/awium-seven-hour-pass/redundant-test-witnesses-report.json`.
+
+### Контейнерные фикстуры принимают готовые настройки
+
+AwaitTestAccess создаёт все четыре семейства ожидания с готовым WaitConfiguration.
+Для Await его двухаргументный конструктор стал package-private, как у ValueAwait;
+публичные 409 деклараций совпадают. Удалены configured, три generic-оси helper
+и три source::call адаптера. Проверки fluent-настройки остаются в публичных
+сценариях. Null-time тест использует одну source и одно исходное ожидание.
+Полный check: 413 тестов без ошибок и пропусков.
+`/tmp/awium-seven-hour-pass/container-fixture-config-report.json`.

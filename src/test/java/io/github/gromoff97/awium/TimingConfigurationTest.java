@@ -87,11 +87,11 @@ class TimingConfigurationTest {
     @Test
     void rejectsMissingTimeOperationsBeforePolling() {
         var time = new FakeTime(0);
-        assertThrows(NullPointerException.class, () -> await((Callable<String>) () -> {
+        Callable<String> source = () -> {
             throw new AssertionError("source must not run");
-        }).usingTime(null, time));
-        assertThrows(NullPointerException.class, () -> await((Callable<String>) () -> {
-            throw new AssertionError("source must not run");
-        }).usingTime(time, null));
+        };
+        var waiting = await(source);
+        assertThrows(NullPointerException.class, () -> waiting.usingTime(null, time));
+        assertThrows(NullPointerException.class, () -> waiting.usingTime(time, null));
     }
 }

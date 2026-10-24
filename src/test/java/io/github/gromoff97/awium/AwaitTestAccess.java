@@ -7,8 +7,6 @@ import java.util.concurrent.Callable;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
-import static java.time.Duration.ofNanos;
-
 final class AwaitTestAccess {
 
     private AwaitTestAccess() {}
@@ -27,26 +25,18 @@ final class AwaitTestAccess {
     static <E, C extends Collection<E>> Await<C, E, Void> timedCollectionAwait(
             Callable<? extends C> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
-        return configured(Await.await(source::call), configuration, clock, parker);
+        return new Await<>(source, configuration.withTime(clock, parker));
     }
 
     static <E> Await<Optional<E>, E, Void> timedOptionalAwait(
             Callable<? extends Optional<E>> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
-        return configured(Await.await(source::call), configuration, clock, parker);
+        return new Await<>(source, configuration.withTime(clock, parker));
     }
 
     static <K, V, M extends Map<K, V>> Await<M, Map.Entry<K, V>, V> timedMapAwait(
             Callable<? extends M> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
-        return configured(Await.await(source::call), configuration, clock, parker);
-    }
-
-    private static <OBSERVED, ELEMENT, MAP_VALUE> Await<OBSERVED, ELEMENT, MAP_VALUE> configured(
-            Await<OBSERVED, ELEMENT, MAP_VALUE> await, WaitConfiguration configuration,
-            LongSupplier clock, LongConsumer parker) {
-        return await.usingTime(clock, parker)
-                .every(ofNanos(configuration.everyNanos())).upTo(ofNanos(configuration.upToNanos()))
-                .persisting(ofNanos(configuration.persistenceNanos()));
+        return new Await<>(source, configuration.withTime(clock, parker));
     }
 }

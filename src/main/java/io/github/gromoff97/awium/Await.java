@@ -28,7 +28,7 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
         super(source);
     }
 
-    private Await(Callable<? extends OBSERVED> source, WaitConfiguration configuration) {
+    Await(Callable<? extends OBSERVED> source, WaitConfiguration configuration) {
         super(source, configuration);
     }
 
