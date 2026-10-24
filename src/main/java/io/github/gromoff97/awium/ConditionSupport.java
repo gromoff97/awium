@@ -122,8 +122,7 @@ final class ConditionSupport {
             AwaitAttempt<? super ELEMENT, ? extends RESULT> evaluator) throws Exception {
         AttemptResult.Evaluated<? extends RESULT> result = new AttemptResult.Evaluated<>(
                 unsatisfied("no value matched"), null, null);
-        for (var iterator = values.iterator(); iterator.hasNext();) {
-            ELEMENT value = iterator.next();
+        for (ELEMENT value : values) {
             switch (evaluator.probe(value)) {
                 case AttemptResult.Uncontrolled<? extends RESULT> failure -> { return failure; }
                 case AttemptResult.Evaluated<? extends RESULT> evaluated -> {

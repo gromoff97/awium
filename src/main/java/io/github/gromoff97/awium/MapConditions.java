@@ -320,10 +320,8 @@ public final class MapConditions {
     }
 
     private static boolean exactContent(Map<?, ?> actual, List<? extends Entry<?, ?>> expected) {
-        if (actual.size() != expected.size()) {
-            return false;
-        }
-        return exactly(actual.entrySet().iterator(), expected, MapConditions::entryMatches);
+        return actual.size() == expected.size()
+                && exactly(actual.entrySet().iterator(), expected, MapConditions::entryMatches);
     }
 
     // Preserve encounter order and distinct entries without calling user equals/hashCode.

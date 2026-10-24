@@ -3,6 +3,7 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.Await.CollectionSource;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
+import java.util.AbstractList;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -243,13 +244,13 @@ class CollectionSelectionConditionsTest {
     void impossibleSequenceLengthDoesNotReenterContainerCallbacks() {
         for (var elements : List.of(List.<Integer>of(), List.of(1), List.of(1, 2))) {
             for (boolean negative : List.of(false, true)) {
-                var actual = new ArrayList<>(elements) {
+                var actual = new AbstractList<Integer>() {
                     private int sizeReads;
 
                     @Override
                     public int size() {
                         if (++sizeReads > 1) throw new AssertionError("an impossible sequence must not reenter size");
-                        return super.size();
+                        return elements.size();
                     }
 
                     @Override
