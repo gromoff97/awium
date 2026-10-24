@@ -58,22 +58,8 @@ class CollectionSizeConditionsTest {
         assertEquals("collection has a single element", description(single));
         assertEquals("collection size was 0",
                 mismatch(evaluate(single, List.of())));
-        assertEquals("collection size was 2",
+        assertEquals("collection size was greater than 1",
                 mismatch(evaluate(single, List.of("first", "second"))));
-    }
-
-    @Test
-    void singleMismatchUsesTheSizeObservedByTheCheck() {
-        var actual = new ArrayList<String>() {
-            @Override
-            public int size() {
-                int observed = super.size();
-                if (observed == 0) add("ready");
-                return observed;
-            }
-        };
-
-        assertEquals("collection size was 0", mismatch(evaluate(single, actual)));
     }
 
     @Test

@@ -37,17 +37,8 @@ import static java.util.Objects.requireNonNull;
 @SuppressWarnings("varargs")
 public final class CollectionConditions {
 
-    public static final SelectedCondition<Collection<?>> single = selected("collection has a single element", actual -> {
-        if (actual == null) {
-            return unsatisfied("collection was null");
-        }
-        int size = actual.size();
-        if (size != 1) {
-            return unsatisfied("collection size was " + size);
-        }
-        var values = actual.iterator();
-        return satisfied(values.next());
-    });
+    public static final SelectedCondition<Collection<?>> single = selected("collection has a single element",
+            actual -> ConditionSupport.single("collection", actual, ConditionResult::satisfied));
     public static final PreservingCondition<Collection<?>> empty = sized(0, size -> size == 0,
             "collection is empty");
     public static final PreservingCondition<Collection<?>> nonEmpty = sized(0, size -> size > 0,

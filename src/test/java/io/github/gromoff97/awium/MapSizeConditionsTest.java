@@ -57,22 +57,8 @@ class MapSizeConditionsTest {
         assertEquals("map has a single entry", description(singleEntry));
         assertEquals("map size was 0",
                 mismatch(evaluate(singleEntry, Map.of())));
-        assertEquals("map size was 2",
+        assertEquals("map size was greater than 1",
                 mismatch(evaluate(singleEntry, Map.of("first", 1, "second", 2))));
-    }
-
-    @Test
-    void singleMismatchUsesTheSizeObservedByTheCheck() {
-        var actual = new LinkedHashMap<String, String>() {
-            @Override
-            public int size() {
-                int observed = super.size();
-                if (observed == 0) put("key", "ready");
-                return observed;
-            }
-        };
-
-        assertEquals("map size was 0", mismatch(evaluate(singleEntry, actual)));
     }
 
     @Test

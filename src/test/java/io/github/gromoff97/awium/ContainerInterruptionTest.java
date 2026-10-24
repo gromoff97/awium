@@ -26,14 +26,11 @@ class ContainerInterruptionTest {
             for (boolean throwing : List.of(false, true)) {
                 var actual = new ArrayList<>(List.of("ready")) {
                     @Override
-                    public int size() {
+                    public Iterator<String> iterator() {
                         Thread.currentThread().interrupt();
                         if (cause instanceof Error error) throw error;
                         throw (RuntimeException) cause;
                     }
-
-                    @Override
-                    public Iterator<String> iterator() { throw new AssertionError("iterator must not be called"); }
 
                     @Override
                     public String toString() { return "failing collection"; }
@@ -109,8 +106,6 @@ class ContainerInterruptionTest {
                 waiting -> waiting.tryUntil(MapConditions.containsExactlyEntries(Map.of("key", "ready"))));
         for (String boundary : List.of("entrySet", "iterator", "hasNext", "next", "getKey", "getValue")) {
             for (int index = 0; index < waits.size(); index++) {
-                // Single-entry selection reads the first entry directly.
-                if (boundary.equals("hasNext") && (index == 0 || index == 3)) continue;
                 // Selecting an entry does not inspect its key.
                 if (boundary.equals("getKey") && index < 2) continue;
                 if (boundary.equals("getValue") && (index < 2 || index == 4)) continue;
@@ -136,7 +131,7 @@ class ContainerInterruptionTest {
                 actual -> await(() -> actual).tryUntil(MapConditions.containsOnlyKeys("key")),
                 actual -> await(() -> actual).tryUntil(MapConditions.allValues(value -> true)),
                 actual -> await(() -> actual).tryUntil(MapConditions.containsValues("ready")));
-        List<String> boundaries = List.of("size", "size", "size", "size", "keySet", "keySet", "keySet", "values", "values");
+        List<String> boundaries = List.of("entrySet", "entrySet", "size", "size", "keySet", "keySet", "keySet", "values", "values");
         for (int index = 0; index < waits.size(); index++) {
             var actual = new SignallingMap(boundaries.get(index));
             var wait = waits.get(index);

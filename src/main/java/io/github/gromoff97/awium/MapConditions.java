@@ -37,15 +37,8 @@ import static java.util.Objects.requireNonNull;
 @SuppressWarnings("varargs")
 public final class MapConditions {
 
-    public static final SelectedCondition<Map<?, ?>> singleEntry = selected("map has a single entry", actual -> {
-        if (actual == null) {
-            return unsatisfied("map was null");
-        }
-        int size = actual.size();
-        return size == 1
-                ? satisfied(firstEntry(actual))
-                : unsatisfied("map size was " + size);
-    });
+    public static final SelectedCondition<Map<?, ?>> singleEntry = selected("map has a single entry",
+            actual -> ConditionSupport.single("map", actual == null ? null : actual.entrySet(), ConditionResult::satisfied));
     public static final PreservingCondition<Map<?, ?>> empty = sized(0, size -> size == 0,
             "map is empty");
     public static final PreservingCondition<Map<?, ?>> nonEmpty = sized(0, size -> size > 0,
@@ -188,18 +181,10 @@ public final class MapConditions {
     }
 
     public static <KEY> MapValueCondition<Map<? super KEY, ?>> onlyValueFor(KEY key) {
-        return new MapValueCondition<>(ConditionSupport.condition("map contains only the expected key", expectedReference(key), actual -> {
-            if (actual == null) {
-                return unsatisfied("map was null");
-            }
-            int size = actual.size();
-            if (size != 1) {
-                return unsatisfied("map size was " + size);
-            }
-            var entry = firstEntry(actual);
-            return deepEquals(entry.getKey(), key)
-                    ? satisfied(entry.getValue()) : unsatisfied("map contained a different key");
-        }));
+        return new MapValueCondition<>(ConditionSupport.condition("map contains only the expected key", expectedReference(key), actual ->
+                ConditionSupport.single("map", actual == null ? null : actual.entrySet(), entry ->
+                        deepEquals(entry.getKey(), key) ? satisfied(entry.getValue())
+                                : unsatisfied("map contained a different key"))));
     }
 
     @SafeVarargs
@@ -283,10 +268,6 @@ public final class MapConditions {
         var entries = snapshotEntries(requireNonNull(expected, "expected entries must not be null"));
         return preserving("map does not contain exactly the expected entries", "map contained exactly the expected entries", expectedReference(entries),
                 actual -> !exactContent(actual, entries));
-    }
-
-    private static <KEY, VALUE> Entry<KEY, VALUE> firstEntry(Map<KEY, VALUE> actual) {
-        return actual.entrySet().iterator().next();
     }
 
     private static <VALUE> ConditionResult<VALUE> value(Map<?, ? extends VALUE> actual, Object key) {

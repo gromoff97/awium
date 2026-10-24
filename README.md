@@ -221,6 +221,11 @@ other elements may be present. No matches or several matches cause a retry.
 The source is read once per attempt. `singleEntry(...)` applies the same rule to
 map entries; `hasValue(...)` checks an optional value.
 
+Structural single-value selections use one iterator to distinguish zero, one,
+and several values, without counting the whole collection. This also avoids
+using a stale size when a concurrent collection changes before iteration.
+The observation remains a caller-owned object, not an atomic snapshot.
+
 The nested condition can preserve the selected value (`matches`, `asserted`,
 `condition`), compare it with an expected value (`equalTo`), or narrow its type
 (`instanceOf`). Its explanation and expected value are

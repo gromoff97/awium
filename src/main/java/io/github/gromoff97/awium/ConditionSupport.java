@@ -106,6 +106,16 @@ final class ConditionSupport {
         });
     }
 
+    static <ELEMENT, RESULT> ConditionResult<RESULT> single(String subject, Iterable<? extends ELEMENT> values,
+            Function<? super ELEMENT, ? extends ConditionResult<RESULT>> selection) {
+        if (values == null) return unsatisfied(subject + " was null");
+        var iterator = values.iterator();
+        if (!iterator.hasNext()) return unsatisfied(subject + " size was 0");
+        ELEMENT value = iterator.next();
+        return iterator.hasNext() ? unsatisfied(subject + " size was greater than 1")
+                : selection.apply(value);
+    }
+
     static <OBSERVED, ELEMENT, RESULT> Condition<OBSERVED, RESULT> single(String subject, Condition<?, ?> condition,
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
             Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT>> evaluatorFactory) {
