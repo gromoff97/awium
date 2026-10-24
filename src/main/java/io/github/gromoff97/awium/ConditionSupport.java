@@ -142,7 +142,7 @@ final class ConditionSupport {
     @SuppressWarnings("varargs")
     static <OBSERVED> Condition<OBSERVED, List<OBSERVED>> captured(PreservingCondition<? super OBSERVED> first,
             PreservingCondition<? super OBSERVED> second, PreservingCondition<? super OBSERVED>... rest) {
-        List<PreservingCondition<? super OBSERVED>> stages = stages(first, second, rest);
+        var stages = stages(first, second, rest);
         return new Condition<>("conditions are satisfied in order", null, null, () ->
                 new SequenceExecution<OBSERVED, OBSERVED>(stages.stream()
                         .map(PreservingCondition::preservingAttempt))::step);
@@ -153,8 +153,7 @@ final class ConditionSupport {
     static <OBSERVED, ELEMENT> Condition<OBSERVED, List<ELEMENT>> captured(SelectedCondition<? super OBSERVED> first,
             SelectedCondition<? super OBSERVED> second,
             SelectedCondition<? super OBSERVED>... rest) {
-        List<SelectedCondition<? super OBSERVED>> stages =
-                stages(first, second, rest);
+        var stages = stages(first, second, rest);
         return new Condition<>("conditions are satisfied in order", null, null,
                 () -> new SequenceExecution<OBSERVED, ELEMENT>(stages.stream()
                         .map(SelectedCondition::selectionAttempt))::step);
@@ -165,8 +164,7 @@ final class ConditionSupport {
     static <OBSERVED, MAP_VALUE> Condition<OBSERVED, List<MAP_VALUE>> captured(MapValueCondition<? super OBSERVED> first,
             MapValueCondition<? super OBSERVED> second,
             MapValueCondition<? super OBSERVED>... rest) {
-        List<MapValueCondition<? super OBSERVED>> stages =
-                stages(first, second, rest);
+        var stages = stages(first, second, rest);
         return new Condition<>("conditions are satisfied in order", null, null,
                 () -> new SequenceExecution<OBSERVED, MAP_VALUE>(stages.stream()
                         .map(MapValueCondition::selectionAttempt))::step);
@@ -176,7 +174,7 @@ final class ConditionSupport {
     @SuppressWarnings("varargs")
     static <OBSERVED> Condition<OBSERVED, List<OBSERVED>> captured(ComparisonCondition<? extends OBSERVED> first,
             ComparisonCondition<? extends OBSERVED> second, ComparisonCondition<? extends OBSERVED>... rest) {
-        List<ComparisonCondition<? extends OBSERVED>> stages = stages(first, second, rest);
+        var stages = stages(first, second, rest);
         return new Condition<>("conditions are satisfied in order", null, null, () ->
                 new SequenceExecution<OBSERVED, OBSERVED>(stages.stream()
                         .map(stage -> stage.definition.preservingAttempt()))::step);

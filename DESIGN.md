@@ -161,6 +161,13 @@
   сохраняют конкретные типы и wildcard-представления. Обычная запись:
   `Callable<User> source = service::loadUser;`
   `User user = await(source).until(matches(User::ready).because("ready user"));`.
+- `AttemptRecord.Timing.BeforeRetrieval/BeforeObservation/AfterObservation`
+  заменяются единым `AttemptRecord.Timing(start, retrieval, observation, completion)`.
+  Невыполненный checkpoint равен `null`; начало и завершение обязательны.
+  Пример чтения: `attempt.outcome().timing().observationOffset()`.
+  Причина любой ошибки исхода читается через `attempt.outcome().cause()`;
+  прежние компоненты `failure()` переименованы. Вид исхода по-прежнему различает
+  отсутствие наблюдения и наблюдение `null`.
 - `isNull` возвращает исходное значение своего типа; `absent` — тот же пустой
   `Optional`. `Unsatisfied` может не содержать дополнительного mismatch.
 - Все таймауты имеют заголовок `Acquisition deadline elapsed`. Диагностика
@@ -185,7 +192,7 @@
 | Конкурентные сессии | По 17 280 запусков, 32 виртуальных потока, раздельное состояние и неизменяемые снимки. `/tmp/awium-concurrent-session-proof/report.json` |
 | Переход на Callable | Реальный JDK-ввод, checked exceptions, wildcard-представления, сравнительные и конкурентные сценарии; чистая компиляция совпала с JAR. `/tmp/awium-callable-source-probe/report.json` |
 | Упорядоченные проверки | 2 063 880 сравнений; измерены варианты обхода. `/tmp/awium-ordered-iterator-proof/report.json` |
-| Общий STRONGER PIT | После общего префикса и индексного поиска: 1034/1035, непокрытых мутаций нет. Оставшаяся мутация удаляет быстрый size-guard карты. `/tmp/awium-pit-current-full` |
+| Общий STRONGER PIT | `455d2d9`: 1030/1030, непокрытых мутаций нет. `/tmp/awium-pit-stage-owner-full` |
 | Диагностика STRONGER PIT | `8b4b805`: 113/113 мутаций обнаружены. `/tmp/awium-pit-diagnostics-complete` |
 | PMD, CPD, SpotBugs | Запущены вне сборки, runtime-зависимости не добавлены. `/tmp/awium-static-analysis` |
 | Record patterns Java 21 | Значение и история остаются типизированными без type witnesses в цепочке. `/tmp/awium-record-pattern-client/report.json` |
@@ -274,8 +281,13 @@
 
 Порядок и момент создания пользовательских проверок сохранены: полный `check`
 (415 тестов), 63 452 160 комбинаций независимой модели с прежним digest
-`088b7c7dc1aa9821` и 17 280 конкурентных сессий прошли. Общий STRONGER PIT
-выполняется. `/tmp/awium-sequence-stage-owner-probe/report.json`.
+`088b7c7dc1aa9821` и 17 280 конкурентных сессий прошли. Общий STRONGER PIT:
+1030/1030, без непокрытых мутаций. `/tmp/awium-sequence-stage-owner-probe/report.json`.
+
+Четыре локальных списка этапов в фабриках объявлены через `var`: тип выводится
+из валидируемых аргументов. Полный `check`: 415 тестов. Из class-файлов изменился
+только `ConditionSupport` из-за сдвига строк; вывод `javap -p -c -s` совпал с
+версией общего PIT. `/tmp/awium-stage-local-types-probe/report.json`.
 
 ### Быстрый отказ точного сравнения карты
 
