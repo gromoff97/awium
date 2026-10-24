@@ -440,7 +440,9 @@ AssertionAdapter проверяет тот же контракт через пу
 повторного assertInstanceOf; из двух эквивалентных nullable predicates оставлен
 проверяющий сам null. Optional<String> выводится из обычной lambda.
 Полный check: 422 теста без ошибок и пропусков. Общий STRONGER по всему продукту
-запущен после серии удалений тестов; результат будет записан по завершении.
+завершён: 1 033 мутации обнаружены, без SURVIVED/NO_COVERAGE. Покрытие строк
+985/1000; точные статусы KILLED/TIMED_OUT сохранены в отдельном отчёте
+`/tmp/awium-seven-hour-pass/all-stronger-after-test-simplification-report.json`.
 `/tmp/awium-seven-hour-pass/test-assertion-pairs-report.json`.
 
 История завершённых проходов удалена из рабочего плана. Она содержала старые
