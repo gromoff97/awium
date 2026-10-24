@@ -25,16 +25,8 @@ final class CompilationSupport {
             "compiler.err.prob.found.req",
             "compiler.err.ref.ambiguous",
             "compiler.err.type.found.req");
-    private static final Set<String> MISSING_METHOD_CODES = Set.of(
-            "compiler.err.cant.resolve.location",
-            "compiler.err.cant.resolve.location.args");
 
     static boolean compiles(Path directory, String source) throws IOException {
-        return compiles(directory, source, null);
-    }
-
-    static boolean compiles(Path directory, String source,
-            String expectedMissingMethod) throws IOException {
         Path sourceFile = directory.resolve("Contract.java");
         writeString(sourceFile, source);
         var options = List.of("--release", "21", "-Xlint:all",
@@ -47,19 +39,18 @@ final class CompilationSupport {
                     diagnostics, options, null,
                     files.getJavaFileObjects(sourceFile)).call());
             if (!compiled) {
-                requireExpectedRejection(diagnostics.getDiagnostics(), expectedMissingMethod);
+                requireExpectedRejection(diagnostics.getDiagnostics());
             }
             return compiled;
         }
     }
 
-    private static void requireExpectedRejection(List<Diagnostic<? extends JavaFileObject>> diagnostics,
-            String expectedMissingMethod) {
+    private static void requireExpectedRejection(List<Diagnostic<? extends JavaFileObject>> diagnostics) {
         List<Diagnostic<? extends JavaFileObject>> errors = diagnostics.stream()
                 .filter(diagnostic -> diagnostic.getKind() == ERROR)
                 .toList();
         if (errors.isEmpty() || errors.stream()
-                .anyMatch(error -> !isExpectedRejection(error, expectedMissingMethod))) {
+                .anyMatch(error -> !TYPE_REJECTION_CODES.contains(error.getCode()))) {
             String details = diagnostics.stream()
                     .map(diagnostic -> diagnostic.getCode() + ": "
                             + diagnostic.getMessage(Locale.ROOT))
@@ -68,11 +59,4 @@ final class CompilationSupport {
         }
     }
 
-    private static boolean isExpectedRejection(Diagnostic<? extends JavaFileObject> error,
-            String expectedMissingMethod) {
-        return TYPE_REJECTION_CODES.contains(error.getCode())
-                || expectedMissingMethod != null
-                && MISSING_METHOD_CODES.contains(error.getCode())
-                && error.getMessage(Locale.ROOT).contains("method " + expectedMissingMethod + "(");
-    }
 }

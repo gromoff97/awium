@@ -32,12 +32,13 @@ class PublicSurfaceTest {
     }
 
     @Test
-    void conditionStagesDoNotExposeRuntimeMechanicsOrFictitiousResults() {
-        Set<String> runtimeMethods = Set.of("evaluatorFactory", "newEvaluator", "newAttempt", "preservingAttempt", "selectionAttempt");
-        for (Class<?> stage : List.of(Condition.class, PreservingCondition.class, ComparisonCondition.class,
+    void conditionsDoNotExposeRuntimeMechanicsOrAlternativeFactories() {
+        Set<String> excludedMethods = Set.of("evaluatorFactory", "newEvaluator", "newAttempt",
+                "preservingAttempt", "selectionAttempt", "yields", "preserving", "captured");
+        for (Class<?> stage : List.of(Conditions.class, Condition.class, PreservingCondition.class, ComparisonCondition.class,
                 SelectedCondition.class, MapValueCondition.class)) {
             stream(stage.getMethods()).forEach(method ->
-                    assertFalse(runtimeMethods.contains(method.getName()), method.toGenericString()));
+                    assertFalse(excludedMethods.contains(method.getName()), method.toGenericString()));
         }
         assertFalse(Condition.class.isAssignableFrom(ComparisonCondition.class));
         assertFalse(Condition.class.isAssignableFrom(SelectedCondition.class));
@@ -45,6 +46,18 @@ class PublicSurfaceTest {
         assertFalse(Condition.class.isAssignableFrom(MapValueCondition.class));
         assertFalse(SelectedCondition.class.isAssignableFrom(MapValueCondition.class));
         assertTrue(isFinal(Condition.class.getModifiers()));
+    }
+
+    @Test
+    void constantConditionsHaveNoZeroArgumentFactoryAliases() {
+        for (var catalog : List.of(Conditions.class, OptionalConditions.class, CollectionConditions.class,
+                MapConditions.class, StringConditions.class)) {
+            for (var field : catalog.getFields()) {
+                assertTrue(stream(catalog.getDeclaredMethods()).noneMatch(method ->
+                        method.getName().equals(field.getName()) && method.getParameterCount() == 0),
+                        field.toGenericString());
+            }
+        }
     }
 
 }

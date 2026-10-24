@@ -60,19 +60,9 @@ class OrderedWaitCompilationContractTest {
     }
 
     @Test
-    void transformationFactoriesAndPreservingAliasAreNotAvailable() throws IOException {
-        assertFalse(CompilationSupport.compiles(directory,
-                source("io.github.gromoff97.awium.Conditions.yields(String::trim);"), "yields"));
-        assertFalse(CompilationSupport.compiles(directory,
-                source("io.github.gromoff97.awium.Conditions.preserving(\"identity\", value -> io.github.gromoff97.awium.ConditionResult.satisfied(value));"), "preserving"));
-    }
-
-    @Test
-    void sequenceDoesNotIntroduceAnEmptyTerminalOrPublicCapturedFactory() throws IOException {
+    void emptyTerminalsAreRejected() throws IOException {
         assertFalse(compiles("await(Contract::text).until();"));
         assertFalse(compiles("await(Contract::text).tryUntil();"));
-        assertFalse(CompilationSupport.compiles(directory,
-                source("io.github.gromoff97.awium.Conditions.captured(isNotNull, isNotNull);"), "captured"));
     }
 
     private boolean compiles(String body) throws IOException {

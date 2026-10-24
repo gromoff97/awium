@@ -284,33 +284,8 @@ class CompilationContractTest {
                 """));
     }
 
-    @Test
-    void constantConditionsAreFieldsNotFactories() throws IOException {
-        for (String condition : List.of("CollectionConditions.empty()",
-                "CollectionConditions.nonEmpty()", "MapConditions.empty()",
-                "MapConditions.nonEmpty()",
-                "CollectionConditions.single()",
-                "CollectionConditions.first()", "CollectionConditions.last()",
-                "MapConditions.singleEntry()")) {
-            String method = condition.substring(condition.lastIndexOf('.') + 1,
-                    condition.indexOf('('));
-            assertFalse(compiles("""
-                    import io.github.gromoff97.awium.CollectionConditions;
-                    import io.github.gromoff97.awium.MapConditions;
-                    final class Contract {
-                        void check() { Object condition = %s; }
-                    }
-                    """.formatted(condition), method), condition);
-        }
-    }
-
     private boolean compiles(String source) throws IOException {
         return CompilationSupport.compiles(temporaryDirectory, source);
     }
 
-    private boolean compiles(String source, String expectedMissingMethod)
-            throws IOException {
-        return CompilationSupport.compiles(temporaryDirectory, source,
-                expectedMissingMethod);
-    }
 }
