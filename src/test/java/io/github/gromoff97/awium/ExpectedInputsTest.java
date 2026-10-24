@@ -21,7 +21,6 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
-import static io.github.gromoff97.awium.ProbeContainers.removeConcurrently;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ExpectedInputsTest {
@@ -44,7 +43,7 @@ class ExpectedInputsTest {
     }
 
     @Test
-    void membershipConditionsNeverKeepAnEmptySnapshotAfterConcurrentRemoval() {
+    void membershipConditionsNeverKeepAnEmptySnapshotAfterRemovalBeforeSnapshot() {
         List<Function<Collection<String>, PreservingCondition<?>>> factories = List.of(
                 CollectionConditions::containsAll, CollectionConditions::doesNotContainAny,
                 CollectionConditions::doesNotContainAll, CollectionConditions::containsAny,
@@ -63,7 +62,7 @@ class ExpectedInputsTest {
     }
 
     @Test
-    void entryConditionsNeverKeepAnEmptySnapshotAfterConcurrentRemoval() {
+    void entryConditionsNeverKeepAnEmptySnapshotAfterRemovalBeforeSnapshot() {
         List<Function<Map<String, String>, PreservingCondition<?>>> factories = List.of(
                 MapConditions::containsEntries, MapConditions::doesNotContainAllEntries,
                 MapConditions::containsAnyEntries, MapConditions::doesNotContainEntries);
@@ -216,7 +215,7 @@ class ExpectedInputsTest {
     private static final class ChangingExpectedQueue extends ConcurrentLinkedQueue<String> {
         @Override
         public Stream<String> stream() {
-            removeConcurrently(this::clear);
+            clear();
             return super.stream();
         }
     }
@@ -224,7 +223,7 @@ class ExpectedInputsTest {
     private static final class ChangingExpectedMap extends ConcurrentHashMap<String, String> {
         @Override
         public Set<Map.Entry<String, String>> entrySet() {
-            removeConcurrently(this::clear);
+            clear();
             return super.entrySet();
         }
     }

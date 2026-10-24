@@ -1191,3 +1191,22 @@ PositiveFluentMatrix и DirectBecause сценариями, в том числе
 ошибок и пропусков. STRONGER Condition*, ValueAwait, SequenceExecution и
 OptionalConditions: 262 мутации, все KILLED.
 `/tmp/awium-seven-hour-pass/test-ownership-report.json`.
+
+### Изменение контейнера воспроизводится без лишнего потока
+
+ConcurrentSelectionTest переименован в ChangingContainerSelectionTest. Hooks
+изменяют контейнер в той же точке чтения, но clear выполняется непосредственно.
+Раньше каждый hook запускал virtual worker и немедленно join до продолжения
+чтения: расписание не было частью проверяемого поведения. Удалены общий
+removeConcurrently, его timeout/catch/interrupt и два импорта. Сохранены
+ConcurrentLinkedQueue/Deque, CopyOnWriteArrayList и ConcurrentHashMap, а также
+hooks старых size/isEmpty и текущих iterator/view чтений. ExpectedInputs
+использует тот же прямой контролируемый момент удаления.
+
+В изолированных классах восстановлены три старые ошибочные реализации:
+индекс через size/get, first/last через isEmpty/getFirst/getLast. Каждая
+отклонена новыми тестами без рабочих потоков. Реальные platform/virtual
+проверки отдельны и прошли вместе с целевыми сценариями. STRONGER
+CollectionConditions/MapConditions/ConditionSupport: 471 мутация без
+SURVIVED/NO_COVERAGE; точные KILLED/TIMED_OUT сохранены в отчёте.
+`/tmp/awium-seven-hour-pass/changing-containers-report.json`.

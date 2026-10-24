@@ -10,12 +10,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.ProbeContainers.removeConcurrently;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-class ConcurrentSelectionTest {
+class ChangingContainerSelectionTest {
 
     @Test
     void indexedSelectionRetriesWhenTheListIsEmptiedBeforeSelection() {
@@ -97,7 +96,7 @@ class ConcurrentSelectionTest {
         public Iterator<String> iterator() {
             if (first) {
                 first = false;
-                removeConcurrently(this::clear);
+                clear();
             }
             return super.iterator();
         }
@@ -109,7 +108,7 @@ class ConcurrentSelectionTest {
         private void change() {
             if (first) {
                 first = false;
-                removeConcurrently(this::clear);
+                clear();
             }
         }
 
@@ -139,7 +138,7 @@ class ConcurrentSelectionTest {
         private void change() {
             if (first) {
                 first = false;
-                removeConcurrently(this::clear);
+                clear();
             }
         }
 
@@ -164,7 +163,7 @@ class ConcurrentSelectionTest {
         public Set<Map.Entry<String, String>> entrySet() {
             if (first) {
                 first = false;
-                removeConcurrently(this::clear);
+                clear();
             }
             return super.entrySet();
         }

@@ -12,19 +12,6 @@ final class ProbeContainers {
 
     private ProbeContainers() {}
 
-    static void removeConcurrently(Runnable removal) {
-        Thread worker = Thread.startVirtualThread(removal);
-        try {
-            worker.join(5_000);
-        } catch (InterruptedException failure) {
-            throw new AssertionError(failure);
-        }
-        if (worker.isAlive()) {
-            worker.interrupt();
-            throw new AssertionError("concurrent removal did not finish");
-        }
-    }
-
     static final class ProbeCollection<E> extends AbstractCollection<E> {
         private final int reportedSize;
         private final RuntimeException sizeFailure;
