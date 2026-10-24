@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.INTERRUPTED;
 import static io.github.gromoff97.awium.CollectionConditions.*;
+import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
@@ -28,8 +29,7 @@ class ContainerInterruptionTest {
                     @Override
                     public Iterator<String> iterator() {
                         Thread.currentThread().interrupt();
-                        if (cause instanceof Error error) throw error;
-                        throw (RuntimeException) cause;
+                        return throwUnchecked(cause);
                     }
 
                     @Override

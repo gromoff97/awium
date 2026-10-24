@@ -690,3 +690,13 @@ ArtifactContractIT включает ValueAwait рядом с Await в запре
 участвуют в проверках. Убраны лишний wildcard cast в failed helper и
 неиспользуемый assertThrows import. Полный check: 413 тестов без ошибок
 и пропусков. `/tmp/awium-seven-hour-pass/incidental-fixtures-report.json`.
+
+### Прямые getters и единый способ выбросить тестовый Throwable
+
+Из ConditionTestRuntime удалены description/explanation для самого Condition:
+они повторяли его публичные getters. Семь вызовов заменены через javac AST;
+семейства сохраняют узкие helpers без новых зависимостей их тестов от definition.
+ContainerInterruptionTest использует общий throwUnchecked вместо ветки
+Error/RuntimeException и cast. Два метода, одна ветка и восемь строк убраны.
+Пять классов с metadata и шесть container interruption тестов прошли.
+`/tmp/awium-seven-hour-pass/test-primitives-report.json`.

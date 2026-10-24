@@ -51,8 +51,8 @@ class ConditionDecorationTest {
         var replacements = conditions.stream()
                 .map(condition -> condition.because("old").because("new %d", 42)).toList();
 
-        for (var condition : conditions) assertNull(explanation(condition));
-        for (var replacement : replacements) assertEquals("new 42", explanation(replacement));
+        for (var condition : conditions) assertNull(condition.explanation());
+        for (var replacement : replacements) assertEquals("new 42", replacement.explanation());
         var custom = condition("custom", ConditionResult::satisfied);
         assertEquals("new 42", explanation(custom.because("old").because("new %d", 42)));
         assertNull(explanation(custom));

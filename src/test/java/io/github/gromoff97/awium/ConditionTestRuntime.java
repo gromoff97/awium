@@ -40,15 +40,15 @@ final class ConditionTestRuntime {
     }
 
     static String description(SelectedCondition<?> condition) {
-        return description(condition.definition);
+        return condition.definition.description();
     }
 
     static String explanation(SelectedCondition<?> condition) {
-        return explanation(condition.definition);
+        return condition.definition.explanation();
     }
 
     static String explanation(MapValueCondition<?> condition) {
-        return explanation(condition.definition);
+        return condition.definition.explanation();
     }
 
     static <S> ConditionResult<? extends S> evaluate(ComparisonCondition<? extends S> condition, S actual) {
@@ -56,11 +56,11 @@ final class ConditionTestRuntime {
     }
 
     static String description(ComparisonCondition<?> condition) {
-        return description(condition.definition);
+        return condition.definition.description();
     }
 
     static String explanation(ComparisonCondition<?> condition) {
-        return explanation(condition.definition);
+        return condition.definition.explanation();
     }
 
     static String description(PreservingCondition<?> condition) {
@@ -69,14 +69,6 @@ final class ConditionTestRuntime {
 
     static String explanation(PreservingCondition<?> condition) {
         return condition.definition.explanation();
-    }
-
-    static String description(Condition<?, ?> condition) {
-        return condition.description();
-    }
-
-    static String explanation(Condition<?, ?> condition) {
-        return condition.explanation();
     }
 
     static void assertUnsatisfied(ConditionResult<?> evaluation) {
