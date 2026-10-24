@@ -23,9 +23,6 @@ final class FailureDiagnostics {
     private final WaitCompletion<?, ?> outcome;
     private final Condition<?, ?> condition;
     private final WaitConfiguration configuration;
-    private final Object observed;
-    private final String mismatch;
-    private final AwaitFailure.Reason reason;
     private final Throwable cause;
     private final AttemptRecord.Progress sequence;
 
@@ -37,15 +34,6 @@ final class FailureDiagnostics {
         this.configuration = requireNonNull(configuration, "configuration must not be null");
         requireNonNull(condition, "condition must not be null");
         var attempt = outcome.attempt().outcome();
-        var evaluation = attempt instanceof AttemptRecord.Outcome.Evaluated<?, ?> value ? value.evaluation() : null;
-        observed = switch (attempt) {
-            case AttemptRecord.Outcome.Evaluated<?, ?> value -> value.observed();
-            case AttemptRecord.Outcome.ConditionFailed<?, ?> value -> value.observed();
-            case AttemptRecord.Outcome.SourceInterrupted<?, ?> value -> value.observed();
-            default -> null;
-        };
-        mismatch = evaluation instanceof ConditionResult.Unsatisfied<?> value ? value.mismatch() : null;
-        reason = outcome.failureReason();
         cause = attempt.cause();
         if (attempt instanceof AttemptRecord.Outcome.Evaluated<?, ?> value) {
             sequence = value.progress();
@@ -75,12 +63,11 @@ final class FailureDiagnostics {
 
     static AwaitFailure failure(WaitCompletion<?, ?> outcome, Condition<?, ?> condition, WaitConfiguration configuration) {
         var diagnostics = new FailureDiagnostics(outcome, condition, configuration);
-        return new AwaitFailure(diagnostics.reason, diagnostics.message(), diagnostics.cause,
+        return new AwaitFailure(outcome.failureReason(), diagnostics.message(), diagnostics.cause,
                 diagnostics.diagnosticFailures);
     }
 
-    private String uncontrolledHeading() {
-        boolean interrupted = reason == AwaitFailure.Reason.INTERRUPTED;
+    private String uncontrolledHeading(boolean interrupted) {
         return switch (outcome.attempt().outcome()) {
             case AttemptRecord.Outcome.WaitingFailed<?, ?> ignored -> interrupted
                     ? "Caller thread was interrupted while waiting" : "Waiting before the next attempt failed";
@@ -96,8 +83,8 @@ final class FailureDiagnostics {
             case WaitCompletion.Timeout<?, ?> ignored -> "Acquisition deadline elapsed";
             case WaitCompletion.PersistenceFailure<?, ?> ignored ->
                     "Condition did not persist for the required duration";
-            case WaitCompletion.Uncontrolled<?, ?> ignored ->
-                    uncontrolledHeading();
+            case WaitCompletion.Uncontrolled<?, ?> failure ->
+                    uncontrolledHeading(failure.interrupted());
             case WaitCompletion.Satisfied<?, ?> ignored ->
                     throw new IllegalArgumentException("successful outcomes have no failure diagnostics");
         };
@@ -107,10 +94,16 @@ final class FailureDiagnostics {
         AttemptRecord<?, ?> attempt = outcome.attempt();
         StringBuilder out = new StringBuilder(title()).append("\n\n");
         condition(out, condition, "");
-        String actual = attempt.outcome().timing().observationOffset() != null
-                ? render(() -> renderValue(observed)) : null;
+        String actual = switch (attempt.outcome()) {
+            case AttemptRecord.Outcome.Evaluated<?, ?> value -> render(() -> renderValue(value.observed()));
+            case AttemptRecord.Outcome.ConditionFailed<?, ?> value -> render(() -> renderValue(value.observed()));
+            case AttemptRecord.Outcome.SourceInterrupted<?, ?> value -> render(() -> renderValue(value.observed()));
+            default -> null;
+        };
+        var evaluation = attempt.outcome() instanceof AttemptRecord.Outcome.Evaluated<?, ?> value ? value.evaluation() : null;
+        String mismatch = evaluation instanceof ConditionResult.Unsatisfied<?> value ? value.mismatch() : null;
         attempt(out, attempt, actual, sequence == null ? mismatch : null);
-        sequence(out);
+        sequence(out, mismatch);
         timing(out);
         if (cause != null) {
             out.append('\n');
@@ -189,7 +182,7 @@ final class FailureDiagnostics {
         }
     }
 
-    private void sequence(StringBuilder out) {
+    private void sequence(StringBuilder out, String mismatch) {
         if (sequence == null) {
             return;
         }
