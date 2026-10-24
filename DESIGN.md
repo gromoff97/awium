@@ -550,3 +550,12 @@ source меняет оба элемента исходного массива д
 Полный check: 415 тестов без ошибок и пропусков.
 `/tmp/awium-seven-hour-pass/captured-fixtures-report.json`; исходники и логи
 контролей — `/tmp/awium-seven-hour-pass/sequence-reuse-regression-control`.
+
+### Отрицательные примеры без лишнего окружения
+
+NestedSelectionCompilationContractTest собирает единственную фикстуру прямо
+рядом с четырьмя примерами: одноразовая assertRejected-обёртка удалена. Убраны
+неиспользуемые map() и import singleEntry. В OrderedWait удалены три неиспользуемых
+импорта фикстуры. Все несовместимые выражения сохранены; общая проверка кодов
+диагностики остаётся. Девять тестов обоих классов прошли.
+`/tmp/awium-seven-hour-pass/negative-fixture-cleanup-report.json`.

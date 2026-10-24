@@ -67,11 +67,8 @@ class OrderedWaitCompilationContractTest {
         CompilationSupport.assertRejected(directory, """
                 import java.util.*;
                 import java.util.concurrent.Callable;
-                import java.util.function.Predicate;
-                import io.github.gromoff97.awium.Condition;
                 import io.github.gromoff97.awium.AwaitResult;
                 import static io.github.gromoff97.awium.Await.await;
-                import static io.github.gromoff97.awium.ConditionResult.satisfied;
                 import static io.github.gromoff97.awium.Conditions.*;
                 import static io.github.gromoff97.awium.CollectionConditions.*;
                 import static io.github.gromoff97.awium.OptionalConditions.present;
