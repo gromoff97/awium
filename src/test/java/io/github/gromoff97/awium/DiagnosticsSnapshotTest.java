@@ -477,24 +477,23 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void longCauseMessagesPointToTheUnchangedCauseStackTrace() {
-        String exactMessage = "x".repeat(160);
-        String longMessage = "x".repeat(140) + "😀".repeat(21);
-        var exactCause = new IllegalStateException(exactMessage);
-        var longCause = new IllegalStateException(longMessage);
+    void causeMessagesRemainCompleteInBothTerminals() {
+        for (String message : List.of("x".repeat(1024), "detailed assertion 😀 ".repeat(32))) {
+            var cause = new IllegalStateException(message);
+            Callable<String> source = () -> { throw cause; };
+            var waiting = await(source);
 
-        var exactFailure = assertFailure(SOURCE_FAILED,
-                () -> complete(sourceFailure(exactCause, 1, 0),
-                        "condition", null, config(1, 2, 0)));
-        var longFailure = assertFailure(SOURCE_FAILED,
-                () -> complete(sourceFailure(longCause, 1, 0),
-                        "condition", null, config(1, 2, 0)));
+            var captured = assertInstanceOf(AwaitResult.Failed.class,
+                    waiting.tryUntil(Conditions.isNotNull)).failure();
+            var thrown = assertThrows(AwaitExecutionException.class,
+                    () -> waiting.until(Conditions.isNotNull));
 
-        assertTrue(exactFailure.getMessage().contains("Message: " + exactMessage));
-        assertTrue(longFailure.getMessage().contains(
-                "Message: " + "x".repeat(140) + "😀… <see stack trace>"));
-        assertSame(longCause, longFailure.getCause());
-        assertEquals(longMessage, longFailure.getCause().getMessage());
+            assertTrue(captured.message().contains("Message: " + message));
+            assertTrue(thrown.getMessage().contains("Message: " + message));
+            assertSame(cause, captured.cause());
+            assertSame(cause, thrown.getCause());
+            assertEquals(message, cause.getMessage());
+        }
     }
 
     @Test

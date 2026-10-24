@@ -17,9 +17,6 @@ final class FailureDiagnostics {
             TimeUnit.DAYS, TimeUnit.HOURS, TimeUnit.MINUTES, TimeUnit.SECONDS,
             TimeUnit.MILLISECONDS, TimeUnit.MICROSECONDS, TimeUnit.NANOSECONDS);
 
-    private static final int CAUSE_MESSAGE_LIMIT = 160;
-    private static final String STACK_TRACE_HINT = "… <see stack trace>";
-
     private final WaitCompletion<?, ?> outcome;
     private final Condition<?, ?> condition;
     private final WaitConfiguration configuration;
@@ -108,8 +105,8 @@ final class FailureDiagnostics {
         if (cause != null) {
             out.append('\n');
             field(out, "", "Cause", cause.getClass().getName());
-            String message = render(() -> causeMessage(cause));
-            if (message != null) field(out, "Message", message);
+            String message = render(cause::getMessage);
+            if (message != null && !message.isBlank()) field(out, "Message", message);
         }
         for (Throwable failure : diagnosticFailures) {
             out.append('\n');
@@ -215,18 +212,4 @@ final class FailureDiagnostics {
         }
     }
 
-    private static String causeMessage(Throwable failure) {
-        String message = failure.getMessage();
-        if (message == null || message.isBlank()) {
-            return null;
-        }
-        String normalized = message.replace("\r\n", "\n").replace('\r', '\n');
-        if (normalized.codePointCount(0, normalized.length()) <= CAUSE_MESSAGE_LIMIT) {
-            return normalized;
-        }
-        int prefixLength = CAUSE_MESSAGE_LIMIT
-                - STACK_TRACE_HINT.codePointCount(0, STACK_TRACE_HINT.length());
-        return normalized.substring(0, normalized.offsetByCodePoints(0, prefixLength))
-                .stripTrailing() + STACK_TRACE_HINT;
-    }
 }

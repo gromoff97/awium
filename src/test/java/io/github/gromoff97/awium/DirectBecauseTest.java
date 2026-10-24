@@ -240,12 +240,15 @@ class DirectBecauseTest {
         var receipt = singleEntry(instanceOf(Receipt.class).because("receipt entry"));
         var ordered = sorted(Comparator.comparingInt(Number::intValue));
         var numbers = new ArrayList<>(List.of(1, 2));
+        var words = new ArrayList<>(List.of("a", "b"));
 
         Receipt result = await(() -> actual).until(receipt.because("required receipt"));
         ArrayList<Integer> sortedNumbers = await(() -> numbers).until(ordered.because("ordered numbers"));
+        ArrayList<String> sortedWords = await(() -> words).until(sorted(String::compareTo).because("natural order"));
 
         assertSame(entry, result);
         assertSame(numbers, sortedNumbers);
+        assertSame(words, sortedWords);
     }
 
     @Test
