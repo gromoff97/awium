@@ -165,10 +165,10 @@ early. Custom waiting failures use the normal waiting-failure handling; clock
 failures propagate directly. Defaults remain `System.nanoTime` and
 `LockSupport.parkNanos`.
 
-## Business importance
+## Explain the condition
 
 Every condition supports `because(...)`. It returns an immutable copy with
-diagnostic business importance, preserving the condition's type and evaluation.
+an explanation for diagnostics, preserving the condition's type and evaluation.
 A repeated `because(...)` replaces the reason; the original condition and shared
 constants remain unchanged:
 
@@ -188,13 +188,21 @@ await(paymentRepository::load).until(equalTo(expectedPayment).because(
 ```
 
 Java does not propagate a target type through a chained generic factory call.
-When `matches(...)` is followed immediately by `because(...)`, declare the
-lambda parameter type:
+When `matches(...)` is followed immediately by `because(...)`, a method
+reference supplies the input type. For a lambda expression, declare its
+parameter type:
 
 ```java
+await(paymentRepository::load).until(matches(Payment::finished).because(
+        "Settlement requires a finished payment"));
 await(paymentRepository::load).until(matches((Payment payment) -> payment.status() == FINISHED).because(
         "Settlement requires a finished payment"));
 ```
+
+For emptiness, use `empty.because(...)` or `nonEmpty.because(...)` from the
+appropriate catalogue. A generic factory cannot infer its operand type from
+an untyped empty `List.of()`, an empty varargs list, or a `null` literal before
+a chained `because(...)`. Use `isNull` for a null check.
 
 ## Selection and checking
 
@@ -294,11 +302,6 @@ Changing the original container afterwards does not change the condition or its
 diagnostic reference. Encounter order, duplicates and supported nulls are retained.
 Reading these inputs happens during construction; a failure to read them is
 thrown there, before polling starts.
-
-`sameSizeAs(other)` retains `other` and reads both current sizes on every
-evaluation. Use `size(n)` for a fixed expected size. The two reads are not
-atomic: this condition does not provide a consistent snapshot of containers
-being changed concurrently. Their synchronization remains the caller's responsibility.
 
 Elements, keys, values, and callbacks remain caller-owned; they are not deeply
 copied. Single-value operands such as `equalTo(value)` and `sameAs(value)`
