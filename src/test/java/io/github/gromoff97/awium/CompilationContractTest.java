@@ -42,6 +42,30 @@ class CompilationContractTest {
     }
 
     @Test
+    void singleAndBulkMembershipRejectUnrelatedElementTypes() throws IOException {
+        for (String condition : List.of("contains(42)", "containsAll(List.of(42))",
+                "doesNotContain(42)", "doesNotContainAny(List.of(42))")) {
+            for (String explanation : List.of("", ".because(\"incompatible\")")) {
+                for (String terminal : List.of("until", "tryUntil")) {
+                    String expression = "await(source)." + terminal + "(CollectionConditions."
+                            + condition + explanation + ");";
+                    assertFalse(compiles("""
+                            import java.util.List;
+                            import java.util.concurrent.Callable;
+                            import io.github.gromoff97.awium.CollectionConditions;
+                            import static io.github.gromoff97.awium.Await.await;
+                            final class Contract {
+                                void check(Callable<List<String>> source) {
+                                    %s
+                                }
+                            }
+                            """.formatted(expression)), expression);
+                }
+            }
+        }
+    }
+
+    @Test
     void unrelatedFixtureFailuresCannotMasqueradeAsTypeRejections() {
         assertThrows(AssertionError.class,
                 () -> compiles("final class Contract { void broken( }"));

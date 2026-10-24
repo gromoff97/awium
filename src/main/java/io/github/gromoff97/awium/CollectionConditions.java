@@ -31,6 +31,7 @@ import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("varargs")
@@ -121,23 +122,25 @@ public final class CollectionConditions {
                 actual -> !matchesAny(actual, predicate));
     }
 
-    @SafeVarargs
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> contains(ELEMENT... expected) {
-        return contains(asList(requireNonNull(expected, "expected elements must not be null")));
+    /** Matches one element, including a collection or array as that single element. */
+    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> contains(ELEMENT expected) {
+        return containsAll(singletonList(expected));
     }
 
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> contains(Collection<? extends ELEMENT> expected) {
+    /** Matches every element in a nonempty shallow snapshot of the expected collection. */
+    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsAll(Collection<? extends ELEMENT> expected) {
         var values = nonEmpty(snapshot(expected, "expected elements"), "expected elements");
         return preserving("collection contains all expected elements", "collection did not contain all expected elements", expectedReference(values),
                 actual -> ValueMatching.containsAll(actual, values, Objects::deepEquals));
     }
 
-    @SafeVarargs
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContain(ELEMENT... unexpected) {
-        return doesNotContain(asList(requireNonNull(unexpected, "unexpected elements must not be null")));
+    /** Rejects one element, including a collection or array as that single element. */
+    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContain(ELEMENT unexpected) {
+        return doesNotContainAny(singletonList(unexpected));
     }
 
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContain(Collection<? extends ELEMENT> unexpected) {
+    /** Rejects every element in a nonempty shallow snapshot of the unexpected collection. */
+    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainAny(Collection<? extends ELEMENT> unexpected) {
         var values = nonEmpty(snapshot(unexpected, "unexpected elements"), "unexpected elements");
         return preserving("collection does not contain any unexpected elements", "collection contained an unexpected element", unexpectedReference(values),
                 actual -> !matchesAny(actual,

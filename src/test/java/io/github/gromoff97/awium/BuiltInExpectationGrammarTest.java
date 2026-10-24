@@ -86,7 +86,7 @@ class BuiltInExpectationGrammarTest {
                         description(CollectionConditions.sizeAtMost(2)),
                         description(contains("expected")),
                         description(doesNotContain("expected")),
-                        description(contains("first", "second")),
+                        description(containsAll(List.of("first", "second"))),
                         description(doesNotContainAll("first", "second")),
                         description(containsAny("expected")),
                         description(doesNotContain("expected")),

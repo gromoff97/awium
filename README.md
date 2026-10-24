@@ -305,6 +305,12 @@ Import only the catalogue used by a test. Shared names such as `empty`,
 | `CollectionConditions` | `single`, empty/null/duplicate checks, quantifiers, membership, exact content, sequences, `first`, `last`, `element`, `sorted`, and `size...` | observed collection or selected element |
 | `MapConditions` | `singleEntry`, empty checks, entry/key/value quantifiers and membership, exact content, `valueFor`, `entryFor`, `onlyValueFor`, and `size...` | observed map, selected entry, or value |
 
+For collection membership, `contains(value)` and `doesNotContain(value)` compare
+one element. A collection or array remains one element. To check a set of
+expected elements, use `containsAll(collection)` or `doesNotContainAny(collection)`,
+for example `containsAll(List.of("a", "b"))`. For null checks, use `containsNull`
+and `doesNotContainNull`.
+
 Factories accepting collections of expected elements, maps of expected entries,
 or varargs candidates take a shallow snapshot when the condition is created.
 Changing the original container afterwards does not change the condition or its
@@ -314,7 +320,8 @@ Reading these inputs happens during construction; a failure to read them is
 thrown there, before polling starts.
 
 Elements, keys, values, and callbacks remain caller-owned; they are not deeply
-copied. Single-value operands such as `equalTo(value)` and `sameAs(value)`
+copied. Single-value operands such as `equalTo(value)`, `sameAs(value)`,
+`contains(value)` and `doesNotContain(value)`
 retain the supplied object, even if it is itself a container. This also applies
 when they are nested inside a selection such as `hasValue(equalTo(value))`.
 Observed values and successful results also retain their original identity.

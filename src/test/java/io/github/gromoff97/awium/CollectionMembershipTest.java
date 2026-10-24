@@ -23,6 +23,7 @@ import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CollectionMembershipTest {
@@ -53,7 +54,7 @@ class CollectionMembershipTest {
         }
         for (var expected : inputs) {
             if (expected.isEmpty()) continue;
-            var condition = contains(expected);
+            var condition = containsAll(expected);
             for (var actual : inputs) {
                 assertEquals(actual.containsAll(expected), evaluate(condition, actual) instanceof Satisfied<?>);
             }
@@ -76,14 +77,14 @@ class CollectionMembershipTest {
         var comparisons = new ArrayList<String>();
         var actual = List.of(new Value("a", comparisons), new Value("b", comparisons));
         var expected = List.of(new Value("b", List.of()), new Value("a", List.of()));
-        assertSame(actual, io.github.gromoff97.awium.Await.await(() -> actual).until(contains(expected)));
+        assertSame(actual, io.github.gromoff97.awium.Await.await(() -> actual).until(containsAll(expected)));
         assertEquals(List.of("a->b", "b->b", "a->a"), comparisons);
     }
 
     @Test
     void nullAndRepeatedExpectedValuesKeepMembershipSemantics() {
         assertUnsatisfied(evaluate(contains("b"), null));
-        assertPair(new Pair("repeated", contains("a", "a"),
+        assertPair(new Pair("repeated", containsAll(List.of("a", "a")),
                 doesNotContainAll("a", "a")), List.of("a"), true);
 
         String nil = null;
@@ -109,14 +110,58 @@ class CollectionMembershipTest {
         List<String> element = List.of("a", "b");
         Collection<List<String>> actual = List.of(element);
 
-        assertSame(actual, result(evaluate(contains(List.of(element)), actual)));
-        assertUnsatisfied(evaluate(contains(List.of(List.of("a"))), actual));
+        assertSame(actual, result(evaluate(containsAll(List.of(element)), actual)));
+        assertUnsatisfied(evaluate(containsAll(List.of(List.of("a"))), actual));
+    }
+
+    @Test
+    void listsAndReferenceArraysAreSingleElementsInFluentCalls() {
+        var time = new FakeTime(0);
+        var element = List.of("a", "b");
+        var lists = List.of(element);
+        List<List<String>> selectedList = Await.await(() -> lists).usingTime(time, time)
+                .until(contains(element).because("one nested list"));
+        assertSame(lists, selectedList);
+        assertEquals(1, selectedList.getFirst().getFirst().length());
+
+        String[] array = {"a", "b"};
+        var arrays = singletonList(array);
+        List<String[]> selectedArray = Await.await(() -> arrays).usingTime(time, time)
+                .until(contains(array).because("one array"));
+        assertSame(arrays, selectedArray);
+        assertEquals(2, selectedArray.getFirst().length);
+
+        var otherLists = List.of(List.of("c"));
+        assertSame(otherLists, Await.await(() -> otherLists).usingTime(time, time)
+                .until(doesNotContain(element).because("the nested list must be absent")));
+        var otherArrays = singletonList(new String[] {"c"});
+        assertSame(otherArrays, Await.await(() -> otherArrays).usingTime(time, time)
+                .until(doesNotContain(array).because("the array must be absent")));
+    }
+
+    @Test
+    void singleContainerOperandsCanBeEmptyOrNullAndRemainCallerOwned() {
+        var time = new FakeTime(0);
+        var expected = new ArrayList<String>();
+        var actual = singletonList(new ArrayList<String>());
+        var condition = contains(expected).because("one caller-owned list");
+        assertSame(actual, Await.await(() -> actual).usingTime(time, time).until(condition));
+        expected.add("changed");
+        actual.getFirst().add("changed");
+        assertSame(actual, Await.await(() -> actual).usingTime(time, time).until(condition));
+
+        String[] empty = {};
+        var emptyArrays = singletonList(empty);
+        assertSame(emptyArrays, Await.await(() -> emptyArrays).usingTime(time, time).until(contains(empty).because("one empty array")));
+        String[] missing = null;
+        var nullArrays = singletonList(missing);
+        assertSame(nullArrays, Await.await(() -> nullArrays).usingTime(time, time).until(contains(missing).because("one null value")));
     }
 
     @Test
     void clearingExpectedCollectionDoesNotChangeContainment() {
         var expected = new ArrayList<>(List.of("expected"));
-        var positive = contains(expected);
+        var positive = containsAll(expected);
         var negative = doesNotContainAll(expected);
         expected.clear();
 
@@ -164,13 +209,13 @@ class CollectionMembershipTest {
     @Test
     void aggregateFactoriesRejectNullAndEmptyInputs() {
         assertValidation(NullPointerException.class,
-                () -> contains((Object[]) null));
+                () -> doesNotContainAny(null));
         assertValidation(NullPointerException.class,
-                () -> contains((Collection<Object>) null));
+                () -> containsAll(null));
         assertValidation(IllegalArgumentException.class,
-                () -> contains(new Object[0]));
+                () -> doesNotContainAny(List.of()));
         assertValidation(IllegalArgumentException.class,
-                () -> contains(List.of()));
+                () -> containsAll(List.of()));
     }
 
     @Test
@@ -178,7 +223,7 @@ class CollectionMembershipTest {
         Collection<Integer> integers = List.of(1, 2);
         var actual = new ArrayList<Number>(integers);
         CollectionSource<ArrayList<Number>> source = () -> actual;
-        PreservingCondition<Collection<? super Integer>> typed = contains(integers);
+        PreservingCondition<Collection<? super Integer>> typed = containsAll(integers);
 
         ArrayList<Number> result = Await.await(source).until(typed);
 
@@ -215,14 +260,12 @@ class CollectionMembershipTest {
     private static List<Pair> pairs() {
         return List.of(
                 new Pair("contains", contains("b"), doesNotContain("b")),
-                new Pair("contains", contains("a", "b"),
+                new Pair("contains", containsAll(List.of("a", "b")),
                         doesNotContainAll("a", "b")),
-                new Pair("contains collection", contains(List.of("a", "b")),
-                        doesNotContainAll(List.of("a", "b"))),
                 new Pair("containsAny", containsAny("x", "b"),
-                        doesNotContain("x", "b")),
+                        doesNotContainAny(List.of("x", "b"))),
                 new Pair("containsAny collection", containsAny(List.of("x", "b")),
-                        doesNotContain(List.of("x", "b"))));
+                        doesNotContainAny(List.of("x", "b"))));
     }
 
     private record Pair(String name,

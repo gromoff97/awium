@@ -36,7 +36,7 @@ class ExpectedInputsTest {
                 return empty;
             }
         };
-        var condition = contains(expected);
+        var condition = containsAll(expected);
         assertEquals(List.of("before"), condition.definition.reference().value());
         expected.clear();
         assertInstanceOf(Unsatisfied.class, evaluate(condition, List.of("unrelated")));
@@ -46,7 +46,7 @@ class ExpectedInputsTest {
     @Test
     void membershipConditionsNeverKeepAnEmptySnapshotAfterConcurrentRemoval() {
         List<Function<Collection<String>, PreservingCondition<?>>> factories = List.of(
-                CollectionConditions::contains, CollectionConditions::doesNotContain,
+                CollectionConditions::containsAll, CollectionConditions::doesNotContainAny,
                 CollectionConditions::doesNotContainAll, CollectionConditions::containsAny);
         for (var factory : factories) {
             var expected = new ChangingExpectedQueue();
@@ -80,7 +80,7 @@ class ExpectedInputsTest {
     @Test
     void collectionFactoriesFreezeMembershipOrderDuplicatesAndNulls() {
         var expected = new ArrayList<>(asList("a", null, "a"));
-        assertStable(List.of(contains(expected), doesNotContain(expected),
+        assertStable(List.of(containsAll(expected), doesNotContainAny(expected),
                 doesNotContainAll(expected), containsAny(expected),
                 containsExactly(expected), doesNotContainExactly(expected),
                 containsExactlyInAnyOrder(expected), doesNotContainExactlyInAnyOrder(expected),
@@ -94,7 +94,7 @@ class ExpectedInputsTest {
     @Test
     void collectionVarargsFactoriesFreezeTheArray() {
         String[] expected = {"a", null, "a"};
-        assertStable(List.of(contains(expected), doesNotContain(expected), doesNotContainAll(expected),
+        assertStable(List.of(containsAll(asList(expected)), doesNotContainAny(asList(expected)), doesNotContainAll(expected),
                 containsAny(expected), containsExactly(expected), doesNotContainExactly(expected),
                 containsExactlyInAnyOrder(expected), doesNotContainExactlyInAnyOrder(expected),
                 containsOnly(expected), startsWith(expected), endsWith(expected), containsSequence(expected),
@@ -168,7 +168,7 @@ class ExpectedInputsTest {
     void snapshotsKeepElementIdentityAndReadOnlyDiagnosticContainers() {
         var element = new StringBuilder("before");
         var expected = new ArrayList<>(List.of(element));
-        var condition = contains(expected);
+        var condition = containsAll(expected);
         var reference = assertInstanceOf(List.class, condition.definition.reference().value());
         expected.clear();
         element.append(" changed");
