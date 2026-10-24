@@ -104,18 +104,19 @@ class ExpectedInputsTest {
     }
 
     @Test
-    void mapFactoriesCopyEntriesRatherThanKeepingLiveEntryObjects() {
+    void mapFactoriesFreezeEntriesAcrossMutationAndClearing() {
         var expected = new LinkedHashMap<String, String>();
         expected.put("a", "before");
         expected.put(null, null);
         Map<String, String> original = new LinkedHashMap<>(expected);
-        assertStable(List.of(MapConditions.containsEntries(expected), MapConditions.doesNotContainAllEntries(expected),
+        var conditions = List.of(MapConditions.containsEntries(expected), MapConditions.doesNotContainAllEntries(expected),
                 MapConditions.containsAnyEntries(expected), MapConditions.doesNotContainEntries(expected),
-                MapConditions.containsExactlyEntries(expected), MapConditions.doesNotContainExactlyEntries(expected)),
-                original, Map.of("a", "changed"), () -> {
+                MapConditions.containsExactlyEntries(expected), MapConditions.doesNotContainExactlyEntries(expected));
+        assertStable(conditions, original, Map.of("a", "changed"), () -> {
                     expected.entrySet().iterator().next().setValue("changed");
                     expected.remove(null);
                 });
+        assertStable(conditions, original, Map.of(), expected::clear);
     }
 
     @Test

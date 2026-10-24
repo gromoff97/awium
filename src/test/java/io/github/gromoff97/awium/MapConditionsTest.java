@@ -196,34 +196,6 @@ class MapConditionsTest {
     }
 
     @Test
-    void mapConditionsSnapshotExpectedValuesAtConstruction() {
-        Map<String, String> expected = new LinkedHashMap<>(map("a", "before"));
-        PreservingCondition<? super Map<String, String>> membership =
-                containsEntries(expected);
-        PreservingCondition<? super Map<String, String>> exact =
-                containsExactlyEntries(expected);
-        expected.put("a", "after");
-
-        assertStatus(membership, map("a", "before", "b", "other"), Satisfied.class);
-        assertStatus(exact, map("a", "before"), Satisfied.class);
-        assertStatus(membership, map("a", "after"), Unsatisfied.class);
-        assertStatus(exact, map("a", "after"), Unsatisfied.class);
-    }
-
-    @Test
-    void clearingExpectedMapDoesNotChangeContainment() {
-        var expected = new LinkedHashMap<>(map("expected", "value"));
-        var positive = containsEntries(expected);
-        var negative = doesNotContainAllEntries(expected);
-        expected.clear();
-
-        for (Map<String, String> actual : List.of(Map.<String, String>of(), map("actual", "value"))) {
-            assertStatus(positive, actual, Unsatisfied.class);
-            assertStatus(negative, actual, Satisfied.class);
-        }
-    }
-
-    @Test
     void negativeMapConditionsDoNotHideTraversalOrEqualityFailures() {
         var actualCause = new IllegalStateException("actual entries");
         var expectedCause = new IllegalStateException("expected entries");
