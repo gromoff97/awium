@@ -125,11 +125,16 @@ class PositiveFluentMatrixTest {
                 });
 
         assertSame(values, await(collectionSource).usingTime(time, time).until(nonEmpty));
-        assertSame(element, await(collectionSource).usingTime(time, time).until(single));
+        var selected = await(collectionSource).usingTime(time, time).until(single.because("covariant element"));
+        assertEquals(1000, selected.intValue());
+        assertSame(element, selected);
         assertSame(element, assertInstanceOf(AwaitResult.Satisfied.class,
                 await(collectionSource).usingTime(time, time).tryUntil(single)).result());
         assertSame(map, await(mapSource).usingTime(time, time).until(MapConditions.nonEmpty));
-        assertSame(entry, await(mapSource).usingTime(time, time).until(MapConditions.singleEntry));
+        var selectedEntry = await(mapSource).usingTime(time, time).until(MapConditions.singleEntry.because("covariant entry"));
+        assertEquals(1000, selectedEntry.getKey().intValue());
+        assertEquals(5, selectedEntry.getValue().length());
+        assertSame(entry, selectedEntry);
         assertSame(entry, assertInstanceOf(AwaitResult.Satisfied.class,
                 await(mapSource).usingTime(time, time).tryUntil(MapConditions.singleEntry)).result());
         assertEquals(3, collectionCalls[0]);

@@ -138,7 +138,7 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
     }
 
     public record CollectionViewSource<ELEMENT, VALUES extends Collection<? extends ELEMENT>>(
-            Callable<? extends VALUES> delegate) implements CollectionSource<VALUES> {
+            Callable<? extends VALUES> delegate) implements Callable<VALUES> {
 
         public CollectionViewSource {
             requireNonNull(delegate, "delegate must not be null");
@@ -155,7 +155,7 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
     }
 
     public record MapViewSource<KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>(
-            Callable<? extends ENTRIES> delegate) implements MapSource<ENTRIES> {
+            Callable<? extends ENTRIES> delegate) implements Callable<ENTRIES> {
 
         public MapViewSource {
             requireNonNull(delegate, "delegate must not be null");
