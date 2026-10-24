@@ -18,7 +18,6 @@ import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -44,7 +43,7 @@ class AssertionAdapterTest {
     }
 
     @Test
-    void namedConditionValidatesItsArgumentsAndRejectsNullEvaluation() {
+    void namedConditionValidatesItsArguments() {
         assertTrue(assertThrows(NullPointerException.class,
                 () -> condition(null, payment -> satisfied(payment)))
                 .getMessage().contains("description"));
@@ -60,12 +59,6 @@ class AssertionAdapterTest {
         assertTrue(assertThrows(NullPointerException.class,
                 () -> condition("payment", (Callable<CheckedFunction<Object, ConditionResult<Object>>>) null))
                 .getMessage().contains("evaluator factory"));
-
-        var condition = Conditions.<String>condition(
-                "nullable evaluation", value -> null);
-        var failure = assertInstanceOf(AttemptResult.Uncontrolled.class, ConditionAwaitAttempt.preserving(condition.definition).probe("42"));
-        assertInstanceOf(NullPointerException.class, failure.cause());
-        assertEquals("condition returned null ConditionResult", failure.cause().getMessage());
     }
 
     @Test
@@ -104,29 +97,6 @@ class AssertionAdapterTest {
         assertSame(assertion, failure.getCause());
         assertArrayEquals(new StackTraceElement[]{frame},
                 failure.getCause().getStackTrace());
-    }
-
-    @Test
-    void runtimeExceptionIsRetainedAsConditionFailure() {
-        var failure = new RuntimeException("runtime");
-        var condition = Conditions.<String>condition("checked value", value -> {
-            throw failure;
-        });
-
-        assertSame(failure, org.junit.jupiter.api.Assertions.assertInstanceOf(
-                AttemptResult.Uncontrolled.class, ConditionAwaitAttempt.preserving(condition.definition).probe("42")).cause());
-    }
-
-    @Test
-    void nonAssertionErrorIsRetainedAsConditionFailure() {
-        var failure = new LinkageError("error");
-
-        var condition = Conditions.<String>condition("checked value", value -> {
-            throw failure;
-        });
-
-        assertSame(failure, org.junit.jupiter.api.Assertions.assertInstanceOf(
-                AttemptResult.Uncontrolled.class, ConditionAwaitAttempt.preserving(condition.definition).probe("42")).cause());
     }
 
     @Test

@@ -1126,3 +1126,19 @@ PreservingCondition теперь получает готовое определ�
 и AttemptResult. Все 409 public-деклараций совпадают. Полный check: 430 тестов
 без ошибок и пропусков. STRONGER ConditionSupport: 83 мутации, все KILLED.
 `/tmp/awium-seven-hour-pass/preserving-definition-report.json`.
+
+### Один сценарий независимых вложенных попыток
+
+В ConditionAwaitAttemptTest объединены два сценария независимых фабрик для
+optional/map. Сохраняются повторное использование определения, ленивое создание,
+два вызова проверки на ожидание и объявленный covariant тип MapValueCondition.
+Более строгий сценарий возвращает из callback другое значение и проверяет
+идентичность исходного выбранного объекта. Map выполняется через оба терминала.
+
+В AssertionAdapterTest удалены два частных повтора общей матрицы Throwable
+и фрагмент о null-результате: действующие проверки Observation/TryUntilFailure
+проверяют исходную причину и точное сообщение через настоящий API и композицию.
+Сохранена отдельная проверка исходного stack trace и одного вызова callback.
+Тестового кода стало на 48 строк меньше, новых помощников нет. Полный check:
+427 тестов без ошибок. STRONGER ConditionSupport/ConditionAwaitAttempt/Conditions:
+192 мутации, все KILLED. `/tmp/awium-seven-hour-pass/attempt-test-merge-report.json`.

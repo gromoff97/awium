@@ -67,7 +67,8 @@ class ConditionAwaitAttemptTest {
         });
         var optional = OptionalConditions.hasValue(nested).because("optional reason");
         var collection = CollectionConditions.single(nested).because("collection reason");
-        var map = MapConditions.valueFor("key", nested).because("map reason");
+        Condition.MapValueCondition<Map<? super String, ? extends Number>> map =
+                MapConditions.valueFor("key", nested).because("map reason");
         assertEquals(0, factories[0]);
 
         for (int run = 0; run < 2; run++) {
@@ -76,35 +77,16 @@ class ConditionAwaitAttemptTest {
                     .every(ofNanos(1)).until(optional);
             Number element = await(() -> List.of(actual)).usingTime(time, time)
                     .every(ofNanos(1)).until(collection);
-            AwaitResult<Map<String, Number>, Number> mapValue = await(() -> Map.of("key", actual))
-                    .usingTime(time, time).every(ofNanos(1)).tryUntil(map);
+            var mapWait = await(() -> Map.of("key", actual)).usingTime(time, time).every(ofNanos(1));
+            Number mapValue = mapWait.until(map);
+            AwaitResult<Map<String, Number>, Number> mapResult = mapWait.tryUntil(map);
             assertSame(actual, optionalValue);
             assertSame(actual, element);
-            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, mapValue).result());
-            assertEquals(2, mapValue.totalAttempts());
+            assertSame(actual, mapValue);
+            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, mapResult).result());
+            assertEquals(2, mapResult.totalAttempts());
         }
-        assertEquals(6, factories[0]);
-    }
-
-    @Test
-    void mapAndOptionalCompositionCreateOneIndependentSessionPerWait() {
-        int[] factories = {0};
-        var nested = Conditions.condition("two observations", () -> {
-            factories[0]++;
-            int[] calls = {0};
-            return (String value) -> ++calls[0] == 2 ? satisfied(value) : ConditionResult.unsatisfied("first observation");
-        });
-        Condition.MapValueCondition<Map<? super String, ? extends String>> map = MapConditions.valueFor("key", nested);
-        var optional = OptionalConditions.hasValue(nested);
-        assertEquals(0, factories[0]);
-        for (int run = 0; run < 2; run++) {
-            var time = new FakeTime(0);
-            assertEquals("ready", await(() -> Map.of("key", "ready")).usingTime(time, time)
-                    .every(ofNanos(1)).upTo(ofNanos(3)).until(map));
-            assertEquals("ready", await(() -> Optional.of("ready")).usingTime(time, time)
-                    .every(ofNanos(1)).upTo(ofNanos(3)).until(optional));
-        }
-        assertEquals(4, factories[0]);
+        assertEquals(8, factories[0]);
     }
 
     @Test
