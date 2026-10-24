@@ -75,27 +75,27 @@ public sealed class ValueAwait<OBSERVED> permits Await {
     }
 
     public OBSERVED until(PreservingCondition<? super OBSERVED> condition) {
-        return complete(required(condition).preservingAttempt());
+        return complete(ConditionAwaitAttempt.preserving(required(condition).definition));
     }
 
     public OBSERVED until(ComparisonCondition<? extends OBSERVED> condition) {
-        return complete(required(condition).definition.preservingAttempt());
+        return complete(ConditionAwaitAttempt.preserving(required(condition).definition));
     }
 
     public <RESULT> RESULT until(Condition<? super OBSERVED, ? extends RESULT> condition) {
-        return complete(required(condition).newAttempt());
+        return complete(new ConditionAwaitAttempt<>(required(condition)));
     }
 
     public AwaitResult<OBSERVED, OBSERVED> tryUntil(PreservingCondition<? super OBSERVED> condition) {
-        return capture(required(condition).preservingAttempt());
+        return capture(ConditionAwaitAttempt.preserving(required(condition).definition));
     }
 
     public AwaitResult<OBSERVED, OBSERVED> tryUntil(ComparisonCondition<? extends OBSERVED> condition) {
-        return capture(required(condition).definition.preservingAttempt());
+        return capture(ConditionAwaitAttempt.preserving(required(condition).definition));
     }
 
     public <RESULT> AwaitResult<OBSERVED, RESULT> tryUntil(Condition<? super OBSERVED, ? extends RESULT> condition) {
-        return capture(required(condition).newAttempt());
+        return capture(new ConditionAwaitAttempt<>(required(condition)));
     }
 
     @SafeVarargs

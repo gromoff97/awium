@@ -16,20 +16,20 @@ final class ConditionTestRuntime {
 
     static <S, R> ConditionResult<? extends R> evaluate(
             Condition<? super S, ? extends R> condition, S actual) {
-        return evaluated(condition.newAttempt().probe(actual));
+        return evaluated(new ConditionAwaitAttempt<>(condition).probe(actual));
     }
 
     static <S> ConditionResult<? extends S> evaluate(PreservingCondition<? super S> condition, S actual) {
-        return evaluated(condition.<S>preservingAttempt().probe(actual));
+        return evaluated(ConditionAwaitAttempt.<S>preserving(condition.definition).probe(actual));
     }
 
     static <S> ConditionResult<?> evaluate(
             SelectedCondition<? super S> condition, S actual) {
-        return evaluated(condition.definition.newAttempt().probe(actual));
+        return evaluated(new ConditionAwaitAttempt<>(condition.definition).probe(actual));
     }
 
     static <S> ConditionResult<?> evaluate(MapValueCondition<? super S> condition, S actual) {
-        return evaluated(condition.definition.newAttempt().probe(actual));
+        return evaluated(new ConditionAwaitAttempt<>(condition.definition).probe(actual));
     }
 
     static <RESULT> ConditionResult<? extends RESULT> evaluated(AttemptResult<? extends RESULT> attempt) {
@@ -52,7 +52,7 @@ final class ConditionTestRuntime {
     }
 
     static <S> ConditionResult<? extends S> evaluate(ComparisonCondition<? extends S> condition, S actual) {
-        return evaluated(condition.definition.<S>preservingAttempt().probe(actual));
+        return evaluated(ConditionAwaitAttempt.<S>preserving(condition.definition).probe(actual));
     }
 
     static String description(ComparisonCondition<?> condition) {

@@ -83,19 +83,19 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
     }
 
     public ELEMENT until(SelectedCondition<? super OBSERVED> condition) {
-        return complete(required(condition).selectionAttempt());
+        return complete(ConditionAwaitAttempt.selecting(required(condition).definition));
     }
 
     public MAP_VALUE until(MapValueCondition<? super OBSERVED> condition) {
-        return complete(required(condition).selectionAttempt());
+        return complete(ConditionAwaitAttempt.selecting(required(condition).definition));
     }
 
     public AwaitResult<OBSERVED, ELEMENT> tryUntil(SelectedCondition<? super OBSERVED> condition) {
-        return capture(required(condition).selectionAttempt());
+        return capture(ConditionAwaitAttempt.selecting(required(condition).definition));
     }
 
     public AwaitResult<OBSERVED, MAP_VALUE> tryUntil(MapValueCondition<? super OBSERVED> condition) {
-        return capture(required(condition).selectionAttempt());
+        return capture(ConditionAwaitAttempt.selecting(required(condition).definition));
     }
 
     @SafeVarargs

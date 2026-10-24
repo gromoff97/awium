@@ -16,7 +16,7 @@ public final class Condition<OBSERVED, RESULT> {
     private final String description;
     private final String explanation;
     private final Reference<?> reference;
-    private final Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory;
+    final Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory;
 
     Condition(String description, String explanation, Reference<?> reference,
             Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
@@ -24,25 +24,6 @@ public final class Condition<OBSERVED, RESULT> {
         this.explanation = explanation;
         this.reference = reference;
         this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
-    }
-
-    ConditionAwaitAttempt<OBSERVED, RESULT> newAttempt() {
-        return new ConditionAwaitAttempt<>(this, evaluatorFactory);
-    }
-
-    final <ACTUAL extends OBSERVED> ConditionAwaitAttempt<ACTUAL, ACTUAL> preservingAttempt() {
-        return new ConditionAwaitAttempt<>(this, () -> {
-            var evaluator = evaluatorFactory.call();
-            return actual -> {
-                var evaluation = evaluator.probe(actual);
-                return switch (evaluation) {
-                    case AttemptResult.Evaluated<?> value -> new AttemptResult.Evaluated<>(
-                            value.result().mapSatisfied(ignored -> actual), value.condition(), value.progress());
-                    case AttemptResult.Uncontrolled<?> failure -> new AttemptResult.Uncontrolled<ACTUAL>(
-                            failure.cause(), failure.condition(), failure.progress());
-                };
-            };
-        });
     }
 
     public String description() {
@@ -59,12 +40,6 @@ public final class Condition<OBSERVED, RESULT> {
 
     Condition<OBSERVED, RESULT> withExplanation(String explanation) {
         return new Condition<>(description, explanation, reference, evaluatorFactory);
-    }
-
-    // Only library-created selectors use this bridge; Await binds their result to the source type.
-    @SuppressWarnings("unchecked")
-    private <SELECTED> ConditionAwaitAttempt<OBSERVED, SELECTED> selectionAttempt() {
-        return (ConditionAwaitAttempt<OBSERVED, SELECTED>) newAttempt();
     }
 
     static <C> C required(C condition) {
@@ -107,10 +82,6 @@ public final class Condition<OBSERVED, RESULT> {
 
         private PreservingCondition(Condition<OBSERVED, OBSERVED> definition) {
             this.definition = definition;
-        }
-
-        final <ACTUAL extends OBSERVED> ConditionAwaitAttempt<ACTUAL, ACTUAL> preservingAttempt() {
-            return definition.preservingAttempt();
         }
 
         public PreservingCondition<OBSERVED> because(String explanation) {
@@ -159,10 +130,6 @@ public final class Condition<OBSERVED, RESULT> {
             this.definition = required(definition);
         }
 
-        <SELECTED> ConditionAwaitAttempt<OBSERVED, SELECTED> selectionAttempt() {
-            return definition.selectionAttempt();
-        }
-
         public SelectedCondition<OBSERVED> because(String explanation) {
             return new SelectedCondition<>(definition.because(explanation));
         }
@@ -184,10 +151,6 @@ public final class Condition<OBSERVED, RESULT> {
 
         MapValueCondition(Condition<OBSERVED, ?> definition) {
             this.definition = required(definition);
-        }
-
-        <VALUE> ConditionAwaitAttempt<OBSERVED, VALUE> selectionAttempt() {
-            return definition.selectionAttempt();
         }
 
         public MapValueCondition<OBSERVED> because(String explanation) {

@@ -21,17 +21,17 @@ public final class OptionalConditions {
 
     public static <VALUE, RESULT> Condition<Optional<? extends VALUE>, RESULT> hasValue(Condition<? super VALUE, ? extends RESULT> nested) {
         return compose("optional value: ", required(nested), null, OptionalConditions::present,
-                nested::newAttempt);
+                () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <VALUE> SelectedCondition<Optional<? extends VALUE>> hasValue(PreservingCondition<? super VALUE> nested) {
         return new SelectedCondition<>(compose("optional value: ", required(nested).definition, null, OptionalConditions::present,
-                nested::preservingAttempt));
+                () -> ConditionAwaitAttempt.preserving(nested.definition)));
     }
 
     public static <EXPECTED> SelectedCondition<Optional<? super EXPECTED>> hasValue(ComparisonCondition<EXPECTED> nested) {
         return new SelectedCondition<>(compose("optional value: ", required(nested).definition, null, OptionalConditions::present,
-                nested.definition::preservingAttempt));
+                () -> ConditionAwaitAttempt.preserving(nested.definition)));
     }
 
     private static <VALUE> ConditionResult<VALUE> present(Optional<? extends VALUE> actual) {

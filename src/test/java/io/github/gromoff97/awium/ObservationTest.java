@@ -99,10 +99,10 @@ class ObservationTest {
         WaitCompletion<Object, Object> terminal = new WaitEngine<Object, Object>(config(1, 20, 0).withTime(time, time), () -> {
             time.advanceNanos(2);
             return actual;
-        }, ConditionSupport.<Object, Object>condition("test condition", null, value -> {
+        }, new ConditionAwaitAttempt<>(ConditionSupport.<Object, Object>condition("test condition", null, value -> {
             time.advanceNanos(3);
             return satisfied(result);
-        }).newAttempt()).waitFor();
+        }))).waitFor();
 
         AttemptRecord<Object, Object> attempt = terminal.attempt();
         var observation = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, attempt.outcome());
@@ -270,10 +270,10 @@ class ObservationTest {
             sourceCalls[0]++;
             currentThread().interrupt();
             return actual;
-        }, Conditions.<Object>condition("ready", value -> {
+        }, ConditionAwaitAttempt.preserving(Conditions.<Object>condition("ready", value -> {
             conditionCalls[0]++;
             return satisfied(value);
-        }).preservingAttempt()).waitFor();
+        }).definition)).waitFor();
 
         var failure = assertInstanceOf(WaitCompletion.Uncontrolled.class, outcome);
         var attempt = assertInstanceOf(AttemptRecord.Outcome.SourceInterrupted.class, failure.attempt().outcome());
@@ -345,13 +345,13 @@ class ObservationTest {
                                 currentThread().interrupt();
                             }
                             return new Object();
-                        }, Conditions.<Object>condition("ready", value -> {
+                        }, ConditionAwaitAttempt.preserving(Conditions.<Object>condition("ready", value -> {
                             if (phase.equals("condition")) {
                                 armed[0] = true;
                                 currentThread().interrupt();
                             }
                             return ConditionResult.unsatisfied("not yet");
-                        }).preservingAttempt()).waitFor()));
+                        }).definition)).waitFor()));
                 assertTrue(currentThread().isInterrupted(), phase);
             } finally {
                 interrupted();
@@ -501,10 +501,10 @@ class ObservationTest {
     private static <R> AttemptRecord<Object, R> attempt(Callable<Object> source,
             CheckedFunction<Object, ConditionResult<R>> condition) {
         var time = new FakeTime(0);
-        return new WaitEngine<Object, R>(config(1, 2, 0).withTime(time, time), source, ConditionSupport.<Object, R>condition("test condition", null, actual -> {
+        return new WaitEngine<Object, R>(config(1, 2, 0).withTime(time, time), source, new ConditionAwaitAttempt<>(ConditionSupport.<Object, R>condition("test condition", null, actual -> {
             ConditionResult<R> evaluation = condition.apply(actual);
             time.advanceNanos(2);
             return evaluation;
-        }).newAttempt()).waitFor().attempt();
+        }))).waitFor().attempt();
     }
 }

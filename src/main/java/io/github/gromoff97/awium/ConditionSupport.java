@@ -150,7 +150,7 @@ final class ConditionSupport {
         var stages = stages(conditions);
         return new Condition<>("conditions are satisfied in order", null, null, () ->
                 new SequenceExecution<OBSERVED, OBSERVED>(stages.stream()
-                        .map(PreservingCondition::preservingAttempt))::step);
+                        .map(stage -> ConditionAwaitAttempt.preserving(stage.definition)))::step);
     }
 
     @SafeVarargs
@@ -159,7 +159,7 @@ final class ConditionSupport {
         var stages = stages(conditions);
         return new Condition<>("conditions are satisfied in order", null, null,
                 () -> new SequenceExecution<OBSERVED, ELEMENT>(stages.stream()
-                        .map(SelectedCondition::selectionAttempt))::step);
+                        .map(stage -> ConditionAwaitAttempt.selecting(stage.definition)))::step);
     }
 
     @SafeVarargs
@@ -168,7 +168,7 @@ final class ConditionSupport {
         var stages = stages(conditions);
         return new Condition<>("conditions are satisfied in order", null, null,
                 () -> new SequenceExecution<OBSERVED, MAP_VALUE>(stages.stream()
-                        .map(MapValueCondition::selectionAttempt))::step);
+                        .map(stage -> ConditionAwaitAttempt.selecting(stage.definition)))::step);
     }
 
     @SafeVarargs
@@ -177,7 +177,7 @@ final class ConditionSupport {
         var stages = stages(conditions);
         return new Condition<>("conditions are satisfied in order", null, null, () ->
                 new SequenceExecution<OBSERVED, OBSERVED>(stages.stream()
-                        .map(stage -> stage.definition.preservingAttempt()))::step);
+                        .map(stage -> ConditionAwaitAttempt.preserving(stage.definition)))::step);
     }
 
     private static <STAGE> List<STAGE> stages(STAGE[] conditions) {

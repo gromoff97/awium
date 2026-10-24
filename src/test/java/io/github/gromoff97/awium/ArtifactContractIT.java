@@ -66,6 +66,8 @@ class ArtifactContractIT {
             assertTrue(classes.get(condition).stream().noneMatch(Set.of("AttemptRecord", "AwaitResult")::contains),
                     condition + " -> " + classes.get(condition));
         }
+        Set<String> definition = classes.get("Condition");
+        assertFalse(definition.contains("ConditionAwaitAttempt"), "Condition -> " + definition);
         // Condition construction is independent of source protocols, timing, diagnostics, and value comparison.
         Set<String> support = classes.get("ConditionSupport");
         assertTrue(support.stream().noneMatch(Set.of("WaitEngine", "WaitCompletion", "FailureDiagnostics", "ValueMatching")::contains),

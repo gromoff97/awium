@@ -116,8 +116,8 @@ class ConditionAwaitAttemptTest {
                 });
         assertEquals("counted", ordinary.description());
         assertNull(ordinary.explanation());
-        AwaitAttempt<Integer, Integer> first = ordinary.newAttempt();
-        AwaitAttempt<Integer, Integer> second = ordinary.newAttempt();
+        AwaitAttempt<Integer, Integer> first = new ConditionAwaitAttempt<>(ordinary);
+        AwaitAttempt<Integer, Integer> second = new ConditionAwaitAttempt<>(ordinary);
 
         assertEquals(1, result(ConditionTestRuntime.evaluated(first.probe(0))));
         assertEquals(2, result(ConditionTestRuntime.evaluated(first.probe(0))));

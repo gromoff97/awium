@@ -117,7 +117,7 @@ class CapturedConditionTest {
     @Test
     void successfulSequenceReportsAllCapturedStages() {
         var sequence = captured(Conditions.<String>matches(value -> true), matches(value -> true));
-        var evaluator = sequence.newAttempt();
+        var evaluator = new ConditionAwaitAttempt<>(sequence);
         var first = evaluator.probe("first");
         var last = evaluator.probe("last");
         assertInstanceOf(ConditionResult.Unsatisfied.class, ConditionTestRuntime.evaluated(first));
