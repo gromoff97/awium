@@ -65,37 +65,38 @@ class MapSelectionConditionsTest {
         actual.put("first", 1);
         actual.put("second", 2);
         MapSource<LinkedHashMap<String, Integer>> source = () -> actual;
+        var waiting = await(source).usingTime(pollingTime, pollingTime);
 
-        Map.Entry<String, Integer> selected = await(source).usingTime(pollingTime, pollingTime).until(MapConditions.singleEntry(matches(entry -> entry.getValue() == 2)));
-        Map.Entry<String, Integer> byKey = await(source).usingTime(pollingTime, pollingTime).until(MapConditions.entryFor("first"));
-        Integer value = await(source).usingTime(pollingTime, pollingTime).until(MapConditions.valueFor("second"));
-        Integer nested = await(source).usingTime(pollingTime, pollingTime).until(MapConditions.valueFor("second", Conditions.atLeast(2)));
-        String key = await(source).usingTime(pollingTime, pollingTime).until(MapConditions.singleEntry(
+        Map.Entry<String, Integer> selected = waiting.until(MapConditions.singleEntry(matches(entry -> entry.getValue() == 2)));
+        Map.Entry<String, Integer> byKey = waiting.until(MapConditions.entryFor("first"));
+        Integer value = waiting.until(MapConditions.valueFor("second"));
+        Integer nested = waiting.until(MapConditions.valueFor("second", Conditions.atLeast(2)));
+        String key = waiting.until(MapConditions.singleEntry(
                 matches(entry -> entry.getKey().startsWith("f")))).getKey();
-        Integer singleValue = await(source).usingTime(pollingTime, pollingTime).until(MapConditions.singleEntry(
-                matches(entry -> entry.getValue() == 2))).getValue();
 
         assertEquals("second", selected.getKey());
         assertEquals("first", byKey.getKey());
         assertEquals(2, value);
         assertEquals(2, nested);
         assertEquals("first", key);
-        assertEquals(2, singleValue);
+        assertEquals(2, selected.getValue());
     }
 
     @Test
     void nullValuesAreDistinguishedFromMissingKeys() {
         var pollingTime = new FakeTime(0);
-        var actual = new LinkedHashMap<String, String>();
-        actual.put("nullable", null);
+        var actual = new LinkedHashMap<String[], String>();
+        actual.put(new String[] {"nullable"}, null);
 
-        assertNull(await((MapSource<LinkedHashMap<String, String>>) () -> actual).usingTime(pollingTime, pollingTime).until(MapConditions.valueFor("nullable")));
+        String selected = await(() -> actual).usingTime(pollingTime, pollingTime)
+                .until(MapConditions.valueFor(new String[] {"nullable"}).because("one array key with a null value"));
+        assertNull(selected);
         assertEquals(Satisfied.class,
-                evaluate(MapConditions.valueFor("nullable"), actual).getClass());
+                evaluate(MapConditions.valueFor(new String[] {"nullable"}), actual).getClass());
         assertEquals("map did not contain the expected key",
-                ((Unsatisfied<?>) evaluate(MapConditions.valueFor("missing"), actual)).mismatch());
+                ((Unsatisfied<?>) evaluate(MapConditions.valueFor(new String[] {"missing"}), actual)).mismatch());
         assertEquals("map was null",
-                ((Unsatisfied<?>) evaluate(MapConditions.valueFor("missing"), null)).mismatch());
+                ((Unsatisfied<?>) evaluate(MapConditions.valueFor(new String[] {"missing"}), null)).mismatch());
     }
 
     @Test
@@ -103,18 +104,19 @@ class MapSelectionConditionsTest {
         var pollingTime = new FakeTime(0);
         var actual = new LinkedHashMap<>(Map.of("a", 1, "b", 2));
         MapSource<LinkedHashMap<String, Integer>> source = () -> actual;
+        var waiting = await(source).usingTime(pollingTime, pollingTime);
 
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(MapConditions.allEntries((key, value) -> value > 0)));
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(MapConditions.anyEntry((key, value) -> key.equals("b"))));
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(MapConditions.noEntry((key, value) -> value < 0)));
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(MapConditions.allKeys(key -> key.length() == 1)));
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(MapConditions.anyKey(key -> key.equals("a"))));
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(MapConditions.allValues(value -> value > 0)));
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(MapConditions.anyValue(value -> value == 2)));
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(MapConditions.containsKeys(List.of("a", "b"))));
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(MapConditions.containsOnlyKeys(List.of("b", "a"))));
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(MapConditions.containsValues(List.of(1, 2))));
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(MapConditions.sizeBetween(1, 3)));
+        assertSame(actual, waiting.until(MapConditions.allEntries((key, value) -> value > 0)));
+        assertSame(actual, waiting.until(MapConditions.anyEntry((key, value) -> key.equals("b"))));
+        assertSame(actual, waiting.until(MapConditions.noEntry((key, value) -> value < 0)));
+        assertSame(actual, waiting.until(MapConditions.allKeys(key -> key.length() == 1)));
+        assertSame(actual, waiting.until(MapConditions.anyKey(key -> key.equals("a"))));
+        assertSame(actual, waiting.until(MapConditions.allValues(value -> value > 0)));
+        assertSame(actual, waiting.until(MapConditions.anyValue(value -> value == 2)));
+        assertSame(actual, waiting.until(MapConditions.containsKeys(List.of("a", "b"))));
+        assertSame(actual, waiting.until(MapConditions.containsOnlyKeys(List.of("b", "a"))));
+        assertSame(actual, waiting.until(MapConditions.containsValues(List.of(1, 2))));
+        assertSame(actual, waiting.until(MapConditions.sizeBetween(1, 3)));
 
         assertEquals(Unsatisfied.class,
                 evaluate(MapConditions.doesNotContainKey("a"), actual).getClass());
@@ -164,7 +166,7 @@ class MapSelectionConditionsTest {
     void onlyReturnsTheValueOfTheSoleExpectedKey() {
         var pollingTime = new FakeTime(0);
         var actual = new LinkedHashMap<>(Map.of("only", 42));
-        Integer value = await((MapSource<LinkedHashMap<String, Integer>>) () -> actual).usingTime(pollingTime, pollingTime).until(MapConditions.onlyValueFor("only"));
+        Integer value = await(() -> actual).usingTime(pollingTime, pollingTime).until(MapConditions.onlyValueFor("only"));
 
         assertEquals(42, value);
     }
