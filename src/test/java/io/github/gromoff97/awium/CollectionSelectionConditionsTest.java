@@ -137,17 +137,6 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
-    void sizeKeepsTheExpectedSizeFromConstruction() {
-        var expected = new ArrayList<>(List.of(1));
-        var condition = CollectionConditions.size(expected.size());
-        assertEquals(Satisfied.class, evaluate(condition, List.of(1)).getClass());
-        expected.add(2);
-
-        assertEquals(Satisfied.class, evaluate(condition, List.of(1)).getClass());
-        assertEquals(Unsatisfied.class, evaluate(condition, List.of(1, 2)).getClass());
-    }
-
-    @Test
     void orderedConditionsCoverPositionsSequencesAndSorting() {
         var pollingTime = new FakeTime(0);
         var values = new ArrayList<>(List.of(1, 2, 3, 5));

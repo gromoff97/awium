@@ -559,3 +559,13 @@ NestedSelectionCompilationContractTest собирает единственную
 импорта фикстуры. Все несовместимые выражения сохранены; общая проверка кодов
 диагностики остаётся. Девять тестов обоих классов прошли.
 `/tmp/awium-seven-hour-pass/negative-fixture-cleanup-report.json`.
+
+### Размер ожидаемого контейнера не является снимком контейнера
+
+Удалены sizeKeepsTheExpectedSizeFromConstruction и explicitSizeReadsTheExpectedContainerOnlyDuringConstruction.
+Оба передают только int от container.size(); библиотека не получает ссылку
+на ожидаемый контейнер и не может повторно его читать. Мутация/счётчики этих
+фикстур проверяли Java-вычисление аргумента. Реальные связи size с наблюдаемым
+контейнером, единственность чтения, границы и исключения остаются в size-тестах.
+Убраны 26 строк, два теста и неиспользуемый import await. Четыре затронутых
+тестовых класса прошли. `/tmp/awium-seven-hour-pass/primitive-size-fixtures-report.json`.

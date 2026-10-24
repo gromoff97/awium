@@ -17,7 +17,6 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 import static java.util.Arrays.asList;
-import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
@@ -197,20 +196,6 @@ class ExpectedInputsTest {
         assertThrows(UnsupportedOperationException.class, entries::clear);
         Map.Entry<?, ?> first = assertInstanceOf(Map.Entry.class, entries.getFirst());
         assertThrows(UnsupportedOperationException.class, () -> first.setValue(null));
-    }
-
-    @Test
-    void explicitSizeReadsTheExpectedContainerOnlyDuringConstruction() {
-        var collection = new ProbeContainers.ProbeCollection<String>(1);
-        var map = new ProbeContainers.ProbeMap<String, String>();
-        var collectionCondition = size(collection.size()).because("same size");
-        var mapCondition = MapConditions.size(map.size()).because("same size");
-        var actualCollection = List.of("a");
-        var actualMap = Map.of("a", "b");
-        assertSame(actualCollection, await(() -> actualCollection).until(collectionCondition));
-        assertSame(actualMap, await(() -> actualMap).until(mapCondition));
-        assertEquals(1, collection.sizeCalls);
-        assertEquals(1, map.sizeCalls);
     }
 
     private static final class ChangingExpectedQueue extends ConcurrentLinkedQueue<String> {
