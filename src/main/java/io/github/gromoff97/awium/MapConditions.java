@@ -229,41 +229,41 @@ public final class MapConditions {
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsEntries(Map<? extends KEY, ? extends VALUE> expected) {
-        var entries = snapshotEntries(nonEmpty(expected, "expected entries"));
+        var entries = nonEmpty(snapshotEntries(expected), "expected entries");
         return preserving("map contains all expected entries", "map did not contain all expected entries", expectedReference(entries),
                 actual -> containsAll(actual.entrySet(), entries,
                         MapConditions::entryMatches));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainAllEntries(Map<? extends KEY, ? extends VALUE> unexpected) {
-        var entries = snapshotEntries(nonEmpty(unexpected, "expected entries"));
+        var entries = nonEmpty(snapshotEntries(unexpected), "expected entries");
         return preserving("map does not contain all expected entries", "map contained all expected entries", expectedReference(entries),
                 actual -> !containsAll(actual.entrySet(), entries,
                         MapConditions::entryMatches));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsAnyEntries(Map<? extends KEY, ? extends VALUE> expected) {
-        var entries = snapshotEntries(nonEmpty(expected, "expected entries"));
+        var entries = nonEmpty(snapshotEntries(expected), "expected entries");
         return preserving("map contains an expected entry", "map did not contain an expected entry", expectedReference(entries),
                 actual -> matchesAny(actual.entrySet(), value ->
                         matchesAny(entries, candidate -> entryMatches(value, candidate))));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainEntries(Map<? extends KEY, ? extends VALUE> expected) {
-        var entries = snapshotEntries(nonEmpty(expected, "expected entries"));
+        var entries = nonEmpty(snapshotEntries(expected), "expected entries");
         return preserving("map does not contain an expected entry", "map contained an expected entry", expectedReference(entries),
                 actual -> !matchesAny(actual.entrySet(), value ->
                         matchesAny(entries, candidate -> entryMatches(value, candidate))));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsExactlyEntries(Map<? extends KEY, ? extends VALUE> expected) {
-        var entries = snapshotEntries(requireNonNull(expected, "expected entries must not be null"));
+        var entries = snapshotEntries(expected);
         return preserving("map contains exactly the expected entries", "map did not contain exactly the expected entries", expectedReference(entries),
                 actual -> exactContent(actual, entries));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainExactlyEntries(Map<? extends KEY, ? extends VALUE> expected) {
-        var entries = snapshotEntries(requireNonNull(expected, "expected entries must not be null"));
+        var entries = snapshotEntries(expected);
         return preserving("map does not contain exactly the expected entries", "map contained exactly the expected entries", expectedReference(entries),
                 actual -> !exactContent(actual, entries));
     }
@@ -305,7 +305,8 @@ public final class MapConditions {
 
     // Preserve encounter order and distinct entries without calling user equals/hashCode.
     private static List<? extends Entry<?, ?>> snapshotEntries(Map<?, ?> values) {
-        return values.entrySet().stream().map(SimpleImmutableEntry::new).toList();
+        return requireNonNull(values, "expected entries must not be null")
+                .entrySet().stream().map(SimpleImmutableEntry::new).toList();
     }
 
     private static boolean entryMatches(Entry<?, ?> actual, Entry<?, ?> expected) {

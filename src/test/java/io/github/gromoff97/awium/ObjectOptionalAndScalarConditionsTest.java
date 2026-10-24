@@ -211,6 +211,7 @@ class ObjectOptionalAndScalarConditionsTest {
         assertPreserving(StringConditions.lengthLessThan(6), "ready", "failed");
         assertPreserving(StringConditions.lengthAtMost(5), "ready", "failed");
         assertStatus(StringConditions.length(0), "", Satisfied.class);
+        assertStatus(StringConditions.length(0), null, Unsatisfied.class);
         assertStatus(StringConditions.lengthAtMost(0), "", Satisfied.class);
         assertStatus(StringConditions.lengthBetween(4, 6), "read", Satisfied.class);
         assertStatus(StringConditions.lengthBetween(4, 6), "failed", Satisfied.class);

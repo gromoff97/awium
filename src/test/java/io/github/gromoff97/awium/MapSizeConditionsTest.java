@@ -71,6 +71,7 @@ class MapSizeConditionsTest {
             assertEquals(Satisfied.class, satisfied.getClass());
             assertSame(matching, result(satisfied));
             assertUnsatisfied(evaluate(testCase.condition(), mismatching));
+            assertEquals("map was null", mismatch(evaluate(testCase.condition(), null)));
             assertFalse(description(testCase.condition()).isBlank());
         }
         assertEquals("map size was 1",

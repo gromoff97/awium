@@ -309,6 +309,7 @@ Factories accepting collections of expected elements, maps of expected entries,
 or varargs candidates take a shallow snapshot when the condition is created.
 Changing the original container afterwards does not change the condition or its
 diagnostic reference. Encounter order, duplicates and supported nulls are retained.
+Non-empty requirements apply to the captured snapshot.
 Reading these inputs happens during construction; a failure to read them is
 thrown there, before polling starts.
 

@@ -6,9 +6,7 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Condition.Reference;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
@@ -203,7 +201,7 @@ final class ConditionSupport {
         return values;
     }
 
-    static <COLLECTION_TYPE extends Collection<?>> COLLECTION_TYPE nonEmpty(COLLECTION_TYPE values, String name) {
+    static <ELEMENT> List<ELEMENT> nonEmpty(List<ELEMENT> values, String name) {
         requireNonNull(values, name + " must not be null");
         if (values.isEmpty()) {
             throw new IllegalArgumentException(name + " must not be empty");
@@ -211,11 +209,4 @@ final class ConditionSupport {
         return values;
     }
 
-    static <MAP_TYPE extends Map<?, ?>> MAP_TYPE nonEmpty(MAP_TYPE values, String name) {
-        requireNonNull(values, name + " must not be null");
-        if (values.isEmpty()) {
-            throw new IllegalArgumentException(name + " must not be empty");
-        }
-        return values;
-    }
 }

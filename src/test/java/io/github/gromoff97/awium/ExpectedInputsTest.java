@@ -4,23 +4,30 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Function;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.ProbeContainers.removeConcurrently;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ExpectedInputsTest {
 
     @Test
-    void expectedValuesCanDisappearBeforeTheirSnapshotIsTaken() {
+    void validationUsesTheSnapshotInsteadOfTheOriginalContainersEmptinessQuery() {
         var expected = new ArrayList<>(List.of("before")) {
             @Override
             public boolean isEmpty() {
@@ -30,12 +37,44 @@ class ExpectedInputsTest {
             }
         };
         var condition = contains(expected);
-        assertEquals(List.of(), condition.definition.reference().value());
-        expected.add("after");
-        for (var actual : List.of(List.<String>of(), List.of("unrelated"))) {
-            assertSame(actual, result(evaluate(condition, actual)));
-        }
+        assertEquals(List.of("before"), condition.definition.reference().value());
+        expected.clear();
+        assertInstanceOf(Unsatisfied.class, evaluate(condition, List.of("unrelated")));
         assertInstanceOf(Unsatisfied.class, evaluate(condition, null));
+    }
+
+    @Test
+    void membershipConditionsNeverKeepAnEmptySnapshotAfterConcurrentRemoval() {
+        List<Function<Collection<String>, PreservingCondition<?>>> factories = List.of(
+                CollectionConditions::contains, CollectionConditions::doesNotContain,
+                CollectionConditions::doesNotContainAll, CollectionConditions::containsAny);
+        for (var factory : factories) {
+            var expected = new ChangingExpectedQueue();
+            expected.add("before");
+            try {
+                var condition = factory.apply(expected);
+                assertFalse(assertInstanceOf(List.class, condition.definition.reference().value()).isEmpty());
+            } catch (IllegalArgumentException failure) {
+                assertTrue(failure.getMessage().endsWith("must not be empty"));
+            }
+        }
+    }
+
+    @Test
+    void entryConditionsNeverKeepAnEmptySnapshotAfterConcurrentRemoval() {
+        List<Function<Map<String, String>, PreservingCondition<?>>> factories = List.of(
+                MapConditions::containsEntries, MapConditions::doesNotContainAllEntries,
+                MapConditions::containsAnyEntries, MapConditions::doesNotContainEntries);
+        for (var factory : factories) {
+            var expected = new ChangingExpectedMap();
+            expected.put("key", "before");
+            try {
+                var condition = factory.apply(expected);
+                assertFalse(assertInstanceOf(List.class, condition.definition.reference().value()).isEmpty());
+            } catch (IllegalArgumentException failure) {
+                assertTrue(failure.getMessage().endsWith("must not be empty"));
+            }
+        }
     }
 
     @Test
@@ -170,6 +209,22 @@ class ExpectedInputsTest {
         assertSame(actualMap, await(() -> actualMap).until(mapCondition));
         assertEquals(1, collection.sizeCalls);
         assertEquals(1, map.sizeCalls);
+    }
+
+    private static final class ChangingExpectedQueue extends ConcurrentLinkedQueue<String> {
+        @Override
+        public Stream<String> stream() {
+            removeConcurrently(this::clear);
+            return super.stream();
+        }
+    }
+
+    private static final class ChangingExpectedMap extends ConcurrentHashMap<String, String> {
+        @Override
+        public Set<Map.Entry<String, String>> entrySet() {
+            removeConcurrently(this::clear);
+            return super.entrySet();
+        }
     }
 
     private static <ACTUAL> void assertStable(List<? extends PreservingCondition<? super ACTUAL>> conditions,

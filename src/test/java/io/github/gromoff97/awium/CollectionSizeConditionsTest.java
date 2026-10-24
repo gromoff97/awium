@@ -72,6 +72,7 @@ class CollectionSizeConditionsTest {
             assertEquals(Satisfied.class, satisfied.getClass());
             assertSame(matching, result(satisfied));
             assertUnsatisfied(evaluate(testCase.condition(), mismatching));
+            assertEquals("collection was null", mismatch(evaluate(testCase.condition(), null)));
             assertFalse(description(testCase.condition()).isBlank());
             assertEquals(1, matching.sizeCalls);
             assertEquals(1, mismatching.sizeCalls);

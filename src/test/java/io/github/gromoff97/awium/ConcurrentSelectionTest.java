@@ -10,6 +10,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.ProbeContainers.removeConcurrently;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -86,19 +87,6 @@ class ConcurrentSelectionTest {
             assertEquals(onlyValue ? "ready" : Map.entry("key", "ready"),
                     assertInstanceOf(AwaitResult.Satisfied.class, result).result());
             assertEquals(2, calls[0]);
-        }
-    }
-
-    private static void removeConcurrently(Runnable removal) {
-        Thread worker = Thread.startVirtualThread(removal);
-        try {
-            worker.join(5_000);
-        } catch (InterruptedException failure) {
-            throw new AssertionError(failure);
-        }
-        if (worker.isAlive()) {
-            worker.interrupt();
-            throw new AssertionError("concurrent removal did not finish");
         }
     }
 
