@@ -731,19 +731,21 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void diagnosticRenderingFailureRetainsTheEngineCauseAsPrimary() {
-        var diagnosticCause = new IllegalStateException("toString failed");
-        var engineCause = new AssertionError("assertion failed");
-        WaitCompletion<Object, Object> outcome = new Timeout<>(
-                assertionUnsatisfiedAttempt(CONDITION, new ThrowingValue(diagnosticCause),
-                        "not ready", engineCause, 1, 2));
+        for (Throwable diagnosticCause : List.of(new IllegalStateException("toString failed"),
+                new InternalError("value fatal"))) {
+            var engineCause = new AssertionError("assertion failed");
+            WaitCompletion<Object, Object> outcome = new Timeout<>(
+                    assertionUnsatisfiedAttempt(CONDITION, new ThrowingValue(diagnosticCause),
+                            "not ready", engineCause, 1, 2));
 
-        var failure = assertFailure(TIMEOUT,
-                () -> Await.complete(outcome, CONDITION,
-                        config(1, 2, 0)));
+            var failure = assertFailure(TIMEOUT,
+                    () -> Await.complete(outcome, CONDITION,
+                            config(1, 2, 0)));
 
-        assertSame(engineCause, failure.getCause());
-        assertEquals(1, failure.getSuppressed().length);
-        assertSame(diagnosticCause, failure.getSuppressed()[0]);
+            assertSame(engineCause, failure.getCause());
+            assertEquals(1, failure.getSuppressed().length);
+            assertSame(diagnosticCause, failure.getSuppressed()[0]);
+        }
     }
 
     @Test
@@ -1038,21 +1040,6 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
-    void diagnosticErrorsAreRetainedAlongsideTheOriginalFailure() {
-        var valueFatal = new InternalError("value fatal");
-        var engineCause = new AssertionError("assertion failed");
-        WaitCompletion<Object, Object> valueFailure = new Timeout<>(
-                assertionUnsatisfiedAttempt(CONDITION, new ThrowingValue(valueFatal), "not ready",
-                        engineCause, 1, 2));
-
-        var thrown = assertThrows(AwaitAssertionError.class,
-                () -> Await.complete(valueFailure, CONDITION,
-                        config(1, 2, 0)));
-        assertSame(engineCause, thrown.getCause());
-        assertArrayEquals(new Throwable[]{valueFatal}, thrown.getSuppressed());
-    }
-
-    @Test
     void isolatedExceptionClassDoesNotRequireItsEnclosingClassForDiagnostics() throws Exception {
         byte[] bytes;
         try (var resource = CountingAssertion.class.getResourceAsStream("DiagnosticsSnapshotTest$CountingAssertion.class")) {
@@ -1079,20 +1066,6 @@ class DiagnosticsSnapshotTest {
         assertNull(diagnosticFailure.getCause());
         assertArrayEquals(new Throwable[]{cause}, diagnosticFailure.getSuppressed());
         assertMessage(diagnosticFailure, "Diagnostics failure: " + cause.getClass().getName());
-    }
-
-    @Test
-    @SuppressWarnings("removal")
-    void uncontrolledCausesRemainDiagnosticDataRegardlessOfThrowableType() {
-        var virtualMachineError = new InternalError("fatal");
-        var threadDeath = new ThreadDeath();
-
-        assertSame(virtualMachineError, assertThrows(AwaitExecutionException.class,
-                () -> Await.complete(sourceFailure(virtualMachineError, 1, 0),
-                        CONDITION, config(1, 2, 0))).getCause());
-        assertSame(threadDeath, assertThrows(AwaitExecutionException.class,
-                () -> Await.complete(conditionFailure(CONDITION, null, threadDeath, 1, 0),
-                        CONDITION, config(1, 2, 0))).getCause());
     }
 
     @Test
@@ -1212,12 +1185,7 @@ class DiagnosticsSnapshotTest {
     @Test
     void errorsFromArrayElementToStringAreRetainedAsDiagnosticFailures() {
         var fatal = new InternalError("array element fatal");
-        Object[] actual = {new Object() {
-            @Override
-            public String toString() {
-                throw fatal;
-            }
-        }};
+        Object[] actual = {new ThrowingValue(fatal)};
         var failure = assertThrows(AwaitAssertionError.class,
                 () -> Await.complete(new Timeout<>(unsatisfiedAttempt(CONDITION, actual, "not ready", 1, 2)),
                         CONDITION, config(1, 2, 0)));

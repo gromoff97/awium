@@ -156,9 +156,18 @@ class ObservationTest {
     @ParameterizedTest
     @MethodSource("throwables")
     void classifiesEverySourceThrowableBeforeObservation(Throwable failure) {
-        var attempt = attempt(() -> throwUnchecked(failure), ObservationTest::failIfCalled);
+        var time = new FakeTime(0);
+        var waiting = await((Callable<Object>) () -> throwUnchecked(failure)).usingTime(time, time);
+        var check = condition("must not run", ObservationTest::failIfCalled);
+        var result = waiting.tryUntil(check);
+        var failed = assertInstanceOf(AwaitResult.Failed.class, result);
+        assertEquals(AwaitFailure.Reason.SOURCE_FAILED, failed.failure().reason());
+        assertSame(failure, failed.failure().cause());
+        assertSame(failure, assertThrows(AwaitExecutionException.class, () -> waiting.until(check)).getCause());
+        assertFalse(currentThread().isInterrupted());
 
-        var outcome = assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class, attempt.outcome());
+        var outcome = assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class,
+                result.attempts().getFirst().outcome());
         assertSame(failure, outcome.cause());
         assertEquals(Duration.ZERO, outcome.timing().startOffset());
         assertEquals(Duration.ZERO, outcome.timing().retrievalOffset());

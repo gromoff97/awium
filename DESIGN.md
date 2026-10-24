@@ -488,3 +488,17 @@ AssertionError, override считает чтения и вызывает super.g
 проверка единственного чтения и загрузка исключения без его enclosing class.
 Все 39 тестов DiagnosticsSnapshotTest прошли; ожидаемые сообщения не менялись.
 `/tmp/awium-seven-hour-pass/diagnostic-fixtures-report.json`.
+
+### Throwable проверяются через настоящие терминалы
+
+Source-матрица ObservationTest теперь вызывает оба терминала, проверяет reason
+и идентичность причины, сохранённые исход/тайминги и отсутствие специального
+установления interrupt flag. Все семь Throwable остаются в одном наборе.
+Два ручных unchecked/fatal исхода в диагностическом тесте больше не нужны.
+
+Проверки primary cause при ошибке диагностики объединены для Exception и Error.
+Анонимный toString-класс в массиве заменён существующей ThrowingValue-фикстурой:
+ещё одного отдельного тестового типа больше нет. Убраны 23 строки и две отдельные
+проверки при сохранении их сценариев. Полный check: 418 тестов без ошибок.
+STRONGER FailureDiagnostics/WaitCompletion*: 107 мутаций, все KILLED.
+`/tmp/awium-seven-hour-pass/diagnostic-throwable-report.json`.
