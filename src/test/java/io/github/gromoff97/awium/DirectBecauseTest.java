@@ -188,8 +188,8 @@ class DirectBecauseTest {
 
     @Test
     void customChecksKeepInferredTypesThroughBecauseAndComposition() {
-        record Payment(String id, boolean paid) {}
-        var actual = new Payment("receipt", true);
+        record Payment(String id) {}
+        var actual = new Payment("receipt");
         var check = condition("identity", ConditionResult::satisfied);
         var time = new FakeTime(0);
 

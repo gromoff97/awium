@@ -682,3 +682,11 @@ ArtifactContractIT включает ValueAwait рядом с Await в запре
 Одноэлементный цикл ConditionResult заменён прямой проверкой, из отрицательной
 фикстуры удалён неиспользуемый Callable import. 5 тестов JAR, JPMS и границ
 доступа прошли. `/tmp/awium-seven-hour-pass/complete-facade-dependencies-report.json`.
+
+### Фикстуры содержат только данные проверяемого сценария
+
+Локальный Payment в DirectBecauseTest хранит только используемый id.
+Поле paid в NestedSelection и detail в CapturedCondition сохранены: они
+участвуют в проверках. Убраны лишний wildcard cast в failed helper и
+неиспользуемый assertThrows import. Полный check: 413 тестов без ошибок
+и пропусков. `/tmp/awium-seven-hour-pass/incidental-fixtures-report.json`.

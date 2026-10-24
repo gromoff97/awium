@@ -331,7 +331,7 @@ class TryUntilFailureTest {
     }
 
     private static AwaitResult.Failed<?, ?> failed(AwaitResult<?, ?> result) {
-        return (AwaitResult.Failed<?, ?>) assertInstanceOf(AwaitResult.Failed.class, result);
+        return assertInstanceOf(AwaitResult.Failed.class, result);
     }
 
     private static PreservingCondition<Object> unstableCondition() {
