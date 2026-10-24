@@ -730,3 +730,21 @@ threads и concurrent reuse. Текст синхронизирован с Thread
 инициализированную локальную переменную продукта и тестов: новых
 неиспользуемых имён не обнаружено.
 `/tmp/awium-seven-hour-pass/unused-local-values-report.json`.
+
+### Доказанный дефект: ошибка извлечения Map теряла ожидаемый ключ
+
+Публичный valueFor(key, nested) при исключении из Map.Entry.getValue
+сохранял исходную причину, но показывал внешнее nested-условие без ключа.
+Новый сквозной тест упал на прежнем коде: Expected: customerId отсутствовал.
+Compose теперь присваивает Uncontrolled условие извлечения, как уже делал
+для extraction mismatch. Все Throwable проходят одинаковый catch; категория,
+идентичность причины и фактический interrupt flag не меняются. Новых типов нет.
+
+Проверены IllegalStateException, AssertionError и Throwable, оба терминала,
+ленивость nested factory и захваченная последовательность с нулём пройденных
+этапов. Ключ сохраняется в progress.condition; because сохраняется в сообщении.
+README уточняет правило. Полный check: 414 тестов без ошибок и пропусков;
+после дополнительных progress-assertion прошли все пять composition-тестов.
+STRONGER ConditionSupport/ConditionAwaitAttempt/SequenceExecution: 119 KILLED,
+без SURVIVED/NO_COVERAGE. Все 409 публичных деклараций совпадают.
+`/tmp/awium-seven-hour-pass/extraction-failure-context-report.json`.

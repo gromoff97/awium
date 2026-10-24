@@ -71,11 +71,17 @@ final class ConditionSupport {
             Supplier<? extends ConditionAwaitAttempt<? super VALUE, ? extends RESULT>> evaluatorFactory) {
         return new Condition<>(prefix + condition.description(), condition.explanation(), condition.reference(), () -> {
             var evaluator = evaluatorFactory.get();
-            return actual -> switch (extract.apply(actual)) {
-                case ConditionResult.Satisfied<VALUE> value -> evaluator.probe(value.result());
-                case ConditionResult.Unsatisfied<VALUE> mismatch -> new AttemptResult.Evaluated<>(
-                        new ConditionResult.Unsatisfied<>(mismatch.mismatch(), mismatch.cause()),
-                        extractionCondition, null);
+            return actual -> {
+                try {
+                    return switch (extract.apply(actual)) {
+                        case ConditionResult.Satisfied<VALUE> value -> evaluator.probe(value.result());
+                        case ConditionResult.Unsatisfied<VALUE> mismatch -> new AttemptResult.Evaluated<>(
+                                new ConditionResult.Unsatisfied<>(mismatch.mismatch(), mismatch.cause()),
+                                extractionCondition, null);
+                    };
+                } catch (Throwable failure) {
+                    return new AttemptResult.Uncontrolled<>(failure, extractionCondition, null);
+                }
             };
         });
     }

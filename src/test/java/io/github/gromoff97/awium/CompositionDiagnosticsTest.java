@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.Conditions.*;
+import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static java.time.Duration.ofNanos;
@@ -83,5 +84,38 @@ class CompositionDiagnosticsTest {
         assertNull(failure.getCause());
         assertArrayEquals(new Throwable[]{formattingFailure}, failure.getSuppressed());
         assertEquals(1, renders[0]);
+    }
+
+    @Test
+    void failedExtractionRetainsTheKeyAndDoesNotInitializeTheNestedCallback() {
+        for (Throwable cause : List.of(new IllegalStateException("value failed"),
+                new AssertionError("getter assertion"), new Throwable("getter throwable"))) {
+            var entry = new java.util.AbstractMap.SimpleImmutableEntry<>("customerId", "Alice") {
+                @Override public String getValue() { return throwUnchecked(cause); }
+            };
+            var actual = new ProbeContainers.EntryMap<String, String>(List.of(entry));
+            var selected = valueFor("customerId", condition("nested", () -> {
+                throw new AssertionError("nested factory must not run before extraction succeeds");
+            })).because("customer is required");
+            var waiting = await(() -> actual);
+
+            var result = waiting.tryUntil(selected);
+            var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+            assertEquals(CONDITION_FAILED, failure.reason());
+            assertSame(cause, failure.cause());
+            assertTrue(failure.message().contains("Expected: customerId"), failure.message());
+            assertTrue(failure.message().contains("Because: customer is required"), failure.message());
+            var outcome = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class,
+                    result.attempts().getFirst().outcome());
+            assertEquals("customerId", outcome.condition().reference().value());
+            assertSame(cause, assertFailure(CONDITION_FAILED, () -> waiting.until(selected)).getCause());
+
+            var captured = waiting.tryUntil(selected, selected);
+            var capturedOutcome = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class,
+                    captured.attempts().getFirst().outcome());
+            assertSame(cause, capturedOutcome.cause());
+            assertEquals(0, capturedOutcome.progress().capturedStages());
+            assertEquals("customerId", capturedOutcome.progress().condition().reference().value());
+        }
     }
 }
