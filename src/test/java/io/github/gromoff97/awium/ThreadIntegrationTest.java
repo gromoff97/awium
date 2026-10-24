@@ -5,32 +5,42 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.condition;
+import static java.lang.System.nanoTime;
+import static java.lang.Thread.State.*;
 import static java.lang.Thread.currentThread;
-import static java.lang.Thread.ofVirtual;
 import static java.time.Duration.*;
+import static java.util.Collections.nCopies;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.locks.LockSupport.parkNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Named.named;
 
-class VirtualThreadIntegrationTest {
+class ThreadIntegrationTest {
 
-    @Test
-    void virtualCallerRunsEveryObservationOnItsEnteringThread() throws Exception {
+    @ParameterizedTest
+    @MethodSource("callers")
+    void callerRunsEveryObservationOnItsEnteringThread(ThreadFactory callers) throws Exception {
         List<Thread> callbackThreads = new ArrayList<>();
         int[] observations = {0};
         int[] result = {0};
 
-        Thread caller = ofVirtual().name("awium-virtual-caller").start(() -> result[0] = await(() -> {
+        Thread caller = callers.newThread(() -> result[0] = await(() -> {
             callbackThreads.add(currentThread());
             return ++observations[0];
         }).every(ofMillis(20)).upTo(ofSeconds(2)).until(condition("third observation", value -> {
@@ -38,6 +48,7 @@ class VirtualThreadIntegrationTest {
             return value == 3 ? satisfied(value)
                     : unsatisfied("not the third observation");
         })));
+        caller.start();
         caller.join(5_000);
         if (caller.isAlive()) {
             caller.interrupt();
@@ -47,7 +58,7 @@ class VirtualThreadIntegrationTest {
         assertFalse(caller.isAlive());
         assertEquals(3, result[0]);
         assertEquals(3, observations[0]);
-        assertTrue(callbackThreads.stream().allMatch(thread -> thread == caller));
+        assertEquals(nCopies(6, caller), callbackThreads);
     }
 
     @Test
@@ -93,5 +104,53 @@ class VirtualThreadIntegrationTest {
         }
         assertEquals(2, resultThreads.size());
         assertEquals(4, sourceCalls.get());
+    }
+
+    @ParameterizedTest
+    @MethodSource("callers")
+    void externalControllerCancelsTheCallerWhileItIsParked(ThreadFactory callers) throws Exception {
+        Throwable[] terminal = new Throwable[1];
+        boolean[] interrupted = new boolean[1];
+        Thread caller = callers.newThread(() -> {
+            try {
+                await(() -> 1).every(ofSeconds(5)).upTo(ofSeconds(10)).until(condition(
+                                "never satisfied", value ->
+                                        unsatisfied("not ready")));
+            } catch (Throwable failure) {
+                terminal[0] = failure;
+                interrupted[0] = currentThread().isInterrupted();
+            }
+        });
+        caller.start();
+        try {
+            awaitTimedWaiting(caller);
+        } finally {
+            caller.interrupt();
+            caller.join(2_000);
+        }
+
+        assertSame(TERMINATED, caller.getState());
+        var failure = assertInstanceOf(
+                AwaitExecutionException.class, terminal[0]);
+        assertEquals(AwaitFailure.Reason.INTERRUPTED, failure.failure().reason());
+        assertInstanceOf(InterruptedException.class, failure.getCause());
+        assertTrue(failure.getMessage().startsWith(
+                "Caller thread was interrupted while waiting"));
+        assertTrue(interrupted[0]);
+    }
+
+    private static void awaitTimedWaiting(Thread caller) {
+        long deadline = nanoTime() + ofSeconds(2).toNanos();
+        while (caller.getState() != TIMED_WAITING
+                && nanoTime() < deadline) {
+            parkNanos(ofMillis(1).toNanos());
+        }
+        assertSame(TIMED_WAITING, caller.getState());
+    }
+
+    private static Stream<Named<ThreadFactory>> callers() {
+        return Stream.of(
+                named("platform", Thread.ofPlatform().name("awium-platform-", 0).factory()),
+                named("virtual", Thread.ofVirtual().name("awium-virtual-", 0).factory()));
     }
 }

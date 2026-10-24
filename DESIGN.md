@@ -626,3 +626,15 @@ TryUntilHistoryTest сравнивает все номера удержанны�
 объединена с сохранением всех acquisition/persistence попыток. Убраны
 12 строк и один тест. Полный check: 412 тестов без ошибок и пропусков.
 `/tmp/awium-seven-hour-pass/history-content-regression-control/report.json`.
+
+### Общие thread-контракты проверяются для обоих видов потоков
+
+RealTimeIntegrationTest и VirtualThreadIntegrationTest объединены в
+ThreadIntegrationTest. Два одинаковых контракта — выполнение callback на
+вызывающем потоке и внешнее прерывание во время park — получают platform и
+virtual ThreadFactory из одного MethodSource. Сценарий одновременного reuse
+двумя virtual callers сохранён. Полный callback trace сравнивается с шестью
+вызовами вместо allMatch; прерывание и join выполняются в finally даже при
+ошибке ожидания TIMED_WAITING. Новых внутренних типов нет; стало на один
+тестовый класс меньше. Пять тестов прошли, PIT исключает единый новый класс.
+`/tmp/awium-seven-hour-pass/thread-integration-report.json`.

@@ -46,8 +46,7 @@ pitest {
     excludedTestClasses = setOf(
         "io.github.gromoff97.awium.*CompilationContractTest",
         "io.github.gromoff97.awium.PublicSurfaceTest",
-        "io.github.gromoff97.awium.RealTimeIntegrationTest",
-        "io.github.gromoff97.awium.VirtualThreadIntegrationTest",
+        "io.github.gromoff97.awium.ThreadIntegrationTest",
     )
     pitestVersion = "1.25.9"
     junit5PluginVersion = "1.2.3"
