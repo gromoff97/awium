@@ -35,18 +35,14 @@ final class ValueMatching {
         var remainingExpected = new ArrayList<>(expected);
         while (actual.hasNext()) {
             ACTUAL value = actual.next();
-            boolean found = false;
-            Iterator<EXPECTED> candidates = remainingExpected.iterator();
-            while (candidates.hasNext()) {
-                if (matches.test(value, candidates.next())) {
-                    candidates.remove();
-                    found = true;
-                    break;
-                }
+            int index = 0;
+            while (index < remainingExpected.size() && !matches.test(value, remainingExpected.get(index))) {
+                index++;
             }
-            if (!found) {
+            if (index == remainingExpected.size()) {
                 return false;
             }
+            remainingExpected.remove(index);
         }
         return remainingExpected.isEmpty();
     }
