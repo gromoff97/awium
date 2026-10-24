@@ -281,7 +281,7 @@ class MapConditionsTest {
             PreservingCondition<? super ProbeContainers.EntryMap<K, V>>
                     condition) {
         var pollingTime = new FakeTime(0);
-        return await((MapSource<ProbeContainers.EntryMap<K, V>>) () -> actual).usingTime(pollingTime, pollingTime).until(condition);
+        return await(() -> actual).usingTime(pollingTime, pollingTime).until(condition);
     }
 
     private static void assertValidation(Class<? extends Throwable> type,

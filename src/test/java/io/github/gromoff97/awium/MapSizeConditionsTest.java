@@ -113,8 +113,7 @@ class MapSizeConditionsTest {
         var map = new ProbeContainers.ProbeMap<Object, Object>(cause);
 
         assertSame(cause, assertFailure(CONDITION_FAILED,
-                () -> await((MapSource<ProbeContainers.ProbeMap<Object, Object>>)
-                        () -> map).usingTime(pollingTime, pollingTime).until(nonEmpty)).getCause());
+                () -> await(() -> map).usingTime(pollingTime, pollingTime).until(nonEmpty)).getCause());
         assertEquals(1, map.sizeCalls);
     }
 

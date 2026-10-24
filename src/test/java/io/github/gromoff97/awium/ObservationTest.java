@@ -494,7 +494,7 @@ class ObservationTest {
                 new InternalError("fatal"), new ThreadDeath());
     }
 
-    private static <T, R> ConditionResult<R> failIfCalled(T ignored) {
+    private static <R> ConditionResult<R> failIfCalled(Object ignored) {
         throw new AssertionError("condition must not be called");
     }
 

@@ -461,3 +461,14 @@ ExpectedInputs. Список шести фабрик создаётся один
 копии свежих карт и 27 строк тестов. Целевые 26 тестов прошли. STRONGER MapConditions:
 181 мутация: 168 KILLED, 13 TIMED_OUT, без SURVIVED/NO_COVERAGE.
 `/tmp/awium-seven-hour-pass/map-snapshot-report.json`.
+
+### Тип источника выводится из возвращаемого контейнера
+
+Из пяти тестовых вызовов убраны лишние приведения CollectionSource/MapSource
+и Callable<String>. Возвращаемый объект уже задаёт нужный тип; явные marker
+переменные, nullable-источники и view-проверки не менялись. Выполняемый javap
+-c -p вывод всех пяти затронутых классов побайтно совпал до/после: выбранные
+перегрузки и инструкции не изменились. У failIfCalled удалён неиспользуемый
+параметр типа T: helper принимает Object, как его единственный тип источника.
+Целевые 97 тестов прошли; повторный PIT не нужен для совпадающих инструкций.
+`/tmp/awium-seven-hour-pass/container-source-inference/report.json`.

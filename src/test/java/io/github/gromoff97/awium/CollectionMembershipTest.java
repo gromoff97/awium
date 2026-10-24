@@ -253,8 +253,7 @@ class CollectionMembershipTest {
             PreservingCondition<? super ProbeContainers.MembershipCollection<E>>
                     condition) {
         var time = new FakeTime(0);
-        return Await.await((CollectionSource<ProbeContainers.MembershipCollection<E>>)
-                () -> actual).usingTime(time, time).until(condition);
+        return Await.await(() -> actual).usingTime(time, time).until(condition);
     }
 
     private static List<Pair> pairs() {

@@ -116,8 +116,7 @@ class CollectionSizeConditionsTest {
         var collection = new ProbeContainers.ProbeCollection<Object>(cause);
 
         assertSame(cause, assertFailure(CONDITION_FAILED,
-                () -> await((CollectionSource<ProbeContainers.ProbeCollection<Object>>)
-                        () -> collection).usingTime(pollingTime, pollingTime).until(nonEmpty)).getCause());
+                () -> await(() -> collection).usingTime(pollingTime, pollingTime).until(nonEmpty)).getCause());
         assertEquals(1, collection.sizeCalls);
     }
 

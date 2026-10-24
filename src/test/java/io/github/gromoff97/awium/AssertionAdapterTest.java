@@ -85,7 +85,7 @@ class AssertionAdapterTest {
         var invocations = new int[1];
 
         var failure = assertFailure(CONDITION_FAILED, () -> timedAwait(
-                (Callable<String>) () -> "42",
+                () -> "42",
                 DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(10)), time, time).until(Conditions.<String>condition("checked value", value -> {
                             invocations[0]++;
                             throw assertion;
