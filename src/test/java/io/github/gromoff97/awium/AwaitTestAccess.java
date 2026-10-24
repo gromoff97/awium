@@ -20,25 +20,25 @@ final class AwaitTestAccess {
     static <S> ValueAwait<S> timedAwait(Callable<? extends S> source,
             WaitConfiguration configuration, LongSupplier clock,
             LongConsumer parker) {
-        return configured(Await.<S>await(source::call), configuration, clock, parker);
+        return configured(Await.await(source::call), configuration, clock, parker);
     }
 
     static <E, C extends Collection<E>> Await<C, E, Void> timedCollectionAwait(
             Callable<? extends C> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
-        return configured(Await.<E, C>await(source::call), configuration, clock, parker);
+        return configured(Await.await(source::call), configuration, clock, parker);
     }
 
     static <E> Await<Optional<E>, E, Void> timedOptionalAwait(
             Callable<? extends Optional<E>> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
-        return configured(Await.<E>await((Await.OptionalSource<E>) source::call), configuration, clock, parker);
+        return configured(Await.await(source::call), configuration, clock, parker);
     }
 
     static <K, V, M extends Map<K, V>> Await<M, Map.Entry<K, V>, V> timedMapAwait(
             Callable<? extends M> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
-        return configured(Await.<K, V, M>await(source::call), configuration, clock, parker);
+        return configured(Await.await(source::call), configuration, clock, parker);
     }
 
     private static <OBSERVED> ValueAwait<OBSERVED> configured(
