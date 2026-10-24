@@ -31,7 +31,6 @@ import static io.github.gromoff97.awium.ValueMatching.exactly;
 import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
-import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 
@@ -148,20 +147,10 @@ public final class CollectionConditions {
                         value -> matchesAny(values, candidate -> deepEquals(value, candidate))));
     }
 
-    @SafeVarargs
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainAll(ELEMENT... unexpected) {
-        return doesNotContainAll(asList(requireNonNull(unexpected, "unexpected elements must not be null")));
-    }
-
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainAll(Collection<? extends ELEMENT> unexpected) {
         var values = nonEmpty(snapshot(unexpected, "unexpected elements"), "unexpected elements");
         return preserving("collection does not contain all unexpected elements", "collection contained all unexpected elements", unexpectedReference(values),
                 actual -> !ValueMatching.containsAll(actual, values, Objects::deepEquals));
-    }
-
-    @SafeVarargs
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsAny(ELEMENT... expected) {
-        return containsAny(asList(requireNonNull(expected, "expected elements must not be null")));
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsAny(Collection<? extends ELEMENT> expected) {
@@ -171,21 +160,11 @@ public final class CollectionConditions {
                         value -> matchesAny(values, candidate -> deepEquals(value, candidate))));
     }
 
-    @SafeVarargs
-    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> containsExactly(ELEMENT... expected) {
-        return containsExactly(asList(requireNonNull(expected, "expected elements must not be null")));
-    }
-
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> containsExactly(Collection<? extends ELEMENT> expected) {
         var values = snapshot(expected, "expected elements");
         return preserving("collection contains exactly the expected elements",
                 "collection did not contain exactly the expected elements", expectedReference(values),
                 actual -> exactContent(actual, values));
-    }
-
-    @SafeVarargs
-    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> doesNotContainExactly(ELEMENT... expected) {
-        return doesNotContainExactly(asList(requireNonNull(expected, "expected elements must not be null")));
     }
 
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> doesNotContainExactly(Collection<? extends ELEMENT> expected) {
@@ -195,11 +174,6 @@ public final class CollectionConditions {
                 actual -> !exactContent(actual, values));
     }
 
-    @SafeVarargs
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsExactlyInAnyOrder(ELEMENT... expected) {
-        return containsExactlyInAnyOrder(asList(requireNonNull(expected, "expected elements must not be null")));
-    }
-
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsExactlyInAnyOrder(Collection<? extends ELEMENT> expected) {
         var values = snapshot(expected, "expected elements");
         return preserving("collection contains exactly the expected elements in any order",
@@ -207,21 +181,11 @@ public final class CollectionConditions {
                 actual -> exactContentInAnyOrder(actual, values));
     }
 
-    @SafeVarargs
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainExactlyInAnyOrder(ELEMENT... expected) {
-        return doesNotContainExactlyInAnyOrder(asList(requireNonNull(expected, "expected elements must not be null")));
-    }
-
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainExactlyInAnyOrder(Collection<? extends ELEMENT> expected) {
         var values = snapshot(expected, "expected elements");
         return preserving("collection does not contain exactly the expected elements in any order",
                 "collection contained exactly the expected elements in any order", expectedReference(values),
                 actual -> !exactContentInAnyOrder(actual, values));
-    }
-
-    @SafeVarargs
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsOnly(ELEMENT... expected) {
-        return containsOnly(asList(requireNonNull(expected, "expected elements must not be null")));
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsOnly(Collection<? extends ELEMENT> expected) {

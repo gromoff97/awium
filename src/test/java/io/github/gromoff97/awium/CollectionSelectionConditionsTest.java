@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.SequencedCollection;
 import org.junit.jupiter.api.Test;
 
+import static java.util.Arrays.asList;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
@@ -110,7 +111,7 @@ class CollectionSelectionConditionsTest {
         assertEquals(Unsatisfied.class,
                 evaluate(CollectionConditions.hasNoDuplicates, values).getClass());
         assertEquals(Satisfied.class,
-                evaluate(CollectionConditions.containsOnly("a", null), values).getClass());
+                evaluate(CollectionConditions.containsOnly(asList("a", null)), values).getClass());
         assertEquals(Satisfied.class, evaluate(CollectionConditions.subsetOf(
                 Arrays.asList("a", "b", null)), values).getClass());
         assertEquals(Satisfied.class,
@@ -129,7 +130,7 @@ class CollectionSelectionConditionsTest {
                 Arrays.asList(null, "a")).getClass());
         assertEquals(Satisfied.class, evaluate(CollectionConditions.hasNoDuplicates,
                 List.of("a", "b")).getClass());
-        assertEquals(Unsatisfied.class, evaluate(CollectionConditions.containsOnly("a", null),
+        assertEquals(Unsatisfied.class, evaluate(CollectionConditions.containsOnly(asList("a", null)),
                 Arrays.asList("a", "b", null)).getClass());
         assertEquals(Unsatisfied.class, evaluate(CollectionConditions.subsetOf(
                 List.of("a", "b")), List.of("a", "c")).getClass());

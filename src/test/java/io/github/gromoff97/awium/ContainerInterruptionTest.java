@@ -77,9 +77,9 @@ class ContainerInterruptionTest {
                 waiting -> waiting.tryUntil(single(matches(value -> true))),
                 waiting -> waiting.tryUntil(contains("ready")),
                 waiting -> waiting.tryUntil(doesNotContain("absent")),
-                waiting -> waiting.tryUntil(containsExactly("ready", "other")),
-                waiting -> waiting.tryUntil(containsExactlyInAnyOrder("other", "ready")),
-                waiting -> waiting.tryUntil(containsOnly("ready", "other")),
+                waiting -> waiting.tryUntil(containsExactly(List.of("ready", "other"))),
+                waiting -> waiting.tryUntil(containsExactlyInAnyOrder(List.of("other", "ready"))),
+                waiting -> waiting.tryUntil(containsOnly(List.of("ready", "other"))),
                 waiting -> waiting.tryUntil(containsSubsequence("ready")),
                 waiting -> waiting.tryUntil(hasNoDuplicates),
                 waiting -> waiting.tryUntil(sorted((left, right) -> 0)));

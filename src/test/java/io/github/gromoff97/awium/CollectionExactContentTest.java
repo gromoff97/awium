@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
+import static java.util.Arrays.asList;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
@@ -26,7 +27,6 @@ import static io.github.gromoff97.awium.ProbeContainers.GreedyValue;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.ofNanos;
-import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CollectionExactContentTest {
@@ -41,12 +41,12 @@ class CollectionExactContentTest {
 
     @Test
     void orderedAndAnyOrderFormsKeepTheirDistinctSemantics() {
-        assertStatus(containsExactly("a", "b"), List.of("b", "a"),
+        assertStatus(containsExactly(List.of("a", "b")), List.of("b", "a"),
                 Unsatisfied.class);
-        assertStatus(containsExactlyInAnyOrder("a", "b"),
+        assertStatus(containsExactlyInAnyOrder(List.of("a", "b")),
                 List.of("b", "a"), Satisfied.class);
-        assertStatus(containsExactly(), List.of(), Satisfied.class);
-        assertStatus(containsExactly("a", "a"), List.of("a", "a"),
+        assertStatus(containsExactly(List.of()), List.of(), Satisfied.class);
+        assertStatus(containsExactly(List.of("a", "a")), List.of("a", "a"),
                 Satisfied.class);
     }
 
@@ -62,8 +62,8 @@ class CollectionExactContentTest {
                         }
                     };
                     PreservingCondition<? super ArrayList<String>> condition = anyOrder
-                            ? negative ? doesNotContainExactlyInAnyOrder("a", "b") : containsExactlyInAnyOrder("a", "b")
-                            : negative ? doesNotContainExactly("a", "b") : containsExactly("a", "b");
+                            ? negative ? doesNotContainExactlyInAnyOrder(List.of("a", "b")) : containsExactlyInAnyOrder(List.of("a", "b"))
+                            : negative ? doesNotContainExactly(List.of("a", "b")) : containsExactly(List.of("a", "b"));
                     var evaluation = evaluate(condition, actual);
                     assertEquals(negative ? Satisfied.class : Unsatisfied.class, evaluation.getClass());
                     if (negative) assertSame(actual, result(evaluation));
@@ -74,15 +74,14 @@ class CollectionExactContentTest {
 
     @Test
     void onlyElementsRejectMissingAndExtraValuesButIgnoreDuplicates() {
-        for (var condition : List.of(containsOnly("a", "b", "a"), containsOnly(List.of("a", "b", "a")))) {
-            assertStatus(condition, List.of(), Unsatisfied.class);
-            assertStatus(condition, List.of("a"), Unsatisfied.class);
-            assertStatus(condition, List.of("b"), Unsatisfied.class);
-            assertStatus(condition, List.of("a", "b", "c"), Unsatisfied.class);
-            assertStatus(condition, List.of("b", "a", "b"), Satisfied.class);
-        }
-        assertStatus(containsOnly(), List.of(), Satisfied.class);
-        assertStatus(containsOnly(), List.of("a"), Unsatisfied.class);
+        var condition = containsOnly(List.of("a", "b", "a"));
+        assertStatus(condition, List.of(), Unsatisfied.class);
+        assertStatus(condition, List.of("a"), Unsatisfied.class);
+        assertStatus(condition, List.of("b"), Unsatisfied.class);
+        assertStatus(condition, List.of("a", "b", "c"), Unsatisfied.class);
+        assertStatus(condition, List.of("b", "a", "b"), Satisfied.class);
+        assertStatus(containsOnly(List.of()), List.of(), Satisfied.class);
+        assertStatus(containsOnly(List.of()), List.of("a"), Unsatisfied.class);
     }
 
     @Test
@@ -104,8 +103,8 @@ class CollectionExactContentTest {
                         }
                     };
                     PreservingCondition<? super ArrayList<String>> condition = anyOrder
-                            ? negative ? doesNotContainExactlyInAnyOrder("a", "b") : containsExactlyInAnyOrder("a", "b")
-                            : negative ? doesNotContainExactly("a", "b") : containsExactly("a", "b");
+                            ? negative ? doesNotContainExactlyInAnyOrder(List.of("a", "b")) : containsExactlyInAnyOrder(List.of("a", "b"))
+                            : negative ? doesNotContainExactly(List.of("a", "b")) : containsExactly(List.of("a", "b"));
                     var evaluation = evaluate(condition, actual);
                     if (negative) {
                         assertEquals(Satisfied.class, evaluation.getClass());
@@ -122,18 +121,18 @@ class CollectionExactContentTest {
     void exactEqualityIsActualFirstArrayAwareAndDoesNotHash() {
         Directional actual = new Directional(true);
         Directional expected = new Directional(false);
-        assertStatus(containsExactlyInAnyOrder(expected), List.of(actual),
+        assertStatus(containsExactlyInAnyOrder(asList(expected)), List.of(actual),
                 Satisfied.class);
         assertEquals(1, actual.equalsCalls);
 
         String nil = null;
-        assertStatus(containsExactly(nil), asList((String) null), Satisfied.class);
-        assertStatus(containsExactly(new int[] {1, 2}),
+        assertStatus(containsExactly(asList(nil)), asList((String) null), Satisfied.class);
+        assertStatus(containsExactly(java.util.Collections.singletonList(new int[] {1, 2})),
                 List.<Object>of(new int[] {1, 2}), Satisfied.class);
 
         Directional onlyActual = new Directional(true);
         Directional onlyExpected = new Directional(false);
-        assertStatus(containsOnly(onlyExpected), List.of(onlyActual), Satisfied.class);
+        assertStatus(containsOnly(asList(onlyExpected)), List.of(onlyActual), Satisfied.class);
         assertEquals(2, onlyActual.equalsCalls);
         assertEquals(0, onlyExpected.equalsCalls);
     }
@@ -145,27 +144,10 @@ class CollectionExactContentTest {
         ExpectedValue x = new ExpectedValue("x");
         ExpectedValue y = new ExpectedValue("y");
 
-        assertStatus(containsExactlyInAnyOrder(x, y),
+        assertStatus(containsExactlyInAnyOrder(asList(x, y)),
                 List.of(first, second), Unsatisfied.class);
-        assertStatus(containsExactlyInAnyOrder(y, x),
+        assertStatus(containsExactlyInAnyOrder(asList(y, x)),
                 List.of(first, second), Satisfied.class);
-    }
-
-    @Test
-    void exactConditionsSnapshotExpectedValuesAtConstruction() {
-        String[] array = {"before"};
-        PreservingCondition<? super List<String>> arrayCondition =
-                containsExactly(array);
-        array[0] = "after";
-        assertStatus(arrayCondition, List.of("before"), Satisfied.class);
-        assertStatus(arrayCondition, List.of("after"), Unsatisfied.class);
-
-        List<String> expected = new ArrayList<>(List.of("before"));
-        PreservingCondition<? super List<String>> collectionCondition =
-                containsExactly(expected);
-        expected.set(0, "after");
-        assertStatus(collectionCondition, List.of("before"), Satisfied.class);
-        assertStatus(collectionCondition, List.of("after"), Unsatisfied.class);
     }
 
     @Test
@@ -180,9 +162,9 @@ class CollectionExactContentTest {
         CollectionSource<ProbeList<ThrowingEquals>> equalitySource = () -> brokenEquality;
 
         assertSame(iteratorCause, assertFailure(CONDITION_FAILED,
-                () -> await(iteratorSource).usingTime(pollingTime, pollingTime).until(doesNotContainExactly("a"))).getCause());
+                () -> await(iteratorSource).usingTime(pollingTime, pollingTime).until(doesNotContainExactly(List.of("a")))).getCause());
         assertSame(equalityCause, assertFailure(CONDITION_FAILED,
-                () -> await(equalitySource).usingTime(pollingTime, pollingTime).until(doesNotContainExactly(new ThrowingEquals(null)))).getCause());
+                () -> await(equalitySource).usingTime(pollingTime, pollingTime).until(doesNotContainExactly(asList(new ThrowingEquals(null))))).getCause());
     }
 
     @Test
@@ -192,7 +174,7 @@ class CollectionExactContentTest {
         assertEquals(Unsatisfied.class, evaluation.getClass());
         assertFalse(mismatch(evaluation).isBlank());
         assertFalse(assertThrows(NullPointerException.class,
-                () -> containsExactly((Object[]) null)).getMessage().isBlank());
+                () -> containsExactly(null)).getMessage().isBlank());
     }
 
     @Test
@@ -205,7 +187,7 @@ class CollectionExactContentTest {
                             time.advanceNanos(2);
                             return actual;
                         }, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
-                        time, time).until(containsExactly("b").because("business reason")));
+                        time, time).until(containsExactly(List.of("b")).because("business reason")));
 
         assertEquals(1, actual.iteratorCalls);
         assertTrue(failure.getMessage().contains("Expected: [b]"));
@@ -231,17 +213,10 @@ class CollectionExactContentTest {
 
     private static List<Pair> pairs() {
         return List.of(
-                new Pair("ordered varargs", containsExactly("a", "a"),
-                        doesNotContainExactly("a", "a"),
-                        List.of("a", "a"), List.of("a", "b")),
                 new Pair("ordered collection",
                         containsExactly(List.of("a", "a")),
                         doesNotContainExactly(List.of("a", "a")),
                         List.of("a", "a"), List.of("a", "b")),
-                new Pair("any-order varargs",
-                        containsExactlyInAnyOrder("a", "b"),
-                        doesNotContainExactlyInAnyOrder("a", "b"),
-                        List.of("b", "a"), List.of("a", "a")),
                 new Pair("any-order collection",
                         containsExactlyInAnyOrder(List.of("a", "b")),
                         doesNotContainExactlyInAnyOrder(

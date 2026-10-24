@@ -43,8 +43,12 @@ class CompilationContractTest {
     @Test
     void singleAndBulkMembershipRejectUnrelatedElementTypes() throws IOException {
         for (String condition : List.of("contains(42)", "containsAll(List.of(42))",
-                "doesNotContain(42)", "doesNotContainAny(List.of(42))")) {
-            for (String explanation : List.of("", ".because(\"incompatible\")")) {
+                "doesNotContain(42)", "doesNotContainAny(List.of(42))",
+                "doesNotContainAll(List.of(42))", "containsAny(List.of(42))",
+                "containsExactly(List.of(42))", "doesNotContainExactly(List.of(42))",
+                "containsExactlyInAnyOrder(List.of(42))", "doesNotContainExactlyInAnyOrder(List.of(42))",
+                "containsOnly(List.of(42))")) {
+            for (String explanation : List.of("", ".because(\"incompatible\")", ".because(\"%s\", \"incompatible\")")) {
                 for (String terminal : List.of("until", "tryUntil")) {
                     String expression = "await(source)." + terminal + "(CollectionConditions."
                             + condition + explanation + ");";
@@ -310,7 +314,7 @@ class CompilationContractTest {
 
                 final class Contract {
                     void check(CollectionSource<Set<String>> source) {
-                        await(source).until(containsExactly("a"));
+                        await(source).until(containsExactly(List.of("a")));
                     }
                 }
                 """);

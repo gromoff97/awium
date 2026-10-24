@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
+import static java.util.Arrays.asList;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.CollectionConditions.*;
@@ -22,7 +23,6 @@ import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.ofNanos;
-import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -85,7 +85,7 @@ class CollectionMembershipTest {
     void nullAndRepeatedExpectedValuesKeepMembershipSemantics() {
         assertUnsatisfied(evaluate(contains("b"), null));
         assertPair(new Pair("repeated", containsAll(List.of("a", "a")),
-                doesNotContainAll("a", "a")), List.of("a"), true);
+                doesNotContainAll(List.of("a", "a"))), List.of("a"), true);
 
         String nil = null;
         Collection<String> actual = asList((String) null);
@@ -260,11 +260,9 @@ class CollectionMembershipTest {
     private static List<Pair> pairs() {
         return List.of(
                 new Pair("contains", contains("b"), doesNotContain("b")),
-                new Pair("contains", containsAll(List.of("a", "b")),
-                        doesNotContainAll("a", "b")),
-                new Pair("containsAny", containsAny("x", "b"),
-                        doesNotContainAny(List.of("x", "b"))),
-                new Pair("containsAny collection", containsAny(List.of("x", "b")),
+                new Pair("containsAll", containsAll(List.of("a", "b")),
+                        doesNotContainAll(List.of("a", "b"))),
+                new Pair("containsAny", containsAny(List.of("x", "b")),
                         doesNotContainAny(List.of("x", "b"))));
     }
 

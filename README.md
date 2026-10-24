@@ -311,6 +311,11 @@ expected elements, use `containsAll(collection)` or `doesNotContainAny(collectio
 for example `containsAll(List.of("a", "b"))`. For null checks, use `containsNull`
 and `doesNotContainNull`.
 
+The other bulk membership and exact-content factories also take a collection:
+`containsAny(List.of("a", "b"))`, `doesNotContainAll(List.of("a", "b"))`,
+`containsOnly(List.of("a", "b"))`, and the `containsExactly...` /
+`doesNotContainExactly...` pairs. Each operation has one collection overload.
+
 Maps follow the same rule: `containsKey(key)`, `doesNotContainKey(key)`,
 `containsValue(value)` and `doesNotContainValue(value)` check one object.
 `containsKeys(collection)`, `doesNotContainKeys(collection)`,

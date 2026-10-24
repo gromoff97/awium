@@ -16,12 +16,12 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
+import static java.util.Arrays.asList;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.ProbeContainers.removeConcurrently;
-import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ExpectedInputsTest {
@@ -94,12 +94,12 @@ class ExpectedInputsTest {
     }
 
     @Test
-    void collectionVarargsFactoriesFreezeTheArray() {
+    void collectionFactoriesSnapshotArrayBackedInputs() {
         String[] expected = {"a", null, "a"};
-        assertStable(List.of(containsAll(asList(expected)), doesNotContainAny(asList(expected)), doesNotContainAll(expected),
-                containsAny(expected), containsExactly(expected), doesNotContainExactly(expected),
-                containsExactlyInAnyOrder(expected), doesNotContainExactlyInAnyOrder(expected),
-                containsOnly(expected), startsWith(expected), endsWith(expected), containsSequence(expected),
+        assertStable(List.of(containsAll(asList(expected)), doesNotContainAny(asList(expected)), doesNotContainAll(asList(expected)),
+                containsAny(asList(expected)), containsExactly(asList(expected)), doesNotContainExactly(asList(expected)),
+                containsExactlyInAnyOrder(asList(expected)), doesNotContainExactlyInAnyOrder(asList(expected)),
+                containsOnly(asList(expected)), startsWith(expected), endsWith(expected), containsSequence(expected),
                 doesNotContainSequence(expected), containsSubsequence(expected), doesNotContainSubsequence(expected)),
                 asList("a", null, "a"), List.of("changed"), () -> expected[0] = "changed");
     }
