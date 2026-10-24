@@ -22,6 +22,7 @@ import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.Conditions.equalTo;
+import static io.github.gromoff97.awium.Conditions.notEqualTo;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.WaitCompletion.*;
 import static java.lang.Thread.currentThread;
@@ -29,6 +30,7 @@ import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -1102,12 +1104,66 @@ class DiagnosticsSnapshotTest {
     }
 
     @Test
+    void repeatedRenderingFailureIsReportedOnceAcrossBothTerminals() {
+        var diagnostic = new IllegalStateException("rendering failed");
+        var value = new ThrowingValue(diagnostic);
+        var time = new FakeTime(0);
+        var waiting = await(() -> value).usingTime(time, time)
+                .every(Duration.ofNanos(1)).upTo(Duration.ofNanos(2));
+        var check = notEqualTo(value).because("the value must change");
+
+        var captured = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(check)).failure();
+        var thrown = assertThrows(AwaitAssertionError.class, () -> waiting.until(check));
+
+        assertEquals(1, captured.suppressed().size());
+        assertSame(diagnostic, captured.suppressed().getFirst());
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(diagnostic, thrown.getSuppressed()[0]);
+        assertEquals(0, diagnostic.getSuppressed().length);
+    }
+
+    @Test
+    void distinctRenderingFailuresAreRetainedEvenWhenTheyAreEqual() {
+        var expectedFailure = new EqualFailure("expected");
+        var actualFailure = new EqualFailure("actual");
+        assertEquals(expectedFailure, actualFailure);
+        var expected = new ThrowingValue(expectedFailure);
+        var actual = new ThrowingValue(actualFailure);
+        var time = new FakeTime(0);
+
+        var result = await(() -> actual).usingTime(time, time)
+                .every(Duration.ofNanos(1)).upTo(Duration.ofNanos(2)).tryUntil(equalTo(expected));
+        var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+
+        assertEquals(TIMEOUT, failure.reason());
+        assertEquals(2, failure.suppressed().size());
+        assertSame(expectedFailure, failure.suppressed().get(0));
+        assertSame(actualFailure, failure.suppressed().get(1));
+    }
+
+    @Test
+    void renderingFailureEqualToThePrimaryCauseIsStillRetained() {
+        var original = new EqualFailure("source failed");
+        var diagnostic = new EqualFailure("expected rendering failed");
+        var expected = new ThrowingValue(diagnostic);
+        Callable<ThrowingValue> source = () -> { throw original; };
+
+        var failure = assertFailure(SOURCE_FAILED, () -> await(source).until(equalTo(expected)));
+
+        assertSame(original, failure.getCause());
+        assertEquals(1, failure.getSuppressed().length);
+        assertSame(diagnostic, failure.getSuppressed()[0]);
+    }
+
+    @Test
     void multilineFieldsAreNormalizedAndArraysRenderWithoutDependencies() {
-        var cause = new IllegalStateException("first\r\nsecond");
+        var cause = new IllegalStateException("first\r\n\r\nsecond");
+        Callable<String> source = () -> { throw cause; };
+        var time = new FakeTime(0);
         var sourceFailure = assertFailure(SOURCE_FAILED,
-                () -> complete(sourceFailure(cause, 1, 0),
-                        "condition\rdescription", "business\nreason",
-                        config(1, 2, 0)));
+                () -> await(source).usingTime(time, time).every(Duration.ofNanos(1)).upTo(Duration.ofNanos(2))
+                        .until(condition("condition\rdescription", ConditionResult::satisfied)
+                                .because("business\n\nreason")));
         var arrayFailure = assertFailure(TIMEOUT,
                 () -> complete(new Timeout<>(
                                 unsatisfiedAttempt(CONDITION, new int[] {1, 2}, "not ready", 1, 2)),
@@ -1119,6 +1175,29 @@ class DiagnosticsSnapshotTest {
                 .noneMatch(line -> line.endsWith(" ")));
         assertMessage(sourceFailure, "condition", "description", "business",
                 "reason", "first", "second");
+        assertEquals("""
+                Source retrieval failed
+
+                Condition:
+                    condition
+                    description
+                    Because:
+                        business
+
+                        reason
+
+                Attempt: 1 (ACQUISITION)
+
+                Timing:
+                    Acquisition timeout: 2 nanoseconds
+                    Elapsed: 0 nanoseconds
+                    Polling interval: 1 nanosecond
+
+                Cause: java.lang.IllegalStateException
+                    Message:
+                        first
+
+                        second""", sourceFailure.getMessage());
         assertMessage(arrayFailure, "[1, 2]");
     }
 
@@ -1255,6 +1334,20 @@ class DiagnosticsSnapshotTest {
     private static <FAILURE extends Throwable> void throwUnchecked(Throwable failure)
             throws FAILURE {
         throw (FAILURE) failure;
+    }
+
+    private static final class EqualFailure extends RuntimeException {
+        private EqualFailure(String message) {
+            super(message);
+        }
+
+        @Override public boolean equals(Object other) {
+            return other instanceof EqualFailure;
+        }
+
+        @Override public int hashCode() {
+            return 1;
+        }
     }
 
     private static final class ThrowingValue {

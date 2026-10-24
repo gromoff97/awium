@@ -146,20 +146,23 @@ class TryUntilFailureTest {
                 acquisitionParking.attempts().getLast().outcome());
         assertInstanceOf(AttemptRecord.Outcome.WaitingFailed.class,
                 persistenceParking.attempts().getLast().outcome());
-        assertParity(time -> {
+        var beforeSource = assertParity(time -> {
                     currentThread().interrupt();
                     timedAwait(() -> "actual", config(1, 2, 0), time, time).until(isNotNull);
                 }, time -> {
                     currentThread().interrupt();
                     return timedAwait(() -> "actual", config(1, 2, 0), time, time).tryUntil(isNotNull);
                 });
-        assertParity(time -> timedAwait((Callable<Object>) () -> {
+        assertTrue(beforeSource.failure().message().startsWith("Caller thread was interrupted while waiting"));
+        var thrownSourceInterruption = assertParity(time -> timedAwait((Callable<Object>) () -> {
                     throw new InterruptedException("source interrupted");
                 }, config(1, 2, 0), time, time).until(isNotNull),
                 time -> timedAwait((Callable<Object>) () -> {
                     throw new InterruptedException("source interrupted");
                 }, config(1, 2, 0), time, time).tryUntil(isNotNull));
-        assertParity(time -> timedAwait((Callable<String>) () -> {
+        assertEquals(SOURCE_FAILED, thrownSourceInterruption.failure().reason());
+        assertTrue(thrownSourceInterruption.failure().message().startsWith("Source retrieval failed"));
+        var sourceFlag = assertParity(time -> timedAwait((Callable<String>) () -> {
                     currentThread().interrupt();
                     return "actual";
                 }, config(1, 2, 0), time, time).until(isNotNull),
@@ -167,6 +170,7 @@ class TryUntilFailureTest {
                     currentThread().interrupt();
                     return "actual";
                 }, config(1, 2, 0), time, time).tryUntil(isNotNull));
+        assertTrue(sourceFlag.failure().message().startsWith("Caller thread was interrupted during source retrieval"));
         var condition = assertParity(time -> timedAwait(() -> "actual", config(1, 2, 0), time, time).until(matches(actual -> {
             currentThread().interrupt();
             return true;
@@ -176,6 +180,7 @@ class TryUntilFailureTest {
         })));
 
         assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, condition.attempts().getLast().outcome());
+        assertTrue(condition.failure().message().startsWith("Caller thread was interrupted during condition evaluation"));
         var interruptTime = new FakeTime(0);
         failed(timedAwait(() -> "actual", config(1, 2, 0),
                 interruptTime, interruptTime).tryUntil(interruptingCondition()));
