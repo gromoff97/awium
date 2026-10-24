@@ -20,6 +20,7 @@ import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.OptionalConditions.present;
+import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -342,7 +343,7 @@ class CapturedConditionTest {
         assertThrows(NullPointerException.class,
                 () -> captured(preserving, preserving, (PreservingCondition<String>) null));
         assertThrows(NullPointerException.class,
-                () -> captured(preserving, preserving, (PreservingCondition<String>[]) null));
+                () -> captured((PreservingCondition<String>[]) null));
     }
 
     @Test
@@ -360,19 +361,51 @@ class CapturedConditionTest {
     }
 
     @Test
-    void capturesTheVarargsTailDefensively() {
+    void capturesTheStageArrayDefensively() {
         var time = new FakeTime(0);
         PreservingCondition<Integer> matchesOne = matches(value -> value == 1);
         @SuppressWarnings("unchecked")
-        PreservingCondition<Integer>[] rest = (PreservingCondition<Integer>[]) new PreservingCondition<?>[]{matchesOne};
-        Condition<Integer, List<Integer>> sequence = captured(
-                matchesOne, matchesOne, rest);
-        rest[0] = matches(value -> false);
+        PreservingCondition<Integer>[] stages = (PreservingCondition<Integer>[]) new PreservingCondition<?>[]{
+                matchesOne, matchesOne, matchesOne};
+        Condition<Integer, List<Integer>> sequence = captured(stages);
+        stages[0] = matches(value -> false);
+        stages[2] = matches(value -> false);
 
         List<Integer> result = timedAwait(() -> 1, config(1, 10, 0),
                 time, time).until(sequence);
 
         assertEquals(List.of(1, 1, 1), result);
+    }
+
+    @Test
+    void terminalSnapshotsTheArrayBeforePollingAndKeepsTheResultType() {
+        var time = new FakeTime(0);
+        @SuppressWarnings("unchecked")
+        PreservingCondition<Integer>[] stages = (PreservingCondition<Integer>[]) new PreservingCondition<?>[]{
+                matches((Integer value) -> value == 1),
+                matches((Integer value) -> value == 2)};
+        int[] calls = {0};
+        var waiting = Await.await(() -> {
+            stages[1] = matches(value -> false);
+            return ++calls[0];
+        }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5));
+
+        List<Integer> values = waiting.until(stages);
+        assertEquals(List.of(1, 2), values);
+
+        calls[0] = 0;
+        stages[1] = matches(value -> value == 2);
+        AwaitResult<Integer, List<Integer>> captured = waiting.tryUntil(stages);
+        assertEquals(values, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+        assertEquals(2, captured.totalAttempts());
+        assertThrows(IllegalArgumentException.class, () -> waiting.until(java.util.Arrays.copyOf(stages, 0)));
+        assertThrows(IllegalArgumentException.class, () -> waiting.tryUntil(java.util.Arrays.copyOf(stages, 0)));
+        assertEquals(2, calls[0]);
+
+        calls[0] = 0;
+        var singleton = waiting.until(java.util.Arrays.copyOf(stages, 1));
+        assertEquals(1, singleton.size());
+        assertEquals(1, singleton.getFirst().intValue());
     }
 
     @Test

@@ -115,6 +115,10 @@ The stages must belong to a compatible condition family; preserving conditions
 and comparisons cannot be mixed. A selection followed by a value check belongs
 inside the selection condition instead.
 
+An array of compatible conditions can be passed directly. It is copied before
+polling and always produces a captured list, including for a one-element array.
+An empty array is rejected before invoking the source.
+
 ## Timing
 
 `every`, `upTo`, and `persisting` are optional, accept `Duration`, may appear in

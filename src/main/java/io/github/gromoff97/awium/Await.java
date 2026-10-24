@@ -15,8 +15,8 @@ import static io.github.gromoff97.awium.Condition.required;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Fluent await facade. One condition returns one value; several compatible conditions capture a list
- * from successive observations. During persistence, only the final stage is re-evaluated.
+ * Fluent await facade. A single condition returns one value; an array or several compatible conditions
+ * capture a list from successive observations. During persistence, only the final stage is re-evaluated.
  *
  * @param <OBSERVED> complete value returned by the source
  * @param <ELEMENT> value selected from an optional, collection, or map
@@ -107,26 +107,26 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final List<ELEMENT> until(SelectedCondition<? super OBSERVED> first, SelectedCondition<? super OBSERVED> second, SelectedCondition<? super OBSERVED>... rest) {
-        return until(ConditionSupport.captured(first, second, rest));
+    public final List<ELEMENT> until(SelectedCondition<? super OBSERVED>... conditions) {
+        return until(ConditionSupport.captured(conditions));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final List<MAP_VALUE> until(MapValueCondition<? super OBSERVED> first, MapValueCondition<? super OBSERVED> second, MapValueCondition<? super OBSERVED>... rest) {
-        return until(ConditionSupport.captured(first, second, rest));
+    public final List<MAP_VALUE> until(MapValueCondition<? super OBSERVED>... conditions) {
+        return until(ConditionSupport.captured(conditions));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final AwaitResult<OBSERVED, List<ELEMENT>> tryUntil(SelectedCondition<? super OBSERVED> first, SelectedCondition<? super OBSERVED> second, SelectedCondition<? super OBSERVED>... rest) {
-        return tryUntil(ConditionSupport.captured(first, second, rest));
+    public final AwaitResult<OBSERVED, List<ELEMENT>> tryUntil(SelectedCondition<? super OBSERVED>... conditions) {
+        return tryUntil(ConditionSupport.captured(conditions));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final AwaitResult<OBSERVED, List<MAP_VALUE>> tryUntil(MapValueCondition<? super OBSERVED> first, MapValueCondition<? super OBSERVED> second, MapValueCondition<? super OBSERVED>... rest) {
-        return tryUntil(ConditionSupport.captured(first, second, rest));
+    public final AwaitResult<OBSERVED, List<MAP_VALUE>> tryUntil(MapValueCondition<? super OBSERVED>... conditions) {
+        return tryUntil(ConditionSupport.captured(conditions));
     }
 
     @FunctionalInterface

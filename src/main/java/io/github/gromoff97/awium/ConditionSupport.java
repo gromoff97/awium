@@ -14,7 +14,6 @@ import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
-import java.util.stream.Stream;
 
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
@@ -140,9 +139,8 @@ final class ConditionSupport {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <OBSERVED> Condition<OBSERVED, List<OBSERVED>> captured(PreservingCondition<? super OBSERVED> first,
-            PreservingCondition<? super OBSERVED> second, PreservingCondition<? super OBSERVED>... rest) {
-        var stages = stages(first, second, rest);
+    static <OBSERVED> Condition<OBSERVED, List<OBSERVED>> captured(PreservingCondition<? super OBSERVED>... conditions) {
+        var stages = stages(conditions);
         return new Condition<>("conditions are satisfied in order", null, null, () ->
                 new SequenceExecution<OBSERVED, OBSERVED>(stages.stream()
                         .map(PreservingCondition::preservingAttempt))::step);
@@ -150,10 +148,8 @@ final class ConditionSupport {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <OBSERVED, ELEMENT> Condition<OBSERVED, List<ELEMENT>> captured(SelectedCondition<? super OBSERVED> first,
-            SelectedCondition<? super OBSERVED> second,
-            SelectedCondition<? super OBSERVED>... rest) {
-        var stages = stages(first, second, rest);
+    static <OBSERVED, ELEMENT> Condition<OBSERVED, List<ELEMENT>> captured(SelectedCondition<? super OBSERVED>... conditions) {
+        var stages = stages(conditions);
         return new Condition<>("conditions are satisfied in order", null, null,
                 () -> new SequenceExecution<OBSERVED, ELEMENT>(stages.stream()
                         .map(SelectedCondition::selectionAttempt))::step);
@@ -161,10 +157,8 @@ final class ConditionSupport {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <OBSERVED, MAP_VALUE> Condition<OBSERVED, List<MAP_VALUE>> captured(MapValueCondition<? super OBSERVED> first,
-            MapValueCondition<? super OBSERVED> second,
-            MapValueCondition<? super OBSERVED>... rest) {
-        var stages = stages(first, second, rest);
+    static <OBSERVED, MAP_VALUE> Condition<OBSERVED, List<MAP_VALUE>> captured(MapValueCondition<? super OBSERVED>... conditions) {
+        var stages = stages(conditions);
         return new Condition<>("conditions are satisfied in order", null, null,
                 () -> new SequenceExecution<OBSERVED, MAP_VALUE>(stages.stream()
                         .map(MapValueCondition::selectionAttempt))::step);
@@ -172,17 +166,15 @@ final class ConditionSupport {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <OBSERVED> Condition<OBSERVED, List<OBSERVED>> captured(ComparisonCondition<? extends OBSERVED> first,
-            ComparisonCondition<? extends OBSERVED> second, ComparisonCondition<? extends OBSERVED>... rest) {
-        var stages = stages(first, second, rest);
+    static <OBSERVED> Condition<OBSERVED, List<OBSERVED>> captured(ComparisonCondition<? extends OBSERVED>... conditions) {
+        var stages = stages(conditions);
         return new Condition<>("conditions are satisfied in order", null, null, () ->
                 new SequenceExecution<OBSERVED, OBSERVED>(stages.stream()
                         .map(stage -> stage.definition.preservingAttempt()))::step);
     }
 
-    private static <STAGE> List<STAGE> stages(STAGE first, STAGE second, STAGE[] rest) {
-        return Stream.concat(Stream.of(first, second),
-                        Arrays.stream(requireNonNull(rest, "conditions must not be null")))
+    private static <STAGE> List<STAGE> stages(STAGE[] conditions) {
+        return Arrays.stream(nonEmpty(conditions, "conditions"))
                 .map(Condition::required)
                 .toList();
     }
