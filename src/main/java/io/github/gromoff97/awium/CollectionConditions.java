@@ -135,7 +135,7 @@ public final class CollectionConditions {
 
     @SafeVarargs
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> contains(ELEMENT... expected) {
-        return contains(asList(nonEmpty(expected, "expected elements")));
+        return contains(asList(requireNonNull(expected, "expected elements must not be null")));
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> contains(Collection<? extends ELEMENT> expected) {
@@ -146,7 +146,7 @@ public final class CollectionConditions {
 
     @SafeVarargs
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContain(ELEMENT... unexpected) {
-        return doesNotContain(asList(nonEmpty(unexpected, "unexpected elements")));
+        return doesNotContain(asList(requireNonNull(unexpected, "unexpected elements must not be null")));
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContain(Collection<? extends ELEMENT> unexpected) {
@@ -158,7 +158,7 @@ public final class CollectionConditions {
 
     @SafeVarargs
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainAll(ELEMENT... unexpected) {
-        return doesNotContainAll(asList(nonEmpty(unexpected, "unexpected elements")));
+        return doesNotContainAll(asList(requireNonNull(unexpected, "unexpected elements must not be null")));
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainAll(Collection<? extends ELEMENT> unexpected) {
@@ -169,7 +169,7 @@ public final class CollectionConditions {
 
     @SafeVarargs
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsAny(ELEMENT... expected) {
-        return containsAny(asList(nonEmpty(expected, "expected elements")));
+        return containsAny(asList(requireNonNull(expected, "expected elements must not be null")));
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsAny(Collection<? extends ELEMENT> expected) {
