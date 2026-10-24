@@ -85,6 +85,13 @@ public final class Condition<OBSERVED, RESULT> {
         return because(formattedExplanation(format, arguments));
     }
 
+    /**
+     * Checks a value without replacing it. A successful wait returns the original observation
+     * with its source type, even when this check accepts a supertype.
+     * {@code because} returns a copy with a replacement diagnostic explanation.
+     *
+     * @param <OBSERVED> input type accepted by the check
+     */
     public static final class PreservingCondition<OBSERVED> {
 
         final Condition<OBSERVED, OBSERVED> definition;
@@ -115,6 +122,12 @@ public final class Condition<OBSERVED, RESULT> {
         }
     }
 
+    /**
+     * Compares with an expected type compatible with the source type. A successful wait returns
+     * the original observation. {@code because} preserves the comparison's type constraint.
+     *
+     * @param <EXPECTED> type of expected values
+     */
     public static final class ComparisonCondition<EXPECTED> {
 
         final Condition<Object, Object> definition;
@@ -132,6 +145,12 @@ public final class Condition<OBSERVED, RESULT> {
         }
     }
 
+    /**
+     * Selects an element or entry from a container. The source determines the returned type,
+     * including for shared constants such as {@code present} and {@code single} after {@code because}.
+     *
+     * @param <OBSERVED> container type accepted by the selector
+     */
     public static final class SelectedCondition<OBSERVED> {
 
         final Condition<OBSERVED, ?> definition;
@@ -153,6 +172,12 @@ public final class Condition<OBSERVED, RESULT> {
         }
     }
 
+    /**
+     * Selects a map value whose returned type is determined by the source.
+     * {@code because} preserves that result type.
+     *
+     * @param <OBSERVED> map type accepted by the selector
+     */
     public static final class MapValueCondition<OBSERVED> {
 
         final Condition<OBSERVED, ?> definition;

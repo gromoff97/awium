@@ -73,10 +73,6 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
         return reconfigured(configuration.withPersistence(persistence));
     }
 
-    /**
-     * Uses a monotonic nanosecond clock and a wait operation receiving a duration in nanoseconds.
-     * Both operations must share the same time base; a wait may return early.
-     */
     @Override
     public Await<OBSERVED, ELEMENT, MAP_VALUE> usingTime(LongSupplier clock, LongConsumer parker) {
         return reconfigured(configuration.withTime(clock, parker));
@@ -126,14 +122,24 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
         return tryUntil(ConditionSupport.captured(conditions));
     }
 
+    /** A source that allows {@code present} and {@code hasValue} to return its contained type. */
     @FunctionalInterface
     public interface OptionalSource<VALUE> extends Callable<Optional<VALUE>> {
     }
 
+    /** A collection source that retains both its complete collection type and selected element type. */
     @FunctionalInterface
     public interface CollectionSource<VALUES extends Collection<?>> extends Callable<VALUES> {
     }
 
+    /**
+     * Adapts a covariant collection source while retaining its element bound for selections.
+     * The returned collection is neither copied nor changed.
+     *
+     * @param <ELEMENT> upper bound of selected elements
+     * @param <VALUES> complete collection type returned by the source
+     * @param delegate source of the original collection
+     */
     public record CollectionViewSource<ELEMENT, VALUES extends Collection<? extends ELEMENT>>(
             Callable<? extends VALUES> delegate) implements Callable<VALUES> {
 
@@ -147,10 +153,20 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
         }
     }
 
+    /** A map source that retains its complete map type, entry type, and value type. */
     @FunctionalInterface
     public interface MapSource<ENTRIES extends Map<?, ?>> extends Callable<ENTRIES> {
     }
 
+    /**
+     * Adapts a covariant map source while retaining its key and value bounds for selections.
+     * The returned map is neither copied nor changed.
+     *
+     * @param <KEY> upper bound of selected keys
+     * @param <VALUE> upper bound of selected values
+     * @param <ENTRIES> complete map type returned by the source
+     * @param delegate source of the original map
+     */
     public record MapViewSource<KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>(
             Callable<? extends ENTRIES> delegate) implements Callable<ENTRIES> {
 

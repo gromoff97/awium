@@ -12,8 +12,14 @@ import static java.util.Objects.requireNonNull;
  */
 public sealed interface AwaitResult<OBSERVED, RESULT> {
 
+    /**
+     * Returns the immutable records retained by this result. Engine-produced results keep
+     * at most 256 records: the first attempt and the most recent 255 attempts.
+     * Observed values and causes are retained by reference.
+     */
     List<AttemptRecord<OBSERVED, RESULT>> attempts();
 
+    /** Returns the last retained attempt's number, or zero when no attempts are retained. */
     default long totalAttempts() {
         return attempts().isEmpty() ? 0 : attempts().getLast().number();
     }
