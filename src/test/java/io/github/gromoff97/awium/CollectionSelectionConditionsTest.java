@@ -14,6 +14,7 @@ import java.util.SequencedCollection;
 import org.junit.jupiter.api.Test;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
@@ -147,34 +148,34 @@ class CollectionSelectionConditionsTest {
         assertEquals(3, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.element(2)));
         assertEquals(3, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.first(value -> value > 2)));
         assertEquals(3, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.last(value -> value < 5)));
-        assertSame(values, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.startsWith(1, 2)));
-        assertSame(values, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.endsWith(3, 5)));
+        assertSame(values, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.startsWith(List.of(1, 2))));
+        assertSame(values, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.endsWith(List.of(3, 5))));
         var pair = List.of(1, 2);
         var exact = await(() -> pair).usingTime(pollingTime, pollingTime).upTo(java.time.Duration.ofNanos(1));
-        assertSame(pair, exact.until(CollectionConditions.startsWith(1, 2)));
-        assertSame(pair, exact.until(CollectionConditions.endsWith(1, 2)));
-        assertSame(values, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.containsSequence(2, 3)));
-        assertEquals(Satisfied.class, evaluate(CollectionConditions.containsSequence(1, 2),
+        assertSame(pair, exact.until(CollectionConditions.startsWith(List.of(1, 2))));
+        assertSame(pair, exact.until(CollectionConditions.endsWith(List.of(1, 2))));
+        assertSame(values, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.containsSequence(List.of(2, 3))));
+        assertEquals(Satisfied.class, evaluate(CollectionConditions.containsSequence(List.of(1, 2)),
                 List.of(1, 2)).getClass());
-        assertSame(values, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.containsSubsequence(1, 3, 5)));
+        assertSame(values, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.containsSubsequence(List.of(1, 3, 5))));
         assertSame(values, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.sorted(Integer::compareTo)));
 
         assertEquals(Unsatisfied.class,
-                evaluate(CollectionConditions.startsWith(1, 3), values).getClass());
+                evaluate(CollectionConditions.startsWith(List.of(1, 3)), values).getClass());
         assertEquals(Unsatisfied.class,
-                evaluate(CollectionConditions.endsWith(2, 5), values).getClass());
+                evaluate(CollectionConditions.endsWith(List.of(2, 5)), values).getClass());
         assertEquals(Unsatisfied.class,
-                evaluate(CollectionConditions.containsSequence(1, 3), values).getClass());
+                evaluate(CollectionConditions.containsSequence(List.of(1, 3)), values).getClass());
         assertEquals(Satisfied.class, evaluate(
-                CollectionConditions.doesNotContainSequence(1, 3), values).getClass());
+                CollectionConditions.doesNotContainSequence(List.of(1, 3)), values).getClass());
         assertEquals(Unsatisfied.class, evaluate(
-                CollectionConditions.doesNotContainSequence(2, 3), values).getClass());
+                CollectionConditions.doesNotContainSequence(List.of(2, 3)), values).getClass());
         assertEquals(Unsatisfied.class, evaluate(
-                CollectionConditions.containsSubsequence(1, 4), values).getClass());
+                CollectionConditions.containsSubsequence(List.of(1, 4)), values).getClass());
         assertEquals(Satisfied.class, evaluate(
-                CollectionConditions.doesNotContainSubsequence(1, 4), values).getClass());
+                CollectionConditions.doesNotContainSubsequence(List.of(1, 4)), values).getClass());
         assertEquals(Unsatisfied.class, evaluate(
-                CollectionConditions.doesNotContainSubsequence(1, 3, 5), values).getClass());
+                CollectionConditions.doesNotContainSubsequence(List.of(1, 3, 5)), values).getClass());
         assertEquals(Unsatisfied.class, evaluate(CollectionConditions.sorted(Integer::compareTo),
                 List.of(1, 3, 2)).getClass());
         assertEquals(Satisfied.class, evaluate(CollectionConditions.sorted(Integer::compareTo),
@@ -185,7 +186,7 @@ class CollectionSelectionConditionsTest {
         var sequencedSet = new LinkedHashSet<>(List.of(1, 2, 3));
         assertEquals(1, await((CollectionSource<LinkedHashSet<Integer>>) () -> sequencedSet).usingTime(pollingTime, pollingTime).until(first));
         assertSame(sequencedSet, await((CollectionSource<LinkedHashSet<Integer>>) () -> sequencedSet).usingTime(pollingTime, pollingTime).until(
-                CollectionConditions.startsWith(1, 2)));
+                CollectionConditions.startsWith(List.of(1, 2))));
     }
 
     @Test
@@ -204,10 +205,10 @@ class CollectionSelectionConditionsTest {
     @Test
     void orderedConditionsRejectIncompletePrefixesAndSuffixes() {
         for (List<Integer> actual : List.of(List.<Integer>of(), List.of(1), List.of(1, 2))) {
-            assertEquals(Unsatisfied.class, evaluate(CollectionConditions.startsWith(1, 2, 3), actual).getClass());
-            assertEquals(Unsatisfied.class, evaluate(CollectionConditions.endsWith(1, 2, 3), actual).getClass());
-            assertEquals(Unsatisfied.class, evaluate(CollectionConditions.containsSequence(1, 2, 3), actual).getClass());
-            assertSame(actual, ((Satisfied<?>) evaluate(CollectionConditions.doesNotContainSequence(1, 2, 3), actual)).result());
+            assertEquals(Unsatisfied.class, evaluate(CollectionConditions.startsWith(List.of(1, 2, 3)), actual).getClass());
+            assertEquals(Unsatisfied.class, evaluate(CollectionConditions.endsWith(List.of(1, 2, 3)), actual).getClass());
+            assertEquals(Unsatisfied.class, evaluate(CollectionConditions.containsSequence(List.of(1, 2, 3)), actual).getClass());
+            assertSame(actual, ((Satisfied<?>) evaluate(CollectionConditions.doesNotContainSequence(List.of(1, 2, 3)), actual)).result());
         }
         var empty = new ArrayDeque<Integer>();
         assertSame(empty, ((Satisfied<?>) evaluate(CollectionConditions.sorted(Integer::compareTo), empty)).result());
@@ -222,11 +223,31 @@ class CollectionSelectionConditionsTest {
             var time = new FakeTime(0);
             var waiting = await(() -> actual).usingTime(time, time);
 
-            assertSame(actual, waiting.until(CollectionConditions.startsWith(null, new int[] {1, 2}).because("prefix")));
-            assertSame(actual, waiting.until(CollectionConditions.endsWith("gap", new int[] {3, 4}).because("suffix")));
-            assertSame(actual, waiting.until(CollectionConditions.containsSequence(new int[] {1, 2}, "gap")));
-            var captured = waiting.tryUntil(CollectionConditions.containsSubsequence(null, new int[] {3, 4}));
+            assertSame(actual, waiting.until(CollectionConditions.startsWith(asList(null, new int[] {1, 2})).because("prefix")));
+            assertSame(actual, waiting.until(CollectionConditions.endsWith(List.of("gap", new int[] {3, 4})).because("suffix")));
+            assertSame(actual, waiting.until(CollectionConditions.containsSequence(List.of(new int[] {1, 2}, "gap"))));
+            var captured = waiting.tryUntil(CollectionConditions.containsSubsequence(asList(null, new int[] {3, 4})));
             assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+        }
+    }
+
+    @Test
+    void orderedExpectationsTreatReferenceArraysAsSingleElementsWithoutTypeArguments() {
+        var expected = singletonList(new String[] {"a", "b"});
+        var unrelated = singletonList(new String[] {"other"});
+        var actual = singletonList(new String[] {"a", "b"});
+        var time = new FakeTime(0);
+        var waiting = await(() -> actual).usingTime(time, time);
+
+        for (var check : List.of(CollectionConditions.startsWith(expected), CollectionConditions.endsWith(expected),
+                CollectionConditions.containsSequence(expected), CollectionConditions.containsSubsequence(expected),
+                CollectionConditions.doesNotContainSequence(unrelated), CollectionConditions.doesNotContainSubsequence(unrelated))) {
+            var selected = waiting.until(check.because("an array is one element"));
+            AwaitResult<List<String[]>, List<String[]>> attempt = waiting.tryUntil(check);
+
+            assertEquals("a", selected.getFirst()[0]);
+            assertSame(actual, selected);
+            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, attempt).result());
         }
     }
 
@@ -235,9 +256,9 @@ class CollectionSelectionConditionsTest {
         for (var elements : List.of(List.<Integer>of(), List.of(1), List.of(1, 2))) {
             for (boolean negative : List.of(false, true)) {
                 var conditions = negative
-                        ? List.of(CollectionConditions.doesNotContainSequence(1, 2, 3))
-                        : List.of(CollectionConditions.startsWith(1, 2, 3), CollectionConditions.endsWith(1, 2, 3),
-                                CollectionConditions.containsSequence(1, 2, 3));
+                        ? List.of(CollectionConditions.doesNotContainSequence(List.of(1, 2, 3)))
+                        : List.of(CollectionConditions.startsWith(List.of(1, 2, 3)), CollectionConditions.endsWith(List.of(1, 2, 3)),
+                                CollectionConditions.containsSequence(List.of(1, 2, 3)));
                 for (var condition : conditions) {
                     var actual = new AbstractList<Integer>() {
                         private int sizeReads;

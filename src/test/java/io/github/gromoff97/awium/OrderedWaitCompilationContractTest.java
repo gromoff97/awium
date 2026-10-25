@@ -49,11 +49,17 @@ class OrderedWaitCompilationContractTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"until", "tryUntil"})
-    void genericResultSequencesAreNotAvailable(String terminal) throws IOException {
+    void sequencesRejectDifferentResultTypes(String terminal) throws IOException {
         for (String decoration : List.of("", ".because(\"required type\")")) {
-            String expression = "await(Contract::text).%s(instanceOf(String.class)%s, instanceOf(String.class)%s);"
-                    .formatted(terminal, decoration, decoration);
-            assertRejected(expression);
+            for (String expression : List.of(
+                    "await(Contract::text).%s(instanceOf(String.class)%s, instanceOf(Integer.class)%s);",
+                    "await(Contract::text).<Object>%s(instanceOf(String.class)%s, instanceOf(Integer.class)%s);",
+                    "await(Contract::collection).%s(single(instanceOf(String.class))%s, single(instanceOf(Integer.class))%s);",
+                    "await(Contract::optional).%s(hasValue(instanceOf(String.class))%s, hasValue(instanceOf(Integer.class))%s);",
+                    "await(Contract::map).%s(valueFor(\"ready\", instanceOf(String.class))%s, valueFor(\"ready\", instanceOf(Integer.class))%s);",
+                    "await(Contract::map).%s(singleEntry(instanceOf(String.class))%s, singleEntry(instanceOf(Integer.class))%s);")) {
+                assertRejected(expression.formatted(terminal, decoration, decoration));
+            }
         }
     }
 
@@ -72,7 +78,9 @@ class OrderedWaitCompilationContractTest {
                 import static io.github.gromoff97.awium.Conditions.*;
                 import static io.github.gromoff97.awium.CollectionConditions.*;
                 import static io.github.gromoff97.awium.OptionalConditions.present;
+                import static io.github.gromoff97.awium.OptionalConditions.hasValue;
                 import static io.github.gromoff97.awium.MapConditions.singleEntry;
+                import static io.github.gromoff97.awium.MapConditions.valueFor;
                 final class Contract {
                     static String text() { return "ready"; }
                     static Optional<String> optional() { return Optional.of("ready"); }

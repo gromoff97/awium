@@ -115,6 +115,17 @@ The stages must belong to a compatible condition family; preserving conditions
 and comparisons cannot be mixed. A selection followed by a value check belongs
 inside the selection condition instead.
 
+Type-narrowing stages and nested type selections can also be captured in order:
+
+```java
+List<Payment> payments = await(repository::findAll).until(
+        single(instanceOf(Payment.class)).because("First payment"),
+        single(instanceOf(Payment.class)).because("Next payment"));
+```
+
+These stages must declare the same result type. Mixing `instanceOf(String.class)`
+with `instanceOf(Integer.class)` is rejected instead of inferring `List<Object>`.
+
 An array of compatible conditions can be passed directly. It is copied before
 polling and always produces a captured list, including for a one-element array.
 An empty array is rejected before invoking the source.
@@ -318,6 +329,12 @@ The other bulk membership and exact-content factories also take a collection:
 For an array as one expected element, use `Collections.singletonList(array)`,
 for example `containsOnly(Collections.singletonList(array))`.
 `List.of(array)` expands a reference array into separate elements.
+
+Ordered expectations use the same collection form: `startsWith(List.of("a", "b"))`,
+`endsWith(...)`, `containsSequence(...)`, and `containsSubsequence(...)`, as do
+`doesNotContainSequence(...)` and `doesNotContainSubsequence(...)`.
+A pattern must not be empty. Use `Collections.singletonList(array)`
+when a reference array is one element of the pattern.
 
 Maps follow the same rule: `containsKey(key)`, `doesNotContainKey(key)`,
 `containsValue(value)` and `doesNotContainValue(value)` check one object.

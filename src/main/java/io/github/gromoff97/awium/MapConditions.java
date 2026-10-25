@@ -89,7 +89,7 @@ public final class MapConditions {
     }
 
     public static <KEY, VALUE, RESULT> Condition<Map<? extends KEY, ? extends VALUE>, RESULT> singleEntry(
-            Condition<? super Entry<? extends KEY, ? extends VALUE>, ? extends RESULT> nested) {
+            Condition<? super Entry<? extends KEY, ? extends VALUE>, RESULT> nested) {
         return ConditionSupport.single("map", required(nested), Map::entrySet,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
@@ -156,7 +156,7 @@ public final class MapConditions {
     }
 
     public static <KEY, VALUE, RESULT> Condition<Map<? super KEY, ? extends VALUE>, RESULT> valueFor(KEY key,
-            Condition<? super VALUE, ? extends RESULT> nested) {
+            Condition<? super VALUE, RESULT> nested) {
         return compose("map value ", required(nested),
                 valueFor(key).definition, actual -> value(actual, key),
                 () -> new ConditionAwaitAttempt<>(nested));

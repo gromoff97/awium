@@ -42,10 +42,13 @@ class ExpectedInputsTest {
     }
 
     @Test
-    void membershipConditionsNeverKeepAnEmptySnapshotAfterRemovalBeforeSnapshot() {
+    void nonEmptyExpectationsRejectAnEmptySnapshotAfterRemovalBeforeSnapshot() {
         List<Function<Collection<String>, PreservingCondition<?>>> factories = List.of(
                 CollectionConditions::containsAll, CollectionConditions::doesNotContainAny,
                 CollectionConditions::doesNotContainAll, CollectionConditions::containsAny,
+                CollectionConditions::startsWith, CollectionConditions::endsWith,
+                CollectionConditions::containsSequence, CollectionConditions::doesNotContainSequence,
+                CollectionConditions::containsSubsequence, CollectionConditions::doesNotContainSubsequence,
                 MapConditions::containsKeys, MapConditions::doesNotContainKeys,
                 MapConditions::containsValues, MapConditions::doesNotContainValues);
         for (var factory : factories) {
@@ -84,7 +87,9 @@ class ExpectedInputsTest {
                 doesNotContainAll(expected), containsAny(expected),
                 containsExactly(expected), doesNotContainExactly(expected),
                 containsExactlyInAnyOrder(expected), doesNotContainExactlyInAnyOrder(expected),
-                containsOnly(expected), subsetOf(expected)),
+                containsOnly(expected), subsetOf(expected), startsWith(expected), endsWith(expected),
+                containsSequence(expected), doesNotContainSequence(expected),
+                containsSubsequence(expected), doesNotContainSubsequence(expected)),
                 asList("a", null, "a"), List.of("changed"), () -> {
                     expected.clear();
                     expected.add("changed");
@@ -97,8 +102,8 @@ class ExpectedInputsTest {
         assertStable(List.of(containsAll(asList(expected)), doesNotContainAny(asList(expected)), doesNotContainAll(asList(expected)),
                 containsAny(asList(expected)), containsExactly(asList(expected)), doesNotContainExactly(asList(expected)),
                 containsExactlyInAnyOrder(asList(expected)), doesNotContainExactlyInAnyOrder(asList(expected)),
-                containsOnly(asList(expected)), startsWith(expected), endsWith(expected), containsSequence(expected),
-                doesNotContainSequence(expected), containsSubsequence(expected), doesNotContainSubsequence(expected)),
+                containsOnly(asList(expected)), startsWith(asList(expected)), endsWith(asList(expected)), containsSequence(asList(expected)),
+                doesNotContainSequence(asList(expected)), containsSubsequence(asList(expected)), doesNotContainSubsequence(asList(expected))),
                 asList("a", null, "a"), List.of("changed"), () -> expected[0] = "changed");
     }
 

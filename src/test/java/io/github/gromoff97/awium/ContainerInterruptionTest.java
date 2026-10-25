@@ -80,7 +80,7 @@ class ContainerInterruptionTest {
                 waiting -> waiting.tryUntil(containsExactly(List.of("ready", "other"))),
                 waiting -> waiting.tryUntil(containsExactlyInAnyOrder(List.of("other", "ready"))),
                 waiting -> waiting.tryUntil(containsOnly(List.of("ready", "other"))),
-                waiting -> waiting.tryUntil(containsSubsequence("ready")),
+                waiting -> waiting.tryUntil(containsSubsequence(List.of("ready"))),
                 waiting -> waiting.tryUntil(hasNoDuplicates),
                 waiting -> waiting.tryUntil(sorted((left, right) -> 0)));
         for (String boundary : List.of("iterator", "hasNext", "next")) {
@@ -148,9 +148,9 @@ class ContainerInterruptionTest {
                 new BoundaryCase<>("reversed", actual -> await(() -> actual).tryUntil(last)),
                 new BoundaryCase<>("reversed", actual -> await(() -> actual).tryUntil(last(value -> true))),
                 new BoundaryCase<>("iterator", actual -> await(() -> actual).tryUntil(element(0))),
-                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(containsSequence("ready"))),
-                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(startsWith("ready"))),
-                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(endsWith("other"))),
+                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(containsSequence(List.of("ready")))),
+                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(startsWith(List.of("ready")))),
+                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(endsWith(List.of("other")))),
                 new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(size(2))));
         for (var testCase : cases) {
             var actual = new SignallingList(testCase.boundary());

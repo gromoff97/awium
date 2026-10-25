@@ -19,7 +19,7 @@ public final class OptionalConditions {
 
     private OptionalConditions() {}
 
-    public static <VALUE, RESULT> Condition<Optional<? extends VALUE>, RESULT> hasValue(Condition<? super VALUE, ? extends RESULT> nested) {
+    public static <VALUE, RESULT> Condition<Optional<? extends VALUE>, RESULT> hasValue(Condition<? super VALUE, RESULT> nested) {
         return compose("optional value: ", required(nested), null, OptionalConditions::present,
                 () -> new ConditionAwaitAttempt<>(nested));
     }

@@ -41,13 +41,16 @@ class CompilationContractTest {
     }
 
     @Test
-    void singleAndBulkMembershipRejectUnrelatedElementTypes() throws IOException {
+    void collectionExpectationsRejectUnrelatedElementTypes() throws IOException {
         for (String condition : List.of("contains(42)", "containsAll(List.of(42))",
                 "doesNotContain(42)", "doesNotContainAny(List.of(42))",
                 "doesNotContainAll(List.of(42))", "containsAny(List.of(42))",
                 "containsExactly(List.of(42))", "doesNotContainExactly(List.of(42))",
                 "containsExactlyInAnyOrder(List.of(42))", "doesNotContainExactlyInAnyOrder(List.of(42))",
                 "containsOnly(List.of(42))",
+                "startsWith(List.of(42))", "endsWith(List.of(42))",
+                "containsSequence(List.of(42))", "doesNotContainSequence(List.of(42))",
+                "containsSubsequence(List.of(42))", "doesNotContainSubsequence(List.of(42))",
                 "contains(42).because(\"incompatible\")",
                 "contains(42).because(\"%s\", \"incompatible\")",
                 "containsExactly(List.of(42)).because(\"incompatible\")",

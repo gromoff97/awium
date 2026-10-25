@@ -117,6 +117,19 @@ public sealed class ValueAwait<OBSERVED> permits Await {
         return tryUntil(ConditionSupport.captured(conditions));
     }
 
+    /** Captures stages with the same declared result type, without widening it to a common supertype. */
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public final <RESULT> List<RESULT> until(Condition<? super OBSERVED, RESULT>... conditions) {
+        return until(ConditionSupport.captured(conditions));
+    }
+
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public final <RESULT> AwaitResult<OBSERVED, List<RESULT>> tryUntil(Condition<? super OBSERVED, RESULT>... conditions) {
+        return tryUntil(ConditionSupport.captured(conditions));
+    }
+
     final <RESULT> RESULT complete(ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> session) {
         return complete(new WaitEngine<>(configuration, source, session).waitFor(),
                 session.condition, configuration);

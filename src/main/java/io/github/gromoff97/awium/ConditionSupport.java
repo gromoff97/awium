@@ -201,6 +201,15 @@ final class ConditionSupport {
                         .map(stage -> ConditionAwaitAttempt.bind(stage.definition)))::step);
     }
 
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    static <OBSERVED, RESULT> Condition<OBSERVED, List<RESULT>> captured(Condition<? super OBSERVED, RESULT>... conditions) {
+        var stages = stages(conditions);
+        return new Condition<>("conditions are satisfied in order", null, null, () ->
+                new SequenceExecution<OBSERVED, RESULT>(stages.stream()
+                        .map(ConditionAwaitAttempt::new))::step);
+    }
+
     private static <STAGE> List<STAGE> stages(STAGE[] conditions) {
         var stages = nonEmptySnapshot(conditions, "conditions");
         stages.forEach(Condition::required);
@@ -219,6 +228,10 @@ final class ConditionSupport {
 
     static <ELEMENT> List<ELEMENT> nonEmptySnapshot(ELEMENT[] values, String name) {
         return nonEmpty(Arrays.stream(requireNonNull(values, name + " must not be null")).toList(), name);
+    }
+
+    static <ELEMENT> List<ELEMENT> nonEmptySnapshot(Collection<ELEMENT> values, String name) {
+        return nonEmpty(snapshot(values, name), name);
     }
 
     static <ELEMENT> List<ELEMENT> nonEmpty(List<ELEMENT> values, String name) {

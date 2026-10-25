@@ -30,6 +30,54 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CapturedConditionTest {
 
     @Test
+    void narrowingSequencesRetainTheirResultTypeAndRetryInBothTerminals() {
+        var first = new String("first");
+        var second = new String("second");
+        Object[] observations = {42, first, 43L, second};
+        int[] reads = {0};
+        var time = new FakeTime(0);
+        var waiting = Await.await(() -> observations[reads[0]++ % observations.length])
+                .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10));
+        var start = Conditions.instanceOf(String.class).because("first text");
+        var finish = Conditions.exactInstanceOf(String.class).because("second text");
+
+        var values = waiting.until(start, finish);
+        AwaitResult<Object, List<String>> attempt = waiting.tryUntil(start, finish);
+
+        assertEquals(5, values.getFirst().length());
+        assertSame(first, values.getFirst());
+        assertSame(second, values.getLast());
+        assertEquals(values, assertInstanceOf(AwaitResult.Satisfied.class, attempt).result());
+        assertEquals(4, attempt.totalAttempts());
+        assertEquals(8, reads[0]);
+        assertThrows(UnsupportedOperationException.class, values::clear);
+    }
+
+    @Test
+    void nestedNarrowingSequencesRetainTheirSelectedResultType() {
+        Integer first = 1000;
+        Integer second = 2000;
+        List<List<Number>> observations = List.of(List.of(1L, first), List.of(second, 2L));
+        int[] reads = {0};
+        var time = new FakeTime(0);
+        var waiting = Await.await(() -> observations.get(reads[0]++ % observations.size()))
+                .usingTime(time, time).every(ofNanos(1));
+
+        var values = waiting.until(CollectionConditions.single(Conditions.instanceOf(Integer.class)).because("first integer"),
+                CollectionConditions.single(Conditions.exactInstanceOf(Integer.class)).because("second integer"));
+        AwaitResult<List<Number>, List<Integer>> attempt = waiting.tryUntil(
+                CollectionConditions.single(Conditions.instanceOf(Integer.class)),
+                CollectionConditions.single(Conditions.exactInstanceOf(Integer.class)));
+
+        assertEquals(1000, values.getFirst().intValue());
+        assertSame(first, values.getFirst());
+        assertSame(second, values.getLast());
+        assertEquals(values, assertInstanceOf(AwaitResult.Satisfied.class, attempt).result());
+        assertEquals(2, attempt.totalAttempts());
+        assertEquals(4, reads[0]);
+    }
+
+    @Test
     void explainedMapValueSequenceCapturesNullAndRefreshesOnlyTheLastStage() {
         var first = java.util.Collections.<String, Number>singletonMap("first", null);
         Number acquired = new BigDecimal("2.00");
