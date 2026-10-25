@@ -104,22 +104,22 @@ public final class Conditions {
         return ConditionSupport.preserving("value matches", "value did not match", predicate);
     }
 
-    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>>
+    public static <BOUND, OBSERVED extends Comparable<? super BOUND>>
             PreservingCondition<OBSERVED> greaterThan(BOUND bound) {
         return comparing("greater than", bound, comparison -> comparison > 0);
     }
 
-    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>>
+    public static <BOUND, OBSERVED extends Comparable<? super BOUND>>
             PreservingCondition<OBSERVED> atLeast(BOUND bound) {
         return comparing("at least", bound, comparison -> comparison >= 0);
     }
 
-    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>>
+    public static <BOUND, OBSERVED extends Comparable<? super BOUND>>
             PreservingCondition<OBSERVED> lessThan(BOUND bound) {
         return comparing("less than", bound, comparison -> comparison < 0);
     }
 
-    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>>
+    public static <BOUND, OBSERVED extends Comparable<? super BOUND>>
             PreservingCondition<OBSERVED> atMost(BOUND bound) {
         return comparing("at most", bound, comparison -> comparison <= 0);
     }
@@ -140,7 +140,7 @@ public final class Conditions {
                 actual -> actual.compareTo(lowerBound) > 0 && actual.compareTo(upperBound) < 0);
     }
 
-    private static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>>
+    private static <BOUND, OBSERVED extends Comparable<? super BOUND>>
             PreservingCondition<OBSERVED> comparing(String relation, BOUND bound, IntPredicate matches) {
         requireNonNull(bound, "bound must not be null");
         return preservingNonNull("value", "value is " + relation + " the bound",

@@ -319,9 +319,10 @@ Import only the catalogue used by a test. Shared names such as `empty`,
 Text conditions accept any `CharSequence` and preserve the source's concrete type
 and instance, including after `because(...)` and inside container selections.
 
-Comparable checks use the source's `Comparable<BOUND>` contract. The bound may
-be a subtype or a different compatible type; `greaterThan(bound).because(...)`
-and the range checks still return the original source type and instance.
+Single-bound checks use only the source's `Comparable<BOUND>` contract; the
+bound itself need not implement `Comparable`. Range bounds must also compare
+with each other. Both forms preserve the source's concrete type and instance
+after `because(...)`.
 
 Object membership uses `in(collection)` and `notIn(collection)`, for example
 `in(List.of("created", "paid"))`. To treat a collection or array as one candidate,

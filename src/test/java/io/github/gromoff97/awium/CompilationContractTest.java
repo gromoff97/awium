@@ -42,7 +42,7 @@ class CompilationContractTest {
     }
 
     @Test
-    void comparableAndTextChecksRejectUnrelatedInputs() throws IOException {
+    void comparableAndTextChecksEnforceTheirInputContracts() throws IOException {
         for (String terminal : List.of("until", "tryUntil")) {
             for (String condition : List.of("greaterThan(1)", "atLeast(1)", "lessThan(1)",
                     "atMost(1)", "between(1, 2)", "strictlyBetween(1, 2)")) {
@@ -63,6 +63,21 @@ class CompilationContractTest {
                         final class Contract {
                             void check() {
                                 await(() -> 1).%s(StringConditions.%s.because("incompatible text"));
+                            }
+                        }
+                        """.formatted(terminal, condition));
+            }
+            for (String condition : List.of("between", "strictlyBetween")) {
+                assertRejected("""
+                        import static io.github.gromoff97.awium.Await.await;
+                        import static io.github.gromoff97.awium.Conditions.*;
+                        final class Contract {
+                            record Limit(int number) {}
+                            record Measurement(int number) implements Comparable<Limit> {
+                                public int compareTo(Limit limit) { return Integer.compare(number, limit.number()); }
+                            }
+                            void check() {
+                                await(() -> new Measurement(10)).%s(%s(new Limit(5), new Limit(15)).because("unordered limits"));
                             }
                         }
                         """.formatted(terminal, condition));

@@ -23,6 +23,40 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ScalarConditionsTest {
 
     @Test
+    void singleBoundChecksDoNotRequireTheBoundToBeComparable() {
+        record Limit(int number) {}
+        record Measurement(int number) implements Comparable<Limit> {
+            @Override
+            public int compareTo(Limit limit) { return Integer.compare(number, limit.number()); }
+        }
+        var measurement = new Measurement(10);
+        var time = new FakeTime(0);
+        var waiting = await(() -> measurement).usingTime(time, time);
+        var checks = List.of(Conditions.greaterThan(new Limit(5)).because("lower limit"),
+                Conditions.atLeast(new Limit(10)).because("inclusive lower limit"),
+                Conditions.lessThan(new Limit(15)).because("upper limit"),
+                Conditions.atMost(new Limit(10)).because("inclusive %s", "upper limit"));
+
+        for (var check : checks) {
+            var value = waiting.until(check);
+            AwaitResult<Measurement, Measurement> captured = waiting.tryUntil(check);
+            var values = waiting.until(check, check);
+            assertSame(measurement, value);
+            assertEquals(10, value.number());
+            assertSame(measurement, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+            assertEquals(10, values.getLast().number());
+        }
+        var selected = await(() -> Optional.of(measurement)).until(OptionalConditions.hasValue(
+                Conditions.atLeast(new Limit(5)).because("inner limit")).because("measurement"));
+        var mapped = await(() -> Map.of("measurement", measurement)).until(MapConditions.valueFor("measurement",
+                Conditions.lessThan(new Limit(15)).because("inner limit")).because("measurement"));
+        assertSame(measurement, selected);
+        assertEquals(10, selected.number());
+        assertSame(measurement, mapped);
+        assertEquals(10, mapped.number());
+    }
+
+    @Test
     void comparableChecksKeepTheBaseSourceTypeWhenBoundsAreSubtypes() {
         class Score implements Comparable<Score> {
             private final int number;
