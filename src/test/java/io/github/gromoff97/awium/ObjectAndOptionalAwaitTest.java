@@ -2,6 +2,7 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Await.OptionalSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.*;
@@ -20,9 +22,11 @@ import static io.github.gromoff97.awium.OptionalConditions.*;
 import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ObjectAndOptionalAwaitTest {
 
@@ -173,9 +177,85 @@ class ObjectAndOptionalAwaitTest {
         assertEquals(5, sourceCalls[0]);
     }
 
+    @Test
+    void narrowingWaitsForANullSourceToProduceAValue() {
+        for (var check : List.of(Conditions.instanceOf(String.class), Conditions.exactInstanceOf(String.class))) {
+            var observations = java.util.Arrays.asList(null, "ready").iterator();
+            var time = new FakeTime(0);
+
+            String result = await(observations::next).usingTime(time, time)
+                    .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(3))
+                    .until(check.because("the value must arrive"));
+
+            assertEquals("ready", result);
+            assertFalse(observations.hasNext());
+        }
+    }
+
+    @Test
+    void unrelatedTypeChecksRemainOrdinaryMismatches() {
+        for (var check : List.<Condition<? super String, ?>>of(Conditions.instanceOf(Integer.class), Conditions.exactInstanceOf(Integer.class))) {
+            var time = new FakeTime(0);
+            var waiting = await(() -> "actual").usingTime(time, time)
+                    .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(2));
+            var captured = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(check));
+            assertEquals(AwaitFailure.Reason.TIMEOUT, captured.failure().reason());
+            assertThrows(AwaitAssertionError.class, () -> waiting.until(check));
+        }
+        String actual = "actual";
+        assertSame(actual, await(() -> actual).until(Conditions.notEqualTo("different")));
+        assertSame(actual, await(() -> actual).until(Conditions.notSameAs("different")));
+        assertSame(actual, await(() -> actual).until(Conditions.notIn("one", "two")));
+    }
+
+    @Test
+    void objectConditionsPreserveAndNarrowTypes() {
+        var pollingTime = new FakeTime(0);
+        var actual = new Child();
+        Callable<Parent> source = () -> actual;
+        var waiting = await(source).usingTime(pollingTime, pollingTime);
+
+        assertSame(actual, waiting.until(Conditions.sameAs(actual)));
+        assertSame(actual, waiting.until(Conditions.notSameAs(new Child())));
+        assertSame(actual, waiting.until(Conditions.in(actual, new Parent())));
+        assertSame(actual, waiting.until(Conditions.notIn(new Parent())));
+        assertSame(actual, waiting.until(Conditions.matches(value -> value instanceof Child)));
+
+        Child child = waiting.until(Conditions.instanceOf(Child.class));
+        Child exact = waiting.until(Conditions.exactInstanceOf(Child.class));
+
+        assertSame(actual, child);
+        assertSame(actual, exact);
+        assertEquals(Unsatisfied.class, evaluate(
+                Conditions.exactInstanceOf(Parent.class), actual).getClass());
+    }
+
+    @Test
+    void optionalOverloadsReturnValuesAndNarrowedTypes() {
+        var pollingTime = new FakeTime(0);
+        OptionalSource<Object> source = () -> Optional.of("ready");
+        var waiting = await(source).usingTime(pollingTime, pollingTime);
+
+        Object expected = waiting.until(OptionalConditions.hasValue(Conditions.equalTo((Object) "ready")));
+        Object selected = waiting.until(OptionalConditions.hasValue(Conditions.matches(value -> value.toString().startsWith("r"))));
+        String narrowed = waiting.until(OptionalConditions.hasValue(instanceOf(String.class)));
+        String nested = await(() -> Optional.of("ready")).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(StringConditions.startsWith("rea")));
+        Integer transformed = await(() -> Optional.of("ready").map(String::length)).usingTime(pollingTime, pollingTime).until(OptionalConditions.present);
+
+        assertEquals("ready", expected);
+        assertEquals("ready", selected);
+        assertEquals("ready", narrowed);
+        assertEquals("ready", nested);
+        assertEquals(5, transformed);
+    }
+
     private static <T> ValueAwait<T> stage(
             FakeTime time, Callable<T> source) {
         return timedAwait(source, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(3)), time, time);
     }
+    private static class Parent {
+    }
 
+    private static final class Child extends Parent {
+    }
 }
