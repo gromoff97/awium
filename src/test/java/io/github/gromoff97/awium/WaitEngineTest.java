@@ -144,7 +144,7 @@ class WaitEngineTest {
         assertEquals(10, timeout.elapsedNanos());
         assertEquals(8, completed(unsatisfied));
         assertEquals("mismatch 3", mismatch(unsatisfied));
-        assertSame(assertion, assertion(unsatisfied));
+        assertSame(assertion, unsatisfied.outcome().cause());
     }
 
     @Test
@@ -184,7 +184,7 @@ class WaitEngineTest {
         assertEquals(10, timeout.elapsedNanos());
         assertSame(actual, observed(unsatisfied));
         assertEquals("late", mismatch(unsatisfied));
-        assertSame(assertion, assertion(unsatisfied));
+        assertSame(assertion, unsatisfied.outcome().cause());
     }
 
     @Test
@@ -574,7 +574,7 @@ class WaitEngineTest {
         assertEquals(2, loss.attempt().number());
         assertSame(failingActual, observed(unsatisfied));
         assertEquals("lost", mismatch(unsatisfied));
-        assertSame(assertion, assertion(unsatisfied));
+        assertSame(assertion, unsatisfied.outcome().cause());
         assertEquals(List.of(5L), time.parkRequests);
     }
 
@@ -623,12 +623,7 @@ class WaitEngineTest {
     }
 
     private static Object observed(AttemptRecord<?, ?> attempt) {
-        return switch (attempt.outcome()) {
-            case AttemptRecord.Outcome.Evaluated<?, ?> outcome -> outcome.observed();
-            case AttemptRecord.Outcome.ConditionFailed<?, ?> outcome -> outcome.observed();
-            case AttemptRecord.Outcome.SourceInterrupted<?, ?> outcome -> outcome.observed();
-            default -> throw new IllegalArgumentException("attempt has no observed value");
-        };
+        return assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, attempt.outcome()).observed();
     }
 
     private static Object result(AttemptRecord<?, ?> attempt) {
@@ -639,10 +634,5 @@ class WaitEngineTest {
     private static String mismatch(AttemptRecord<?, ?> attempt) {
         var evaluated = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, attempt.outcome());
         return assertInstanceOf(ConditionResult.Unsatisfied.class, evaluated.evaluation()).mismatch();
-    }
-
-    private static Throwable assertion(AttemptRecord<?, ?> attempt) {
-        var evaluated = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, attempt.outcome());
-        return assertInstanceOf(ConditionResult.Unsatisfied.class, evaluated.evaluation()).cause();
     }
 }

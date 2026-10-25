@@ -2,7 +2,6 @@ package io.github.gromoff97.awium;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
@@ -24,12 +23,6 @@ final class AwaitTestAccess {
 
     static <E, C extends Collection<E>> Await<C, E, Void> timedCollectionAwait(
             Callable<? extends C> source, WaitConfiguration configuration,
-            LongSupplier clock, LongConsumer parker) {
-        return new Await<>(source, configuration.withTime(clock, parker));
-    }
-
-    static <E> Await<Optional<E>, E, Void> timedOptionalAwait(
-            Callable<? extends Optional<E>> source, WaitConfiguration configuration,
             LongSupplier clock, LongConsumer parker) {
         return new Await<>(source, configuration.withTime(clock, parker));
     }

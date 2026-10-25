@@ -184,6 +184,7 @@ class ObservationTest {
         var observation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, attempt.outcome());
         assertSame(failure, observation.cause());
         assertSame(actual, observation.observed());
+        assertFalse(currentThread().isInterrupted());
     }
 
     @ParameterizedTest
@@ -227,30 +228,6 @@ class ObservationTest {
         assertEquals(NullPointerException.class, observation.cause().getClass());
         assertEquals("condition returned null ConditionResult", observation.cause().getMessage());
         assertEquals(1, conditionCalls[0]);
-    }
-
-    @Test
-    void thrownSourceInterruptionDoesNotSetTheThreadFlag() {
-        var interruption = new InterruptedException("source stopped");
-        var attempt = attempt(() -> {
-            throw interruption;
-        }, ObservationTest::failIfCalled);
-
-        var outcome = assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class, attempt.outcome());
-        assertSame(interruption, outcome.cause());
-        assertFalse(currentThread().isInterrupted());
-    }
-
-    @Test
-    void thrownConditionInterruptionKeepsTheCauseWithoutSettingTheFlag() {
-        var actual = new Object();
-        var interruption = new InterruptedException("condition stopped");
-        var attempt = attempt(() -> actual, value -> { throw interruption; });
-
-        var observation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, attempt.outcome());
-        assertSame(interruption, observation.cause());
-        assertSame(actual, observation.observed());
-        assertFalse(currentThread().isInterrupted());
     }
 
     @Test
@@ -498,7 +475,8 @@ class ObservationTest {
     }
 
     private static Stream<Throwable> throwables() {
-        return Stream.of(new Throwable("direct"), new Exception("checked"), new RuntimeException("runtime"),
+        return Stream.of(new Throwable("direct"), new Exception("checked"), new InterruptedException("interrupted"),
+                new RuntimeException("runtime"),
                 new AssertionError("assertion"), new LinkageError("linkage"),
                 new InternalError("fatal"), new ThreadDeath());
     }

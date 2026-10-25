@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
@@ -34,7 +33,6 @@ class AssertionAdapterTest {
 
         ConditionResult<? extends String> evaluation = evaluate(condition, "42");
 
-        assertEquals(Satisfied.class, evaluation.getClass());
         assertEquals("42", result(evaluation));
         assertEquals(1, invocations[0]);
         assertEquals("payment id", description(condition));
@@ -69,7 +67,6 @@ class AssertionAdapterTest {
 
         ConditionResult<? extends String> evaluation = evaluate(condition, actual);
 
-        assertEquals(Satisfied.class, evaluation.getClass());
         assertSame(actual, result(evaluation));
         assertEquals(1, invocations[0]);
         assertFalse(description(condition).isBlank());

@@ -13,7 +13,6 @@ import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedOptionalAwait;
 import static io.github.gromoff97.awium.ConditionSupport.captured;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.Conditions.condition;
@@ -401,8 +400,9 @@ class CapturedConditionTest {
                 Optional.of("second"));
         int[] next = {0};
 
-        List<String> result = timedOptionalAwait(() -> observations.get(next[0]++),
-                config(1, 10, 0), time, time).until(present, present);
+        List<String> result = Await.await(() -> observations.get(next[0]++))
+                .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10))
+                .until(present, present);
 
         assertEquals(List.of("first", "second"), result);
     }
