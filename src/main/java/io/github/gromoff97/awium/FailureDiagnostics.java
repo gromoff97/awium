@@ -174,8 +174,9 @@ final class FailureDiagnostics {
         if (reference != null) {
             field(out, detailsIndentation, reference.label(), render(() -> renderValue(reference.value())));
         }
-        if (condition.explanation() != null) {
-            field(out, detailsIndentation, "Because", condition.explanation());
+        String explanation = render(condition::explanation);
+        if (explanation != null) {
+            field(out, detailsIndentation, "Because", explanation);
         }
     }
 

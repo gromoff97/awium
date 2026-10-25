@@ -191,15 +191,26 @@ nonEmpty.because("The collection must not be empty");
 nonEmpty.because("Settlement requires at least one eligible payment");
 ```
 
-The formatting overload is eager and uses `Locale.ROOT`:
+String formatting is eager and uses `Locale.ROOT`. A supplier defers building
+the explanation:
 
 ```java
 await(paymentRepository::load).until(equalTo(expectedPayment).because(
         "Refund processing requires payment %s in the replica", paymentId));
+
+await(paymentRepository::load).until(equalTo(expectedPayment).because(
+        () -> "Expected payment: " + expectedPayment));
 ```
 
+The supplier form is lazy: it runs when diagnostics need to render that
+condition. Reusing the condition can evaluate it again for a later failure.
+An explanation failure is recorded in `AwaitFailure.suppressed()` without
+replacing the wait's outcome or cause. Reading `Condition.explanation()`
+explicitly also evaluates a lazy supplier; the resulting failure message
+remains a frozen string.
+
 Java does not propagate a target type through a chained generic factory call.
-When `matches(...)` is followed immediately by `because(...)`, a method
+When `matches(...)` is followed immediately by `because(...)`, an unambiguous method
 reference supplies the input type. For a lambda expression, declare its
 parameter type:
 

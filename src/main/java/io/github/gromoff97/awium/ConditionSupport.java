@@ -75,7 +75,7 @@ final class ConditionSupport {
             Condition<?, ?> extractionCondition,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<VALUE>> extract,
             Supplier<? extends ConditionAwaitAttempt<? super VALUE, ? extends RESULT>> evaluatorFactory) {
-        return new Condition<>(prefix + condition.description(), condition.explanation(), condition.reference(), () -> {
+        return new Condition<>(prefix + condition.description(), condition, () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> {
                 try {
@@ -137,8 +137,7 @@ final class ConditionSupport {
     static <OBSERVED, ELEMENT, RESULT> Condition<OBSERVED, RESULT> single(String subject, Condition<?, ?> condition,
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
             Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT>> evaluatorFactory) {
-        return new Condition<>(subject + " has a single matching value: " + condition.description(),
-                condition.explanation(), condition.reference(), () -> {
+        return new Condition<>(subject + " has a single matching value: " + condition.description(), condition, () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> actual == null ? AttemptResult.of(unsatisfied(subject + " was null"))
                     : evaluateSingle(elements.apply(actual), evaluator);

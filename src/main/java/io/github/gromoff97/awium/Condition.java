@@ -2,6 +2,7 @@ package io.github.gromoff97.awium;
 
 import java.util.Locale;
 import java.util.concurrent.Callable;
+import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 
@@ -14,11 +15,21 @@ import static java.util.Objects.requireNonNull;
 public final class Condition<OBSERVED, RESULT> {
 
     private final String description;
-    private final String explanation;
+    private final Supplier<String> explanation;
     private final Reference<?> reference;
     final Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory;
 
     Condition(String description, String explanation, Reference<?> reference,
+            Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
+        this(description, constantExplanation(explanation), reference, evaluatorFactory);
+    }
+
+    Condition(String description, Condition<?, ?> metadata,
+            Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
+        this(description, required(metadata).explanation, metadata.reference, evaluatorFactory);
+    }
+
+    private Condition(String description, Supplier<String> explanation, Reference<?> reference,
             Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
         this.description = nonBlank(description, "description");
         this.explanation = explanation;
@@ -30,16 +41,21 @@ public final class Condition<OBSERVED, RESULT> {
         return description;
     }
 
+    /** Returns the explanation, evaluating a lazy supplier on each explicit read, or null when absent. */
     public String explanation() {
-        return explanation;
+        return explanation == null ? null : explanation.get();
     }
 
     public Reference<?> reference() {
         return reference;
     }
 
-    Condition<OBSERVED, RESULT> withExplanation(String explanation) {
-        return new Condition<>(description, explanation, reference, evaluatorFactory);
+    Condition<OBSERVED, RESULT> withExplanationFrom(Condition<?, ?> metadata) {
+        return new Condition<>(description, metadata.explanation, reference, evaluatorFactory);
+    }
+
+    private static Supplier<String> constantExplanation(String explanation) {
+        return explanation == null ? null : () -> explanation;
     }
 
     static <C> C required(C condition) {
@@ -53,11 +69,24 @@ public final class Condition<OBSERVED, RESULT> {
     }
 
     public Condition<OBSERVED, RESULT> because(String explanation) {
-        return withExplanation(nonBlank(explanation, "explanation"));
+        return new Condition<>(description, nonBlank(explanation, "explanation"), reference, evaluatorFactory);
     }
 
     public Condition<OBSERVED, RESULT> because(String format, Object... arguments) {
         return because(formattedExplanation(format, arguments));
+    }
+
+    /**
+     * Returns a copy whose explanation is evaluated when failure diagnostics need it.
+     * Reusing the condition may evaluate the supplier again; the supplier remains caller-owned.
+     * Invalid text or a thrown failure is retained as a diagnostic error without replacing the wait's outcome.
+     *
+     * @param explanation supplier of non-null, non-blank diagnostic text
+     * @return an independent condition with the same evaluation
+     */
+    public Condition<OBSERVED, RESULT> because(Supplier<? extends String> explanation) {
+        requireNonNull(explanation, "explanation supplier must not be null");
+        return new Condition<>(description, () -> nonBlank(explanation.get(), "explanation"), reference, evaluatorFactory);
     }
 
     /**
@@ -82,6 +111,11 @@ public final class Condition<OBSERVED, RESULT> {
         public PreservingCondition<OBSERVED> because(String format, Object... arguments) {
             return because(formattedExplanation(format, arguments));
         }
+
+        /** @see Condition#because(Supplier) */
+        public PreservingCondition<OBSERVED> because(Supplier<? extends String> explanation) {
+            return new PreservingCondition<>(definition.because(explanation));
+        }
     }
 
     /**
@@ -104,6 +138,11 @@ public final class Condition<OBSERVED, RESULT> {
 
         public ComparisonCondition<EXPECTED> because(String format, Object... arguments) {
             return because(formattedExplanation(format, arguments));
+        }
+
+        /** @see Condition#because(Supplier) */
+        public ComparisonCondition<EXPECTED> because(Supplier<? extends String> explanation) {
+            return new ComparisonCondition<>(definition.because(explanation));
         }
     }
 
@@ -128,6 +167,11 @@ public final class Condition<OBSERVED, RESULT> {
         public SelectedCondition<OBSERVED> because(String format, Object... arguments) {
             return because(formattedExplanation(format, arguments));
         }
+
+        /** @see Condition#because(Supplier) */
+        public SelectedCondition<OBSERVED> because(Supplier<? extends String> explanation) {
+            return new SelectedCondition<>(definition.because(explanation));
+        }
     }
 
     /**
@@ -150,6 +194,11 @@ public final class Condition<OBSERVED, RESULT> {
 
         public MapValueCondition<OBSERVED> because(String format, Object... arguments) {
             return because(formattedExplanation(format, arguments));
+        }
+
+        /** @see Condition#because(Supplier) */
+        public MapValueCondition<OBSERVED> because(Supplier<? extends String> explanation) {
+            return new MapValueCondition<>(definition.because(explanation));
         }
     }
 

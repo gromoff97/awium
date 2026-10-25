@@ -15,7 +15,7 @@ sealed interface AttemptResult<RESULT> {
     default Condition<?, ?> conditionOr(Condition<?, ?> fallback) {
         var condition = condition();
         return condition == null ? fallback
-                : condition.withExplanation(fallback.explanation());
+                : condition.withExplanationFrom(fallback);
     }
 
     record Evaluated<RESULT>(ConditionResult<? extends RESULT> result,

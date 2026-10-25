@@ -12,6 +12,17 @@ class DirectBecauseCompilationContractTest {
     Path directory;
 
     @Test
+    void supplierReasonsPreserveInputResultAndReasonTypes() throws IOException {
+        for (String expression : List.of(
+                "await(() -> \"ready\").until(equalTo(123).because(() -> \"wrong input\"));",
+                "String wrong = await(numbers).until(equalTo(1).because(() -> \"wrong result\"));",
+                "Map.Entry<String, Number> wrong = await(map).until(valueFor(\"key\").because(() -> \"wrong kind\"));",
+                "await(() -> \"ready\").until(isNotNull.because(() -> 123));")) {
+            assertRejected(expression);
+        }
+    }
+
+    @Test
     void customChecksCannotReturnAnAttemptFailure() throws IOException {
         for (String expression : List.of(
                 "Conditions.condition(\"failed\", value -> failure);",
