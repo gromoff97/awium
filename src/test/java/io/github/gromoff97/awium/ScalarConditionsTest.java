@@ -3,6 +3,10 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
+import java.nio.CharBuffer;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
@@ -12,10 +16,141 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ScalarConditionsTest {
+
+    @Test
+    void comparableChecksKeepTheBaseSourceTypeWhenBoundsAreSubtypes() {
+        class Score implements Comparable<Score> {
+            private final int number;
+            Score(int number) { this.number = number; }
+            int number() { return number; }
+            @Override
+            public int compareTo(Score other) { return Integer.compare(number, other.number); }
+        }
+        class Bound extends Score {
+            Bound(int number) { super(number); }
+        }
+        var score = new Score(10);
+        var time = new FakeTime(0);
+        var waiting = await(() -> score).usingTime(time, time);
+        var checks = List.of(Conditions.greaterThan(new Bound(5)).because("lower bound"),
+                Conditions.atLeast(new Bound(10)).because("inclusive lower bound"),
+                Conditions.lessThan(new Bound(15)).because("upper bound"),
+                Conditions.atMost(new Bound(10)).because("inclusive %s", "upper bound"),
+                Conditions.between(new Bound(5), new Bound(15)).because("inclusive range"),
+                Conditions.strictlyBetween(new Bound(5), new Bound(15)).because("exclusive range"));
+
+        for (var check : checks) {
+            var value = waiting.until(check);
+            AwaitResult<Score, Score> result = waiting.tryUntil(check);
+            var values = waiting.until(check, check);
+            assertSame(score, value);
+            assertEquals(10, value.number());
+            assertSame(score, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+            assertSame(score, values.getFirst());
+            assertEquals(10, values.getLast().number());
+        }
+    }
+
+    @Test
+    void comparableChecksAcceptObjectsComparableWithAnotherBoundType() {
+        record Threshold(int number) implements Comparable<Threshold> {
+            @Override
+            public int compareTo(Threshold other) { return Integer.compare(number, other.number); }
+        }
+        record Reading(int number) implements Comparable<Threshold> {
+            @Override
+            public int compareTo(Threshold threshold) { return Integer.compare(number, threshold.number()); }
+        }
+        var reading = new Reading(10);
+        var checks = List.of(Conditions.greaterThan(new Threshold(5)).because("lower bound"),
+                Conditions.atLeast(new Threshold(10)).because("inclusive lower bound"),
+                Conditions.lessThan(new Threshold(15)).because("upper bound"),
+                Conditions.atMost(new Threshold(10)).because("inclusive upper bound"),
+                Conditions.between(new Threshold(5), new Threshold(15)).because("inclusive range"),
+                Conditions.strictlyBetween(new Threshold(5), new Threshold(15)).because("exclusive range"));
+
+        for (var check : checks) {
+            var value = await(() -> reading).until(check);
+            assertSame(reading, value);
+            assertEquals(10, value.number());
+        }
+        var selected = await(() -> List.of(reading)).until(CollectionConditions.single(
+                Conditions.greaterThan(new Threshold(5)).because("nested lower bound")).because("one reading"));
+        assertSame(reading, selected);
+        assertEquals(10, selected.number());
+
+        PreservingCondition<Integer> positive = Conditions.greaterThan(0);
+        assertEquals(1, await(() -> 1).until(positive));
+    }
+
+    @Test
+    void textChecksPreserveMutableSourcesInBothTerminalsAndSequences() {
+        var text = new StringBuilder("Ready 42");
+        var time = new FakeTime(0);
+        var waiting = await(() -> text).usingTime(time, time);
+        var checks = List.of(StringConditions.nonEmpty, StringConditions.nonBlank,
+                StringConditions.contains("Ready", "42"), StringConditions.doesNotContain("failed"),
+                StringConditions.containsIgnoringCase("READY"), StringConditions.startsWith("Ready"),
+                StringConditions.doesNotStartWith("failed"), StringConditions.endsWith("42"),
+                StringConditions.doesNotEndWith("failed"), StringConditions.matchesRegex("Ready \\d+"),
+                StringConditions.doesNotMatchRegex("failed"), StringConditions.equalToIgnoringCase("ready 42"),
+                StringConditions.notEqualToIgnoringCase("failed"), StringConditions.length(8),
+                StringConditions.lengthIsNot(0), StringConditions.lengthGreaterThan(0),
+                StringConditions.lengthAtLeast(8), StringConditions.lengthLessThan(9),
+                StringConditions.lengthAtMost(8), StringConditions.lengthBetween(1, 10));
+
+        for (var check : checks) {
+            var value = waiting.until(check.because("mutable text"));
+            assertSame(text, value);
+            assertEquals(text.capacity(), value.capacity());
+            var captured = waiting.tryUntil(check.because("mutable %s", "text"));
+            switch (captured) {
+                case AwaitResult.Satisfied(var attempts, var result) -> {
+                    assertSame(text, result);
+                    assertEquals(text.capacity(), result.capacity());
+                }
+                case AwaitResult.Failed(var attempts, var failure) -> throw new AssertionError(failure);
+            }
+        }
+
+        var values = waiting.until(StringConditions.nonEmpty.because("first"),
+                StringConditions.equalToIgnoringCase("ready 42").because("second"));
+        assertSame(text, values.getFirst());
+        assertEquals(text.capacity(), values.getLast().capacity());
+        text.setLength(0);
+        assertSame(text, waiting.until(StringConditions.empty.because("cleared")));
+        text.append(" \t");
+        assertSame(text, waiting.until(StringConditions.blank.because("whitespace")));
+    }
+
+    @Test
+    void nestedTextChecksPreserveBuildersBuffersAndTheirCurrentContents() {
+        var text = new StringBuilder("ready");
+        var buffer = CharBuffer.wrap(" ready");
+        buffer.position(1);
+
+        var optional = await(() -> Optional.of(text)).until(
+                OptionalConditions.hasValue(StringConditions.startsWith("rea").because("prefix")));
+        var selected = await(() -> List.of(buffer)).until(
+                CollectionConditions.single(StringConditions.matchesRegex("ready").because("remaining text")));
+        var mapped = await(() -> Map.of("text", text)).until(
+                MapConditions.valueFor("text", StringConditions.length(5).because("length")));
+
+        assertSame(text, optional);
+        assertSame(buffer, selected);
+        assertSame(text, mapped);
+        assertEquals(text.capacity(), optional.capacity());
+        assertEquals(1, selected.position());
+        assertEquals(text.capacity(), mapped.capacity());
+
+        text.replace(0, text.length(), "finished");
+        assertSame(text, await(() -> text).until(StringConditions.endsWith("ed").because("updated text")));
+    }
 
     @Test
     void comparableConditionsCoverInclusiveAndExclusiveRelations() {

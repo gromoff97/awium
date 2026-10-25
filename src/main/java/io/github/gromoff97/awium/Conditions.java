@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
@@ -106,41 +107,41 @@ public final class Conditions {
         return ConditionSupport.preserving("value matches", "value did not match", predicate);
     }
 
-    public static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> greaterThan(VALUE bound) {
-        return comparing("greater than", bound, actual -> actual.compareTo(bound) > 0);
+    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>> PreservingCondition<OBSERVED> greaterThan(BOUND bound) {
+        return comparing("greater than", bound, comparison -> comparison > 0);
     }
 
-    public static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> atLeast(VALUE bound) {
-        return comparing("at least", bound, actual -> actual.compareTo(bound) >= 0);
+    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>> PreservingCondition<OBSERVED> atLeast(BOUND bound) {
+        return comparing("at least", bound, comparison -> comparison >= 0);
     }
 
-    public static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> lessThan(VALUE bound) {
-        return comparing("less than", bound, actual -> actual.compareTo(bound) < 0);
+    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>> PreservingCondition<OBSERVED> lessThan(BOUND bound) {
+        return comparing("less than", bound, comparison -> comparison < 0);
     }
 
-    public static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> atMost(VALUE bound) {
-        return comparing("at most", bound, actual -> actual.compareTo(bound) <= 0);
+    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>> PreservingCondition<OBSERVED> atMost(BOUND bound) {
+        return comparing("at most", bound, comparison -> comparison <= 0);
     }
 
-    public static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> between(VALUE lowerBound, VALUE upperBound) {
+    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>> PreservingCondition<OBSERVED> between(BOUND lowerBound, BOUND upperBound) {
         validateRange(lowerBound, upperBound);
         return preservingNonNull("value", "value is between the inclusive bounds", "value was outside the inclusive range",
                 expectedReference(List.of(lowerBound, upperBound)),
                 actual -> actual.compareTo(lowerBound) >= 0 && actual.compareTo(upperBound) <= 0);
     }
 
-    public static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> strictlyBetween(VALUE lowerBound, VALUE upperBound) {
+    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>> PreservingCondition<OBSERVED> strictlyBetween(BOUND lowerBound, BOUND upperBound) {
         validateRange(lowerBound, upperBound);
         return preservingNonNull("value", "value is strictly between the bounds", "value was outside the exclusive range",
                 expectedReference(List.of(lowerBound, upperBound)),
                 actual -> actual.compareTo(lowerBound) > 0 && actual.compareTo(upperBound) < 0);
     }
 
-    private static <VALUE extends Comparable<? super VALUE>> PreservingCondition<VALUE> comparing(String relation, VALUE bound,
-            Predicate<? super VALUE> matches) {
+    private static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>>
+            PreservingCondition<OBSERVED> comparing(String relation, BOUND bound, IntPredicate matches) {
         requireNonNull(bound, "bound must not be null");
         return preservingNonNull("value", "value is " + relation + " the bound",
-                "value was not " + relation + " the bound", expectedReference(bound), matches);
+                "value was not " + relation + " the bound", expectedReference(bound), actual -> matches.test(actual.compareTo(bound)));
     }
 
     private static <VALUE extends Comparable<? super VALUE>> void validateRange(VALUE lowerBound, VALUE upperBound) {

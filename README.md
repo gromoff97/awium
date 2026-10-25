@@ -312,9 +312,16 @@ Import only the catalogue used by a test. Shared names such as `empty`,
 | --- | --- | --- |
 | `Conditions` | `condition`, `asserted`, object equality and identity, type checks, `matches`, and comparable ranges | observed or narrowed value |
 | `OptionalConditions` | `present`, `absent`, `hasValue` | contained or narrowed value; original optional for `absent` |
-| `StringConditions` | empty/blank checks, content, prefix, suffix, regex, case-insensitive equality, and `length...` | observed string |
+| `StringConditions` | empty/blank checks, content, prefix, suffix, regex, case-insensitive equality, and `length...` | observed text, including `StringBuilder` and `CharBuffer` |
 | `CollectionConditions` | `single`, empty/null/duplicate checks, quantifiers, membership, exact content, sequences, `first`, `last`, `element`, `sorted`, and `size...` | observed collection or selected element |
 | `MapConditions` | `singleEntry`, empty checks, entry/key/value quantifiers and membership, exact content, `valueFor`, `entryFor`, `onlyValueFor`, and `size...` | observed map, selected entry, or value |
+
+Text conditions accept any `CharSequence` and preserve the source's concrete type
+and instance, including after `because(...)` and inside container selections.
+
+Comparable checks use the source's `Comparable<BOUND>` contract. The bound may
+be a subtype or a different compatible type; `greaterThan(bound).because(...)`
+and the range checks still return the original source type and instance.
 
 For collection membership, `contains(value)` and `doesNotContain(value)` compare
 one element. A collection or array remains one element. To check a set of

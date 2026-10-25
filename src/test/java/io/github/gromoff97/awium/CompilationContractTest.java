@@ -41,6 +41,35 @@ class CompilationContractTest {
     }
 
     @Test
+    void comparableAndTextChecksRejectUnrelatedInputs() throws IOException {
+        for (String terminal : List.of("until", "tryUntil")) {
+            for (String condition : List.of("greaterThan(1)", "atLeast(1)", "lessThan(1)",
+                    "atMost(1)", "between(1, 2)", "strictlyBetween(1, 2)")) {
+                assertRejected("""
+                        import static io.github.gromoff97.awium.Await.await;
+                        import static io.github.gromoff97.awium.Conditions.*;
+                        final class Contract {
+                            void check() {
+                                await(() -> "ready").%s(%s.because("incompatible bound"));
+                            }
+                        }
+                        """.formatted(terminal, condition));
+            }
+            for (String condition : List.of("nonBlank", "length(1)")) {
+                assertRejected("""
+                        import static io.github.gromoff97.awium.Await.await;
+                        import io.github.gromoff97.awium.StringConditions;
+                        final class Contract {
+                            void check() {
+                                await(() -> 1).%s(StringConditions.%s.because("incompatible text"));
+                            }
+                        }
+                        """.formatted(terminal, condition));
+            }
+        }
+    }
+
+    @Test
     void collectionExpectationsRejectUnrelatedElementTypes() throws IOException {
         for (String condition : List.of("contains(42)", "containsAll(List.of(42))",
                 "doesNotContain(42)", "doesNotContainAny(List.of(42))",

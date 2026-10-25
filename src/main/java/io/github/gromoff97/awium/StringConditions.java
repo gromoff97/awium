@@ -15,133 +15,134 @@ import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static java.util.Objects.requireNonNull;
 
+/** Text checks that preserve the original {@link CharSequence} type and instance. */
 public final class StringConditions {
 
-    public static final PreservingCondition<String> empty = matching("string is empty", "string was not empty", String::isEmpty);
-    public static final PreservingCondition<String> nonEmpty = matching("string is not empty", "string was empty", value -> !value.isEmpty());
-    public static final PreservingCondition<String> blank = matching("string is blank", "string was not blank", String::isBlank);
-    public static final PreservingCondition<String> nonBlank = matching("string is not blank", "string was blank", value -> !value.isBlank());
+    public static final PreservingCondition<CharSequence> empty = matching("string is empty", "string was not empty", String::isEmpty);
+    public static final PreservingCondition<CharSequence> nonEmpty = matching("string is not empty", "string was empty", value -> !value.isEmpty());
+    public static final PreservingCondition<CharSequence> blank = matching("string is blank", "string was not blank", String::isBlank);
+    public static final PreservingCondition<CharSequence> nonBlank = matching("string is not blank", "string was blank", value -> !value.isBlank());
 
     private StringConditions() {}
 
-    public static PreservingCondition<String> contains(String... expected) {
+    public static PreservingCondition<CharSequence> contains(String... expected) {
         List<String> values = nonEmpty(expected, "expected strings");
         return matching("string contains all expected strings", "string did not contain all expected strings", expectedReference(values),
                 actual -> matchesAll(values, actual::contains));
     }
 
-    public static PreservingCondition<String> doesNotContain(String... unexpected) {
+    public static PreservingCondition<CharSequence> doesNotContain(String... unexpected) {
         List<String> values = nonEmpty(unexpected, "unexpected strings");
         return matching("string does not contain unexpected strings", "string contained an unexpected string", unexpectedReference(values),
                 actual -> !matchesAny(values, actual::contains));
     }
 
-    public static PreservingCondition<String> containsIgnoringCase(String expected) {
+    public static PreservingCondition<CharSequence> containsIgnoringCase(String expected) {
         var pattern = Pattern.compile(expected, Pattern.LITERAL | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         return matching("string contains expected string ignoring case",
                 "string did not contain expected string ignoring case", expectedReference(expected),
                 actual -> pattern.matcher(actual).find());
     }
 
-    public static PreservingCondition<String> startsWith(String prefix) {
+    public static PreservingCondition<CharSequence> startsWith(String prefix) {
         requireNonNull(prefix, "prefix must not be null");
         return matching("string starts with expected prefix", "string did not start with expected prefix", expectedReference(prefix),
                 actual -> actual.startsWith(prefix));
     }
 
-    public static PreservingCondition<String> doesNotStartWith(String prefix) {
+    public static PreservingCondition<CharSequence> doesNotStartWith(String prefix) {
         requireNonNull(prefix, "prefix must not be null");
         return matching("string does not start with unexpected prefix", "string started with unexpected prefix", unexpectedReference(prefix),
                 actual -> !actual.startsWith(prefix));
     }
 
-    public static PreservingCondition<String> endsWith(String suffix) {
+    public static PreservingCondition<CharSequence> endsWith(String suffix) {
         requireNonNull(suffix, "suffix must not be null");
         return matching("string ends with expected suffix", "string did not end with expected suffix", expectedReference(suffix),
                 actual -> actual.endsWith(suffix));
     }
 
-    public static PreservingCondition<String> doesNotEndWith(String suffix) {
+    public static PreservingCondition<CharSequence> doesNotEndWith(String suffix) {
         requireNonNull(suffix, "suffix must not be null");
         return matching("string does not end with unexpected suffix", "string ended with unexpected suffix", unexpectedReference(suffix),
                 actual -> !actual.endsWith(suffix));
     }
 
-    public static PreservingCondition<String> matchesRegex(String regex) {
+    public static PreservingCondition<CharSequence> matchesRegex(String regex) {
         return matchesRegex(Pattern.compile(regex));
     }
 
-    public static PreservingCondition<String> matchesRegex(Pattern expected) {
+    public static PreservingCondition<CharSequence> matchesRegex(Pattern expected) {
         requireNonNull(expected, "pattern must not be null");
         return matching("string matches expected pattern", "string did not match expected pattern", expectedReference(expected),
                 actual -> expected.matcher(actual).matches());
     }
 
-    public static PreservingCondition<String> doesNotMatchRegex(String regex) {
+    public static PreservingCondition<CharSequence> doesNotMatchRegex(String regex) {
         return doesNotMatchRegex(Pattern.compile(regex));
     }
 
-    public static PreservingCondition<String> doesNotMatchRegex(Pattern unexpected) {
+    public static PreservingCondition<CharSequence> doesNotMatchRegex(Pattern unexpected) {
         requireNonNull(unexpected, "pattern must not be null");
         return matching("string does not match unexpected pattern", "string matched unexpected pattern", unexpectedReference(unexpected),
                 actual -> !unexpected.matcher(actual).matches());
     }
 
-    public static PreservingCondition<String> equalToIgnoringCase(String expected) {
+    public static PreservingCondition<CharSequence> equalToIgnoringCase(String expected) {
         requireNonNull(expected, "expected string must not be null");
         return matching("string equals expected string ignoring case",
                 "string was not equal to expected string ignoring case", expectedReference(expected), actual -> actual.equalsIgnoreCase(expected));
     }
 
-    public static PreservingCondition<String> notEqualToIgnoringCase(String unexpected) {
+    public static PreservingCondition<CharSequence> notEqualToIgnoringCase(String unexpected) {
         requireNonNull(unexpected, "unexpected string must not be null");
         return matching("string does not equal unexpected string ignoring case",
                 "string was equal to unexpected string ignoring case", unexpectedReference(unexpected), actual -> !actual.equalsIgnoreCase(unexpected));
     }
 
-    public static PreservingCondition<String> length(int expected) {
+    public static PreservingCondition<CharSequence> length(int expected) {
         return matchingLength(expected, actual -> actual == expected, "is " + expected);
     }
 
-    public static PreservingCondition<String> lengthIsNot(int unexpected) {
+    public static PreservingCondition<CharSequence> lengthIsNot(int unexpected) {
         return matchingLength(unexpected, actual -> actual != unexpected, "is not " + unexpected);
     }
 
-    public static PreservingCondition<String> lengthGreaterThan(int lowerBound) {
+    public static PreservingCondition<CharSequence> lengthGreaterThan(int lowerBound) {
         return matchingLength(lowerBound, actual -> actual > lowerBound, "is greater than " + lowerBound);
     }
 
-    public static PreservingCondition<String> lengthAtLeast(int lowerBound) {
+    public static PreservingCondition<CharSequence> lengthAtLeast(int lowerBound) {
         return matchingLength(lowerBound, actual -> actual >= lowerBound, "is at least " + lowerBound);
     }
 
-    public static PreservingCondition<String> lengthLessThan(int upperBound) {
+    public static PreservingCondition<CharSequence> lengthLessThan(int upperBound) {
         return matchingLength(upperBound, actual -> actual < upperBound, "is less than " + upperBound);
     }
 
-    public static PreservingCondition<String> lengthAtMost(int upperBound) {
+    public static PreservingCondition<CharSequence> lengthAtMost(int upperBound) {
         return matchingLength(upperBound, actual -> actual <= upperBound, "is at most " + upperBound);
     }
 
-    public static PreservingCondition<String> lengthBetween(int lowerBound, int upperBound) {
+    public static PreservingCondition<CharSequence> lengthBetween(int lowerBound, int upperBound) {
         validateRange(lowerBound, upperBound, "length");
         return matchingLength(lowerBound, length -> length >= lowerBound && length <= upperBound,
                 "is between " + lowerBound + " and " + upperBound);
     }
 
-    private static PreservingCondition<String> matchingLength(int bound, IntPredicate matches,
+    private static PreservingCondition<CharSequence> matchingLength(int bound, IntPredicate matches,
             String relation) {
-        return ConditionSupport.sized("string", "length", bound, matches, "string length " + relation, String::length);
+        return ConditionSupport.sized("string", "length", bound, matches, "string length " + relation, CharSequence::length);
     }
 
-    private static PreservingCondition<String> matching(String description, String mismatch,
+    private static PreservingCondition<CharSequence> matching(String description, String mismatch,
             Predicate<String> matches) {
-        return preservingNonNull("string", description, mismatch, matches);
+        return preservingNonNull("string", description, mismatch, actual -> matches.test(actual.toString()));
     }
 
-    private static PreservingCondition<String> matching(String description, String mismatch,
+    private static PreservingCondition<CharSequence> matching(String description, String mismatch,
             Reference<?> reference, Predicate<String> matches) {
-        return preservingNonNull("string", description, mismatch, reference, matches);
+        return preservingNonNull("string", description, mismatch, reference, actual -> matches.test(actual.toString()));
     }
 
     private static List<String> nonEmpty(String[] values, String name) {
