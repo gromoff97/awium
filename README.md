@@ -329,6 +329,10 @@ Import only the catalogue used by a test. Shared names such as `empty`,
 
 Text conditions accept any `CharSequence` and preserve the source's concrete type
 and instance, including after `because(...)` and inside container selections.
+Expected fragments, prefixes, suffixes, and regex text also accept `CharSequence`,
+for example `StringConditions.startsWith(new StringBuilder("rea"))`.
+Their text is frozen when the condition is created, so later changes to an
+expected `StringBuilder` or `CharBuffer` do not change the check.
 
 Single-bound checks use only the source's `Comparable<BOUND>` contract; the
 bound itself need not implement `Comparable`. Range bounds must also compare

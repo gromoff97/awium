@@ -14,6 +14,20 @@ class CompilationContractTest {
     Path temporaryDirectory;
 
     @Test
+    void textExpectationsRejectNonTextValues() throws IOException {
+        for (String method : List.of("contains", "doesNotContain", "containsIgnoringCase",
+                "startsWith", "doesNotStartWith", "endsWith", "doesNotEndWith",
+                "matchesRegex", "doesNotMatchRegex", "equalToIgnoringCase", "notEqualToIgnoringCase")) {
+            assertRejected("""
+                    import io.github.gromoff97.awium.StringConditions;
+                    final class Contract {
+                        void check() { StringConditions.%s(42); }
+                    }
+                    """.formatted(method));
+        }
+    }
+
+    @Test
     void conditionsAndResultsRejectUnrelatedTypes() throws IOException {
         for (String expression : List.of(
                 "await(strings).until(equalTo(42));",
