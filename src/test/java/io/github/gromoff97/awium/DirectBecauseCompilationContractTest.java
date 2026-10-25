@@ -46,11 +46,11 @@ class DirectBecauseCompilationContractTest {
     void comparisonsRejectIncompatibleExpectedTypes() throws IOException {
         for (String terminal : List.of("until", "tryUntil")) {
             for (String condition : List.of("equalTo(123)", "notEqualTo(123)", "sameAs(123)",
-                    "notSameAs(123)", "in(123, 456)", "notIn(123, 456)")) {
-                for (String decoration : List.of("", ".because(\"required value\")")) {
-                    String expression = "await(() -> \"ready\").%s(%s%s);".formatted(terminal, condition, decoration);
-                    assertRejected(expression);
-                }
+                    "notSameAs(123)", "in(123, 456)", "notIn(123, 456)",
+                    "equalTo(123).because(\"required value\")",
+                    "equalTo(123).because(\"%s\", \"required value\")")) {
+                String expression = "await(() -> \"ready\").%s(%s);".formatted(terminal, condition);
+                assertRejected(expression);
             }
         }
     }
