@@ -299,7 +299,10 @@ extraction-failure-context-before.xml. Файлы находятся в обще
   1013 KILLED и 3 TIMED_OUT. Assertions и продукт не менялись.
   После следующего сокращения фикстур результат сохранился: 1016 KILLED, 6m10s.
   Устойчивое ускорение по единичным замерам не заявляется.
-- README-примеры проверены после миграции bulk API, Javadoc собирался успешно.
+- Все 23 текущих README Java-блока скомпилированы и выполнены после упрощения
+  preserving-исполнения; проверены обе ветки failure-примера. Новый array bulk
+  пример использует singletonList без generic witnesses и возвращает List<String[]>.
+  Javadoc собирался успешно после миграции bulk API.
   Повторять их только из-за изменения этого отчёта не требуется.
 - Javac-поиск проверил 283 внутренних члена и 1701 локальную переменную;
   новых кандидатов на удаление не обнаружил. Это не доказательство отсутствия
@@ -332,5 +335,8 @@ extraction-failure-context-report.json и прочие отчёты общего
 DirectBecause переведены на FakeTime без изменения assertions. Повторный
 полный STRONGER: 1014 KILLED, без TIMED_OUT/SURVIVED/NO_COVERAGE,
 977/990 строк, 6m08s. Отчёт: preserving-construction/report.json.
+README уточняет singletonList для массива как одного bulk-элемента; существующий
+fluent-тест проверяет конкретный List<String[]> без generic witnesses. Все 13
+membership-тестов прошли; 23 README-блока выполнены. final-readme/report.json.
 Продолжить поиск до установленной границы; перед завершением выполнить
 финальный check и проверить чистоту дерева.

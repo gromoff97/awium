@@ -315,6 +315,9 @@ The other bulk membership and exact-content factories also take a collection:
 `containsAny(List.of("a", "b"))`, `doesNotContainAll(List.of("a", "b"))`,
 `containsOnly(List.of("a", "b"))`, and the `containsExactly...` /
 `doesNotContainExactly...` pairs. Each operation has one collection overload.
+For an array as one expected element, use `Collections.singletonList(array)`,
+for example `containsOnly(Collections.singletonList(array))`.
+`List.of(array)` expands a reference array into separate elements.
 
 Maps follow the same rule: `containsKey(key)`, `doesNotContainKey(key)`,
 `containsValue(value)` and `doesNotContainValue(value)` check one object.

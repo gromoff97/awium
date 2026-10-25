@@ -130,6 +130,9 @@ class CollectionMembershipTest {
                 .until(contains(array).because("one array"));
         assertSame(arrays, selectedArray);
         assertEquals(2, selectedArray.getFirst().length);
+        List<String[]> onlyArray = Await.await(() -> arrays).usingTime(time, time)
+                .until(containsOnly(singletonList(array)).because("the array is the whole expectation"));
+        assertSame(arrays, onlyArray);
 
         var otherLists = List.of(List.of("c"));
         assertSame(otherLists, Await.await(() -> otherLists).usingTime(time, time)
