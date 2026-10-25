@@ -34,9 +34,10 @@ import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 
+/** Single-element selection and predicate quantifiers also accept non-collection iterables. */
 public final class CollectionConditions {
 
-    public static final SelectedCondition<Collection<?>> single = selected("collection has a single element",
+    public static final SelectedCondition<Iterable<?>> single = selected("collection has a single element",
             actual -> ConditionSupport.single("collection", actual, ConditionResult::satisfied));
     public static final PreservingCondition<Collection<?>> empty = preserving("collection is empty", "collection was not empty", Collection::isEmpty);
     public static final PreservingCondition<Collection<?>> nonEmpty = preserving("collection is not empty", "collection was empty", actual -> !actual.isEmpty());
@@ -88,34 +89,34 @@ public final class CollectionConditions {
                 "collection size is between " + lowerBound + " and " + upperBound);
     }
 
-    public static <ELEMENT> SelectedCondition<Collection<? extends ELEMENT>> single(PreservingCondition<? super ELEMENT> nested) {
+    public static <ELEMENT> SelectedCondition<Iterable<? extends ELEMENT>> single(PreservingCondition<? super ELEMENT> nested) {
         return new SelectedCondition<>(ConditionSupport.single("collection", required(nested).definition, actual -> actual,
                 () -> ConditionAwaitAttempt.bind(nested.definition)));
     }
 
-    public static <ELEMENT, RESULT> Condition<Collection<? extends ELEMENT>, RESULT> single(Condition<? super ELEMENT, RESULT> nested) {
+    public static <ELEMENT, RESULT> Condition<Iterable<? extends ELEMENT>, RESULT> single(Condition<? super ELEMENT, RESULT> nested) {
         return ConditionSupport.single("collection", required(nested), actual -> actual,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
-    public static <EXPECTED> SelectedCondition<Collection<? super EXPECTED>> single(ComparisonCondition<EXPECTED> nested) {
+    public static <EXPECTED> SelectedCondition<Iterable<? super EXPECTED>> single(ComparisonCondition<EXPECTED> nested) {
         return new SelectedCondition<>(ConditionSupport.single("collection", required(nested).definition, actual -> actual,
                 () -> ConditionAwaitAttempt.bind(nested.definition)));
     }
 
-    public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> all(Predicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> PreservingCondition<Iterable<? extends ELEMENT>> all(Predicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all collection elements match", "not all collection elements matched",
                 actual -> matchesAll(actual, predicate));
     }
 
-    public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> any(Predicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> PreservingCondition<Iterable<? extends ELEMENT>> any(Predicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any collection element matches", "no collection element matched",
                 actual -> matchesAny(actual, predicate));
     }
 
-    public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> none(Predicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> PreservingCondition<Iterable<? extends ELEMENT>> none(Predicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no collection element matches", "a collection element matched",
                 actual -> !matchesAny(actual, predicate));
@@ -299,12 +300,12 @@ public final class CollectionConditions {
         return ConditionSupport.sized("collection", "size", bound, matches, description, Collection::size);
     }
 
-    private static <VALUES extends Collection<?>> PreservingCondition<VALUES> preserving(String description, String mismatch,
+    private static <VALUES extends Iterable<?>> PreservingCondition<VALUES> preserving(String description, String mismatch,
             Predicate<? super VALUES> matches) {
         return preservingNonNull("collection", description, mismatch, matches);
     }
 
-    private static <VALUES extends Collection<?>> PreservingCondition<VALUES> preserving(String description, String mismatch,
+    private static <VALUES extends Iterable<?>> PreservingCondition<VALUES> preserving(String description, String mismatch,
             Reference<?> reference, Predicate<? super VALUES> matches) {
         return preservingNonNull("collection", description, mismatch, reference, matches);
     }

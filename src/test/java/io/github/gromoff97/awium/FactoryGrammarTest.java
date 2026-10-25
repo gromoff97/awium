@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Await.CollectionSource;
+import io.github.gromoff97.awium.Await.IterableSource;
 import io.github.gromoff97.awium.Await.MapSource;
 import io.github.gromoff97.awium.Await.OptionalSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
@@ -28,9 +28,9 @@ class FactoryGrammarTest {
     void everyTypedNullSourceUsesTheExactValidationMessage() {
         assertNullRejected("source", () -> await((Callable<Object>) null));
         assertNullRejected("source", () -> await((OptionalSource<Object>) null));
-        assertNullRejected("source", () -> await((CollectionSource<Collection<Object>>) null));
+        assertNullRejected("source", () -> await((IterableSource<Collection<Object>>) null));
         assertNullRejected("source", () -> await((MapSource<Map<Object, Object>>) null));
-        assertNullRejected("source", () -> await((Await.CollectionViewSource<Object, List<Object>>) null));
+        assertNullRejected("source", () -> await((Await.IterableViewSource<Object, List<Object>>) null));
         assertNullRejected("source", () -> await((Await.MapViewSource<Object, Object, Map<Object, Object>>) null));
     }
 
@@ -71,7 +71,7 @@ class FactoryGrammarTest {
         var optional = await((OptionalSource<String>) Optional::empty).usingTime(pollingTime, pollingTime).every(ofSeconds(20));
         assertNullRejected("condition", () -> optional.until((SelectedCondition<Optional<?>>) null));
 
-        var collection = await((CollectionSource<Collection<String>>) List::of).usingTime(pollingTime, pollingTime).every(ofSeconds(20));
+        var collection = await((IterableSource<Collection<String>>) List::of).usingTime(pollingTime, pollingTime).every(ofSeconds(20));
         assertNullRejected("condition", () -> collection.until((SelectedCondition<Collection<?>>) null));
 
         var map = await((MapSource<Map<String, String>>) Map::of).usingTime(pollingTime, pollingTime).every(ofSeconds(20));

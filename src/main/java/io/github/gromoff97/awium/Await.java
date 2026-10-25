@@ -3,7 +3,6 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import java.time.Duration;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -20,7 +19,7 @@ import static java.util.Objects.requireNonNull;
  * capture a list from successive observations. During persistence, only the final stage is re-evaluated.
  *
  * @param <OBSERVED> complete value returned by the source
- * @param <ELEMENT> value selected from an optional, collection, or map
+ * @param <ELEMENT> value selected from an optional, iterable, or map
  * @param <MAP_VALUE> value selected from a map by key
  */
 public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERVED> {
@@ -37,12 +36,12 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
         return new Await<>(source, DEFAULT);
     }
 
-    public static <ELEMENT, VALUES extends Collection<ELEMENT>> Await<VALUES, ELEMENT, Void> await(CollectionSource<VALUES> source) {
+    public static <ELEMENT, VALUES extends Iterable<ELEMENT>> Await<VALUES, ELEMENT, Void> await(IterableSource<VALUES> source) {
         return new Await<>(source, DEFAULT);
     }
 
-    public static <ELEMENT, VALUES extends Collection<? extends ELEMENT>>
-            Await<VALUES, ELEMENT, Void> await(CollectionViewSource<ELEMENT, VALUES> source) {
+    public static <ELEMENT, VALUES extends Iterable<? extends ELEMENT>>
+            Await<VALUES, ELEMENT, Void> await(IterableViewSource<ELEMENT, VALUES> source) {
         return new Await<>(source, DEFAULT);
     }
 
@@ -124,24 +123,24 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
     public interface OptionalSource<VALUE> extends Callable<Optional<VALUE>> {
     }
 
-    /** A collection source that retains both its complete collection type and selected element type. */
+    /** An iterable source that retains both its complete iterable type and selected element type. */
     @FunctionalInterface
-    public interface CollectionSource<VALUES extends Collection<?>> extends Callable<VALUES> {
+    public interface IterableSource<VALUES extends Iterable<?>> extends Callable<VALUES> {
     }
 
     /**
-     * Adapts a covariant collection source while retaining its element bound for selections.
-     * The returned collection is neither copied nor changed.
+     * Adapts a covariant iterable source while retaining its element bound for selections.
+     * The returned iterable is neither copied nor changed.
      * Use a typed declaration or explicit type arguments to establish the selected element bound.
      *
      * @param <ELEMENT> upper bound of selected elements
-     * @param <VALUES> complete collection type returned by the source
-     * @param delegate source of the original collection
+     * @param <VALUES> complete iterable type returned by the source
+     * @param delegate source of the original iterable
      */
-    public record CollectionViewSource<ELEMENT, VALUES extends Collection<? extends ELEMENT>>(
+    public record IterableViewSource<ELEMENT, VALUES extends Iterable<? extends ELEMENT>>(
             Callable<? extends VALUES> delegate) implements Callable<VALUES> {
 
-        public CollectionViewSource {
+        public IterableViewSource {
             requireNonNull(delegate, "delegate must not be null");
         }
 

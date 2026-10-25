@@ -213,7 +213,7 @@ class DirectBecauseCompilationContractTest {
                 import static io.github.gromoff97.awium.MapConditions.*;
                 final class Contract {
                     void check(Callable<Number> numbers, OptionalSource<Number> optional,
-                            CollectionSource<List<Number>> collection, MapSource<Map<String, Number>> map) {
+                            IterableSource<List<Number>> collection, MapSource<Map<String, Number>> map) {
                         %s
                     }
                 }

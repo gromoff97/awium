@@ -14,6 +14,35 @@ class CompilationContractTest {
     Path temporaryDirectory;
 
     @Test
+    void iterableChecksRejectIncompatibleTypesAndUnsupportedContainerOperations() throws IOException {
+        for (String expression : List.of(
+                "await(() -> users).until(single(equalTo(123).because(\"wrong\")));",
+                "await(() -> users).until(single(matches(String::isBlank)).because(\"wrong\"));",
+                "await(() -> users).until(all(String::isBlank).because(\"wrong\"));",
+                "String wrong = await(() -> users).until(single.because(\"wrong\"));",
+                "await(() -> users).until(first.because(\"unordered\"));",
+                "await(() -> users).until(size(1));",
+                "await(() -> users).until(present);",
+                "await(() -> users).until(valueFor(\"key\"));",
+                "await(() -> users).until(single(instanceOf(String.class)), single(instanceOf(Integer.class)));",
+                "User wrong = await(() -> broad).until(single);",
+                "await(() -> broad).until(all(User::active));")) {
+            assertRejected("""
+                    import java.util.*;
+                    import static io.github.gromoff97.awium.Await.await;
+                    import static io.github.gromoff97.awium.Conditions.*;
+                    import static io.github.gromoff97.awium.CollectionConditions.*;
+                    import static io.github.gromoff97.awium.OptionalConditions.present;
+                    import static io.github.gromoff97.awium.MapConditions.valueFor;
+                    final class Contract {
+                        record User(boolean active) {}
+                        void check(Iterable<User> users, Iterable<? super User> broad) { %s }
+                    }
+                    """.formatted(expression));
+        }
+    }
+
+    @Test
     void textExpectationsRejectNonTextValues() throws IOException {
         for (String method : List.of("contains", "doesNotContain", "containsIgnoringCase",
                 "startsWith", "doesNotStartWith", "endsWith", "doesNotEndWith",
@@ -232,10 +261,10 @@ class CompilationContractTest {
         assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import io.github.gromoff97.awium.MapConditions;
-                import io.github.gromoff97.awium.Await.CollectionSource;
+                import io.github.gromoff97.awium.Await.IterableSource;
                 import java.util.List;
                 final class Contract {
-                    void check(CollectionSource<List<String>> source) {
+                    void check(IterableSource<List<String>> source) {
                         await(source).until(MapConditions.nonEmpty);
                     }
                 }
@@ -254,10 +283,10 @@ class CompilationContractTest {
         assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import io.github.gromoff97.awium.MapConditions;
-                import io.github.gromoff97.awium.Await.CollectionSource;
+                import io.github.gromoff97.awium.Await.IterableSource;
                 import java.util.List;
                 final class Contract {
-                    void check(CollectionSource<List<String>> source) {
+                    void check(IterableSource<List<String>> source) {
                         await(source).until(MapConditions.singleEntry);
                     }
                 }
@@ -283,7 +312,7 @@ class CompilationContractTest {
                 import java.util.List;
                 final class Contract {
                     void check() {
-                        Integer wrong = await((io.github.gromoff97.awium.Await.CollectionSource<List<String>>)
+                        Integer wrong = await((io.github.gromoff97.awium.Await.IterableSource<List<String>>)
                                 () -> List.of("value")).until(single);
                     }
                 }
@@ -295,10 +324,10 @@ class CompilationContractTest {
         assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.CollectionConditions.first;
-                import io.github.gromoff97.awium.Await.CollectionSource;
+                import io.github.gromoff97.awium.Await.IterableSource;
                 import java.util.List;
                 final class Contract {
-                    void check(CollectionSource<List<String>> source) {
+                    void check(IterableSource<List<String>> source) {
                         Integer wrong = await(source).until(first);
                     }
                 }
@@ -306,10 +335,10 @@ class CompilationContractTest {
         assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.CollectionConditions.first;
-                import io.github.gromoff97.awium.Await.CollectionSource;
+                import io.github.gromoff97.awium.Await.IterableSource;
                 import java.util.HashSet;
                 final class Contract {
-                    void check(CollectionSource<HashSet<String>> source) {
+                    void check(IterableSource<HashSet<String>> source) {
                         await(source).until(first);
                     }
                 }
@@ -372,11 +401,11 @@ class CompilationContractTest {
         assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.CollectionConditions.*;
-                import io.github.gromoff97.awium.Await.CollectionSource;
+                import io.github.gromoff97.awium.Await.IterableSource;
                 import java.util.*;
 
                 final class Contract {
-                    void check(CollectionSource<Set<String>> source) {
+                    void check(IterableSource<Set<String>> source) {
                         await(source).until(containsExactly(List.of("a")));
                     }
                 }

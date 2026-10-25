@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Await.CollectionViewSource;
+import io.github.gromoff97.awium.Await.IterableViewSource;
 import io.github.gromoff97.awium.Await.MapViewSource;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -262,7 +262,7 @@ class DirectBecauseTest {
         var time = new FakeTime(0);
         Callable<List<? extends Number>> values = () -> List.of(1);
         Callable<Map<CharSequence, ? extends Number>> entries = () -> Map.of("key", 1);
-        var collection = new CollectionViewSource<Number, List<? extends Number>>(values);
+        var collection = new IterableViewSource<Number, List<? extends Number>>(values);
         var map = new MapViewSource<CharSequence, Number, Map<CharSequence, ? extends Number>>(entries);
 
         Number value = await(collection).usingTime(time, time).until(single(isNotNull).because("one"));
