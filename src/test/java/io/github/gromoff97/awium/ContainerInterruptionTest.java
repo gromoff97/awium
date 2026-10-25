@@ -125,40 +125,36 @@ class ContainerInterruptionTest {
 
     @Test
     void interruptionsDuringMapSizeAndViewsAreDetectedAfterTheCheck() {
-        List<Function<SignallingMap, AwaitResult<?, ?>>> waits = List.of(
-                actual -> await(() -> actual).tryUntil(MapConditions.singleEntry),
-                actual -> await(() -> actual).tryUntil(MapConditions.onlyValueFor("key")),
-                actual -> await(() -> actual).tryUntil(MapConditions.containsExactlyEntries(Map.of("key", "ready"))),
-                actual -> await(() -> actual).tryUntil(MapConditions.size(1)),
-                actual -> await(() -> actual).tryUntil(MapConditions.allKeys(value -> true)),
-                actual -> await(() -> actual).tryUntil(MapConditions.containsKey("key")),
-                actual -> await(() -> actual).tryUntil(MapConditions.containsOnlyKeys(java.util.Collections.singletonList("key"))),
-                actual -> await(() -> actual).tryUntil(MapConditions.allValues(value -> true)),
-                actual -> await(() -> actual).tryUntil(MapConditions.containsValue("ready")));
-        List<String> boundaries = List.of("entrySet", "entrySet", "size", "size", "keySet", "keySet", "keySet", "values", "values");
-        for (int index = 0; index < waits.size(); index++) {
-            var actual = new SignallingMap(boundaries.get(index));
-            var wait = waits.get(index);
-            assertInterrupted(() -> wait.apply(actual), boundaries.get(index), actual.calls);
+        List<BoundaryCase<SignallingMap>> cases = List.of(
+                new BoundaryCase<>("entrySet", actual -> await(() -> actual).tryUntil(MapConditions.singleEntry)),
+                new BoundaryCase<>("entrySet", actual -> await(() -> actual).tryUntil(MapConditions.onlyValueFor("key"))),
+                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(MapConditions.containsExactlyEntries(Map.of("key", "ready")))),
+                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(MapConditions.size(1))),
+                new BoundaryCase<>("keySet", actual -> await(() -> actual).tryUntil(MapConditions.allKeys(value -> true))),
+                new BoundaryCase<>("keySet", actual -> await(() -> actual).tryUntil(MapConditions.containsKey("key"))),
+                new BoundaryCase<>("keySet", actual -> await(() -> actual).tryUntil(MapConditions.containsOnlyKeys(java.util.Collections.singletonList("key")))),
+                new BoundaryCase<>("values", actual -> await(() -> actual).tryUntil(MapConditions.allValues(value -> true))),
+                new BoundaryCase<>("values", actual -> await(() -> actual).tryUntil(MapConditions.containsValue("ready"))));
+        for (var testCase : cases) {
+            var actual = new SignallingMap(testCase.boundary());
+            assertInterrupted(() -> testCase.check().apply(actual), testCase.boundary(), actual.calls);
         }
     }
 
     @Test
     void interruptionsDuringSelectionAreDetectedAfterTheCheck() {
-        List<Function<SignallingList, AwaitResult<?, ?>>> waits = List.of(
-                actual -> await(() -> actual).tryUntil(first),
-                actual -> await(() -> actual).tryUntil(last),
-                actual -> await(() -> actual).tryUntil(last(value -> true)),
-                actual -> await(() -> actual).tryUntil(element(0)),
-                actual -> await(() -> actual).tryUntil(containsSequence("ready")),
-                actual -> await(() -> actual).tryUntil(startsWith("ready")),
-                actual -> await(() -> actual).tryUntil(endsWith("other")),
-                actual -> await(() -> actual).tryUntil(size(2)));
-        List<String> boundaries = List.of("iterator", "reversed", "reversed", "iterator", "size", "size", "size", "size");
-        for (int index = 0; index < waits.size(); index++) {
-            var actual = new SignallingList(boundaries.get(index));
-            var wait = waits.get(index);
-            assertInterrupted(() -> wait.apply(actual), boundaries.get(index), actual.calls);
+        List<BoundaryCase<SignallingList>> cases = List.of(
+                new BoundaryCase<>("iterator", actual -> await(() -> actual).tryUntil(first)),
+                new BoundaryCase<>("reversed", actual -> await(() -> actual).tryUntil(last)),
+                new BoundaryCase<>("reversed", actual -> await(() -> actual).tryUntil(last(value -> true))),
+                new BoundaryCase<>("iterator", actual -> await(() -> actual).tryUntil(element(0))),
+                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(containsSequence("ready"))),
+                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(startsWith("ready"))),
+                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(endsWith("other"))),
+                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(size(2))));
+        for (var testCase : cases) {
+            var actual = new SignallingList(testCase.boundary());
+            assertInterrupted(() -> testCase.check().apply(actual), testCase.boundary(), actual.calls);
         }
     }
 
@@ -175,6 +171,9 @@ class ContainerInterruptionTest {
             Thread.interrupted();
         }
     }
+
+    private record BoundaryCase<ACTUAL>(String boundary,
+            Function<ACTUAL, AwaitResult<?, ?>> check) {}
 
     private static final class SignallingMap extends AbstractMap<String, String> {
         private final String boundary;

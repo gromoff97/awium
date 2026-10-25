@@ -784,3 +784,17 @@ PreservingCondition<Object>, containsOnly теряет ограничение э
 обнаруживают. Полный check: 414 тестов без ошибок и пропусков.
 Вместе с membership убраны 44 повторные компиляции без общего кеша.
 `/tmp/awium-seven-hour-pass/negative-comparison-sampling/report.json`.
+
+### Строки граничных проверок содержат операцию вместе с её границей
+
+В двух ContainerInterruptionTest таблицах 17 исходных пар объединены в строки
+BoundaryCase. Убраны два отдельных списка границ, два индексных цикла и локальные
+wait-алиасы. Связь больше не зависит от одинакового порядка двух списков.
+Добавлен один приватный record с двумя нужными полями; логики в нём нет.
+Итог на одну строку короче. AST-перенос сохраняет каждую исходную пару;
+все шесть методов прошли отдельно и через Gradle.
+`/tmp/awium-seven-hour-pass/paired-boundary-cases/report.json`.
+
+Полный STRONGER текущего продукта перед этим переносом фикстур: 1016 обнаруженных
+мутаций — 999 KILLED, 17 TIMED_OUT, 0 SURVIVED/NO_COVERAGE. Покрытие строк 981/996.
+`/tmp/awium-seven-hour-pass/current-all-stronger-report.json`.
