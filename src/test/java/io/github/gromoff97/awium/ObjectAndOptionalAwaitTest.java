@@ -21,6 +21,7 @@ import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.OptionalConditions.*;
 import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.ofNanos;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -31,16 +32,72 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ObjectAndOptionalAwaitTest {
 
     @Test
+    void readyCandidateCollectionsPreserveScalarAndContainerTypes() {
+        var text = await(() -> "ready").until(in(List.of("pending", "ready")).because("allowed states"));
+        var list = List.of("ready");
+        var map = Map.of("ready", 1);
+        var optional = Optional.of("ready");
+        var selectedList = await(() -> list).until(in(List.of(List.of("ready"))).because("list candidate"));
+        var selectedMap = await(() -> map).until(in(List.of(Map.of("ready", 1))).because("map candidate"));
+        var selectedOptional = await(() -> optional).until(in(List.of(Optional.of("ready"))).because("optional candidate"));
+        AwaitResult<Map<String, Integer>, Map<String, Integer>> captured = await(() -> map).tryUntil(
+                notIn(List.of(Map.of("failed", 0))).because("excluded %s", "candidates"));
+
+        assertEquals(5, text.length());
+        assertSame(list, selectedList);
+        assertEquals(5, selectedList.getFirst().length());
+        assertSame(map, selectedMap);
+        assertEquals(1, selectedMap.get("ready").intValue());
+        assertSame(optional, selectedOptional);
+        assertEquals(5, selectedOptional.orElseThrow().length());
+        assertSame(map, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+    }
+
+    @Test
+    void arrayCandidatesRemainWholeValuesInBothTerminalsAndSequences() {
+        String[] empty = {};
+        String[] ready = {"ready"};
+        for (var actual : List.of(empty, ready)) {
+            var time = new FakeTime(0);
+            var waiting = await(() -> actual).usingTime(time, time);
+            var value = waiting.until(in(singletonList(actual.clone())).because("whole array"));
+            AwaitResult<String[], String[]> captured = waiting.tryUntil(
+                    in(singletonList(actual.clone())).because("array contents"));
+            var values = waiting.until(in(singletonList(actual.clone())).because("included"),
+                    notIn(singletonList(new String[]{"failed"})).because("excluded"));
+
+            assertSame(actual, value);
+            assertEquals(actual.length, value.length);
+            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+            assertSame(actual, values.getFirst());
+            assertEquals(actual.length, values.getLast().length);
+            if (value.length > 0) assertEquals(5, value[0].length());
+        }
+        int[] actual = {1, 2};
+        var selected = await(() -> actual).until(in(singletonList(actual.clone())).because("primitive array"));
+        assertSame(actual, selected);
+        assertEquals(1, selected[0]);
+    }
+
+    @Test
+    void candidateCollectionsMustExistAndContainAtLeastOneCandidate() {
+        assertThrows(NullPointerException.class, () -> in(null));
+        assertThrows(NullPointerException.class, () -> notIn(null));
+        assertThrows(IllegalArgumentException.class, () -> in(List.of()));
+        assertThrows(IllegalArgumentException.class, () -> notIn(List.of()));
+    }
+
+    @Test
     void comparisonsPreserveTheObservedTypeAndNarrowingCanFailAtRuntime() {
         var time = new FakeTime(0);
         var waiting = await(() -> "ready").usingTime(time, time).upTo(ofNanos(1));
-        for (var condition : List.of(equalTo("different"), sameAs("different"), in("one", "two"))) {
+        for (var condition : List.of(equalTo("different"), sameAs("different"), in(List.of("one", "two")))) {
             AwaitResult<String, String> result = waiting.tryUntil(condition);
             assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
         }
         String unequal = waiting.until(notEqualTo("different"));
         String different = waiting.until(notSameAs("different"));
-        String excluded = waiting.until(notIn("one", "two"));
+        String excluded = waiting.until(notIn(List.of("one", "two")));
         AwaitResult<String, Integer> narrowed = waiting.tryUntil(instanceOf(Integer.class));
         AwaitResult<Optional<String>, Integer> nested = await(() -> Optional.of("ready"))
                 .usingTime(time, time).upTo(ofNanos(1)).tryUntil(hasValue(instanceOf(Integer.class)));
@@ -205,7 +262,7 @@ class ObjectAndOptionalAwaitTest {
         String actual = "actual";
         assertSame(actual, await(() -> actual).until(Conditions.notEqualTo("different")));
         assertSame(actual, await(() -> actual).until(Conditions.notSameAs("different")));
-        assertSame(actual, await(() -> actual).until(Conditions.notIn("one", "two")));
+        assertSame(actual, await(() -> actual).until(Conditions.notIn(List.of("one", "two"))));
     }
 
     @Test
@@ -217,8 +274,8 @@ class ObjectAndOptionalAwaitTest {
 
         assertSame(actual, waiting.until(Conditions.sameAs(actual)));
         assertSame(actual, waiting.until(Conditions.notSameAs(new Child())));
-        assertSame(actual, waiting.until(Conditions.in(actual, new Parent())));
-        assertSame(actual, waiting.until(Conditions.notIn(new Parent())));
+        assertSame(actual, waiting.until(Conditions.in(List.of(actual, new Parent()))));
+        assertSame(actual, waiting.until(Conditions.notIn(List.of(new Parent()))));
         assertSame(actual, waiting.until(Conditions.matches(value -> value instanceof Child)));
 
         Child child = waiting.until(Conditions.instanceOf(Child.class));

@@ -2,6 +2,7 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.IntPredicate;
@@ -84,18 +85,14 @@ public final class Conditions {
                         : unsatisfied("value was not exactly an instance of " + type.getTypeName()));
     }
 
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    public static <EXPECTED> ComparisonCondition<EXPECTED> in(EXPECTED... expected) {
+    public static <EXPECTED> ComparisonCondition<EXPECTED> in(Collection<? extends EXPECTED> expected) {
         List<?> values = nonEmptySnapshot(expected, "expected values");
         return new ComparisonCondition<>(ConditionSupport.condition("value is in the expected values", expectedReference(values),
                 actual -> matchesAny(values, candidate -> deepEquals(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was not in the expected values")));
     }
 
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    public static <EXPECTED> ComparisonCondition<EXPECTED> notIn(EXPECTED... unexpected) {
+    public static <EXPECTED> ComparisonCondition<EXPECTED> notIn(Collection<? extends EXPECTED> unexpected) {
         List<?> values = nonEmptySnapshot(unexpected, "unexpected values");
         return new ComparisonCondition<>(ConditionSupport.condition("value is not in the unexpected values", unexpectedReference(values),
                 actual -> !matchesAny(values, candidate -> deepEquals(actual, candidate))
@@ -107,30 +104,36 @@ public final class Conditions {
         return ConditionSupport.preserving("value matches", "value did not match", predicate);
     }
 
-    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>> PreservingCondition<OBSERVED> greaterThan(BOUND bound) {
+    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>>
+            PreservingCondition<OBSERVED> greaterThan(BOUND bound) {
         return comparing("greater than", bound, comparison -> comparison > 0);
     }
 
-    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>> PreservingCondition<OBSERVED> atLeast(BOUND bound) {
+    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>>
+            PreservingCondition<OBSERVED> atLeast(BOUND bound) {
         return comparing("at least", bound, comparison -> comparison >= 0);
     }
 
-    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>> PreservingCondition<OBSERVED> lessThan(BOUND bound) {
+    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>>
+            PreservingCondition<OBSERVED> lessThan(BOUND bound) {
         return comparing("less than", bound, comparison -> comparison < 0);
     }
 
-    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>> PreservingCondition<OBSERVED> atMost(BOUND bound) {
+    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>>
+            PreservingCondition<OBSERVED> atMost(BOUND bound) {
         return comparing("at most", bound, comparison -> comparison <= 0);
     }
 
-    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>> PreservingCondition<OBSERVED> between(BOUND lowerBound, BOUND upperBound) {
+    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>>
+            PreservingCondition<OBSERVED> between(BOUND lowerBound, BOUND upperBound) {
         validateRange(lowerBound, upperBound);
         return preservingNonNull("value", "value is between the inclusive bounds", "value was outside the inclusive range",
                 expectedReference(List.of(lowerBound, upperBound)),
                 actual -> actual.compareTo(lowerBound) >= 0 && actual.compareTo(upperBound) <= 0);
     }
 
-    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>> PreservingCondition<OBSERVED> strictlyBetween(BOUND lowerBound, BOUND upperBound) {
+    public static <BOUND extends Comparable<? super BOUND>, OBSERVED extends Comparable<? super BOUND>>
+            PreservingCondition<OBSERVED> strictlyBetween(BOUND lowerBound, BOUND upperBound) {
         validateRange(lowerBound, upperBound);
         return preservingNonNull("value", "value is strictly between the bounds", "value was outside the exclusive range",
                 expectedReference(List.of(lowerBound, upperBound)),

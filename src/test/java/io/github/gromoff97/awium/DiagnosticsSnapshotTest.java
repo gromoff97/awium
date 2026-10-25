@@ -815,7 +815,7 @@ class DiagnosticsSnapshotTest {
                     @Override
                     public String toString() { return "actual"; }
                 };
-                var check = negative ? Conditions.notIn(signalling, clearing) : Conditions.in(signalling, clearing);
+                var check = negative ? Conditions.notIn(List.of(signalling, clearing)) : Conditions.in(List.of(signalling, clearing));
                 var time = new FakeTime(0);
                 var waiting = timedAwait(() -> {
                     time.advanceNanos(2);

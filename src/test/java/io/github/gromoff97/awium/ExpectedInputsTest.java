@@ -136,10 +136,10 @@ class ExpectedInputsTest {
     }
 
     @Test
-    void objectAndStringVarargsFactoriesFreezeTheirCandidates() {
+    void candidateFactoriesFreezeTheirInputs() {
         String[] expected = {"before", null};
-        var included = Conditions.in(expected);
-        var excluded = Conditions.notIn(expected);
+        var included = Conditions.in(asList(expected));
+        var excluded = Conditions.notIn(asList(expected));
         expected[0] = "after";
         assertInstanceOf(Satisfied.class, evaluate(included, "before"));
         assertInstanceOf(Unsatisfied.class, evaluate(included, "after"));

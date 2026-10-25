@@ -323,6 +323,11 @@ Comparable checks use the source's `Comparable<BOUND>` contract. The bound may
 be a subtype or a different compatible type; `greaterThan(bound).because(...)`
 and the range checks still return the original source type and instance.
 
+Object membership uses `in(collection)` and `notIn(collection)`, for example
+`in(List.of("created", "paid"))`. To treat a collection or array as one candidate,
+wrap it in `Collections.singletonList(value)`. The candidate collection must not
+be empty.
+
 For collection membership, `contains(value)` and `doesNotContain(value)` compare
 one element. A collection or array remains one element. To check a set of
 expected elements, use `containsAll(collection)` or `doesNotContainAny(collection)`,

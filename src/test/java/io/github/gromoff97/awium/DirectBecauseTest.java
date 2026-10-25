@@ -29,7 +29,7 @@ class DirectBecauseTest {
         var waiting = await(() -> actual).usingTime(time, time);
 
         for (var condition : List.of(equalTo(1000), notEqualTo(0), sameAs(actual),
-                notSameAs(0), in(1000, 2), notIn(0, -1))) {
+                notSameAs(0), in(List.of(1000, 2)), notIn(List.of(0, -1)))) {
             var check = condition.because("expected %s", "number");
             Number value = waiting.until(check);
             AwaitResult<Number, Number> attempt = waiting.tryUntil(check);
@@ -49,7 +49,7 @@ class DirectBecauseTest {
         var time = new FakeTime(0);
         var value = await(() -> "ready").until(equalTo("ready").because("ready value"));
         var comparisons = await(() -> "ready").usingTime(time, time)
-                .until(equalTo("ready").because("ready"), notIn("failed").because("successful"));
+                .until(equalTo("ready").because("ready"), notIn(List.of("failed")).because("successful"));
         var checks = await(() -> "ready").usingTime(time, time)
                 .until(isNotNull.because("present"), matches(valueToCheck -> true).because("accepted"));
         assertEquals(5, value.length());
