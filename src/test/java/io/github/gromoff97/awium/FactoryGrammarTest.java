@@ -21,18 +21,17 @@ import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static java.time.Duration.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FactoryGrammarTest {
 
     @Test
     void everyTypedNullSourceUsesTheExactValidationMessage() {
-        var pollingTime = new FakeTime(0);
-        assertNullRejected("source", () -> await((Callable<Object>) null).usingTime(pollingTime, pollingTime));
-        assertNullRejected("source", () -> await(
-                (CollectionSource<Collection<Object>>) null).usingTime(pollingTime, pollingTime));
-        assertNullRejected("source", () -> await(
-                (MapSource<Map<Object, Object>>) null).usingTime(pollingTime, pollingTime));
+        assertNullRejected("source", () -> await((Callable<Object>) null));
+        assertNullRejected("source", () -> await((OptionalSource<Object>) null));
+        assertNullRejected("source", () -> await((CollectionSource<Collection<Object>>) null));
+        assertNullRejected("source", () -> await((MapSource<Map<Object, Object>>) null));
+        assertNullRejected("source", () -> await((Await.CollectionViewSource<Object, List<Object>>) null));
+        assertNullRejected("source", () -> await((Await.MapViewSource<Object, Object, Map<Object, Object>>) null));
     }
 
     @Test
@@ -80,6 +79,6 @@ class FactoryGrammarTest {
     }
 
     private static void assertNullRejected(String argument, Executable action) {
-        assertTrue(assertThrows(NullPointerException.class, action).getMessage().contains(argument));
+        assertEquals(argument + " must not be null", assertThrows(NullPointerException.class, action).getMessage());
     }
 }

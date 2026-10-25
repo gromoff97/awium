@@ -112,11 +112,12 @@ class FailureTaxonomyTest {
 
     @Test
     void structuredFailureAllowsNoCauseAndDefensivelyCopiesSuppressedCauses() {
-        var causes = new ArrayList<Throwable>(List.of(new AssertionError("original")));
+        var original = new AssertionError("original");
+        var causes = new ArrayList<Throwable>(List.of(original));
         var failure = new AwaitFailure(AwaitFailure.Reason.TIMEOUT, "not ready", null, causes);
         causes.clear();
         assertNull(failure.cause());
-        assertEquals(1, failure.suppressed().size());
+        assertEquals(List.of(original), failure.suppressed());
         assertThrows(UnsupportedOperationException.class, () -> failure.suppressed().clear());
         assertThrows(NullPointerException.class, () -> new AwaitFailure(null, "message", null, List.of()));
         assertThrows(NullPointerException.class, () -> new AwaitFailure(AwaitFailure.Reason.TIMEOUT, null, null, List.of()));

@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -146,7 +145,8 @@ class CheckedCallbackTest {
     @Test
     void nestedAndCapturedCheckedFailuresKeepTheirContextAndExplanation() {
         var cause = new IOException("offline");
-        var nested = failing(cause).because("receipt is needed");
+        var nested = condition("checked receipt", () -> (String actual) -> { throw cause; })
+                .because("receipt is needed");
         var time = new FakeTime(0);
 
         var optional = await(() -> Optional.of("ready")).usingTime(time, time).tryUntil(hasValue(nested));
@@ -227,9 +227,5 @@ class CheckedCallbackTest {
 
     private static void verifySecond(int actual) throws Throwable {
         assertEquals(2, actual);
-    }
-
-    private static PreservingCondition<String> failing(IOException cause) {
-        return condition("checked receipt", () -> actual -> { throw cause; });
     }
 }
