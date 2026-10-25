@@ -2,7 +2,6 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.IntPredicate;
@@ -85,14 +84,14 @@ public final class Conditions {
                         : unsatisfied("value was not exactly an instance of " + type.getTypeName()));
     }
 
-    public static <EXPECTED> ComparisonCondition<EXPECTED> in(Collection<? extends EXPECTED> expected) {
+    public static <EXPECTED> ComparisonCondition<EXPECTED> in(Iterable<? extends EXPECTED> expected) {
         List<?> values = nonEmptySnapshot(expected, "expected values");
         return new ComparisonCondition<>(ConditionSupport.condition("value is in the expected values", expectedReference(values),
                 actual -> matchesAny(values, candidate -> deepEquals(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was not in the expected values")));
     }
 
-    public static <EXPECTED> ComparisonCondition<EXPECTED> notIn(Collection<? extends EXPECTED> unexpected) {
+    public static <EXPECTED> ComparisonCondition<EXPECTED> notIn(Iterable<? extends EXPECTED> unexpected) {
         List<?> values = nonEmptySnapshot(unexpected, "unexpected values");
         return new ComparisonCondition<>(ConditionSupport.condition("value is not in the unexpected values", unexpectedReference(values),
                 actual -> !matchesAny(values, candidate -> deepEquals(actual, candidate))

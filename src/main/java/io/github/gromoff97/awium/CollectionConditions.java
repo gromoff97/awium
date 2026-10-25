@@ -19,7 +19,6 @@ import static io.github.gromoff97.awium.Condition.required;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
-import static io.github.gromoff97.awium.ConditionSupport.nonEmpty;
 import static io.github.gromoff97.awium.ConditionSupport.nonEmptySnapshot;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.selected;
@@ -127,9 +126,9 @@ public final class CollectionConditions {
         return containsAll(singletonList(expected));
     }
 
-    /** Matches every element in a nonempty shallow snapshot of the expected collection. */
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsAll(Collection<? extends ELEMENT> expected) {
-        var values = nonEmpty(snapshot(expected, "expected elements"), "expected elements");
+    /** Matches every element in a nonempty shallow snapshot of the expected iterable. */
+    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsAll(Iterable<? extends ELEMENT> expected) {
+        var values = nonEmptySnapshot(expected, "expected elements");
         return preserving("collection contains all expected elements", "collection did not contain all expected elements", expectedReference(values),
                 actual -> ValueMatching.containsAll(actual, values, Objects::deepEquals));
     }
@@ -139,98 +138,98 @@ public final class CollectionConditions {
         return doesNotContainAny(singletonList(unexpected));
     }
 
-    /** Rejects every element in a nonempty shallow snapshot of the unexpected collection. */
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainAny(Collection<? extends ELEMENT> unexpected) {
-        var values = nonEmpty(snapshot(unexpected, "unexpected elements"), "unexpected elements");
+    /** Rejects every element in a nonempty shallow snapshot of the unexpected iterable. */
+    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainAny(Iterable<? extends ELEMENT> unexpected) {
+        var values = nonEmptySnapshot(unexpected, "unexpected elements");
         return preserving("collection does not contain any unexpected elements", "collection contained an unexpected element", unexpectedReference(values),
                 actual -> !ValueMatching.containsAny(actual, values, Objects::deepEquals));
     }
 
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainAll(Collection<? extends ELEMENT> unexpected) {
-        var values = nonEmpty(snapshot(unexpected, "unexpected elements"), "unexpected elements");
+    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainAll(Iterable<? extends ELEMENT> unexpected) {
+        var values = nonEmptySnapshot(unexpected, "unexpected elements");
         return preserving("collection does not contain all unexpected elements", "collection contained all unexpected elements", unexpectedReference(values),
                 actual -> !ValueMatching.containsAll(actual, values, Objects::deepEquals));
     }
 
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsAny(Collection<? extends ELEMENT> expected) {
-        var values = nonEmpty(snapshot(expected, "expected elements"), "expected elements");
+    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsAny(Iterable<? extends ELEMENT> expected) {
+        var values = nonEmptySnapshot(expected, "expected elements");
         return preserving("collection contains an expected element", "collection did not contain an expected element", expectedReference(values),
                 actual -> ValueMatching.containsAny(actual, values, Objects::deepEquals));
     }
 
-    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> containsExactly(Collection<? extends ELEMENT> expected) {
+    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> containsExactly(Iterable<? extends ELEMENT> expected) {
         var values = snapshot(expected, "expected elements");
         return preserving("collection contains exactly the expected elements",
                 "collection did not contain exactly the expected elements", expectedReference(values),
                 actual -> exactContent(actual, values));
     }
 
-    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> doesNotContainExactly(Collection<? extends ELEMENT> expected) {
+    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> doesNotContainExactly(Iterable<? extends ELEMENT> expected) {
         var values = snapshot(expected, "expected elements");
         return preserving("collection does not contain exactly the expected elements",
                 "collection contained exactly the expected elements", expectedReference(values),
                 actual -> !exactContent(actual, values));
     }
 
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsExactlyInAnyOrder(Collection<? extends ELEMENT> expected) {
+    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsExactlyInAnyOrder(Iterable<? extends ELEMENT> expected) {
         var values = snapshot(expected, "expected elements");
         return preserving("collection contains exactly the expected elements in any order",
                 "collection did not contain exactly the expected elements in any order", expectedReference(values),
                 actual -> exactContentInAnyOrder(actual, values));
     }
 
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainExactlyInAnyOrder(Collection<? extends ELEMENT> expected) {
+    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainExactlyInAnyOrder(Iterable<? extends ELEMENT> expected) {
         var values = snapshot(expected, "expected elements");
         return preserving("collection does not contain exactly the expected elements in any order",
                 "collection contained exactly the expected elements in any order", expectedReference(values),
                 actual -> !exactContentInAnyOrder(actual, values));
     }
 
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsOnly(Collection<? extends ELEMENT> expected) {
+    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsOnly(Iterable<? extends ELEMENT> expected) {
         var values = snapshot(expected, "expected elements");
         return preserving("collection contains only the expected elements",
                 "collection did not contain only the expected elements", expectedReference(values),
                 actual -> sameDistinctElements(actual, values));
     }
 
-    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> subsetOf(Collection<? extends ELEMENT> expected) {
+    public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> subsetOf(Iterable<? extends ELEMENT> expected) {
         var values = snapshot(expected, "expected elements");
         return preserving("collection is a subset of the expected elements",
                 "collection was not a subset of the expected elements", expectedReference(values),
                 actual -> matchesAll(actual, value -> matchesAny(values, candidate -> deepEquals(value, candidate))));
     }
 
-    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> startsWith(Collection<? extends ELEMENT> expected) {
+    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> startsWith(Iterable<? extends ELEMENT> expected) {
         List<? extends ELEMENT> values = nonEmptySnapshot(expected, "expected elements");
         return preserving("collection contains expected prefix", "collection did not contain expected prefix", expectedReference(values),
                 actual -> actual.size() >= values.size() && prefixMatches(actual.iterator(), values));
     }
 
-    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> endsWith(Collection<? extends ELEMENT> expected) {
+    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> endsWith(Iterable<? extends ELEMENT> expected) {
         List<? extends ELEMENT> values = nonEmptySnapshot(expected, "expected elements");
         return preserving("collection contains expected suffix", "collection did not contain expected suffix", expectedReference(values),
                 actual -> actual.size() >= values.size() && prefixMatches(actual.reversed().iterator(), values.reversed()));
     }
 
-    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> containsSequence(Collection<? extends ELEMENT> expected) {
+    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> containsSequence(Iterable<? extends ELEMENT> expected) {
         List<? extends ELEMENT> values = nonEmptySnapshot(expected, "expected elements");
         return preserving("collection contains expected sequence", "collection did not contain expected sequence", expectedReference(values),
                 actual -> containsSequence(actual, values));
     }
 
-    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> doesNotContainSequence(Collection<? extends ELEMENT> expected) {
+    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> doesNotContainSequence(Iterable<? extends ELEMENT> expected) {
         List<? extends ELEMENT> values = nonEmptySnapshot(expected, "expected elements");
         return preserving("collection does not contain expected sequence", "collection contained expected sequence", expectedReference(values),
                 actual -> !containsSequence(actual, values));
     }
 
-    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> containsSubsequence(Collection<? extends ELEMENT> expected) {
+    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> containsSubsequence(Iterable<? extends ELEMENT> expected) {
         List<? extends ELEMENT> values = nonEmptySnapshot(expected, "expected elements");
         return preserving("collection contains expected subsequence", "collection did not contain expected subsequence", expectedReference(values),
                 actual -> containsSubsequence(actual, values));
     }
 
-    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> doesNotContainSubsequence(Collection<? extends ELEMENT> expected) {
+    public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> doesNotContainSubsequence(Iterable<? extends ELEMENT> expected) {
         List<? extends ELEMENT> values = nonEmptySnapshot(expected, "expected elements");
         return preserving("collection does not contain expected subsequence",
                 "collection contained expected subsequence", expectedReference(values),

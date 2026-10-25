@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Function;
-import java.util.stream.Stream;
+import java.util.Spliterator;
 import org.junit.jupiter.api.Test;
 
 import static java.util.Arrays.asList;
@@ -205,9 +205,9 @@ class ExpectedInputsTest {
 
     private static final class ChangingExpectedQueue extends ConcurrentLinkedQueue<String> {
         @Override
-        public Stream<String> stream() {
+        public Spliterator<String> spliterator() {
             clear();
-            return super.stream();
+            return super.spliterator();
         }
     }
 

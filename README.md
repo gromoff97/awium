@@ -324,7 +324,7 @@ Import only the catalogue used by a test. Shared names such as `empty`,
 | `Conditions` | `condition`, `asserted`, object equality and identity, type checks, `matches`, and comparable ranges | observed or narrowed value |
 | `OptionalConditions` | `present`, `absent`, `hasValue` | contained or narrowed value; original optional for `absent` |
 | `StringConditions` | empty/blank checks, content, prefix, suffix, regex, case-insensitive equality, and `length...` | observed text, including `StringBuilder` and `CharBuffer` |
-| `CollectionConditions` | `single`, empty/null/duplicate checks, quantifiers, membership, exact content, sequences, `first`, `last`, `element`, `sorted`, and `size...` | observed collection or selected element |
+| `CollectionConditions` | `single`, empty/null/duplicate checks, quantifiers, membership, exact content, sequences, `first`, `last`, `element`, `sorted`, and `size...` | observed iterable or selected element |
 | `MapConditions` | `singleEntry`, empty checks, entry/key/value quantifiers and membership, exact content, `valueFor`, `entryFor`, `onlyValueFor`, and `size...` | observed map, selected entry, or value |
 
 `single`, `single(condition)`, `all`, `any`, and `none` accept any `Iterable`.
@@ -333,10 +333,13 @@ The source does not have to implement `Collection`:
 ```java
 Iterable<Payment> payments = List.of(expectedPayment);
 Payment payment = await(() -> payments).until(single.because("One payment is required"));
+List<Payment> batch = await(paymentRepository::findAll).until(
+        containsOnly(payments).because("The replica must contain the expected payment"));
 ```
 
-Size and content checks still require `Collection`; ordered checks require
-`SequencedCollection`. Explicit iterable sources use `IterableSource` and
+The observed value for size and content checks must still implement `Collection`;
+ordered checks require `SequencedCollection`. Explicit iterable sources use
+`IterableSource` and
 `IterableViewSource`, which replace the former collection-specific source names.
 
 Text conditions accept any `CharSequence` and preserve the source's concrete type
@@ -351,26 +354,26 @@ bound itself need not implement `Comparable`. Range bounds must also compare
 with each other. Both forms preserve the source's concrete type and instance
 after `because(...)`.
 
-Object membership uses `in(collection)` and `notIn(collection)`, for example
+Object membership uses `in(iterable)` and `notIn(iterable)`, for example
 `in(List.of("created", "paid"))`. To treat a collection or array as one candidate,
-wrap it in `Collections.singletonList(value)`. The candidate collection must not
+wrap it in `Collections.singletonList(value)`. The candidate iterable must not
 be empty.
 
 For collection membership, `contains(value)` and `doesNotContain(value)` compare
 one element. A collection or array remains one element. To check a set of
-expected elements, use `containsAll(collection)` or `doesNotContainAny(collection)`,
+expected elements, use `containsAll(iterable)` or `doesNotContainAny(iterable)`,
 for example `containsAll(List.of("a", "b"))`. For null checks, use `containsNull`
 and `doesNotContainNull`.
 
-The other bulk membership and exact-content factories also take a collection:
+The other bulk membership and exact-content factories also take an iterable:
 `containsAny(List.of("a", "b"))`, `doesNotContainAll(List.of("a", "b"))`,
 `containsOnly(List.of("a", "b"))`, and the `containsExactly...` /
-`doesNotContainExactly...` pairs. Each operation has one collection overload.
+`doesNotContainExactly...` pairs. Each operation has one iterable overload.
 For an array as one expected element, use `Collections.singletonList(array)`,
 for example `containsOnly(Collections.singletonList(array))`.
 `List.of(array)` expands a reference array into separate elements.
 
-Ordered expectations use the same collection form: `startsWith(List.of("a", "b"))`,
+Ordered expectations use the same iterable form: `startsWith(List.of("a", "b"))`,
 `endsWith(...)`, `containsSequence(...)`, and `containsSubsequence(...)`, as do
 `doesNotContainSequence(...)` and `doesNotContainSubsequence(...)`.
 A pattern must not be empty. Use `Collections.singletonList(array)`
@@ -378,17 +381,17 @@ when a reference array is one element of the pattern.
 
 Maps follow the same rule: `containsKey(key)`, `doesNotContainKey(key)`,
 `containsValue(value)` and `doesNotContainValue(value)` check one object.
-`containsKeys(collection)`, `doesNotContainKeys(collection)`,
-`containsValues(collection)`, `doesNotContainValues(collection)` and
-`containsOnlyKeys(collection)` accept collections of expected keys or values.
+`containsKeys(iterable)`, `doesNotContainKeys(iterable)`,
+`containsValues(iterable)`, `doesNotContainValues(iterable)` and
+`containsOnlyKeys(iterable)` accept iterables of expected keys or values.
 
-Factories accepting collections of expected elements, maps of expected entries,
-or varargs candidates take a shallow snapshot when the condition is created.
-Changing the original container afterwards does not change the condition or its
+Factories accepting iterables of expected elements or maps of expected entries
+take a shallow snapshot when the condition is created.
+Changing the original input afterwards does not change the condition or its
 diagnostic reference. Encounter order, duplicates and supported nulls are retained.
 Non-empty requirements apply to the captured snapshot.
-Reading these inputs happens during construction; a failure to read them is
-thrown there, before polling starts.
+Each iterable is traversed once during construction; a failure to read these
+inputs is thrown there, before polling starts.
 
 Elements, keys, values, and callbacks remain caller-owned; they are not deeply
 copied. Single-value operands such as `equalTo(value)`, `sameAs(value)`,
@@ -400,7 +403,7 @@ Observed values and successful results also retain their original identity.
 Optional value conditions require a present `Optional`; use `absent` when
 emptiness itself is the expectation.
 
-Qualify a provider when a test genuinely needs colliding catalogues:
+Qualify a provider when a test needs colliding catalogues:
 
 ```java
 await(paymentRepository::findAll).until(CollectionConditions.nonEmpty);

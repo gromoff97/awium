@@ -6,7 +6,6 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Condition.Reference;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
@@ -18,6 +17,7 @@ import java.util.function.ToIntFunction;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.StreamSupport.stream;
 
 /** Creates conditions and shares checks and composition across catalogs. */
 final class ConditionSupport {
@@ -221,15 +221,15 @@ final class ConditionSupport {
         }
     }
 
-    static <ELEMENT> List<ELEMENT> snapshot(Collection<ELEMENT> values, String name) {
-        return requireNonNull(values, name + " must not be null").stream().toList();
+    static <ELEMENT> List<ELEMENT> snapshot(Iterable<ELEMENT> values, String name) {
+        return stream(requireNonNull(values, name + " must not be null").spliterator(), false).toList();
     }
 
     static <ELEMENT> List<ELEMENT> nonEmptySnapshot(ELEMENT[] values, String name) {
         return nonEmpty(Arrays.stream(requireNonNull(values, name + " must not be null")).toList(), name);
     }
 
-    static <ELEMENT> List<ELEMENT> nonEmptySnapshot(Collection<ELEMENT> values, String name) {
+    static <ELEMENT> List<ELEMENT> nonEmptySnapshot(Iterable<ELEMENT> values, String name) {
         return nonEmpty(snapshot(values, name), name);
     }
 

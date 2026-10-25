@@ -14,6 +14,31 @@ class CompilationContractTest {
     Path temporaryDirectory;
 
     @Test
+    void expectedIterablesDoNotWeakenElementKeyOrValueConstraints() throws IOException {
+        for (String expression : List.of(
+                "await(() -> \"ready\").until(in(wrong).because(\"wrong\"));",
+                "await(() -> \"ready\").until(notIn(wrong));",
+                "await(() -> List.of(\"ready\")).until(containsAll(wrong));",
+                "await(() -> List.of(\"ready\")).until(containsExactly(wrong).because(\"wrong\"));",
+                "await(() -> List.of(\"ready\")).until(containsOnly(wrong));",
+                "await(() -> List.of(\"ready\")).until(startsWith(wrong));",
+                "await(() -> Map.of(\"key\", \"ready\")).until(MapConditions.containsKeys(wrong));",
+                "await(() -> Map.of(\"key\", \"ready\")).until(MapConditions.containsOnlyKeys(wrong));",
+                "await(() -> Map.of(\"key\", \"ready\")).until(MapConditions.containsValues(wrong).because(\"wrong\"));")) {
+            assertRejected("""
+                    import java.util.*;
+                    import io.github.gromoff97.awium.MapConditions;
+                    import static io.github.gromoff97.awium.Await.await;
+                    import static io.github.gromoff97.awium.Conditions.*;
+                    import static io.github.gromoff97.awium.CollectionConditions.*;
+                    final class Contract {
+                        void check(Iterable<Integer> wrong) { %s }
+                    }
+                    """.formatted(expression));
+        }
+    }
+
+    @Test
     void iterableChecksRejectIncompatibleTypesAndUnsupportedContainerOperations() throws IOException {
         for (String expression : List.of(
                 "await(() -> users).until(single(equalTo(123).because(\"wrong\")));",
