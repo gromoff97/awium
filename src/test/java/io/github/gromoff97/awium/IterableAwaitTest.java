@@ -24,7 +24,8 @@ class IterableAwaitTest {
     @Test
     void mapsThatAlsoIterateValuesKeepMapSelectionTypes() {
         var both = new MapWithUsers();
-        var waiting = await(() -> both);
+        var time = new FakeTime(0);
+        var waiting = await(() -> both).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
 
         assertEquals(10, waiting.until(MapConditions.singleEntry).getValue().intValue());
         assertEquals(10, waiting.until(MapConditions.valueFor("key")).intValue());

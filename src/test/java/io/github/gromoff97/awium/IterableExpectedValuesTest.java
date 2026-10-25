@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -52,19 +53,19 @@ class IterableExpectedValuesTest {
         var expected = new Once<>(values);
         var allowed = in(expected).because("allowed values");
         values.clear();
-        assertEquals(5, await(() -> "ready").until(allowed).length());
+        assertEquals(5, waiting(() -> "ready").until(allowed).length());
         String missing = null;
-        assertNull(await(() -> missing).until(allowed));
+        assertNull(waiting(() -> missing).until(allowed));
         assertEquals(1, expected.iterations);
 
         int[] element = {1, 2};
         Iterable<int[]> arrays = List.of(element);
-        assertEquals(2, await(() -> new int[] {1, 2}).until(in(arrays).because("whole array")).length);
-        assertEquals(1, await(() -> new int[] {3}).until(notIn(arrays).because("whole array")).length);
-        assertEquals(2, await(() -> List.of(element)).until(containsOnly(arrays)).getFirst().length);
+        assertEquals(2, waiting(() -> new int[] {1, 2}).until(in(arrays).because("whole array")).length);
+        assertEquals(1, waiting(() -> new int[] {3}).until(notIn(arrays).because("whole array")).length);
+        assertEquals(2, waiting(() -> List.of(element)).until(containsOnly(arrays)).getFirst().length);
 
         Iterable<List<String>> lists = List.of(List.of("ready"));
-        assertEquals(5, await(() -> List.of(List.of("ready"))).until(containsOnly(lists)).getFirst().getFirst().length());
+        assertEquals(5, waiting(() -> List.of(List.of("ready"))).until(containsOnly(lists)).getFirst().getFirst().length());
     }
 
     @Test
@@ -77,14 +78,14 @@ class IterableExpectedValuesTest {
         assertThrows(NullPointerException.class, () -> containsAll(absent));
         assertThrows(NullPointerException.class, () -> notIn(absent));
         List<String> actual = List.of();
-        assertSame(actual, await(() -> actual).until(containsOnly(empty).because("empty")));
-        assertSame(actual, await(() -> actual).until(containsExactly(empty).because("empty")));
+        assertSame(actual, waiting(() -> actual).until(containsOnly(empty).because("empty")));
+        assertSame(actual, waiting(() -> actual).until(containsExactly(empty).because("empty")));
 
         int[] reads = {0};
         var cause = new IllegalStateException("expected iterator failed");
         Iterable<String> broken = () -> { throw cause; };
         assertSame(cause, assertThrows(IllegalStateException.class, () ->
-                await(() -> { reads[0]++; return List.of("ready"); }).until(containsAll(broken))));
+                waiting(() -> { reads[0]++; return List.of("ready"); }).until(containsAll(broken))));
         assertEquals(0, reads[0]);
     }
 
@@ -94,8 +95,7 @@ class IterableExpectedValuesTest {
         var mutable = new ArrayList<>(expectedValues);
         var expected = new Once<>(mutable);
         var condition = factory.apply(expected).because("frozen expectation");
-        var time = new FakeTime(0);
-        var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1));
+        var waiting = waiting(() -> actual);
         var before = waiting.tryUntil(condition);
         mutable.clear();
         mutable.add("changed");
@@ -115,6 +115,11 @@ class IterableExpectedValuesTest {
             assertThrows(AwaitAssertionError.class, () -> waiting.until(condition));
         }
         assertEquals(1, expected.iterations);
+    }
+
+    private static <OBSERVED> ValueAwait<OBSERVED> waiting(Callable<OBSERVED> source) {
+        var time = new FakeTime(0);
+        return await(source).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1));
     }
 
     private static final class Once<ELEMENT> implements Iterable<ELEMENT> {
