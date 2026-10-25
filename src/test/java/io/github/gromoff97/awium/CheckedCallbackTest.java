@@ -119,6 +119,7 @@ class CheckedCallbackTest {
 
     @Test
     void interruptionDuringValueExtractionSkipsTheNestedFactoryAndEvaluator() {
+        var time = new FakeTime(0);
         var entry = new AbstractMap.SimpleImmutableEntry<String, String>("key", "ready") {
             @Override
             public String getValue() {
@@ -129,7 +130,7 @@ class CheckedCallbackTest {
         var actual = new ProbeContainers.EntryMap<String, String>(List.of(entry));
         int[] factoryCalls = {0};
         int[] evaluatorCalls = {0};
-        var result = await(() -> actual).tryUntil(valueFor("key", condition("nested", () -> {
+        var result = await(() -> actual).usingTime(time, time).tryUntil(valueFor("key", condition("nested", () -> {
             factoryCalls[0]++;
             return value -> { evaluatorCalls[0]++; return satisfied(value); };
         })));
@@ -184,8 +185,9 @@ class CheckedCallbackTest {
 
     @Test
     void aFlagClearedWithinTheCheckIsNotAnInterruptionAtItsBoundary() {
+        var time = new FakeTime(0);
         var actual = List.of(1, 2);
-        var result = await(() -> actual).tryUntil(CollectionConditions.all(value -> {
+        var result = await(() -> actual).usingTime(time, time).tryUntil(CollectionConditions.all(value -> {
             if (value == 1) Thread.currentThread().interrupt();
             else assertTrue(Thread.interrupted());
             return true;

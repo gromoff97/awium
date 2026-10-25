@@ -166,635 +166,149 @@
 рабочего файла: они не определяют текущую работу. Отчёты текущего прохода
 находятся в `/tmp/awium-seven-hour-pass`.
 
-## Семичасовой проход: продукт и тесты
-
-Начало — 24 октября, 21:50:48 МСК; граница — 25 октября, 04:50:48 МСК.
-Исходный `0aaf8f9`, дерево чистое. Продукт и тесты входят в область работы;
-README/Javadoc разрешены. Новые изменения коммитятся локально в `main`.
-Массовые проверки двумя компиляторами из предыдущего прохода не возобновляются.
-
-### Прямая проверка отклонения несовместимого кода
-
-CompilationSupport обслуживает только отрицательные контракты типов. Вместо
-boolean compiles и повторяющихся assertFalse теперь assertRejected: успешная
-компиляция сама вызывает ошибку с полным исходником. Проверка кодов диагностики
-остаётся общей; синтаксические ошибки, отсутствующие импорты и опечатки не
-засчитываются как ожидаемое отклонение типов. Существующий контроль инфраструктуры
-дополнен заведомо корректным пустым классом, который assertRejected обязан отклонить.
-Все исходные несовместимые API-примеры сохранены. У OrderedWait убрана лишняя
-функция-обёртка source. Полный check: 426 тестов, ошибок и пропусков нет.
-
-### Удаление проверок, не добавляющих поведения
-
-Из scalar fluent-теста убраны десять вариантов немедленно успешной цепочки.
-Оставлена полная цепочка с конкретным типом результата и because; отдельные
-FactoryGrammar/TimingConfiguration уже проверяют реальные интервалы, последнее
-значение и независимость конфигураций. Удалён одноразовый assertAllSame.
-Из MapSize удалена проверка мутации исходной карты после size(expected.size()):
-в условие передаётся только int, поэтому карта не может влиять на него.
-Обычные проверки всех сравнений размера и границ сохранены.
-Целевые тесты: 27 без ошибок. STRONGER пяти затронутых продуктовых
-классов: 315 мутаций, статусы {'KILLED': 302, 'TIMED_OUT': 13}, без SURVIVED/NO_COVERAGE.
-`/tmp/awium-seven-hour-pass/redundant-tests-report.json`.
-
-### Единая матрица Throwable в тестах
-
-Раздельные nonfatal/fatal сценарии источника объединены с общим набором семи
-Throwable, уже используемым для condition. Проверки времени, пропуска condition,
-идентичности причины и флага прерывания сохранены и теперь выполняются для
-всего набора, включая непосредственный Throwable. Два дублирующих теста удалены.
-Разделение Exception/Error из throwFailure и три копии unchecked-shim удалены;
-одна общая функция используется только там, где сигнатура Java не позволяет
-бросить синтетический Throwable напрямую. Фикстуры engine принимают CheckedFunction
-вместо Function; InterruptedException в callback бросается непосредственно.
-В диагностических фикстурах убраны недостижимые return и повторное деление
-RuntimeException/Error. Тестовый код уменьшился на 49 строк без новых классов.
-Полный check: 432 теста без ошибок и пропусков.
-`/tmp/awium-seven-hour-pass/throwable-tests-report.json`.
-
-### Настройка scalar-фикстуры без повторного построения конфигурации
-
-AwaitTestAccess.timedAwait получает уже проверенную WaitConfiguration и теперь
-создаёт ValueAwait непосредственно с заменённым временем. Убраны промежуточная
-fluent-цепочка, обратные преобразования наносекунд в Duration и дублирующая
-перегрузка configured. Реальные публичные fluent-сценарии остаются в API-тестах;
-специализированные collection/map/optional фикстуры сохраняют свои типы.
-Новых входов в продукт не добавлено. Полный check: 432 теста без ошибок и пропусков.
-
-
-### Один вход для готового набора ожидаемых элементов
-
-Удалены семь делегирующих varargs-перегрузок doesNotContainAll, containsAny,
-containsExactly, doesNotContainExactly, containsExactlyInAnyOrder,
-doesNotContainExactlyInAnyOrder и containsOnly. Каждая операция принимает
-Collection: containsExactly(a, b) заменяется на containsExactly(List.of(a, b)).
-Это продолжает принятое правило одиночного объекта и готового набора;
-переходных алиасов нет. Новых типов, состояния и алгоритмов не добавлено.
-Каталоги строк/объектов и фабрики упорядоченных фрагментов не менялись.
-
-51 реальный вызов мигрирован с учётом разрешённой компилятором перегрузки:
-массив-кандидаты становится asList(array), массив как один элемент — singletonList.
-Проверки null перенесены на единственный Collection-параметр. Удалены три
-повторяющихся набора пар, повтор одного containsOnly-сценария и локальная
-проверка снимка exact, полностью покрытая общими ExpectedInputs-тестами.
-Отрицательная матрица несовместимых элементов расширена до 66 форм, включая
-обе формы because и оба терминала. Продуктовый код уменьшился на 36 строк.
-
-Полный check: 431 тест без ошибок и пропусков. Поведение до/после совпало
-на 103 099 сценариях; SHA-256 210d453ae070baf9ded8edf61c09a80443f7097d52d9abd79af3f692471eec02.
-STRONGER шести классов: 519 мутаций — 489 KILLED, 30 TIMED_OUT, без
-SURVIVED/NO_COVERAGE. Javadoc прошёл, семь Collection-сигнатур проверены
-в HTML. Все 23 текущих Java-примера README выполнены javac на итоговом JAR.
-`/tmp/awium-seven-hour-pass/bulk-report.json`.
-
-### Тип результата сохраняется и во вспомогательных проверках
-
-ConditionTestRuntime.result больше не возвращает Object для типизированного
-ConditionResult: тип RESULT сохраняется, проверка удовлетворённости остаётся
-прямой JUnit-проверкой, приведение параметризованного подтипа проверяется javac
-без unchecked. Существующий тест равенства получает конкретный String.
-Для неизвестного результата селектора helper не выдумывает тип: эти случаи
-проверяются через типизированный fluent API. В TryUntilTest удалён unchecked,
-в Map assertStatus убраны два неиспользуемых параметра типов, в проверке
-валидации — ещё один. Полный check: 431 тест без ошибок и пропусков.
-
-### Вложенная проверка без повторного разбора результата
-
-compose разбирает Satisfied/Unsatisfied исчерпывающим switch; отрицательный
-результат больше не пропускается через mapSatisfied с недостижимым callback.
-В evaluateSingle текущее состояние результата проверяется один раз: пока
-совпадения нет, сохраняется последний исход; после первого совпадения второй
-успех немедленно отклоняется. Порядок callback-вызовов, метаданные и приоритет
-Uncontrolled сохраняются. Новых типов, полей и флагов нет.
-Полный check: 431 тест без ошибок. Независимая модель: 15 728 640 сценариев,
-40 371 120 вызовов, прежний digest 981d57bed93f2d0b. STRONGER ConditionSupport:
-78 мутаций, {'KILLED': 78}, без SURVIVED/NO_COVERAGE.
-`/tmp/awium-seven-hour-pass/composition-report.json`.
-
-### Сигнатуры callback согласованы с обработкой Throwable
-
-CheckedFunction.apply, CheckedConsumer.accept и внутренний AwaitAttempt.probe
-теперь объявляют throws Throwable. Раньше ядро ловило любой Throwable, но
-передать method reference с таким объявлением не позволяли сами сигнатуры.
-Отдельный потребитель воспроизвёл отказ старого API и выполнение того же кода
-после изменения. Новых интерфейсов, адаптеров и runtime-ветвей нет.
-
-Действие asserted не меняется: AssertionError становится Unsatisfied, остальные
-выброшенные причины остаются Uncontrolled. CheckedCallback использует реальные
-method reference с throws Throwable; Observation бросает исходный Throwable
-в condition напрямую. JDK Callable источников/фабрик и интерфейсы времени
-не менялись. При непосредственном вызове публичного checked-callback его
-объявленный checked-тип теперь Throwable. Полный check: 431 тест без ошибок;
-внешний потребитель итогового JAR компилируется с -Werror, исходная причина
-и CONDITION_FAILED проверены для обеих callback-форм.
-`/tmp/awium-seven-hour-pass/throwable-contract-prototype/report.json`.
-
-### Фикстуры должны участвовать в проверяемом поведении
-
-В ConditionAwaitAttemptTest удалены три посторонние фикстуры и assertNotNull,
-которые не проверяли ни выполнение, ни независимость семейств. Существующие
-реальные сценарии композиции и captured выполняют эти семейства. Оставшийся
-тест прямо проверяет метаданные ordinary condition и две независимые попытки.
-Тестовый код уменьшился на 13 строк, удалены три импорта. Целевые проверки
-ConditionAwaitAttempt, CapturedCondition и DirectBecause: 40 без ошибок.
-
-### Один сценарий сохранения наблюдения для двух терминалов
-
-Две однотипные проверки broad PreservingCondition<Object> на источнике String
-объединены. Оба терминала по-прежнему вызываются реально, их результаты имеют
-конкретные String / AwaitResult<String, String>. Вместо равенства интернированной
-строки проверяется идентичность отдельного объекта. Удалены лишняя локальная
-фабрика condition и дублирующее приведение AwaitResult. Целевые тесты: 9
-без ошибок. Общее число тестов уменьшилось на один, оба поведения сохранены.
-
-### Condition описывает, ConditionAwaitAttempt создаёт попытку
-
-Из модели Condition и её семейств удалены шесть методов создания/делегирования
-попыток. Три точки создания принадлежат ConditionAwaitAttempt: конструктор
-обычной попытки и адаптеры preserving/selecting. Selector-приведение остаётся
-единственным, изолированным в исполнении. Состояние evaluator и границы
-обработки Throwable не менялись. Неизменяемая factory остаётся в Condition;
-её package-private final доступ нужен исполнителю, public-доступ не добавлен.
-
-AST: методов стало на три меньше, параметров типов на два меньше; типов
-по-прежнему 56, полей 119, имена полей и final-модификаторы совпадают.
-Конкретные зависимости Condition → ConditionAwaitAttempt по jdeps: 4 → 0;
-граница закреплена существующим архитектурным тестом. Все 409 public-деклараций
-совпадают, fluent API и вывод типов не изменились.
-Полный check: 430 тестов. Модель: 15 728 640 сценариев, 40 371 120 вызовов,
-прежний digest 981d57bed93f2d0b. STRONGER восьми классов: 553 мутаций,
-{'KILLED': 534, 'TIMED_OUT': 19}, без SURVIVED/NO_COVERAGE.
-`/tmp/awium-seven-hour-pass/definition-attempt-report.json`.
-
-### Адаптация callback остаётся в сборке условий
-
-PreservingCondition теперь получает готовое определение, как остальные семейства.
-Адаптация ConditionResult в AttemptResult перенесена из конструктора модели
-в ConditionSupport. Обычный preserving-callback использует общую сборку condition:
-убраны лишняя фабрика и повторная проверка того же callback при каждом ожидании.
-Для пользовательской фабрики сохраняются отдельное создание evaluator на ожидание
-и проверка её результата. Внутренняя фабричная перегрузка не принимает всегда
-пустой Reference. Новых public-методов, классов и полей нет.
-
-Архитектурная проверка запрещает зависимости Condition от конкретной попытки
-и AttemptResult. Все 409 public-деклараций совпадают. Полный check: 430 тестов
-без ошибок и пропусков. STRONGER ConditionSupport: 83 мутации, все KILLED.
-`/tmp/awium-seven-hour-pass/preserving-definition-report.json`.
-
-### Один сценарий независимых вложенных попыток
-
-В ConditionAwaitAttemptTest объединены два сценария независимых фабрик для
-optional/map. Сохраняются повторное использование определения, ленивое создание,
-два вызова проверки на ожидание и объявленный covariant тип MapValueCondition.
-Более строгий сценарий возвращает из callback другое значение и проверяет
-идентичность исходного выбранного объекта. Map выполняется через оба терминала.
-
-В AssertionAdapterTest удалены два частных повтора общей матрицы Throwable
-и фрагмент о null-результате: действующие проверки Observation/TryUntilFailure
-проверяют исходную причину и точное сообщение через настоящий API и композицию.
-Сохранена отдельная проверка исходного stack trace и одного вызова callback.
-Тестового кода стало на 48 строк меньше, новых помощников нет. Полный check:
-427 тестов без ошибок. STRONGER ConditionSupport/ConditionAwaitAttempt/Conditions:
-192 мутации, все KILLED. `/tmp/awium-seven-hour-pass/attempt-test-merge-report.json`.
-
-### Сценарии каталогов читаются через один источник
-
-Повторная сборка одинаковых scalar/optional await-цепочек в четырёх сценариях
-заменена локальной неизменяемой конфигурацией. Assertions показывают условия,
-не повторяя перед каждым настройки источника и часов. Убраны ненужные приведения
-Callable<String>/Callable<Integer> и одно OptionalSource<String>; typed source
-для проверки Parent/Child и Optional<Object> остаётся. Реальные platform/virtual
-сценарии тоже используют вывод типа lambda без приведения. В timedAwait источник
-передаётся непосредственно, без лишнего method-reference адаптера. Одиночная
-проверка interruptedSleep использует существующий AfterEach вместо дублирующего
-finally; очистка внутри циклов сохранена. Публичный код не менялся.
-Целевые 25 тестов и полный check (427 тестов) прошли без ошибок.
-`/tmp/awium-seven-hour-pass/scalar-fixtures-report.json`.
-
-### Общая boolean-матрица не дублирует точные контракты
-
-Из ObjectOptionalAndScalarConditionsTest убрана повторная object/optional матрица.
-Nullability, равенство, наличие optional, сохранение наблюдаемого значения,
-сужение и predicate retry уже проверяются выделенными поведенческими тестами
-через API и отдельные исходы. В тест равенства добавлены четыре явные проверки
-идентичности: равные разные String не являются одной ссылкой, отрицательное
-условие отклоняет ту же ссылку. Сохранены общие type-narrowing сценарии.
-
-Стали не нужны три вспомогательные перегрузки assertStatus/assertPreserving
-и их generic-параметры; новые помощники не добавлены. Проверка javac-symbols
-для 172 неаннотированных методов и полей тестов не нашла неиспользуемых helpers
-(учтены отражение по строковому имени и неявные accessor/equals у record).
-Целевые поведенческие тесты прошли. STRONGER Conditions/OptionalConditions/
-ConditionSupport/ConditionAwaitAttempt: 198 мутаций, все KILLED.
-`/tmp/awium-seven-hour-pass/object-matrix-report.json`.
-
-### Тесты декорации отвечают за декорацию
-
-В ConditionDecorationTest удалены три повторных сценария выполнения: fresh
-factory, последовательность preserving-условий и сохранение исходного объекта.
-Они покрыты более строгими ConditionAwaitAttempt, TimingConfiguration,
-PositiveFluentMatrix и DirectBecause сценариями, в том числе обоими терминалами,
-заменяющим результатом callback и повторным использованием одного await.
-Из файла ушли AtomicInteger, привязка к тестовому времени и пять импортов.
-Форматирование, eager validation, замена объяснения и неизменяемость остаются.
-
-В проверке делегирования убран посторонний parseLong: факт единственного вызова
-уже проверяется счётчиком. История попыток проверяет номера и фазы без лишней
-смены неиспользуемых значений источника; номера читаются существующим helper.
-Всего тестового кода стало на 53 строки меньше. Полный check: 423 теста без
-ошибок и пропусков. STRONGER Condition*, ValueAwait, SequenceExecution и
-OptionalConditions: 262 мутации, все KILLED.
-`/tmp/awium-seven-hour-pass/test-ownership-report.json`.
-
-### Изменение контейнера воспроизводится без лишнего потока
-
-ConcurrentSelectionTest переименован в ChangingContainerSelectionTest. Hooks
-изменяют контейнер в той же точке чтения, но clear выполняется непосредственно.
-Раньше каждый hook запускал virtual worker и немедленно join до продолжения
-чтения: расписание не было частью проверяемого поведения. Удалены общий
-removeConcurrently, его timeout/catch/interrupt и два импорта. Сохранены
-ConcurrentLinkedQueue/Deque, CopyOnWriteArrayList и ConcurrentHashMap, а также
-hooks старых size/isEmpty и текущих iterator/view чтений. ExpectedInputs
-использует тот же прямой контролируемый момент удаления.
-
-В изолированных классах восстановлены три старые ошибочные реализации:
-индекс через size/get, first/last через isEmpty/getFirst/getLast. Каждая
-отклонена новыми тестами без рабочих потоков. Реальные platform/virtual
-проверки отдельны и прошли вместе с целевыми сценариями. STRONGER
-CollectionConditions/MapConditions/ConditionSupport: 471 мутация без
-SURVIVED/NO_COVERAGE; точные KILLED/TIMED_OUT сохранены в отчёте.
-`/tmp/awium-seven-hour-pass/changing-containers-report.json`.
-
-### Ожидаемый текст стоит рядом с проверяемым условием
-
-BuiltInExpectationGrammarTest переименован в BuiltInConditionGrammarTest.
-Два позиционно синхронизируемых списка из 49 элементов заменены прямыми
-assertEquals: каждая строка находится рядом со своим condition. Обнаруженный
-повтор doesNotContain заменён проверкой готового набора doesNotContainAny.
-Новых таблиц, records и helpers нет. FactoryGrammar helper теперь называется
-assertNullRejected и явно описывает проверку валидации, а не null-значения.
-
-В AwaitResultTest удалён посторонний повтор валидации описания Condition:
-AssertionAdapter проверяет тот же контракт через публичную фабрику и порядок
-ошибок. TryUntil проверяет null-наблюдение одним локальным outcome, без
-повторного assertInstanceOf; из двух эквивалентных nullable predicates оставлен
-проверяющий сам null. Optional<String> выводится из обычной lambda.
-Полный check: 422 теста без ошибок и пропусков. Общий STRONGER по всему продукту
-завершён: 1 033 мутации обнаружены, без SURVIVED/NO_COVERAGE. Покрытие строк
-985/1000; точные статусы KILLED/TIMED_OUT сохранены в отдельном отчёте
-`/tmp/awium-seven-hour-pass/all-stronger-after-test-simplification-report.json`.
-`/tmp/awium-seven-hour-pass/test-assertion-pairs-report.json`.
-
-История завершённых проходов удалена из рабочего плана. Она содержала старые
-временные границы, прежние API и уже снятые запреты на документацию. Сохранены
-действующий план, применимые ограничения и результаты текущего прохода; подробная
-история доступна в Git. Срок этого прохода не менялся.
-
-### Снимки Map проверяются общим сценарием
-
-Два повторных сценария MapConditionsTest перенесены в существующую проверку
-ExpectedInputs. Список шести фабрик создаётся один раз и проходит два изменения:
-мутацию исходного entry/удаление null-ключа, затем полную очистку исходной карты.
-Проверяются исходное, изменённое и пустое наблюдения. Это сохраняет проверку
-защиты от vacuous containment после clear и распространяет её на все шесть
-фабрик вместо двух. Новых helpers и типов нет; убраны две лишние промежуточные
-копии свежих карт и 27 строк тестов. Целевые 26 тестов прошли. STRONGER MapConditions:
-181 мутация: 168 KILLED, 13 TIMED_OUT, без SURVIVED/NO_COVERAGE.
-`/tmp/awium-seven-hour-pass/map-snapshot-report.json`.
-
-### Тип источника выводится из возвращаемого контейнера
-
-Из пяти тестовых вызовов убраны лишние приведения CollectionSource/MapSource
-и Callable<String>. Возвращаемый объект уже задаёт нужный тип; явные marker
-переменные, nullable-источники и view-проверки не менялись. Выполняемый javap
--c -p вывод всех пяти затронутых классов побайтно совпал до/после: выбранные
-перегрузки и инструкции не изменились. У failIfCalled удалён неиспользуемый
-параметр типа T: helper принимает Object, как его единственный тип источника.
-Целевые 97 тестов прошли; повторный PIT не нужен для совпадающих инструкций.
-`/tmp/awium-seven-hour-pass/container-source-inference/report.json`.
-
-### Диагностическая фикстура не дублирует данные Condition
-
-Из DiagnosticsSnapshotTest удалена complete-обёртка с четырьмя аргументами
-и двумя generic-параметрами. Вместо повторной передачи description/explanation
-тесты вызывают Await.complete прямо. Оценённый результат содержит своё Condition;
-резервный CONDITION теперь намеренно отличается в содержательных snapshots.
-Это проверяет правильный источник метаданных. Только source failure с бизнес-
-объяснением явно передаёт нужное резервное Condition. Повторные строки и
-создание неиспользуемых определений убраны.
-
-У CountingAssertion удалено своё поле message: сообщение хранится в стандартном
-AssertionError, override считает чтения и вызывает super.getMessage(). Сохранены
-проверка единственного чтения и загрузка исключения без его enclosing class.
-Все 39 тестов DiagnosticsSnapshotTest прошли; ожидаемые сообщения не менялись.
-`/tmp/awium-seven-hour-pass/diagnostic-fixtures-report.json`.
-
-### Throwable проверяются через настоящие терминалы
-
-Source-матрица ObservationTest теперь вызывает оба терминала, проверяет reason
-и идентичность причины, сохранённые исход/тайминги и отсутствие специального
-установления interrupt flag. Все семь Throwable остаются в одном наборе.
-Два ручных unchecked/fatal исхода в диагностическом тесте больше не нужны.
-
-Проверки primary cause при ошибке диагностики объединены для Exception и Error.
-Анонимный toString-класс в массиве заменён существующей ThrowingValue-фикстурой:
-ещё одного отдельного тестового типа больше нет. Убраны 23 строки и две отдельные
-проверки при сохранении их сценариев. Полный check: 418 тестов без ошибок.
-STRONGER FailureDiagnostics/WaitCompletion*: 107 мутаций, все KILLED.
-`/tmp/awium-seven-hour-pass/diagnostic-throwable-report.json`.
-
-### Progress объясняет различие проверенного и активного этапа
-
-Javadoc публичного Progress определяет каждый компонент. После промежуточного
-успеха condition описывает следующий этап, а evaluatedStageNumber — только что
-проверенный; последний этап остаётся активным для persistence. Исполнение
-и публичные сигнатуры не менялись. В multiline snapshot удалены три повторных
-assertion про фрагменты, CR и пробелы: полное сравнение с ожидаемым сообщением
-уже проверяет все эти свойства. Сохранены отдельные проверки identity, числа
-callback-вызовов и suppressed: текст сам по себе их не гарантирует.
-Все 37 диагностических тестов и генерация Javadoc прошли.
-`/tmp/awium-seven-hour-pass/progress-doc-and-snapshot-report.json`.
-
-### Очистка interrupt flag проверяется в сквозном сценарии
-
-Исправлена неточность теста thrownConditionFailureRetainsInterruptFlagAfterDiagnosticsClearIt:
-его прежний getMessage не снимал флаг, несмотря на название проверки. Соседний
-ручной waiting-исход объединён с ним: единственный cause.getMessage проверяет
-и снимает установленный callback флаг; настоящий await должен вернуть исходную
-причину и восстановленный флаг. Явное приведение Callable для Object::new
-убрано, finally очищает состояние после теста. Удалены одна отдельная проверка
-и 17 строк при более сильном сквозном сценарии. Диагностика, checked callbacks
-и Observation прошли совместно.
-`/tmp/awium-seven-hour-pass/diagnostic-interruption-report.json`.
-
-В FailureTaxonomy cleanup теперь проверяет возвращённый Thread.interrupted(),
-а не молча стирает его. Во всех шести синтетических категориях пользовательские
-рендереры не меняют флаг, поэтому неожиданное изменение состояния диагностикой
-становится видимым. Пять тестов класса прошли; очистка сохранена.
-`/tmp/awium-seven-hour-pass/diagnostic-category-flag.log`.
-
-### Разные запуски последовательности должны захватывать новые значения
-
-Доказан дефект двух прежних тестов reuse: они использовали тот же CREATED-объект
-в повторных запусках. Намеренно общий SequenceExecution с переносом захваченных
-значений проходил оба теста. Они объединены в один сценарий четырёх запусков:
-два успеха с разными CREATED-значениями, тайм-аут, затем новый успех. Новая
-проверка отклоняет общий state и отдельный вариант переноса только после timeout.
-Продуктовый код не менялся; неисправные реализации находятся только в /tmp.
-
-Приватная проверка defensive stage array удалена в пользу публичного сценария:
-source меняет оба элемента исходного массива до первого probe. Оба терминала,
-пустой и одноэлементный массивы остаются проверены с конкретными List<Integer>.
-Отдельный контроль с живым Arrays.asList вместо снимка отклонён новым тестом.
-Стало на 22 строки, два метода тестов и одну unchecked suppression меньше.
-Полный check: 415 тестов без ошибок и пропусков.
-`/tmp/awium-seven-hour-pass/captured-fixtures-report.json`; исходники и логи
-контролей — `/tmp/awium-seven-hour-pass/sequence-reuse-regression-control`.
-
-### Отрицательные примеры без лишнего окружения
-
-NestedSelectionCompilationContractTest собирает единственную фикстуру прямо
-рядом с четырьмя примерами: одноразовая assertRejected-обёртка удалена. Убраны
-неиспользуемые map() и import singleEntry. В OrderedWait удалены три неиспользуемых
-импорта фикстуры. Все несовместимые выражения сохранены; общая проверка кодов
-диагностики остаётся. Девять тестов обоих классов прошли.
-`/tmp/awium-seven-hour-pass/negative-fixture-cleanup-report.json`.
-
-### Размер ожидаемого контейнера не является снимком контейнера
-
-Удалены sizeKeepsTheExpectedSizeFromConstruction и explicitSizeReadsTheExpectedContainerOnlyDuringConstruction.
-Оба передают только int от container.size(); библиотека не получает ссылку
-на ожидаемый контейнер и не может повторно его читать. Мутация/счётчики этих
-фикстур проверяли Java-вычисление аргумента. Реальные связи size с наблюдаемым
-контейнером, единственность чтения, границы и исключения остаются в size-тестах.
-Убраны 26 строк, два теста и неиспользуемый import await. Четыре затронутых
-тестовых класса прошли. `/tmp/awium-seven-hour-pass/primitive-size-fixtures-report.json`.
-
-### Map-сценарий различает null и пропущенный массив-ключ
-
-В MapSelectionConditionsTest один await переиспользуется в двух сценариях
-вместо повторного построения одинаковой цепочки. Повторный singleEntry ради
-getValue убран: поле проверяется у уже типизированной выбранной записи.
-Удалены два ненужных source-приведения.
-
-Существующий null/missing-key сценарий использует два разных равных String[]
-ключа и конкретный String результат после because. Временная подмена deepEquals
-на обычный Objects.equals проходила пять прежних lookup-сценариев; усиленный
-тест её отклоняет. Публичных и внутренних продуктовых изменений нет. Новые
-тесты, типы и helpers не добавлены. 25 целевых тестов и отдельно все семь
-после явного String результата прошли.
-`/tmp/awium-seven-hour-pass/map-lookup-regression-control/report.json`.
-
-### Явные типы удалены только при неизменном выводе типов
-
-Семь из 50 generic-witnesses в тестах убраны после сравнения javac-типов
-переменных, lambda-параметров, результатов, выбранных методов и method references.
-43 оставлены. В частности, Map `<String, Integer>` сохранены: без них
-внутренний evaluate расширяет тип ключа до Object, хотя код компилируется.
-Полный check: 413 тестов, без ошибок и пропусков.
-`/tmp/awium-seven-hour-pass/redundant-test-witnesses-report.json`.
-
-### Контейнерные фикстуры принимают готовые настройки
-
-AwaitTestAccess создаёт все четыре семейства ожидания с готовым WaitConfiguration.
-Для Await его двухаргументный конструктор стал package-private, как у ValueAwait;
-публичные 409 деклараций совпадают. Удалены configured, три generic-оси helper
-и три source::call адаптера. Проверки fluent-настройки остаются в публичных
-сценариях. Null-time тест использует одну source и одно исходное ожидание.
-Полный check: 413 тестов без ошибок и пропусков.
-`/tmp/awium-seven-hour-pass/container-fixture-config-report.json`.
-
-### Паритет терминалов без двух копий каждого сценария
-
-TryUntilFailureTest принимает setup ожидания и factory условия. Оба терминала
-запускаются с отдельными FakeTime и свежим Condition; finally по-прежнему
-очищает interrupt между вызовами. AST подтвердил одинаковые setup/condition
-у 18 прежних пар; before-source interruption перенесён отдельно. Убраны
-восемь одноразовых методов, 48 строк, Consumer import. Все 11 тестов класса
-прошли; STRONGER ValueAwait/WaitEngine/ConditionAwaitAttempt/WaitCompletion*:
-148 мутаций, все KILLED, без NO_COVERAGE.
-`/tmp/awium-seven-hour-pass/terminal-parity-report.json`.
-
-### История проверяется целиком, включая середину
-
-TryUntilHistoryTest сравнивает все номера удержанных попыток с первым и
-последними 255 номерами. Размер и края отдельно больше не проверяются:
-они входят в сравнение списка. Сохранены totalAttempts и неизменяемость.
-Временная подмена, дублирующая среднюю запись при заполнении лимита,
-проходила прежний тест; новый её отклоняет. Продуктовый код не менялся.
-Проверка отсутствия вызовов пользовательских equals/hashCode/toString
-объединена с сохранением всех acquisition/persistence попыток. Убраны
-12 строк и один тест. Полный check: 412 тестов без ошибок и пропусков.
-`/tmp/awium-seven-hour-pass/history-content-regression-control/report.json`.
-
-### Общие thread-контракты проверяются для обоих видов потоков
-
-RealTimeIntegrationTest и VirtualThreadIntegrationTest объединены в
-ThreadIntegrationTest. Два одинаковых контракта — выполнение callback на
-вызывающем потоке и внешнее прерывание во время park — получают platform и
-virtual ThreadFactory из одного MethodSource. Сценарий одновременного reuse
-двумя virtual callers сохранён. Полный callback trace сравнивается с шестью
-вызовами вместо allMatch; прерывание и join выполняются в finally даже при
-ошибке ожидания TIMED_WAITING. Новых внутренних типов нет; стало на один
-тестовый класс меньше. Пять тестов прошли, PIT исключает единый новый класс.
-`/tmp/awium-seven-hour-pass/thread-integration-report.json`.
-
-### Проверка любого совпадения находится в ValueMatching
-
-Шесть вложенных обходов в CollectionConditions и MapConditions используют
-один внутренний containsAny рядом с containsAll. Порядок actual/expected,
-направление deepEquals, short-circuit и пользовательские исключения сохранены.
-Новых типов нет; появился один helper, общий код вырос на две строки,
-но вложенные comparator-lambda больше не дублируются в шести фабриках.
-409 публичных деклараций совпадают. Полный check: 414 тестов без ошибок
-и пропусков. STRONGER трёх изменённых классов: {'KILLED': 393, 'TIMED_OUT': 18}; недетектированных нет.
-Дополнительный javac-поиск не выявил неиспользуемых внутренних членов среди
-283 проверенных; удалений по этому поиску нет.
-`/tmp/awium-seven-hour-pass/any-matching-report.json`.
-
-### Проверка immutability применяется к тем же экземплярам после because
-
-ConditionDecorationTest строит replacements из исходного списка Conditions,
-а не повторяет фабрики. Проверки исходных custom/isNotNull/comparison перенесены
-после because. Временный ComparisonCondition, меняющий свою definition,
-проходил прежний тест; новый его отклоняет с ожидаемым null против old.
-Тестов, helper и assertion не добавлено, три строки убраны. Продукт не менялся.
-ConditionDecorationTest и DirectBecauseTest прошли.
-`/tmp/awium-seven-hour-pass/decoration-immutability-control/report.json`.
-
-### Тип результата проверяется один раз
-
-В трёх assertPair убраны сравнение классов и их неравенство: result уже
-требует Satisfied, а mismatch — Unsatisfied; это final records. Проверки
-identity и непустого mismatch сохранены, assertAll сохраняет имя сценария.
-Size-сценарии используют тот же result без промежуточной переменной.
-Повторная проверка непустых описаний и двух single-строк убрана: точные
-описания проверяет BuiltInConditionGrammarTest, непустоту — Condition.
-Пустой exact Map включён в существующую таблицу вместе с отрицательной
-формой. Дублирующий метод удалён. Убраны 27 строк и один тест;
-53 целевых проверок прошли без ошибок.
-`/tmp/awium-seven-hour-pass/paired-result-assertions-report.json`.
-
-### Архитектурный guard охватывает оба fluent-фасада
-
-ArtifactContractIT включает ValueAwait рядом с Await в запрещённых зависимостях
-исполнения и диагностики. Прежний набор пропускал этот публичный фасад.
-Одноэлементный цикл ConditionResult заменён прямой проверкой, из отрицательной
-фикстуры удалён неиспользуемый Callable import. 5 тестов JAR, JPMS и границ
-доступа прошли. `/tmp/awium-seven-hour-pass/complete-facade-dependencies-report.json`.
-
-### Фикстуры содержат только данные проверяемого сценария
-
-Локальный Payment в DirectBecauseTest хранит только используемый id.
-Поле paid в NestedSelection и detail в CapturedCondition сохранены: они
-участвуют в проверках. Убраны лишний wildcard cast в failed helper и
-неиспользуемый assertThrows import. Полный check: 413 тестов без ошибок
-и пропусков. `/tmp/awium-seven-hour-pass/incidental-fixtures-report.json`.
-
-### Прямые getters и единый способ выбросить тестовый Throwable
-
-Из ConditionTestRuntime удалены description/explanation для самого Condition:
-они повторяли его публичные getters. Семь вызовов заменены через javac AST;
-семейства сохраняют узкие helpers без новых зависимостей их тестов от definition.
-ContainerInterruptionTest использует общий throwUnchecked вместо ветки
-Error/RuntimeException и cast. Два метода, одна ветка и восемь строк убраны.
-Пять классов с metadata и шесть container interruption тестов прошли.
-`/tmp/awium-seven-hour-pass/test-primitives-report.json`.
-
-### Диагностические записи принимают готовый ConditionResult
-
-satisfiedAttempt, unsatisfiedAttempt и assertionUnsatisfiedAttempt объединены
-в evaluatedAttempt. В 12 местах явно передаётся satisfied либо unsatisfied
-с нужной причиной; helper только собирает общую запись с timing и condition.
-Убраны два метода и две generic-оси. У status удалены необязательный importance,
-ветка null и промежуточная переменная: pending/completed вызывают because сами.
-Новых типов нет, стало на 17 строк меньше. Все 36 диагностических тестов
-прошли с прежними сообщениями и проверками identity/числа callback-вызовов.
-`/tmp/awium-seven-hour-pass/diagnostic-attempt-fixtures-report.json`.
-
-### Однопоточные nested-фикстуры без AtomicInteger
-
-В NestedSelectionTest удалены пять AtomicInteger. Два источника используют
-заданные неизменяемые наблюдения и локальные итераторы вместо switch/ternary
-по счётчику; проверяется исчерпание наблюдений. Три счётчика callback/factory
-остаются локальными int[]. Checked callback бросает cause напрямую без
-ветки Error/Exception. Неиспользуемое имя результата assertInstanceOf удалено,
-сам assertion сохранён. 6 nested-тестов прошли, перед этим прошёл
-совместный запуск с ThreadIntegrationTest. AtomicInteger в реальном
-concurrent reuse сохранён. Стало на четыре строки меньше, новых типов нет.
-`/tmp/awium-seven-hour-pass/nested-observation-fixtures-report.json`.
-
-README описывает общие caller/cancellation проверки для platform и virtual
-threads и concurrent reuse. Текст синхронизирован с ThreadIntegrationTest;
-повторный запуск кода ради этого абзаца не нужен. Javac-поиск проверил 1701
-инициализированную локальную переменную продукта и тестов: новых
-неиспользуемых имён не обнаружено.
-`/tmp/awium-seven-hour-pass/unused-local-values-report.json`.
-
-### Доказанный дефект: ошибка извлечения Map теряла ожидаемый ключ
-
-Публичный valueFor(key, nested) при исключении из Map.Entry.getValue
-сохранял исходную причину, но показывал внешнее nested-условие без ключа.
-Новый сквозной тест упал на прежнем коде: Expected: customerId отсутствовал.
-Compose теперь присваивает Uncontrolled условие извлечения, как уже делал
-для extraction mismatch. Все Throwable проходят одинаковый catch; категория,
-идентичность причины и фактический interrupt flag не меняются. Новых типов нет.
-
-Проверены IllegalStateException, AssertionError и Throwable, оба терминала,
-ленивость nested factory и захваченная последовательность с нулём пройденных
-этапов. Ключ сохраняется в progress.condition; because сохраняется в сообщении.
-README уточняет правило. Полный check: 414 тестов без ошибок и пропусков;
-после дополнительных progress-assertion прошли все пять composition-тестов.
-STRONGER ConditionSupport/ConditionAwaitAttempt/SequenceExecution: 119 KILLED,
-без SURVIVED/NO_COVERAGE. Все 409 публичных деклараций совпадают.
-`/tmp/awium-seven-hour-pass/extraction-failure-context-report.json`.
-
-### Один конструктор полного состояния у каждого fluent-класса
-
-Одноаргументные Await/ValueAwait только делегировали с DEFAULT и удалены.
-Шесть await-фабрик выбирают DEFAULT явно; общий ValueAwait-конструктор
-проверяет source. Переконфигурация и тестовые входы используют тот же путь.
-Убраны два конструктора и восемь продуктовых строк без новых типов.
-Javap подтверждает по одному полному конструктору; публичные 409 деклараций
-совпадают. Полный check: 414 тестов без ошибок и пропусков.
-`/tmp/awium-seven-hour-pass/fluent-constructor-report.json`.
-
-### Отрицательные membership-контракты без лишнего произведения комбинаций
-
-Все 11 фабрик проверяются с until и tryUntil. Две перегрузки because проверяются
-на Collection и SequencedCollection — двух формах возвращаемого subject-типа.
-Вместо 11 × 3 × 2 осталось (11 + 4) × 2: 30 независимых компиляций вместо 66.
-Один вложенный цикл удалён без новых helpers, классов, кешей и общих ресурсов.
-Ограничения каждой операции и оба терминала сохранены; декорирование проверяет
-общий PreservingCondition, а не каждую копию той же декларации.
-
-Прежняя и новая версии обнаруживают два временных дефекта: because возвращает
-PreservingCondition<Object>, containsOnly теряет ограничение элемента. Фикстуры
-и логи находятся только в /tmp. Все 34 тестов четырёх классов отрицательных
-контрактов прошли. Подсчёт задач точный; ускорение по одному прогону не заявляется.
-`/tmp/awium-seven-hour-pass/negative-membership-sampling/report.json`.
-
-### Отрицательные сравнения проверяют общий because один раз на форму
-
-Шесть ComparisonCondition-фабрик и оба терминала сохранены. К ним добавлены
-два декорированных equalTo: plain и format because. Вместо 24 компиляций
-получилось 16, один цикл убран, новых helpers и типов нет. Форматный because
-теперь явно входит в эту String-source группу. Временная декларация because
-со свободным <BASE> позволяла недопустимое сравнение; обе версии теста её
-обнаруживают. Полный check: 414 тестов без ошибок и пропусков.
-Вместе с membership убраны 44 повторные компиляции без общего кеша.
-`/tmp/awium-seven-hour-pass/negative-comparison-sampling/report.json`.
-
-### Строки граничных проверок содержат операцию вместе с её границей
-
-В двух ContainerInterruptionTest таблицах 17 исходных пар объединены в строки
-BoundaryCase. Убраны два отдельных списка границ, два индексных цикла и локальные
-wait-алиасы. Связь больше не зависит от одинакового порядка двух списков.
-Добавлен один приватный record с двумя нужными полями; логики в нём нет.
-Итог на одну строку короче. AST-перенос сохраняет каждую исходную пару;
-все шесть методов прошли отдельно и через Gradle.
-`/tmp/awium-seven-hour-pass/paired-boundary-cases/report.json`.
-
-Полный STRONGER текущего продукта перед этим переносом фикстур: 1016 обнаруженных
-мутаций — 999 KILLED, 17 TIMED_OUT, 0 SURVIVED/NO_COVERAGE. Покрытие строк 981/996.
-`/tmp/awium-seven-hour-pass/current-all-stronger-report.json`.
+## Результат текущего прохода
+
+Работа продолжается до указанной границы. Изменения коммитятся локально в main;
+push не выполнялся. Подробная хронология есть в Git и сохранённом отчёте
+`/tmp/awium-seven-hour-pass/DESIGN-progress-before-consolidation.md`.
+
+### Продукт и API
+
+- У семи bulk membership-операций удалены дублирующие varargs-перегрузки:
+  doesNotContainAll, containsAny, containsExactly, doesNotContainExactly,
+  containsExactlyInAnyOrder, doesNotContainExactlyInAnyOrder, containsOnly.
+  Единственный вход — Collection. Например, containsAny(a, b) заменяется
+  на containsAny(List.of(a, b)). Шесть prefix/sequence varargs-операций сохранены.
+  README, рабочие вызовы и несовместимые примеры мигрированы. Коммит ef4332d.
+- CheckedFunction, CheckedConsumer и внутренний AwaitAttempt допускают Throwable.
+  Method references с throws Throwable передаются без адаптера. Callable остаётся
+  стандартным входом источников и фабрик. Коммит 029403e.
+- Condition хранит определение и собственные метаданные; создание и адаптация
+  исполняемых попыток принадлежат ConditionAwaitAttempt. Удалены шесть методов
+  создания/делегирования из модели и зависимость Condition от AttemptResult.
+  Preserving-определения используют общую сборку. Коммиты 4c47cc0, 3287a19.
+- Упрощены extraction switch и хранение единственного совпадения.
+  Шесть копий вложенного поиска совпадения используют общий ValueMatching.containsAny.
+  Сохраняются actual-first deepEquals, порядок обхода, short-circuit и причины ошибок.
+  Коммиты 7d1a96e, 94d11ae.
+- Await и ValueAwait имеют по одному конструктору полного состояния. Фабрики
+  выбирают DEFAULT, общий конструктор проверяет source. Удалены два конструктора.
+  Переконфигурация и тестовые входы используют тот же путь. Коммит 61dcf65.
+
+### Доказанный продуктовый дефект
+
+valueFor(key, nested) при исключении из Map.Entry.getValue сохранял cause,
+но терял ожидаемый ключ. Новый сквозной тест упал на прежнем коде.
+Compose теперь возвращает Uncontrolled с условием извлечения. Категория,
+идентичность cause, because и фактический interrupt flag сохраняются;
+nested factory не запускается. Ключ остаётся и в progress захваченной
+последовательности с нулём пройденных этапов. Проверены IllegalStateException,
+AssertionError и Throwable, оба терминала. Коммит 594a9be.
+
+Отчёт: extraction-failure-context-report.json; воспроизведение до исправления —
+extraction-failure-context-before.xml. Файлы находятся в общем каталоге /tmp выше.
+
+### Тесты: меньше повторения, более точные проверки
+
+- Положительная типизация проверяется обычным использованием fluent API.
+  CompilationSupport обслуживает отрицательные контракты через assertRejected
+  и принимает только ожидаемые коды ошибок типов. Корректный код, опечатки,
+  синтаксические ошибки и отсутствующие импорты не засчитываются как успех.
+- В membership-матрице сохранены все 11 фабрик и оба терминала. Две формы because
+  проверяют общий PreservingCondition на Collection и SequencedCollection.
+  66 компиляций сокращены до 30. В сравнениях сохранены шесть фабрик и оба терминала;
+  plain/format because проверяются на представителе: 24 компиляции сокращены до 16.
+  Старые и новые проверки обнаруживают временные прототипы с потерей ограничения
+  элемента, PreservingCondition<Object> и свободным generic-параметром because.
+  Новых helpers, кешей и типов для этого нет. Коммиты 314c28d, 62d249e.
+- Терминальный паритет задаёт setup и factory один раз, затем запускает until
+  и tryUntil с отдельными часами и свежим Condition. Восемь одноразовых методов
+  удалены. Контролируемые mismatch и выброшенные Throwable остаются различимы.
+  Коммит 661491b.
+- История проверяет весь удержанный список номеров, включая середину. Новый
+  тест отклоняет дубликат средней записи, который проходил прежние проверки краёв.
+  Проверки immutable list и totalAttempts сохранены. Коммит a985f72.
+- Reuse последовательности использует разные CREATED-значения после успеха
+  и timeout. Прежние тесты пропускали общий SequenceExecution с устаревшим capture;
+  новые отклоняют перенос состояния. Массив этапов меняется до первого probe,
+  что проверяет защитный снимок через публичный API. Коммит efe498c.
+- Проверка because декорирует те же исходные экземпляры и читает их после
+  вызова. Прежний тест пропускал изменение definition ComparisonCondition;
+  исправленный его обнаруживает. Коммит 1662049.
+- Map lookup проверяет разные равные массивы-ключи с конкретным String-результатом.
+  Временный Objects.equals проходил прежние примеры; новый тест его отклоняет.
+  Коммит 65d4e35.
+- Проверка очистки interrupt flag действительно снимает его в getMessage
+  и требует восстановленный флаг после настоящего ожидания. Коммит 647c501.
+- Изменение контейнера воспроизводится прямо в нужном getter/iterator hook,
+  без запуска потока с немедленным join. Настоящие thread-контракты собраны
+  в ThreadIntegrationTest: caller и cancellation проверяются на platform и virtual
+  threads, concurrent reuse проверяется отдельно. Коммиты c147b1d, 2b59d0c.
+- Две таблицы прерываний хранят 17 пар «граница + операция» в BoundaryCase.
+  Убраны два списка границ и два индексных цикла. Один приватный record имеет
+  два нужных поля без дополнительной логики. Коммит 597564d.
+- Убраны повторные status/assertion-проверки, которые уже выполняют result/mismatch;
+  assertAll сохраняет имена сценариев. Тексты условий проверяет grammar suite.
+  Size-тесты больше не проверяют Java-вычисление примитивного аргумента.
+- Снимки Map проверяются до и после setValue, удаления null-ключа и clear.
+  Фикстуры сохраняют identity, порядок и дубликаты без user hashing/equality.
+- Удалены корневые metadata getter-алиасы; семь вызовов используют getters Condition.
+  Три фабрики диагностических записей заменены одной с явным ConditionResult.
+  status не имеет необязательного параметра explanation: because вызывается снаружи.
+- Пять однопоточных AtomicInteger удалены. Заданные наблюдения представлены
+  неизменяемыми списками с локальными итераторами; callback-счётчики — локальными int[].
+  Настоящий concurrent AtomicInteger сохранён. Проверки типа Throwable не нужны:
+  checked callbacks бросают cause напрямую, getters используют общий throwUnchecked.
+- Семь generic-witnesses удалены только после сравнения javac-типов переменных,
+  lambda-параметров, результатов и выбранных методов. 43 оставлены. В частности,
+  Map String,Integer сохранены: без них внутренний helper расширяет ключ до Object.
+- Контейнерные и скалярные тестовые входы принимают готовый WaitConfiguration.
+  Удалены configured wrapper, три generic-оси и source::call адаптеры.
+- Архитектурные guards учитывают ValueAwait рядом с Await. Проверены JAR, JPMS,
+  доступ к внутренним типам и независимость ядра от fluent/каталогов/диагностики.
+
+Инъекционные прототипы выше существовали только в /tmp: перечисленные пробелы
+в тестах не означают, что в продукте присутствовали соответствующие дефекты.
+
+### Проверки и ограничения доказательств
+
+- Последний завершённый полный check: 414 тестов, без ошибок и пропусков.
+- Публичные декларации после согласованных изменений API сверяются со снимком
+  из 409 деклараций. Позднейшие внутренние упрощения его не меняли.
+- Независимый model-check композиции: 15 728 640 вариантов, 40 371 120 probes,
+  hash 981d57bed93f2d0b. Проверка bulk API: 103 099 исходов без расхождений.
+- Scoped STRONGER: core attempts/composition — 119 KILLED; matching/catalogs —
+  411 обнаруженных; terminal parity — 148 KILLED. Отчёты сохраняют точные статусы.
+- Последний полный STRONGER после перевода четырёх fluent-сценариев и двух
+  callback-сценариев на FakeTime: 1016 KILLED, без TIMED_OUT, SURVIVED и NO_COVERAGE.
+  Покрытие строк 981/996. До перевода было 999 KILLED и 17 TIMED_OUT, промежуточно —
+  1013 KILLED и 3 TIMED_OUT. Assertions и продукт не менялись.
+  Последний замер занял 6m13s против 7m47s; устойчивое ускорение не заявляется.
+- README-примеры проверены после миграции bulk API, Javadoc собирался успешно.
+  Повторять их только из-за изменения этого отчёта не требуется.
+- Javac-поиск проверил 283 внутренних члена и 1701 локальную переменную;
+  новых кандидатов на удаление не обнаружил. Это не доказательство отсутствия
+  всех возможных упрощений.
+
+Артефакты: all-virtual-time-stronger-report.json, virtual-time-all-stronger-report.json,
+negative-membership-sampling/report.json, negative-comparison-sampling/report.json,
+extraction-failure-context-report.json и прочие отчёты общего каталога /tmp.
+В Git остаются законченные изменения и исполняемые проверки.
+
+### Отклонённые варианты
+
+- Общий file manager javac не показал устойчивой выгоды в сравнительном запуске.
+  Статический compiler cache, новое управление ресурсами и batch API не добавлены.
+- Callable<? extends VALUE> у скалярной await-фабрики не устраняет capture
+  в нужной comparison.because цепочке. source::call тоже сохраняет capture.
+  API не менялся; новые обёртки и оси типов ради этого прототипа не добавлены.
+- Полное удаление семейных metadata helpers разнесло бы зависимость от definition
+  по тестам. Удалены только корневые алиасы, повторявшие публичные getters.
+
+### Текущий следующий шаг
+
+Полный check после шести FakeTime-фикстур прошёл: 414 тестов. Полный STRONGER
+подтвердил исчезновение всех 17 прежних тайм-аутов: 1016 KILLED. Следующий шаг —
+проверить подготовленное удаление повторных тестовых сценариев и одноразовой
+Optional-обёртки, затем продолжить поиск до установленной границы. Финальный check
+и чистое дерево обязательны; уже успешные проверки без причины не повторять.

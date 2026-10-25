@@ -145,8 +145,9 @@ class DirectBecauseTest {
 
     @Test
     void explainedMapQuantifiersPreserveBothTypeArgumentsAndTheConcreteMap() {
+        var time = new FakeTime(0);
         var actual = new LinkedHashMap<>(Map.of(" ", "\t"));
-        var waiting = await(() -> actual);
+        var waiting = await(() -> actual).usingTime(time, time);
 
         List<LinkedHashMap<String, String>> results = List.of(
                 waiting.until(allKeys(String::isBlank).because("blank keys")),
@@ -161,8 +162,9 @@ class DirectBecauseTest {
 
     @Test
     void explainedEntryQuantifiersAcceptPredicatesForSupertypes() {
+        var time = new FakeTime(0);
         var actual = new LinkedHashMap<>(Map.of("key", 1));
-        var waiting = await(() -> actual);
+        var waiting = await(() -> actual).usingTime(time, time);
         BiPredicate<CharSequence, Number> valid = (key, value) -> !key.isEmpty() && value.intValue() > 0;
 
         List<LinkedHashMap<String, Integer>> results = List.of(
@@ -175,8 +177,9 @@ class DirectBecauseTest {
 
     @Test
     void explainedCollectionQuantifiersAcceptPredicatesForSupertypes() {
+        var time = new FakeTime(0);
         var actual = new ArrayList<>(List.of(""));
-        var waiting = await(() -> actual);
+        var waiting = await(() -> actual).usingTime(time, time);
 
         List<ArrayList<String>> results = List.of(
                 waiting.until(all(CharSequence::isEmpty).because("empty elements")),
@@ -230,6 +233,7 @@ class DirectBecauseTest {
 
     @Test
     void standaloneSortingAndEntryConditionsDoNotNeedSourceTypeHints() {
+        var time = new FakeTime(0);
         record Receipt(String key, Integer value) implements Map.Entry<String, Integer> {
             @Override public String getKey() { return key; }
             @Override public Integer getValue() { return value; }
@@ -242,9 +246,9 @@ class DirectBecauseTest {
         var numbers = new ArrayList<>(List.of(1, 2));
         var words = new ArrayList<>(List.of("a", "b"));
 
-        Receipt result = await(() -> actual).until(receipt.because("required receipt"));
-        ArrayList<Integer> sortedNumbers = await(() -> numbers).until(ordered.because("ordered numbers"));
-        ArrayList<String> sortedWords = await(() -> words).until(sorted(String::compareTo).because("natural order"));
+        Receipt result = await(() -> actual).usingTime(time, time).until(receipt.because("required receipt"));
+        ArrayList<Integer> sortedNumbers = await(() -> numbers).usingTime(time, time).until(ordered.because("ordered numbers"));
+        ArrayList<String> sortedWords = await(() -> words).usingTime(time, time).until(sorted(String::compareTo).because("natural order"));
 
         assertSame(entry, result);
         assertSame(numbers, sortedNumbers);
