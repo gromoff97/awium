@@ -26,12 +26,12 @@ public final class OptionalConditions {
 
     public static <VALUE> SelectedCondition<Optional<? extends VALUE>> hasValue(PreservingCondition<? super VALUE> nested) {
         return new SelectedCondition<>(compose("optional value: ", required(nested).definition, null, OptionalConditions::present,
-                () -> ConditionAwaitAttempt.preserving(nested.definition)));
+                () -> ConditionAwaitAttempt.bind(nested.definition)));
     }
 
     public static <EXPECTED> SelectedCondition<Optional<? super EXPECTED>> hasValue(ComparisonCondition<EXPECTED> nested) {
         return new SelectedCondition<>(compose("optional value: ", required(nested).definition, null, OptionalConditions::present,
-                () -> ConditionAwaitAttempt.preserving(nested.definition)));
+                () -> ConditionAwaitAttempt.bind(nested.definition)));
     }
 
     private static <VALUE> ConditionResult<VALUE> present(Optional<? extends VALUE> actual) {

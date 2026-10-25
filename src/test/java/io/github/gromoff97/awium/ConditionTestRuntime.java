@@ -20,7 +20,7 @@ final class ConditionTestRuntime {
     }
 
     static <S> ConditionResult<? extends S> evaluate(PreservingCondition<? super S> condition, S actual) {
-        return evaluated(ConditionAwaitAttempt.<S>preserving(condition.definition).probe(actual));
+        return evaluated(ConditionAwaitAttempt.<S, S>bind(condition.definition).probe(actual));
     }
 
     static <S> ConditionResult<?> evaluate(
@@ -52,7 +52,7 @@ final class ConditionTestRuntime {
     }
 
     static <S> ConditionResult<? extends S> evaluate(ComparisonCondition<? extends S> condition, S actual) {
-        return evaluated(ConditionAwaitAttempt.<S>preserving(condition.definition).probe(actual));
+        return evaluated(ConditionAwaitAttempt.<S, S>bind(condition.definition).probe(actual));
     }
 
     static String description(ComparisonCondition<?> condition) {

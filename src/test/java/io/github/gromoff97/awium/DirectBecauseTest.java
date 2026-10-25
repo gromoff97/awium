@@ -59,10 +59,11 @@ class DirectBecauseTest {
 
     @Test
     void typedNullableOperandsKeepTheirTypesAfterBecause() {
+        var time = new FakeTime(0);
         String missing = null;
-        var value = await(() -> missing).until(equalTo(missing).because("missing value"));
+        var value = await(() -> missing).usingTime(time, time).until(equalTo(missing).because("missing value"));
         var actual = java.util.Collections.singletonMap(missing, "ready");
-        var selected = await(() -> actual).until(valueFor(missing).because("nullable key"));
+        var selected = await(() -> actual).usingTime(time, time).until(valueFor(missing).because("nullable key"));
 
         String nullableResult = value;
         assertNull(nullableResult);
@@ -134,11 +135,12 @@ class DirectBecauseTest {
 
     @Test
     void explainedConditionsNarrowNestedValues() {
+        var time = new FakeTime(0);
         Number actual = 1;
-        Integer direct = await(() -> actual).until(instanceOf(Integer.class).because("integer"));
-        Integer optional = await(() -> Optional.of(actual)).until(hasValue(instanceOf(Integer.class)).because("integer"));
-        Integer element = await(() -> List.of(actual)).until(single(instanceOf(Integer.class)).because("integer"));
-        Integer mapped = await(() -> Map.of("key", actual)).until(valueFor("key", instanceOf(Integer.class)).because("integer"));
+        Integer direct = await(() -> actual).usingTime(time, time).until(instanceOf(Integer.class).because("integer"));
+        Integer optional = await(() -> Optional.of(actual)).usingTime(time, time).until(hasValue(instanceOf(Integer.class)).because("integer"));
+        Integer element = await(() -> List.of(actual)).usingTime(time, time).until(single(instanceOf(Integer.class)).because("integer"));
+        Integer mapped = await(() -> Map.of("key", actual)).usingTime(time, time).until(valueFor("key", instanceOf(Integer.class)).because("integer"));
 
         assertEquals(List.of(1, 1, 1, 1), List.of(direct, optional, element, mapped));
     }
@@ -196,14 +198,14 @@ class DirectBecauseTest {
         var check = condition("identity", ConditionResult::satisfied);
         var time = new FakeTime(0);
 
-        var payment = await(() -> actual).until(condition("inline", value -> ConditionResult.satisfied(value)).because("required"));
-        var created = await(() -> actual).until(condition("factory", () -> ConditionResult::satisfied).because("required"));
-        var selected = await(() -> List.of(actual)).until(single(check.because("inner")).because("outer"));
-        var optional = await(() -> Optional.of(actual)).until(hasValue(check).because("optional"));
-        var mapped = await(() -> Map.of("key", actual)).until(valueFor("key", check).because("mapped"));
+        var payment = await(() -> actual).usingTime(time, time).until(condition("inline", value -> ConditionResult.satisfied(value)).because("required"));
+        var created = await(() -> actual).usingTime(time, time).until(condition("factory", () -> ConditionResult::satisfied).because("required"));
+        var selected = await(() -> List.of(actual)).usingTime(time, time).until(single(check.because("inner")).because("outer"));
+        var optional = await(() -> Optional.of(actual)).usingTime(time, time).until(hasValue(check).because("optional"));
+        var mapped = await(() -> Map.of("key", actual)).usingTime(time, time).until(valueFor("key", check).because("mapped"));
         var sequence = await(() -> actual).usingTime(time, time)
                 .until(check.because("first"), condition("second", ConditionResult::satisfied).because("second"));
-        var diagnostic = await(() -> actual).tryUntil(check.because("diagnostic"));
+        var diagnostic = await(() -> actual).usingTime(time, time).tryUntil(check.because("diagnostic"));
 
         assertEquals(List.of("receipt", "receipt", "receipt", "receipt", "receipt", "receipt"),
                 List.of(payment.id(), created.id(), selected.id(), optional.id(), mapped.id(), sequence.getLast().id()));
@@ -257,17 +259,18 @@ class DirectBecauseTest {
 
     @Test
     void explainedSelectionsAcceptCovariantViewsAndTypedEntryCallbacks() {
+        var time = new FakeTime(0);
         Callable<List<? extends Number>> values = () -> List.of(1);
         Callable<Map<CharSequence, ? extends Number>> entries = () -> Map.of("key", 1);
         var collection = new CollectionViewSource<Number, List<? extends Number>>(values);
         var map = new MapViewSource<CharSequence, Number, Map<CharSequence, ? extends Number>>(entries);
 
-        Number value = await(collection).until(single(isNotNull).because("one"));
-        Number mapped = await(map).until(valueFor("key", isNotNull).because("one"));
-        Map.Entry<? extends CharSequence, ? extends Number> entry = await(map).until(entryFor("key").because("entry"));
-        Map.Entry<String, Number> checked = await(() -> Map.<String, Number>of("key", 1)).until(singleEntry(matches(
+        Number value = await(collection).usingTime(time, time).until(single(isNotNull).because("one"));
+        Number mapped = await(map).usingTime(time, time).until(valueFor("key", isNotNull).because("one"));
+        Map.Entry<? extends CharSequence, ? extends Number> entry = await(map).usingTime(time, time).until(entryFor("key").because("entry"));
+        Map.Entry<String, Number> checked = await(() -> Map.<String, Number>of("key", 1)).usingTime(time, time).until(singleEntry(matches(
                 (Map.Entry<? extends String, ? extends Number> candidate) -> candidate.getValue() != null)).because("checked"));
-        Integer subtype = await(() -> List.of(1)).until(first((Number number) -> true).because("first"));
+        Integer subtype = await(() -> List.of(1)).usingTime(time, time).until(first((Number number) -> true).because("first"));
 
         assertEquals(List.of(1, 1, 1), List.of(value, mapped, subtype));
         assertEquals(Map.entry("key", 1), entry);

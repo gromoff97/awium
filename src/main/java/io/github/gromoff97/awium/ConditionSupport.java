@@ -39,14 +39,20 @@ final class ConditionSupport {
 
     static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description, Reference<?> reference,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>> evaluator) {
-        return new PreservingCondition<>(condition(description, reference, evaluator));
+        var definition = condition(description, reference, (OBSERVED actual) ->
+                requireNonNull(evaluator.apply(actual), "condition returned null ConditionResult")
+                        .mapSatisfied(ignored -> actual));
+        requireNonNull(evaluator, "evaluation must not be null");
+        return new PreservingCondition<>(definition);
     }
 
     static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description,
             Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory) {
         var definition = new Condition<OBSERVED, OBSERVED>(description, null, null, () -> {
             var evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
-            return actual -> AttemptResult.of(evaluator.apply(actual));
+            return actual -> AttemptResult.of(
+                    requireNonNull(evaluator.apply(actual), "condition returned null ConditionResult")
+                            .mapSatisfied(ignored -> actual));
         });
         requireNonNull(evaluatorFactory, "evaluator factory must not be null");
         return new PreservingCondition<>(definition);
@@ -165,7 +171,7 @@ final class ConditionSupport {
         var stages = stages(conditions);
         return new Condition<>("conditions are satisfied in order", null, null, () ->
                 new SequenceExecution<OBSERVED, OBSERVED>(stages.stream()
-                        .map(stage -> ConditionAwaitAttempt.preserving(stage.definition)))::step);
+                        .map(stage -> ConditionAwaitAttempt.bind(stage.definition)))::step);
     }
 
     @SafeVarargs
@@ -174,7 +180,7 @@ final class ConditionSupport {
         var stages = stages(conditions);
         return new Condition<>("conditions are satisfied in order", null, null,
                 () -> new SequenceExecution<OBSERVED, ELEMENT>(stages.stream()
-                        .map(stage -> ConditionAwaitAttempt.selecting(stage.definition)))::step);
+                        .map(stage -> ConditionAwaitAttempt.bind(stage.definition)))::step);
     }
 
     @SafeVarargs
@@ -183,7 +189,7 @@ final class ConditionSupport {
         var stages = stages(conditions);
         return new Condition<>("conditions are satisfied in order", null, null,
                 () -> new SequenceExecution<OBSERVED, MAP_VALUE>(stages.stream()
-                        .map(stage -> ConditionAwaitAttempt.selecting(stage.definition)))::step);
+                        .map(stage -> ConditionAwaitAttempt.bind(stage.definition)))::step);
     }
 
     @SafeVarargs
@@ -192,7 +198,7 @@ final class ConditionSupport {
         var stages = stages(conditions);
         return new Condition<>("conditions are satisfied in order", null, null, () ->
                 new SequenceExecution<OBSERVED, OBSERVED>(stages.stream()
-                        .map(stage -> ConditionAwaitAttempt.preserving(stage.definition)))::step);
+                        .map(stage -> ConditionAwaitAttempt.bind(stage.definition)))::step);
     }
 
     private static <STAGE> List<STAGE> stages(STAGE[] conditions) {

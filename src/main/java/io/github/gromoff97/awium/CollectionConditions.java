@@ -91,7 +91,7 @@ public final class CollectionConditions {
 
     public static <ELEMENT> SelectedCondition<Collection<? extends ELEMENT>> single(PreservingCondition<? super ELEMENT> nested) {
         return new SelectedCondition<>(ConditionSupport.single("collection", required(nested).definition, actual -> actual,
-                () -> ConditionAwaitAttempt.preserving(nested.definition)));
+                () -> ConditionAwaitAttempt.bind(nested.definition)));
     }
 
     public static <ELEMENT, RESULT> Condition<Collection<? extends ELEMENT>, RESULT> single(Condition<? super ELEMENT, ? extends RESULT> nested) {
@@ -101,7 +101,7 @@ public final class CollectionConditions {
 
     public static <EXPECTED> SelectedCondition<Collection<? super EXPECTED>> single(ComparisonCondition<EXPECTED> nested) {
         return new SelectedCondition<>(ConditionSupport.single("collection", required(nested).definition, actual -> actual,
-                () -> ConditionAwaitAttempt.preserving(nested.definition)));
+                () -> ConditionAwaitAttempt.bind(nested.definition)));
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> all(Predicate<? super ELEMENT> predicate) {

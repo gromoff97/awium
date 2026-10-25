@@ -256,7 +256,7 @@ class ObservationTest {
             sourceCalls[0]++;
             currentThread().interrupt();
             return actual;
-        }, ConditionAwaitAttempt.preserving(Conditions.condition("ready", value -> {
+        }, ConditionAwaitAttempt.bind(Conditions.condition("ready", value -> {
             conditionCalls[0]++;
             return satisfied(value);
         }).definition)).waitFor();
@@ -331,7 +331,7 @@ class ObservationTest {
                                 currentThread().interrupt();
                             }
                             return new Object();
-                        }, ConditionAwaitAttempt.preserving(Conditions.condition("ready", value -> {
+                        }, ConditionAwaitAttempt.bind(Conditions.condition("ready", value -> {
                             if (phase.equals("condition")) {
                                 armed[0] = true;
                                 currentThread().interrupt();
