@@ -10,6 +10,7 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
+import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -122,7 +123,7 @@ class ScalarConditionsTest {
     }
 
     private static <S> void assertPreserving(PreservingCondition<? super S> condition, S matching, S mismatching) {
-        assertStatus(condition, matching, Satisfied.class);
+        assertSame(matching, result(evaluate(condition, matching)));
         assertStatus(condition, mismatching, Unsatisfied.class);
     }
 
