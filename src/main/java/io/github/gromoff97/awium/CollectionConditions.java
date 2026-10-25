@@ -33,10 +33,10 @@ import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 
-/** Single-element selection and predicate quantifiers also accept non-collection iterables. */
+/** Collection checks and selections; predicate quantifiers also accept non-collection iterables. */
 public final class CollectionConditions {
 
-    public static final SelectedCondition<Iterable<?>> single = selected("collection has a single element",
+    public static final SelectedCondition<Collection<?>> single = selected("collection has a single element",
             actual -> ConditionSupport.single("collection", actual, ConditionResult::satisfied));
     public static final PreservingCondition<Collection<?>> empty = preserving("collection is empty", "collection was not empty", Collection::isEmpty);
     public static final PreservingCondition<Collection<?>> nonEmpty = preserving("collection is not empty", "collection was empty", actual -> !actual.isEmpty());
@@ -88,17 +88,18 @@ public final class CollectionConditions {
                 "collection size is between " + lowerBound + " and " + upperBound);
     }
 
-    public static <ELEMENT> SelectedCondition<Iterable<? extends ELEMENT>> single(PreservingCondition<? super ELEMENT> nested) {
+    public static <ELEMENT> SelectedCondition<Collection<? extends ELEMENT>> single(PreservingCondition<? super ELEMENT> nested) {
         return new SelectedCondition<>(ConditionSupport.single("collection", required(nested).definition, actual -> actual,
                 () -> ConditionAwaitAttempt.bind(nested.definition)));
     }
 
+    /** Selects a unique matching result from an iterable using a condition with a declared result type. */
     public static <ELEMENT, RESULT> Condition<Iterable<? extends ELEMENT>, RESULT> single(Condition<? super ELEMENT, RESULT> nested) {
         return ConditionSupport.single("collection", required(nested), actual -> actual,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
-    public static <EXPECTED> SelectedCondition<Iterable<? super EXPECTED>> single(ComparisonCondition<EXPECTED> nested) {
+    public static <EXPECTED> SelectedCondition<Collection<? super EXPECTED>> single(ComparisonCondition<EXPECTED> nested) {
         return new SelectedCondition<>(ConditionSupport.single("collection", required(nested).definition, actual -> actual,
                 () -> ConditionAwaitAttempt.bind(nested.definition)));
     }

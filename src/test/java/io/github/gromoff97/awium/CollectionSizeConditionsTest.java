@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Await.IterableSource;
+import io.github.gromoff97.awium.Await.CollectionSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import java.util.ArrayList;
@@ -44,11 +44,11 @@ class CollectionSizeConditionsTest {
     void hasSingleElementReturnsTheTypedElement() {
         var pollingTime = new FakeTime(0);
         String element = new String("element");
-        IterableSource<ArrayList<String>> source = () -> new ArrayList<>(List.of(element));
+        CollectionSource<ArrayList<String>> source = () -> new ArrayList<>(List.of(element));
 
         String selected = await(source).usingTime(pollingTime, pollingTime).until(single);
         String explained = await(source).usingTime(pollingTime, pollingTime).until(single.because("exactly one result is required"));
-        String nullElement = await((IterableSource<List<String>>)
+        String nullElement = await((CollectionSource<List<String>>)
                 () -> Collections.singletonList(null)).usingTime(pollingTime, pollingTime).until(single);
 
         assertSame(element, selected);

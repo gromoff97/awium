@@ -237,7 +237,7 @@ Payment paid = await(paymentRepository::findAll).until(single(matches(Payment::p
 Payment found = await(paymentRepository::find).until(hasValue(matches(Payment::paid)));
 ```
 
-`single` requires an iterable containing exactly one element.
+`single` requires a collection containing exactly one element.
 `single(condition)` requires exactly one matching element among all elements;
 other elements may be present. No matches or several matches cause a retry.
 The source is read once per attempt. `singleEntry(...)` applies the same rule to
@@ -327,20 +327,20 @@ Import only the catalogue used by a test. Shared names such as `empty`,
 | `CollectionConditions` | `single`, empty/null/duplicate checks, quantifiers, membership, exact content, sequences, `first`, `last`, `element`, `sorted`, and `size...` | observed iterable or selected element |
 | `MapConditions` | `singleEntry`, empty checks, entry/key/value quantifiers and membership, exact content, `valueFor`, `entryFor`, `onlyValueFor`, and `size...` | observed map, selected entry, or value |
 
-`single`, `single(condition)`, `all`, `any`, and `none` accept any `Iterable`.
+`all`, `any`, and `none` accept any `Iterable`.
 The source does not have to implement `Collection`:
 
 ```java
 Iterable<Payment> payments = List.of(expectedPayment);
-Payment payment = await(() -> payments).until(single.because("One payment is required"));
+Iterable<Payment> observed = await(() -> payments).until(all(Payment::paid).because("All payments must be paid"));
 List<Payment> batch = await(paymentRepository::findAll).until(
         containsOnly(payments).because("The replica must contain the expected payment"));
 ```
 
-The observed value for size and content checks must still implement `Collection`;
-ordered checks require `SequencedCollection`. Explicit iterable sources use
-`IterableSource` and
-`IterableViewSource`, which replace the former collection-specific source names.
+Collection selectors, size and content checks require an observed `Collection`;
+ordered checks require `SequencedCollection`. A selection with its own result
+type, such as `single(instanceOf(Payment.class))`, can also read an arbitrary
+`Iterable`.
 
 Text conditions accept any `CharSequence` and preserve the source's concrete type
 and instance, including after `because(...)` and inside container selections.
@@ -427,7 +427,7 @@ await(source).until(isNull);
 ```
 
 A variable declared as a plain JDK `Callable` uses scalar conditions, even
-when its return type is an optional, iterable, or map.
+when its return type is an optional, collection, or map.
 Pass its method reference to recover the family without another source type:
 
 ```java
@@ -443,10 +443,10 @@ Payment onlyPayment = await(payments::call).until(single);
 Alternatively, declare the corresponding marker when selection is needed:
 
 ```java
-import io.github.gromoff97.awium.Await.IterableSource;
+import io.github.gromoff97.awium.Await.CollectionSource;
 import io.github.gromoff97.awium.Await.MapSource;
 
-IterableSource<List<Payment>> payments = paymentRepository::findAll;
+CollectionSource<List<Payment>> payments = paymentRepository::findAll;
 MapSource<Map<String, Payment>> index = paymentRepository::index;
 
 Payment onlyPayment = await(payments).until(single);
@@ -467,10 +467,10 @@ both the container type and its selected bound. This matters for an explicitly
 typed `AwaitResult` or comparison with another covariant container:
 
 ```java
-import io.github.gromoff97.awium.Await.IterableViewSource;
+import io.github.gromoff97.awium.Await.CollectionViewSource;
 import io.github.gromoff97.awium.Await.MapViewSource;
 
-var payments = new IterableViewSource<Payment, List<? extends Payment>>(paymentRepository::findAllView);
+var payments = new CollectionViewSource<Payment, List<? extends Payment>>(paymentRepository::findAllView);
 var index = new MapViewSource<String, Payment, Map<? extends String, ? extends Payment>>(paymentRepository::indexView);
 
 Payment payment = await(payments).until(single);

@@ -10,7 +10,7 @@ final class ConditionAwaitAttempt<OBSERVED, RESULT> implements AwaitAttempt<OBSE
         this.condition = condition;
     }
 
-    // Library-created preserving checks and selectors bind their result to the source type.
+    // Preservers and selectors bind to source types. Collection stays disjoint from Map; Iterable would overlap.
     @SuppressWarnings("unchecked")
     static <OBSERVED, RESULT> ConditionAwaitAttempt<OBSERVED, RESULT> bind(Condition<? super OBSERVED, ?> condition) {
         return (ConditionAwaitAttempt<OBSERVED, RESULT>) new ConditionAwaitAttempt<>(condition);

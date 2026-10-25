@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Await.IterableSource;
+import io.github.gromoff97.awium.Await.CollectionSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
@@ -158,8 +158,8 @@ class CollectionExactContentTest {
         var brokenIterator = new ProbeList<>(List.of("a"), iteratorCause);
         var brokenEquality = new ProbeList<>(
                 List.of(new ThrowingEquals(equalityCause)), null);
-        IterableSource<ProbeList<String>> iteratorSource = () -> brokenIterator;
-        IterableSource<ProbeList<ThrowingEquals>> equalitySource = () -> brokenEquality;
+        CollectionSource<ProbeList<String>> iteratorSource = () -> brokenIterator;
+        CollectionSource<ProbeList<ThrowingEquals>> equalitySource = () -> brokenEquality;
 
         assertSame(iteratorCause, assertFailure(CONDITION_FAILED,
                 () -> await(iteratorSource).usingTime(pollingTime, pollingTime).until(doesNotContainExactly(List.of("a")))).getCause());

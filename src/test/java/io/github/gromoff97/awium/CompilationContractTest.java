@@ -14,6 +14,29 @@ class CompilationContractTest {
     Path temporaryDirectory;
 
     @Test
+    void mapsThatAlsoIterateValuesCannotConfuseTheirSelectionResults() throws IOException {
+        for (String terminal : List.of("until", "tryUntil")) {
+            for (String condition : List.of("single", "single(matches(User::active))", "single(equalTo(new User(true)))")) {
+                assertRejected("""
+                        import java.util.*;
+                        import io.github.gromoff97.awium.Await.MapSource;
+                        import static io.github.gromoff97.awium.Await.await;
+                        import static io.github.gromoff97.awium.Conditions.*;
+                        import static io.github.gromoff97.awium.CollectionConditions.*;
+                        final class Contract {
+                            record User(boolean active) {}
+                            static final class Both extends AbstractMap<String,Integer> implements Iterable<User> {
+                                public Set<Map.Entry<String,Integer>> entrySet() { return Set.of(Map.entry("key", 10)); }
+                                public Iterator<User> iterator() { return List.of(new User(true)).iterator(); }
+                            }
+                            void check(MapSource<Both> source) { await(source).%s(%s.because("wrong source family")); }
+                        }
+                        """.formatted(terminal, condition));
+            }
+        }
+    }
+
+    @Test
     void expectedIterablesDoNotWeakenElementKeyOrValueConstraints() throws IOException {
         for (String expression : List.of(
                 "await(() -> \"ready\").until(in(wrong).because(\"wrong\"));",
@@ -39,18 +62,17 @@ class CompilationContractTest {
     }
 
     @Test
-    void iterableChecksRejectIncompatibleTypesAndUnsupportedContainerOperations() throws IOException {
+    void iterablesRejectIncompatibleQuantifiersResultsAndCollectionOnlyOperations() throws IOException {
         for (String expression : List.of(
-                "await(() -> users).until(single(equalTo(123).because(\"wrong\")));",
-                "await(() -> users).until(single(matches(String::isBlank)).because(\"wrong\"));",
                 "await(() -> users).until(all(String::isBlank).because(\"wrong\"));",
-                "String wrong = await(() -> users).until(single.because(\"wrong\"));",
+                "await(() -> users).until(any(String::isBlank));",
+                "String wrong = await(() -> users).until(single(instanceOf(User.class)).because(\"wrong\"));",
+                "await(() -> users).until(single.because(\"collection required\"));",
                 "await(() -> users).until(first.because(\"unordered\"));",
                 "await(() -> users).until(size(1));",
                 "await(() -> users).until(present);",
                 "await(() -> users).until(valueFor(\"key\"));",
                 "await(() -> users).until(single(instanceOf(String.class)), single(instanceOf(Integer.class)));",
-                "User wrong = await(() -> broad).until(single);",
                 "await(() -> broad).until(all(User::active));")) {
             assertRejected("""
                     import java.util.*;
@@ -286,10 +308,10 @@ class CompilationContractTest {
         assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import io.github.gromoff97.awium.MapConditions;
-                import io.github.gromoff97.awium.Await.IterableSource;
+                import io.github.gromoff97.awium.Await.CollectionSource;
                 import java.util.List;
                 final class Contract {
-                    void check(IterableSource<List<String>> source) {
+                    void check(CollectionSource<List<String>> source) {
                         await(source).until(MapConditions.nonEmpty);
                     }
                 }
@@ -308,10 +330,10 @@ class CompilationContractTest {
         assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import io.github.gromoff97.awium.MapConditions;
-                import io.github.gromoff97.awium.Await.IterableSource;
+                import io.github.gromoff97.awium.Await.CollectionSource;
                 import java.util.List;
                 final class Contract {
-                    void check(IterableSource<List<String>> source) {
+                    void check(CollectionSource<List<String>> source) {
                         await(source).until(MapConditions.singleEntry);
                     }
                 }
@@ -337,7 +359,7 @@ class CompilationContractTest {
                 import java.util.List;
                 final class Contract {
                     void check() {
-                        Integer wrong = await((io.github.gromoff97.awium.Await.IterableSource<List<String>>)
+                        Integer wrong = await((io.github.gromoff97.awium.Await.CollectionSource<List<String>>)
                                 () -> List.of("value")).until(single);
                     }
                 }
@@ -349,10 +371,10 @@ class CompilationContractTest {
         assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.CollectionConditions.first;
-                import io.github.gromoff97.awium.Await.IterableSource;
+                import io.github.gromoff97.awium.Await.CollectionSource;
                 import java.util.List;
                 final class Contract {
-                    void check(IterableSource<List<String>> source) {
+                    void check(CollectionSource<List<String>> source) {
                         Integer wrong = await(source).until(first);
                     }
                 }
@@ -360,10 +382,10 @@ class CompilationContractTest {
         assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.CollectionConditions.first;
-                import io.github.gromoff97.awium.Await.IterableSource;
+                import io.github.gromoff97.awium.Await.CollectionSource;
                 import java.util.HashSet;
                 final class Contract {
-                    void check(IterableSource<HashSet<String>> source) {
+                    void check(CollectionSource<HashSet<String>> source) {
                         await(source).until(first);
                     }
                 }
@@ -426,11 +448,11 @@ class CompilationContractTest {
         assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.CollectionConditions.*;
-                import io.github.gromoff97.awium.Await.IterableSource;
+                import io.github.gromoff97.awium.Await.CollectionSource;
                 import java.util.*;
 
                 final class Contract {
-                    void check(IterableSource<Set<String>> source) {
+                    void check(CollectionSource<Set<String>> source) {
                         await(source).until(containsExactly(List.of("a")));
                     }
                 }

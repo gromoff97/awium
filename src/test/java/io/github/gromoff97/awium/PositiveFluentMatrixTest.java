@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Await.IterableSource;
-import io.github.gromoff97.awium.Await.IterableViewSource;
+import io.github.gromoff97.awium.Await.CollectionSource;
+import io.github.gromoff97.awium.Await.CollectionViewSource;
 import io.github.gromoff97.awium.Await.MapSource;
 import io.github.gromoff97.awium.Await.MapViewSource;
 import io.github.gromoff97.awium.Await.OptionalSource;
@@ -70,7 +70,7 @@ class PositiveFluentMatrixTest {
     void collectionFacadeExecutesCanonicalFullChain() {
         var pollingTime = new FakeTime(0);
         var actual = new ArrayList<>(List.of("value"));
-        IterableSource<ArrayList<String>> source = () -> actual;
+        CollectionSource<ArrayList<String>> source = () -> actual;
 
         Condition.PreservingCondition<Collection<?>> collectionCondition = nonEmpty;
         Condition.PreservingCondition<Collection<?>> explained =
@@ -132,7 +132,7 @@ class PositiveFluentMatrixTest {
         var entry = entries.entrySet().iterator().next();
         int[] collectionCalls = {0};
         int[] mapCalls = {0};
-        var collectionSource = new IterableViewSource<Number, List<? extends Number>>(() -> {
+        var collectionSource = new CollectionViewSource<Number, List<? extends Number>>(() -> {
             collectionCalls[0]++;
             return values;
         });
@@ -185,7 +185,7 @@ class PositiveFluentMatrixTest {
     @Test
     void diagnosticTerminalsRetainSpecializedSourceAndResultTypes() {
         OptionalSource<String> optional = () -> Optional.of("ready");
-        IterableSource<List<String>> collection = () -> List.of("ready");
+        CollectionSource<List<String>> collection = () -> List.of("ready");
         MapSource<Map<String, Integer>> map = () -> Map.of("ready", 1);
 
         AwaitResult<Optional<String>, String> optionalResult = await(optional).tryUntil(present);

@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Await.IterableSource;
+import io.github.gromoff97.awium.Await.CollectionSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
@@ -225,7 +225,7 @@ class CollectionMembershipTest {
     void aggregateConditionsPreserveTheConcreteCollectionType() {
         Collection<Integer> integers = List.of(1, 2);
         var actual = new ArrayList<Number>(integers);
-        IterableSource<ArrayList<Number>> source = () -> actual;
+        CollectionSource<ArrayList<Number>> source = () -> actual;
         PreservingCondition<Collection<? super Integer>> typed = containsAll(integers);
 
         ArrayList<Number> result = Await.await(source).until(typed);
