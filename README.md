@@ -237,7 +237,7 @@ Payment paid = await(paymentRepository::findAll).until(single(matches(Payment::p
 Payment found = await(paymentRepository::find).until(hasValue(matches(Payment::paid)));
 ```
 
-`single` requires a collection containing exactly one element.
+`single` requires an iterable containing exactly one element.
 `single(condition)` requires exactly one matching element among all elements;
 other elements may be present. No matches or several matches cause a retry.
 The source is read once per attempt. `singleEntry(...)` applies the same rule to
@@ -424,7 +424,7 @@ await(source).until(isNull);
 ```
 
 A variable declared as a plain JDK `Callable` uses scalar conditions, even
-when its return type is an optional, collection, or map.
+when its return type is an optional, iterable, or map.
 Pass its method reference to recover the family without another source type:
 
 ```java
@@ -565,7 +565,9 @@ formatting failures are retained by identity in `suppressed()` and in
 `getSuppressed()` on the thrown wrapper. Awium does not mutate the original
 throwable to attach diagnostics.
 
-Invalid sources, conditions, and durations fail before polling. Every thrown
+Null sources and conditions, invalid durations, and invalid eager factory
+arguments fail before polling. Lazy explanation text is validated when
+diagnostics render it. Every thrown
 `Throwable` from a source, condition, evaluator factory, or wait operation
 stops polling and is retained as the cause. Only the explicit `asserted(...)`
 adapter treats an `AssertionError` as an unsatisfied condition.
