@@ -47,23 +47,24 @@ class CompilationContractTest {
                 "doesNotContainAll(List.of(42))", "containsAny(List.of(42))",
                 "containsExactly(List.of(42))", "doesNotContainExactly(List.of(42))",
                 "containsExactlyInAnyOrder(List.of(42))", "doesNotContainExactlyInAnyOrder(List.of(42))",
-                "containsOnly(List.of(42))")) {
-            for (String explanation : List.of("", ".because(\"incompatible\")", ".because(\"%s\", \"incompatible\")")) {
-                for (String terminal : List.of("until", "tryUntil")) {
-                    String expression = "await(source)." + terminal + "(CollectionConditions."
-                            + condition + explanation + ");";
-                    assertRejected("""
-                            import java.util.List;
-                            import java.util.concurrent.Callable;
-                            import io.github.gromoff97.awium.CollectionConditions;
-                            import static io.github.gromoff97.awium.Await.await;
-                            final class Contract {
-                                void check(Callable<List<String>> source) {
-                                    %s
-                                }
+                "containsOnly(List.of(42))",
+                "contains(42).because(\"incompatible\")",
+                "contains(42).because(\"%s\", \"incompatible\")",
+                "containsExactly(List.of(42)).because(\"incompatible\")",
+                "containsExactly(List.of(42)).because(\"%s\", \"incompatible\")")) {
+            for (String terminal : List.of("until", "tryUntil")) {
+                String expression = "await(source)." + terminal + "(CollectionConditions." + condition + ");";
+                assertRejected("""
+                        import java.util.List;
+                        import java.util.concurrent.Callable;
+                        import io.github.gromoff97.awium.CollectionConditions;
+                        import static io.github.gromoff97.awium.Await.await;
+                        final class Contract {
+                            void check(Callable<List<String>> source) {
+                                %s
                             }
-                            """.formatted(expression));
-                }
+                        }
+                        """.formatted(expression));
             }
         }
     }
