@@ -228,45 +228,36 @@ final class ConditionSupport {
     @SuppressWarnings("varargs")
     static <OBSERVED> Condition.Typed<OBSERVED, List<OBSERVED>> captured(
             SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>, ?>... conditions) {
-        var stages = stages(conditions);
-        return new Condition.Typed<>("conditions are satisfied in order", null, null, () ->
-                new SequenceExecution<OBSERVED, OBSERVED>(stages.stream()
-                        .map(stage -> ConditionAwaitAttempt.bind(stage)))::step);
+        return captured(conditions, ConditionAwaitAttempt::bind);
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     static <OBSERVED, ELEMENT> Condition.Typed<OBSERVED, List<ELEMENT>> captured(
             SelectedCondition<? super OBSERVED, ? super ELEMENT, ? super Reference<? super ELEMENT>>... conditions) {
-        var stages = stages(conditions);
-        return new Condition.Typed<>("conditions are satisfied in order", null, null,
-                () -> new SequenceExecution<OBSERVED, ELEMENT>(stages.stream()
-                        .map(stage -> ConditionAwaitAttempt.bind(stage)))::step);
+        return captured(conditions, ConditionAwaitAttempt::bind);
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     static <OBSERVED, MAP_VALUE> Condition.Typed<OBSERVED, List<MAP_VALUE>> captured(
             MapValueCondition<? super OBSERVED, ? super MAP_VALUE, ? super Reference<? super MAP_VALUE>>... conditions) {
-        var stages = stages(conditions);
-        return new Condition.Typed<>("conditions are satisfied in order", null, null,
-                () -> new SequenceExecution<OBSERVED, MAP_VALUE>(stages.stream()
-                        .map(stage -> ConditionAwaitAttempt.bind(stage)))::step);
+        return captured(conditions, ConditionAwaitAttempt::bind);
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
     static <OBSERVED, RESULT> Condition.Typed<OBSERVED, List<RESULT>> captured(Condition.Typed<? super OBSERVED, RESULT>... conditions) {
-        var stages = stages(conditions);
-        return new Condition.Typed<>("conditions are satisfied in order", null, null, () ->
-                new SequenceExecution<OBSERVED, RESULT>(stages.stream()
-                        .map(ConditionAwaitAttempt::new))::step);
+        return captured(conditions, ConditionAwaitAttempt::new);
     }
 
-    private static <STAGE> List<STAGE> stages(STAGE[] conditions) {
+    private static <OBSERVED, RESULT, STAGE extends Condition<?>> Condition.Typed<OBSERVED, List<RESULT>> captured(
+            STAGE[] conditions,
+            Function<? super STAGE, ? extends ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT>> bind) {
         var stages = nonEmptySnapshot(conditions, "conditions");
         stages.forEach(Condition::required);
-        return stages;
+        return new Condition.Typed<>("conditions are satisfied in order", null, null,
+                () -> new SequenceExecution<>(stages.stream().map(bind))::step);
     }
 
     static void validateRange(int lowerBound, int upperBound, String measure) {
