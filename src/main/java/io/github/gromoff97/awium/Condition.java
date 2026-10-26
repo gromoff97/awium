@@ -68,6 +68,11 @@ public final class Condition<OBSERVED, RESULT> {
         return String.format(Locale.ROOT, format, arguments);
     }
 
+    /** Checks a satisfied result without changing its type; mismatches and failures skip the predicate. */
+    public Condition<OBSERVED, RESULT> where(CheckedPredicate<? super RESULT> predicate) {
+        return ConditionSupport.filtered(this, predicate);
+    }
+
     public Condition<OBSERVED, RESULT> because(String explanation) {
         return new Condition<>(description, nonBlank(explanation, "explanation"), reference, evaluatorFactory);
     }

@@ -282,6 +282,8 @@ Payment firstPayment = await(repository::findAll).until(first(instanceOf(Payment
 Payment lastPayment = await(repository::findAll).until(last(instanceOf(Payment.class)).because("Last payment"));
 Payment indexedPayment = await(repository::findAll).until(element(0, instanceOf(Payment.class)).because("Payment at index zero"));
 Payment paid = await(paymentRepository::findAll).until(first(Payment::paid).because("Paid payment"));
+Payment settled = await(repository::findAll).until(single(
+        instanceOf(Payment.class).where(candidate -> candidate.paid())).because("Only paid payment"));
 ```
 
 `first`, `last`, and `element` accept nested conditions. Checks such as
@@ -292,6 +294,14 @@ declared result type, including when the source contains `Object` values.
 reverse encounter order; `element` checks only the indexed value. If nested
 evaluation throws or the callback sets the thread's interrupt flag, the wait stops
 before the next callback.
+
+Conditions with a declared result type support `where(predicate)` to check that
+result without changing its type. In the example above, the lambda receives
+`Payment` even though the collection contains `Object`. The predicate runs only
+after the preceding condition succeeds and may throw checked exceptions.
+Inside `single`, it filters candidates before counting matches. After `single`,
+it runs only once that selection has succeeded. `where` does not change how
+`matches(...).because(...)` infers an untyped lambda's input.
 
 To collect selected values in order, pass several selections to the terminal:
 
