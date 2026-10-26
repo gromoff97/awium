@@ -230,7 +230,7 @@ class DiagnosticsSnapshotTest {
                 persistenceAssertion), 71, 9 * SECOND + 100 * MILLISECOND);
         var persistence = new PersistenceFailure<>(7 * SECOND,
                 new AttemptRecord<>(persistedAttempt.number(), AttemptRecord.Phase.PERSISTENCE,
-                        persistedAttempt.condition(), persistedAttempt.progress(), persistedAttempt.outcome()));
+                        persistedAttempt.timing(), persistedAttempt.condition(), persistedAttempt.progress(), persistedAttempt.outcome()));
 
         var betweenFailure = assertFailure(TIMEOUT,
                 () -> Await.complete(between, config(3 * SECOND, 10 * SECOND, 0)));
@@ -574,9 +574,9 @@ class DiagnosticsSnapshotTest {
         var cause = new IllegalArgumentException("actual toString failed");
         var progress = new AttemptRecord.Progress(1, 2, 2,
                 diagnosticCondition("inner second", "inner business reason", null));
-        var attempt = new AttemptRecord<>(2, ACQUISITION,
+        var attempt = new AttemptRecord<>(2, ACQUISITION, afterObservation(2),
                 diagnosticCondition("conditions are satisfied in order", null, null), progress,
-                new AttemptRecord.Outcome.Evaluated<>(afterObservation(2), new ThrowingValue(cause),
+                new AttemptRecord.Outcome.Evaluated<>(new ThrowingValue(cause),
                         new ConditionResult.Unsatisfied<>("inner mismatch", null)));
 
         var failure = assertFailure(TIMEOUT,
@@ -601,9 +601,9 @@ class DiagnosticsSnapshotTest {
         var expected = new ThrowingValue(cause);
         var progress = new AttemptRecord.Progress(1, 2, 2, diagnosticCondition("second stage", null,
                 new Condition.Reference<>("Expected", expected)));
-        var attempt = new AttemptRecord<>(2, ACQUISITION,
+        var attempt = new AttemptRecord<>(2, ACQUISITION, afterObservation(2),
                 diagnosticCondition("ordered conditions", null, null), progress,
-                new AttemptRecord.Outcome.Evaluated<>(afterObservation(2), actual,
+                new AttemptRecord.Outcome.Evaluated<>(actual,
                         new ConditionResult.Unsatisfied<>("not ready", null)));
 
         var failure = assertFailure(TIMEOUT,
@@ -1195,30 +1195,28 @@ class DiagnosticsSnapshotTest {
 
     private static <S, R> AttemptRecord<S, R> evaluatedAttempt(
             Condition<?> condition, S observed, ConditionResult<? extends R> result, long number, long completedNanos) {
-        return new AttemptRecord<>(number, ACQUISITION, condition, null,
-                new AttemptRecord.Outcome.Evaluated<>(afterObservation(completedNanos), observed,
-                        result));
+        return new AttemptRecord<>(number, ACQUISITION, afterObservation(completedNanos), condition, null,
+                new AttemptRecord.Outcome.Evaluated<>(observed, result));
     }
 
     private static WaitCompletion<Object, Object> sourceFailure(
             Condition<?> condition, Throwable failure, long number, long completedNanos) {
         var timing = new AttemptRecord.Timing(Duration.ZERO, Duration.ZERO, null, Duration.ofNanos(completedNanos));
-        return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION, condition, null,
-                new AttemptRecord.Outcome.SourceRetrievalFailed<>(timing, failure)));
+        return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION, timing, condition, null,
+                new AttemptRecord.Outcome.SourceRetrievalFailed<>(failure)));
     }
 
     private static WaitCompletion<Object, Object> waitingFailure(
             Throwable failure, long number, long completedNanos) {
         var timing = new AttemptRecord.Timing(Duration.ZERO, null, null, Duration.ofNanos(completedNanos));
-        return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION, CONDITION, null,
-                new AttemptRecord.Outcome.WaitingFailed<>(timing, failure)));
+        return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION, timing, CONDITION, null,
+                new AttemptRecord.Outcome.WaitingFailed<>(failure)));
     }
 
     private static WaitCompletion<Object, Object> conditionFailure(
             Condition<?> expectation, Object observed, Throwable failure, long number, long completedNanos) {
-        return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION, expectation, null,
-                new AttemptRecord.Outcome.ConditionFailed<>(afterObservation(completedNanos), observed,
-                        failure)));
+        return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION, afterObservation(completedNanos), expectation, null,
+                new AttemptRecord.Outcome.ConditionFailed<>(observed, failure)));
     }
 
     private static AttemptRecord.Timing afterObservation(

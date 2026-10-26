@@ -66,19 +66,20 @@ class FailureTaxonomyTest {
                 case INTERRUPTED -> new InterruptedException("interrupted");
                 default -> new IllegalStateException("operation failed");
             };
-            var timing = new AttemptRecord.Timing(Duration.ZERO, Duration.ZERO, Duration.ZERO, ofNanos(2));
+            var timing = new AttemptRecord.Timing(Duration.ZERO,
+                    reason == AwaitFailure.Reason.WAIT_FAILED ? null : Duration.ZERO,
+                    reason == AwaitFailure.Reason.WAIT_FAILED || reason == AwaitFailure.Reason.SOURCE_FAILED
+                            ? null : Duration.ZERO, ofNanos(2));
             var metadata = diagnosticCondition("ready", null, new Condition.Reference<>("Expected", expected));
             AttemptRecord.Outcome<Object, Object> observation = switch (reason) {
-                case WAIT_FAILED -> new AttemptRecord.Outcome.WaitingFailed<>(
-                        new AttemptRecord.Timing(Duration.ZERO, null, null, ofNanos(2)), original);
-                case SOURCE_FAILED -> new AttemptRecord.Outcome.SourceRetrievalFailed<>(
-                        new AttemptRecord.Timing(Duration.ZERO, Duration.ZERO, null, ofNanos(2)), original);
-                case TIMEOUT, PERSISTENCE_FAILED -> new AttemptRecord.Outcome.Evaluated<>(timing, "actual",
+                case WAIT_FAILED -> new AttemptRecord.Outcome.WaitingFailed<>(original);
+                case SOURCE_FAILED -> new AttemptRecord.Outcome.SourceRetrievalFailed<>(original);
+                case TIMEOUT, PERSISTENCE_FAILED -> new AttemptRecord.Outcome.Evaluated<>("actual",
                         ConditionResult.unsatisfied("not ready", original));
-                default -> new AttemptRecord.Outcome.ConditionFailed<>(timing, "actual", original);
+                default -> new AttemptRecord.Outcome.ConditionFailed<>("actual", original);
             };
             var attempt = new AttemptRecord<>(1, reason == AwaitFailure.Reason.PERSISTENCE_FAILED
-                    ? AttemptRecord.Phase.PERSISTENCE : AttemptRecord.Phase.ACQUISITION, metadata, null, observation);
+                    ? AttemptRecord.Phase.PERSISTENCE : AttemptRecord.Phase.ACQUISITION, timing, metadata, null, observation);
             WaitCompletion<Object, Object> outcome = switch (reason) {
                 case TIMEOUT -> new WaitCompletion.Timeout<>(attempt);
                 case PERSISTENCE_FAILED -> new WaitCompletion.PersistenceFailure<>(0, attempt);

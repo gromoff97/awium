@@ -83,8 +83,8 @@ class TimingConfigurationTest {
         assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
         assertEquals(2, factories[0]);
         assertEquals(2, result.totalAttempts());
-        assertEquals(ofNanos(0), result.attempts().getFirst().outcome().timing().startOffset());
-        assertEquals(ofNanos(2), result.attempts().getLast().outcome().timing().completionOffset());
+        assertEquals(ofNanos(0), result.attempts().getFirst().timing().startOffset());
+        assertEquals(ofNanos(2), result.attempts().getLast().timing().completionOffset());
     }
 
     @Test

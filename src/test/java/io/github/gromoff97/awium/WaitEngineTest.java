@@ -289,8 +289,8 @@ class WaitEngineTest {
                 uncontrolled.attempt().outcome());
         assertEquals(2, uncontrolled.attempt().number());
         assertSame(failure, attempt.cause());
-        assertEquals(0, attempt.timing().startOffset().toNanos());
-        assertEquals(0, attempt.timing().completionOffset().toNanos());
+        assertEquals(0, uncontrolled.attempt().timing().startOffset().toNanos());
+        assertEquals(0, uncontrolled.attempt().timing().completionOffset().toNanos());
     }
 
     @ParameterizedTest
@@ -619,7 +619,7 @@ class WaitEngineTest {
     }
 
     private static long completed(AttemptRecord<?, ?> attempt) {
-        return attempt.outcome().timing().completionOffset().toNanos();
+        return attempt.timing().completionOffset().toNanos();
     }
 
     private static Object observed(AttemptRecord<?, ?> attempt) {

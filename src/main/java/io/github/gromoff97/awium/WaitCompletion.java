@@ -47,7 +47,7 @@ sealed interface WaitCompletion<OBSERVED, RESULT> {
             AttemptRecord<OBSERVED, RESULT> attempt) implements WaitCompletion<OBSERVED, RESULT> {
 
         Timeout(AttemptRecord<OBSERVED, RESULT> attempt) {
-            this(attempt.outcome().timing().completionOffset().toNanos(), attempt);
+            this(attempt.timing().completionOffset().toNanos(), attempt);
         }
     }
 

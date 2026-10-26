@@ -128,7 +128,7 @@ final class FailureDiagnostics {
         out.append('\n').append("Timing:\n");
         field(out, "Acquisition timeout",
                 duration(configuration.upToNanos()));
-        long completedAfter = outcome.attempt().outcome().timing().completionOffset().toNanos();
+        long completedAfter = outcome.attempt().timing().completionOffset().toNanos();
         long elapsed = outcome instanceof WaitCompletion.Timeout<?, ?> timeout
                 ? timeout.elapsedNanos() : completedAfter;
         if (elapsed != completedAfter) {

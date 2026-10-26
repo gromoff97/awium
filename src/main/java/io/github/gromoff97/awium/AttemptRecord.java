@@ -11,11 +11,12 @@ import static java.util.Objects.requireNonNull;
  * @param <RESULT> value produced by the condition
  * @param number one-based attempt number
  * @param phase acquisition or persistence phase
+ * @param timing checkpoints measured from the start of the terminal call
  * @param condition condition associated with this attempt, including attempts that fail before evaluation
  * @param progress last known sequence progress, or null if no sequence stage has been evaluated
  * @param outcome terminal outcome of this attempt
  */
-public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
+public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase, Timing timing,
         Condition<?> condition, Progress progress, Outcome<OBSERVED, RESULT> outcome) {
 
     public AttemptRecord {
@@ -23,6 +24,7 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
             throw new IllegalArgumentException("attempt number must be positive");
         }
         requireNonNull(phase, "phase must not be null");
+        requireNonNull(timing, "timing must not be null");
         requireNonNull(condition, "condition must not be null");
         requireNonNull(outcome, "outcome must not be null");
     }
@@ -31,16 +33,13 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
 
     public sealed interface Outcome<OBSERVED, RESULT> {
 
-        Timing timing();
-
         Throwable cause();
 
         /** An observation and the exact result returned by its condition evaluation. */
-        record Evaluated<OBSERVED, RESULT>(Timing timing,
-                OBSERVED observed, ConditionResult<? extends RESULT> evaluation) implements Outcome<OBSERVED, RESULT> {
+        record Evaluated<OBSERVED, RESULT>(OBSERVED observed,
+                ConditionResult<? extends RESULT> evaluation) implements Outcome<OBSERVED, RESULT> {
 
             public Evaluated {
-                requireNonNull(timing, "timing must not be null");
                 requireNonNull(evaluation, "evaluation must not be null");
             }
 
@@ -50,38 +49,32 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
             }
         }
 
-        record ConditionFailed<OBSERVED, RESULT>(Timing timing,
-                OBSERVED observed, Throwable cause) implements Outcome<OBSERVED, RESULT> {
+        record ConditionFailed<OBSERVED, RESULT>(OBSERVED observed,
+                Throwable cause) implements Outcome<OBSERVED, RESULT> {
 
             public ConditionFailed {
-                requireNonNull(timing, "timing must not be null");
                 requireNonNull(cause, "cause must not be null");
             }
         }
 
-        record WaitingFailed<OBSERVED, RESULT>(Timing timing,
-                Throwable cause) implements Outcome<OBSERVED, RESULT> {
+        record WaitingFailed<OBSERVED, RESULT>(Throwable cause) implements Outcome<OBSERVED, RESULT> {
 
             public WaitingFailed {
-                requireNonNull(timing, "timing must not be null");
                 requireNonNull(cause, "cause must not be null");
             }
         }
 
-        record SourceRetrievalFailed<OBSERVED, RESULT>(Timing timing,
-                Throwable cause) implements Outcome<OBSERVED, RESULT> {
+        record SourceRetrievalFailed<OBSERVED, RESULT>(Throwable cause) implements Outcome<OBSERVED, RESULT> {
 
             public SourceRetrievalFailed {
-                requireNonNull(timing, "timing must not be null");
                 requireNonNull(cause, "cause must not be null");
             }
         }
 
-        record SourceInterrupted<OBSERVED, RESULT>(Timing timing, OBSERVED observed,
+        record SourceInterrupted<OBSERVED, RESULT>(OBSERVED observed,
                 Throwable cause) implements Outcome<OBSERVED, RESULT> {
 
             public SourceInterrupted {
-                requireNonNull(timing, "timing must not be null");
                 requireNonNull(cause, "cause must not be null");
             }
         }

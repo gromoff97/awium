@@ -591,7 +591,7 @@ condition failures use `ConditionFailed`. Waiting, source retrieval, and source
 interruption have their own outcomes, so an absent observation is distinct
 from a legitimate `null` value. All outcomes expose `cause()`.
 
-Each outcome has one `AttemptRecord.Timing` with offsets from the start of the
+Each attempt exposes `timing()`, an `AttemptRecord.Timing` with offsets from the start of the
 terminal call. `startOffset()` marks the attempt's start before waiting;
 `retrievalOffset()` marks the start of the source call, `observationOffset()`
 its successful return, and `completionOffset()` the end of the attempt. A

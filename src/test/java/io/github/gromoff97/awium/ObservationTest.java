@@ -78,9 +78,9 @@ class ObservationTest {
                     AwaitResult.Failed<?, ?> failure = assertInstanceOf(AwaitResult.Failed.class, result);
                     var attempt = failure.attempts().getLast();
                     var outcome = assertInstanceOf(AttemptRecord.Outcome.WaitingFailed.class, attempt.outcome());
-                    assertNull(outcome.timing().retrievalOffset());
-                    assertNull(outcome.timing().observationOffset());
-                    assertEquals(boundary.equals("afterInterval") ? 6 : 2, outcome.timing().completionOffset().toNanos());
+                    assertNull(attempt.timing().retrievalOffset());
+                    assertNull(attempt.timing().observationOffset());
+                    assertEquals(boundary.equals("afterInterval") ? 6 : 2, attempt.timing().completionOffset().toNanos());
                     assertEquals(persistence == 0 ? ACQUISITION : AttemptRecord.Phase.PERSISTENCE, attempt.phase());
                     assertEquals(2, attempt.number());
                     assertEquals(1, sources[0]);
@@ -112,7 +112,7 @@ class ObservationTest {
         var observation = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, attempt.outcome());
         var outcome = assertInstanceOf(ConditionResult.Satisfied.class,
                 observation.evaluation());
-        var timing = observation.timing();
+        var timing = attempt.timing();
         assertEquals(1, attempt.number());
         assertEquals(ACQUISITION, attempt.phase());
         assertEquals(Duration.ZERO, timing.startOffset());
@@ -173,10 +173,11 @@ class ObservationTest {
         var outcome = assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class,
                 result.attempts().getFirst().outcome());
         assertSame(failure, outcome.cause());
-        assertEquals(Duration.ZERO, outcome.timing().startOffset());
-        assertEquals(Duration.ZERO, outcome.timing().retrievalOffset());
-        assertNull(outcome.timing().observationOffset());
-        assertEquals(Duration.ZERO, outcome.timing().completionOffset());
+        var timing = result.attempts().getFirst().timing();
+        assertEquals(Duration.ZERO, timing.startOffset());
+        assertEquals(Duration.ZERO, timing.retrievalOffset());
+        assertNull(timing.observationOffset());
+        assertEquals(Duration.ZERO, timing.completionOffset());
     }
 
     @ParameterizedTest

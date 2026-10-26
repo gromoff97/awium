@@ -120,8 +120,8 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, Callable<? 
             long completed = now(configuration);
             var timing = new AttemptRecord.Timing(offset(attemptStarted),
                     offset(retrievalStarted), null, offset(completed));
-            return new AttemptRecord<>(number, phase, evaluator.condition, progress,
-                    new AttemptRecord.Outcome.SourceRetrievalFailed<>(timing, failure));
+            return new AttemptRecord<>(number, phase, timing, evaluator.condition, progress,
+                    new AttemptRecord.Outcome.SourceRetrievalFailed<>(failure));
         }
 
         long observed = now(configuration);
@@ -129,8 +129,8 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, Callable<? 
             var interruption = new InterruptedException("caller thread interrupt flag was set");
             long completed = now(configuration);
             var timing = afterObservation(attemptStarted, retrievalStarted, observed, completed);
-            return new AttemptRecord<>(number, phase, evaluator.condition, progress,
-                    new AttemptRecord.Outcome.SourceInterrupted<>(timing, actual, interruption));
+            return new AttemptRecord<>(number, phase, timing, evaluator.condition, progress,
+                    new AttemptRecord.Outcome.SourceInterrupted<>(actual, interruption));
         }
 
         var execution = evaluator.probe(actual);
@@ -143,11 +143,11 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, Callable<? 
         var condition = evaluation.conditionOr(evaluator.condition);
         AttemptRecord.Outcome<OBSERVED, RESULT> outcome = switch (evaluation) {
             case AttemptResult.Evaluated<? extends RESULT> value -> new Evaluated<>(
-                    timing, actual, value.result());
+                    actual, value.result());
             case AttemptResult.Uncontrolled<?> failure -> new AttemptRecord.Outcome.ConditionFailed<>(
-                    timing, actual, failure.cause());
+                    actual, failure.cause());
         };
-        return new AttemptRecord<>(number, phase, condition,
+        return new AttemptRecord<>(number, phase, timing, condition,
                 evaluation.progress() == null ? progress : evaluation.progress(), outcome);
     }
 
@@ -195,12 +195,12 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, Callable<? 
             long attemptStarted, AttemptRecord.Progress progress, Throwable failure) {
         long completed = now(configuration);
         var timing = new AttemptRecord.Timing(offset(attemptStarted), null, null, offset(completed));
-        return new AttemptRecord<>(number, phase, evaluator.condition, progress,
-                new AttemptRecord.Outcome.WaitingFailed<>(timing, failure));
+        return new AttemptRecord<>(number, phase, timing, evaluator.condition, progress,
+                new AttemptRecord.Outcome.WaitingFailed<>(failure));
     }
 
     private long completedNanos(AttemptRecord<?, ?> attempt) {
-        return started + attempt.outcome().timing().completionOffset().toNanos();
+        return started + attempt.timing().completionOffset().toNanos();
     }
 
     private Duration offset(long stage) {

@@ -17,10 +17,9 @@ class AwaitResultTest {
     @Test
     void successRetainsLegitimateNullAndCopiesHistory() {
         var attempt = new AttemptRecord<String, String>(300, ACQUISITION,
+                new AttemptRecord.Timing(Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ZERO),
                 diagnosticCondition("ready", null, null), null,
-                new AttemptRecord.Outcome.Evaluated<>(new AttemptRecord.Timing(
-                                Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ZERO), null,
-                        new ConditionResult.Satisfied<>(null)));
+                new AttemptRecord.Outcome.Evaluated<>(null, new ConditionResult.Satisfied<>(null)));
         var mutable = new ArrayList<>(List.of(attempt));
 
         var result = new AwaitResult.Satisfied<>(mutable, null);
@@ -48,7 +47,7 @@ class AwaitResultTest {
     void attemptNumbersHaveConciseValidationMessages() {
         assertEquals("attempt number must be positive", assertThrows(
                 IllegalArgumentException.class,
-                () -> new AttemptRecord<>(0, null, null, null, null)).getMessage());
+                () -> new AttemptRecord<>(0, null, null, null, null, null)).getMessage());
     }
 
     @Test
