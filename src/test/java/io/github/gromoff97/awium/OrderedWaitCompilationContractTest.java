@@ -30,8 +30,7 @@ class OrderedWaitCompilationContractTest {
                 "await(Contract::optional).%s(first, last);",
                 "await(Contract::collection).%s(present, present);",
                 "await(Contract::map).%s(first, last);",
-                "await(Contract::collection).%s(singleEntry, singleEntry);",
-                "Callable<List<String>> source = Contract::collection; List<String> wrong = await(source).%s(first, last);")) {
+                "await(Contract::collection).%s(singleEntry, singleEntry);")) {
             assertRejected(expression.formatted(terminal));
         }
     }
@@ -42,6 +41,8 @@ class OrderedWaitCompilationContractTest {
                 "String value = await(Contract::text).until(isNotNull, isNotNull);",
                 "AwaitResult<String, String> value = await(Contract::text).tryUntil(isNotNull, isNotNull);",
                 "List<Integer> value = await(Contract::collection).until(first, last);",
+                "Callable<List<String>> source = Contract::collection; List<Integer> wrong = await(source).until(first, last);",
+                "Callable<List<String>> source = Contract::collection; AwaitResult<List<String>,List<Integer>> wrong = await(source).tryUntil(first, last);",
                 "List<Integer> result = await(Contract::text).until(instanceOf(String.class), instanceOf(String.class));")) {
             assertRejected(expression);
         }
@@ -74,7 +75,10 @@ class OrderedWaitCompilationContractTest {
                 import java.util.*;
                 import java.util.concurrent.Callable;
                 import io.github.gromoff97.awium.AwaitResult;
-                import static io.github.gromoff97.awium.Await.await;
+                import static io.github.gromoff97.awium.Conditions.await;
+                import static io.github.gromoff97.awium.CollectionConditions.await;
+                import static io.github.gromoff97.awium.OptionalConditions.await;
+                import static io.github.gromoff97.awium.MapConditions.await;
                 import static io.github.gromoff97.awium.Conditions.*;
                 import static io.github.gromoff97.awium.CollectionConditions.*;
                 import static io.github.gromoff97.awium.OptionalConditions.present;

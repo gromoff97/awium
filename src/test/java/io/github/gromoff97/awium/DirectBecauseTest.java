@@ -12,7 +12,10 @@ import java.util.concurrent.Callable;
 import java.util.function.BiPredicate;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.MapConditions.*;

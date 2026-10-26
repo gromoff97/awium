@@ -10,7 +10,10 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;

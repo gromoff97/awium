@@ -157,7 +157,7 @@ class WaitEngineTest {
                 ignored -> {}), () -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, ConditionAwaitAttempt.bind(Conditions.<String>condition("test condition", actual -> satisfied(actual)).definition)).waitFor();
+                }, ConditionAwaitAttempt.bind(Conditions.<String>condition("test condition", actual -> satisfied(actual)))).waitFor();
 
         assertInstanceOf(Timeout.class, outcome);
         assertEquals(1, sourceCalls[0]);
@@ -346,7 +346,7 @@ class WaitEngineTest {
         var outcome = new WaitEngine<String, String>(config(5, 20, 0).withTime(clock,
                 nanos -> { throw new AssertionError("parker must not be called"); }),
                 () -> { sourceCalls[0]++; return "actual"; },
-                ConditionAwaitAttempt.bind(Conditions.<String>condition("ready", ConditionResult::satisfied).definition), 0).waitFor();
+                ConditionAwaitAttempt.bind(Conditions.<String>condition("ready", ConditionResult::satisfied)), 0).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = assertInstanceOf(AttemptRecord.Outcome.WaitingFailed.class, failure.attempt().outcome());
@@ -369,7 +369,7 @@ class WaitEngineTest {
         var outcome = new WaitEngine<String, String>(config(1, 2, 0).withTime(clock, nanos -> {}), () -> {
             sourceCalls[0]++;
             return "actual";
-        }, ConditionAwaitAttempt.bind(Conditions.<String>condition("not ready", value -> unsatisfied("not yet")).definition)).waitFor();
+        }, ConditionAwaitAttempt.bind(Conditions.<String>condition("not ready", value -> unsatisfied("not yet")))).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = assertInstanceOf(AttemptRecord.Outcome.WaitingFailed.class, failure.attempt().outcome());
@@ -398,7 +398,7 @@ class WaitEngineTest {
                 ConditionAwaitAttempt.bind(Conditions.<String>condition("ready", actual -> {
                     evaluated[0] = true;
                     return persistence == 0 ? unsatisfied("not yet") : satisfied("ready");
-                }).definition), 0).waitFor();
+                })), 0).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = assertInstanceOf(AttemptRecord.Outcome.WaitingFailed.class, failure.attempt().outcome());

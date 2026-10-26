@@ -46,7 +46,7 @@ class DirectBecauseCompilationContractTest {
                     "String wrong = await(numbers).until(condition(\"identity\", ConditionResult::satisfied)%s);",
                     "AwaitResult<Number, String> wrong = await(numbers).tryUntil(condition(\"identity\", ConditionResult::satisfied)%s);",
                     "List<String> wrong = await(numbers).until(condition(\"first\", ConditionResult::satisfied)%s, isNotNull);",
-                    "Condition<Number, String> wrong = condition(\"transform\", value -> ConditionResult.satisfied(\"text\"))%s;")) {
+                    "Condition.Typed<Number, String> wrong = condition(\"transform\", value -> ConditionResult.satisfied(\"text\"))%s;")) {
                 String call = expression.formatted(decoration);
                 assertRejected(call);
             }
@@ -131,8 +131,8 @@ class DirectBecauseCompilationContractTest {
                 }
             }
         }
-        assertRejected("Condition<Object, Object> erased = isNotNull;");
-        assertRejected("Condition<String, String> erased = equalTo(\"ready\");");
+        assertRejected("Condition.Typed<Object, Object> erased = isNotNull;");
+        assertRejected("Condition.Typed<String, String> erased = equalTo(\"ready\");");
     }
 
     @Test
@@ -205,16 +205,16 @@ class DirectBecauseCompilationContractTest {
     @Test
     void selectorsCannotMasqueradeAsTypedTransformations() throws IOException {
         for (String expression : List.of(
-                "Condition<Optional<?>, Object> erased = present;",
-                "Condition<Map<?, ?>, Object> erased = valueFor(\"key\");",
+                "Condition.Typed<Optional<?>, Object> erased = present;",
+                "Condition.Typed<Map<?, ?>, Object> erased = valueFor(\"key\");",
                 "Object value = await(() -> List.of(Optional.of(1))).until(single(present));",
                 "Object value = await(() -> List.of(Optional.of(1))).until(single(present.because(\"inner\")).because(\"outer\"));",
                 "Object value = await(() -> Optional.of(Map.of(\"key\", 1))).until(hasValue(valueFor(\"key\")));",
                 "Object value = await(() -> Optional.of(Map.of(\"key\", 1))).until(hasValue(valueFor(\"key\").because(\"inner\")).because(\"outer\"));",
                 "List<Object> values = await(collection).until(single, isNotNull);",
                 "List<Object> values = await(collection).until(single.because(\"first\"), isNotNull.because(\"second\"));",
-                "Callable<Map<String, Number>> plain = map; Object value = await(plain).until(valueFor(\"key\"));",
-                "Callable<Map<String, Number>> plain = map; Object value = await(plain).until(valueFor(\"key\").because(\"required\"));",
+                "Callable<Map<String, Number>> plain = map; String value = await(plain).until(valueFor(\"key\"));",
+                "Callable<Map<String, Number>> plain = map; String value = await(plain).until(valueFor(\"key\").because(\"required\"));",
                 "await(collection).until(CollectionConditions.sorted(String::compareTo).because(\"wrong type\"));")) {
             assertRejected(expression);
         }
@@ -226,14 +226,17 @@ class DirectBecauseCompilationContractTest {
                 import java.util.concurrent.Callable;
                 import io.github.gromoff97.awium.*;
                 import io.github.gromoff97.awium.Await.*;
-                import static io.github.gromoff97.awium.Await.await;
+                import static io.github.gromoff97.awium.Conditions.await;
+                import static io.github.gromoff97.awium.CollectionConditions.await;
+                import static io.github.gromoff97.awium.OptionalConditions.await;
+                import static io.github.gromoff97.awium.MapConditions.await;
                 import static io.github.gromoff97.awium.Conditions.*;
                 import static io.github.gromoff97.awium.OptionalConditions.*;
                 import static io.github.gromoff97.awium.CollectionConditions.single;
                 import static io.github.gromoff97.awium.MapConditions.*;
                 final class Contract {
-                    void check(Callable<Number> numbers, OptionalSource<Number> optional,
-                            CollectionSource<List<Number>> collection, MapSource<Map<String, Number>> map) {
+                    void check(Callable<Number> numbers, java.util.concurrent.Callable<java.util.Optional<Number>> optional,
+                            java.util.concurrent.Callable<List<Number>> collection, java.util.concurrent.Callable<Map<String, Number>> map) {
                         %s
                     }
                 }

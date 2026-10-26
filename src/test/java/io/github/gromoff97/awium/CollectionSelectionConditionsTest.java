@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Await.CollectionSource;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
 import java.util.AbstractList;
@@ -15,7 +14,10 @@ import org.junit.jupiter.api.Test;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.CollectionConditions.first;
@@ -40,11 +42,11 @@ class CollectionSelectionConditionsTest {
     void singleFieldAndOverloadsReturnTypedElements() {
         var pollingTime = new FakeTime(0);
         var users = new ArrayList<>(List.of(new User(1), new User(2)));
-        CollectionSource<ArrayList<User>> source = () -> users;
+        java.util.concurrent.Callable<ArrayList<User>> source = () -> users;
 
         User matching = await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(matches(user -> user.id() == 2)));
-        String typed = await((CollectionSource<List<Object>>) () -> List.of("text", 42)).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(instanceOf(String.class)));
-        String nullable = await((CollectionSource<List<String>>) () -> Arrays.asList((String) null)).usingTime(pollingTime, pollingTime).until(CollectionConditions.single);
+        String typed = await((java.util.concurrent.Callable<List<Object>>) () -> List.of("text", 42)).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(instanceOf(String.class)));
+        String nullable = await((java.util.concurrent.Callable<List<String>>) () -> Arrays.asList((String) null)).usingTime(pollingTime, pollingTime).until(CollectionConditions.single);
 
         assertSame(users.get(1), matching);
         assertEquals("text", typed);
@@ -56,7 +58,7 @@ class CollectionSelectionConditionsTest {
     void quantifiersPreserveTheConcreteCollection() {
         var pollingTime = new FakeTime(0);
         var actual = new ArrayList<>(List.of(2, 4, 6));
-        CollectionSource<ArrayList<Integer>> source = () -> actual;
+        java.util.concurrent.Callable<ArrayList<Integer>> source = () -> actual;
 
         assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.all(value -> value % 2 == 0)));
         assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.any(value -> value == 4)));
@@ -141,7 +143,7 @@ class CollectionSelectionConditionsTest {
     void orderedConditionsCoverPositionsSequencesAndSorting() {
         var pollingTime = new FakeTime(0);
         var values = new ArrayList<>(List.of(1, 2, 3, 5));
-        CollectionSource<ArrayList<Integer>> source = () -> values;
+        java.util.concurrent.Callable<ArrayList<Integer>> source = () -> values;
 
         assertEquals(1, await(source).usingTime(pollingTime, pollingTime).until(first));
         assertEquals(5, await(source).usingTime(pollingTime, pollingTime).until(last.because("latest business result")));
@@ -184,8 +186,8 @@ class CollectionSelectionConditionsTest {
                 java.util.Comparator.comparingInt(Integer::intValue).reversed()), List.of(3, 2, 1)).getClass());
 
         var sequencedSet = new LinkedHashSet<>(List.of(1, 2, 3));
-        assertEquals(1, await((CollectionSource<LinkedHashSet<Integer>>) () -> sequencedSet).usingTime(pollingTime, pollingTime).until(first));
-        assertSame(sequencedSet, await((CollectionSource<LinkedHashSet<Integer>>) () -> sequencedSet).usingTime(pollingTime, pollingTime).until(
+        assertEquals(1, await((java.util.concurrent.Callable<LinkedHashSet<Integer>>) () -> sequencedSet).usingTime(pollingTime, pollingTime).until(first));
+        assertSame(sequencedSet, await((java.util.concurrent.Callable<LinkedHashSet<Integer>>) () -> sequencedSet).usingTime(pollingTime, pollingTime).until(
                 CollectionConditions.startsWith(List.of(1, 2))));
     }
 
@@ -328,7 +330,7 @@ class CollectionSelectionConditionsTest {
     @Test
     void lastReturnsTheFinalPersistenceObservation() {
         var observations = new ArrayDeque<>(List.of(List.of(1), List.of(2), List.of(3)));
-        CollectionSource<List<Integer>> source = observations::removeFirst;
+        java.util.concurrent.Callable<List<Integer>> source = observations::removeFirst;
         FakeTime time = new FakeTime(0);
 
         assertEquals(3, timedCollectionAwait(source,
@@ -338,7 +340,7 @@ class CollectionSelectionConditionsTest {
     @Test
     void explainedFirstRetainsSelectedTimeoutDiagnostics() {
         FakeTime time = new FakeTime(0);
-        CollectionSource<List<String>> source = List::of;
+        java.util.concurrent.Callable<List<String>> source = List::of;
 
         var failure = assertFailure(TIMEOUT,
                 () -> timedCollectionAwait(source,

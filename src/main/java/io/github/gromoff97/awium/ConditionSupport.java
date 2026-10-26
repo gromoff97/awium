@@ -23,9 +23,27 @@ final class ConditionSupport {
 
     private ConditionSupport() {}
 
-    static <OBSERVED, RESULT> Condition<OBSERVED, RESULT> condition(String description, Reference<?> reference,
+    enum Quantifier {
+        ALL, ANY, NONE;
+
+        boolean stops(boolean matched) {
+            return switch (this) {
+                case ALL -> !matched;
+                case ANY, NONE -> matched;
+            };
+        }
+
+        boolean satisfied(boolean stopped) {
+            return switch (this) {
+                case ALL, NONE -> !stopped;
+                case ANY -> stopped;
+            };
+        }
+    }
+
+    static <OBSERVED, RESULT> Condition.Typed<OBSERVED, RESULT> condition(String description, Reference<?> reference,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>> evaluation) {
-        var condition = new Condition<OBSERVED, RESULT>(description, null, reference,
+        var condition = new Condition.Typed<OBSERVED, RESULT>(description, null, reference,
                 () -> actual -> AttemptResult.of(evaluation.apply(actual)));
         requireNonNull(evaluation, "evaluation must not be null");
         return condition;
@@ -47,7 +65,7 @@ final class ConditionSupport {
 
     static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description,
             Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory) {
-        var definition = new Condition<OBSERVED, OBSERVED>(description, null, null, () -> {
+        var definition = new Condition.Typed<OBSERVED, OBSERVED>(description, null, null, () -> {
             var evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
             return actual -> AttemptResult.of(
                     requireNonNull(evaluator.apply(actual), "condition returned null ConditionResult")
@@ -66,15 +84,58 @@ final class ConditionSupport {
         return new Reference<>("Expected", value);
     }
 
+    static <OBSERVED, ELEMENT, RESULT> PreservingCondition<OBSERVED> quantified(
+            String subject, String description, String mismatch, Quantifier quantifier, Condition<?> nested,
+            Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
+            Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT>> evaluatorFactory) {
+        Condition.required(nested);
+        return new PreservingCondition<>(new Condition.Typed<>(description, nested, () -> {
+            var evaluator = evaluatorFactory.get();
+            return actual -> actual == null ? AttemptResult.of(unsatisfied(subject + " was null"))
+                    : evaluateQuantifier(actual, elements.apply(actual), evaluator, quantifier, mismatch);
+        }));
+    }
+
+    private static <OBSERVED, ELEMENT, RESULT> AttemptResult<OBSERVED> evaluateQuantifier(
+            OBSERVED actual, Iterable<? extends ELEMENT> values,
+            ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT> evaluator,
+            Quantifier quantifier, String mismatch) {
+        AttemptResult.Evaluated<? extends RESULT> last = null;
+        for (ELEMENT value : values) {
+            switch (evaluator.probe(value)) {
+                case AttemptResult.Uncontrolled<? extends RESULT> failure -> {
+                    return new AttemptResult.Uncontrolled<>(failure.cause(), failure.condition(), failure.progress());
+                }
+                case AttemptResult.Evaluated<? extends RESULT> evaluated -> {
+                    last = evaluated;
+                    if (quantifier.stops(evaluated.result() instanceof ConditionResult.Satisfied<?>)) {
+                        return quantifiedResult(actual, quantifier.satisfied(true), mismatch, evaluated);
+                    }
+                }
+            }
+        }
+        return quantifiedResult(actual, quantifier.satisfied(false), mismatch, last);
+    }
+
+    private static <OBSERVED> AttemptResult<OBSERVED> quantifiedResult(OBSERVED actual, boolean successful,
+            String mismatch, AttemptResult.Evaluated<?> evaluated) {
+        if (successful) return AttemptResult.of(satisfied(actual));
+        if (evaluated == null) return AttemptResult.of(unsatisfied(mismatch));
+        ConditionResult<OBSERVED> failure = evaluated.result() instanceof ConditionResult.Unsatisfied<?> value
+                ? unsatisfied(value.mismatch() == null ? mismatch : mismatch + ": " + value.mismatch(), value.cause())
+                : unsatisfied(mismatch);
+        return new AttemptResult.Evaluated<>(failure, evaluated.condition(), evaluated.progress());
+    }
+
     static <VALUE> Reference<VALUE> unexpectedReference(VALUE value) {
         return new Reference<>("Unexpected", value);
     }
 
-    static <OBSERVED, VALUE, RESULT> Condition<OBSERVED, RESULT> compose(String prefix, Condition<?, ?> condition,
-            Condition<?, ?> extractionCondition,
+    static <OBSERVED, VALUE, RESULT> Condition.Typed<OBSERVED, RESULT> compose(String prefix, Condition<?> condition,
+            Condition<?> extractionCondition,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<VALUE>> extract,
             Supplier<? extends ConditionAwaitAttempt<? super VALUE, ? extends RESULT>> evaluatorFactory) {
-        return new Condition<>(prefix + condition.description(), condition, () -> {
+        return new Condition.Typed<>(prefix + condition.description(), condition, () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> {
                 try {
@@ -133,10 +194,10 @@ final class ConditionSupport {
                 : selection.apply(value);
     }
 
-    static <OBSERVED, ELEMENT, RESULT> Condition<OBSERVED, RESULT> single(String subject, Condition<?, ?> condition,
+    static <OBSERVED, ELEMENT, RESULT> Condition.Typed<OBSERVED, RESULT> single(String subject, Condition<?> condition,
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
             Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT>> evaluatorFactory) {
-        return new Condition<>(subject + " has a single matching value: " + condition.description(), condition, () -> {
+        return new Condition.Typed<>(subject + " has a single matching value: " + condition.description(), condition, () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> actual == null ? AttemptResult.of(unsatisfied(subject + " was null"))
                     : evaluateSingle(elements.apply(actual), evaluator);
@@ -165,39 +226,39 @@ final class ConditionSupport {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <OBSERVED> Condition<OBSERVED, List<OBSERVED>> captured(
-            SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>>... conditions) {
+    static <OBSERVED> Condition.Typed<OBSERVED, List<OBSERVED>> captured(
+            SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>, ?>... conditions) {
         var stages = stages(conditions);
-        return new Condition<>("conditions are satisfied in order", null, null, () ->
+        return new Condition.Typed<>("conditions are satisfied in order", null, null, () ->
                 new SequenceExecution<OBSERVED, OBSERVED>(stages.stream()
-                        .map(stage -> ConditionAwaitAttempt.bind(stage.definition())))::step);
+                        .map(stage -> ConditionAwaitAttempt.bind(stage)))::step);
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <OBSERVED, ELEMENT> Condition<OBSERVED, List<ELEMENT>> captured(
+    static <OBSERVED, ELEMENT> Condition.Typed<OBSERVED, List<ELEMENT>> captured(
             SelectedCondition<? super OBSERVED, ? super ELEMENT, ? super Reference<? super ELEMENT>>... conditions) {
         var stages = stages(conditions);
-        return new Condition<>("conditions are satisfied in order", null, null,
+        return new Condition.Typed<>("conditions are satisfied in order", null, null,
                 () -> new SequenceExecution<OBSERVED, ELEMENT>(stages.stream()
-                        .map(stage -> ConditionAwaitAttempt.bind(stage.definition)))::step);
+                        .map(stage -> ConditionAwaitAttempt.bind(stage)))::step);
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <OBSERVED, MAP_VALUE> Condition<OBSERVED, List<MAP_VALUE>> captured(
+    static <OBSERVED, MAP_VALUE> Condition.Typed<OBSERVED, List<MAP_VALUE>> captured(
             MapValueCondition<? super OBSERVED, ? super MAP_VALUE, ? super Reference<? super MAP_VALUE>>... conditions) {
         var stages = stages(conditions);
-        return new Condition<>("conditions are satisfied in order", null, null,
+        return new Condition.Typed<>("conditions are satisfied in order", null, null,
                 () -> new SequenceExecution<OBSERVED, MAP_VALUE>(stages.stream()
-                        .map(stage -> ConditionAwaitAttempt.bind(stage.definition)))::step);
+                        .map(stage -> ConditionAwaitAttempt.bind(stage)))::step);
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <OBSERVED, RESULT> Condition<OBSERVED, List<RESULT>> captured(Condition<? super OBSERVED, RESULT>... conditions) {
+    static <OBSERVED, RESULT> Condition.Typed<OBSERVED, List<RESULT>> captured(Condition.Typed<? super OBSERVED, RESULT>... conditions) {
         var stages = stages(conditions);
-        return new Condition<>("conditions are satisfied in order", null, null, () ->
+        return new Condition.Typed<>("conditions are satisfied in order", null, null, () ->
                 new SequenceExecution<OBSERVED, RESULT>(stages.stream()
                         .map(ConditionAwaitAttempt::new))::step);
     }

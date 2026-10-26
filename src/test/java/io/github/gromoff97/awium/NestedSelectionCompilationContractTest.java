@@ -21,7 +21,10 @@ class NestedSelectionCompilationContractTest {
             CompilationSupport.assertRejected(directory, """
                     import java.util.List;
                     import io.github.gromoff97.awium.AwaitResult;
-                    import static io.github.gromoff97.awium.Await.await;
+                    import static io.github.gromoff97.awium.Conditions.await;
+                    import static io.github.gromoff97.awium.CollectionConditions.await;
+                    import static io.github.gromoff97.awium.OptionalConditions.await;
+                    import static io.github.gromoff97.awium.MapConditions.await;
                     import static io.github.gromoff97.awium.Conditions.*;
                     import static io.github.gromoff97.awium.CollectionConditions.single;
                     final class Contract {

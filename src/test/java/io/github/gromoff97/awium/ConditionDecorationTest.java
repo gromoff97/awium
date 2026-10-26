@@ -1,5 +1,10 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
+
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.util.IllegalFormatException;
 import java.util.List;
@@ -44,7 +49,12 @@ class ConditionDecorationTest {
 
     @Test
     void replacingAnExplanationLeavesTheOriginalAndConstantsUnchanged() {
-        var conditions = List.<Condition<?, ?>>of(
+        List<Condition<?>> conditions = List.of(
+                matches(String::isBlank),
+                equalTo("expected"),
+                OptionalConditions.present,
+                CollectionConditions.single,
+                MapConditions.valueFor("key"),
                 instanceOf(String.class),
                 captured(equalTo("first"), equalTo("last")),
                 captured(CollectionConditions.first, CollectionConditions.last));
@@ -53,6 +63,10 @@ class ConditionDecorationTest {
 
         for (var condition : conditions) assertNull(condition.explanation());
         for (var replacement : replacements) assertEquals("new 42", replacement.explanation());
+        for (int i = 0; i < conditions.size(); i++) {
+            assertEquals(conditions.get(i).description(), replacements.get(i).description());
+            assertEquals(conditions.get(i).reference(), replacements.get(i).reference());
+        }
         var custom = condition("custom", ConditionResult::satisfied);
         assertEquals("new 42", explanation(custom.because("old").because("new %d", 42)));
         assertNull(explanation(custom));
@@ -112,7 +126,7 @@ class ConditionDecorationTest {
         Callable<String> source = () -> {
             throw new AssertionError("source must not be read");
         };
-        var waiting = Await.await(source);
+        var waiting = await(source);
         assertEquals("condition must not be null",
                 assertThrows(NullPointerException.class, () -> waiting.until((PreservingCondition<String>) null)).getMessage());
         assertEquals("condition must not be null",

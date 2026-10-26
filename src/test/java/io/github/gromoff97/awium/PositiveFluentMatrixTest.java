@@ -1,10 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Await.CollectionSource;
 import io.github.gromoff97.awium.Await.CollectionViewSource;
-import io.github.gromoff97.awium.Await.MapSource;
 import io.github.gromoff97.awium.Await.MapViewSource;
-import io.github.gromoff97.awium.Await.OptionalSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -20,7 +17,10 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.OptionalConditions.*;
@@ -56,7 +56,7 @@ class PositiveFluentMatrixTest {
     void optionalFacadeExecutesCanonicalFullChain() {
         var pollingTime = new FakeTime(0);
         var value = new String("value");
-        OptionalSource<String> source = () -> Optional.of(value);
+        java.util.concurrent.Callable<java.util.Optional<String>> source = () -> Optional.of(value);
 
         String selected = await(source).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).until(present.because("optional full chain"));
         Optional<String> empty = Optional.empty();
@@ -70,7 +70,7 @@ class PositiveFluentMatrixTest {
     void collectionFacadeExecutesCanonicalFullChain() {
         var pollingTime = new FakeTime(0);
         var actual = new ArrayList<>(List.of("value"));
-        CollectionSource<ArrayList<String>> source = () -> actual;
+        java.util.concurrent.Callable<ArrayList<String>> source = () -> actual;
 
         Condition.PreservingCondition<Collection<?>> collectionCondition = nonEmpty;
         Condition.PreservingCondition<Collection<?>> explained =
@@ -86,7 +86,7 @@ class PositiveFluentMatrixTest {
     void mapFacadeExecutesCanonicalFullChain() {
         var pollingTime = new FakeTime(0);
         var actual = new LinkedHashMap<>(java.util.Map.of("key", "value"));
-        MapSource<LinkedHashMap<String, String>> source = () -> actual;
+        java.util.concurrent.Callable<LinkedHashMap<String, String>> source = () -> actual;
 
         LinkedHashMap<String, String> raw = await(source).usingTime(pollingTime, pollingTime).until(MapConditions.nonEmpty);
         LinkedHashMap<String, String> selected = await(source).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).until(MapConditions.nonEmpty.because("map full chain"));
@@ -166,7 +166,7 @@ class PositiveFluentMatrixTest {
     }
 
     @Test
-    void methodReferencesRecoverSelectionTypesFromPlainSources() {
+    void jdkVariablesAndMethodReferencesHaveTheSameSelectionTypes() {
         Callable<Optional<String>> optional = () -> Optional.of("ready");
         Callable<ArrayList<String>> collection = () -> new ArrayList<>(List.of("ready"));
         Callable<LinkedHashMap<String, Integer>> map = () -> new LinkedHashMap<>(Map.of("ready", 1));
@@ -180,13 +180,31 @@ class PositiveFluentMatrixTest {
         assertEquals("ready", element);
         assertEquals(Map.entry("ready", 1), entry);
         assertEquals(optionalValue, assertInstanceOf(AwaitResult.Satisfied.class, attempt).result());
+        assertEquals(optionalValue, await(optional).until(present));
+        assertEquals(element, await(collection).until(single));
+        assertEquals(entry, await(map).until(MapConditions.singleEntry));
+        var time = new FakeTime(0);
+        List<String> stages = await(collection).usingTime(time, time).every(ofNanos(1)).until(first, last);
+        assertEquals(List.of("ready", "ready"), stages);
+    }
+
+    @Test
+    void explicitCatalogFactoriesAcceptOverloadedConstructors() {
+        StringBuilder text = Conditions.await(StringBuilder::new).until(StringConditions.empty);
+        ArrayList<String> values = CollectionConditions.await(ArrayList<String>::new).until(CollectionConditions.empty);
+        LinkedHashMap<String, Integer> entries = MapConditions.await(LinkedHashMap<String, Integer>::new).until(MapConditions.empty);
+        Optional<?> absent = OptionalConditions.await(Optional::empty).until(OptionalConditions.absent);
+        assertEquals(0, text.length());
+        assertEquals(0, values.size());
+        assertEquals(0, entries.size());
+        assertEquals(Optional.empty(), absent);
     }
 
     @Test
     void diagnosticTerminalsRetainSpecializedSourceAndResultTypes() {
-        OptionalSource<String> optional = () -> Optional.of("ready");
-        CollectionSource<List<String>> collection = () -> List.of("ready");
-        MapSource<Map<String, Integer>> map = () -> Map.of("ready", 1);
+        java.util.concurrent.Callable<java.util.Optional<String>> optional = () -> Optional.of("ready");
+        java.util.concurrent.Callable<List<String>> collection = () -> List.of("ready");
+        java.util.concurrent.Callable<Map<String, Integer>> map = () -> Map.of("ready", 1);
 
         AwaitResult<Optional<String>, String> optionalResult = await(optional).tryUntil(present);
         AwaitResult<List<String>, String> collectionResult = await(collection).tryUntil(single);

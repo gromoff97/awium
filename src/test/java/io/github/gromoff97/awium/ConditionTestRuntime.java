@@ -9,27 +9,27 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 final class ConditionTestRuntime {
 
-    static Condition<Object, Object> diagnosticCondition(String description, String explanation, Condition.Reference<?> reference) {
-        return new Condition<>(description, explanation, reference,
+    static Condition.Typed<Object, Object> diagnosticCondition(String description, String explanation, Condition.Reference<?> reference) {
+        return new Condition.Typed<>(description, explanation, reference,
                 () -> actual -> AttemptResult.of(ConditionResult.satisfied(actual)));
     }
 
     static <S, R> ConditionResult<? extends R> evaluate(
-            Condition<? super S, ? extends R> condition, S actual) {
+            Condition.Typed<? super S, ? extends R> condition, S actual) {
         return evaluated(new ConditionAwaitAttempt<>(condition).probe(actual));
     }
 
     static <S> ConditionResult<? extends S> evaluate(PreservingCondition<? super S> condition, S actual) {
-        return evaluated(ConditionAwaitAttempt.<S, S>bind(condition.definition).probe(actual));
+        return evaluated(ConditionAwaitAttempt.<S, S>bind(condition).probe(actual));
     }
 
     static <S> ConditionResult<?> evaluate(
             SelectedCondition<? super S, ?, ?> condition, S actual) {
-        return evaluated(new ConditionAwaitAttempt<>(condition.definition).probe(actual));
+        return evaluated(ConditionAwaitAttempt.<S, Object>bind(condition).probe(actual));
     }
 
     static <S> ConditionResult<?> evaluate(MapValueCondition<? super S, ?, ?> condition, S actual) {
-        return evaluated(new ConditionAwaitAttempt<>(condition.definition).probe(actual));
+        return evaluated(ConditionAwaitAttempt.<S, Object>bind(condition).probe(actual));
     }
 
     static <RESULT> ConditionResult<? extends RESULT> evaluated(AttemptResult<? extends RESULT> attempt) {
@@ -39,36 +39,16 @@ final class ConditionTestRuntime {
         };
     }
 
-    static String description(SelectedCondition<?, ?, ?> condition) {
-        return condition.definition.description();
-    }
-
-    static String explanation(SelectedCondition<?, ?, ?> condition) {
-        return condition.definition.explanation();
-    }
-
-    static String explanation(MapValueCondition<?, ?, ?> condition) {
-        return condition.definition.explanation();
-    }
-
     static <S> ConditionResult<? extends S> evaluate(ComparisonCondition<? extends S> condition, S actual) {
-        return evaluated(ConditionAwaitAttempt.<S, S>bind(condition.definition).probe(actual));
+        return evaluated(ConditionAwaitAttempt.<S, S>bind(condition).probe(actual));
     }
 
-    static String description(ComparisonCondition<?> condition) {
-        return condition.definition.description();
+    static String description(Condition<?> condition) {
+        return condition.description();
     }
 
-    static String explanation(ComparisonCondition<?> condition) {
-        return condition.definition.explanation();
-    }
-
-    static String description(PreservingCondition<?> condition) {
-        return condition.definition.description();
-    }
-
-    static String explanation(PreservingCondition<?> condition) {
-        return condition.definition.explanation();
+    static String explanation(Condition<?> condition) {
+        return condition.explanation();
     }
 
     static void assertUnsatisfied(ConditionResult<?> evaluation) {

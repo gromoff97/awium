@@ -6,7 +6,10 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.CollectionConditions.single;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
@@ -17,6 +20,47 @@ import static org.junit.jupiter.api.Assertions.*;
 class NestedSelectionTest {
 
     record Payment(int id, boolean paid) {}
+
+    @Test
+    void onlyValueForAcceptsChecksComparisonsAndDeclaredResults() {
+        var paid = new Payment(1, true);
+        var source = Map.of("payment", paid);
+        Payment checked = await(() -> source).until(MapConditions.onlyValueFor("payment",
+                matches(Payment::paid).because("paid payment")).because("only payment"));
+        assertSame(paid, checked);
+        assertSame(paid, await(() -> source).until(MapConditions.onlyValueFor("payment", Payment::paid)));
+        assertSame(paid, await(() -> source).until(MapConditions.onlyValueFor("payment", equalTo(paid))));
+        Map<String, Object> broad = Map.of("payment", paid);
+        Payment narrowed = await(() -> broad).until(MapConditions.onlyValueFor("payment", instanceOf(Payment.class)));
+        assertSame(paid, narrowed);
+        var captured = await(() -> source).tryUntil(MapConditions.onlyValueFor("payment", Payment::paid));
+        assertSame(paid, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+    }
+
+    @Test
+    void onlyValueForChecksStructureBeforeCreatingNestedStateAndKeepsFailures() {
+        var paid = new Payment(1, true);
+        int[] factories = {0};
+        var cause = new IOException("payment failed");
+        var check = conditionPerWait("broken payment", () -> {
+            factories[0]++;
+            return (Payment payment) -> { throw cause; };
+        });
+        var time = new FakeTime(0);
+        for (Map<String, Payment> source : java.util.Arrays.asList(null, Map.<String, Payment>of(),
+                Map.of("other", paid), Map.of("payment", paid, "other", paid))) {
+            var result = await(() -> source).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1))
+                    .tryUntil(MapConditions.onlyValueFor("payment", check).because("required payment"));
+            var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+            assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+            assertTrue(failure.message().contains("Expected: payment"), failure.message());
+            assertTrue(failure.message().contains("Because: required payment"), failure.message());
+        }
+        assertEquals(0, factories[0]);
+        var result = await(() -> Map.of("payment", paid)).tryUntil(MapConditions.onlyValueFor("payment", check));
+        assertSame(cause, assertInstanceOf(AwaitResult.Failed.class, result).failure().cause());
+        assertEquals(1, factories[0]);
+    }
 
     @Test
     void nestedConditionsSelectAndNarrowTheUniqueMatchingValue() {

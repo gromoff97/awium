@@ -25,6 +25,16 @@ public final class Conditions {
 
     private Conditions() {}
 
+    /**
+     * Configures a wait for an observed value. Use the corresponding container catalogue for selections.
+     * @param <VALUE> observed value type
+     * @param source repeatedly invoked source
+     * @return immutable wait configuration
+     */
+    public static <VALUE> ValueAwait<VALUE> await(Callable<VALUE> source) {
+        return new ValueAwait<>(source, WaitConfiguration.DEFAULT);
+    }
+
     /** Creates a named check using the supplied callback for every execution. */
     public static <OBSERVED> PreservingCondition<OBSERVED> condition(String description,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>> evaluation) {
@@ -69,7 +79,7 @@ public final class Conditions {
                 ? satisfied(actual) : unsatisfied("value was the same instance")));
     }
 
-    public static <RESULT> Condition<Object, RESULT> instanceOf(Class<RESULT> type) {
+    public static <RESULT> Condition.Typed<Object, RESULT> instanceOf(Class<RESULT> type) {
         requireNonNull(type, "type must not be null");
         return ConditionSupport.condition("value is an instance of " + type.getTypeName(), null, actual ->
                 type.isInstance(actual)
@@ -77,7 +87,7 @@ public final class Conditions {
                         : unsatisfied("value was not an instance of " + type.getTypeName()));
     }
 
-    public static <RESULT> Condition<Object, RESULT> exactInstanceOf(Class<RESULT> type) {
+    public static <RESULT> Condition.Typed<Object, RESULT> exactInstanceOf(Class<RESULT> type) {
         requireNonNull(type, "type must not be null");
         return ConditionSupport.condition("value is exactly an instance of " + type.getTypeName(), null, actual ->
                 actual != null && actual.getClass() == type

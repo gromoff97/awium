@@ -12,7 +12,10 @@ import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
 import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.AttemptRecord.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
@@ -39,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DiagnosticsSnapshotTest {
 
-    private static final Condition<?, ?> CONDITION = diagnosticCondition("condition", null, null);
+    private static final Condition<?> CONDITION = diagnosticCondition("condition", null, null);
     private static final long SECOND = 1_000_000_000L;
     private static final long MILLISECOND = 1_000_000L;
 
@@ -650,7 +653,7 @@ class DiagnosticsSnapshotTest {
             };
             var progress = new AttemptRecord.Progress(1, 2, 2, diagnosticCondition("second stage", null,
                     new Condition.Reference<>("Expected", values[2])));
-            var check = new Condition<Object, Object>("ordered conditions", null,
+            var check = new Condition.Typed<Object, Object>("ordered conditions", null,
                     new Condition.Reference<>("Expected", values[0]),
                     () -> actual -> new AttemptResult.Evaluated<>(unsatisfied("not ready", original), null, progress));
             var time = new FakeTime(0);
@@ -691,7 +694,7 @@ class DiagnosticsSnapshotTest {
             };
             var progress = new AttemptRecord.Progress(1, 2, 2, diagnosticCondition("second stage", null,
                     new Condition.Reference<>("Expected", "stage operand")));
-            var check = new Condition<Object, Object>("ordered conditions", "business reason",
+            var check = new Condition.Typed<Object, Object>("ordered conditions", "business reason",
                     new Condition.Reference<>("Expected", expected),
                     () -> value -> new AttemptResult.Evaluated<>(unsatisfied("not ready", original), null, progress));
             var time = new FakeTime(0);
@@ -1182,7 +1185,7 @@ class DiagnosticsSnapshotTest {
         assertMessage(failure, "[[[1, 2], leaf], [[1, 2], leaf], [null, [a, b]], [[...]]]");
     }
 
-    private static Condition<String, List<String>> lifecycle(
+    private static Condition.Typed<String, List<String>> lifecycle(
             PreservingCondition<String> pending,
             PreservingCondition<String> completed) {
         return captured(status("created", "payment status is created"),
@@ -1206,7 +1209,7 @@ class DiagnosticsSnapshotTest {
     }
 
     private static <S, R> AttemptRecord<S, R> evaluatedAttempt(
-            Condition<?, ?> condition, S observed, ConditionResult<? extends R> result, long number, long completedNanos) {
+            Condition<?> condition, S observed, ConditionResult<? extends R> result, long number, long completedNanos) {
         return new AttemptRecord<>(number, ACQUISITION,
                 new AttemptRecord.Outcome.Evaluated<>(afterObservation(completedNanos), observed,
                         result, condition, null));
@@ -1227,7 +1230,7 @@ class DiagnosticsSnapshotTest {
     }
 
     private static WaitCompletion<Object, Object> conditionFailure(
-            Condition<?, ?> expectation, Object observed, Throwable failure, long number, long completedNanos) {
+            Condition<?> expectation, Object observed, Throwable failure, long number, long completedNanos) {
         return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION,
                 new AttemptRecord.Outcome.ConditionFailed<>(afterObservation(completedNanos), observed,
                         failure, expectation, null)));

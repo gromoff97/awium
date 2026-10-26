@@ -13,7 +13,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.AttemptRecord.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
@@ -260,7 +263,7 @@ class ObservationTest {
         }, ConditionAwaitAttempt.bind(Conditions.condition("ready", value -> {
             conditionCalls[0]++;
             return satisfied(value);
-        }).definition)).waitFor();
+        }))).waitFor();
 
         var failure = assertInstanceOf(WaitCompletion.Uncontrolled.class, outcome);
         var attempt = assertInstanceOf(AttemptRecord.Outcome.SourceInterrupted.class, failure.attempt().outcome());
@@ -338,7 +341,7 @@ class ObservationTest {
                                 currentThread().interrupt();
                             }
                             return ConditionResult.unsatisfied("not yet");
-                        }).definition)).waitFor()));
+                        }))).waitFor()));
                 assertTrue(currentThread().isInterrupted(), phase);
             } finally {
                 interrupted();

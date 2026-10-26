@@ -12,7 +12,10 @@ import java.util.function.Supplier;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
 import static io.github.gromoff97.awium.Conditions.equalTo;
@@ -210,7 +213,7 @@ class TypedCollectionSelectionTest {
     @Test
     void mismatchesRetainLazyReasonsAndExtractionDetails() {
         List<Object> values = List.of("wrong");
-        List<Condition<? super List<Object>, User>> checks = List.of(
+        List<Condition.Typed<? super List<Object>, User>> checks = List.of(
                 first(instanceOf(User.class)), last(instanceOf(User.class)), element(0, instanceOf(User.class)));
         for (var check : checks) {
             int[] reasons = {0};
@@ -228,7 +231,7 @@ class TypedCollectionSelectionTest {
         assertTrue(failure.message().contains("Because: outer"));
         assertThrows(IllegalArgumentException.class, () -> element(-1, instanceOf(User.class)));
 
-        Condition<Object, User> absent = null;
+        Condition.Typed<Object, User> absent = null;
         assertEquals("condition must not be null", assertThrows(NullPointerException.class, () -> first(absent)).getMessage());
         assertEquals("condition must not be null", assertThrows(NullPointerException.class, () -> last(absent)).getMessage());
         assertEquals("condition must not be null", assertThrows(NullPointerException.class, () -> element(0, absent)).getMessage());
@@ -258,7 +261,7 @@ class TypedCollectionSelectionTest {
         }
     }
 
-    private static void assertNestedFailure(Condition<? super List<Map<String, Object>>, User> condition,
+    private static void assertNestedFailure(Condition.Typed<? super List<Map<String, Object>>, User> condition,
             List<Map<String, Object>> values, Throwable cause) {
         int[] reads = {0};
         var result = waiting(() -> { reads[0]++; return values; }).tryUntil(condition.because("selected user"));

@@ -35,7 +35,7 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
         /** An observation and the exact result returned by its condition evaluation. */
         record Evaluated<OBSERVED, RESULT>(Timing timing,
                 OBSERVED observed, ConditionResult<? extends RESULT> evaluation,
-                Condition<?, ?> condition, Progress progress) implements Outcome<OBSERVED, RESULT> {
+                Condition<?> condition, Progress progress) implements Outcome<OBSERVED, RESULT> {
 
             public Evaluated {
                 requireNonNull(timing, "timing must not be null");
@@ -50,7 +50,7 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
         }
 
         record ConditionFailed<OBSERVED, RESULT>(Timing timing,
-                OBSERVED observed, Throwable cause, Condition<?, ?> condition,
+                OBSERVED observed, Throwable cause, Condition<?> condition,
                 Progress progress) implements Outcome<OBSERVED, RESULT> {
 
             public ConditionFailed {
@@ -99,7 +99,7 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase,
      *                  otherwise for the evaluated stage
      */
     public record Progress(int capturedStages, int totalStages, int evaluatedStageNumber,
-            Condition<?, ?> condition) {
+            Condition<?> condition) {
 
         public Progress {
             if (capturedStages < 0 || capturedStages > totalStages

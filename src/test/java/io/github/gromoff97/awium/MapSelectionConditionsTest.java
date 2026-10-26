@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Await.MapSource;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
 import java.math.BigDecimal;
@@ -9,7 +8,10 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,7 +40,7 @@ class MapSelectionConditionsTest {
         var equalEntry = new ReceiptEntry("receipt", new BigDecimal("42.00"));
         var actual = new ProbeContainers.EntryMap<String, Number>(List.of(entry));
         int[] reads = {0};
-        MapSource<ProbeContainers.EntryMap<String, Number>> source = () -> {
+        java.util.concurrent.Callable<ProbeContainers.EntryMap<String, Number>> source = () -> {
             reads[0]++;
             return actual;
         };
@@ -64,7 +66,7 @@ class MapSelectionConditionsTest {
         var actual = new LinkedHashMap<String, Integer>();
         actual.put("first", 1);
         actual.put("second", 2);
-        MapSource<LinkedHashMap<String, Integer>> source = () -> actual;
+        java.util.concurrent.Callable<LinkedHashMap<String, Integer>> source = () -> actual;
         var waiting = await(source).usingTime(pollingTime, pollingTime);
 
         Map.Entry<String, Integer> selected = waiting.until(MapConditions.singleEntry(matches((Map.Entry<String, Integer> entry) -> entry.getValue() == 2)));
@@ -103,7 +105,7 @@ class MapSelectionConditionsTest {
     void quantifiersAndBulkConditionsPreserveTheConcreteMap() {
         var pollingTime = new FakeTime(0);
         var actual = new LinkedHashMap<>(Map.of("a", 1, "b", 2));
-        MapSource<LinkedHashMap<String, Integer>> source = () -> actual;
+        java.util.concurrent.Callable<LinkedHashMap<String, Integer>> source = () -> actual;
         var waiting = await(source).usingTime(pollingTime, pollingTime);
 
         assertSame(actual, waiting.until(MapConditions.allEntries((key, value) -> value > 0)));
@@ -195,6 +197,6 @@ class MapSelectionConditionsTest {
                 MapConditions.onlyValueFor("first"), null).getClass());
         assertThrows(NullPointerException.class, () -> MapConditions.singleEntry(
                 (Condition.PreservingCondition<Map.Entry<?, ?>>) null));
-        assertThrows(NullPointerException.class, () -> MapConditions.allEntries(null));
+        assertThrows(NullPointerException.class, () -> MapConditions.allEntries((CheckedBiPredicate<Object, Object>) null));
     }
 }

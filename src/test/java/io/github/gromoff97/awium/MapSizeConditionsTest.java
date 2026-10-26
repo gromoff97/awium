@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Await.MapSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import java.util.LinkedHashMap;
@@ -9,7 +8,10 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedMapAwait;
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
@@ -41,7 +43,7 @@ class MapSizeConditionsTest {
     @Test
     void hasSingleEntryReturnsTheTypedEntry() {
         var pollingTime = new FakeTime(0);
-        MapSource<LinkedHashMap<String, Integer>> source = () -> {
+        java.util.concurrent.Callable<LinkedHashMap<String, Integer>> source = () -> {
             var map = new LinkedHashMap<String, Integer>();
             map.put("key", 42);
             return map;

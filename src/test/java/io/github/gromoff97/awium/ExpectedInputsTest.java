@@ -35,7 +35,7 @@ class ExpectedInputsTest {
             }
         };
         var condition = containsAll(expected);
-        assertEquals(List.of("before"), condition.definition.reference().value());
+        assertEquals(List.of("before"), condition.reference().value());
         expected.clear();
         assertInstanceOf(Unsatisfied.class, evaluate(condition, List.of("unrelated")));
         assertInstanceOf(Unsatisfied.class, evaluate(condition, null));
@@ -56,7 +56,7 @@ class ExpectedInputsTest {
             expected.add("before");
             try {
                 var condition = factory.apply(expected);
-                assertFalse(assertInstanceOf(List.class, condition.definition.reference().value()).isEmpty());
+                assertFalse(assertInstanceOf(List.class, condition.reference().value()).isEmpty());
             } catch (IllegalArgumentException failure) {
                 assertTrue(failure.getMessage().endsWith("must not be empty"));
             }
@@ -73,7 +73,7 @@ class ExpectedInputsTest {
             expected.put("key", "before");
             try {
                 var condition = factory.apply(expected);
-                assertFalse(assertInstanceOf(List.class, condition.definition.reference().value()).isEmpty());
+                assertFalse(assertInstanceOf(List.class, condition.reference().value()).isEmpty());
             } catch (IllegalArgumentException failure) {
                 assertTrue(failure.getMessage().endsWith("must not be empty"));
             }
@@ -175,7 +175,7 @@ class ExpectedInputsTest {
         var element = new StringBuilder("before");
         var expected = new ArrayList<>(List.of(element));
         var condition = containsAll(expected);
-        var reference = assertInstanceOf(List.class, condition.definition.reference().value());
+        var reference = assertInstanceOf(List.class, condition.reference().value());
         expected.clear();
         element.append(" changed");
         assertSame(element, reference.getFirst());
@@ -185,7 +185,7 @@ class ExpectedInputsTest {
 
         var strings = StringConditions.contains("before");
         assertThrows(UnsupportedOperationException.class,
-                assertInstanceOf(List.class, strings.definition.reference().value())::clear);
+                assertInstanceOf(List.class, strings.reference().value())::clear);
     }
 
     @Test
@@ -196,8 +196,8 @@ class ExpectedInputsTest {
         var condition = MapConditions.containsEntries(expected);
         expected.put("b", "after");
         expected.remove("a");
-        assertEquals("[b=before, a=null]", condition.definition.reference().value().toString());
-        var entries = assertInstanceOf(List.class, condition.definition.reference().value());
+        assertEquals("[b=before, a=null]", condition.reference().value().toString());
+        var entries = assertInstanceOf(List.class, condition.reference().value());
         assertThrows(UnsupportedOperationException.class, entries::clear);
         Map.Entry<?, ?> first = assertInstanceOf(Map.Entry.class, entries.getFirst());
         assertThrows(UnsupportedOperationException.class, () -> first.setValue(null));

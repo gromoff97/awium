@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Await.OptionalSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
 import java.util.Arrays;
@@ -10,7 +9,10 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
@@ -190,7 +192,7 @@ class ObjectAndOptionalAwaitTest {
         var pollingTime = new FakeTime(0);
         var equalValue = new Object();
 
-        assertSame(equalValue, await((OptionalSource<Object>)
+        assertSame(equalValue, await((java.util.concurrent.Callable<java.util.Optional<Object>>)
                 () -> Optional.of(equalValue)).usingTime(pollingTime, pollingTime).until(hasValue(equalTo(equalValue))));
     }
 
@@ -251,7 +253,7 @@ class ObjectAndOptionalAwaitTest {
 
     @Test
     void unrelatedTypeChecksRemainOrdinaryMismatches() {
-        for (var check : List.<Condition<? super String, ?>>of(Conditions.instanceOf(Integer.class), Conditions.exactInstanceOf(Integer.class))) {
+        for (var check : List.<Condition.Typed<? super String, ?>>of(Conditions.instanceOf(Integer.class), Conditions.exactInstanceOf(Integer.class))) {
             var time = new FakeTime(0);
             var waiting = await(() -> "actual").usingTime(time, time)
                     .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(2));
@@ -290,7 +292,7 @@ class ObjectAndOptionalAwaitTest {
     @Test
     void optionalOverloadsReturnValuesAndNarrowedTypes() {
         var pollingTime = new FakeTime(0);
-        OptionalSource<Object> source = () -> Optional.of("ready");
+        java.util.concurrent.Callable<java.util.Optional<Object>> source = () -> Optional.of("ready");
         var waiting = await(source).usingTime(pollingTime, pollingTime);
 
         Object expected = waiting.until(OptionalConditions.hasValue(Conditions.equalTo((Object) "ready")));

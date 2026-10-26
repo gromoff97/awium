@@ -7,13 +7,11 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
 import static io.github.gromoff97.awium.Condition.required;
-import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -28,32 +26,6 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
 
     Await(Callable<? extends OBSERVED> source, WaitConfiguration configuration) {
         super(source, configuration);
-    }
-
-    public static <VALUE> ValueAwait<VALUE> await(Callable<VALUE> source) {
-        return new ValueAwait<>(source, DEFAULT);
-    }
-
-    public static <VALUE> Await<Optional<VALUE>, VALUE, Void> await(OptionalSource<VALUE> source) {
-        return new Await<>(source, DEFAULT);
-    }
-
-    public static <ELEMENT, VALUES extends Collection<ELEMENT>> Await<VALUES, ELEMENT, Void> await(CollectionSource<VALUES> source) {
-        return new Await<>(source, DEFAULT);
-    }
-
-    public static <ELEMENT, VALUES extends Collection<? extends ELEMENT>>
-            Await<VALUES, ELEMENT, Void> await(CollectionViewSource<ELEMENT, VALUES> source) {
-        return new Await<>(source, DEFAULT);
-    }
-
-    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> Await<ENTRIES, Map.Entry<KEY, VALUE>, VALUE> await(MapSource<ENTRIES> source) {
-        return new Await<>(source, DEFAULT);
-    }
-
-    public static <KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>
-            Await<ENTRIES, Map.Entry<? extends KEY, ? extends VALUE>, VALUE> await(MapViewSource<KEY, VALUE, ENTRIES> source) {
-        return new Await<>(source, DEFAULT);
     }
 
     @Override
@@ -81,21 +53,21 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
     }
 
     public ELEMENT until(SelectedCondition<? super OBSERVED, ? super ELEMENT, ? super Reference<? super ELEMENT>> condition) {
-        return complete(ConditionAwaitAttempt.bind(required(condition).definition));
+        return complete(ConditionAwaitAttempt.bind(required(condition)));
     }
 
     public MAP_VALUE until(MapValueCondition<? super OBSERVED, ? super MAP_VALUE, ? super Reference<? super MAP_VALUE>> condition) {
-        return complete(ConditionAwaitAttempt.bind(required(condition).definition));
+        return complete(ConditionAwaitAttempt.bind(required(condition)));
     }
 
     public AwaitResult<OBSERVED, ELEMENT> tryUntil(
             SelectedCondition<? super OBSERVED, ? super ELEMENT, ? super Reference<? super ELEMENT>> condition) {
-        return capture(ConditionAwaitAttempt.bind(required(condition).definition));
+        return capture(ConditionAwaitAttempt.bind(required(condition)));
     }
 
     public AwaitResult<OBSERVED, MAP_VALUE> tryUntil(
             MapValueCondition<? super OBSERVED, ? super MAP_VALUE, ? super Reference<? super MAP_VALUE>> condition) {
-        return capture(ConditionAwaitAttempt.bind(required(condition).definition));
+        return capture(ConditionAwaitAttempt.bind(required(condition)));
     }
 
     @SafeVarargs
@@ -126,18 +98,8 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
         return tryUntil(ConditionSupport.captured(conditions));
     }
 
-    /** A source that allows {@code present} and {@code hasValue} to return its contained type. */
-    @FunctionalInterface
-    public interface OptionalSource<VALUE> extends Callable<Optional<VALUE>> {
-    }
-
-    /** A collection source that retains both its complete collection type and selected element type. */
-    @FunctionalInterface
-    public interface CollectionSource<VALUES extends Collection<?>> extends Callable<VALUES> {
-    }
-
     /**
-     * Adapts a covariant collection source while retaining its element bound for selections.
+     * Describes a covariant collection source with an explicit element bound for selections.
      * The returned collection is neither copied nor changed.
      * Use a typed declaration or explicit type arguments to establish the selected element bound.
      *
@@ -146,25 +108,15 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
      * @param delegate source of the original collection
      */
     public record CollectionViewSource<ELEMENT, VALUES extends Collection<? extends ELEMENT>>(
-            Callable<? extends VALUES> delegate) implements Callable<VALUES> {
+            Callable<? extends VALUES> delegate) {
 
         public CollectionViewSource {
             requireNonNull(delegate, "delegate must not be null");
         }
-
-        @Override
-        public VALUES call() throws Exception {
-            return delegate.call();
-        }
-    }
-
-    /** A map source that retains its complete map type, entry type, and value type. */
-    @FunctionalInterface
-    public interface MapSource<ENTRIES extends Map<?, ?>> extends Callable<ENTRIES> {
     }
 
     /**
-     * Adapts a covariant map source while retaining its key and value bounds for selections.
+     * Describes a covariant map source with explicit key and value bounds for selections.
      * The returned map is neither copied nor changed.
      * Use a typed declaration or explicit type arguments to establish the selected bounds.
      *
@@ -174,15 +126,10 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
      * @param delegate source of the original map
      */
     public record MapViewSource<KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>(
-            Callable<? extends ENTRIES> delegate) implements Callable<ENTRIES> {
+            Callable<? extends ENTRIES> delegate) {
 
         public MapViewSource {
             requireNonNull(delegate, "delegate must not be null");
-        }
-
-        @Override
-        public ENTRIES call() throws Exception {
-            return delegate.call();
         }
     }
 }

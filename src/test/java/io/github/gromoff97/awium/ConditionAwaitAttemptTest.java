@@ -6,7 +6,10 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static java.time.Duration.ofNanos;
@@ -91,7 +94,7 @@ class ConditionAwaitAttemptTest {
 
     @Test
     void ordinaryConditionKeepsMetadataAndCreatesIndependentEvaluators() throws Throwable {
-        Condition<Integer, Integer> ordinary = new Condition<>(
+        Condition.Typed<Integer, Integer> ordinary = new Condition.Typed<>(
                 "counted", null, null, () -> {
                     int[] calls = {0};
                     return ignored -> AttemptResult.of(satisfied(++calls[0]));

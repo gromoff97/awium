@@ -99,7 +99,7 @@ class ObjectAndOptionalConditionsTest {
     @Test
     void optionalValueFactoriesRejectNullConditionsImmediately() {
         assertTrue(assertThrows(NullPointerException.class,
-                () -> hasValue((Condition<Object, Object>) null)).getMessage().contains("condition"));
+                () -> hasValue((Condition.Typed<Object, Object>) null)).getMessage().contains("condition"));
         assertTrue(assertThrows(NullPointerException.class,
                 () -> hasValue((Condition.PreservingCondition<Object>) null)).getMessage().contains("condition"));
     }

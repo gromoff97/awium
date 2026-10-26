@@ -69,44 +69,44 @@ public sealed class ValueAwait<OBSERVED> permits Await {
         return new ValueAwait<>(source, configuration);
     }
 
-    public OBSERVED until(SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>> condition) {
-        return complete(ConditionAwaitAttempt.bind(required(condition).definition()));
+    public OBSERVED until(SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>, ?> condition) {
+        return complete(ConditionAwaitAttempt.bind(required(condition)));
     }
 
-    public <RESULT> RESULT until(Condition<? super OBSERVED, ? extends RESULT> condition) {
+    public <RESULT> RESULT until(Condition.Typed<? super OBSERVED, ? extends RESULT> condition) {
         return complete(new ConditionAwaitAttempt<>(required(condition)));
     }
 
-    public AwaitResult<OBSERVED, OBSERVED> tryUntil(SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>> condition) {
-        return capture(ConditionAwaitAttempt.bind(required(condition).definition()));
+    public AwaitResult<OBSERVED, OBSERVED> tryUntil(SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>, ?> condition) {
+        return capture(ConditionAwaitAttempt.bind(required(condition)));
     }
 
-    public <RESULT> AwaitResult<OBSERVED, RESULT> tryUntil(Condition<? super OBSERVED, ? extends RESULT> condition) {
+    public <RESULT> AwaitResult<OBSERVED, RESULT> tryUntil(Condition.Typed<? super OBSERVED, ? extends RESULT> condition) {
         return capture(new ConditionAwaitAttempt<>(required(condition)));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final List<OBSERVED> until(SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>>... conditions) {
+    public final List<OBSERVED> until(SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>, ?>... conditions) {
         return until(ConditionSupport.captured(conditions));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final AwaitResult<OBSERVED, List<OBSERVED>> tryUntil(SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>>... conditions) {
+    public final AwaitResult<OBSERVED, List<OBSERVED>> tryUntil(SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>, ?>... conditions) {
         return tryUntil(ConditionSupport.captured(conditions));
     }
 
     /** Captures stages with the same declared result type, without widening it to a common supertype. */
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final <RESULT> List<RESULT> until(Condition<? super OBSERVED, RESULT>... conditions) {
+    public final <RESULT> List<RESULT> until(Condition.Typed<? super OBSERVED, RESULT>... conditions) {
         return until(ConditionSupport.captured(conditions));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final <RESULT> AwaitResult<OBSERVED, List<RESULT>> tryUntil(Condition<? super OBSERVED, RESULT>... conditions) {
+    public final <RESULT> AwaitResult<OBSERVED, List<RESULT>> tryUntil(Condition.Typed<? super OBSERVED, RESULT>... conditions) {
         return tryUntil(ConditionSupport.captured(conditions));
     }
 
@@ -116,7 +116,7 @@ public sealed class ValueAwait<OBSERVED> permits Await {
     }
 
     static <OBSERVED, RESULT> RESULT complete(WaitCompletion<OBSERVED, RESULT> outcome,
-            Condition<?, ?> condition, WaitConfiguration configuration) {
+            Condition<?> condition, WaitConfiguration configuration) {
         if (outcome instanceof WaitCompletion.Satisfied<OBSERVED, RESULT> success) {
             return success.result();
         }

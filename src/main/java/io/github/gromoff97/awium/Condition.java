@@ -7,51 +7,84 @@ import java.util.function.Supplier;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Typed, immutable condition. Its family preserves, checks, narrows, selects, or transforms the observed value.
+ * Immutable condition metadata and evaluation. All families share explanations and metadata;
+ * their input and result constraints remain checked by the terminals.
  *
- * @param <OBSERVED> value supplied to the condition
- * @param <RESULT> value returned when the condition is satisfied
+ * @param <SELF> concrete condition type retained when replacing an explanation
  */
-public final class Condition<OBSERVED, RESULT> {
+public abstract sealed class Condition<SELF extends Condition<SELF>>
+        permits Condition.Typed, Condition.SourceCondition, Condition.SelectedCondition, Condition.MapValueCondition {
 
     private final String description;
     private final Supplier<String> explanation;
     private final Reference<?> reference;
-    final Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory;
+    final Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory;
 
     Condition(String description, String explanation, Reference<?> reference,
-            Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
+            Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory) {
         this(description, constantExplanation(explanation), reference, evaluatorFactory);
     }
 
-    Condition(String description, Condition<?, ?> metadata,
-            Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
+    Condition(String description, Condition<?> metadata,
+            Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory) {
         this(description, required(metadata).explanation, metadata.reference, evaluatorFactory);
     }
 
+    Condition(Condition<?> original) {
+        this(original, required(original).explanation);
+    }
+
+    Condition(Condition<?> original, Supplier<String> explanation) {
+        this(required(original).description, explanation, original.reference, original.evaluatorFactory);
+    }
+
     private Condition(String description, Supplier<String> explanation, Reference<?> reference,
-            Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
+            Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory) {
         this.description = nonBlank(description, "description");
         this.explanation = explanation;
         this.reference = reference;
         this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
     }
 
-    public String description() {
+    public final String description() {
         return description;
     }
 
     /** Returns the explanation, evaluating a lazy supplier on each explicit read, or null when absent. */
-    public String explanation() {
+    public final String explanation() {
         return explanation == null ? null : explanation.get();
     }
 
-    public Reference<?> reference() {
+    public final Reference<?> reference() {
         return reference;
     }
 
-    Condition<OBSERVED, RESULT> withExplanationFrom(Condition<?, ?> metadata) {
-        return new Condition<>(description, metadata.explanation, reference, evaluatorFactory);
+    abstract SELF explained(Supplier<String> explanation);
+
+    final SELF withExplanationFrom(Condition<?> metadata) {
+        return explained(metadata.explanation);
+    }
+
+    public final SELF because(String explanation) {
+        return explained(constantExplanation(nonBlank(explanation, "explanation")));
+    }
+
+    public final SELF because(String format, Object... arguments) {
+        requireNonNull(format, "format must not be null");
+        requireNonNull(arguments, "arguments must not be null");
+        return because(String.format(Locale.ROOT, format, arguments));
+    }
+
+    /**
+     * Returns a copy whose explanation is evaluated when failure diagnostics need it.
+     * A supplier failure or invalid text is retained as a diagnostic error without replacing the wait's outcome.
+     *
+     * @param explanation supplier of non-null, non-blank diagnostic text
+     * @return an independent condition with the same evaluation
+     */
+    public final SELF because(Supplier<? extends String> explanation) {
+        requireNonNull(explanation, "explanation supplier must not be null");
+        return explained(() -> nonBlank(explanation.get(), "explanation"));
     }
 
     private static Supplier<String> constantExplanation(String explanation) {
@@ -62,188 +95,146 @@ public final class Condition<OBSERVED, RESULT> {
         return requireNonNull(condition, "condition must not be null");
     }
 
-    private static String formattedExplanation(String format, Object[] arguments) {
-        requireNonNull(format, "format must not be null");
-        requireNonNull(arguments, "arguments must not be null");
-        return String.format(Locale.ROOT, format, arguments);
-    }
-
-    public Condition<OBSERVED, RESULT> because(String explanation) {
-        return new Condition<>(description, nonBlank(explanation, "explanation"), reference, evaluatorFactory);
-    }
-
-    public Condition<OBSERVED, RESULT> because(String format, Object... arguments) {
-        return because(formattedExplanation(format, arguments));
-    }
-
     /**
-     * Returns a copy whose explanation is evaluated when failure diagnostics need it.
-     * Reusing the condition may evaluate the supplier again; the supplier remains caller-owned.
-     * Invalid text or a thrown failure is retained as a diagnostic error without replacing the wait's outcome.
+     * A condition with a declared result type, such as a type check or a nested typed selection.
      *
-     * @param explanation supplier of non-null, non-blank diagnostic text
-     * @return an independent condition with the same evaluation
+     * @param <OBSERVED> accepted input type
+     * @param <RESULT> successful result type
      */
-    public Condition<OBSERVED, RESULT> because(Supplier<? extends String> explanation) {
-        requireNonNull(explanation, "explanation supplier must not be null");
-        return new Condition<>(description, () -> nonBlank(explanation.get(), "explanation"), reference, evaluatorFactory);
+    public static final class Typed<OBSERVED, RESULT> extends Condition<Typed<OBSERVED, RESULT>> {
+
+        Typed(String description, String explanation, Reference<?> reference,
+                Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
+            super(description, explanation, reference, evaluatorFactory);
+        }
+
+        Typed(String description, Condition<?> metadata,
+                Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
+            super(description, metadata, evaluatorFactory);
+        }
+
+        private Typed(Typed<OBSERVED, RESULT> original, Supplier<String> explanation) {
+            super(original, explanation);
+        }
+
+        @Override
+        Typed<OBSERVED, RESULT> explained(Supplier<String> explanation) {
+            return new Typed<>(this, explanation);
+        }
     }
 
     /**
-     * A check that returns the original observation. Input and expected-value bounds
-     * jointly constrain the compatible source; the reference parameter carries only that constraint.
-     * Input checks use {@code Reference<?>}; comparisons use {@code Reference<? super EXPECTED>}.
-     * Terminals require that bound to contain {@code Reference<? super SOURCE>}, so an expected
-     * subtype is allowed while a broader input check can still accept the source.
+     * A check returning its original observation. Input checks use Reference&lt;?&gt;; comparisons
+     * use Reference&lt;? super EXPECTED&gt;. The terminal checks both bounds against the source type.
      *
-     * @param <OBSERVED> input type accepted by the check
+     * @param <OBSERVED> accepted input type
      * @param <REFERENCE> expected-value compatibility bound
+     * @param <SELF> concrete check type retained by because
      */
-    public abstract static sealed class SourceCondition<OBSERVED, REFERENCE>
+    public abstract static sealed class SourceCondition<OBSERVED, REFERENCE,
+            SELF extends SourceCondition<OBSERVED, REFERENCE, SELF>> extends Condition<SELF>
             permits PreservingCondition, ComparisonCondition {
 
-        SourceCondition() {}
+        SourceCondition(Typed<OBSERVED, ?> definition) {
+            super(definition);
+        }
 
-        abstract Condition<OBSERVED, ?> definition();
-
-        public abstract SourceCondition<OBSERVED, REFERENCE> because(String explanation);
-
-        public abstract SourceCondition<OBSERVED, REFERENCE> because(String format, Object... arguments);
-
-        public abstract SourceCondition<OBSERVED, REFERENCE> because(Supplier<? extends String> explanation);
+        SourceCondition(SourceCondition<OBSERVED, REFERENCE, SELF> original, Supplier<String> explanation) {
+            super(original, explanation);
+        }
     }
 
     /**
-     * Checks a value without replacing it. A successful wait returns the original observation
-     * with its source type, even when this check accepts a supertype.
-     * {@code because} returns a copy with a replacement diagnostic explanation.
-     *
-     * @param <OBSERVED> input type accepted by the check
+     * Checks a value while retaining the source's concrete type at the terminal.
+     * @param <OBSERVED> accepted input type
      */
     public static final class PreservingCondition<OBSERVED>
-            extends SourceCondition<OBSERVED, Reference<?>> {
+            extends SourceCondition<OBSERVED, Reference<?>, PreservingCondition<OBSERVED>> {
 
-        final Condition<OBSERVED, OBSERVED> definition;
+        PreservingCondition(Typed<OBSERVED, OBSERVED> definition) {
+            super(definition);
+        }
 
-        PreservingCondition(Condition<OBSERVED, OBSERVED> definition) {
-            this.definition = required(definition);
+        private PreservingCondition(PreservingCondition<OBSERVED> original, Supplier<String> explanation) {
+            super(original, explanation);
         }
 
         @Override
-        Condition<OBSERVED, OBSERVED> definition() {
-            return definition;
-        }
-
-        public PreservingCondition<OBSERVED> because(String explanation) {
-            return new PreservingCondition<>(definition.because(explanation));
-        }
-
-        public PreservingCondition<OBSERVED> because(String format, Object... arguments) {
-            return because(formattedExplanation(format, arguments));
-        }
-
-        /** @see Condition#because(Supplier) */
-        public PreservingCondition<OBSERVED> because(Supplier<? extends String> explanation) {
-            return new PreservingCondition<>(definition.because(explanation));
+        PreservingCondition<OBSERVED> explained(Supplier<String> explanation) {
+            return new PreservingCondition<>(this, explanation);
         }
     }
 
     /**
-     * Compares with an expected type compatible with the source type. A successful wait returns
-     * the original observation. {@code because} preserves the comparison's type constraint.
-     *
-     * @param <EXPECTED> type of expected values
+     * Compares with an expected value compatible with the source type.
+     * @param <EXPECTED> expected type compatible with the source
      */
     public static final class ComparisonCondition<EXPECTED>
-            extends SourceCondition<Object, Reference<? super EXPECTED>> {
+            extends SourceCondition<Object, Reference<? super EXPECTED>, ComparisonCondition<EXPECTED>> {
 
-        final Condition<Object, Object> definition;
+        ComparisonCondition(Typed<Object, Object> definition) {
+            super(definition);
+        }
 
-        ComparisonCondition(Condition<Object, Object> definition) {
-            this.definition = required(definition);
+        private ComparisonCondition(ComparisonCondition<EXPECTED> original, Supplier<String> explanation) {
+            super(original, explanation);
         }
 
         @Override
-        Condition<Object, Object> definition() {
-            return definition;
-        }
-
-        public ComparisonCondition<EXPECTED> because(String explanation) {
-            return new ComparisonCondition<>(definition.because(explanation));
-        }
-
-        public ComparisonCondition<EXPECTED> because(String format, Object... arguments) {
-            return because(formattedExplanation(format, arguments));
-        }
-
-        /** @see Condition#because(Supplier) */
-        public ComparisonCondition<EXPECTED> because(Supplier<? extends String> explanation) {
-            return new ComparisonCondition<>(definition.because(explanation));
+        ComparisonCondition<EXPECTED> explained(Supplier<String> explanation) {
+            return new ComparisonCondition<>(this, explanation);
         }
     }
 
     /**
-     * Selects an element or entry from a container. The source determines the returned type,
-     * including for shared constants such as {@code present} and {@code single} after {@code because}.
+     * A container selection whose result type is supplied by its source.
      *
-     * @param <OBSERVED> container type accepted by the selector
+     * @param <OBSERVED> accepted container type
      * @param <CHECKED> selected value type accepted by a nested check
      * @param <REFERENCE> expected-value compatibility bound
      */
-    public static final class SelectedCondition<OBSERVED, CHECKED, REFERENCE> {
+    public static final class SelectedCondition<OBSERVED, CHECKED, REFERENCE>
+            extends Condition<SelectedCondition<OBSERVED, CHECKED, REFERENCE>> {
 
-        final Condition<OBSERVED, ?> definition;
-
-        SelectedCondition(Condition<OBSERVED, ?> definition) {
-            this.definition = required(definition);
+        SelectedCondition(Typed<OBSERVED, ?> definition) {
+            super(definition);
         }
 
-        public SelectedCondition<OBSERVED, CHECKED, REFERENCE> because(String explanation) {
-            return new SelectedCondition<>(definition.because(explanation));
+        private SelectedCondition(SelectedCondition<OBSERVED, CHECKED, REFERENCE> original, Supplier<String> explanation) {
+            super(original, explanation);
         }
 
-        public SelectedCondition<OBSERVED, CHECKED, REFERENCE> because(String format, Object... arguments) {
-            return because(formattedExplanation(format, arguments));
-        }
-
-        /** @see Condition#because(Supplier) */
-        public SelectedCondition<OBSERVED, CHECKED, REFERENCE> because(Supplier<? extends String> explanation) {
-            return new SelectedCondition<>(definition.because(explanation));
+        @Override
+        SelectedCondition<OBSERVED, CHECKED, REFERENCE> explained(Supplier<String> explanation) {
+            return new SelectedCondition<>(this, explanation);
         }
     }
 
     /**
-     * Selects a map value whose returned type is determined by the source.
-     * {@code because} preserves that result type.
+     * A map value selection whose result type is supplied by its source.
      *
-     * @param <OBSERVED> map type accepted by the selector
-     * @param <CHECKED> selected value type accepted by a nested check
+     * @param <OBSERVED> accepted map type
+     * @param <CHECKED> value type accepted by a nested check
      * @param <REFERENCE> expected-value compatibility bound
      */
-    public static final class MapValueCondition<OBSERVED, CHECKED, REFERENCE> {
+    public static final class MapValueCondition<OBSERVED, CHECKED, REFERENCE>
+            extends Condition<MapValueCondition<OBSERVED, CHECKED, REFERENCE>> {
 
-        final Condition<OBSERVED, ?> definition;
-
-        MapValueCondition(Condition<OBSERVED, ?> definition) {
-            this.definition = required(definition);
+        MapValueCondition(Typed<OBSERVED, ?> definition) {
+            super(definition);
         }
 
-        public MapValueCondition<OBSERVED, CHECKED, REFERENCE> because(String explanation) {
-            return new MapValueCondition<>(definition.because(explanation));
+        private MapValueCondition(MapValueCondition<OBSERVED, CHECKED, REFERENCE> original, Supplier<String> explanation) {
+            super(original, explanation);
         }
 
-        public MapValueCondition<OBSERVED, CHECKED, REFERENCE> because(String format, Object... arguments) {
-            return because(formattedExplanation(format, arguments));
-        }
-
-        /** @see Condition#because(Supplier) */
-        public MapValueCondition<OBSERVED, CHECKED, REFERENCE> because(Supplier<? extends String> explanation) {
-            return new MapValueCondition<>(definition.because(explanation));
+        @Override
+        MapValueCondition<OBSERVED, CHECKED, REFERENCE> explained(Supplier<String> explanation) {
+            return new MapValueCondition<>(this, explanation);
         }
     }
 
     public record Reference<VALUE>(String label, VALUE value) {
-
         public Reference {
             label = nonBlank(label, "reference label");
         }
@@ -255,5 +246,4 @@ public final class Condition<OBSERVED, RESULT> {
         }
         return value;
     }
-
 }

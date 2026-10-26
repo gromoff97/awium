@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Await.CollectionSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import java.util.ArrayList;
@@ -10,7 +9,10 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.CollectionConditions.empty;
@@ -44,11 +46,11 @@ class CollectionSizeConditionsTest {
     void hasSingleElementReturnsTheTypedElement() {
         var pollingTime = new FakeTime(0);
         String element = new String("element");
-        CollectionSource<ArrayList<String>> source = () -> new ArrayList<>(List.of(element));
+        java.util.concurrent.Callable<ArrayList<String>> source = () -> new ArrayList<>(List.of(element));
 
         String selected = await(source).usingTime(pollingTime, pollingTime).until(single);
         String explained = await(source).usingTime(pollingTime, pollingTime).until(single.because("exactly one result is required"));
-        String nullElement = await((CollectionSource<List<String>>)
+        String nullElement = await((java.util.concurrent.Callable<List<String>>)
                 () -> Collections.singletonList(null)).usingTime(pollingTime, pollingTime).until(single);
 
         assertSame(element, selected);

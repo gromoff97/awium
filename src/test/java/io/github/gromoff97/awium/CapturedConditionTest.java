@@ -1,5 +1,10 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
+
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -36,7 +41,7 @@ class CapturedConditionTest {
         Object[] observations = {42, first, 43L, second};
         int[] reads = {0};
         var time = new FakeTime(0);
-        var waiting = Await.await(() -> observations[reads[0]++ % observations.length])
+        var waiting = await(() -> observations[reads[0]++ % observations.length])
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10));
         var start = Conditions.instanceOf(String.class).because("first text");
         var finish = Conditions.exactInstanceOf(String.class).because("second text");
@@ -60,7 +65,7 @@ class CapturedConditionTest {
         List<List<Number>> observations = List.of(List.of(1L, first), List.of(second, 2L));
         int[] reads = {0};
         var time = new FakeTime(0);
-        var waiting = Await.await(() -> observations.get(reads[0]++ % observations.size()))
+        var waiting = await(() -> observations.get(reads[0]++ % observations.size()))
                 .usingTime(time, time).every(ofNanos(1));
 
         var values = waiting.until(CollectionConditions.single(Conditions.instanceOf(Integer.class)).because("first integer"),
@@ -85,7 +90,7 @@ class CapturedConditionTest {
         var observations = List.of(first, Map.of("last", acquired), Map.of("last", persisted));
         int[] reads = {0};
         var time = new FakeTime(0);
-        var waiting = Await.await(() -> observations.get(reads[0]++ % observations.size()))
+        var waiting = await(() -> observations.get(reads[0]++ % observations.size()))
                 .usingTime(time, time).every(java.time.Duration.ofNanos(1))
                 .persisting(java.time.Duration.ofNanos(1));
         var start = MapConditions.valueFor("first").because("first value");
@@ -415,7 +420,7 @@ class CapturedConditionTest {
                 matches((Integer value) -> value == 1),
                 matches((Integer value) -> value == 2)};
         int[] calls = {0};
-        var waiting = Await.await(() -> {
+        var waiting = await(() -> {
             stages[0] = matches(value -> false);
             stages[1] = matches(value -> false);
             return ++calls[0];
@@ -448,7 +453,7 @@ class CapturedConditionTest {
                 Optional.of("second"));
         int[] next = {0};
 
-        List<String> result = Await.await(() -> observations.get(next[0]++))
+        List<String> result = await(() -> observations.get(next[0]++))
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10))
                 .until(present, present);
 
@@ -457,7 +462,7 @@ class CapturedConditionTest {
 
     @Test
     void sequenceStartsFreshAfterSuccessAndTimeout() {
-        Condition<Payment, List<Payment>> lifecycle = captured(matches(value -> value.status() == Status.CREATED),
+        Condition.Typed<Payment, List<Payment>> lifecycle = captured(matches(value -> value.status() == Status.CREATED),
                 matches(value -> value.status() == Status.FINISHED));
         var firstCreated = new Payment(Status.CREATED, "first execution");
         var nextCreated = new Payment(Status.CREATED, "next execution");
@@ -476,7 +481,7 @@ class CapturedConditionTest {
     }
 
     private static List<Payment> runLifecycle(Payment[] observations,
-            Condition<Payment, List<Payment>> lifecycle, long timeout) {
+            Condition.Typed<Payment, List<Payment>> lifecycle, long timeout) {
         var time = new FakeTime(0);
         int[] next = {0};
         return timedAwait(() -> observations[Math.min(next[0]++, observations.length - 1)],

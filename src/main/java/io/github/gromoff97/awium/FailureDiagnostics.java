@@ -18,7 +18,7 @@ final class FailureDiagnostics {
             TimeUnit.MILLISECONDS, TimeUnit.MICROSECONDS, TimeUnit.NANOSECONDS);
 
     private final WaitCompletion<?, ?> outcome;
-    private final Condition<?, ?> condition;
+    private final Condition<?> condition;
     private final WaitConfiguration configuration;
     private final Throwable cause;
     private final AttemptRecord.Progress sequence;
@@ -26,7 +26,7 @@ final class FailureDiagnostics {
     private final List<Throwable> diagnosticFailures = new ArrayList<>();
 
     private FailureDiagnostics(WaitCompletion<?, ?> outcome,
-            Condition<?, ?> condition, WaitConfiguration configuration) {
+            Condition<?> condition, WaitConfiguration configuration) {
         this.outcome = requireNonNull(outcome, "outcome must not be null");
         this.configuration = requireNonNull(configuration, "configuration must not be null");
         requireNonNull(condition, "condition must not be null");
@@ -58,7 +58,7 @@ final class FailureDiagnostics {
         return result.toString();
     }
 
-    static AwaitFailure failure(WaitCompletion<?, ?> outcome, Condition<?, ?> condition, WaitConfiguration configuration) {
+    static AwaitFailure failure(WaitCompletion<?, ?> outcome, Condition<?> condition, WaitConfiguration configuration) {
         var diagnostics = new FailureDiagnostics(outcome, condition, configuration);
         return new AwaitFailure(outcome.failureReason(), diagnostics.message(), diagnostics.cause,
                 diagnostics.diagnosticFailures);
@@ -167,7 +167,7 @@ final class FailureDiagnostics {
         }
     }
 
-    private void condition(StringBuilder out, Condition<?, ?> condition, String indentation) {
+    private void condition(StringBuilder out, Condition<?> condition, String indentation) {
         field(out, indentation, "Condition", condition.description());
         String detailsIndentation = indentation + "    ";
         var reference = condition.reference();

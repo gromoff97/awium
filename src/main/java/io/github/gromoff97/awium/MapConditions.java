@@ -6,6 +6,7 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Condition.SourceCondition;
+import java.util.concurrent.Callable;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import java.util.Map.Entry;
@@ -43,6 +44,31 @@ public final class MapConditions {
     public static final PreservingCondition<Map<?, ?>> nonEmpty = preserving("map is not empty", "map was empty", actual -> !actual.isEmpty());
 
     private MapConditions() {}
+
+    /**
+     * Configures a map wait, retaining its complete type, entry type, and value type.
+     * @param <KEY> key type
+     * @param <VALUE> value type
+     * @param <ENTRIES> complete map type
+     * @param source repeatedly invoked source
+     * @return immutable wait configuration
+     */
+    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> Await<ENTRIES, Map.Entry<KEY, VALUE>, VALUE> await(Callable<ENTRIES> source) {
+        return new Await<>(source, WaitConfiguration.DEFAULT);
+    }
+
+    /**
+     * Configures a wait using a covariant map source description.
+     * @param <KEY> selected key bound
+     * @param <VALUE> selected value bound
+     * @param <ENTRIES> complete map type
+     * @param source typed source description
+     * @return immutable wait configuration
+     */
+    public static <KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>
+            Await<ENTRIES, Map.Entry<? extends KEY, ? extends VALUE>, VALUE> await(Await.MapViewSource<KEY, VALUE, ENTRIES> source) {
+        return new Await<>(requireNonNull(source, "source must not be null").delegate(), WaitConfiguration.DEFAULT);
+    }
 
     public static PreservingCondition<Map<?, ?>> size(int expected) {
         return sized(expected, actual -> actual == expected,
@@ -89,72 +115,234 @@ public final class MapConditions {
     }
 
     public static <CHECKED, REFERENCE> SelectedCondition<Map<?, ?>, CHECKED, REFERENCE> singleEntry(
-            SourceCondition<CHECKED, REFERENCE> nested) {
-        return new SelectedCondition<>(ConditionSupport.single("map", required(nested).definition(), Map::entrySet,
+            SourceCondition<CHECKED, REFERENCE, ?> nested) {
+        return new SelectedCondition<>(ConditionSupport.single("map", required(nested), Map::entrySet,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 
-    public static <KEY, VALUE, RESULT> Condition<Map<? extends KEY, ? extends VALUE>, RESULT> singleEntry(
-            Condition<? super Entry<? extends KEY, ? extends VALUE>, RESULT> nested) {
+    public static <KEY, VALUE, RESULT> Condition.Typed<Map<? extends KEY, ? extends VALUE>, RESULT> singleEntry(
+            Condition.Typed<? super Entry<? extends KEY, ? extends VALUE>, RESULT> nested) {
         return ConditionSupport.single("map", required(nested), Map::entrySet,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <KEY, VALUE> SelectedCondition<Map<? super KEY, ? super VALUE>, Object, Reference<?>> singleEntry(
             ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
-        return new SelectedCondition<>(ConditionSupport.single("map", required(nested).definition, Map::entrySet,
-                () -> ConditionAwaitAttempt.bind(nested.definition)));
+        return new SelectedCondition<>(ConditionSupport.single("map", required(nested), Map::entrySet,
+                () -> ConditionAwaitAttempt.bind(nested)));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> allEntries(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return preserving("all map entries match", "not all map entries matched",
-                actual -> matchesAll(actual.entrySet(),
-                        entry -> predicate.test(entry.getKey(), entry.getValue())));
+        var nested = Conditions.matches((Entry<? extends KEY, ? extends VALUE> entry) ->
+                predicate.test(entry.getKey(), entry.getValue()));
+        return ConditionSupport.quantified("map", "all map entries match", "not all map entries matched",
+                ConditionSupport.Quantifier.ALL, nested, Map::entrySet,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+    }
+
+    public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> allEntries(PreservingCondition<? super Entry<KEY, VALUE>> nested) {
+        return ConditionSupport.quantified("map", "all map entries match", "not all map entries matched",
+                ConditionSupport.Quantifier.ALL, nested, Map::entrySet,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+    }
+
+    public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> allEntries(ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
+        return ConditionSupport.quantified("map", "all map entries match", "not all map entries matched",
+                ConditionSupport.Quantifier.ALL, nested, Map::entrySet,
+                () -> ConditionAwaitAttempt.<Object, Object>bind(nested));
+    }
+
+    public static <RESULT> PreservingCondition<Map<?, ?>> allEntries(Condition.Typed<? super Entry<?, ?>, RESULT> nested) {
+        return ConditionSupport.quantified("map", "all map entries match", "not all map entries matched",
+                ConditionSupport.Quantifier.ALL, nested, Map::entrySet,
+                () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> anyEntry(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return preserving("any map entry matches", "no map entry matched",
-                actual -> matchesAny(actual.entrySet(),
-                        entry -> predicate.test(entry.getKey(), entry.getValue())));
+        var nested = Conditions.matches((Entry<? extends KEY, ? extends VALUE> entry) ->
+                predicate.test(entry.getKey(), entry.getValue()));
+        return ConditionSupport.quantified("map", "any map entry matches", "no map entry matched",
+                ConditionSupport.Quantifier.ANY, nested, Map::entrySet,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+    }
+
+    public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> anyEntry(PreservingCondition<? super Entry<KEY, VALUE>> nested) {
+        return ConditionSupport.quantified("map", "any map entry matches", "no map entry matched",
+                ConditionSupport.Quantifier.ANY, nested, Map::entrySet,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+    }
+
+    public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> anyEntry(ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
+        return ConditionSupport.quantified("map", "any map entry matches", "no map entry matched",
+                ConditionSupport.Quantifier.ANY, nested, Map::entrySet,
+                () -> ConditionAwaitAttempt.<Object, Object>bind(nested));
+    }
+
+    public static <RESULT> PreservingCondition<Map<?, ?>> anyEntry(Condition.Typed<? super Entry<?, ?>, RESULT> nested) {
+        return ConditionSupport.quantified("map", "any map entry matches", "no map entry matched",
+                ConditionSupport.Quantifier.ANY, nested, Map::entrySet,
+                () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> noEntry(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return preserving("no map entry matches", "a map entry matched",
-                actual -> !matchesAny(actual.entrySet(),
-                        entry -> predicate.test(entry.getKey(), entry.getValue())));
+        var nested = Conditions.matches((Entry<? extends KEY, ? extends VALUE> entry) ->
+                predicate.test(entry.getKey(), entry.getValue()));
+        return ConditionSupport.quantified("map", "no map entry matches", "a map entry matched",
+                ConditionSupport.Quantifier.NONE, nested, Map::entrySet,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+    }
+
+    public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> noEntry(PreservingCondition<? super Entry<KEY, VALUE>> nested) {
+        return ConditionSupport.quantified("map", "no map entry matches", "a map entry matched",
+                ConditionSupport.Quantifier.NONE, nested, Map::entrySet,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+    }
+
+    public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> noEntry(ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
+        return ConditionSupport.quantified("map", "no map entry matches", "a map entry matched",
+                ConditionSupport.Quantifier.NONE, nested, Map::entrySet,
+                () -> ConditionAwaitAttempt.<Object, Object>bind(nested));
+    }
+
+    public static <RESULT> PreservingCondition<Map<?, ?>> noEntry(Condition.Typed<? super Entry<?, ?>, RESULT> nested) {
+        return ConditionSupport.quantified("map", "no map entry matches", "a map entry matched",
+                ConditionSupport.Quantifier.NONE, nested, Map::entrySet,
+                () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <KEY> PreservingCondition<Map<? extends KEY, ?>> allKeys(CheckedPredicate<? super KEY> predicate) {
-        requireNonNull(predicate, "predicate must not be null");
-        return preserving("all map keys match", "not all map keys matched", actual -> matchesAll(actual.keySet(), predicate));
+        return allKeys(Conditions.matches(predicate));
+    }
+
+    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> allKeys(PreservingCondition<? super KEY> nested) {
+        return ConditionSupport.quantified("map", "all map keys match", "not all map keys matched",
+                ConditionSupport.Quantifier.ALL, nested, Map::keySet,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+    }
+
+    public static <EXPECTED> PreservingCondition<Map<? super EXPECTED, ?>> allKeys(ComparisonCondition<EXPECTED> nested) {
+        return ConditionSupport.quantified("map", "all map keys match", "not all map keys matched",
+                ConditionSupport.Quantifier.ALL, nested, Map::keySet,
+                () -> ConditionAwaitAttempt.<Object, Object>bind(nested));
+    }
+
+    public static <KEY, RESULT> PreservingCondition<Map<? extends KEY, ?>> allKeys(Condition.Typed<? super KEY, RESULT> nested) {
+        return ConditionSupport.quantified("map", "all map keys match", "not all map keys matched",
+                ConditionSupport.Quantifier.ALL, nested, Map::keySet,
+                () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <KEY> PreservingCondition<Map<? extends KEY, ?>> anyKey(CheckedPredicate<? super KEY> predicate) {
-        requireNonNull(predicate, "predicate must not be null");
-        return preserving("any map key matches", "no map key matched", actual -> matchesAny(actual.keySet(), predicate));
+        return anyKey(Conditions.matches(predicate));
+    }
+
+    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> anyKey(PreservingCondition<? super KEY> nested) {
+        return ConditionSupport.quantified("map", "any map key matches", "no map key matched",
+                ConditionSupport.Quantifier.ANY, nested, Map::keySet,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+    }
+
+    public static <EXPECTED> PreservingCondition<Map<? super EXPECTED, ?>> anyKey(ComparisonCondition<EXPECTED> nested) {
+        return ConditionSupport.quantified("map", "any map key matches", "no map key matched",
+                ConditionSupport.Quantifier.ANY, nested, Map::keySet,
+                () -> ConditionAwaitAttempt.<Object, Object>bind(nested));
+    }
+
+    public static <KEY, RESULT> PreservingCondition<Map<? extends KEY, ?>> anyKey(Condition.Typed<? super KEY, RESULT> nested) {
+        return ConditionSupport.quantified("map", "any map key matches", "no map key matched",
+                ConditionSupport.Quantifier.ANY, nested, Map::keySet,
+                () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <KEY> PreservingCondition<Map<? extends KEY, ?>> noKey(CheckedPredicate<? super KEY> predicate) {
-        requireNonNull(predicate, "predicate must not be null");
-        return preserving("no map key matches", "a map key matched", actual -> !matchesAny(actual.keySet(), predicate));
+        return noKey(Conditions.matches(predicate));
+    }
+
+    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> noKey(PreservingCondition<? super KEY> nested) {
+        return ConditionSupport.quantified("map", "no map key matches", "a map key matched",
+                ConditionSupport.Quantifier.NONE, nested, Map::keySet,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+    }
+
+    public static <EXPECTED> PreservingCondition<Map<? super EXPECTED, ?>> noKey(ComparisonCondition<EXPECTED> nested) {
+        return ConditionSupport.quantified("map", "no map key matches", "a map key matched",
+                ConditionSupport.Quantifier.NONE, nested, Map::keySet,
+                () -> ConditionAwaitAttempt.<Object, Object>bind(nested));
+    }
+
+    public static <KEY, RESULT> PreservingCondition<Map<? extends KEY, ?>> noKey(Condition.Typed<? super KEY, RESULT> nested) {
+        return ConditionSupport.quantified("map", "no map key matches", "a map key matched",
+                ConditionSupport.Quantifier.NONE, nested, Map::keySet,
+                () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> allValues(CheckedPredicate<? super VALUE> predicate) {
-        requireNonNull(predicate, "predicate must not be null");
-        return preserving("all map values match", "not all map values matched", actual -> matchesAll(actual.values(), predicate));
+        return allValues(Conditions.matches(predicate));
+    }
+
+    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> allValues(PreservingCondition<? super VALUE> nested) {
+        return ConditionSupport.quantified("map", "all map values match", "not all map values matched",
+                ConditionSupport.Quantifier.ALL, nested, Map::values,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+    }
+
+    public static <EXPECTED> PreservingCondition<Map<?, ? super EXPECTED>> allValues(ComparisonCondition<EXPECTED> nested) {
+        return ConditionSupport.quantified("map", "all map values match", "not all map values matched",
+                ConditionSupport.Quantifier.ALL, nested, Map::values,
+                () -> ConditionAwaitAttempt.<Object, Object>bind(nested));
+    }
+
+    public static <VALUE, RESULT> PreservingCondition<Map<?, ? extends VALUE>> allValues(Condition.Typed<? super VALUE, RESULT> nested) {
+        return ConditionSupport.quantified("map", "all map values match", "not all map values matched",
+                ConditionSupport.Quantifier.ALL, nested, Map::values,
+                () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> anyValue(CheckedPredicate<? super VALUE> predicate) {
-        requireNonNull(predicate, "predicate must not be null");
-        return preserving("any map value matches", "no map value matched", actual -> matchesAny(actual.values(), predicate));
+        return anyValue(Conditions.matches(predicate));
+    }
+
+    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> anyValue(PreservingCondition<? super VALUE> nested) {
+        return ConditionSupport.quantified("map", "any map value matches", "no map value matched",
+                ConditionSupport.Quantifier.ANY, nested, Map::values,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+    }
+
+    public static <EXPECTED> PreservingCondition<Map<?, ? super EXPECTED>> anyValue(ComparisonCondition<EXPECTED> nested) {
+        return ConditionSupport.quantified("map", "any map value matches", "no map value matched",
+                ConditionSupport.Quantifier.ANY, nested, Map::values,
+                () -> ConditionAwaitAttempt.<Object, Object>bind(nested));
+    }
+
+    public static <VALUE, RESULT> PreservingCondition<Map<?, ? extends VALUE>> anyValue(Condition.Typed<? super VALUE, RESULT> nested) {
+        return ConditionSupport.quantified("map", "any map value matches", "no map value matched",
+                ConditionSupport.Quantifier.ANY, nested, Map::values,
+                () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> noValue(CheckedPredicate<? super VALUE> predicate) {
-        requireNonNull(predicate, "predicate must not be null");
-        return preserving("no map value matches", "a map value matched", actual -> !matchesAny(actual.values(), predicate));
+        return noValue(Conditions.matches(predicate));
+    }
+
+    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> noValue(PreservingCondition<? super VALUE> nested) {
+        return ConditionSupport.quantified("map", "no map value matches", "a map value matched",
+                ConditionSupport.Quantifier.NONE, nested, Map::values,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+    }
+
+    public static <EXPECTED> PreservingCondition<Map<?, ? super EXPECTED>> noValue(ComparisonCondition<EXPECTED> nested) {
+        return ConditionSupport.quantified("map", "no map value matches", "a map value matched",
+                ConditionSupport.Quantifier.NONE, nested, Map::values,
+                () -> ConditionAwaitAttempt.<Object, Object>bind(nested));
+    }
+
+    public static <VALUE, RESULT> PreservingCondition<Map<?, ? extends VALUE>> noValue(Condition.Typed<? super VALUE, RESULT> nested) {
+        return ConditionSupport.quantified("map", "no map value matches", "a map value matched",
+                ConditionSupport.Quantifier.NONE, nested, Map::values,
+                () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <KEY> MapValueCondition<Map<? super KEY, ?>, Object, Reference<?>> valueFor(KEY key) {
@@ -167,17 +355,17 @@ public final class MapConditions {
         return valueFor(key, Conditions.matches(predicate));
     }
 
-    public static <KEY, VALUE, RESULT> Condition<Map<? super KEY, ? extends VALUE>, RESULT> valueFor(KEY key,
-            Condition<? super VALUE, RESULT> nested) {
+    public static <KEY, VALUE, RESULT> Condition.Typed<Map<? super KEY, ? extends VALUE>, RESULT> valueFor(KEY key,
+            Condition.Typed<? super VALUE, RESULT> nested) {
         return compose("map value ", required(nested),
-                valueFor(key).definition, actual -> value(actual, key),
+                valueFor(key), actual -> value(actual, key),
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <KEY, CHECKED, REFERENCE> MapValueCondition<Map<? super KEY, ?>, CHECKED, REFERENCE> valueFor(KEY key,
-            SourceCondition<CHECKED, REFERENCE> nested) {
-        return new MapValueCondition<>(compose("map value ", required(nested).definition(),
-                valueFor(key).definition, actual -> value(actual, key),
+            SourceCondition<CHECKED, REFERENCE, ?> nested) {
+        return new MapValueCondition<>(compose("map value ", required(nested),
+                valueFor(key), actual -> value(actual, key),
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 
@@ -187,9 +375,29 @@ public final class MapConditions {
 
     public static <KEY> MapValueCondition<Map<? super KEY, ?>, Object, Reference<?>> onlyValueFor(KEY key) {
         return new MapValueCondition<>(ConditionSupport.condition("map contains only the expected key", expectedReference(key), actual ->
-                ConditionSupport.single("map", actual == null ? null : actual.entrySet(), entry ->
-                        deepEquals(entry.getKey(), key) ? satisfied(entry.getValue())
-                                : unsatisfied("map contained a different key"))));
+                onlyValue(actual, key)));
+    }
+
+    public static <KEY, VALUE> MapValueCondition<Map<? super KEY, ?>, VALUE, Reference<?>> onlyValueFor(KEY key,
+            CheckedPredicate<? super VALUE> predicate) {
+        return onlyValueFor(key, Conditions.matches(predicate));
+    }
+
+    public static <KEY, VALUE, RESULT> Condition.Typed<Map<? super KEY, ? extends VALUE>, RESULT> onlyValueFor(KEY key,
+            Condition.Typed<? super VALUE, RESULT> nested) {
+        return compose("only map value ", required(nested), onlyValueFor(key), actual -> onlyValue(actual, key),
+                () -> new ConditionAwaitAttempt<>(nested));
+    }
+
+    public static <KEY, CHECKED, REFERENCE> MapValueCondition<Map<? super KEY, ?>, CHECKED, REFERENCE> onlyValueFor(KEY key,
+            SourceCondition<CHECKED, REFERENCE, ?> nested) {
+        return new MapValueCondition<>(compose("only map value ", required(nested), onlyValueFor(key),
+                actual -> onlyValue(actual, key), () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
+    }
+
+    private static <KEY, VALUE> ConditionResult<VALUE> onlyValue(Map<? super KEY, ? extends VALUE> actual, KEY key) {
+        return ConditionSupport.single("map", actual == null ? null : actual.entrySet(), entry ->
+                deepEquals(entry.getKey(), key) ? satisfied(entry.getValue()) : unsatisfied("map contained a different key"));
     }
 
     /** Matches one key, including a collection or array as that single key. */

@@ -1,5 +1,10 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
+
 import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
@@ -10,7 +15,6 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
-import static java.lang.reflect.Modifier.isFinal;
 import static java.util.Arrays.stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -27,7 +31,7 @@ class PublicSurfaceTest {
             return "ready";
         };
 
-        String value = Await.await(source).until(Conditions.isNotNull.because("standard checked supplier"));
+        String value = await(source).until(Conditions.isNotNull.because("standard checked supplier"));
 
         assertEquals("ready", value);
     }
@@ -36,17 +40,17 @@ class PublicSurfaceTest {
     void conditionsDoNotExposeRuntimeMechanicsOrAlternativeFactories() {
         Set<String> excludedMethods = Set.of("definition", "evaluatorFactory", "newEvaluator", "newAttempt",
                 "preservingAttempt", "selectionAttempt", "yields", "preserving", "captured");
-        for (Class<?> stage : List.of(Conditions.class, Condition.class, PreservingCondition.class, ComparisonCondition.class,
+        for (Class<?> stage : List.of(Conditions.class, Condition.class, Condition.Typed.class, PreservingCondition.class, ComparisonCondition.class,
                 SelectedCondition.class, MapValueCondition.class, SourceCondition.class)) {
             stream(stage.getMethods()).forEach(method ->
                     assertFalse(excludedMethods.contains(method.getName()), method.toGenericString()));
         }
-        assertFalse(Condition.class.isAssignableFrom(ComparisonCondition.class));
-        assertFalse(Condition.class.isAssignableFrom(SelectedCondition.class));
-        assertFalse(Condition.class.isAssignableFrom(PreservingCondition.class));
-        assertFalse(Condition.class.isAssignableFrom(MapValueCondition.class));
+        assertTrue(Condition.class.isAssignableFrom(ComparisonCondition.class));
+        assertTrue(Condition.class.isAssignableFrom(SelectedCondition.class));
+        assertTrue(Condition.class.isAssignableFrom(PreservingCondition.class));
+        assertTrue(Condition.class.isAssignableFrom(MapValueCondition.class));
         assertFalse(SelectedCondition.class.isAssignableFrom(MapValueCondition.class));
-        assertTrue(isFinal(Condition.class.getModifiers()));
+        assertTrue(Condition.class.isSealed());
     }
 
     @Test

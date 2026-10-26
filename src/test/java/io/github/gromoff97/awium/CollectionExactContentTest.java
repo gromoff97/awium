@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Await.CollectionSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
@@ -13,7 +12,10 @@ import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static java.util.Arrays.asList;
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.CollectionConditions.*;
@@ -158,8 +160,8 @@ class CollectionExactContentTest {
         var brokenIterator = new ProbeList<>(List.of("a"), iteratorCause);
         var brokenEquality = new ProbeList<>(
                 List.of(new ThrowingEquals(equalityCause)), null);
-        CollectionSource<ProbeList<String>> iteratorSource = () -> brokenIterator;
-        CollectionSource<ProbeList<ThrowingEquals>> equalitySource = () -> brokenEquality;
+        java.util.concurrent.Callable<ProbeList<String>> iteratorSource = () -> brokenIterator;
+        java.util.concurrent.Callable<ProbeList<ThrowingEquals>> equalitySource = () -> brokenEquality;
 
         assertSame(iteratorCause, assertFailure(CONDITION_FAILED,
                 () -> await(iteratorSource).usingTime(pollingTime, pollingTime).until(doesNotContainExactly(List.of("a")))).getCause());

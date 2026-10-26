@@ -12,7 +12,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.Conditions.*;
@@ -164,7 +167,7 @@ class CheckedCallbackTest {
     }
 
     @Test
-    void traversalCompletesBeforeInterruptStopsTheNextAttempt() {
+    void quantifiersStopBeforeTheNextCallbackAfterAnInterrupt() {
         var time = new FakeTime(0);
         var values = List.of(1, 2, 3);
         var visited = new ArrayList<Integer>();
@@ -178,18 +181,18 @@ class CheckedCallbackTest {
         var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
         assertEquals(INTERRUPTED, failure.reason());
         assertInstanceOf(InterruptedException.class, failure.cause());
-        assertEquals(values, visited);
+        assertEquals(List.of(1), visited);
         assertEquals(1, sourceCalls[0]);
         assertTrue(time.parkRequests.isEmpty());
     }
 
     @Test
-    void aFlagClearedWithinTheCheckIsNotAnInterruptionAtItsBoundary() {
+    void aFlagClearedWithinTheSameCallbackDoesNotInterruptTheQuantifier() {
         var time = new FakeTime(0);
         var actual = List.of(1, 2);
         var result = await(() -> actual).usingTime(time, time).tryUntil(CollectionConditions.all(value -> {
-            if (value == 1) Thread.currentThread().interrupt();
-            else assertTrue(Thread.interrupted());
+            Thread.currentThread().interrupt();
+            assertTrue(Thread.interrupted());
             return true;
         }));
         assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
@@ -198,19 +201,18 @@ class CheckedCallbackTest {
     }
 
     @Test
-    void exceptionAfterAnInterruptWithinTheSameCheckKeepsItsOriginalCause() {
-        var cause = new IllegalStateException("second element failed");
+    void exceptionAfterAnInterruptWithinTheSameCallbackKeepsItsOriginalCause() {
+        var cause = new IllegalStateException("callback failed");
         int[] calls = {0};
         var result = await(() -> List.of(1, 2)).tryUntil(CollectionConditions.all(value -> {
             calls[0]++;
-            if (value == 2) throw cause;
             Thread.currentThread().interrupt();
-            return true;
+            throw cause;
         }));
         var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
         assertEquals(INTERRUPTED, failure.reason());
         assertSame(cause, failure.cause());
-        assertEquals(2, calls[0]);
+        assertEquals(1, calls[0]);
     }
 
     private static void verify(String actual) throws Throwable {
