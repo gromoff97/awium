@@ -84,10 +84,10 @@ final class ConditionSupport {
         return new Reference<>("Expected", value);
     }
 
-    static <OBSERVED, ELEMENT, RESULT> PreservingCondition<OBSERVED> quantified(
+    static <OBSERVED, ELEMENT> PreservingCondition<OBSERVED> quantified(
             String subject, String description, String mismatch, Quantifier quantifier, Condition<?> nested,
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
-            Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT>> evaluatorFactory) {
+            Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ?>> evaluatorFactory) {
         Condition.required(nested);
         return new PreservingCondition<>(new Condition.Typed<>(description, nested, () -> {
             var evaluator = evaluatorFactory.get();
@@ -96,17 +96,17 @@ final class ConditionSupport {
         }));
     }
 
-    private static <OBSERVED, ELEMENT, RESULT> AttemptResult<OBSERVED> evaluateQuantifier(
+    private static <OBSERVED, ELEMENT> AttemptResult<OBSERVED> evaluateQuantifier(
             OBSERVED actual, Iterable<? extends ELEMENT> values,
-            ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT> evaluator,
+            ConditionAwaitAttempt<? super ELEMENT, ?> evaluator,
             Quantifier quantifier, String mismatch) {
-        AttemptResult.Evaluated<? extends RESULT> last = null;
+        AttemptResult.Evaluated<?> last = null;
         for (ELEMENT value : values) {
             switch (evaluator.probe(value)) {
-                case AttemptResult.Uncontrolled<? extends RESULT> failure -> {
+                case AttemptResult.Uncontrolled<?> failure -> {
                     return new AttemptResult.Uncontrolled<>(failure.cause(), failure.condition(), failure.progress());
                 }
-                case AttemptResult.Evaluated<? extends RESULT> evaluated -> {
+                case AttemptResult.Evaluated<?> evaluated -> {
                     last = evaluated;
                     if (quantifier.stops(evaluated.result() instanceof ConditionResult.Satisfied<?>)) {
                         return quantifiedResult(actual, quantifier.satisfied(true), mismatch, evaluated);
