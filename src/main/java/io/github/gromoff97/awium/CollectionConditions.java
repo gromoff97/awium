@@ -374,7 +374,7 @@ public final class CollectionConditions {
         if (index < 0) {
             throw new IllegalArgumentException("index must be non-negative");
         }
-        return selected("list has a matching element at index " + index,
+        return selected("list has an element at index " + index,
                 actual -> selectElement(actual, index));
     }
 

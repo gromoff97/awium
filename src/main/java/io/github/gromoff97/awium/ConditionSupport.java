@@ -197,7 +197,7 @@ final class ConditionSupport {
     static <OBSERVED, ELEMENT, RESULT> Condition.Typed<OBSERVED, RESULT> single(String subject, Condition<?> condition,
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
             Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT>> evaluatorFactory) {
-        return new Condition.Typed<>(condition, subject + " has a single matching value: " + condition.description(), () -> {
+        return new Condition.Typed<>(condition, subject + " has exactly one match: " + condition.description(), () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> actual == null ? AttemptResult.of(unsatisfied(subject + " was null"))
                     : evaluateSingle(elements.apply(actual), evaluator);
