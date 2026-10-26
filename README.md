@@ -308,29 +308,32 @@ Payment payment = await(paymentRepository::load).until(condition(
         "payment has a receipt",
         actual -> actual.receipt() == null
                 ? unsatisfied("receipt was absent")
-                : satisfied(actual)));
+                : satisfied()));
 ```
 
-Custom conditions preserve the observed object. Use `unsatisfied()` when no
-extra mismatch text is needed, or `unsatisfied(message, cause)` to attach
+Custom conditions preserve the observed object. Use `satisfied()` to signal
+success, `unsatisfied()` when no extra mismatch text is needed, or
+`unsatisfied(message, cause)` to attach
 diagnostics. A condition returns only `Satisfied` or `Unsatisfied`; any thrown
 `Throwable` becomes an uncontrolled attempt and stops the wait.
 
-`condition(description, callback)` reuses the supplied callback. For state that
-must start fresh for each wait, use the overload accepting a JDK `Callable`
-that constructs a `CheckedFunction`:
+`condition(description, callback)` reuses the supplied callback.
+`conditionPerWait(description, factory)` accepts a JDK `Callable` that creates
+a `CheckedFunction` with fresh state for each wait:
 
 ```java
-await(paymentRepository::load).until(condition("two paid observations", () -> {
+import static io.github.gromoff97.awium.Conditions.conditionPerWait;
+
+await(paymentRepository::load).until(conditionPerWait("two paid observations", () -> {
     int[] paidObservations = {0};
     return (Payment actual) -> actual.paid() && ++paidObservations[0] >= 2
-            ? satisfied(actual)
+            ? satisfied()
             : unsatisfied();
 }).because("Payment must be observed as paid twice"));
 ```
 
-Creation is lazy, once per wait when the condition is first evaluated. Both
-creation and evaluation may throw checked exceptions; either failure stops
+Creation is lazy, once per use of the condition in a wait; ordered stages have
+independent callbacks. Both creation and evaluation may throw checked exceptions; either failure stops
 the wait with its original cause. To observe a derived value, project it in
 the source, for example `await(() -> paymentRepository.load().receipt())`.
 
@@ -341,7 +344,7 @@ Import only the catalogue used by a test. Shared names such as `empty`,
 
 | Provider | Conditions | Successful result |
 | --- | --- | --- |
-| `Conditions` | `condition`, `asserted`, object equality and identity, type checks, `matches`, and comparable ranges | observed or narrowed value |
+| `Conditions` | `condition`, `conditionPerWait`, `asserted`, object equality and identity, type checks, `matches`, and comparable ranges | observed or narrowed value |
 | `OptionalConditions` | `present`, `absent`, `hasValue` | contained or narrowed value; original optional for `absent` |
 | `StringConditions` | empty/blank checks, content, prefix, suffix, regex, case-insensitive equality, and `length...` | observed text, including `StringBuilder` and `CharBuffer` |
 | `CollectionConditions` | `single`, empty/null/duplicate checks, quantifiers, membership, exact content, sequences, `first`, `last`, `element`, `sorted`, and `size...` | observed iterable or selected element |

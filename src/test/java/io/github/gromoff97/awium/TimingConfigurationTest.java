@@ -58,7 +58,7 @@ class TimingConfigurationTest {
         var time = new FakeTime(100);
         int[] clockReads = {0};
         int[] factories = {0};
-        var condition = Conditions.<String>condition("second observation", () -> {
+        var condition = Conditions.<String>conditionPerWait("second observation", () -> {
             factories[0]++;
             int[] calls = {0};
             return actual -> ++calls[0] == 2

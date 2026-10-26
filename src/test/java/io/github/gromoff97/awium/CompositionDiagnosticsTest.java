@@ -57,7 +57,7 @@ class CompositionDiagnosticsTest {
     @Test
     void missingKeyInsideCapturedKeepsLookupContextAndDoesNotCreateTheNestedSession() {
         var time = new FakeTime(0);
-        Condition.MapValueCondition<Map<? super String, ? extends String>> selected = valueFor("customerId", condition("nested", () -> {
+        Condition.MapValueCondition<Map<? super String, ? extends String>> selected = valueFor("customerId", conditionPerWait("nested", () -> {
             throw new AssertionError("nested factory must not run before extraction succeeds");
         }));
         var failure = assertFailure(TIMEOUT, () -> await(() -> Map.<String, String>of())
@@ -94,7 +94,7 @@ class CompositionDiagnosticsTest {
                 @Override public String getValue() { return throwUnchecked(cause); }
             };
             var actual = new ProbeContainers.EntryMap<String, String>(List.of(entry));
-            var selected = valueFor("customerId", condition("nested", () -> {
+            var selected = valueFor("customerId", conditionPerWait("nested", () -> {
                 throw new AssertionError("nested factory must not run before extraction succeeds");
             })).because("customer is required");
             var waiting = await(() -> actual);

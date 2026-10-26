@@ -23,6 +23,11 @@ public sealed interface ConditionResult<RESULT> {
         };
     }
 
+    /** Signals satisfaction without a payload; preserving checks still return their original observation. */
+    static <RESULT> ConditionResult<RESULT> satisfied() {
+        return satisfied(null);
+    }
+
     static <RESULT> ConditionResult<RESULT> satisfied(RESULT result) {
         return new Satisfied<>(result);
     }

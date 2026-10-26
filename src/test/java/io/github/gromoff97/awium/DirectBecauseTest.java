@@ -199,7 +199,7 @@ class DirectBecauseTest {
         var time = new FakeTime(0);
 
         var payment = await(() -> actual).usingTime(time, time).until(condition("inline", value -> ConditionResult.satisfied(value)).because("required"));
-        var created = await(() -> actual).usingTime(time, time).until(condition("factory", () -> ConditionResult::satisfied).because("required"));
+        var created = await(() -> actual).usingTime(time, time).until(conditionPerWait("factory", () -> ConditionResult::satisfied).because("required"));
         var selected = await(() -> List.of(actual)).usingTime(time, time).until(single(check.because("inner")).because("outer"));
         var optional = await(() -> Optional.of(actual)).usingTime(time, time).until(hasValue(check).because("optional"));
         var mapped = await(() -> Map.of("key", actual)).usingTime(time, time).until(valueFor("key", check).because("mapped"));

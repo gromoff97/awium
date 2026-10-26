@@ -28,7 +28,7 @@ class AssertionAdapterTest {
         var condition = Conditions.<String>condition(
                 "payment id", value -> {
                     invocations[0]++;
-                    return satisfied(value);
+                    return satisfied();
                 });
 
         ConditionResult<? extends String> evaluation = evaluate(condition, "42");
@@ -53,7 +53,7 @@ class AssertionAdapterTest {
                 () -> condition("payment", (CheckedFunction<Object, ConditionResult<Object>>) null))
                 .getMessage().contains("evaluation"));
         assertTrue(assertThrows(NullPointerException.class,
-                () -> condition("payment", (Callable<CheckedFunction<Object, ConditionResult<Object>>>) null))
+                () -> conditionPerWait("payment", (Callable<CheckedFunction<Object, ConditionResult<Object>>>) null))
                 .getMessage().contains("evaluator factory"));
     }
 

@@ -244,11 +244,11 @@ class PositiveFluentMatrixTest {
         var waiting = await(() -> "ready").usingTime(time, time);
 
         String direct = waiting.until(condition("direct", ConditionResult::satisfied));
-        String created = waiting.until(condition("created", PositiveFluentMatrixTest::evaluator).because("ready"));
-        String preserved = waiting.until(condition("preserved", PositiveFluentMatrixTest::evaluator));
-        String concrete = waiting.until(condition("broad", broadFactory));
-        List<String> captured = waiting.until(condition("first", PositiveFluentMatrixTest::evaluator),
-                condition("second", PositiveFluentMatrixTest::evaluator));
+        String created = waiting.until(conditionPerWait("created", PositiveFluentMatrixTest::evaluator).because("ready"));
+        String preserved = waiting.until(conditionPerWait("preserved", PositiveFluentMatrixTest::evaluator));
+        String concrete = waiting.until(conditionPerWait("broad", broadFactory));
+        List<String> captured = waiting.until(conditionPerWait("first", PositiveFluentMatrixTest::evaluator),
+                conditionPerWait("second", PositiveFluentMatrixTest::evaluator));
 
         assertEquals(List.of("ready", "ready", "ready", "ready"), List.of(direct, created, preserved, concrete));
         assertEquals(List.of("ready", "ready"), captured);

@@ -13,6 +13,35 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConditionResultContractTest {
 
+    private record User(int id) {}
+
+    @Test
+    void satisfactionWithoutAPayloadPreservesConcreteAndSelectedObservations() {
+        ConditionResult<String> signal = satisfied();
+        assertNull(assertInstanceOf(Satisfied.class, signal).result());
+        assertNull(signal.cause());
+        var actual = new User(42);
+        var time = new FakeTime(0);
+        var waiting = Await.await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+
+        assertEquals(42, waiting.until(Conditions.condition("ready", ignored -> satisfied()).because("original user")).id());
+        AwaitResult<User, User> result = waiting.tryUntil(Conditions.condition("ready", ignored -> satisfied()));
+        switch (result) {
+            case AwaitResult.Satisfied(var attempts, var user) -> assertSame(actual, user);
+            case AwaitResult.Failed(var attempts, var failure) -> org.junit.jupiter.api.Assertions.fail(failure.message());
+        }
+        assertSame(actual, Await.await(() -> java.util.Optional.of(actual)).usingTime(time, time)
+                .until(OptionalConditions.hasValue(Conditions.condition("present", ignored -> satisfied())).because("optional")));
+        assertEquals(42, Await.await(() -> java.util.List.of(actual)).usingTime(time, time)
+                .until(CollectionConditions.single(Conditions.condition("single", ignored -> satisfied()))).id());
+        assertEquals(42, Await.await(() -> java.util.List.of(actual)).usingTime(time, time)
+                .until(CollectionConditions.first(Conditions.condition("first", ignored -> satisfied()))).id());
+        assertEquals(42, Await.await(() -> java.util.Map.of("user", actual)).usingTime(time, time)
+                .until(MapConditions.valueFor("user", Conditions.condition("mapped", ignored -> satisfied()))).id());
+        User absent = null;
+        assertNull(Await.await(() -> absent).usingTime(time, time).until(Conditions.condition("null is valid", ignored -> satisfied())));
+    }
+
     @Test
     void mappingSatisfiedResultChangesItsValue() {
         ConditionResult<String> mapped = satisfied(42)

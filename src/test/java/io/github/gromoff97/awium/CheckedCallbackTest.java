@@ -61,8 +61,8 @@ class CheckedCallbackTest {
             Map<String, Executable> callbacks = Map.of(
                     "asserted", () -> waiting.until(asserted(actual -> { throw cause; })),
                     "condition", () -> waiting.until(condition("checked", actual -> { throw cause; })),
-                    "condition factory evaluator", () -> waiting.until(condition("checked", () -> actual -> { throw cause; })),
-                    "condition factory creation", () -> waiting.until(condition("checked", () -> { throw cause; })));
+                    "condition factory evaluator", () -> waiting.until(conditionPerWait("checked", () -> actual -> { throw cause; })),
+                    "condition factory creation", () -> waiting.until(conditionPerWait("checked", () -> { throw cause; })));
 
             for (var callback : callbacks.entrySet()) {
                 calls[0] = 0;
@@ -92,9 +92,9 @@ class CheckedCallbackTest {
     @Test
     void interruptionDuringFactoryCreationSkipsItsEvaluator() {
         List<Function<Callable<CheckedFunction<String, ConditionResult<String>>>, AwaitResult<?, ?>>> waits = List.of(
-                factory -> await(() -> "ready").tryUntil(condition("lazy", factory)),
-                factory -> await(() -> Optional.of("ready")).tryUntil(hasValue(condition("lazy", factory))),
-                factory -> await(() -> "ready").tryUntil(condition("lazy", factory), matches(value -> true)));
+                factory -> await(() -> "ready").tryUntil(conditionPerWait("lazy", factory)),
+                factory -> await(() -> Optional.of("ready")).tryUntil(hasValue(conditionPerWait("lazy", factory))),
+                factory -> await(() -> "ready").tryUntil(conditionPerWait("lazy", factory), matches(value -> true)));
         for (var wait : waits) {
             int[] factoryCalls = {0};
             int[] evaluatorCalls = {0};
@@ -129,7 +129,7 @@ class CheckedCallbackTest {
         var actual = new ProbeContainers.EntryMap<String, String>(List.of(entry));
         int[] factoryCalls = {0};
         int[] evaluatorCalls = {0};
-        var result = await(() -> actual).usingTime(time, time).tryUntil(valueFor("key", condition("nested", () -> {
+        var result = await(() -> actual).usingTime(time, time).tryUntil(valueFor("key", conditionPerWait("nested", () -> {
             factoryCalls[0]++;
             return value -> { evaluatorCalls[0]++; return satisfied(value); };
         })));
@@ -145,7 +145,7 @@ class CheckedCallbackTest {
     @Test
     void nestedAndCapturedCheckedFailuresKeepTheirContextAndExplanation() {
         var cause = new IOException("offline");
-        var nested = condition("checked receipt", () -> (String actual) -> { throw cause; })
+        var nested = conditionPerWait("checked receipt", () -> (String actual) -> { throw cause; })
                 .because("receipt is needed");
         var time = new FakeTime(0);
 

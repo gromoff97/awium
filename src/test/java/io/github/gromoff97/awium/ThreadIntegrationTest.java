@@ -71,7 +71,7 @@ class ThreadIntegrationTest {
             return currentThread();
         }).usingTime(() -> timers.get().getAsLong(), nanos -> timers.get().accept(nanos))
                 .every(ofNanos(1)).upTo(ofNanos(3));
-        var check = Conditions.<Thread>condition("two observations per caller", () -> {
+        var check = Conditions.<Thread>conditionPerWait("two observations per caller", () -> {
             Thread owner = currentThread();
             int[] calls = {0};
             return actual -> {

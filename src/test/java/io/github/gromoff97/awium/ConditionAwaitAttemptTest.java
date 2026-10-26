@@ -22,7 +22,7 @@ class ConditionAwaitAttemptTest {
         int[] factories = {0};
         var actual = new Object();
         var replacement = new Object();
-        var condition = Conditions.condition("two observations", () -> {
+        var condition = Conditions.conditionPerWait("two observations", () -> {
             factories[0]++;
             int[] calls = {0};
             return ignored -> ++calls[0] == 2 ? satisfied(replacement) : ConditionResult.unsatisfied("first observation");
@@ -60,7 +60,7 @@ class ConditionAwaitAttemptTest {
     void explainedNestedChecksPreserveSelectedIdentityAndIndependentSessions() {
         int[] factories = {0};
         Number actual = new java.math.BigDecimal("1.00");
-        var nested = Conditions.<Number>condition("second observation", () -> {
+        var nested = Conditions.<Number>conditionPerWait("second observation", () -> {
             factories[0]++;
             int[] calls = {0};
             return ignored -> ++calls[0] == 2 ? satisfied(42) : ConditionResult.unsatisfied("first observation");

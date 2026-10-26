@@ -79,10 +79,10 @@ class TypedCollectionSelectionTest {
     @Test
     void nestedCheckStateIsRetainedAcrossRetriesAndResetForEachWait() {
         int[] factories = {0};
-        Condition.PreservingCondition<User> secondObservation = Conditions.condition("second observation", () -> {
+        Condition.PreservingCondition<User> secondObservation = Conditions.conditionPerWait("second observation", () -> {
             factories[0]++;
             int[] calls = {0};
-            return value -> ++calls[0] == 2 ? ConditionResult.satisfied(value) : ConditionResult.unsatisfied("one more");
+            return value -> ++calls[0] == 2 ? ConditionResult.satisfied() : ConditionResult.unsatisfied("one more");
         });
         List<Condition.SelectedCondition<? super List<User>>> selectors = List.of(
                 first(secondObservation), last(secondObservation), element(0, secondObservation));

@@ -26,7 +26,7 @@ class DirectBecauseCompilationContractTest {
     void customChecksCannotReturnAnAttemptFailure() throws IOException {
         for (String expression : List.of(
                 "Conditions.condition(\"failed\", value -> failure);",
-                "Conditions.condition(\"failed\", () -> value -> failure);")) {
+                "Conditions.conditionPerWait(\"failed\", () -> value -> failure);")) {
             CompilationSupport.assertRejected(directory, """
                     package io.github.gromoff97.awium;
                     final class Contract {

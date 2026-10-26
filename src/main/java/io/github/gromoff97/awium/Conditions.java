@@ -25,12 +25,14 @@ public final class Conditions {
 
     private Conditions() {}
 
+    /** Creates a named check using the supplied callback for every execution. */
     public static <OBSERVED> PreservingCondition<OBSERVED> condition(String description,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>> evaluation) {
         return ConditionSupport.preserving(description, evaluation);
     }
 
-    public static <OBSERVED> PreservingCondition<OBSERVED> condition(String description,
+    /** Creates callbacks lazily for each wait; separate sequence stages have independent callbacks. */
+    public static <OBSERVED> PreservingCondition<OBSERVED> conditionPerWait(String description,
             Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory) {
         return ConditionSupport.preserving(description, evaluatorFactory);
     }

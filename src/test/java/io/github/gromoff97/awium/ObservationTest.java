@@ -20,6 +20,7 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.Conditions.condition;
+import static io.github.gromoff97.awium.Conditions.conditionPerWait;
 import static java.time.Duration.ofNanos;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
@@ -191,7 +192,7 @@ class ObservationTest {
     @MethodSource("throwables")
     void conditionThrowablesStayUncontrolledThroughTerminalsAndComposition(Throwable cause) {
         PreservingCondition<String> callback = condition("callback", actual -> { throw cause; });
-        PreservingCondition<String> factory = condition("factory", () -> throwUnchecked(cause));
+        PreservingCondition<String> factory = conditionPerWait("factory", () -> throwUnchecked(cause));
         for (var check : List.of(callback, factory)) {
             var time = new FakeTime(0);
             var waiting = await(() -> "actual").usingTime(time, time).every(ofNanos(1));
@@ -449,7 +450,7 @@ class ObservationTest {
                         failed[0] = true;
                         throw interruption;
                     });
-                    default -> condition("interruption", () -> {
+                    default -> conditionPerWait("interruption", () -> {
                         failed[0] = true;
                         throw interruption;
                     });

@@ -72,7 +72,7 @@ class NestedSelectionTest {
     @Test
     void eachTerminalAndSequenceStageGetsAFreshLazyCallback() {
         int[] factories = {0};
-        PreservingCondition<String> ready = condition("ready after retry", () -> {
+        PreservingCondition<String> ready = conditionPerWait("ready after retry", () -> {
             ++factories[0];
             int[] calls = {0};
             return value -> ++calls[0] == 2 ? satisfied(value) : unsatisfied("retry");

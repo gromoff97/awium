@@ -19,6 +19,7 @@ import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.Conditions.asserted;
 import static io.github.gromoff97.awium.Conditions.condition;
+import static io.github.gromoff97.awium.Conditions.conditionPerWait;
 import static io.github.gromoff97.awium.Conditions.isNotNull;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static java.lang.Thread.currentThread;
@@ -102,12 +103,12 @@ class TryUntilFailureTest {
     void capturesConditionFactoryFailuresInsideTheFirstAttempt() {
         var failure = assertParity(time -> timedAwait(() -> "actual",
                         config(1, 2, 0), time, time),
-                () -> condition("condition succeeds", () -> {
+                () -> conditionPerWait("condition succeeds", () -> {
                     throw new IllegalStateException("condition factory failed");
                 }));
         var nullEvaluator = assertParity(time -> timedAwait(() -> "actual",
                         config(1, 2, 0), time, time),
-                () -> condition("condition succeeds", () -> null));
+                () -> conditionPerWait("condition succeeds", () -> null));
 
         assertEquals(1, failure.totalAttempts());
         assertEquals(1, failure.attempts().getFirst().number());
