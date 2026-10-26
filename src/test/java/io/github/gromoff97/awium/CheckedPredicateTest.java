@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.matches;
+import static io.github.gromoff97.awium.CheckedPredicate.not;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -25,6 +26,47 @@ class CheckedPredicateTest {
     private static final User PENDING = new User(0, false);
     private static final User FIRST = new User(1, true);
     private static final User LAST = new User(2, true);
+
+    @Test
+    void negatedCheckedReferencesKeepInputTypesAcrossRetriesAndSelections() {
+        var observations = new ArrayDeque<>(List.of(FIRST, PENDING));
+        var time = new FakeTime(0);
+        var user = await(observations::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
+                .until(matches(not(User::checkReady)).because("not ready"));
+        assertSame(PENDING, user);
+        assertEquals(0, user.id());
+        assertTrue(observations.isEmpty());
+        assertEquals(0, await(() -> List.of(FIRST, PENDING)).usingTime(time, time)
+                .until(single(not(User::checkReady)).because("not ready")).id());
+
+        AwaitResult<User, User> captured = await(() -> PENDING).usingTime(time, time)
+                .tryUntil(matches(not(User::checkReady)).because("not ready"));
+        assertSame(PENDING, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+
+        Map.Entry<String, User> entry = await(() -> Map.of("pending", PENDING, "ready", FIRST)).usingTime(time, time)
+                .until(MapConditions.singleEntry(CheckedBiPredicate.not(CheckedPredicateTest::readyEntry)).because("not ready"));
+        assertEquals("pending", entry.getKey());
+        assertEquals(0, entry.getValue().id());
+    }
+
+    @Test
+    void negationDoesNotCatchFailuresAndRejectsMissingCallbacksEagerly() {
+        assertThrows(NullPointerException.class, () -> CheckedPredicate.not(null));
+        assertThrows(NullPointerException.class, () -> CheckedBiPredicate.not(null));
+        for (Throwable cause : List.of(new IOException("checked"), new AssertionError("assertion"),
+                new Throwable("throwable"), new InterruptedException("ordinary failure"))) {
+            CheckedPredicate<User> unary = not(user -> { throw cause; });
+            CheckedBiPredicate<String, User> pair = CheckedBiPredicate.not((key, user) -> { throw cause; });
+            var time = new FakeTime(0);
+            var result = await(() -> FIRST).usingTime(time, time).tryUntil(matches(unary));
+            assertSame(cause, assertInstanceOf(AwaitResult.Failed.class, result).failure().cause());
+            var mapResult = await(() -> Map.of("ready", FIRST)).usingTime(time, time).tryUntil(MapConditions.noEntry(pair));
+            assertSame(cause, assertInstanceOf(AwaitResult.Failed.class, mapResult).failure().cause());
+            assertEquals(1, result.totalAttempts());
+            assertEquals(1, mapResult.totalAttempts());
+            assertFalse(Thread.currentThread().isInterrupted());
+        }
+    }
 
     @Test
     void checkedMethodReferencesRetryAndKeepTypesThroughBecauseAndBothTerminals() {

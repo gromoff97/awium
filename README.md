@@ -96,6 +96,9 @@ make that assertion fail.
 For callbacks already stored in JDK `Function`, `Consumer`, `Predicate`, or
 `BiPredicate` variables, pass `function::apply`, `consumer::accept`,
 `predicate::test`, or `entryPredicate::test`.
+Negate a checked callback with `CheckedPredicate.not(check)` or `CheckedBiPredicate.not(check)`.
+For example, `matches(CheckedPredicate.not(Payment::paid)).because("Payment must be unpaid")`
+keeps the method reference's input type and also accepts checks that throw checked exceptions.
 
 ### Ordered states
 
