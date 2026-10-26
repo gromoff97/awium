@@ -19,6 +19,11 @@ public final class OptionalConditions {
 
     private OptionalConditions() {}
 
+    /** Selects the present value if it matches, retaining the source's contained type. */
+    public static <VALUE> SelectedCondition<Optional<? extends VALUE>> hasValue(CheckedPredicate<? super VALUE> predicate) {
+        return hasValue(Conditions.matches(predicate));
+    }
+
     public static <VALUE, RESULT> Condition<Optional<? extends VALUE>, RESULT> hasValue(Condition<? super VALUE, RESULT> nested) {
         return compose("optional value: ", required(nested), null, OptionalConditions::present,
                 () -> new ConditionAwaitAttempt<>(nested));

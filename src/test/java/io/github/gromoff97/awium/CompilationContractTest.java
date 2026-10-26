@@ -20,6 +20,12 @@ class CompilationContractTest {
                 "await(() -> Set.of(new User(1))).until(last(instanceOf(User.class)));",
                 "await(() -> new ArrayDeque<>(List.of(new User(1)))).until(element(0,instanceOf(User.class)));",
                 "await(() -> List.of(new User(1))).until(first(equalTo(123)).because(\"wrong comparison\"));",
+                "await(() -> List.of(new User(1))).until(single(String::isBlank).because(\"wrong input\"));",
+                "await(() -> Optional.of(new User(1))).until(OptionalConditions.hasValue(String::isBlank));",
+                "await(() -> Map.of(\"user\",new User(1))).until(MapConditions.valueFor(\"user\",String::isBlank));",
+                "await(() -> Map.of(\"user\",new User(1))).until(MapConditions.singleEntry((Integer key,User user)->true));",
+                "await(() -> Map.of(\"user\",new User(1))).until(MapConditions.singleEntry((String key,String user)->true));",
+                "await(() -> Map.of(\"user\",new User(1))).until(MapConditions.singleEntry((String key,User user)->\"wrong boolean\"));",
                 "await(() -> List.of(new User(1))).until(last(matches(String::isEmpty)).because(\"wrong input\"));",
                 "await(() -> List.of(new User(1))).until(element(0,equalTo(123)));",
                 "String wrong = await(() -> List.of(new User(1))).until(first(isNotNull).because(\"wrong result\"));",
@@ -34,6 +40,8 @@ class CompilationContractTest {
             assertRejected("""
                     import java.util.*;
                     import io.github.gromoff97.awium.AwaitResult;
+                    import io.github.gromoff97.awium.MapConditions;
+                    import io.github.gromoff97.awium.OptionalConditions;
                     import static io.github.gromoff97.awium.Await.await;
                     import static io.github.gromoff97.awium.Conditions.*;
                     import static io.github.gromoff97.awium.CollectionConditions.*;
@@ -48,7 +56,7 @@ class CompilationContractTest {
     @Test
     void mapsThatAlsoIterateValuesCannotConfuseTheirSelectionResults() throws IOException {
         for (String terminal : List.of("until", "tryUntil")) {
-            for (String condition : List.of("single", "single(matches(User::active))", "single(equalTo(new User(true)))")) {
+            for (String condition : List.of("single", "single(User::active)", "single(matches(User::active))", "single(equalTo(new User(true)))")) {
                 assertRejected("""
                         import java.util.*;
                         import io.github.gromoff97.awium.Await.MapSource;

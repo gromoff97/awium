@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
@@ -57,7 +58,7 @@ class CheckedPredicateTest {
         assertEquals(2, waiting.until(last(User::checkReady).because("last ready")).id());
         assertEquals(1, waiting.until(element(1, User::checkReady).because("indexed ready")).id());
         assertEquals(1, await(() -> List.of(PENDING, FIRST)).usingTime(time, time)
-                .until(single(matches(User::checkReady).because("only ready"))).id());
+                .until(single(User::checkReady).because("only ready")).id());
         assertSame(values, waiting.until(any(User::checkReady).because("any ready")));
 
         var ready = new ArrayList<>(List.of(FIRST, LAST));
@@ -86,6 +87,41 @@ class CheckedPredicateTest {
 
         observed.forEach(value -> assertSame(actual, value));
         assertEquals(1, observed.getFirst().get("first").id());
+        var entry = waiting.until(MapConditions.singleEntry(CheckedPredicateTest::firstEntry).because("first user"));
+        assertEquals(5, entry.getKey().length());
+        assertEquals(1, entry.getValue().id());
+        AwaitResult<LinkedHashMap<String, User>, Map.Entry<String, User>> captured =
+                waiting.tryUntil(MapConditions.singleEntry(CheckedPredicateTest::firstEntry));
+        switch (captured) {
+            case AwaitResult.Satisfied(var attempts, var selected) -> assertEquals(1, selected.getValue().id());
+            case AwaitResult.Failed(var attempts, var failure) -> fail(failure.message());
+        }
+    }
+
+    @Test
+    void optionalAndKeyedValuePredicatesSkipMissingValuesAndRetryMismatches() {
+        ArrayDeque<Optional<User>> optionals = new ArrayDeque<>(List.of(Optional.empty(), Optional.of(FIRST)));
+        ArrayDeque<Map<String, User>> maps = new ArrayDeque<>(List.of(Map.of(), Map.of("user", PENDING), Map.of("user", FIRST)));
+        int[] calls = {0};
+        CheckedPredicate<User> ready = user -> { calls[0]++; return user.checkReady(); };
+        var time = new FakeTime(0);
+
+        assertEquals(1, await(optionals::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(4))
+                .until(OptionalConditions.hasValue(ready).because("present and ready")).id());
+        assertEquals(1, calls[0]);
+        assertTrue(optionals.isEmpty());
+        calls[0] = 0;
+        var waiting = await(maps::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(4));
+        AwaitResult<Map<String, User>, User> result = waiting.tryUntil(MapConditions.valueFor("user", ready).because("keyed ready"));
+        switch (result) {
+            case AwaitResult.Satisfied(var attempts, var user) -> {
+                assertEquals(1, user.id());
+                assertEquals(3, attempts.size());
+            }
+            case AwaitResult.Failed(var attempts, var failure) -> fail(failure.message());
+        }
+        assertEquals(2, calls[0]);
+        assertTrue(maps.isEmpty());
     }
 
     @Test
@@ -99,17 +135,22 @@ class CheckedPredicateTest {
             var time = new FakeTime(0);
             var value = await(() -> FIRST).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
             var values = await(() -> List.of(FIRST, LAST)).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
+            var optional = await(() -> Optional.of(FIRST)).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
             var map = await(() -> Map.of("first", FIRST, "last", LAST))
                     .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
             List<Supplier<AwaitResult<?, ?>>> waits = List.of(
                     () -> value.tryUntil(matches(check).because("checked")),
+                    () -> optional.tryUntil(OptionalConditions.hasValue(check)),
                     () -> values.tryUntil(single(matches(check))),
+                    () -> values.tryUntil(single(check)),
                     () -> values.tryUntil(first(check)),
                     () -> values.tryUntil(last(check)),
                     () -> values.tryUntil(element(0, check)),
                     () -> values.tryUntil(all(check)),
                     () -> values.tryUntil(any(check)),
                     () -> values.tryUntil(none(check)),
+                    () -> map.tryUntil(MapConditions.valueFor("first", check)),
+                    () -> map.tryUntil(MapConditions.singleEntry(entryCheck)),
                     () -> map.tryUntil(MapConditions.allEntries(entryCheck)),
                     () -> map.tryUntil(MapConditions.anyEntry(entryCheck)),
                     () -> map.tryUntil(MapConditions.noEntry(entryCheck)),
@@ -138,6 +179,10 @@ class CheckedPredicateTest {
 
     private static boolean readyEntry(String key, User user) throws Throwable {
         return validKey(key) && user.checkReady();
+    }
+
+    private static boolean firstEntry(CharSequence key, User user) throws Throwable {
+        return !key.isEmpty() && user.id() == 1 && user.checkReady();
     }
 
     private static boolean pendingEntry(String key, User user) throws Throwable {

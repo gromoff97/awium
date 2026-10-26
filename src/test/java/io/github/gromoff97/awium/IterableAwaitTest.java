@@ -29,6 +29,8 @@ class IterableAwaitTest {
 
         assertEquals(10, waiting.until(MapConditions.singleEntry).getValue().intValue());
         assertEquals(10, waiting.until(MapConditions.valueFor("key")).intValue());
+        assertEquals(10, waiting.until(MapConditions.singleEntry((key, value) -> true).because("map entry")).getValue().intValue());
+        assertEquals(10, waiting.until(MapConditions.valueFor("key", java.util.Objects::nonNull)).intValue());
         assertSame(both, waiting.until(all(User::active).because("iterable users")));
         assertTrue(waiting.until(single(instanceOf(User.class)).because("one user")).active());
         AwaitResult<MapWithUsers, Map.Entry<String, Integer>> captured = waiting.tryUntil(MapConditions.singleEntry);

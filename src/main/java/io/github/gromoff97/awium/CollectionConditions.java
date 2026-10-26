@@ -89,6 +89,11 @@ public final class CollectionConditions {
                 "collection size is between " + lowerBound + " and " + upperBound);
     }
 
+    /** Selects the only matching element, retaining the source's element type. */
+    public static <ELEMENT> SelectedCondition<Collection<? extends ELEMENT>> single(CheckedPredicate<? super ELEMENT> predicate) {
+        return single(Conditions.matches(predicate));
+    }
+
     public static <ELEMENT> SelectedCondition<Collection<? extends ELEMENT>> single(PreservingCondition<? super ELEMENT> nested) {
         return new SelectedCondition<>(ConditionSupport.single("collection", required(nested).definition, actual -> actual,
                 () -> ConditionAwaitAttempt.bind(nested.definition)));

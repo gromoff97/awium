@@ -217,9 +217,9 @@ explicitly also evaluates a lazy supplier; the resulting failure message
 remains a frozen string.
 
 Java does not propagate a target type through a chained generic factory call.
-When `matches(...)` is followed immediately by `because(...)`, an unambiguous method
-reference supplies the input type. For a lambda expression, declare its
-parameter type:
+Generic predicate factories such as `matches`, `single`, and `hasValue` may lose
+a lambda's input type before `because(...)`. Method references such as
+`Payment::finished` supply that type; a lambda may need an explicit parameter type:
 
 ```java
 await(paymentRepository::load).until(matches(Payment::finished).because(
@@ -235,18 +235,24 @@ a chained `because(...)`. Use `isNull` for a null check.
 
 ## Selection and checking
 
-Put a condition inside the selection:
+Put a check inside the selection:
 
 ```java
-Payment payment = await(paymentRepository::findAll).until(single(matches(Payment::paid)));
-Payment paid = await(paymentRepository::findAll).until(single(matches(Payment::paid)).because(
+Payment payment = await(paymentRepository::findAll).until(single(Payment::paid));
+Payment paid = await(paymentRepository::findAll).until(single(Payment::paid).because(
         "Settlement requires a paid payment"));
-Payment found = await(paymentRepository::find).until(hasValue(matches(Payment::paid)));
+Payment found = await(paymentRepository::find).until(hasValue(Payment::paid));
 ```
 
 `single` requires a collection containing exactly one element.
 `single(condition)` requires exactly one matching element among all elements;
 other elements may be present. No matches or several matches cause a retry.
+Selectors that accept nested conditions also accept a predicate directly:
+`single(check)`, `hasValue(check)`, and `valueFor(key, check)`. Use a full condition
+for its own explanation, assertion adapter, or per-wait callback state.
+`singleEntry((key, value) -> ...)` accepts a two-argument check like the map's
+entry quantifiers and retains the source's key and value types.
+
 The source is read once per attempt. `singleEntry(...)` applies the same rule to
 map entries; `hasValue(...)` checks an optional value.
 
@@ -275,11 +281,11 @@ Payment found = await(repository::find).until(hasValue(instanceOf(Payment.class)
 Payment firstPayment = await(repository::findAll).until(first(instanceOf(Payment.class)).because("First payment"));
 Payment lastPayment = await(repository::findAll).until(last(instanceOf(Payment.class)).because("Last payment"));
 Payment indexedPayment = await(repository::findAll).until(element(0, instanceOf(Payment.class)).because("Payment at index zero"));
-Payment paid = await(paymentRepository::findAll).until(first(matches(Payment::paid)).because("Paid payment"));
+Payment paid = await(paymentRepository::findAll).until(first(Payment::paid).because("Paid payment"));
 ```
 
 `first`, `last`, and `element` accept nested conditions. Checks such as
-`first(matches(Payment::paid))` and comparisons such as `last(equalTo(expectedPayment))`
+`first(Payment::paid)` and comparisons such as `last(equalTo(expectedPayment))`
 retain the source's element type. Conditions such as `instanceOf` return their
 declared result type, including when the source contains `Object` values.
 `because(...)` preserves both forms. The first two search in encounter order or
@@ -291,8 +297,8 @@ To collect selected values in order, pass several selections to the terminal:
 
 ```java
 List<Payment> payments = await(paymentRepository::findAll).until(
-        single(matches(Payment::created)).because("Creation"),
-        single(matches(Payment::paid)).because("Payment"));
+        single(Payment::created).because("Creation"),
+        single(Payment::paid).because("Payment"));
 ```
 
 ## Custom conditions

@@ -79,6 +79,14 @@ public final class MapConditions {
                 "map size is between " + lowerBound + " and " + upperBound);
     }
 
+    /** Selects the only entry whose key and value match, retaining the source's entry type. */
+    public static <KEY, VALUE> SelectedCondition<Map<? extends KEY, ? extends VALUE>> singleEntry(
+            CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
+        requireNonNull(predicate, "predicate must not be null");
+        return singleEntry(Conditions.matches((Entry<? extends KEY, ? extends VALUE> entry) ->
+                predicate.test(entry.getKey(), entry.getValue())));
+    }
+
     public static <KEY, VALUE> SelectedCondition<Map<? extends KEY, ? extends VALUE>> singleEntry(
             PreservingCondition<? super Entry<? extends KEY, ? extends VALUE>> nested) {
         return new SelectedCondition<>(ConditionSupport.single("map", required(nested).definition, Map::entrySet,
@@ -150,6 +158,12 @@ public final class MapConditions {
 
     public static <KEY> MapValueCondition<Map<? super KEY, ?>> valueFor(KEY key) {
         return new MapValueCondition<>(ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> value(actual, key)));
+    }
+
+    /** Selects the key's value if it matches, retaining the source's value type. */
+    public static <KEY, VALUE> MapValueCondition<Map<? super KEY, ? extends VALUE>> valueFor(KEY key,
+            CheckedPredicate<? super VALUE> predicate) {
+        return valueFor(key, Conditions.matches(predicate));
     }
 
     public static <KEY, VALUE, RESULT> Condition<Map<? super KEY, ? extends VALUE>, RESULT> valueFor(KEY key,
