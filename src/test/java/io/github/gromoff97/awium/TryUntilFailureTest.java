@@ -239,13 +239,13 @@ class TryUntilFailureTest {
                 }),
                 condition("second stage", actual -> satisfied(actual))));
         var observation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, result.attempts().getFirst().outcome());
-        var progress = observation.progress();
+        var progress = result.attempts().getFirst().progress();
 
         assertEquals(INTERRUPTED, result.failure().reason());
         assertEquals(NullPointerException.class, observation.cause().getClass());
         assertEquals("condition returned null ConditionResult", observation.cause().getMessage());
-        assertEquals(1, progress.evaluatedStageNumber());
-        assertEquals("first stage", progress.condition().description());
+        assertEquals(1, progress.lastEvaluatedStageNumber());
+        assertEquals("first stage", progress.activeCondition().description());
     }
 
     @Test
@@ -257,13 +257,13 @@ class TryUntilFailureTest {
                     return satisfied(actual);
                 }),
                 condition("second stage", actual -> satisfied(actual))));
-        var observation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, result.attempts().getFirst().outcome());
-        var progress = observation.progress();
+        assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, result.attempts().getFirst().outcome());
+        var progress = result.attempts().getFirst().progress();
 
         assertEquals(INTERRUPTED, result.failure().reason());
         assertEquals(0, progress.capturedStages());
-        assertEquals(1, progress.evaluatedStageNumber());
-        assertEquals("first stage", progress.condition().description());
+        assertEquals(1, progress.lastEvaluatedStageNumber());
+        assertEquals("first stage", progress.activeCondition().description());
         assertTrue(currentThread().isInterrupted());
     }
 

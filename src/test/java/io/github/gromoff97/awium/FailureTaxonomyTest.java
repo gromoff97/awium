@@ -74,11 +74,11 @@ class FailureTaxonomyTest {
                 case SOURCE_FAILED -> new AttemptRecord.Outcome.SourceRetrievalFailed<>(
                         new AttemptRecord.Timing(Duration.ZERO, Duration.ZERO, null, ofNanos(2)), original);
                 case TIMEOUT, PERSISTENCE_FAILED -> new AttemptRecord.Outcome.Evaluated<>(timing, "actual",
-                        ConditionResult.unsatisfied("not ready", original), metadata, null);
-                default -> new AttemptRecord.Outcome.ConditionFailed<>(timing, "actual", original, metadata, null);
+                        ConditionResult.unsatisfied("not ready", original));
+                default -> new AttemptRecord.Outcome.ConditionFailed<>(timing, "actual", original);
             };
             var attempt = new AttemptRecord<>(1, reason == AwaitFailure.Reason.PERSISTENCE_FAILED
-                    ? AttemptRecord.Phase.PERSISTENCE : AttemptRecord.Phase.ACQUISITION, observation);
+                    ? AttemptRecord.Phase.PERSISTENCE : AttemptRecord.Phase.ACQUISITION, metadata, null, observation);
             WaitCompletion<Object, Object> outcome = switch (reason) {
                 case TIMEOUT -> new WaitCompletion.Timeout<>(attempt);
                 case PERSISTENCE_FAILED -> new WaitCompletion.PersistenceFailure<>(0, attempt);
@@ -86,11 +86,11 @@ class FailureTaxonomyTest {
             };
             var configuration = AwaitTestAccess.config(1, 2, 0);
             try {
-                var captured = FailureDiagnostics.failure(outcome, metadata, configuration);
+                var captured = FailureDiagnostics.failure(outcome, configuration);
                 assertEquals(reason, captured.reason());
                 assertSame(original, captured.cause());
                 assertEquals(List.of(rendering), captured.suppressed());
-                var thrown = assertFailure(reason, () -> Await.complete(outcome, metadata, configuration));
+                var thrown = assertFailure(reason, () -> Await.complete(outcome, configuration));
                 assertSame(original, thrown.getCause());
                 assertArrayEquals(new Throwable[]{rendering}, thrown.getSuppressed());
                 assertEquals(0, original.getSuppressed().length);

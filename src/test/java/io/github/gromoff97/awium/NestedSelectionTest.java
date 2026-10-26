@@ -108,9 +108,9 @@ class NestedSelectionTest {
                 single(matches(Payment::paid).because("payment")));
         var observation = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, result.attempts().getLast().outcome());
         assertInstanceOf(ConditionResult.Unsatisfied.class, observation.evaluation());
-        var progress = observation.progress();
+        var progress = result.attempts().getLast().progress();
         assertEquals(1, progress.capturedStages());
-        assertEquals("payment", progress.condition().explanation());
+        assertEquals("payment", progress.activeCondition().explanation());
     }
 
     @Test

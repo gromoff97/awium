@@ -229,20 +229,17 @@ class DiagnosticsSnapshotTest {
                 "Optional.empty", unsatisfied("optional was empty",
                 persistenceAssertion), 71, 9 * SECOND + 100 * MILLISECOND);
         var persistence = new PersistenceFailure<>(7 * SECOND,
-                new AttemptRecord<>(persistedAttempt.number(), AttemptRecord.Phase.PERSISTENCE, persistedAttempt.outcome()));
+                new AttemptRecord<>(persistedAttempt.number(), AttemptRecord.Phase.PERSISTENCE,
+                        persistedAttempt.condition(), persistedAttempt.progress(), persistedAttempt.outcome()));
 
         var betweenFailure = assertFailure(TIMEOUT,
-                () -> Await.complete(between, CONDITION,
-                        config(3 * SECOND, 10 * SECOND, 0)));
+                () -> Await.complete(between, config(3 * SECOND, 10 * SECOND, 0)));
         var lateUnsatisfiedFailure = assertFailure(TIMEOUT,
-                () -> Await.complete(lateUnsatisfied, CONDITION,
-                        config(100 * MILLISECOND, 10 * SECOND, 0)));
+                () -> Await.complete(lateUnsatisfied, config(100 * MILLISECOND, 10 * SECOND, 0)));
         var lateSatisfiedFailure = assertFailure(TIMEOUT,
-                () -> Await.complete(lateSatisfied, CONDITION,
-                        config(100 * MILLISECOND, 10 * SECOND, 0)));
+                () -> Await.complete(lateSatisfied, config(100 * MILLISECOND, 10 * SECOND, 0)));
         var persistenceFailure = assertFailure(PERSISTENCE_FAILED,
-                () -> Await.complete(persistence, CONDITION,
-                        config(100 * MILLISECOND, 10 * SECOND, 5 * SECOND)));
+                () -> Await.complete(persistence, config(100 * MILLISECOND, 10 * SECOND, 5 * SECOND)));
 
         assertEquals("""
                 Acquisition deadline elapsed
@@ -323,18 +320,15 @@ class DiagnosticsSnapshotTest {
         var interruption = new InterruptedException("stopped");
 
         var sourceFailure = assertFailure(SOURCE_FAILED,
-                () -> Await.complete(sourceFailure(sourceCause, 2, SECOND),
-                        diagnosticCondition("condition", "business reason", null),
+                () -> Await.complete(sourceFailure(diagnosticCondition("condition", "business reason", null), sourceCause, 2, SECOND),
                         config(SECOND, 10 * SECOND, 0)));
         var conditionFailure = assertFailure(CONDITION_FAILED,
                 () -> Await.complete(conditionFailure(diagnosticCondition("condition", "business reason", null),
-                        "actual", conditionCause, 3, SECOND), CONDITION, config(SECOND, 10 * SECOND, 0)));
+                        "actual", conditionCause, 3, SECOND), config(SECOND, 10 * SECOND, 0)));
         var waitingFailure = assertFailure(WAIT_FAILED,
-                () -> Await.complete(waitingFailure(waitingCause, 4, SECOND), CONDITION,
-                        config(SECOND, 10 * SECOND, 0)));
+                () -> Await.complete(waitingFailure(waitingCause, 4, SECOND), config(SECOND, 10 * SECOND, 0)));
         var interruptedFailure = assertFailure(WAIT_FAILED,
-                () -> Await.complete(waitingFailure(interruption, 5, SECOND), CONDITION,
-                        config(SECOND, 10 * SECOND, 0)));
+                () -> Await.complete(waitingFailure(interruption, 5, SECOND), config(SECOND, 10 * SECOND, 0)));
 
         assertSame(sourceCause, sourceFailure.getCause());
         assertSame(conditionCause, conditionFailure.getCause());
@@ -435,8 +429,7 @@ class DiagnosticsSnapshotTest {
                         2, 3 * SECOND));
 
         var failure = assertFailure(TIMEOUT,
-                () -> Await.complete(outcome, CONDITION,
-                        config(SECOND, 2 * SECOND, 0)));
+                () -> Await.complete(outcome, config(SECOND, 2 * SECOND, 0)));
 
         assertSame(assertion, failure.getCause());
         assertEquals("""
@@ -513,8 +506,7 @@ class DiagnosticsSnapshotTest {
                 evaluatedAttempt(diagnosticCondition("condition", "business reason", null), actual, unsatisfied("not ready"), 1, 2));
 
         var valueFailure = assertFailure(TIMEOUT,
-                () -> Await.complete(outcome, CONDITION,
-                        config(1, 2, 0)));
+                () -> Await.complete(outcome, config(1, 2, 0)));
 
         assertNull(valueFailure.getCause());
         assertArrayEquals(new Throwable[]{valueCause}, valueFailure.getSuppressed());
@@ -549,8 +541,7 @@ class DiagnosticsSnapshotTest {
 
         try {
             var failure = assertFailure(TIMEOUT,
-                    () -> Await.complete(new Timeout<>(evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 1, 2)),
-                            CONDITION, config(1, 2, 0)));
+                    () -> Await.complete(new Timeout<>(evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 1, 2)), config(1, 2, 0)));
 
             assertNull(failure.getCause());
             assertArrayEquals(new Throwable[]{interruption}, failure.getSuppressed());
@@ -584,12 +575,12 @@ class DiagnosticsSnapshotTest {
         var progress = new AttemptRecord.Progress(1, 2, 2,
                 diagnosticCondition("inner second", "inner business reason", null));
         var attempt = new AttemptRecord<>(2, ACQUISITION,
+                diagnosticCondition("conditions are satisfied in order", null, null), progress,
                 new AttemptRecord.Outcome.Evaluated<>(afterObservation(2), new ThrowingValue(cause),
-                        new ConditionResult.Unsatisfied<>("inner mismatch", null),
-                        diagnosticCondition("conditions are satisfied in order", null, null), progress));
+                        new ConditionResult.Unsatisfied<>("inner mismatch", null)));
 
         var failure = assertFailure(TIMEOUT,
-                () -> Await.complete(new Timeout<>(attempt), CONDITION, config(1, 2, 0)));
+                () -> Await.complete(new Timeout<>(attempt), config(1, 2, 0)));
 
         assertMessage(failure, "Sequence (captured 1 of 2)",
                 "Condition: inner second", "Because: inner business reason",
@@ -611,12 +602,12 @@ class DiagnosticsSnapshotTest {
         var progress = new AttemptRecord.Progress(1, 2, 2, diagnosticCondition("second stage", null,
                 new Condition.Reference<>("Expected", expected)));
         var attempt = new AttemptRecord<>(2, ACQUISITION,
+                diagnosticCondition("ordered conditions", null, null), progress,
                 new AttemptRecord.Outcome.Evaluated<>(afterObservation(2), actual,
-                        new ConditionResult.Unsatisfied<>("not ready", null),
-                        diagnosticCondition("ordered conditions", null, null), progress));
+                        new ConditionResult.Unsatisfied<>("not ready", null)));
 
         var failure = assertFailure(TIMEOUT,
-                () -> Await.complete(new Timeout<>(attempt), CONDITION, config(1, 2, 0)));
+                () -> Await.complete(new Timeout<>(attempt), config(1, 2, 0)));
 
         assertNull(failure.getCause());
         assertArrayEquals(new Throwable[]{cause}, failure.getSuppressed());
@@ -725,8 +716,7 @@ class DiagnosticsSnapshotTest {
                             unsatisfied("not ready", engineCause), 1, 2));
 
             var failure = assertFailure(TIMEOUT,
-                    () -> Await.complete(outcome, CONDITION,
-                            config(1, 2, 0)));
+                    () -> Await.complete(outcome, config(1, 2, 0)));
 
             assertSame(engineCause, failure.getCause());
             assertEquals(1, failure.getSuppressed().length);
@@ -778,8 +768,7 @@ class DiagnosticsSnapshotTest {
                     evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 1, 2));
 
             var valueFailure = assertFailure(TIMEOUT,
-                    () -> Await.complete(rendered, CONDITION,
-                            config(1, 2, 0)));
+                    () -> Await.complete(rendered, config(1, 2, 0)));
 
             assertNull(valueFailure.getCause());
             assertEquals(0, valueFailure.getSuppressed().length);
@@ -1117,9 +1106,7 @@ class DiagnosticsSnapshotTest {
                                 .because("business\n\nreason")));
         var arrayFailure = assertFailure(TIMEOUT,
                 () -> Await.complete(new Timeout<>(
-                                evaluatedAttempt(CONDITION, new int[] {1, 2}, unsatisfied("not ready"), 1, 2)),
-                        CONDITION,
-                        config(1, 2, 0)));
+                                evaluatedAttempt(CONDITION, new int[] {1, 2}, unsatisfied("not ready"), 1, 2)), config(1, 2, 0)));
 
         assertEquals("""
                 Source retrieval failed
@@ -1168,8 +1155,7 @@ class DiagnosticsSnapshotTest {
         var fatal = new InternalError("array element fatal");
         Object[] actual = {new ThrowingValue(fatal)};
         var failure = assertThrows(AwaitAssertionError.class,
-                () -> Await.complete(new Timeout<>(evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 1, 2)),
-                        CONDITION, config(1, 2, 0)));
+                () -> Await.complete(new Timeout<>(evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 1, 2)), config(1, 2, 0)));
         assertArrayEquals(new Throwable[]{fatal}, failure.getSuppressed());
     }
 
@@ -1180,8 +1166,7 @@ class DiagnosticsSnapshotTest {
         cycle[0] = cycle;
         Object[] actual = {shared, shared, new Object[] {null, new char[] {'a', 'b'}}, cycle};
         var failure = assertFailure(TIMEOUT,
-                () -> Await.complete(new Timeout<>(evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 1, 2)),
-                        CONDITION, config(1, 2, 0)));
+                () -> Await.complete(new Timeout<>(evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 1, 2)), config(1, 2, 0)));
         assertMessage(failure, "[[[1, 2], leaf], [[1, 2], leaf], [null, [a, b]], [[...]]]");
     }
 
@@ -1210,30 +1195,30 @@ class DiagnosticsSnapshotTest {
 
     private static <S, R> AttemptRecord<S, R> evaluatedAttempt(
             Condition<?> condition, S observed, ConditionResult<? extends R> result, long number, long completedNanos) {
-        return new AttemptRecord<>(number, ACQUISITION,
+        return new AttemptRecord<>(number, ACQUISITION, condition, null,
                 new AttemptRecord.Outcome.Evaluated<>(afterObservation(completedNanos), observed,
-                        result, condition, null));
+                        result));
     }
 
     private static WaitCompletion<Object, Object> sourceFailure(
-            Throwable failure, long number, long completedNanos) {
+            Condition<?> condition, Throwable failure, long number, long completedNanos) {
         var timing = new AttemptRecord.Timing(Duration.ZERO, Duration.ZERO, null, Duration.ofNanos(completedNanos));
-        return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION,
+        return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION, condition, null,
                 new AttemptRecord.Outcome.SourceRetrievalFailed<>(timing, failure)));
     }
 
     private static WaitCompletion<Object, Object> waitingFailure(
             Throwable failure, long number, long completedNanos) {
         var timing = new AttemptRecord.Timing(Duration.ZERO, null, null, Duration.ofNanos(completedNanos));
-        return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION,
+        return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION, CONDITION, null,
                 new AttemptRecord.Outcome.WaitingFailed<>(timing, failure)));
     }
 
     private static WaitCompletion<Object, Object> conditionFailure(
             Condition<?> expectation, Object observed, Throwable failure, long number, long completedNanos) {
-        return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION,
+        return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION, expectation, null,
                 new AttemptRecord.Outcome.ConditionFailed<>(afterObservation(completedNanos), observed,
-                        failure, expectation, null)));
+                        failure)));
     }
 
     private static AttemptRecord.Timing afterObservation(

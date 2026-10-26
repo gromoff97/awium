@@ -98,8 +98,7 @@ class LazyExplanationTest {
 
         assertEquals(1, renderings[0]);
         assertTrue(message.contains("Because: reads=" + reads[0] + ", rendering=1"));
-        var evaluated = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, result.attempts().getLast().outcome());
-        assertEquals("reads=" + reads[0] + ", rendering=2", evaluated.condition().explanation());
+        assertEquals("reads=" + reads[0] + ", rendering=2", result.attempts().getLast().condition().explanation());
         assertEquals(message, failure.message());
         assertEquals(2, renderings[0]);
     }

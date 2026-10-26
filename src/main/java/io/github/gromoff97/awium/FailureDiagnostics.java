@@ -25,23 +25,13 @@ final class FailureDiagnostics {
 
     private final List<Throwable> diagnosticFailures = new ArrayList<>();
 
-    private FailureDiagnostics(WaitCompletion<?, ?> outcome,
-            Condition<?> condition, WaitConfiguration configuration) {
+    private FailureDiagnostics(WaitCompletion<?, ?> outcome, WaitConfiguration configuration) {
         this.outcome = requireNonNull(outcome, "outcome must not be null");
         this.configuration = requireNonNull(configuration, "configuration must not be null");
-        requireNonNull(condition, "condition must not be null");
-        var attempt = outcome.attempt().outcome();
-        cause = attempt.cause();
-        if (attempt instanceof AttemptRecord.Outcome.Evaluated<?, ?> value) {
-            sequence = value.progress();
-            this.condition = value.condition();
-        } else if (attempt instanceof AttemptRecord.Outcome.ConditionFailed<?, ?> value) {
-            sequence = value.progress();
-            this.condition = value.condition();
-        } else {
-            sequence = null;
-            this.condition = condition;
-        }
+        var attempt = outcome.attempt();
+        cause = attempt.outcome().cause();
+        sequence = attempt.progress();
+        condition = attempt.condition();
     }
 
     static String duration(long nanos) {
@@ -58,8 +48,8 @@ final class FailureDiagnostics {
         return result.toString();
     }
 
-    static AwaitFailure failure(WaitCompletion<?, ?> outcome, Condition<?> condition, WaitConfiguration configuration) {
-        var diagnostics = new FailureDiagnostics(outcome, condition, configuration);
+    static AwaitFailure failure(WaitCompletion<?, ?> outcome, WaitConfiguration configuration) {
+        var diagnostics = new FailureDiagnostics(outcome, configuration);
         return new AwaitFailure(outcome.failureReason(), diagnostics.message(), diagnostics.cause,
                 diagnostics.diagnosticFailures);
     }
@@ -186,7 +176,7 @@ final class FailureDiagnostics {
         }
         out.append('\n').append("Sequence (captured ").append(sequence.capturedStages())
                 .append(" of ").append(sequence.totalStages()).append("):\n");
-        condition(out, sequence.condition(), "    ");
+        condition(out, sequence.activeCondition(), "    ");
         if (mismatch != null) {
             field(out, "        ", "Mismatch", mismatch);
         }

@@ -111,16 +111,15 @@ public sealed class ValueAwait<OBSERVED> permits Await {
     }
 
     final <RESULT> RESULT complete(ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> session) {
-        return complete(new WaitEngine<>(configuration, source, session).waitFor(),
-                session.condition, configuration);
+        return complete(new WaitEngine<>(configuration, source, session).waitFor(), configuration);
     }
 
     static <OBSERVED, RESULT> RESULT complete(WaitCompletion<OBSERVED, RESULT> outcome,
-            Condition<?> condition, WaitConfiguration configuration) {
+            WaitConfiguration configuration) {
         if (outcome instanceof WaitCompletion.Satisfied<OBSERVED, RESULT> success) {
             return success.result();
         }
-        AwaitFailure failure = FailureDiagnostics.failure(outcome, condition, configuration);
+        AwaitFailure failure = FailureDiagnostics.failure(outcome, configuration);
         switch (failure.reason()) {
             case TIMEOUT, PERSISTENCE_FAILED -> throw new AwaitAssertionError(failure);
             default -> throw new AwaitExecutionException(failure);
@@ -139,6 +138,6 @@ public sealed class ValueAwait<OBSERVED> permits Await {
             return new AwaitResult.Satisfied<>(attempts, success.result());
         }
         return new AwaitResult.Failed<>(attempts,
-                FailureDiagnostics.failure(outcome, session.condition, configuration));
+                FailureDiagnostics.failure(outcome, configuration));
     }
 }

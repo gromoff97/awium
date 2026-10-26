@@ -44,9 +44,9 @@ class CompositionDiagnosticsTest {
 
         assertEquals("Bob", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
         assertEquals(3, result.attempts().size());
-        AttemptRecord.Outcome.Evaluated<?, ?> lookup = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, result.attempts().get(0).outcome());
-        AttemptRecord.Outcome.Evaluated<?, ?> nested = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, result.attempts().get(1).outcome());
-        AttemptRecord.Outcome.Evaluated<?, ?> success = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, result.attempts().get(2).outcome());
+        var lookup = result.attempts().get(0);
+        var nested = result.attempts().get(1);
+        var success = result.attempts().get(2);
         assertEquals("map contains the expected key", lookup.condition().description());
         assertEquals("customerId", lookup.condition().reference().value());
         assertEquals("Bob", nested.condition().reference().value());
@@ -108,17 +108,17 @@ class CompositionDiagnosticsTest {
             assertSame(cause, failure.cause());
             assertTrue(failure.message().contains("Expected: customerId"), failure.message());
             assertTrue(failure.message().contains("Because: customer is required"), failure.message());
-            var outcome = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class,
-                    result.attempts().getFirst().outcome());
-            assertEquals("customerId", outcome.condition().reference().value());
+            assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, result.attempts().getFirst().outcome());
+            assertEquals("customerId", result.attempts().getFirst().condition().reference().value());
             assertSame(cause, assertFailure(CONDITION_FAILED, () -> waiting.until(selected)).getCause());
 
             var captured = waiting.tryUntil(selected, selected);
             var capturedOutcome = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class,
                     captured.attempts().getFirst().outcome());
             assertSame(cause, capturedOutcome.cause());
-            assertEquals(0, capturedOutcome.progress().capturedStages());
-            assertEquals("customerId", capturedOutcome.progress().condition().reference().value());
+            var progress = captured.attempts().getFirst().progress();
+            assertEquals(0, progress.capturedStages());
+            assertEquals("customerId", progress.activeCondition().reference().value());
         }
     }
 }

@@ -35,6 +35,49 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CapturedConditionTest {
 
     @Test
+    void sourceAndWaitingFailuresRetainProgressInBothPhasesAndTerminals() {
+        for (boolean capture : List.of(false, true)) {
+            for (var phase : AttemptRecord.Phase.values()) {
+                int completedStages = phase == AttemptRecord.Phase.ACQUISITION ? 1 : 2;
+                for (var reason : List.of(SOURCE_FAILED, WAIT_FAILED)) {
+                    var time = new FakeTime(0);
+                    var cause = new IllegalStateException("after a completed stage");
+                    int[] reads = {0};
+                    var waiting = await(() -> {
+                        if (++reads[0] > completedStages && reason == SOURCE_FAILED) throw cause;
+                        return reads[0] == 1 ? "ready" : "done";
+                    }).usingTime(time, nanos -> {
+                        if (reads[0] == completedStages && reason == WAIT_FAILED) throw cause;
+                        time.accept(nanos);
+                    }).every(ofNanos(1)).persisting(ofNanos(2));
+                    var first = Conditions.equalTo("ready").because("first stage");
+                    var second = Conditions.equalTo("done").because("finish the second stage");
+                    AwaitFailure failure;
+                    if (capture) {
+                        var result = waiting.tryUntil(first, second);
+                        failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+                        var attempt = result.attempts().getLast();
+                        var progress = attempt.progress();
+                        assertEquals(phase, attempt.phase());
+                        assertEquals(completedStages, progress.capturedStages());
+                        assertEquals(completedStages, progress.lastEvaluatedStageNumber());
+                        assertSame(second, progress.activeCondition());
+                        assertSame(result.attempts().get(completedStages - 1).progress(), progress);
+                        assertSame(result.attempts().getFirst().condition(), attempt.condition());
+                    } else {
+                        failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(first, second)).failure();
+                    }
+
+                    assertEquals(reason, failure.reason());
+                    assertSame(cause, failure.cause());
+                    assertTrue(failure.message().contains("Sequence (captured " + completedStages + " of 2)"), failure.message());
+                    assertTrue(failure.message().contains("Because: finish the second stage"), failure.message());
+                }
+            }
+        }
+    }
+
+    @Test
     void narrowingSequencesRetainTheirResultTypeAndRetryInBothTerminals() {
         var first = new String("first");
         var second = new String("second");
@@ -175,9 +218,9 @@ class CapturedConditionTest {
         assertInstanceOf(ConditionResult.Unsatisfied.class, ConditionTestRuntime.evaluated(first));
         assertInstanceOf(ConditionResult.Satisfied.class, ConditionTestRuntime.evaluated(last));
         assertEquals(1, first.progress().capturedStages());
-        assertEquals(1, first.progress().evaluatedStageNumber());
+        assertEquals(1, first.progress().lastEvaluatedStageNumber());
         assertEquals(2, last.progress().capturedStages());
-        assertEquals(2, last.progress().evaluatedStageNumber());
+        assertEquals(2, last.progress().lastEvaluatedStageNumber());
     }
 
     @Test
@@ -207,11 +250,11 @@ class CapturedConditionTest {
                         if (capture) {
                             var result = waiting.tryUntil(first, second);
                             failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
-                            var evaluation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class,
+                            assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class,
                                     result.attempts().getLast().outcome());
-                            var progress = evaluation.progress();
+                            var progress = result.attempts().getLast().progress();
                             assertEquals(stage - 1, progress.capturedStages());
-                            assertEquals(stage, progress.evaluatedStageNumber());
+                            assertEquals(stage, progress.lastEvaluatedStageNumber());
                         } else {
                             failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(first, second)).failure();
                         }

@@ -92,10 +92,10 @@ class MixedConditionSequenceTest {
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
             assertTrue(failure.message().contains("Because: final state"));
-            var attempt = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, result.attempts().getLast().outcome());
+            var attempt = result.attempts().getLast();
             assertEquals(1, attempt.progress().capturedStages());
-            assertEquals(2, attempt.progress().evaluatedStageNumber());
-            if (comparisonLast) assertSame(READY, attempt.progress().condition().reference().value());
+            assertEquals(2, attempt.progress().lastEvaluatedStageNumber());
+            if (comparisonLast) assertSame(READY, attempt.progress().activeCondition().reference().value());
         }
 
         var cause = new IOException("callback failed");

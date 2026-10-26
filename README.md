@@ -580,7 +580,12 @@ if (result instanceof AwaitResult.Failed<?, ?> failed) {
 
 Both results expose `attempts()`, an immutable list of `AttemptRecord` values.
 Each record has a one-based `number()`, an acquisition or persistence `phase()`,
-and an `outcome()`. `AttemptRecord.Outcome.Evaluated` holds the observed value
+the associated `condition()`, sequence `progress()`, and an `outcome()`.
+Progress is `null` until a sequence stage has been evaluated. It exposes the
+number of captured stages, the total, `lastEvaluatedStageNumber()`, and
+`activeCondition()`. Source and waiting failures retain the last known progress.
+
+`AttemptRecord.Outcome.Evaluated` holds the observed value
 and its `evaluation()`: `ConditionResult.Satisfied` or `Unsatisfied`. Thrown
 condition failures use `ConditionFailed`. Waiting, source retrieval, and source
 interruption have their own outcomes, so an absent observation is distinct

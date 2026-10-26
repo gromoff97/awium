@@ -269,7 +269,7 @@ class TypedCollectionSelectionTest {
         assertEquals(AwaitFailure.Reason.CONDITION_FAILED, failure.reason());
         assertSame(cause, failure.cause());
         assertEquals(1, reads[0]);
-        var attempt = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, result.attempts().getLast().outcome());
+        var attempt = result.attempts().getLast();
         assertEquals("target-key", attempt.condition().reference().value());
     }
 

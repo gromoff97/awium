@@ -160,10 +160,10 @@ class CheckedCallbackTest {
             assertSame(cause, failure.failure().cause());
             assertTrue(failure.failure().message().contains("receipt is needed"));
         }
-        var observation = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, sequence.attempts().getLast().outcome());
-        var progress = observation.progress();
+        assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, sequence.attempts().getLast().outcome());
+        var progress = sequence.attempts().getLast().progress();
         assertEquals(1, progress.capturedStages());
-        assertEquals(2, progress.evaluatedStageNumber());
+        assertEquals(2, progress.lastEvaluatedStageNumber());
     }
 
     @Test
