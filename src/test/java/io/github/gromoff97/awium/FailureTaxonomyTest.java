@@ -70,7 +70,7 @@ class FailureTaxonomyTest {
                     reason == AwaitFailure.Reason.WAIT_FAILED ? null : Duration.ZERO,
                     reason == AwaitFailure.Reason.WAIT_FAILED || reason == AwaitFailure.Reason.SOURCE_FAILED
                             ? null : Duration.ZERO, ofNanos(2));
-            var metadata = diagnosticCondition("ready", null, new Condition.Reference<>("Expected", expected));
+            var metadata = diagnosticCondition("ready", new Condition.Reference<>("Expected", expected));
             AttemptRecord.Outcome<Object, Object> observation = switch (reason) {
                 case WAIT_FAILED -> new AttemptRecord.Outcome.WaitingFailed<>(original);
                 case SOURCE_FAILED -> new AttemptRecord.Outcome.SourceRetrievalFailed<>(original);

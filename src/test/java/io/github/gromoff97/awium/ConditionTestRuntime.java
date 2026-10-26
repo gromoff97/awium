@@ -9,8 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 final class ConditionTestRuntime {
 
-    static Condition.Typed<Object, Object> diagnosticCondition(String description, String explanation, Condition.Reference<?> reference) {
-        return new Condition.Typed<>(description, explanation, reference,
+    static Condition.Typed<Object, Object> diagnosticCondition(String description, Condition.Reference<?> reference) {
+        return new Condition.Typed<>(description, reference,
                 () -> actual -> AttemptResult.of(ConditionResult.satisfied(actual)));
     }
 

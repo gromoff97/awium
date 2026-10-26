@@ -425,7 +425,7 @@ public final class CollectionConditions {
             String description, Condition<?> nested,
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> order,
             Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT>> evaluatorFactory) {
-        return new Condition.Typed<>(description + nested.description(), nested, () -> {
+        return new Condition.Typed<>(nested, description + nested.description(), () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> actual == null ? AttemptResult.of(unsatisfied("collection was null"))
                     : selectFirst(order.apply(actual), evaluator);

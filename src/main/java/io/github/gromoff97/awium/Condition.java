@@ -20,16 +20,6 @@ public abstract sealed class Condition<SELF extends Condition<SELF>>
     private final Reference<?> reference;
     final Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory;
 
-    Condition(String description, String explanation, Reference<?> reference,
-            Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory) {
-        this(description, constantExplanation(explanation), reference, evaluatorFactory);
-    }
-
-    Condition(String description, Condition<?> metadata,
-            Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory) {
-        this(description, required(metadata).explanation, metadata.reference, evaluatorFactory);
-    }
-
     Condition(Condition<?> original) {
         this(original, required(original).explanation);
     }
@@ -66,7 +56,8 @@ public abstract sealed class Condition<SELF extends Condition<SELF>>
     }
 
     public final SELF because(String explanation) {
-        return explained(constantExplanation(nonBlank(explanation, "explanation")));
+        nonBlank(explanation, "explanation");
+        return explained(() -> explanation);
     }
 
     public final SELF because(String format, Object... arguments) {
@@ -87,10 +78,6 @@ public abstract sealed class Condition<SELF extends Condition<SELF>>
         return explained(() -> nonBlank(explanation.get(), "explanation"));
     }
 
-    private static Supplier<String> constantExplanation(String explanation) {
-        return explanation == null ? null : () -> explanation;
-    }
-
     static <C extends Condition<?>> C required(C condition) {
         return requireNonNull(condition, "condition must not be null");
     }
@@ -103,14 +90,14 @@ public abstract sealed class Condition<SELF extends Condition<SELF>>
      */
     public static final class Typed<OBSERVED, RESULT> extends Condition<Typed<OBSERVED, RESULT>> {
 
-        Typed(String description, String explanation, Reference<?> reference,
+        Typed(String description, Reference<?> reference,
                 Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
-            super(description, explanation, reference, evaluatorFactory);
+            super(description, null, reference, evaluatorFactory);
         }
 
-        Typed(String description, Condition<?> metadata,
+        Typed(Condition<?> metadata, String description,
                 Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
-            super(description, metadata, evaluatorFactory);
+            super(description, required(metadata).explanation, metadata.reference, evaluatorFactory);
         }
 
         private Typed(Typed<OBSERVED, RESULT> original, Supplier<String> explanation) {

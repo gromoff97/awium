@@ -95,7 +95,7 @@ class ConditionAwaitAttemptTest {
     @Test
     void ordinaryConditionKeepsMetadataAndCreatesIndependentEvaluators() throws Throwable {
         Condition.Typed<Integer, Integer> ordinary = new Condition.Typed<>(
-                "counted", null, null, () -> {
+                "counted", null, () -> {
                     int[] calls = {0};
                     return ignored -> AttemptResult.of(satisfied(++calls[0]));
                 });

@@ -18,7 +18,7 @@ class AwaitResultTest {
     void successRetainsLegitimateNullAndCopiesHistory() {
         var attempt = new AttemptRecord<String, String>(300, ACQUISITION,
                 new AttemptRecord.Timing(Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ZERO),
-                diagnosticCondition("ready", null, null), null,
+                diagnosticCondition("ready", null), null,
                 new AttemptRecord.Outcome.Evaluated<>(null, new ConditionResult.Satisfied<>(null)));
         var mutable = new ArrayList<>(List.of(attempt));
 
@@ -52,7 +52,7 @@ class AwaitResultTest {
 
     @Test
     void sequenceProgressRequiresAnExistingEvaluatedStage() {
-        var condition = diagnosticCondition("first stage", null, null);
+        var condition = diagnosticCondition("first stage", null);
         assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(0, 2, 0, condition));
         assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(0, 0, 1, condition));
         assertThrows(IllegalArgumentException.class, () -> new AttemptRecord.Progress(-1, 2, 1, condition));

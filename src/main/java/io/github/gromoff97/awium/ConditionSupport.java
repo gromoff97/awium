@@ -43,7 +43,7 @@ final class ConditionSupport {
 
     static <OBSERVED, RESULT> Condition.Typed<OBSERVED, RESULT> condition(String description, Reference<?> reference,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends RESULT>> evaluation) {
-        var condition = new Condition.Typed<OBSERVED, RESULT>(description, null, reference,
+        var condition = new Condition.Typed<OBSERVED, RESULT>(description, reference,
                 () -> actual -> AttemptResult.of(evaluation.apply(actual)));
         requireNonNull(evaluation, "evaluation must not be null");
         return condition;
@@ -65,7 +65,7 @@ final class ConditionSupport {
 
     static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description,
             Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory) {
-        var definition = new Condition.Typed<OBSERVED, OBSERVED>(description, null, null, () -> {
+        var definition = new Condition.Typed<OBSERVED, OBSERVED>(description, null, () -> {
             var evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
             return actual -> AttemptResult.of(
                     requireNonNull(evaluator.apply(actual), "condition returned null ConditionResult")
@@ -89,7 +89,7 @@ final class ConditionSupport {
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
             Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ?>> evaluatorFactory) {
         Condition.required(nested);
-        return new PreservingCondition<>(new Condition.Typed<>(description, nested, () -> {
+        return new PreservingCondition<>(new Condition.Typed<>(nested, description, () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> actual == null ? AttemptResult.of(unsatisfied(subject + " was null"))
                     : evaluateQuantifier(actual, elements.apply(actual), evaluator, quantifier, mismatch);
@@ -135,7 +135,7 @@ final class ConditionSupport {
             Condition<?> extractionCondition,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<VALUE>> extract,
             Supplier<? extends ConditionAwaitAttempt<? super VALUE, ? extends RESULT>> evaluatorFactory) {
-        return new Condition.Typed<>(prefix + condition.description(), condition, () -> {
+        return new Condition.Typed<>(condition, prefix + condition.description(), () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> {
                 try {
@@ -197,7 +197,7 @@ final class ConditionSupport {
     static <OBSERVED, ELEMENT, RESULT> Condition.Typed<OBSERVED, RESULT> single(String subject, Condition<?> condition,
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
             Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT>> evaluatorFactory) {
-        return new Condition.Typed<>(subject + " has a single matching value: " + condition.description(), condition, () -> {
+        return new Condition.Typed<>(condition, subject + " has a single matching value: " + condition.description(), () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> actual == null ? AttemptResult.of(unsatisfied(subject + " was null"))
                     : evaluateSingle(elements.apply(actual), evaluator);
@@ -255,7 +255,7 @@ final class ConditionSupport {
             Function<? super STAGE, ? extends ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT>> bind) {
         var stages = nonEmptySnapshot(conditions, "conditions");
         stages.forEach(Condition::required);
-        return new Condition.Typed<>("conditions are satisfied in order", null, null,
+        return new Condition.Typed<>("conditions are satisfied in order", null,
                 () -> new SequenceExecution<>(stages.stream().map(bind))::step);
     }
 
