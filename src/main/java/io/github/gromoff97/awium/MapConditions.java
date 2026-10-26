@@ -30,7 +30,6 @@ import static io.github.gromoff97.awium.ValueMatching.containsAll;
 import static io.github.gromoff97.awium.ValueMatching.containsAny;
 import static java.util.Objects.deepEquals;
 import static io.github.gromoff97.awium.ValueMatching.exactly;
-import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
 import static java.util.Objects.requireNonNull;

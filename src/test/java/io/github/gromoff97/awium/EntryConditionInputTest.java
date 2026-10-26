@@ -3,7 +3,6 @@ package io.github.gromoff97.awium;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
