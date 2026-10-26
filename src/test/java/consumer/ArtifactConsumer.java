@@ -33,10 +33,10 @@ public final class ArtifactConsumer {
         boolean preserved = await(() -> values).until(asserted(actual -> {
             if (actual.size() != 1) throw new AssertionError("one value expected");
         })) == values;
-        AwaitResult<Optional<String>, String> result = await(() -> Optional.of("ready")).tryUntil(present);
+        var result = await(() -> Optional.of("ready")).tryUntil(present);
         String captured = switch (result) {
-            case AwaitResult.Satisfied<Optional<String>, String> success -> success.result();
-            case AwaitResult.Failed<Optional<String>, String> failure -> throw new AssertionError(failure.failure().reason());
+            case AwaitResult.Satisfied(var attempts, var value) -> value;
+            case AwaitResult.Failed(var attempts, var failure) -> throw new AssertionError(failure.reason());
         };
         Number mapped = await(() -> Map.<String, Number>of("key", 1)).until(valueFor("key").because("number"));
         Map.Entry<String, Integer> entry = await(() -> Map.of("key", 1)).until(singleEntry.because("entry"));
@@ -48,13 +48,10 @@ public final class ArtifactConsumer {
 
     private static String observed(AttemptRecord<Optional<String>, String> attempt) {
         return switch (attempt.outcome()) {
-            case AttemptRecord.Outcome.Evaluated<Optional<String>, String> value -> {
-                ConditionResult<? extends String> evaluation = value.evaluation();
-                yield switch (evaluation) {
-                    case ConditionResult.Satisfied<? extends String> success -> success.result();
-                    case ConditionResult.Unsatisfied<?> ignored -> value.observed().orElse(null);
-                };
-            }
+            case AttemptRecord.Outcome.Evaluated(var value, var evaluation) -> switch (evaluation) {
+                case ConditionResult.Satisfied(var result) -> result;
+                case ConditionResult.Unsatisfied(var mismatch, var cause) -> value.orElse(null);
+            };
             default -> null;
         };
     }

@@ -565,19 +565,24 @@ Finish the same `await(...)` chain with `tryUntil(...)` to return an
 ```java
 import static io.github.gromoff97.awium.OptionalConditions.await;
 
-AwaitResult<Optional<Payment>, Payment> result =
-        await(paymentRepository::find).upTo(TIMEOUT).tryUntil(present);
+var result = await(paymentRepository::find).upTo(TIMEOUT).tryUntil(present);
 ```
 
 `AwaitResult.Satisfied` contains the terminal result. `AwaitResult.Failed`
 contains an `AwaitFailure` with `reason()`, `message()`, the original `cause()`
-and immutable `suppressed()` causes. It does not construct a wrapper exception:
+and immutable `suppressed()` causes. It does not construct a wrapper exception.
+Java 21 record patterns retain the result type: `payment` below is a `Payment`,
+without casts or repeated generic arguments.
 
 ```java
-if (result instanceof AwaitResult.Failed<?, ?> failed) {
-    switch (failed.failure().reason()) {
-        case TIMEOUT -> reportTimeout(failed.failure().message());
-        default -> reportFailure(failed.failure());
+switch (result) {
+    case AwaitResult.Satisfied(var attempts, var payment) ->
+            System.out.println(payment.receipt());
+    case AwaitResult.Failed(var attempts, var failure) -> {
+        switch (failure.reason()) {
+            case TIMEOUT -> reportTimeout(failure.message());
+            default -> reportFailure(failure);
+        }
     }
 }
 ```
