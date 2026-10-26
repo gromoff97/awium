@@ -2,6 +2,7 @@ package io.github.gromoff97.awium;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Conditions.await;
@@ -13,11 +14,63 @@ import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.OptionalConditions.hasValue;
+import static io.github.gromoff97.awium.OptionalConditions.present;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CompositionDiagnosticsTest {
+
+    @Test
+    void missingOptionalReportsPresenceBeforeEitherNestedConditionFamily() {
+        List<Optional<String>> observations = asList(null, Optional.empty());
+        for (var actual : observations) {
+            var time = new FakeTime(0);
+            var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+            var selected = hasValue(equalTo("Bob").because("customer is required"));
+            var typed = hasValue(instanceOf(Integer.class).because("customer is required"));
+            var selectedResult = waiting.tryUntil(selected);
+            var typedResult = waiting.tryUntil(typed);
+
+            for (var result : List.of(selectedResult, typedResult)) {
+                var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+                var condition = result.attempts().getLast().condition();
+                assertEquals(TIMEOUT, failure.reason());
+                assertEquals(present.description(), condition.description());
+                assertNull(condition.reference());
+                assertEquals("customer is required", condition.explanation());
+                assertTrue(failure.message().contains("Because: customer is required"));
+                assertFalse(failure.message().contains("Expected:"));
+            }
+            var failure = assertInstanceOf(AwaitResult.Failed.class, selectedResult).failure();
+            assertEquals(failure.message(), assertInstanceOf(AwaitResult.Failed.class, typedResult).failure().message());
+            assertEquals(failure.message(), assertFailure(TIMEOUT, () -> waiting.until(selected)).getMessage());
+            assertEquals(failure.message(), assertFailure(TIMEOUT, () -> waiting.until(typed)).getMessage());
+        }
+    }
+
+    @Test
+    void optionalHistorySwitchesFromPresenceToTheNestedExpectation() {
+        var observations = List.of(Optional.<String>empty(), Optional.of("Alice"), Optional.of("Bob")).iterator();
+        var time = new FakeTime(0);
+        var nested = equalTo("Bob");
+        var selected = hasValue(nested).because("customer is required");
+        var result = await(observations::next).usingTime(time, time).every(ofNanos(1)).tryUntil(selected);
+
+        assertEquals("Bob", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals(3, result.totalAttempts());
+        var missing = result.attempts().getFirst().condition();
+        assertEquals(present.description(), missing.description());
+        assertNull(missing.reference());
+        for (var attempt : result.attempts().subList(1, 3)) {
+            assertEquals(selected.description(), attempt.condition().description());
+            assertEquals(nested.reference(), attempt.condition().reference());
+        }
+        for (var attempt : result.attempts()) {
+            assertEquals("customer is required", attempt.condition().explanation());
+        }
+    }
 
     @Test
     void missingKeyAndNestedMismatchReportTheirOwnExpectedValues() {

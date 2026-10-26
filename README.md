@@ -679,9 +679,10 @@ without replacing its category or cause. A successful check can still finish
 too late.
 
 `ConditionSupport` shares condition construction, checks, extraction, and
-composition. Failed map extraction reports the lookup key, including when
-entry access throws. After extraction succeeds, diagnostics use the nested
-condition's expectation.
+composition. Failed extraction reports its own condition: optional presence,
+the requested list position, or the map lookup key. Map entry access failures
+also retain the lookup key. After extraction succeeds, diagnostics use the
+nested condition's expectation. The explanation is retained on both paths.
 
 Catalog and fluent behavior tests use virtual time. Integration tests verify
 caller-thread execution and external cancellation on both platform and virtual
