@@ -5,7 +5,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
-import static io.github.gromoff97.awium.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.Conditions.*;
@@ -57,7 +56,7 @@ class ObjectAndOptionalConditionsTest {
         Optional<String> empty = Optional.empty();
         Optional<String> presentValue = Optional.of("value");
 
-        assertFalse(description(present).isBlank());
+        assertFalse(present.description().isBlank());
         assertUnsatisfied(evaluate(present, null));
         assertUnsatisfied(evaluate(absent, null));
         assertUnsatisfied(evaluate(present, empty));

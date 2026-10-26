@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.MapValueCondition;
-import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
+import io.github.gromoff97.awium.Condition.SourceCondition;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
@@ -19,7 +19,8 @@ final class ConditionTestRuntime {
         return evaluated(new ConditionAwaitAttempt<>(condition).probe(actual));
     }
 
-    static <S> ConditionResult<? extends S> evaluate(PreservingCondition<? super S> condition, S actual) {
+    static <S> ConditionResult<? extends S> evaluate(
+            SourceCondition<? super S, ? super Reference<? super S>, ?> condition, S actual) {
         return evaluated(ConditionAwaitAttempt.<S, S>bind(condition).probe(actual));
     }
 
@@ -37,18 +38,6 @@ final class ConditionTestRuntime {
             case AttemptResult.Evaluated<? extends RESULT> value -> value.result();
             case AttemptResult.Uncontrolled<?> failure -> throw new AssertionError("condition failed", failure.cause());
         };
-    }
-
-    static <S> ConditionResult<? extends S> evaluate(ComparisonCondition<? extends S> condition, S actual) {
-        return evaluated(ConditionAwaitAttempt.<S, S>bind(condition).probe(actual));
-    }
-
-    static String description(Condition<?> condition) {
-        return condition.description();
-    }
-
-    static String explanation(Condition<?> condition) {
-        return condition.explanation();
     }
 
     static void assertUnsatisfied(ConditionResult<?> evaluation) {

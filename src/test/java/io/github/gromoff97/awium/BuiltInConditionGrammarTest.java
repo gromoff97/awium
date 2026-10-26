@@ -5,7 +5,6 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.CollectionConditions.*;
-import static io.github.gromoff97.awium.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.MapConditions.*;
 import static io.github.gromoff97.awium.OptionalConditions.*;
@@ -15,67 +14,67 @@ class BuiltInConditionGrammarTest {
 
     @Test
     void builtInConditionsAreBooleanStatements() {
-        assertEquals("value is null", description(isNull));
-        assertEquals("value is not null", description(isNotNull));
-        assertEquals("value equals expected", description(equalTo("expected")));
-        assertEquals("value does not equal unexpected", description(notEqualTo("unexpected")));
-        assertEquals("optional is present", description(present));
-        assertEquals("optional is absent", description(absent));
+        assertEquals("value is null", isNull.description());
+        assertEquals("value is not null", isNotNull.description());
+        assertEquals("value equals expected", equalTo("expected").description());
+        assertEquals("value does not equal unexpected", notEqualTo("unexpected").description());
+        assertEquals("optional is present", present.description());
+        assertEquals("optional is absent", absent.description());
         assertEquals("optional value: value equals expected",
-                description(OptionalConditions.hasValue(equalTo("expected"))));
+                OptionalConditions.hasValue(equalTo("expected")).description());
         assertEquals("optional value: value does not equal unexpected",
-                description(OptionalConditions.hasValue(notEqualTo("unexpected"))));
-        assertEquals("value satisfies assertion", description(asserted(value -> {})));
-        assertEquals("collection has a single element", description(CollectionConditions.single));
-        assertEquals("collection is empty", description(CollectionConditions.empty));
-        assertEquals("collection is not empty", description(CollectionConditions.nonEmpty));
-        assertEquals("collection size is 2", description(CollectionConditions.size(2)));
-        assertEquals("collection size is not 2", description(CollectionConditions.sizeIsNot(2)));
-        assertEquals("collection size is greater than 2", description(CollectionConditions.sizeGreaterThan(2)));
-        assertEquals("collection size is at least 2", description(CollectionConditions.sizeAtLeast(2)));
-        assertEquals("collection size is less than 2", description(CollectionConditions.sizeLessThan(2)));
-        assertEquals("collection size is at most 2", description(CollectionConditions.sizeAtMost(2)));
-        assertEquals("collection contains expected element", description(contains("expected")));
-        assertEquals("collection does not contain unexpected element", description(doesNotContain("expected")));
-        assertEquals("collection contains all expected elements", description(containsAll(List.of("first", "second"))));
+                OptionalConditions.hasValue(notEqualTo("unexpected")).description());
+        assertEquals("value satisfies assertion", asserted(value -> {}).description());
+        assertEquals("collection has a single element", CollectionConditions.single.description());
+        assertEquals("collection is empty", CollectionConditions.empty.description());
+        assertEquals("collection is not empty", CollectionConditions.nonEmpty.description());
+        assertEquals("collection size is 2", CollectionConditions.size(2).description());
+        assertEquals("collection size is not 2", CollectionConditions.sizeIsNot(2).description());
+        assertEquals("collection size is greater than 2", CollectionConditions.sizeGreaterThan(2).description());
+        assertEquals("collection size is at least 2", CollectionConditions.sizeAtLeast(2).description());
+        assertEquals("collection size is less than 2", CollectionConditions.sizeLessThan(2).description());
+        assertEquals("collection size is at most 2", CollectionConditions.sizeAtMost(2).description());
+        assertEquals("collection contains expected element", contains("expected").description());
+        assertEquals("collection does not contain unexpected element", doesNotContain("expected").description());
+        assertEquals("collection contains all expected elements", containsAll(List.of("first", "second")).description());
         assertEquals("collection does not contain all unexpected elements",
-                description(doesNotContainAll(List.of("first", "second"))));
-        assertEquals("collection contains an expected element", description(containsAny(List.of("expected"))));
+                doesNotContainAll(List.of("first", "second")).description());
+        assertEquals("collection contains an expected element", containsAny(List.of("expected")).description());
         assertEquals("collection does not contain any unexpected elements",
-                description(doesNotContainAny(List.of("expected"))));
+                doesNotContainAny(List.of("expected")).description());
         assertEquals("collection contains exactly the expected elements",
-                description(containsExactly(List.of("expected"))));
+                containsExactly(List.of("expected")).description());
         assertEquals("collection does not contain exactly the unexpected elements",
-                description(doesNotContainExactly(List.of("expected"))));
+                doesNotContainExactly(List.of("expected")).description());
         assertEquals("collection contains exactly the expected elements in any order",
-                description(containsExactlyInAnyOrder(List.of("expected"))));
+                containsExactlyInAnyOrder(List.of("expected")).description());
         assertEquals("collection does not contain exactly the unexpected elements in any order",
-                description(doesNotContainExactlyInAnyOrder(List.of("expected"))));
-        assertEquals("map has a single entry", description(MapConditions.singleEntry));
-        assertEquals("map is empty", description(MapConditions.empty));
-        assertEquals("map is not empty", description(MapConditions.nonEmpty));
-        assertEquals("map size is 2", description(MapConditions.size(2)));
-        assertEquals("map size is not 2", description(MapConditions.sizeIsNot(2)));
-        assertEquals("map size is greater than 2", description(MapConditions.sizeGreaterThan(2)));
-        assertEquals("map size is at least 2", description(MapConditions.sizeAtLeast(2)));
-        assertEquals("map size is less than 2", description(MapConditions.sizeLessThan(2)));
-        assertEquals("map size is at most 2", description(MapConditions.sizeAtMost(2)));
-        assertEquals("map contains expected key", description(containsKey("expected")));
-        assertEquals("map does not contain unexpected key", description(doesNotContainKey("expected")));
-        assertEquals("map contains expected value", description(containsValue("expected")));
-        assertEquals("map does not contain unexpected value", description(doesNotContainValue("expected")));
-        assertEquals("map contains expected entry", description(containsEntry("key", "value")));
-        assertEquals("map does not contain unexpected entry", description(doesNotContainEntry("key", "value")));
-        assertEquals("map contains all expected entries", description(containsAllEntries(Map.of("key", "value"))));
+                doesNotContainExactlyInAnyOrder(List.of("expected")).description());
+        assertEquals("map has a single entry", MapConditions.singleEntry.description());
+        assertEquals("map is empty", MapConditions.empty.description());
+        assertEquals("map is not empty", MapConditions.nonEmpty.description());
+        assertEquals("map size is 2", MapConditions.size(2).description());
+        assertEquals("map size is not 2", MapConditions.sizeIsNot(2).description());
+        assertEquals("map size is greater than 2", MapConditions.sizeGreaterThan(2).description());
+        assertEquals("map size is at least 2", MapConditions.sizeAtLeast(2).description());
+        assertEquals("map size is less than 2", MapConditions.sizeLessThan(2).description());
+        assertEquals("map size is at most 2", MapConditions.sizeAtMost(2).description());
+        assertEquals("map contains expected key", containsKey("expected").description());
+        assertEquals("map does not contain unexpected key", doesNotContainKey("expected").description());
+        assertEquals("map contains expected value", containsValue("expected").description());
+        assertEquals("map does not contain unexpected value", doesNotContainValue("expected").description());
+        assertEquals("map contains expected entry", containsEntry("key", "value").description());
+        assertEquals("map does not contain unexpected entry", doesNotContainEntry("key", "value").description());
+        assertEquals("map contains all expected entries", containsAllEntries(Map.of("key", "value")).description());
         assertEquals("map does not contain all unexpected entries",
-                description(doesNotContainAllEntries(Map.of("key", "value"))));
-        assertEquals("map contains an expected entry", description(containsAnyEntries(Map.of("key", "value"))));
+                doesNotContainAllEntries(Map.of("key", "value")).description());
+        assertEquals("map contains an expected entry", containsAnyEntries(Map.of("key", "value")).description());
         assertEquals("map does not contain an unexpected entry",
-                description(doesNotContainAnyEntries(Map.of("key", "value"))));
+                doesNotContainAnyEntries(Map.of("key", "value")).description());
         assertEquals("map contains exactly the expected entries",
-                description(containsExactlyEntries(Map.of("key", "value"))));
+                containsExactlyEntries(Map.of("key", "value")).description());
         assertEquals("map does not contain exactly the unexpected entries",
-                description(doesNotContainExactlyEntries(Map.of("key", "value"))));
+                doesNotContainExactlyEntries(Map.of("key", "value")).description());
     }
 
 }

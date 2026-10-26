@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.Conditions.*;
@@ -60,7 +59,7 @@ class AssertionAdapterTest {
 
         assertEquals("42", result(evaluation));
         assertEquals(1, invocations[0]);
-        assertEquals("payment id", description(condition));
+        assertEquals("payment id", condition.description());
     }
 
     @Test
@@ -94,7 +93,7 @@ class AssertionAdapterTest {
 
         assertSame(actual, result(evaluation));
         assertEquals(1, invocations[0]);
-        assertFalse(description(condition).isBlank());
+        assertFalse(condition.description().isBlank());
     }
 
     @Test

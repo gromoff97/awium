@@ -220,7 +220,7 @@ class DirectBecauseTest {
         }
         assertSame(actual, payment);
         assertSame(actual, selected);
-        assertNull(ConditionTestRuntime.explanation(check));
+        assertNull(check.explanation());
     }
 
     @Test

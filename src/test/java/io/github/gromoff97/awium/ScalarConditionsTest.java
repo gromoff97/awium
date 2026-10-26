@@ -14,7 +14,6 @@ import static io.github.gromoff97.awium.Conditions.await;
 import static io.github.gromoff97.awium.CollectionConditions.await;
 import static io.github.gromoff97.awium.OptionalConditions.await;
 import static io.github.gromoff97.awium.MapConditions.await;
-import static io.github.gromoff97.awium.ConditionTestRuntime.description;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
@@ -279,7 +278,7 @@ class ScalarConditionsTest {
         assertStatus(StringConditions.lengthBetween(4, 6), "hey", Unsatisfied.class);
         assertStatus(StringConditions.lengthBetween(4, 6), "failure", Unsatisfied.class);
         assertStatus(StringConditions.nonBlank, null, Unsatisfied.class);
-        assertEquals("string length is 5", description(StringConditions.length(5)));
+        assertEquals("string length is 5", StringConditions.length(5).description());
         assertEquals("string length was 4",
                 mismatch(evaluate(StringConditions.length(5), "read")));
 

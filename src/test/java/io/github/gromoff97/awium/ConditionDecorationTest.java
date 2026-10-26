@@ -13,7 +13,6 @@ import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.ConditionSupport.captured;
-import static io.github.gromoff97.awium.ConditionTestRuntime.explanation;
 import static io.github.gromoff97.awium.Conditions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -30,21 +29,21 @@ class ConditionDecorationTest {
         var selected = OptionalConditions.present;
 
         assertEquals("the value must be ready",
-                explanation(condition.because("the value must be ready")));
+                condition.because("the value must be ready").explanation());
         assertEquals("attempt 3",
-                explanation(condition.because("attempt %d", 3)));
+                condition.because("attempt %d", 3).explanation());
         assertEquals("preserving",
-                explanation(preserving.because("preserving")));
+                preserving.because("preserving").explanation());
         assertEquals("selected value",
-                explanation(selected.because("selected %s", "value")));
+                selected.because("selected %s", "value").explanation());
         assertEquals("collection value",
-                explanation(CollectionConditions.nonEmpty.because("collection %s", "value")));
+                CollectionConditions.nonEmpty.because("collection %s", "value").explanation());
         assertEquals("single element",
-                explanation(CollectionConditions.single.because("single %s", "element")));
+                CollectionConditions.single.because("single %s", "element").explanation());
         assertEquals("map value",
-                explanation(MapConditions.nonEmpty.because("map %s", "value")));
+                MapConditions.nonEmpty.because("map %s", "value").explanation());
         assertEquals("single entry",
-                explanation(MapConditions.singleEntry.because("single %s", "entry")));
+                MapConditions.singleEntry.because("single %s", "entry").explanation());
     }
 
     @Test
@@ -68,30 +67,30 @@ class ConditionDecorationTest {
             assertEquals(conditions.get(i).reference(), replacements.get(i).reference());
         }
         var custom = condition("custom", ConditionResult::satisfied);
-        assertEquals("new 42", explanation(custom.because("old").because("new %d", 42)));
-        assertNull(explanation(custom));
-        assertEquals("new 42", explanation(isNotNull.because("old").because("new %d", 42)));
-        assertNull(explanation(isNotNull));
+        assertEquals("new 42", custom.because("old").because("new %d", 42).explanation());
+        assertNull(custom.explanation());
+        assertEquals("new 42", isNotNull.because("old").because("new %d", 42).explanation());
+        assertNull(isNotNull.explanation());
         var comparison = equalTo("ready");
-        assertEquals("new 42", explanation(comparison.because("old").because("new %d", 42)));
-        assertNull(explanation(comparison));
+        assertEquals("new 42", comparison.because("old").because("new %d", 42).explanation());
+        assertNull(comparison.explanation());
         var first = OptionalConditions.present.because("first");
         var second = first.because("second");
-        assertEquals("first", explanation(first));
-        assertEquals("second", explanation(second));
-        assertNull(explanation(OptionalConditions.present));
+        assertEquals("first", first.explanation());
+        assertEquals("second", second.explanation());
+        assertNull(OptionalConditions.present.explanation());
         var value = MapConditions.valueFor("key");
         var explained = value.because("old").because("new %d", 42);
-        assertNull(explanation(value));
-        assertEquals("new 42", explanation(explained));
+        assertNull(value.explanation());
+        assertEquals("new 42", explained.explanation());
     }
 
     @Test
     void nestedConditionsRetainTheirExplanation() {
         var nested = matches((String actual) -> true).because("business reason");
 
-        assertEquals("business reason", explanation(OptionalConditions.hasValue(nested)));
-        assertEquals("business reason", explanation(MapConditions.valueFor("key", nested)));
+        assertEquals("business reason", OptionalConditions.hasValue(nested).explanation());
+        assertEquals("business reason", MapConditions.valueFor("key", nested).explanation());
     }
 
     @Test
@@ -155,7 +154,7 @@ class ConditionDecorationTest {
         Locale.setDefault(Locale.Category.FORMAT, Locale.GERMANY);
         try {
             assertEquals("1.5",
-                    explanation(asserted((Object actual) -> {}).because("%.1f", 1.5)));
+                    asserted((Object actual) -> {}).because("%.1f", 1.5).explanation());
         } finally {
             Locale.setDefault(Locale.Category.FORMAT, original);
         }
