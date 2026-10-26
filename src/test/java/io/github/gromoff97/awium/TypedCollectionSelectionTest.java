@@ -13,9 +13,6 @@ import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
 import static io.github.gromoff97.awium.Conditions.equalTo;
@@ -37,7 +34,7 @@ class TypedCollectionSelectionTest {
     void firstLastAndIndexedConditionsReturnTheirDeclaredValues() {
         List<Object> values = List.of("skip", FIRST, 99, LAST);
         var time = new FakeTime(0);
-        var waiting = await(() -> values).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+        var waiting = awaitCollection(() -> values).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
         Supplier<String> forbidden = () -> { throw new AssertionError("successful selection rendered its reason"); };
 
         assertEquals(1, waiting.until(first(instanceOf(User.class).because(forbidden)).because(forbidden)).id());
@@ -54,7 +51,7 @@ class TypedCollectionSelectionTest {
     void checksAndComparisonsRetainTheSourceElementType() {
         List<User> values = List.of(new User(-1), FIRST, LAST);
         var time = new FakeTime(0);
-        var waiting = await(() -> values).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
+        var waiting = awaitCollection(() -> values).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
         Supplier<String> forbidden = () -> { throw new AssertionError("successful check rendered its reason"); };
 
         assertEquals(1, waiting.until(first(matches(User::positive).because(forbidden)).because(forbidden)).id());
@@ -76,7 +73,7 @@ class TypedCollectionSelectionTest {
             case AwaitResult.Failed(var attempts, var failure) -> fail(failure.message());
         }
         List<CharSequence> texts = List.of("ready");
-        assertEquals(5, await(() -> texts).usingTime(time, time).until(first(equalTo("ready")).because("text")).length());
+        assertEquals(5, awaitCollection(() -> texts).usingTime(time, time).until(first(equalTo("ready")).because("text")).length());
     }
 
     @Test
@@ -91,7 +88,7 @@ class TypedCollectionSelectionTest {
                 first(secondObservation), last(secondObservation), element(0, secondObservation));
         var time = new FakeTime(0);
         int[] reads = {0};
-        var waiting = await(() -> { reads[0]++; return List.of(FIRST); })
+        var waiting = awaitCollection(() -> { reads[0]++; return List.of(FIRST); })
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
         for (var selector : selectors) {
             for (int run = 0; run < 2; run++) {
@@ -101,7 +98,7 @@ class TypedCollectionSelectionTest {
         assertEquals(6, factories[0]);
         assertEquals(12, reads[0]);
 
-        assertEquals(1, await(() -> List.of(new User(-1), FIRST, LAST)).usingTime(time, time)
+        assertEquals(1, awaitCollection(() -> List.of(new User(-1), FIRST, LAST)).usingTime(time, time)
                 .until(first(secondObservation)).id());
         assertEquals(7, factories[0]);
     }
@@ -118,7 +115,7 @@ class TypedCollectionSelectionTest {
             var selection = reverse ? last(predicate::test) : first(predicate::test);
             var time = new FakeTime(0);
             try {
-                var result = await(() -> List.of(FIRST, LAST)).usingTime(time, time).tryUntil(selection);
+                var result = awaitCollection(() -> List.of(FIRST, LAST)).usingTime(time, time).tryUntil(selection);
                 var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
                 assertEquals(AwaitFailure.Reason.INTERRUPTED, failure.reason());
                 assertInstanceOf(InterruptedException.class, failure.cause());

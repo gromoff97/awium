@@ -12,10 +12,6 @@ import java.util.concurrent.Callable;
 import java.util.function.BiPredicate;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.MapConditions.*;
@@ -66,7 +62,7 @@ class DirectBecauseTest {
         String missing = null;
         var value = await(() -> missing).usingTime(time, time).until(equalTo(missing).because("missing value"));
         var actual = java.util.Collections.singletonMap(missing, "ready");
-        var selected = await(() -> actual).usingTime(time, time).until(valueFor(missing).because("nullable key"));
+        var selected = awaitMap(() -> actual).usingTime(time, time).until(valueFor(missing).because("nullable key"));
 
         String nullableResult = value;
         assertNull(nullableResult);
@@ -77,7 +73,7 @@ class DirectBecauseTest {
     void explainedOptionalSelectionsReturnContainedNumbers() {
         Number actual = 1;
         var time = new FakeTime(0);
-        var waiting = await(() -> Optional.of(actual)).usingTime(time, time);
+        var waiting = awaitOptional(() -> Optional.of(actual)).usingTime(time, time);
         var check = hasValue(equalTo(1).because("inner")).because("outer");
 
         Number value = waiting.until(check);
@@ -95,7 +91,7 @@ class DirectBecauseTest {
     void explainedCollectionSelectionsReturnElementsInBothTerminalsAndSequences() {
         Number actual = 1;
         var time = new FakeTime(0);
-        var waiting = await(() -> List.of(actual)).usingTime(time, time);
+        var waiting = awaitCollection(() -> List.of(actual)).usingTime(time, time);
 
         Number nested = waiting.until(single(equalTo(1).because("inner")).because("outer"));
         Number indexed = waiting.until(element(0).because("index"));
@@ -116,7 +112,7 @@ class DirectBecauseTest {
     void explainedMapSelectionsKeepValuesAndEntriesDistinct() {
         Number actual = 1;
         var time = new FakeTime(0);
-        var waiting = await(() -> Map.of("key", actual)).usingTime(time, time);
+        var waiting = awaitMap(() -> Map.of("key", actual)).usingTime(time, time);
         var check = valueFor("key", equalTo(1)).because("number");
 
         Number value = waiting.until(valueFor("key").because("value"));
@@ -141,9 +137,9 @@ class DirectBecauseTest {
         var time = new FakeTime(0);
         Number actual = 1;
         Integer direct = await(() -> actual).usingTime(time, time).until(instanceOf(Integer.class).because("integer"));
-        Integer optional = await(() -> Optional.of(actual)).usingTime(time, time).until(hasValue(instanceOf(Integer.class)).because("integer"));
-        Integer element = await(() -> List.of(actual)).usingTime(time, time).until(single(instanceOf(Integer.class)).because("integer"));
-        Integer mapped = await(() -> Map.of("key", actual)).usingTime(time, time).until(valueFor("key", instanceOf(Integer.class)).because("integer"));
+        Integer optional = awaitOptional(() -> Optional.of(actual)).usingTime(time, time).until(hasValue(instanceOf(Integer.class)).because("integer"));
+        Integer element = awaitCollection(() -> List.of(actual)).usingTime(time, time).until(single(instanceOf(Integer.class)).because("integer"));
+        Integer mapped = awaitMap(() -> Map.of("key", actual)).usingTime(time, time).until(valueFor("key", instanceOf(Integer.class)).because("integer"));
 
         assertEquals(List.of(1, 1, 1, 1), List.of(direct, optional, element, mapped));
     }
@@ -152,7 +148,7 @@ class DirectBecauseTest {
     void explainedMapQuantifiersPreserveBothTypeArgumentsAndTheConcreteMap() {
         var time = new FakeTime(0);
         var actual = new LinkedHashMap<>(Map.of(" ", "\t"));
-        var waiting = await(() -> actual).usingTime(time, time);
+        var waiting = awaitMap(() -> actual).usingTime(time, time);
 
         List<LinkedHashMap<String, String>> results = List.of(
                 waiting.until(allKeys(String::isBlank).because("blank keys")),
@@ -169,7 +165,7 @@ class DirectBecauseTest {
     void explainedEntryQuantifiersAcceptPredicatesForSupertypes() {
         var time = new FakeTime(0);
         var actual = new LinkedHashMap<>(Map.of("key", 1));
-        var waiting = await(() -> actual).usingTime(time, time);
+        var waiting = awaitMap(() -> actual).usingTime(time, time);
         BiPredicate<CharSequence, Number> valid = (key, value) -> !key.isEmpty() && value.intValue() > 0;
 
         List<LinkedHashMap<String, Integer>> results = List.of(
@@ -184,7 +180,7 @@ class DirectBecauseTest {
     void explainedCollectionQuantifiersAcceptPredicatesForSupertypes() {
         var time = new FakeTime(0);
         var actual = new ArrayList<>(List.of(""));
-        var waiting = await(() -> actual).usingTime(time, time);
+        var waiting = awaitCollection(() -> actual).usingTime(time, time);
 
         List<ArrayList<String>> results = List.of(
                 waiting.until(all(CharSequence::isEmpty).because("empty elements")),
@@ -203,9 +199,9 @@ class DirectBecauseTest {
 
         var payment = await(() -> actual).usingTime(time, time).until(condition("inline", value -> ConditionResult.satisfied(value)).because("required"));
         var created = await(() -> actual).usingTime(time, time).until(conditionPerWait("factory", () -> ConditionResult::satisfied).because("required"));
-        var selected = await(() -> List.of(actual)).usingTime(time, time).until(single(check.because("inner")).because("outer"));
-        var optional = await(() -> Optional.of(actual)).usingTime(time, time).until(hasValue(check).because("optional"));
-        var mapped = await(() -> Map.of("key", actual)).usingTime(time, time).until(valueFor("key", check).because("mapped"));
+        var selected = awaitCollection(() -> List.of(actual)).usingTime(time, time).until(single(check.because("inner")).because("outer"));
+        var optional = awaitOptional(() -> Optional.of(actual)).usingTime(time, time).until(hasValue(check).because("optional"));
+        var mapped = awaitMap(() -> Map.of("key", actual)).usingTime(time, time).until(valueFor("key", check).because("mapped"));
         var sequence = await(() -> actual).usingTime(time, time)
                 .until(check.because("first"), condition("second", ConditionResult::satisfied).because("second"));
         var diagnostic = await(() -> actual).usingTime(time, time).tryUntil(check.because("diagnostic"));
@@ -230,7 +226,7 @@ class DirectBecauseTest {
         var entries = Map.of("key", 1);
 
         var name = await(user::name).until(isNotNull.because("required name"));
-        var key = await(entries::keySet).until(single.because("single key"));
+        var key = awaitCollection(entries::keySet).until(single.because("single key"));
 
         assertEquals(5, name.length());
         assertEquals(3, key.length());
@@ -251,9 +247,9 @@ class DirectBecauseTest {
         var numbers = new ArrayList<>(List.of(1, 2));
         var words = new ArrayList<>(List.of("a", "b"));
 
-        Receipt result = await(() -> actual).usingTime(time, time).until(receipt.because("required receipt"));
-        ArrayList<Integer> sortedNumbers = await(() -> numbers).usingTime(time, time).until(ordered.because("ordered numbers"));
-        ArrayList<String> sortedWords = await(() -> words).usingTime(time, time).until(sorted(String::compareTo).because("natural order"));
+        Receipt result = awaitMap(() -> actual).usingTime(time, time).until(receipt.because("required receipt"));
+        ArrayList<Integer> sortedNumbers = awaitCollection(() -> numbers).usingTime(time, time).until(ordered.because("ordered numbers"));
+        ArrayList<String> sortedWords = awaitCollection(() -> words).usingTime(time, time).until(sorted(String::compareTo).because("natural order"));
 
         assertSame(entry, result);
         assertSame(numbers, sortedNumbers);
@@ -268,12 +264,12 @@ class DirectBecauseTest {
         var collection = new CollectionViewSource<Number, List<? extends Number>>(values);
         var map = new MapViewSource<CharSequence, Number, Map<CharSequence, ? extends Number>>(entries);
 
-        Number value = await(collection).usingTime(time, time).until(single(isNotNull).because("one"));
-        Number mapped = await(map).usingTime(time, time).until(valueFor("key", isNotNull).because("one"));
-        Map.Entry<? extends CharSequence, ? extends Number> entry = await(map).usingTime(time, time).until(entryFor("key").because("entry"));
-        Map.Entry<String, Number> checked = await(() -> Map.<String, Number>of("key", 1)).usingTime(time, time).until(singleEntry(matches(
+        Number value = awaitCollection(collection).usingTime(time, time).until(single(isNotNull).because("one"));
+        Number mapped = awaitMap(map).usingTime(time, time).until(valueFor("key", isNotNull).because("one"));
+        Map.Entry<? extends CharSequence, ? extends Number> entry = awaitMap(map).usingTime(time, time).until(entryFor("key").because("entry"));
+        Map.Entry<String, Number> checked = awaitMap(() -> Map.<String, Number>of("key", 1)).usingTime(time, time).until(singleEntry(matches(
                 (Map.Entry<? extends String, ? extends Number> candidate) -> candidate.getValue() != null)).because("checked"));
-        Integer subtype = await(() -> List.of(1)).usingTime(time, time).until(first((Number number) -> true).because("first"));
+        Integer subtype = awaitCollection(() -> List.of(1)).usingTime(time, time).until(first((Number number) -> true).because("first"));
 
         assertEquals(List.of(1, 1, 1), List.of(value, mapped, subtype));
         assertEquals(Map.entry("key", 1), entry);

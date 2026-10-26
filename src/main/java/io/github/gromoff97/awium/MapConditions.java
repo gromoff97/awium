@@ -51,8 +51,13 @@ public final class MapConditions {
      * @param source repeatedly invoked source
      * @return immutable wait configuration
      */
-    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> Await<ENTRIES, Map.Entry<KEY, VALUE>, VALUE> await(Callable<? extends ENTRIES> source) {
+    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> Await<ENTRIES, Map.Entry<KEY, VALUE>, VALUE> awaitMap(Callable<? extends ENTRIES> source) {
         return new Await<>(source, WaitConfiguration.DEFAULT);
+    }
+
+    /** Short form of {@link #awaitMap(Callable)}. */
+    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> Await<ENTRIES, Map.Entry<KEY, VALUE>, VALUE> am(Callable<? extends ENTRIES> source) {
+        return awaitMap(source);
     }
 
     /**
@@ -64,8 +69,14 @@ public final class MapConditions {
      * @return immutable wait configuration
      */
     public static <KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>
-            Await<ENTRIES, Map.Entry<? extends KEY, ? extends VALUE>, VALUE> await(Await.MapViewSource<KEY, VALUE, ENTRIES> source) {
+            Await<ENTRIES, Map.Entry<? extends KEY, ? extends VALUE>, VALUE> awaitMap(Await.MapViewSource<KEY, VALUE, ENTRIES> source) {
         return new Await<>(requireNonNull(source, "source must not be null").delegate(), WaitConfiguration.DEFAULT);
+    }
+
+    /** Short form of {@link #awaitMap(Await.MapViewSource)}. */
+    public static <KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>
+            Await<ENTRIES, Map.Entry<? extends KEY, ? extends VALUE>, VALUE> am(Await.MapViewSource<KEY, VALUE, ENTRIES> source) {
+        return awaitMap(source);
     }
 
     public static PreservingCondition<Map<?, ?>> size(int expected) {

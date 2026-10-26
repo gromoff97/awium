@@ -9,9 +9,9 @@ import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
+import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
+import static io.github.gromoff97.awium.MapConditions.awaitMap;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -65,14 +65,14 @@ class TextExpectedValuesTest {
         assertSame(text, values.getFirst());
         assertEquals(text.capacity(), values.getLast().capacity());
 
-        StringBuilder selected = await(() -> List.of(text)).until(CollectionConditions.single(
+        StringBuilder selected = awaitCollection(() -> List.of(text)).until(CollectionConditions.single(
                 StringConditions.contentEquals(expected)).because("one matching text"));
         assertSame(text, selected);
         CharBuffer buffer = await(() -> expected).until(StringConditions.contentEquals(text).because("buffer"));
         assertSame(expected, buffer);
         assertEquals(0, buffer.position());
 
-        assertSame(text, await(() -> Map.of("status", text)).until(MapConditions.valueFor("status",
+        assertSame(text, awaitMap(() -> Map.of("status", text)).until(MapConditions.valueFor("status",
                 StringConditions.contentEquals(expected)).because("status text")));
         assertTrue(await(() -> new StringBuilder()).until(StringConditions.contentEquals("")).isEmpty());
 
@@ -100,9 +100,9 @@ class TextExpectedValuesTest {
         assertEquals(6, await(() -> "failed").until(excluded).length());
 
         var nested = StringConditions.startsWith(CharBuffer.wrap("rea")).because("prefix");
-        assertEquals(text.capacity(), await(() -> Optional.of(text)).until(OptionalConditions.hasValue(nested)).capacity());
-        assertEquals(text.capacity(), await(() -> List.of(text)).until(CollectionConditions.single(nested)).capacity());
-        assertEquals(text.capacity(), await(() -> Map.of("text", text)).until(MapConditions.valueFor("text", nested)).capacity());
+        assertEquals(text.capacity(), awaitOptional(() -> Optional.of(text)).until(OptionalConditions.hasValue(nested)).capacity());
+        assertEquals(text.capacity(), awaitCollection(() -> List.of(text)).until(CollectionConditions.single(nested)).capacity());
+        assertEquals(text.capacity(), awaitMap(() -> Map.of("text", text)).until(MapConditions.valueFor("text", nested)).capacity());
     }
 
     @Test

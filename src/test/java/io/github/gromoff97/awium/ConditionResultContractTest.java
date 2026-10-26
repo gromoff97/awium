@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
+import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
+import static io.github.gromoff97.awium.MapConditions.awaitMap;
 
 import org.junit.jupiter.api.Test;
 
@@ -35,13 +35,13 @@ class ConditionResultContractTest {
             case AwaitResult.Satisfied(var attempts, var user) -> assertSame(actual, user);
             case AwaitResult.Failed(var attempts, var failure) -> org.junit.jupiter.api.Assertions.fail(failure.message());
         }
-        assertSame(actual, await(() -> java.util.Optional.of(actual)).usingTime(time, time)
+        assertSame(actual, awaitOptional(() -> java.util.Optional.of(actual)).usingTime(time, time)
                 .until(OptionalConditions.hasValue(Conditions.condition("present", ignored -> satisfied())).because("optional")));
-        assertEquals(42, await(() -> java.util.List.of(actual)).usingTime(time, time)
+        assertEquals(42, awaitCollection(() -> java.util.List.of(actual)).usingTime(time, time)
                 .until(CollectionConditions.single(Conditions.condition("single", ignored -> satisfied()))).id());
-        assertEquals(42, await(() -> java.util.List.of(actual)).usingTime(time, time)
+        assertEquals(42, awaitCollection(() -> java.util.List.of(actual)).usingTime(time, time)
                 .until(CollectionConditions.first(Conditions.condition("first", ignored -> satisfied()))).id());
-        assertEquals(42, await(() -> java.util.Map.of("user", actual)).usingTime(time, time)
+        assertEquals(42, awaitMap(() -> java.util.Map.of("user", actual)).usingTime(time, time)
                 .until(MapConditions.valueFor("user", Conditions.condition("mapped", ignored -> satisfied()))).id());
         User absent = null;
         assertNull(await(() -> absent).usingTime(time, time).until(Conditions.condition("null is valid", ignored -> satisfied())));

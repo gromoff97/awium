@@ -11,9 +11,9 @@ import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
+import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
+import static io.github.gromoff97.awium.MapConditions.awaitMap;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
@@ -48,9 +48,9 @@ class ScalarConditionsTest {
             assertSame(measurement, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
             assertEquals(10, values.getLast().number());
         }
-        var selected = await(() -> Optional.of(measurement)).until(OptionalConditions.hasValue(
+        var selected = awaitOptional(() -> Optional.of(measurement)).until(OptionalConditions.hasValue(
                 Conditions.atLeast(new Limit(5)).because("inner limit")).because("measurement"));
-        var mapped = await(() -> Map.of("measurement", measurement)).until(MapConditions.valueFor("measurement",
+        var mapped = awaitMap(() -> Map.of("measurement", measurement)).until(MapConditions.valueFor("measurement",
                 Conditions.lessThan(new Limit(15)).because("inner limit")).because("measurement"));
         assertSame(measurement, selected);
         assertEquals(10, selected.number());
@@ -115,7 +115,7 @@ class ScalarConditionsTest {
             assertSame(reading, value);
             assertEquals(10, value.number());
         }
-        var selected = await(() -> List.of(reading)).until(CollectionConditions.single(
+        var selected = awaitCollection(() -> List.of(reading)).until(CollectionConditions.single(
                 Conditions.greaterThan(new Threshold(5)).because("nested lower bound")).because("one reading"));
         assertSame(reading, selected);
         assertEquals(10, selected.number());
@@ -170,11 +170,11 @@ class ScalarConditionsTest {
         var buffer = CharBuffer.wrap(" ready");
         buffer.position(1);
 
-        var optional = await(() -> Optional.of(text)).until(
+        var optional = awaitOptional(() -> Optional.of(text)).until(
                 OptionalConditions.hasValue(StringConditions.startsWith("rea").because("prefix")));
-        var selected = await(() -> List.of(buffer)).until(
+        var selected = awaitCollection(() -> List.of(buffer)).until(
                 CollectionConditions.single(StringConditions.matchesRegex("ready").because("remaining text")));
-        var mapped = await(() -> Map.of("text", text)).until(
+        var mapped = awaitMap(() -> Map.of("text", text)).until(
                 MapConditions.valueFor("text", StringConditions.length(5).because("length")));
 
         assertSame(text, optional);

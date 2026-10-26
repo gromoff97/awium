@@ -10,9 +10,6 @@ import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.Conditions.asserted;
 import static io.github.gromoff97.awium.Conditions.equalTo;
 import static java.time.Duration.ofNanos;

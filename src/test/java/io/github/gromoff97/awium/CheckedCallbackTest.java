@@ -12,10 +12,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
+import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
+import static io.github.gromoff97.awium.MapConditions.awaitMap;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.Conditions.*;
@@ -96,7 +95,7 @@ class CheckedCallbackTest {
     void interruptionDuringFactoryCreationSkipsItsEvaluator() {
         List<Function<Callable<CheckedFunction<String, ConditionResult<String>>>, AwaitResult<?, ?>>> waits = List.of(
                 factory -> await(() -> "ready").tryUntil(conditionPerWait("lazy", factory)),
-                factory -> await(() -> Optional.of("ready")).tryUntil(hasValue(conditionPerWait("lazy", factory))),
+                factory -> awaitOptional(() -> Optional.of("ready")).tryUntil(hasValue(conditionPerWait("lazy", factory))),
                 factory -> await(() -> "ready").tryUntil(conditionPerWait("lazy", factory), matches(value -> true)));
         for (var wait : waits) {
             int[] factoryCalls = {0};
@@ -132,7 +131,7 @@ class CheckedCallbackTest {
         var actual = new ProbeContainers.EntryMap<String, String>(List.of(entry));
         int[] factoryCalls = {0};
         int[] evaluatorCalls = {0};
-        var result = await(() -> actual).usingTime(time, time).tryUntil(valueFor("key", conditionPerWait("nested", () -> {
+        var result = awaitMap(() -> actual).usingTime(time, time).tryUntil(valueFor("key", conditionPerWait("nested", () -> {
             factoryCalls[0]++;
             return value -> { evaluatorCalls[0]++; return satisfied(value); };
         })));
@@ -152,8 +151,8 @@ class CheckedCallbackTest {
                 .because("receipt is needed");
         var time = new FakeTime(0);
 
-        var optional = await(() -> Optional.of("ready")).usingTime(time, time).tryUntil(hasValue(nested));
-        var map = await(() -> Map.of("key", "ready")).usingTime(time, time).tryUntil(valueFor("key", nested));
+        var optional = awaitOptional(() -> Optional.of("ready")).usingTime(time, time).tryUntil(hasValue(nested));
+        var map = awaitMap(() -> Map.of("key", "ready")).usingTime(time, time).tryUntil(valueFor("key", nested));
         var sequence = await(() -> "ready").usingTime(time, time).every(ofNanos(1)).tryUntil(isNotNull, nested);
         for (AwaitResult<?, ?> result : List.of(optional, map, sequence)) {
             var failure = assertInstanceOf(AwaitResult.Failed.class, result);
@@ -172,7 +171,7 @@ class CheckedCallbackTest {
         var values = List.of(1, 2, 3);
         var visited = new ArrayList<Integer>();
         int[] sourceCalls = {0};
-        var result = await(() -> { sourceCalls[0]++; return values; })
+        var result = awaitCollection(() -> { sourceCalls[0]++; return values; })
                 .usingTime(time, time).tryUntil(CollectionConditions.all(value -> {
                     visited.add(value);
                     Thread.currentThread().interrupt();
@@ -190,7 +189,7 @@ class CheckedCallbackTest {
     void aFlagClearedWithinTheSameCallbackDoesNotInterruptTheQuantifier() {
         var time = new FakeTime(0);
         var actual = List.of(1, 2);
-        var result = await(() -> actual).usingTime(time, time).tryUntil(CollectionConditions.all(value -> {
+        var result = awaitCollection(() -> actual).usingTime(time, time).tryUntil(CollectionConditions.all(value -> {
             Thread.currentThread().interrupt();
             assertTrue(Thread.interrupted());
             return true;
@@ -204,7 +203,7 @@ class CheckedCallbackTest {
     void exceptionAfterAnInterruptWithinTheSameCallbackKeepsItsOriginalCause() {
         var cause = new IllegalStateException("callback failed");
         int[] calls = {0};
-        var result = await(() -> List.of(1, 2)).tryUntil(CollectionConditions.all(value -> {
+        var result = awaitCollection(() -> List.of(1, 2)).tryUntil(CollectionConditions.all(value -> {
             calls[0]++;
             Thread.currentThread().interrupt();
             throw cause;

@@ -37,7 +37,7 @@ class ExpectedInputsTest {
             var actual = List.of(negative ? operand : new int[] {9});
             var condition = negative ? doesNotContain(operand) : contains(operand);
             var time = new FakeTime(0);
-            var outcome = await(() -> actual).usingTime(time, time)
+            var outcome = awaitCollection(() -> actual).usingTime(time, time)
                     .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(1))
                     .tryUntil(condition.because("one array"));
             var failure = assertInstanceOf(AwaitResult.Failed.class, outcome).failure();

@@ -12,9 +12,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
+import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
+import static io.github.gromoff97.awium.MapConditions.awaitMap;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
@@ -211,9 +211,9 @@ class TryUntilFailureTest {
             List<Supplier<AwaitResult<?, ?>>> paths = List.of(
                     () -> await(() -> "actual").tryUntil(preserved),
                     () -> await(() -> "actual").tryUntil(preserved, preserved),
-                    () -> await(() -> Optional.of("actual")).tryUntil(OptionalConditions.hasValue(preserved)),
-                    () -> await(() -> List.of("actual")).tryUntil(CollectionConditions.single(preserved)),
-                    () -> await(() -> Map.of("key", "actual")).tryUntil(MapConditions.valueFor("key", preserved)));
+                    () -> awaitOptional(() -> Optional.of("actual")).tryUntil(OptionalConditions.hasValue(preserved)),
+                    () -> awaitCollection(() -> List.of("actual")).tryUntil(CollectionConditions.single(preserved)),
+                    () -> awaitMap(() -> Map.of("key", "actual")).tryUntil(MapConditions.valueFor("key", preserved)));
             for (var path : paths) {
                 try {
                     var result = failed(path.get());

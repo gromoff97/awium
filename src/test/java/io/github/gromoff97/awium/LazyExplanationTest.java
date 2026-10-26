@@ -9,10 +9,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
 import static io.github.gromoff97.awium.CollectionConditions.single;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.MapConditions.*;
@@ -28,18 +25,18 @@ class LazyExplanationTest {
 
         assertEquals(5, await(() -> "ready").until(isNotNull.because(forbidden)).length());
         assertEquals(5, await(() -> "ready").until(equalTo("ready").because(forbidden)).length());
-        assertEquals(5, await(() -> Optional.of("ready")).until(present.because(forbidden)).length());
-        assertEquals(5, await(() -> List.of("ready")).until(single.because(forbidden)).length());
-        assertEquals(5, await(() -> Map.of("key", "ready")).until(valueFor("key").because(forbidden)).length());
+        assertEquals(5, awaitOptional(() -> Optional.of("ready")).until(present.because(forbidden)).length());
+        assertEquals(5, awaitCollection(() -> List.of("ready")).until(single.because(forbidden)).length());
+        assertEquals(5, awaitMap(() -> Map.of("key", "ready")).until(valueFor("key").because(forbidden)).length());
         Object observed = "ready";
         assertEquals(5, await(() -> observed).until(instanceOf(String.class).because(forbidden)).length());
-        assertEquals(5, await(() -> Optional.of("ready")).until(
+        assertEquals(5, awaitOptional(() -> Optional.of("ready")).until(
                 hasValue(isNotNull.because(forbidden)).because(forbidden)).length());
-        assertEquals(5, await(() -> List.of("ready")).until(
+        assertEquals(5, awaitCollection(() -> List.of("ready")).until(
                 single(isNotNull.because(forbidden)).because(forbidden)).length());
-        assertEquals(5, await(() -> Map.of("key", "ready")).until(
+        assertEquals(5, awaitMap(() -> Map.of("key", "ready")).until(
                 valueFor("key", isNotNull.because(forbidden)).because(forbidden)).length());
-        assertEquals(5, await(() -> Map.of("key", "ready")).until(
+        assertEquals(5, awaitMap(() -> Map.of("key", "ready")).until(
                 singleEntry(isNotNull.because(forbidden)).because(forbidden)).getValue().length());
         assertInstanceOf(AwaitResult.Satisfied.class,
                 await(() -> "ready").tryUntil(equalTo("ready").because(forbidden)));
@@ -48,9 +45,9 @@ class LazyExplanationTest {
     @Test
     void nestedFailuresInheritLazyTextAndOuterReasonsTakePrecedence() {
         var time = new FakeTime(0);
-        var optionals = await(() -> Optional.of("pending")).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
-        var collections = await(() -> List.of("pending")).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
-        var maps = await(() -> Map.of("key", "pending")).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+        var optionals = awaitOptional(() -> Optional.of("pending")).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+        var collections = awaitCollection(() -> List.of("pending")).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+        var maps = awaitMap(() -> Map.of("key", "pending")).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
         List<Function<Supplier<String>, AwaitResult<?, ?>>> waits = List.of(
                 reason -> optionals.tryUntil(hasValue(equalTo("ready").because(reason))),
                 reason -> collections.tryUntil(single(equalTo("ready").because(reason))),

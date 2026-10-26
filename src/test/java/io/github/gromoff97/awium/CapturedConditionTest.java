@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium;
 
 import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
+import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
+import static io.github.gromoff97.awium.MapConditions.awaitMap;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.math.BigDecimal;
@@ -143,7 +143,7 @@ class CapturedConditionTest {
         List<List<Number>> observations = List.of(List.of(1L, first), List.of(second, 2L));
         int[] reads = {0};
         var time = new FakeTime(0);
-        var waiting = await(() -> observations.get(reads[0]++ % observations.size()))
+        var waiting = awaitCollection(() -> observations.get(reads[0]++ % observations.size()))
                 .usingTime(time, time).every(ofNanos(1));
 
         var values = waiting.until(CollectionConditions.single(Conditions.instanceOf(Integer.class)).because("first integer"),
@@ -168,7 +168,7 @@ class CapturedConditionTest {
         var observations = List.of(first, Map.of("last", acquired), Map.of("last", persisted));
         int[] reads = {0};
         var time = new FakeTime(0);
-        var waiting = await(() -> observations.get(reads[0]++ % observations.size()))
+        var waiting = awaitMap(() -> observations.get(reads[0]++ % observations.size()))
                 .usingTime(time, time).every(java.time.Duration.ofNanos(1))
                 .persisting(java.time.Duration.ofNanos(1));
         var start = MapConditions.valueFor("first").because("first value");
@@ -227,7 +227,7 @@ class CapturedConditionTest {
         int[] reads = {0};
         var time = new FakeTime(0);
 
-        AwaitResult<List<String>, List<String>> result = await(() -> observations.get(reads[0]++))
+        AwaitResult<List<String>, List<String>> result = awaitCollection(() -> observations.get(reads[0]++))
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).persisting(ofNanos(1))
                 .tryUntil(CollectionConditions.first, CollectionConditions.last);
 
@@ -532,7 +532,7 @@ class CapturedConditionTest {
                 Optional.of("second"));
         int[] next = {0};
 
-        List<String> result = await(() -> observations.get(next[0]++))
+        List<String> result = awaitOptional(() -> observations.get(next[0]++))
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10))
                 .until(present, present);
 

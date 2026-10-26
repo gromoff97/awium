@@ -5,9 +5,6 @@ import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.CONDITION_FAILED;
 import static io.github.gromoff97.awium.Conditions.equalTo;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;

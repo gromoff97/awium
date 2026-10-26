@@ -35,6 +35,11 @@ public final class Conditions {
         return new ValueAwait<>(source, WaitConfiguration.DEFAULT);
     }
 
+    /** Short form of {@link #await(Callable)}. */
+    public static <VALUE> ValueAwait<VALUE> a(Callable<? extends VALUE> source) {
+        return await(source);
+    }
+
     /** Creates a named check using the supplied callback for every execution. */
     public static <OBSERVED> PreservingCondition<OBSERVED> condition(String description,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>> evaluation) {

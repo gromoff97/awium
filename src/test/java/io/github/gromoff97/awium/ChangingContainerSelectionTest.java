@@ -9,10 +9,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
+import static io.github.gromoff97.awium.MapConditions.awaitMap;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -26,7 +24,7 @@ class ChangingContainerSelectionTest {
         int[] calls = {0};
         var time = new FakeTime(0);
 
-        var result = await(() -> {
+        var result = awaitCollection(() -> {
             if (++calls[0] == 2) values.add("ready");
             return values;
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
@@ -44,7 +42,7 @@ class ChangingContainerSelectionTest {
             int[] calls = {0};
             var time = new FakeTime(0);
 
-            var result = await(() -> {
+            var result = awaitCollection(() -> {
                 if (++calls[0] == 2) values.add("ready");
                 return values;
             }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
@@ -62,7 +60,7 @@ class ChangingContainerSelectionTest {
         int[] calls = {0};
         var time = new FakeTime(0);
 
-        var result = await(() -> {
+        var result = awaitCollection(() -> {
             if (++calls[0] == 2) values.add("ready");
             return values;
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).tryUntil(CollectionConditions.single);
@@ -78,7 +76,7 @@ class ChangingContainerSelectionTest {
             values.put("key", "old");
             int[] calls = {0};
             var time = new FakeTime(0);
-            var waiting = await(() -> {
+            var waiting = awaitMap(() -> {
                 if (++calls[0] == 2) values.put("key", "ready");
                 return values;
             }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5));

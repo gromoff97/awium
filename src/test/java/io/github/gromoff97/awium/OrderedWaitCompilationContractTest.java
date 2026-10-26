@@ -27,10 +27,10 @@ class OrderedWaitCompilationContractTest {
         for (String expression : List.of(
                 "await(Contract::text).%s(matches((Integer value) -> true));",
                 "await(Contract::text).%s(matches(value -> value.length()));",
-                "await(Contract::optional).%s(first, last);",
-                "await(Contract::collection).%s(present, present);",
-                "await(Contract::map).%s(first, last);",
-                "await(Contract::collection).%s(singleEntry, singleEntry);")) {
+                "awaitOptional(Contract::optional).%s(first, last);",
+                "awaitCollection(Contract::collection).%s(present, present);",
+                "awaitMap(Contract::map).%s(first, last);",
+                "awaitCollection(Contract::collection).%s(singleEntry, singleEntry);")) {
             assertRejected(expression.formatted(terminal));
         }
     }
@@ -40,9 +40,9 @@ class OrderedWaitCompilationContractTest {
         for (String expression : List.of(
                 "String value = await(Contract::text).until(isNotNull, isNotNull);",
                 "AwaitResult<String, String> value = await(Contract::text).tryUntil(isNotNull, isNotNull);",
-                "List<Integer> value = await(Contract::collection).until(first, last);",
-                "Callable<List<String>> source = Contract::collection; List<Integer> wrong = await(source).until(first, last);",
-                "Callable<List<String>> source = Contract::collection; AwaitResult<List<String>,List<Integer>> wrong = await(source).tryUntil(first, last);",
+                "List<Integer> value = awaitCollection(Contract::collection).until(first, last);",
+                "Callable<List<String>> source = Contract::collection; List<Integer> wrong = awaitCollection(source).until(first, last);",
+                "Callable<List<String>> source = Contract::collection; AwaitResult<List<String>,List<Integer>> wrong = awaitCollection(source).tryUntil(first, last);",
                 "List<Integer> result = await(Contract::text).until(instanceOf(String.class), instanceOf(String.class));")) {
             assertRejected(expression);
         }
@@ -55,10 +55,10 @@ class OrderedWaitCompilationContractTest {
             for (String expression : List.of(
                     "await(Contract::text).%s(instanceOf(String.class)%s, instanceOf(Integer.class)%s);",
                     "await(Contract::text).<Object>%s(instanceOf(String.class)%s, instanceOf(Integer.class)%s);",
-                    "await(Contract::collection).%s(single(instanceOf(String.class))%s, single(instanceOf(Integer.class))%s);",
-                    "await(Contract::optional).%s(hasValue(instanceOf(String.class))%s, hasValue(instanceOf(Integer.class))%s);",
-                    "await(Contract::map).%s(valueFor(\"ready\", instanceOf(String.class))%s, valueFor(\"ready\", instanceOf(Integer.class))%s);",
-                    "await(Contract::map).%s(singleEntry(instanceOf(String.class))%s, singleEntry(instanceOf(Integer.class))%s);")) {
+                    "awaitCollection(Contract::collection).%s(single(instanceOf(String.class))%s, single(instanceOf(Integer.class))%s);",
+                    "awaitOptional(Contract::optional).%s(hasValue(instanceOf(String.class))%s, hasValue(instanceOf(Integer.class))%s);",
+                    "awaitMap(Contract::map).%s(valueFor(\"ready\", instanceOf(String.class))%s, valueFor(\"ready\", instanceOf(Integer.class))%s);",
+                    "awaitMap(Contract::map).%s(singleEntry(instanceOf(String.class))%s, singleEntry(instanceOf(Integer.class))%s);")) {
                 assertRejected(expression.formatted(terminal, decoration, decoration));
             }
         }
@@ -76,9 +76,9 @@ class OrderedWaitCompilationContractTest {
                 import java.util.concurrent.Callable;
                 import io.github.gromoff97.awium.AwaitResult;
                 import static io.github.gromoff97.awium.Conditions.await;
-                import static io.github.gromoff97.awium.CollectionConditions.await;
-                import static io.github.gromoff97.awium.OptionalConditions.await;
-                import static io.github.gromoff97.awium.MapConditions.await;
+                import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
+                import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
+                import static io.github.gromoff97.awium.MapConditions.awaitMap;
                 import static io.github.gromoff97.awium.Conditions.*;
                 import static io.github.gromoff97.awium.CollectionConditions.*;
                 import static io.github.gromoff97.awium.OptionalConditions.present;

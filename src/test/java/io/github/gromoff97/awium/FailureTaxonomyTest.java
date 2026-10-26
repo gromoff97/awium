@@ -8,9 +8,6 @@ import org.junit.jupiter.api.function.Executable;
 
 import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
 import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.Conditions.asserted;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;

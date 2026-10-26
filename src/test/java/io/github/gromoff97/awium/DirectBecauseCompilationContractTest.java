@@ -16,7 +16,7 @@ class DirectBecauseCompilationContractTest {
         for (String expression : List.of(
                 "await(() -> \"ready\").until(equalTo(123).because(() -> \"wrong input\"));",
                 "String wrong = await(numbers).until(equalTo(1).because(() -> \"wrong result\"));",
-                "Map.Entry<String, Number> wrong = await(map).until(valueFor(\"key\").because(() -> \"wrong kind\"));",
+                "Map.Entry<String, Number> wrong = awaitMap(map).until(valueFor(\"key\").because(() -> \"wrong kind\"));",
                 "await(() -> \"ready\").until(isNotNull.because(() -> 123));")) {
             assertRejected(expression);
         }
@@ -71,9 +71,9 @@ class DirectBecauseCompilationContractTest {
         for (String terminal : List.of("until", "tryUntil")) {
             for (String decoration : List.of("", ".because(\"allowed values\")")) {
                 for (String expression : List.of(
-                        "await(() -> List.of(\"ready\")).%s(CollectionConditions.subsetOf(List.of(123))%s);",
-                        "await(() -> List.of(\"ready\")).%s(CollectionConditions.subsetOf(List.of(123))%s, isNotNull);",
-                        "await(() -> List.of(List.of(\"ready\"))).%s(single(CollectionConditions.subsetOf(List.of(123))%s));")) {
+                        "awaitCollection(() -> List.of(\"ready\")).%s(CollectionConditions.subsetOf(List.of(123))%s);",
+                        "awaitCollection(() -> List.of(\"ready\")).%s(CollectionConditions.subsetOf(List.of(123))%s, isNotNull);",
+                        "awaitCollection(() -> List.of(List.of(\"ready\"))).%s(single(CollectionConditions.subsetOf(List.of(123))%s));")) {
                     String call = expression.formatted(terminal, decoration);
                     assertRejected(call);
                 }
@@ -86,11 +86,11 @@ class DirectBecauseCompilationContractTest {
         for (String terminal : List.of("until", "tryUntil")) {
             for (String decoration : List.of("", ".because(\"required value\")")) {
                 for (String expression : List.of(
-                        "await(optional).%s(hasValue(equalTo(\"wrong\")%s));",
-                        "await(collection).%s(single(equalTo(\"wrong\")%s));",
-                        "await(map).%s(valueFor(\"key\", equalTo(\"wrong\")%s));",
-                        "await(map).%s(singleEntry(equalTo(Map.entry(123, 1))%s));",
-                        "await(map).%s(singleEntry(equalTo(Map.entry(\"key\", \"wrong\"))%s));")) {
+                        "awaitOptional(optional).%s(hasValue(equalTo(\"wrong\")%s));",
+                        "awaitCollection(collection).%s(single(equalTo(\"wrong\")%s));",
+                        "awaitMap(map).%s(valueFor(\"key\", equalTo(\"wrong\")%s));",
+                        "awaitMap(map).%s(singleEntry(equalTo(Map.entry(123, 1))%s));",
+                        "awaitMap(map).%s(singleEntry(equalTo(Map.entry(\"key\", \"wrong\"))%s));")) {
                     String call = expression.formatted(terminal, decoration);
                     assertRejected(call);
                 }
@@ -141,7 +141,7 @@ class DirectBecauseCompilationContractTest {
             for (String condition : List.of("valueFor(123)", "entryFor(123)", "onlyValueFor(123)",
                     "valueFor(123, equalTo(1))", "valueFor(123, instanceOf(String.class))")) {
                 for (String decoration : List.of("", ".because(\"required key\")")) {
-                    String expression = "await(map).%s(%s%s);".formatted(terminal, condition, decoration);
+                    String expression = "awaitMap(map).%s(%s%s);".formatted(terminal, condition, decoration);
                     assertRejected(expression);
                 }
             }
@@ -164,18 +164,18 @@ class DirectBecauseCompilationContractTest {
     void decorationCannotInventInputOrResultTypes() throws IOException {
         for (String expression : List.of(
                 "String wrong = await(numbers).until(equalTo(1).because(\"wrong\"));",
-                "String wrong = await(collection).until(single(equalTo(1)).because(\"wrong\"));",
-                "String wrong = await(map).until(valueFor(\"key\").because(\"wrong\"));",
-                "Map.Entry<String, Number> wrong = await(map).until(valueFor(\"key\").because(\"wrong\"));",
-                "Number wrong = await(map).until(entryFor(\"key\").because(\"wrong\"));",
+                "String wrong = awaitCollection(collection).until(single(equalTo(1)).because(\"wrong\"));",
+                "String wrong = awaitMap(map).until(valueFor(\"key\").because(\"wrong\"));",
+                "Map.Entry<String, Number> wrong = awaitMap(map).until(valueFor(\"key\").because(\"wrong\"));",
+                "Number wrong = awaitMap(map).until(entryFor(\"key\").because(\"wrong\"));",
                 "Condition.SelectedCondition<Map<?, ?>, Object, io.github.gromoff97.awium.Condition.Reference<?>> wrong = valueFor(\"key\").because(\"wrong\");",
-                "await(map).until(singleEntry(matches((Map.Entry<String, Object> entry) -> entry.setValue(new Object()) != null)).because(\"wrong\"));",
-                "await(map).until(singleEntry(matches((Map.Entry<Object, Number> entry) -> true)).because(\"wrong key input\"));",
-                "await(map).until(singleEntry(matches((Map.Entry<String, Integer> entry) -> true)).because(\"narrow value input\"));",
-                "Map.Entry<String, String> wrong = await(map).until(singleEntry(matches((Map.Entry<String, Number> entry) -> true)));",
-                "await(collection).until(single(matches(String::isBlank)).because(\"wrong\"));",
-                "AwaitResult<Map<String, Number>, String> wrong = await(map).tryUntil(valueFor(\"key\").because(\"wrong\"));",
-                "List<String> wrong = await(map).until(valueFor(\"key\").because(\"wrong\"), valueFor(\"key\"));")) {
+                "awaitMap(map).until(singleEntry(matches((Map.Entry<String, Object> entry) -> entry.setValue(new Object()) != null)).because(\"wrong\"));",
+                "awaitMap(map).until(singleEntry(matches((Map.Entry<Object, Number> entry) -> true)).because(\"wrong key input\"));",
+                "awaitMap(map).until(singleEntry(matches((Map.Entry<String, Integer> entry) -> true)).because(\"narrow value input\"));",
+                "Map.Entry<String, String> wrong = awaitMap(map).until(singleEntry(matches((Map.Entry<String, Number> entry) -> true)));",
+                "awaitCollection(collection).until(single(matches(String::isBlank)).because(\"wrong\"));",
+                "AwaitResult<Map<String, Number>, String> wrong = awaitMap(map).tryUntil(valueFor(\"key\").because(\"wrong\"));",
+                "List<String> wrong = awaitMap(map).until(valueFor(\"key\").because(\"wrong\"), valueFor(\"key\"));")) {
             assertRejected(expression);
         }
     }
@@ -184,18 +184,18 @@ class DirectBecauseCompilationContractTest {
     void explainedQuantifiersRejectIncompatibleCallbacks() throws IOException {
         for (String terminal : List.of("until", "tryUntil")) {
             for (String expression : List.of(
-                    "await(map).%s(allKeys((Integer key) -> key > 0).because(\"wrong\"));",
-                    "await(map).%s(anyKey((Integer key) -> key > 0).because(\"wrong\"));",
-                    "await(map).%s(noKey((Integer key) -> key > 0).because(\"wrong\"));",
-                    "await(map).%s(allValues(String::isBlank).because(\"wrong\"));",
-                    "await(map).%s(anyValue(String::isBlank).because(\"wrong\"));",
-                    "await(map).%s(noValue(String::isBlank).because(\"wrong\"));",
-                    "await(map).%s(allEntries((String key, String value) -> value.isBlank()).because(\"wrong\"));",
-                    "await(map).%s(anyEntry((String key, String value) -> value.isBlank()).because(\"wrong\"));",
-                    "await(map).%s(noEntry((String key, String value) -> value.isBlank()).because(\"wrong\"));",
-                    "await(collection).%s(CollectionConditions.all(String::isBlank).because(\"wrong\"));",
-                    "await(collection).%s(CollectionConditions.any(String::isBlank).because(\"wrong\"));",
-                    "await(collection).%s(CollectionConditions.none(String::isBlank).because(\"wrong\"));")) {
+                    "awaitMap(map).%s(allKeys((Integer key) -> key > 0).because(\"wrong\"));",
+                    "awaitMap(map).%s(anyKey((Integer key) -> key > 0).because(\"wrong\"));",
+                    "awaitMap(map).%s(noKey((Integer key) -> key > 0).because(\"wrong\"));",
+                    "awaitMap(map).%s(allValues(String::isBlank).because(\"wrong\"));",
+                    "awaitMap(map).%s(anyValue(String::isBlank).because(\"wrong\"));",
+                    "awaitMap(map).%s(noValue(String::isBlank).because(\"wrong\"));",
+                    "awaitMap(map).%s(allEntries((String key, String value) -> value.isBlank()).because(\"wrong\"));",
+                    "awaitMap(map).%s(anyEntry((String key, String value) -> value.isBlank()).because(\"wrong\"));",
+                    "awaitMap(map).%s(noEntry((String key, String value) -> value.isBlank()).because(\"wrong\"));",
+                    "awaitCollection(collection).%s(CollectionConditions.all(String::isBlank).because(\"wrong\"));",
+                    "awaitCollection(collection).%s(CollectionConditions.any(String::isBlank).because(\"wrong\"));",
+                    "awaitCollection(collection).%s(CollectionConditions.none(String::isBlank).because(\"wrong\"));")) {
                 String call = expression.formatted(terminal);
                 assertRejected(call);
             }
@@ -207,15 +207,15 @@ class DirectBecauseCompilationContractTest {
         for (String expression : List.of(
                 "Condition.Typed<Optional<?>, Object> erased = present;",
                 "Condition.Typed<Map<?, ?>, Object> erased = valueFor(\"key\");",
-                "Object value = await(() -> List.of(Optional.of(1))).until(single(present));",
-                "Object value = await(() -> List.of(Optional.of(1))).until(single(present.because(\"inner\")).because(\"outer\"));",
-                "Object value = await(() -> Optional.of(Map.of(\"key\", 1))).until(hasValue(valueFor(\"key\")));",
-                "Object value = await(() -> Optional.of(Map.of(\"key\", 1))).until(hasValue(valueFor(\"key\").because(\"inner\")).because(\"outer\"));",
-                "List<Object> values = await(collection).until(single, isNotNull);",
-                "List<Object> values = await(collection).until(single.because(\"first\"), isNotNull.because(\"second\"));",
-                "Callable<Map<String, Number>> plain = map; String value = await(plain).until(valueFor(\"key\"));",
-                "Callable<Map<String, Number>> plain = map; String value = await(plain).until(valueFor(\"key\").because(\"required\"));",
-                "await(collection).until(CollectionConditions.sorted(String::compareTo).because(\"wrong type\"));")) {
+                "Object value = awaitCollection(() -> List.of(Optional.of(1))).until(single(present));",
+                "Object value = awaitCollection(() -> List.of(Optional.of(1))).until(single(present.because(\"inner\")).because(\"outer\"));",
+                "Object value = awaitOptional(() -> Optional.of(Map.of(\"key\", 1))).until(hasValue(valueFor(\"key\")));",
+                "Object value = awaitOptional(() -> Optional.of(Map.of(\"key\", 1))).until(hasValue(valueFor(\"key\").because(\"inner\")).because(\"outer\"));",
+                "List<Object> values = awaitCollection(collection).until(single, isNotNull);",
+                "List<Object> values = awaitCollection(collection).until(single.because(\"first\"), isNotNull.because(\"second\"));",
+                "Callable<Map<String, Number>> plain = map; String value = awaitMap(plain).until(valueFor(\"key\"));",
+                "Callable<Map<String, Number>> plain = map; String value = awaitMap(plain).until(valueFor(\"key\").because(\"required\"));",
+                "awaitCollection(collection).until(CollectionConditions.sorted(String::compareTo).because(\"wrong type\"));")) {
             assertRejected(expression);
         }
     }
@@ -227,9 +227,9 @@ class DirectBecauseCompilationContractTest {
                 import io.github.gromoff97.awium.*;
                 import io.github.gromoff97.awium.Await.*;
                 import static io.github.gromoff97.awium.Conditions.await;
-                import static io.github.gromoff97.awium.CollectionConditions.await;
-                import static io.github.gromoff97.awium.OptionalConditions.await;
-                import static io.github.gromoff97.awium.MapConditions.await;
+                import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
+                import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
+                import static io.github.gromoff97.awium.MapConditions.awaitMap;
                 import static io.github.gromoff97.awium.Conditions.*;
                 import static io.github.gromoff97.awium.OptionalConditions.*;
                 import static io.github.gromoff97.awium.CollectionConditions.single;

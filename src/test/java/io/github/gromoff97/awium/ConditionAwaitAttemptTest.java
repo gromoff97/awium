@@ -7,9 +7,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
+import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
+import static io.github.gromoff97.awium.MapConditions.awaitMap;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static java.time.Duration.ofNanos;
@@ -53,8 +53,8 @@ class ConditionAwaitAttemptTest {
 
         assertSame(actual, waiting.until(condition));
         assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, waiting.tryUntil(condition)).result());
-        assertSame(actual, await(() -> Optional.of(actual)).until(OptionalConditions.hasValue(condition)));
-        assertSame(actual, await(() -> List.of(actual)).until(CollectionConditions.single(condition)));
+        assertSame(actual, awaitOptional(() -> Optional.of(actual)).until(OptionalConditions.hasValue(condition)));
+        assertSame(actual, awaitCollection(() -> List.of(actual)).until(CollectionConditions.single(condition)));
         var time = new FakeTime(0);
         assertEquals(List.of(actual, actual), waiting.usingTime(time, time).until(condition, condition));
     }
@@ -76,11 +76,11 @@ class ConditionAwaitAttemptTest {
 
         for (int run = 0; run < 2; run++) {
             var time = new FakeTime(0);
-            Number optionalValue = await(() -> Optional.of(actual)).usingTime(time, time)
+            Number optionalValue = awaitOptional(() -> Optional.of(actual)).usingTime(time, time)
                     .every(ofNanos(1)).until(optional);
-            Number element = await(() -> List.of(actual)).usingTime(time, time)
+            Number element = awaitCollection(() -> List.of(actual)).usingTime(time, time)
                     .every(ofNanos(1)).until(collection);
-            var mapWait = await(() -> Map.of("key", actual)).usingTime(time, time).every(ofNanos(1));
+            var mapWait = awaitMap(() -> Map.of("key", actual)).usingTime(time, time).every(ofNanos(1));
             Number mapValue = mapWait.until(map);
             AwaitResult<Map<String, Number>, Number> mapResult = mapWait.tryUntil(map);
             assertSame(actual, optionalValue);

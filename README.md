@@ -4,10 +4,10 @@ Awium is a zero-dependency Java 21 library that waits for a condition in the
 calling thread and returns the result from the same successful observation.
 
 ```java
-import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.ao;
 import static io.github.gromoff97.awium.OptionalConditions.present;
 
-Payment payment = await(() -> paymentRepository.findById(order.paymentId())).until(present.because("Checkout cannot continue without the payment"));
+Payment payment = ao(() -> paymentRepository.findById(order.paymentId())).until(present.because("Checkout cannot continue without the payment"));
 ```
 
 ## Installation
@@ -57,9 +57,9 @@ import static io.github.gromoff97.awium.CollectionConditions.single;
 import static io.github.gromoff97.awium.MapConditions.singleEntry;
 import static io.github.gromoff97.awium.OptionalConditions.present;
 
-Payment payment = await(paymentRepository::find).until(present);
-Payment onlyPayment = await(paymentRepository::findAll).until(single);
-Map.Entry<String, Payment> entry = await(paymentRepository::index).until(singleEntry);
+Payment payment = awaitOptional(paymentRepository::find).until(present);
+Payment onlyPayment = awaitCollection(paymentRepository::findAll).until(single);
+Map.Entry<String, Payment> entry = awaitMap(paymentRepository::index).until(singleEntry);
 ```
 
 `present`, `single`, `first`, `last`, and `singleEntry` are fields, so they do
@@ -131,7 +131,7 @@ by a value check belongs inside the selection condition instead.
 Type-narrowing stages and nested type selections can also be captured in order:
 
 ```java
-List<Payment> payments = await(repository::findAll).until(
+List<Payment> payments = awaitCollection(repository::findAll).until(
         single(instanceOf(Payment.class)).because("First payment"),
         single(instanceOf(Payment.class)).because("Next payment"));
 ```
@@ -149,7 +149,7 @@ An empty array is rejected before invoking the source.
 any order, and may be repeated. The last supplied value wins:
 
 ```java
-Payment payment = await(source).every(POLL_INTERVAL).upTo(TIMEOUT).persisting(STABILITY).until(present);
+Payment payment = awaitOptional(source).every(POLL_INTERVAL).upTo(TIMEOUT).persisting(STABILITY).until(present);
 ```
 
 Defaults are:
@@ -179,7 +179,7 @@ independent:
 
 ```java
 var nanos = new java.util.concurrent.atomic.AtomicLong();
-Payment payment = await(source).usingTime(nanos::get, delay -> nanos.addAndGet(delay)).until(present);
+Payment payment = awaitOptional(source).usingTime(nanos::get, delay -> nanos.addAndGet(delay)).until(present);
 ```
 
 The example advances virtual time instead of sleeping. The clock and wait
@@ -250,10 +250,10 @@ a chained `because(...)`. Use `isNull` for a null check.
 Put a check inside the selection:
 
 ```java
-Payment payment = await(paymentRepository::findAll).until(single(Payment::paid));
-Payment paid = await(paymentRepository::findAll).until(single(Payment::paid).because(
+Payment payment = awaitCollection(paymentRepository::findAll).until(single(Payment::paid));
+Payment paid = awaitCollection(paymentRepository::findAll).until(single(Payment::paid).because(
         "Settlement requires a paid payment"));
-Payment found = await(paymentRepository::find).until(hasValue(Payment::paid));
+Payment found = awaitOptional(paymentRepository::find).until(hasValue(Payment::paid));
 ```
 
 `single` requires a collection containing exactly one element.
@@ -317,12 +317,12 @@ as conditions inside another selection or quantifier.
 Type selection uses the same composition:
 
 ```java
-Payment payment = await(repository::findAll).until(single(instanceOf(Payment.class)));
-Payment found = await(repository::find).until(hasValue(instanceOf(Payment.class)));
-Payment firstPayment = await(repository::findAll).until(first(instanceOf(Payment.class)).because("First payment"));
-Payment lastPayment = await(repository::findAll).until(last(instanceOf(Payment.class)).because("Last payment"));
-Payment indexedPayment = await(repository::findAll).until(element(0, instanceOf(Payment.class)).because("Payment at index zero"));
-Payment paid = await(paymentRepository::findAll).until(first(Payment::paid).because("Paid payment"));
+Payment payment = awaitCollection(repository::findAll).until(single(instanceOf(Payment.class)));
+Payment found = awaitOptional(repository::find).until(hasValue(instanceOf(Payment.class)));
+Payment firstPayment = awaitCollection(repository::findAll).until(first(instanceOf(Payment.class)).because("First payment"));
+Payment lastPayment = awaitCollection(repository::findAll).until(last(instanceOf(Payment.class)).because("Last payment"));
+Payment indexedPayment = awaitCollection(repository::findAll).until(element(0, instanceOf(Payment.class)).because("Payment at index zero"));
+Payment paid = awaitCollection(paymentRepository::findAll).until(first(Payment::paid).because("Paid payment"));
 ```
 
 `first`, `last`, and `element` accept nested conditions. Checks such as
@@ -337,7 +337,7 @@ before the next callback.
 To collect selected values in order, pass several selections to the terminal:
 
 ```java
-List<Payment> payments = await(paymentRepository::findAll).until(
+List<Payment> payments = awaitCollection(paymentRepository::findAll).until(
         single(Payment::created).because("Creation"),
         single(Payment::paid).because("Payment"));
 ```
@@ -402,8 +402,8 @@ Expected sets of values can come from any `Iterable`:
 
 ```java
 Collection<Payment> payments = List.of(expectedPayment);
-Collection<Payment> observed = await(() -> payments).until(all(Payment::paid).because("All payments must be paid"));
-List<Payment> batch = await(paymentRepository::findAll).until(
+Collection<Payment> observed = awaitCollection(() -> payments).until(all(Payment::paid).because("All payments must be paid"));
+List<Payment> batch = awaitCollection(paymentRepository::findAll).until(
         containsOnly(payments).because("The replica must contain the expected payment"));
 ```
 
@@ -490,37 +490,50 @@ emptiness itself is the expectation.
 Qualify a provider when a test needs colliding catalogues:
 
 ```java
-await(paymentRepository::findAll).until(CollectionConditions.nonEmpty);
-await(paymentRepository::index).until(MapConditions.nonEmpty);
+awaitCollection(paymentRepository::findAll).until(CollectionConditions.nonEmpty);
+awaitMap(paymentRepository::index).until(MapConditions.nonEmpty);
 ```
 
 ## Sources
 
-Every source factory is named `await`. Import it from the catalogue matching
-its return type:
+Choose the factory for the value returned by the source. Each factory has a full
+name and a short form with the same types and behavior:
 
-| Source result | Static import |
-| --- | --- |
-| A value, including text | `Conditions.await` |
-| A `Collection` | `CollectionConditions.await` |
-| An `Optional` | `OptionalConditions.await` |
-| A `Map` | `MapConditions.await` |
+| Source result | Full name | Short form |
+| --- | --- | --- |
+| A value, including text | `Conditions.await` | `Conditions.a` |
+| A `Collection`, including lists and sets | `CollectionConditions.awaitCollection` | `CollectionConditions.ac` |
+| An `Optional` | `OptionalConditions.awaitOptional` | `OptionalConditions.ao` |
+| A `Map` | `MapConditions.awaitMap` | `MapConditions.am` |
 
-For a file using several source kinds, import each required `await` explicitly.
-The call stays `await(source).until(condition)`. Factories accept JDK `Callable`
-variables, lambdas, and method references, and the source may throw checked exceptions.
-They never accept a direct observed value.
+```java
+import static io.github.gromoff97.awium.Conditions.a;
+import static io.github.gromoff97.awium.CollectionConditions.ac;
+import static io.github.gromoff97.awium.OptionalConditions.ao;
+import static io.github.gromoff97.awium.MapConditions.am;
+
+Payment loaded = a(paymentRepository::load).until(equalTo(expectedPayment));
+Payment found = ao(paymentRepository::find).until(present);
+Payment onlyPayment = ac(paymentRepository::findAll).upTo(TIMEOUT).every(POLL_INTERVAL).until(single);
+Map.Entry<String, Payment> entry = am(paymentRepository::index).until(singleEntry);
+```
+
+The names select the source category without competing `await` overloads.
+Use `ao` / `awaitOptional` for `present`, `ac` / `awaitCollection` for collection
+selections, and `am` / `awaitMap` for map selections. The generic `a` / `await`
+treats any source result as a whole value; it does not switch categories automatically.
+
+Factories accept JDK `Callable` variables, lambdas, and method references, and
+the source may throw checked exceptions. They never accept a direct observed value.
 All four factories also accept covariant sources such as
 `Callable<? extends Optional<Payment>>`, retaining their selection types.
 
-A typed JDK source also establishes the category of a source returning `null`:
+The chosen name also establishes the category when a source returns `null`:
 
 ```java
-import java.util.concurrent.Callable;
-import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
 
-Callable<Optional<Payment>> source = () -> null;
-await(source).until(isNull);
+awaitOptional(() -> null).until(isNull);
 ```
 
 For sources with concrete contained types, JDK variables and references to their
@@ -528,22 +541,22 @@ For sources with concrete contained types, JDK variables and references to their
 
 ```java
 import java.util.concurrent.Callable;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
+import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
+import static io.github.gromoff97.awium.MapConditions.awaitMap;
 
 Callable<Optional<Payment>> payment = paymentRepository::find;
 Callable<List<Payment>> payments = paymentRepository::findAll;
 Callable<Map<String, Payment>> index = paymentRepository::index;
 
-Payment found = await(payment).until(present.because("The payment is required"));
-Payment onlyPayment = await(payments).until(single);
-Map.Entry<String, Payment> onlyEntry = await(index).until(singleEntry);
+Payment found = awaitOptional(payment).until(present.because("The payment is required"));
+Payment onlyPayment = awaitCollection(payments).until(single);
+Map.Entry<String, Payment> onlyEntry = awaitMap(index).until(singleEntry);
 ```
 
-When several factories are imported, an overloaded constructor or generic method
-reference can remain ambiguous. Use a lambda, such as `await(() -> new StringBuilder())`,
-or qualify the appropriate factory: `Conditions.await(StringBuilder::new)`.
+Different source factories can be imported together. Constructor references such
+as `await(StringBuilder::new)` and `awaitCollection(ArrayList<String>::new)` select
+their category directly.
 
 For covariant collection and map results, typed views establish both the complete
 container type and its selected bound. The view is an immutable source description;
@@ -556,8 +569,8 @@ import io.github.gromoff97.awium.Await.MapViewSource;
 var payments = new CollectionViewSource<Payment, List<? extends Payment>>(paymentRepository::findAllView);
 var index = new MapViewSource<String, Payment, Map<? extends String, ? extends Payment>>(paymentRepository::indexView);
 
-Payment payment = await(payments).until(single);
-Map.Entry<? extends String, ? extends Payment> entry = await(index).until(singleEntry);
+Payment payment = awaitCollection(payments).until(single);
+Map.Entry<? extends String, ? extends Payment> entry = awaitMap(index).until(singleEntry);
 ```
 
 Use typed views when collecting mutable covariant values across observations,
@@ -572,13 +585,13 @@ remains owned by the caller.
 
 ## Diagnostic waits
 
-Finish the same `await(...)` chain with `tryUntil(...)` to return an
+Finish the same source configuration with `tryUntil(...)` to return an
 `AwaitResult<OBSERVED, RESULT>` for both success and failure:
 
 ```java
-import static io.github.gromoff97.awium.OptionalConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
 
-var result = await(paymentRepository::find).upTo(TIMEOUT).tryUntil(present);
+var result = awaitOptional(paymentRepository::find).upTo(TIMEOUT).tryUntil(present);
 ```
 
 `AwaitResult.Satisfied` contains the terminal result. `AwaitResult.Failed`

@@ -60,8 +60,13 @@ public final class CollectionConditions {
      * @param source repeatedly invoked source
      * @return immutable wait configuration
      */
-    public static <ELEMENT, VALUES extends Collection<ELEMENT>> Await<VALUES, ELEMENT, Void> await(Callable<? extends VALUES> source) {
+    public static <ELEMENT, VALUES extends Collection<ELEMENT>> Await<VALUES, ELEMENT, Void> awaitCollection(Callable<? extends VALUES> source) {
         return new Await<>(source, WaitConfiguration.DEFAULT);
+    }
+
+    /** Short form of {@link #awaitCollection(Callable)}. */
+    public static <ELEMENT, VALUES extends Collection<ELEMENT>> Await<VALUES, ELEMENT, Void> ac(Callable<? extends VALUES> source) {
+        return awaitCollection(source);
     }
 
     /**
@@ -72,8 +77,14 @@ public final class CollectionConditions {
      * @return immutable wait configuration
      */
     public static <ELEMENT, VALUES extends Collection<? extends ELEMENT>>
-            Await<VALUES, ELEMENT, Void> await(Await.CollectionViewSource<ELEMENT, VALUES> source) {
+            Await<VALUES, ELEMENT, Void> awaitCollection(Await.CollectionViewSource<ELEMENT, VALUES> source) {
         return new Await<>(requireNonNull(source, "source must not be null").delegate(), WaitConfiguration.DEFAULT);
+    }
+
+    /** Short form of {@link #awaitCollection(Await.CollectionViewSource)}. */
+    public static <ELEMENT, VALUES extends Collection<? extends ELEMENT>>
+            Await<VALUES, ELEMENT, Void> ac(Await.CollectionViewSource<ELEMENT, VALUES> source) {
+        return awaitCollection(source);
     }
 
     public static PreservingCondition<Collection<?>> size(int expected) {

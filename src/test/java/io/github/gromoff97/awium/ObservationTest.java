@@ -14,9 +14,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
+import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
 import static io.github.gromoff97.awium.AttemptRecord.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
@@ -205,9 +204,9 @@ class ObservationTest {
             assertSame(cause, assertThrows(AwaitExecutionException.class, () -> waiting.until(check)).getCause());
             List<Supplier<AwaitResult<?, ?>>> waits = List.of(
                     () -> waiting.tryUntil(check),
-                    () -> await(() -> Optional.of("actual")).usingTime(time, time)
+                    () -> awaitOptional(() -> Optional.of("actual")).usingTime(time, time)
                             .tryUntil(OptionalConditions.hasValue(check)),
-                    () -> await(() -> List.of("actual", "later")).usingTime(time, time)
+                    () -> awaitCollection(() -> List.of("actual", "later")).usingTime(time, time)
                             .tryUntil(CollectionConditions.single(check)),
                     () -> waiting.tryUntil(Conditions.isNotNull, check));
             for (var wait : waits) {

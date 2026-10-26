@@ -7,9 +7,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.Conditions.equalTo;
 import static io.github.gromoff97.awium.Conditions.isNotNull;

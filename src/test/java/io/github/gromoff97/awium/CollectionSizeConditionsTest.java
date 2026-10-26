@@ -9,10 +9,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.CollectionConditions.empty;
 import static io.github.gromoff97.awium.CollectionConditions.nonEmpty;
@@ -46,18 +43,18 @@ class CollectionSizeConditionsTest {
         String element = new String("element");
         java.util.concurrent.Callable<ArrayList<String>> source = () -> new ArrayList<>(List.of(element));
 
-        String selected = await(source).usingTime(pollingTime, pollingTime).until(single);
-        String explained = await(source).usingTime(pollingTime, pollingTime).until(single.because("exactly one result is required"));
-        String nullElement = await((java.util.concurrent.Callable<List<String>>)
+        String selected = awaitCollection(source).usingTime(pollingTime, pollingTime).until(single);
+        String explained = awaitCollection(source).usingTime(pollingTime, pollingTime).until(single.because("exactly one result is required"));
+        String nullElement = awaitCollection((java.util.concurrent.Callable<List<String>>)
                 () -> Collections.singletonList(null)).usingTime(pollingTime, pollingTime).until(single);
 
         assertSame(element, selected);
         assertSame(element, explained);
         assertNull(nullElement);
-        assertTrue(assertFailure(TIMEOUT, () -> await(() -> List.of())
+        assertTrue(assertFailure(TIMEOUT, () -> awaitCollection(() -> List.of())
                 .usingTime(pollingTime, pollingTime).upTo(ofNanos(1)).until(single))
                 .getMessage().contains("collection size was 0"));
-        assertTrue(assertFailure(TIMEOUT, () -> await(() -> List.of("first", "second"))
+        assertTrue(assertFailure(TIMEOUT, () -> awaitCollection(() -> List.of("first", "second"))
                 .usingTime(pollingTime, pollingTime).upTo(ofNanos(1)).until(single))
                 .getMessage().contains("collection size was greater than 1"));
     }
@@ -84,7 +81,7 @@ class CollectionSizeConditionsTest {
         Collection<Object> actual = null;
 
         assertFailure(TIMEOUT,
-                () -> await(() -> actual).usingTime(time, time)
+                () -> awaitCollection(() -> actual).usingTime(time, time)
                         .every(ofNanos(1)).upTo(ofNanos(2)).until(empty));
     }
 
@@ -94,7 +91,7 @@ class CollectionSizeConditionsTest {
         FakeTime time = new FakeTime(0);
 
         var failure = assertFailure(TIMEOUT,
-                () -> await(() -> {
+                () -> awaitCollection(() -> {
                     time.advanceNanos(2);
                     return actual;
                 }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(empty));
@@ -111,7 +108,7 @@ class CollectionSizeConditionsTest {
         var collection = new ProbeContainers.ProbeCollection<Object>(cause);
 
         assertSame(cause, assertFailure(CONDITION_FAILED,
-                () -> await(() -> collection).usingTime(pollingTime, pollingTime).until(nonEmpty)).getCause());
+                () -> awaitCollection(() -> collection).usingTime(pollingTime, pollingTime).until(nonEmpty)).getCause());
         assertEquals(1, collection.sizeCalls);
     }
 
@@ -144,7 +141,7 @@ class CollectionSizeConditionsTest {
         };
 
         assertTrue(assertThrows(NullPointerException.class,
-                () -> await(source).usingTime(time, time).until((PreservingCondition<Collection<String>>) null))
+                () -> awaitCollection(source).usingTime(time, time).until((PreservingCondition<Collection<String>>) null))
                 .getMessage().contains("condition"));
         assertEquals(0, sourceCalls[0]);
     }

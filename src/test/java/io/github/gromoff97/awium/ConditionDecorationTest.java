@@ -1,9 +1,5 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.util.IllegalFormatException;

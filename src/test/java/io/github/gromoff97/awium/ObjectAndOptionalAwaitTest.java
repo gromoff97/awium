@@ -9,10 +9,8 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
+import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
+import static io.github.gromoff97.awium.MapConditions.awaitMap;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
@@ -39,10 +37,10 @@ class ObjectAndOptionalAwaitTest {
         var list = List.of("ready");
         var map = Map.of("ready", 1);
         var optional = Optional.of("ready");
-        var selectedList = await(() -> list).until(in(List.of(List.of("ready"))).because("list candidate"));
-        var selectedMap = await(() -> map).until(in(List.of(Map.of("ready", 1))).because("map candidate"));
-        var selectedOptional = await(() -> optional).until(in(List.of(Optional.of("ready"))).because("optional candidate"));
-        AwaitResult<Map<String, Integer>, Map<String, Integer>> captured = await(() -> map).tryUntil(
+        var selectedList = awaitCollection(() -> list).until(in(List.of(List.of("ready"))).because("list candidate"));
+        var selectedMap = awaitMap(() -> map).until(in(List.of(Map.of("ready", 1))).because("map candidate"));
+        var selectedOptional = awaitOptional(() -> optional).until(in(List.of(Optional.of("ready"))).because("optional candidate"));
+        AwaitResult<Map<String, Integer>, Map<String, Integer>> captured = awaitMap(() -> map).tryUntil(
                 notIn(List.of(Map.of("failed", 0))).because("excluded %s", "candidates"));
 
         assertEquals(5, text.length());
@@ -101,7 +99,7 @@ class ObjectAndOptionalAwaitTest {
         String different = waiting.until(notSameAs("different"));
         String excluded = waiting.until(notIn(List.of("one", "two")));
         AwaitResult<String, Integer> narrowed = waiting.tryUntil(instanceOf(Integer.class));
-        AwaitResult<Optional<String>, Integer> nested = await(() -> Optional.of("ready"))
+        AwaitResult<Optional<String>, Integer> nested = awaitOptional(() -> Optional.of("ready"))
                 .usingTime(time, time).upTo(ofNanos(1)).tryUntil(hasValue(instanceOf(Integer.class)));
         Number broadened = await(() -> 1).until(instanceOf(Number.class));
 
@@ -175,11 +173,11 @@ class ObjectAndOptionalAwaitTest {
         var items = Arrays.asList("value", null);
         Optional<String> empty = Optional.empty();
 
-        String missing = await(() -> items).usingTime(time, time).upTo(ofNanos(1))
+        String missing = awaitCollection(() -> items).usingTime(time, time).upTo(ofNanos(1))
                 .until(CollectionConditions.single(isNull).because("one missing value"));
-        Optional<String> nested = await(() -> Optional.of(empty)).usingTime(time, time).upTo(ofNanos(1))
+        Optional<String> nested = awaitOptional(() -> Optional.of(empty)).usingTime(time, time).upTo(ofNanos(1))
                 .until(hasValue(absent).because("inner optional is empty"));
-        Optional<String> mapped = await(() -> Map.of("key", empty)).usingTime(time, time).upTo(ofNanos(1))
+        Optional<String> mapped = awaitMap(() -> Map.of("key", empty)).usingTime(time, time).upTo(ofNanos(1))
                 .until(MapConditions.valueFor("key", absent).because("mapped optional is empty"));
 
         assertNull(missing);
@@ -192,7 +190,7 @@ class ObjectAndOptionalAwaitTest {
         var pollingTime = new FakeTime(0);
         var equalValue = new Object();
 
-        assertSame(equalValue, await(() -> Optional.of(equalValue)).usingTime(pollingTime, pollingTime)
+        assertSame(equalValue, awaitOptional(() -> Optional.of(equalValue)).usingTime(pollingTime, pollingTime)
                 .until(hasValue(equalTo(equalValue))));
     }
 
@@ -293,13 +291,13 @@ class ObjectAndOptionalAwaitTest {
     void optionalOverloadsReturnValuesAndNarrowedTypes() {
         var pollingTime = new FakeTime(0);
         java.util.concurrent.Callable<java.util.Optional<Object>> source = () -> Optional.of("ready");
-        var waiting = await(source).usingTime(pollingTime, pollingTime);
+        var waiting = awaitOptional(source).usingTime(pollingTime, pollingTime);
 
         Object expected = waiting.until(OptionalConditions.hasValue(Conditions.equalTo((Object) "ready")));
         Object selected = waiting.until(OptionalConditions.hasValue(Conditions.matches(value -> value.toString().startsWith("r"))));
         String narrowed = waiting.until(OptionalConditions.hasValue(instanceOf(String.class)));
-        String nested = await(() -> Optional.of("ready")).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(StringConditions.startsWith("rea")));
-        Integer transformed = await(() -> Optional.of("ready").map(String::length)).usingTime(pollingTime, pollingTime).until(OptionalConditions.present);
+        String nested = awaitOptional(() -> Optional.of("ready")).usingTime(pollingTime, pollingTime).until(OptionalConditions.hasValue(StringConditions.startsWith("rea")));
+        Integer transformed = awaitOptional(() -> Optional.of("ready").map(String::length)).usingTime(pollingTime, pollingTime).until(OptionalConditions.present);
 
         assertEquals("ready", expected);
         assertEquals("ready", selected);

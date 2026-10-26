@@ -5,10 +5,8 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
+import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
+import static io.github.gromoff97.awium.MapConditions.awaitMap;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
@@ -27,7 +25,7 @@ class CompositionDiagnosticsTest {
         List<Optional<String>> observations = asList(null, Optional.empty());
         for (var actual : observations) {
             var time = new FakeTime(0);
-            var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+            var waiting = awaitOptional(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
             var selected = hasValue(equalTo("Bob").because("customer is required"));
             var typed = hasValue(instanceOf(Integer.class).because("customer is required"));
             var selectedResult = waiting.tryUntil(selected);
@@ -56,7 +54,7 @@ class CompositionDiagnosticsTest {
         var time = new FakeTime(0);
         var nested = equalTo("Bob");
         var selected = hasValue(nested).because("customer is required");
-        var result = await(observations::next).usingTime(time, time).every(ofNanos(1)).tryUntil(selected);
+        var result = awaitOptional(observations::next).usingTime(time, time).every(ofNanos(1)).tryUntil(selected);
 
         assertEquals("Bob", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
         assertEquals(3, result.totalAttempts());
@@ -76,7 +74,7 @@ class CompositionDiagnosticsTest {
     void missingKeyAndNestedMismatchReportTheirOwnExpectedValues() {
         for (Map<String, String> actual : asList(null, Map.<String, String>of(), Map.of("customerId", "Alice"))) {
             var time = new FakeTime(0);
-            var result = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).tryUntil(
+            var result = awaitMap(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).tryUntil(
                     valueFor("customerId", equalTo("Bob")).because("customer is required"));
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
             assertEquals(TIMEOUT, failure.reason());
@@ -92,7 +90,7 @@ class CompositionDiagnosticsTest {
         var observations = List.of(Map.<String, String>of(), Map.of("customerId", "Alice"), Map.of("customerId", "Bob"));
         int[] calls = {0};
         var time = new FakeTime(0);
-        var result = await(() -> observations.get(calls[0]++)).usingTime(time, time).every(ofNanos(1)).tryUntil(
+        var result = awaitMap(() -> observations.get(calls[0]++)).usingTime(time, time).every(ofNanos(1)).tryUntil(
                 valueFor("customerId", equalTo("Bob")).because("customer is required"));
 
         assertEquals("Bob", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
@@ -116,7 +114,7 @@ class CompositionDiagnosticsTest {
         Condition.MapValueCondition<Map<? super String, ?>, String, Condition.Reference<?>> selected = valueFor("customerId", conditionPerWait("nested", () -> {
             throw new AssertionError("nested factory must not run before extraction succeeds");
         }));
-        var failure = assertFailure(TIMEOUT, () -> await(() -> Map.<String, String>of())
+        var failure = assertFailure(TIMEOUT, () -> awaitMap(() -> Map.<String, String>of())
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).until(selected, selected));
         assertTrue(failure.getMessage().contains("Expected: customerId"), failure.getMessage());
         assertTrue(failure.getMessage().contains("Sequence (captured 0 of 2)"), failure.getMessage());
@@ -135,7 +133,7 @@ class CompositionDiagnosticsTest {
         };
         var selected = valueFor(key, equalTo("Bob"));
         assertEquals(0, renders[0]);
-        var failure = assertFailure(TIMEOUT, () -> await(() -> Map.<Object, String>of())
+        var failure = assertFailure(TIMEOUT, () -> awaitMap(() -> Map.<Object, String>of())
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).until(selected));
         assertNull(failure.getCause());
         assertArrayEquals(new Throwable[]{formattingFailure}, failure.getSuppressed());
@@ -153,7 +151,7 @@ class CompositionDiagnosticsTest {
             var selected = valueFor("customerId", conditionPerWait("nested", () -> {
                 throw new AssertionError("nested factory must not run before extraction succeeds");
             })).because("customer is required");
-            var waiting = await(() -> actual);
+            var waiting = awaitMap(() -> actual);
 
             var result = waiting.tryUntil(selected);
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();

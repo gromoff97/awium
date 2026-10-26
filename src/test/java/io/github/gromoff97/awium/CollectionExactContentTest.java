@@ -10,10 +10,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static java.util.Arrays.asList;
-import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
@@ -137,7 +133,7 @@ class CollectionExactContentTest {
     void anyOrderMatchingIgnoresPermutationButRetainsMultiplicity() {
         var actual = new ArrayList<>(List.of("a", "b", "a"));
         var time = new FakeTime(0);
-        var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1));
+        var waiting = awaitCollection(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1));
 
         for (var expected : List.of(List.of("a", "b", "a"), List.of("b", "a", "a"), List.of("a", "a", "b"))) {
             assertSame(actual, waiting.until(containsExactlyInAnyOrder(expected).because("same multiplicities")));
@@ -161,9 +157,9 @@ class CollectionExactContentTest {
         java.util.concurrent.Callable<ProbeList<ThrowingEquals>> equalitySource = () -> brokenEquality;
 
         assertSame(iteratorCause, assertFailure(CONDITION_FAILED,
-                () -> await(iteratorSource).usingTime(pollingTime, pollingTime).until(doesNotContainExactly(List.of("a")))).getCause());
+                () -> awaitCollection(iteratorSource).usingTime(pollingTime, pollingTime).until(doesNotContainExactly(List.of("a")))).getCause());
         assertSame(equalityCause, assertFailure(CONDITION_FAILED,
-                () -> await(equalitySource).usingTime(pollingTime, pollingTime).until(doesNotContainExactly(asList(new ThrowingEquals(null))))).getCause());
+                () -> awaitCollection(equalitySource).usingTime(pollingTime, pollingTime).until(doesNotContainExactly(asList(new ThrowingEquals(null))))).getCause());
     }
 
     @Test
@@ -182,7 +178,7 @@ class CollectionExactContentTest {
         FakeTime time = new FakeTime(0);
 
         var failure = assertFailure(TIMEOUT,
-                () -> await(() -> {
+                () -> awaitCollection(() -> {
                     time.advanceNanos(2);
                     return actual;
                 }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))

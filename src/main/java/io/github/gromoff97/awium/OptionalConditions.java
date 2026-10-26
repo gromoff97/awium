@@ -27,8 +27,13 @@ public final class OptionalConditions {
      * @param source repeatedly invoked source
      * @return immutable wait configuration
      */
-    public static <VALUE> Await<Optional<VALUE>, VALUE, Void> await(Callable<? extends Optional<VALUE>> source) {
+    public static <VALUE> Await<Optional<VALUE>, VALUE, Void> awaitOptional(Callable<? extends Optional<VALUE>> source) {
         return new Await<>(source, WaitConfiguration.DEFAULT);
+    }
+
+    /** Short form of {@link #awaitOptional(Callable)}. */
+    public static <VALUE> Await<Optional<VALUE>, VALUE, Void> ao(Callable<? extends Optional<VALUE>> source) {
+        return awaitOptional(source);
     }
 
     /** Selects the present value if it matches, retaining the source's contained type. */

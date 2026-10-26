@@ -13,9 +13,7 @@ import org.junit.jupiter.api.Test;
 import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
 import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
 import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.await;
-import static io.github.gromoff97.awium.MapConditions.await;
+import static io.github.gromoff97.awium.MapConditions.awaitMap;
 import static io.github.gromoff97.awium.AttemptRecord.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
@@ -864,7 +862,7 @@ class DiagnosticsSnapshotTest {
                 for (var check : checks) {
                     renders[0] = renders[1] = 0;
                     var time = new FakeTime(0);
-                    var waiting = await(() -> {
+                    var waiting = awaitMap(() -> {
                         time.advanceNanos(2);
                         return actual;
                     }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
