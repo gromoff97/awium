@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
@@ -16,11 +17,35 @@ import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AssertionAdapterTest {
+
+    @Test
+    void interruptedAssertionsRetainTheirCauseInBothTerminals() {
+        for (boolean capture : List.of(false, true)) {
+            var cause = new AssertionError("payment is not ready");
+            var check = asserted((String value) -> {
+                Thread.currentThread().interrupt();
+                throw cause;
+            }).because("payment state");
+            try {
+                var waiting = await(() -> "pending");
+                var failure = capture
+                        ? assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(check)).failure()
+                        : assertThrows(AwaitExecutionException.class, () -> waiting.until(check)).failure();
+                assertEquals(INTERRUPTED, failure.reason());
+                assertSame(cause, failure.cause());
+                assertTrue(failure.message().contains("Because: payment state"));
+                assertTrue(Thread.currentThread().isInterrupted());
+            } finally {
+                Thread.interrupted();
+            }
+        }
+    }
 
     @Test
     void namedConditionDelegatesOnceAndSuppliesItsDescription() {

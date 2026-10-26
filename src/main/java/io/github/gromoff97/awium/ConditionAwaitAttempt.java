@@ -54,9 +54,11 @@ final class ConditionAwaitAttempt<OBSERVED, RESULT> implements AwaitAttempt<OBSE
     }
 
     static <RESULT> AttemptResult<? extends RESULT> withInterruption(AttemptResult<? extends RESULT> result) {
-        if (!(result instanceof AttemptResult.Uncontrolled<?>) && Thread.currentThread().isInterrupted()) {
-            var interruption = new InterruptedException("caller thread interrupt flag was set");
-            return new AttemptResult.Uncontrolled<>(interruption, result.condition(), result.progress());
+        if (result instanceof AttemptResult.Evaluated<?> evaluated && Thread.currentThread().isInterrupted()) {
+            var cause = evaluated.result().cause();
+            return new AttemptResult.Uncontrolled<>(cause == null
+                    ? new InterruptedException("caller thread interrupt flag was set") : cause,
+                    result.condition(), result.progress());
         }
         return result;
     }

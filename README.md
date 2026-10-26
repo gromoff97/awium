@@ -614,7 +614,9 @@ execution state. Callbacks and user-owned mutable values remain responsible
 for any synchronization they need.
 
 An interrupt flag set before or during the wait stops polling. Awium preserves
-the flag when reading the clock and formatting diagnostics.
+the flag when reading the clock and formatting diagnostics. A cause already
+returned by the condition is retained, including an assertion mismatch;
+a service interruption cause is created only when no cause is available.
 `until(...)` throws `AwaitExecutionException` with
 `failure().reason() == INTERRUPTED`; `tryUntil(...)` returns that reason in
 `AwaitResult.Failed`. A callback that throws `InterruptedException` after

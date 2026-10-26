@@ -481,6 +481,21 @@ class ObservationTest {
         }
     }
 
+    @ParameterizedTest
+    @MethodSource("throwables")
+    void returnedMismatchCauseSurvivesTheInterruptFlag(Throwable failure) {
+        var actual = new Object();
+        var attempt = attempt(() -> actual, value -> {
+            currentThread().interrupt();
+            return unsatisfied("not ready", failure);
+        });
+
+        var outcome = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, attempt.outcome());
+        assertSame(failure, outcome.cause());
+        assertSame(actual, outcome.observed());
+        assertTrue(currentThread().isInterrupted());
+    }
+
     private static Stream<Throwable> throwables() {
         return Stream.of(new Throwable("direct"), new Exception("checked"), new InterruptedException("interrupted"),
                 new RuntimeException("runtime"),
