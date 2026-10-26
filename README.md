@@ -122,9 +122,11 @@ values remain unchanged. Each factory-backed stage gets its own fresh evaluator
 for every terminal call. One condition still returns one value; zero conditions
 are invalid. A comma between terminal arguments always means ordered capture.
 Comparisons and preserving checks can be mixed: `equalTo(expectedPayment)` and
-`matches(Payment::paid)` both capture the original payment. Selections and typed
-transformations keep their own result rules. A selection followed by a value
-check belongs inside the selection condition instead.
+`matches(Payment::paid)` both capture the original payment. A sequence must use
+source-preserving checks, selections of the same source component, or conditions
+with a declared result type throughout. These categories cannot currently be
+mixed, even when their successful values have the same type. A selection followed
+by a value check belongs inside the selection condition instead.
 
 Type-narrowing stages and nested type selections can also be captured in order:
 
@@ -301,6 +303,12 @@ retained in diagnostics. Callback failures stop evaluation and retain their
 original cause. If a callback sets the thread's interrupt flag, selection stops
 before invoking the next callback. A nested factory initializes lazily on the first candidate and
 keeps its state across candidates and retries within that stage.
+
+Selections such as bare `present`, `single`, and `valueFor(key)` obtain their
+result type from the source at the terminal. They cannot themselves be nested:
+`single(present)` and `single(single)` are not supported. Nested selections with
+a declared result type, such as `single(instanceOf(Payment.class))`, can be used
+as conditions inside another selection or quantifier.
 
 Type selection uses the same composition:
 
@@ -511,7 +519,8 @@ Callable<Optional<Payment>> source = () -> null;
 await(source).until(isNull);
 ```
 
-JDK variables and references to their `call` method retain the same selections:
+For sources with concrete contained types, JDK variables and references to their
+`call` method retain the same selections:
 
 ```java
 import java.util.concurrent.Callable;
