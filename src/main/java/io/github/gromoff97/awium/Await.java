@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.MapValueCondition;
+import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import java.time.Duration;
 import java.util.Collection;
@@ -79,43 +80,49 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
         return new Await<>(source, configuration);
     }
 
-    public ELEMENT until(SelectedCondition<? super OBSERVED> condition) {
+    public ELEMENT until(SelectedCondition<? super OBSERVED, ? super ELEMENT, ? super Reference<? super ELEMENT>> condition) {
         return complete(ConditionAwaitAttempt.bind(required(condition).definition));
     }
 
-    public MAP_VALUE until(MapValueCondition<? super OBSERVED> condition) {
+    public MAP_VALUE until(MapValueCondition<? super OBSERVED, ? super MAP_VALUE, ? super Reference<? super MAP_VALUE>> condition) {
         return complete(ConditionAwaitAttempt.bind(required(condition).definition));
     }
 
-    public AwaitResult<OBSERVED, ELEMENT> tryUntil(SelectedCondition<? super OBSERVED> condition) {
+    public AwaitResult<OBSERVED, ELEMENT> tryUntil(
+            SelectedCondition<? super OBSERVED, ? super ELEMENT, ? super Reference<? super ELEMENT>> condition) {
         return capture(ConditionAwaitAttempt.bind(required(condition).definition));
     }
 
-    public AwaitResult<OBSERVED, MAP_VALUE> tryUntil(MapValueCondition<? super OBSERVED> condition) {
+    public AwaitResult<OBSERVED, MAP_VALUE> tryUntil(
+            MapValueCondition<? super OBSERVED, ? super MAP_VALUE, ? super Reference<? super MAP_VALUE>> condition) {
         return capture(ConditionAwaitAttempt.bind(required(condition).definition));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final List<ELEMENT> until(SelectedCondition<? super OBSERVED>... conditions) {
+    public final List<ELEMENT> until(
+            SelectedCondition<? super OBSERVED, ? super ELEMENT, ? super Reference<? super ELEMENT>>... conditions) {
         return until(ConditionSupport.captured(conditions));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final List<MAP_VALUE> until(MapValueCondition<? super OBSERVED>... conditions) {
+    public final List<MAP_VALUE> until(
+            MapValueCondition<? super OBSERVED, ? super MAP_VALUE, ? super Reference<? super MAP_VALUE>>... conditions) {
         return until(ConditionSupport.captured(conditions));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final AwaitResult<OBSERVED, List<ELEMENT>> tryUntil(SelectedCondition<? super OBSERVED>... conditions) {
+    public final AwaitResult<OBSERVED, List<ELEMENT>> tryUntil(
+            SelectedCondition<? super OBSERVED, ? super ELEMENT, ? super Reference<? super ELEMENT>>... conditions) {
         return tryUntil(ConditionSupport.captured(conditions));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final AwaitResult<OBSERVED, List<MAP_VALUE>> tryUntil(MapValueCondition<? super OBSERVED>... conditions) {
+    public final AwaitResult<OBSERVED, List<MAP_VALUE>> tryUntil(
+            MapValueCondition<? super OBSERVED, ? super MAP_VALUE, ? super Reference<? super MAP_VALUE>>... conditions) {
         return tryUntil(ConditionSupport.captured(conditions));
     }
 

@@ -84,7 +84,7 @@ class TypedCollectionSelectionTest {
             int[] calls = {0};
             return value -> ++calls[0] == 2 ? ConditionResult.satisfied() : ConditionResult.unsatisfied("one more");
         });
-        List<Condition.SelectedCondition<? super List<User>>> selectors = List.of(
+        List<Condition.SelectedCondition<? super List<User>, ? super User, ? super Condition.Reference<? super User>>> selectors = List.of(
                 first(secondObservation), last(secondObservation), element(0, secondObservation));
         var time = new FakeTime(0);
         int[] reads = {0};

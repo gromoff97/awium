@@ -2,9 +2,9 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Condition.SourceCondition;
-import io.github.gromoff97.awium.Condition.Reference;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -57,7 +57,7 @@ final class ConditionSupport {
         return new PreservingCondition<>(definition);
     }
 
-    static <OBSERVED> SelectedCondition<OBSERVED> selected(String description,
+    static <OBSERVED> SelectedCondition<OBSERVED, Object, Reference<?>> selected(String description,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<?>> evaluator) {
         return new SelectedCondition<>(condition(description, null, evaluator));
     }
@@ -193,7 +193,8 @@ final class ConditionSupport {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <OBSERVED, ELEMENT> Condition<OBSERVED, List<ELEMENT>> captured(SelectedCondition<? super OBSERVED>... conditions) {
+    static <OBSERVED, ELEMENT> Condition<OBSERVED, List<ELEMENT>> captured(
+            SelectedCondition<? super OBSERVED, ? super ELEMENT, ? super Reference<? super ELEMENT>>... conditions) {
         var stages = stages(conditions);
         return new Condition<>("conditions are satisfied in order", null, null,
                 () -> new SequenceExecution<OBSERVED, ELEMENT>(stages.stream()
@@ -202,7 +203,8 @@ final class ConditionSupport {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <OBSERVED, MAP_VALUE> Condition<OBSERVED, List<MAP_VALUE>> captured(MapValueCondition<? super OBSERVED>... conditions) {
+    static <OBSERVED, MAP_VALUE> Condition<OBSERVED, List<MAP_VALUE>> captured(
+            MapValueCondition<? super OBSERVED, ? super MAP_VALUE, ? super Reference<? super MAP_VALUE>>... conditions) {
         var stages = stages(conditions);
         return new Condition<>("conditions are satisfied in order", null, null,
                 () -> new SequenceExecution<OBSERVED, MAP_VALUE>(stages.stream()

@@ -1,8 +1,9 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
+import io.github.gromoff97.awium.Condition.SourceCondition;
 import java.util.Optional;
 
 import static io.github.gromoff97.awium.Condition.required;
@@ -12,7 +13,7 @@ import static io.github.gromoff97.awium.ConditionSupport.compose;
 
 public final class OptionalConditions {
 
-    public static final SelectedCondition<Optional<?>> present =
+    public static final SelectedCondition<Optional<?>, Object, Reference<?>> present =
             ConditionSupport.selected("optional is present", OptionalConditions::present);
     public static final PreservingCondition<Optional<?>> absent = ConditionSupport.preservingNonNull(
             "optional", "optional is absent", "optional was present", Optional::isEmpty);
@@ -20,7 +21,7 @@ public final class OptionalConditions {
     private OptionalConditions() {}
 
     /** Selects the present value if it matches, retaining the source's contained type. */
-    public static <VALUE> SelectedCondition<Optional<? extends VALUE>> hasValue(CheckedPredicate<? super VALUE> predicate) {
+    public static <VALUE> SelectedCondition<Optional<?>, VALUE, Reference<?>> hasValue(CheckedPredicate<? super VALUE> predicate) {
         return hasValue(Conditions.matches(predicate));
     }
 
@@ -29,14 +30,10 @@ public final class OptionalConditions {
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
-    public static <VALUE> SelectedCondition<Optional<? extends VALUE>> hasValue(PreservingCondition<? super VALUE> nested) {
-        return new SelectedCondition<>(compose("optional value: ", required(nested).definition, null, OptionalConditions::present,
-                () -> ConditionAwaitAttempt.bind(nested.definition)));
-    }
-
-    public static <EXPECTED> SelectedCondition<Optional<? super EXPECTED>> hasValue(ComparisonCondition<EXPECTED> nested) {
-        return new SelectedCondition<>(compose("optional value: ", required(nested).definition, null, OptionalConditions::present,
-                () -> ConditionAwaitAttempt.bind(nested.definition)));
+    public static <CHECKED, REFERENCE> SelectedCondition<Optional<?>, CHECKED, REFERENCE> hasValue(
+            SourceCondition<CHECKED, REFERENCE> nested) {
+        return new SelectedCondition<>(compose("optional value: ", required(nested).definition(), null, OptionalConditions::present,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 
     private static <VALUE> ConditionResult<VALUE> present(Optional<? extends VALUE> actual) {

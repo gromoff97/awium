@@ -192,9 +192,9 @@ class CollectionSelectionConditionsTest {
     @Test
     void singleMatchingConditionRequiresExactlyOneMatch() {
         ConditionResult<?> none = evaluate(
-                CollectionConditions.single(matches(value -> value > 10)), List.of(1, 2));
+                CollectionConditions.single(matches((Integer value) -> value > 10)), List.of(1, 2));
         ConditionResult<?> many = evaluate(
-                CollectionConditions.single(matches(value -> value > 0)), List.of(1, 2));
+                CollectionConditions.single(matches((Integer value) -> value > 0)), List.of(1, 2));
 
         assertEquals(Unsatisfied.class, none.getClass());
         assertEquals(Unsatisfied.class, many.getClass());

@@ -73,13 +73,13 @@ class FactoryGrammarTest {
         assertNullRejected("condition", () -> MapConditions.singleEntry((Condition.ComparisonCondition<Map.Entry<String, String>>) null));
 
         var optional = await((OptionalSource<String>) Optional::empty).usingTime(pollingTime, pollingTime).every(ofSeconds(20));
-        assertNullRejected("condition", () -> optional.until((SelectedCondition<Optional<?>>) null));
+        assertNullRejected("condition", () -> optional.until((SelectedCondition<Optional<?>, Object, Condition.Reference<?>>) null));
 
         var collection = await((CollectionSource<Collection<String>>) List::of).usingTime(pollingTime, pollingTime).every(ofSeconds(20));
-        assertNullRejected("condition", () -> collection.until((SelectedCondition<Collection<?>>) null));
+        assertNullRejected("condition", () -> collection.until((SelectedCondition<Collection<?>, Object, Condition.Reference<?>>) null));
 
         var map = await((MapSource<Map<String, String>>) Map::of).usingTime(pollingTime, pollingTime).every(ofSeconds(20));
-        assertNullRejected("condition", () -> map.until((SelectedCondition<Map<?, ?>>) null));
+        assertNullRejected("condition", () -> map.until((SelectedCondition<Map<?, ?>, Object, Condition.Reference<?>>) null));
     }
 
     private static void assertNullRejected(String argument, Executable action) {

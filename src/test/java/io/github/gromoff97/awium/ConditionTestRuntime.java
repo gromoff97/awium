@@ -24,11 +24,11 @@ final class ConditionTestRuntime {
     }
 
     static <S> ConditionResult<?> evaluate(
-            SelectedCondition<? super S> condition, S actual) {
+            SelectedCondition<? super S, ?, ?> condition, S actual) {
         return evaluated(new ConditionAwaitAttempt<>(condition.definition).probe(actual));
     }
 
-    static <S> ConditionResult<?> evaluate(MapValueCondition<? super S> condition, S actual) {
+    static <S> ConditionResult<?> evaluate(MapValueCondition<? super S, ?, ?> condition, S actual) {
         return evaluated(new ConditionAwaitAttempt<>(condition.definition).probe(actual));
     }
 
@@ -39,15 +39,15 @@ final class ConditionTestRuntime {
         };
     }
 
-    static String description(SelectedCondition<?> condition) {
+    static String description(SelectedCondition<?, ?, ?> condition) {
         return condition.definition.description();
     }
 
-    static String explanation(SelectedCondition<?> condition) {
+    static String explanation(SelectedCondition<?, ?, ?> condition) {
         return condition.definition.explanation();
     }
 
-    static String explanation(MapValueCondition<?> condition) {
+    static String explanation(MapValueCondition<?, ?, ?> condition) {
         return condition.definition.explanation();
     }
 

@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Condition.Reference;
+import io.github.gromoff97.awium.Condition.SelectedCondition;
+import io.github.gromoff97.awium.Condition.SourceCondition;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -37,7 +37,7 @@ import static java.util.Objects.requireNonNull;
 /** Collection checks and selections; predicate quantifiers also accept non-collection iterables. */
 public final class CollectionConditions {
 
-    public static final SelectedCondition<Collection<?>> single = selected("collection has a single element",
+    public static final SelectedCondition<Collection<?>, Object, Reference<?>> single = selected("collection has a single element",
             actual -> ConditionSupport.single("collection", actual, ConditionResult::satisfied));
     public static final PreservingCondition<Collection<?>> empty = preserving("collection is empty", "collection was not empty", Collection::isEmpty);
     public static final PreservingCondition<Collection<?>> nonEmpty = preserving("collection is not empty", "collection was empty", actual -> !actual.isEmpty());
@@ -90,24 +90,20 @@ public final class CollectionConditions {
     }
 
     /** Selects the only matching element, retaining the source's element type. */
-    public static <ELEMENT> SelectedCondition<Collection<? extends ELEMENT>> single(CheckedPredicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> SelectedCondition<Collection<?>, ELEMENT, Reference<?>> single(CheckedPredicate<? super ELEMENT> predicate) {
         return single(Conditions.matches(predicate));
     }
 
-    public static <ELEMENT> SelectedCondition<Collection<? extends ELEMENT>> single(PreservingCondition<? super ELEMENT> nested) {
-        return new SelectedCondition<>(ConditionSupport.single("collection", required(nested).definition, actual -> actual,
-                () -> ConditionAwaitAttempt.bind(nested.definition)));
+    public static <CHECKED, REFERENCE> SelectedCondition<Collection<?>, CHECKED, REFERENCE> single(
+            SourceCondition<CHECKED, REFERENCE> nested) {
+        return new SelectedCondition<>(ConditionSupport.single("collection", required(nested).definition(), actual -> actual,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 
     /** Selects a unique matching result from an iterable using a condition with a declared result type. */
     public static <ELEMENT, RESULT> Condition<Iterable<? extends ELEMENT>, RESULT> single(Condition<? super ELEMENT, RESULT> nested) {
         return ConditionSupport.single("collection", required(nested), actual -> actual,
                 () -> new ConditionAwaitAttempt<>(nested));
-    }
-
-    public static <EXPECTED> SelectedCondition<Collection<? super EXPECTED>> single(ComparisonCondition<EXPECTED> nested) {
-        return new SelectedCondition<>(ConditionSupport.single("collection", required(nested).definition, actual -> actual,
-                () -> ConditionAwaitAttempt.bind(nested.definition)));
     }
 
     public static <ELEMENT> PreservingCondition<Iterable<? extends ELEMENT>> all(CheckedPredicate<? super ELEMENT> predicate) {
@@ -243,23 +239,19 @@ public final class CollectionConditions {
                 actual -> !containsSubsequence(actual, values));
     }
 
-    public static final SelectedCondition<SequencedCollection<?>> first = selected("collection has a first element",
+    public static final SelectedCondition<SequencedCollection<?>, Object, Reference<?>> first = selected("collection has a first element",
             CollectionConditions::selectFirst);
 
-    public static <ELEMENT> SelectedCondition<SequencedCollection<? extends ELEMENT>> first(CheckedPredicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> SelectedCondition<SequencedCollection<?>, ELEMENT, Reference<?>> first(
+            CheckedPredicate<? super ELEMENT> predicate) {
         return first(Conditions.matches(predicate));
     }
 
     /** Selects the first matching element, retaining the source's element type. */
-    public static <ELEMENT> SelectedCondition<SequencedCollection<? extends ELEMENT>> first(PreservingCondition<? super ELEMENT> nested) {
-        return new SelectedCondition<>(matching("collection has a first matching value: ", required(nested).definition,
-                actual -> actual, () -> ConditionAwaitAttempt.bind(nested.definition)));
-    }
-
-    /** Selects the first compatible comparison match, retaining the source's element type. */
-    public static <EXPECTED> SelectedCondition<SequencedCollection<? super EXPECTED>> first(ComparisonCondition<EXPECTED> nested) {
-        return new SelectedCondition<>(matching("collection has a first matching value: ", required(nested).definition,
-                actual -> actual, () -> ConditionAwaitAttempt.bind(nested.definition)));
+    public static <CHECKED, REFERENCE> SelectedCondition<SequencedCollection<?>, CHECKED, REFERENCE> first(
+            SourceCondition<CHECKED, REFERENCE> nested) {
+        return new SelectedCondition<>(matching("collection has a first matching value: ", required(nested).definition(),
+                actual -> actual, () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 
     /**
@@ -276,23 +268,19 @@ public final class CollectionConditions {
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
-    public static final SelectedCondition<SequencedCollection<?>> last = selected("collection has a last element",
+    public static final SelectedCondition<SequencedCollection<?>, Object, Reference<?>> last = selected("collection has a last element",
             actual -> selectFirst(actual == null ? null : actual.reversed()));
 
-    public static <ELEMENT> SelectedCondition<SequencedCollection<? extends ELEMENT>> last(CheckedPredicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> SelectedCondition<SequencedCollection<?>, ELEMENT, Reference<?>> last(
+            CheckedPredicate<? super ELEMENT> predicate) {
         return last(Conditions.matches(predicate));
     }
 
     /** Selects the last matching element, retaining the source's element type. */
-    public static <ELEMENT> SelectedCondition<SequencedCollection<? extends ELEMENT>> last(PreservingCondition<? super ELEMENT> nested) {
-        return new SelectedCondition<>(matching("collection has a last matching value: ", required(nested).definition,
-                SequencedCollection::reversed, () -> ConditionAwaitAttempt.bind(nested.definition)));
-    }
-
-    /** Selects the last compatible comparison match, retaining the source's element type. */
-    public static <EXPECTED> SelectedCondition<SequencedCollection<? super EXPECTED>> last(ComparisonCondition<EXPECTED> nested) {
-        return new SelectedCondition<>(matching("collection has a last matching value: ", required(nested).definition,
-                SequencedCollection::reversed, () -> ConditionAwaitAttempt.bind(nested.definition)));
+    public static <CHECKED, REFERENCE> SelectedCondition<SequencedCollection<?>, CHECKED, REFERENCE> last(
+            SourceCondition<CHECKED, REFERENCE> nested) {
+        return new SelectedCondition<>(matching("collection has a last matching value: ", required(nested).definition(),
+                SequencedCollection::reversed, () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 
     /**
@@ -309,7 +297,7 @@ public final class CollectionConditions {
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
-    public static SelectedCondition<List<?>> element(int index) {
+    public static SelectedCondition<List<?>, Object, Reference<?>> element(int index) {
         if (index < 0) {
             throw new IllegalArgumentException("index must be non-negative");
         }
@@ -317,24 +305,18 @@ public final class CollectionConditions {
                 actual -> selectElement(actual, index));
     }
 
-    public static <ELEMENT> SelectedCondition<List<? extends ELEMENT>> element(int index, CheckedPredicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> SelectedCondition<List<?>, ELEMENT, Reference<?>> element(
+            int index, CheckedPredicate<? super ELEMENT> predicate) {
         return element(index, Conditions.matches(predicate));
     }
 
     /** Checks the indexed element, retaining the source's element type. */
-    public static <ELEMENT> SelectedCondition<List<? extends ELEMENT>> element(int index, PreservingCondition<? super ELEMENT> nested) {
+    public static <CHECKED, REFERENCE> SelectedCondition<List<?>, CHECKED, REFERENCE> element(
+            int index, SourceCondition<CHECKED, REFERENCE> nested) {
         var extraction = element(index);
-        return new SelectedCondition<>(ConditionSupport.compose("element at index " + index + " matches: ", required(nested).definition,
+        return new SelectedCondition<>(ConditionSupport.compose("element at index " + index + " matches: ", required(nested).definition(),
                 extraction.definition, actual -> selectElement(actual, index),
-                () -> ConditionAwaitAttempt.bind(nested.definition)));
-    }
-
-    /** Compares the indexed element, retaining the source's element type. */
-    public static <EXPECTED> SelectedCondition<List<? super EXPECTED>> element(int index, ComparisonCondition<EXPECTED> nested) {
-        var extraction = element(index);
-        return new SelectedCondition<>(ConditionSupport.compose("element at index " + index + " matches: ", required(nested).definition,
-                extraction.definition, actual -> selectElement(actual, index),
-                () -> ConditionAwaitAttempt.bind(nested.definition)));
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 
     /**

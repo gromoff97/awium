@@ -253,6 +253,9 @@ Selectors that accept nested conditions also accept a predicate directly:
 for its own explanation, assertion adapter, or per-wait callback state.
 `singleEntry((key, value) -> ...)` accepts a two-argument check like the map's
 entry quantifiers and retains the source's key and value types.
+Nested entry conditions can accept exact `Map.Entry<KEY, VALUE>` parameters,
+including after `because(...)`. Their key and value types must match the source;
+read-only wildcard entry checks are also supported.
 
 The source is read once per attempt. `singleEntry(...)` applies the same rule to
 map entries; `hasValue(...)` checks an optional value.
@@ -633,6 +636,7 @@ checks; `./gradlew pitest` runs mutation testing.
 Its typed families let terminal overloads preserve or select the source's type.
 Preserving checks and comparisons share `SourceCondition`, whose input and
 expected-value bounds allow mixed stages while retaining the complete source type.
+Selector contracts check the container type and the nested callback's input separately.
 Each terminal call creates fresh `ConditionAwaitAttempt` instances, which
 initialize callbacks lazily and convert thrown failures into internal
 uncontrolled results. `SequenceExecution` owns ordered stage progress and

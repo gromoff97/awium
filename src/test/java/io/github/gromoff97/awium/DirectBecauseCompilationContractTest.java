@@ -168,8 +168,11 @@ class DirectBecauseCompilationContractTest {
                 "String wrong = await(map).until(valueFor(\"key\").because(\"wrong\"));",
                 "Map.Entry<String, Number> wrong = await(map).until(valueFor(\"key\").because(\"wrong\"));",
                 "Number wrong = await(map).until(entryFor(\"key\").because(\"wrong\"));",
-                "Condition.SelectedCondition<Map<?, ?>> wrong = valueFor(\"key\").because(\"wrong\");",
+                "Condition.SelectedCondition<Map<?, ?>, Object, io.github.gromoff97.awium.Condition.Reference<?>> wrong = valueFor(\"key\").because(\"wrong\");",
                 "await(map).until(singleEntry(matches((Map.Entry<String, Object> entry) -> entry.setValue(new Object()) != null)).because(\"wrong\"));",
+                "await(map).until(singleEntry(matches((Map.Entry<Object, Number> entry) -> true)).because(\"wrong key input\"));",
+                "await(map).until(singleEntry(matches((Map.Entry<String, Integer> entry) -> true)).because(\"narrow value input\"));",
+                "Map.Entry<String, String> wrong = await(map).until(singleEntry(matches((Map.Entry<String, Number> entry) -> true)));",
                 "await(collection).until(single(matches(String::isBlank)).because(\"wrong\"));",
                 "AwaitResult<Map<String, Number>, String> wrong = await(map).tryUntil(valueFor(\"key\").because(\"wrong\"));",
                 "List<String> wrong = await(map).until(valueFor(\"key\").because(\"wrong\"), valueFor(\"key\"));")) {

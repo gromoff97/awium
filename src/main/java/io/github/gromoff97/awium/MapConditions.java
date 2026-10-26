@@ -3,13 +3,14 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Condition.Reference;
+import io.github.gromoff97.awium.Condition.SelectedCondition;
+import io.github.gromoff97.awium.Condition.SourceCondition;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
-import java.util.Objects;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.IntPredicate;
 
 import static io.github.gromoff97.awium.Condition.required;
@@ -36,7 +37,7 @@ import static java.util.Objects.requireNonNull;
 
 public final class MapConditions {
 
-    public static final SelectedCondition<Map<?, ?>> singleEntry = selected("map has a single entry",
+    public static final SelectedCondition<Map<?, ?>, Object, Reference<?>> singleEntry = selected("map has a single entry",
             actual -> ConditionSupport.single("map", actual == null ? null : actual.entrySet(), ConditionResult::satisfied));
     public static final PreservingCondition<Map<?, ?>> empty = preserving("map is empty", "map was not empty", Map::isEmpty);
     public static final PreservingCondition<Map<?, ?>> nonEmpty = preserving("map is not empty", "map was empty", actual -> !actual.isEmpty());
@@ -80,17 +81,17 @@ public final class MapConditions {
     }
 
     /** Selects the only entry whose key and value match, retaining the source's entry type. */
-    public static <KEY, VALUE> SelectedCondition<Map<? extends KEY, ? extends VALUE>> singleEntry(
+    public static <KEY, VALUE> SelectedCondition<Map<?, ?>, Entry<? extends KEY, ? extends VALUE>, Reference<?>> singleEntry(
             CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return singleEntry(Conditions.matches((Entry<? extends KEY, ? extends VALUE> entry) ->
                 predicate.test(entry.getKey(), entry.getValue())));
     }
 
-    public static <KEY, VALUE> SelectedCondition<Map<? extends KEY, ? extends VALUE>> singleEntry(
-            PreservingCondition<? super Entry<? extends KEY, ? extends VALUE>> nested) {
-        return new SelectedCondition<>(ConditionSupport.single("map", required(nested).definition, Map::entrySet,
-                () -> ConditionAwaitAttempt.bind(nested.definition)));
+    public static <CHECKED, REFERENCE> SelectedCondition<Map<?, ?>, CHECKED, REFERENCE> singleEntry(
+            SourceCondition<CHECKED, REFERENCE> nested) {
+        return new SelectedCondition<>(ConditionSupport.single("map", required(nested).definition(), Map::entrySet,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 
     public static <KEY, VALUE, RESULT> Condition<Map<? extends KEY, ? extends VALUE>, RESULT> singleEntry(
@@ -99,7 +100,7 @@ public final class MapConditions {
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
-    public static <KEY, VALUE> SelectedCondition<Map<? super KEY, ? super VALUE>> singleEntry(
+    public static <KEY, VALUE> SelectedCondition<Map<? super KEY, ? super VALUE>, Object, Reference<?>> singleEntry(
             ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
         return new SelectedCondition<>(ConditionSupport.single("map", required(nested).definition, Map::entrySet,
                 () -> ConditionAwaitAttempt.bind(nested.definition)));
@@ -156,12 +157,12 @@ public final class MapConditions {
         return preserving("no map value matches", "a map value matched", actual -> !matchesAny(actual.values(), predicate));
     }
 
-    public static <KEY> MapValueCondition<Map<? super KEY, ?>> valueFor(KEY key) {
+    public static <KEY> MapValueCondition<Map<? super KEY, ?>, Object, Reference<?>> valueFor(KEY key) {
         return new MapValueCondition<>(ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> value(actual, key)));
     }
 
     /** Selects the key's value if it matches, retaining the source's value type. */
-    public static <KEY, VALUE> MapValueCondition<Map<? super KEY, ? extends VALUE>> valueFor(KEY key,
+    public static <KEY, VALUE> MapValueCondition<Map<? super KEY, ?>, VALUE, Reference<?>> valueFor(KEY key,
             CheckedPredicate<? super VALUE> predicate) {
         return valueFor(key, Conditions.matches(predicate));
     }
@@ -173,25 +174,18 @@ public final class MapConditions {
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
-    public static <KEY, VALUE> MapValueCondition<Map<? super KEY, ? extends VALUE>> valueFor(KEY key,
-            PreservingCondition<? super VALUE> nested) {
-        return new MapValueCondition<>(compose("map value ", required(nested).definition,
+    public static <KEY, CHECKED, REFERENCE> MapValueCondition<Map<? super KEY, ?>, CHECKED, REFERENCE> valueFor(KEY key,
+            SourceCondition<CHECKED, REFERENCE> nested) {
+        return new MapValueCondition<>(compose("map value ", required(nested).definition(),
                 valueFor(key).definition, actual -> value(actual, key),
-                () -> ConditionAwaitAttempt.bind(nested.definition)));
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 
-    public static <KEY, EXPECTED> MapValueCondition<Map<? super KEY, ? super EXPECTED>> valueFor(KEY key,
-            ComparisonCondition<EXPECTED> nested) {
-        return new MapValueCondition<>(compose("map value ", required(nested).definition,
-                valueFor(key).definition, actual -> value(actual, key),
-                () -> ConditionAwaitAttempt.bind(nested.definition)));
-    }
-
-    public static <KEY> SelectedCondition<Map<? super KEY, ?>> entryFor(KEY key) {
+    public static <KEY> SelectedCondition<Map<? super KEY, ?>, Object, Reference<?>> entryFor(KEY key) {
         return new SelectedCondition<>(ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> findEntry(actual, key)));
     }
 
-    public static <KEY> MapValueCondition<Map<? super KEY, ?>> onlyValueFor(KEY key) {
+    public static <KEY> MapValueCondition<Map<? super KEY, ?>, Object, Reference<?>> onlyValueFor(KEY key) {
         return new MapValueCondition<>(ConditionSupport.condition("map contains only the expected key", expectedReference(key), actual ->
                 ConditionSupport.single("map", actual == null ? null : actual.entrySet(), entry ->
                         deepEquals(entry.getKey(), key) ? satisfied(entry.getValue())

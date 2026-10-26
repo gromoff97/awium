@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.SourceCondition;
+
 /** Creates typed attempts and executes them lazily, converting thrown failures into uncontrolled results. */
 final class ConditionAwaitAttempt<OBSERVED, RESULT> implements AwaitAttempt<OBSERVED, RESULT> {
 
@@ -14,6 +16,13 @@ final class ConditionAwaitAttempt<OBSERVED, RESULT> implements AwaitAttempt<OBSE
     @SuppressWarnings("unchecked")
     static <OBSERVED, RESULT> ConditionAwaitAttempt<OBSERVED, RESULT> bind(Condition<? super OBSERVED, ?> condition) {
         return (ConditionAwaitAttempt<OBSERVED, RESULT>) new ConditionAwaitAttempt<>(condition);
+    }
+
+    // Selector terminals require SOURCE_VALUE to be accepted by CHECKED; their source protocol supplies that value.
+    // This bridge is only for those nested checks. Sealed SourceCondition preserves the input instance.
+    @SuppressWarnings("unchecked")
+    static <VALUE> ConditionAwaitAttempt<VALUE, VALUE> bindSelectionCheck(SourceCondition<?, ?> condition) {
+        return (ConditionAwaitAttempt<VALUE, VALUE>) new ConditionAwaitAttempt<>(condition.definition());
     }
 
     @Override

@@ -57,7 +57,7 @@ class CompositionDiagnosticsTest {
     @Test
     void missingKeyInsideCapturedKeepsLookupContextAndDoesNotCreateTheNestedSession() {
         var time = new FakeTime(0);
-        Condition.MapValueCondition<Map<? super String, ? extends String>> selected = valueFor("customerId", conditionPerWait("nested", () -> {
+        Condition.MapValueCondition<Map<? super String, ?>, String, Condition.Reference<?>> selected = valueFor("customerId", conditionPerWait("nested", () -> {
             throw new AssertionError("nested factory must not run before extraction succeeds");
         }));
         var failure = assertFailure(TIMEOUT, () -> await(() -> Map.<String, String>of())

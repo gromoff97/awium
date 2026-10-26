@@ -67,7 +67,7 @@ class MapSelectionConditionsTest {
         MapSource<LinkedHashMap<String, Integer>> source = () -> actual;
         var waiting = await(source).usingTime(pollingTime, pollingTime);
 
-        Map.Entry<String, Integer> selected = waiting.until(MapConditions.singleEntry(matches(entry -> entry.getValue() == 2)));
+        Map.Entry<String, Integer> selected = waiting.until(MapConditions.singleEntry(matches((Map.Entry<String, Integer> entry) -> entry.getValue() == 2)));
         Map.Entry<String, Integer> byKey = waiting.until(MapConditions.entryFor("first"));
         Integer value = waiting.until(MapConditions.valueFor("second"));
         Integer nested = waiting.until(MapConditions.valueFor("second", Conditions.atLeast(2)));
@@ -175,8 +175,8 @@ class MapSelectionConditionsTest {
     void selectorsCoverMissingMultipleAndWrongEntries() {
         var actual = new LinkedHashMap<>(Map.of("first", 1, "second", 2));
 
-        var none = evaluate(MapConditions.singleEntry(matches(entry -> entry.getValue() > 2)), actual);
-        var many = evaluate(MapConditions.singleEntry(matches(entry -> entry.getValue() > 0)), actual);
+        var none = evaluate(MapConditions.singleEntry(matches((Map.Entry<String, Integer> entry) -> entry.getValue() > 2)), actual);
+        var many = evaluate(MapConditions.singleEntry(matches((Map.Entry<String, Integer> entry) -> entry.getValue() > 0)), actual);
         assertEquals(Unsatisfied.class, none.getClass());
         assertEquals(Unsatisfied.class, many.getClass());
         assertEquals("value did not match", ((Unsatisfied<?>) none).mismatch());

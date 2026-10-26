@@ -311,9 +311,9 @@ class CompilationContractTest {
     @Test
     void categorySpecificTerminalsRejectWrongConditions() throws IOException {
         for (String type : List.of(
-                "SelectedCondition<java.util.Optional<?>>",
-                "SelectedCondition<java.util.Collection<?>>",
-                "SelectedCondition<java.util.Map<?, ?>>")) {
+                "SelectedCondition<java.util.Optional<?>, Object, io.github.gromoff97.awium.Condition.Reference<?>>",
+                "SelectedCondition<java.util.Collection<?>, Object, io.github.gromoff97.awium.Condition.Reference<?>>",
+                "SelectedCondition<java.util.Map<?, ?>, Object, io.github.gromoff97.awium.Condition.Reference<?>>")) {
             assertRejected("""
                     import static io.github.gromoff97.awium.Await.await;
                     import java.util.concurrent.Callable;

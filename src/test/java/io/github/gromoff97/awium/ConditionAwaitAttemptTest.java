@@ -67,7 +67,7 @@ class ConditionAwaitAttemptTest {
         });
         var optional = OptionalConditions.hasValue(nested).because("optional reason");
         var collection = CollectionConditions.single(nested).because("collection reason");
-        Condition.MapValueCondition<Map<? super String, ? extends Number>> map =
+        Condition.MapValueCondition<Map<? super String, ?>, Number, Condition.Reference<?>> map =
                 MapConditions.valueFor("key", nested).because("map reason");
         assertEquals(0, factories[0]);
 

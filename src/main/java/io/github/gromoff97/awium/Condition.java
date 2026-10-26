@@ -197,8 +197,10 @@ public final class Condition<OBSERVED, RESULT> {
      * including for shared constants such as {@code present} and {@code single} after {@code because}.
      *
      * @param <OBSERVED> container type accepted by the selector
+     * @param <CHECKED> selected value type accepted by a nested check
+     * @param <REFERENCE> expected-value compatibility bound
      */
-    public static final class SelectedCondition<OBSERVED> {
+    public static final class SelectedCondition<OBSERVED, CHECKED, REFERENCE> {
 
         final Condition<OBSERVED, ?> definition;
 
@@ -206,16 +208,16 @@ public final class Condition<OBSERVED, RESULT> {
             this.definition = required(definition);
         }
 
-        public SelectedCondition<OBSERVED> because(String explanation) {
+        public SelectedCondition<OBSERVED, CHECKED, REFERENCE> because(String explanation) {
             return new SelectedCondition<>(definition.because(explanation));
         }
 
-        public SelectedCondition<OBSERVED> because(String format, Object... arguments) {
+        public SelectedCondition<OBSERVED, CHECKED, REFERENCE> because(String format, Object... arguments) {
             return because(formattedExplanation(format, arguments));
         }
 
         /** @see Condition#because(Supplier) */
-        public SelectedCondition<OBSERVED> because(Supplier<? extends String> explanation) {
+        public SelectedCondition<OBSERVED, CHECKED, REFERENCE> because(Supplier<? extends String> explanation) {
             return new SelectedCondition<>(definition.because(explanation));
         }
     }
@@ -225,8 +227,10 @@ public final class Condition<OBSERVED, RESULT> {
      * {@code because} preserves that result type.
      *
      * @param <OBSERVED> map type accepted by the selector
+     * @param <CHECKED> selected value type accepted by a nested check
+     * @param <REFERENCE> expected-value compatibility bound
      */
-    public static final class MapValueCondition<OBSERVED> {
+    public static final class MapValueCondition<OBSERVED, CHECKED, REFERENCE> {
 
         final Condition<OBSERVED, ?> definition;
 
@@ -234,16 +238,16 @@ public final class Condition<OBSERVED, RESULT> {
             this.definition = required(definition);
         }
 
-        public MapValueCondition<OBSERVED> because(String explanation) {
+        public MapValueCondition<OBSERVED, CHECKED, REFERENCE> because(String explanation) {
             return new MapValueCondition<>(definition.because(explanation));
         }
 
-        public MapValueCondition<OBSERVED> because(String format, Object... arguments) {
+        public MapValueCondition<OBSERVED, CHECKED, REFERENCE> because(String format, Object... arguments) {
             return because(formattedExplanation(format, arguments));
         }
 
         /** @see Condition#because(Supplier) */
-        public MapValueCondition<OBSERVED> because(Supplier<? extends String> explanation) {
+        public MapValueCondition<OBSERVED, CHECKED, REFERENCE> because(Supplier<? extends String> explanation) {
             return new MapValueCondition<>(definition.because(explanation));
         }
     }
