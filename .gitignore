@@ -1,4 +1,5 @@
 .gradle/
+.zvec-grep/
 build/
 .idea/
 *.iml
