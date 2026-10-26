@@ -268,13 +268,17 @@ Payment found = await(repository::find).until(hasValue(instanceOf(Payment.class)
 Payment firstPayment = await(repository::findAll).until(first(instanceOf(Payment.class)).because("First payment"));
 Payment lastPayment = await(repository::findAll).until(last(instanceOf(Payment.class)).because("Last payment"));
 Payment indexedPayment = await(repository::findAll).until(element(0, instanceOf(Payment.class)).because("Payment at index zero"));
+Payment paid = await(paymentRepository::findAll).until(first(matches(Payment::paid)).because("Paid payment"));
 ```
 
-`first`, `last`, and `element` accept conditions with a declared result type,
-such as `instanceOf`. They retain that result type through `because(...)`,
-including when the source contains `Object` values. The first two search in
-encounter order or reverse encounter order; `element` checks only the indexed
-value. If nested evaluation throws, the wait stops immediately.
+`first`, `last`, and `element` accept nested conditions. Checks such as
+`first(matches(Payment::paid))` and comparisons such as `last(equalTo(expectedPayment))`
+retain the source's element type. Conditions such as `instanceOf` return their
+declared result type, including when the source contains `Object` values.
+`because(...)` preserves both forms. The first two search in encounter order or
+reverse encounter order; `element` checks only the indexed value. If nested
+evaluation throws or the callback sets the thread's interrupt flag, the wait stops
+before the next callback.
 
 To collect selected values in order, pass several selections to the terminal:
 

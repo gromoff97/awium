@@ -9,18 +9,24 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
+import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
+import static io.github.gromoff97.awium.Conditions.equalTo;
+import static io.github.gromoff97.awium.Conditions.isNotNull;
+import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TypedCollectionSelectionTest {
 
-    private record User(int id) {}
+    private record User(int id) {
+        boolean positive() { return id > 0; }
+    }
     private static final User FIRST = new User(1);
     private static final User LAST = new User(2);
 
@@ -38,6 +44,87 @@ class TypedCollectionSelectionTest {
         switch (captured) {
             case AwaitResult.Satisfied(var attempts, var user) -> assertEquals(1, user.id());
             case AwaitResult.Failed(var attempts, var failure) -> fail(failure.message());
+        }
+    }
+
+    @Test
+    void checksAndComparisonsRetainTheSourceElementType() {
+        List<User> values = List.of(new User(-1), FIRST, LAST);
+        var time = new FakeTime(0);
+        var waiting = await(() -> values).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
+        Supplier<String> forbidden = () -> { throw new AssertionError("successful check rendered its reason"); };
+
+        assertEquals(1, waiting.until(first(matches(User::positive).because(forbidden)).because(forbidden)).id());
+        assertEquals(2, waiting.until(last(matches(User::positive)).because("positive %s", "user")).id());
+        assertEquals(1, waiting.until(element(1, matches(User::positive)).because(forbidden)).id());
+        assertEquals(2, waiting.until(first(equalTo(LAST).because(forbidden)).because("first match")).id());
+        assertEquals(1, waiting.until(last(equalTo(FIRST)).because(forbidden)).id());
+        assertEquals(2, waiting.until(element(2, equalTo(LAST)).because(forbidden)).id());
+        assertEquals(-1, waiting.until(first(isNotNull).because(forbidden)).id());
+        assertEquals(2, waiting.until(last(isNotNull)).id());
+        assertEquals(1, waiting.until(element(1, isNotNull)).id());
+
+        var selected = waiting.until(first(matches(User::positive)), last(equalTo(LAST)), element(1, isNotNull));
+        assertEquals(1, selected.getFirst().id());
+        assertEquals(1, selected.getLast().id());
+        AwaitResult<List<User>, User> captured = waiting.tryUntil(last(equalTo(FIRST)).because("selected"));
+        switch (captured) {
+            case AwaitResult.Satisfied(var attempts, var user) -> assertEquals(1, user.id());
+            case AwaitResult.Failed(var attempts, var failure) -> fail(failure.message());
+        }
+        List<CharSequence> texts = List.of("ready");
+        assertEquals(5, await(() -> texts).usingTime(time, time).until(first(equalTo("ready")).because("text")).length());
+    }
+
+    @Test
+    void nestedCheckStateIsRetainedAcrossRetriesAndResetForEachWait() {
+        int[] factories = {0};
+        Condition.PreservingCondition<User> secondObservation = Conditions.condition("second observation", () -> {
+            factories[0]++;
+            int[] calls = {0};
+            return value -> ++calls[0] == 2 ? ConditionResult.satisfied(value) : ConditionResult.unsatisfied("one more");
+        });
+        List<Condition.SelectedCondition<? super List<User>>> selectors = List.of(
+                first(secondObservation), last(secondObservation), element(0, secondObservation));
+        var time = new FakeTime(0);
+        int[] reads = {0};
+        var waiting = await(() -> { reads[0]++; return List.of(FIRST); })
+                .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
+        for (var selector : selectors) {
+            for (int run = 0; run < 2; run++) {
+                assertEquals(1, waiting.until(selector.because("stateful")).id());
+            }
+        }
+        assertEquals(6, factories[0]);
+        assertEquals(12, reads[0]);
+
+        assertEquals(1, await(() -> List.of(new User(-1), FIRST, LAST)).usingTime(time, time)
+                .until(first(secondObservation)).id());
+        assertEquals(7, factories[0]);
+    }
+
+    @Test
+    void predicateSearchStopsBeforeTheNextCallbackAfterInterruption() {
+        for (boolean reverse : List.of(false, true)) {
+            int[] calls = {0};
+            Predicate<User> predicate = value -> {
+                calls[0]++;
+                Thread.currentThread().interrupt();
+                return false;
+            };
+            var selection = reverse ? last(predicate) : first(predicate);
+            var time = new FakeTime(0);
+            try {
+                var result = await(() -> List.of(FIRST, LAST)).usingTime(time, time).tryUntil(selection);
+                var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+                assertEquals(AwaitFailure.Reason.INTERRUPTED, failure.reason());
+                assertInstanceOf(InterruptedException.class, failure.cause());
+                assertEquals(1, calls[0]);
+                assertTrue(Thread.currentThread().isInterrupted());
+                assertEquals(1, result.attempts().size());
+            } finally {
+                Thread.interrupted();
+            }
         }
     }
 
@@ -131,6 +218,7 @@ class TypedCollectionSelectionTest {
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
             assertTrue(failure.message().contains("Because: user required"));
+            assertTrue(failure.message().contains("value was not an instance of " + User.class.getTypeName()));
             assertEquals(1, reasons[0]);
         }
         var missing = waiting(() -> values).tryUntil(element(3, instanceOf(User.class).because("inner")).because("outer"));
