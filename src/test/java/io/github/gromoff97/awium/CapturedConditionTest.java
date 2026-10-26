@@ -78,6 +78,42 @@ class CapturedConditionTest {
     }
 
     @Test
+    void sourceAndWaitingInterruptionsRetainProgressInBothPhases() {
+        for (var phase : AttemptRecord.Phase.values()) {
+            int completedStages = phase == AttemptRecord.Phase.ACQUISITION ? 1 : 2;
+            for (boolean interruptInSource : List.of(false, true)) {
+                var time = new FakeTime(0);
+                int[] reads = {0};
+                var waiting = await(() -> {
+                    if (++reads[0] > completedStages && interruptInSource) Thread.currentThread().interrupt();
+                    return reads[0] == 1 ? "ready" : "done";
+                }).usingTime(time, nanos -> {
+                    if (reads[0] == completedStages && !interruptInSource) Thread.currentThread().interrupt();
+                    time.accept(nanos);
+                }).every(ofNanos(1)).persisting(ofNanos(2));
+                try {
+                    var first = Conditions.equalTo("ready").because("first stage");
+                    var second = Conditions.equalTo("done").because("second stage");
+                    var result = waiting.tryUntil(first, second);
+                    var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+                    var attempt = result.attempts().getLast();
+                    assertEquals(INTERRUPTED, failure.reason());
+                    assertEquals(phase, attempt.phase());
+                    assertEquals(completedStages, attempt.progress().capturedStages());
+                    assertEquals(completedStages, attempt.progress().lastEvaluatedStageNumber());
+                    assertSame(second, attempt.progress().activeCondition());
+                    assertSame(result.attempts().get(completedStages - 1).progress(), attempt.progress());
+                    assertTrue(failure.message().contains("Sequence (captured " + completedStages + " of 2)"));
+                    assertEquals(1, result.attempts().getFirst().progress().capturedStages());
+                    assertTrue(Thread.currentThread().isInterrupted());
+                } finally {
+                    Thread.interrupted();
+                }
+            }
+        }
+    }
+
+    @Test
     void narrowingSequencesRetainTheirResultTypeAndRetryInBothTerminals() {
         var first = new String("first");
         var second = new String("second");

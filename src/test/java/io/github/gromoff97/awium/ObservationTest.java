@@ -173,6 +173,8 @@ class ObservationTest {
         var outcome = assertInstanceOf(AttemptRecord.Outcome.SourceRetrievalFailed.class,
                 result.attempts().getFirst().outcome());
         assertSame(failure, outcome.cause());
+        assertSame(check, result.attempts().getFirst().condition());
+        assertNull(result.attempts().getFirst().progress());
         var timing = result.attempts().getFirst().timing();
         assertEquals(Duration.ZERO, timing.startOffset());
         assertEquals(Duration.ZERO, timing.retrievalOffset());
