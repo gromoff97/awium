@@ -186,12 +186,12 @@ class MapSelectionConditionsTest {
         var time = new FakeTime(0);
         var waiting = await(() -> actual).usingTime(time, time).upTo(ofNanos(1));
 
-        var none = evaluate(MapConditions.singleEntry(matches((Map.Entry<String, Integer> entry) -> entry.getValue() > 2)), actual);
-        var many = evaluate(MapConditions.singleEntry(matches((Map.Entry<String, Integer> entry) -> entry.getValue() > 0)), actual);
-        assertEquals(Unsatisfied.class, none.getClass());
-        assertEquals(Unsatisfied.class, many.getClass());
-        assertEquals("value did not match", ((Unsatisfied<?>) none).mismatch());
-        assertEquals("more than one value matched", ((Unsatisfied<?>) many).mismatch());
+        var none = assertFailure(TIMEOUT,
+                () -> waiting.until(MapConditions.singleEntry(matches(entry -> entry.getValue() > 2))));
+        var many = assertFailure(TIMEOUT,
+                () -> waiting.until(MapConditions.singleEntry(matches(entry -> entry.getValue() > 0))));
+        assertTrue(none.getMessage().contains("value did not match"));
+        assertTrue(many.getMessage().contains("more than one value matched"));
         assertFailure(TIMEOUT, () -> waiting.until(MapConditions.valueFor("missing")));
         assertFailure(TIMEOUT, () -> waiting.until(MapConditions.valueFor("first", Conditions.greaterThan(1))));
         assertFailure(TIMEOUT, () -> waiting.until(MapConditions.onlyValueFor("first")));

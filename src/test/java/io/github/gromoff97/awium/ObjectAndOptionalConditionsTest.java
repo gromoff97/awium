@@ -4,12 +4,15 @@ import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitFailure.Reason.TIMEOUT;
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.Conditions.*;
+import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.OptionalConditions.*;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
+import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -55,14 +58,19 @@ class ObjectAndOptionalConditionsTest {
     void optionalPresenceConditionsDistinguishNullEmptyAndPresent() {
         Optional<String> empty = Optional.empty();
         Optional<String> presentValue = Optional.of("value");
+        var time = new FakeTime(0);
+        var missing = await(() -> (Optional<String>) null).usingTime(time, time).upTo(ofNanos(1));
+        var emptySource = await(() -> empty).usingTime(time, time).upTo(ofNanos(1));
+        var presentSource = await(() -> presentValue).usingTime(time, time).upTo(ofNanos(1));
 
         assertFalse(present.description().isBlank());
-        assertUnsatisfied(evaluate(present, null));
-        assertUnsatisfied(evaluate(absent, null));
-        assertUnsatisfied(evaluate(present, empty));
-        assertSame(empty, result(evaluate(absent, empty)));
-        assertSame("value", result(evaluate(present, presentValue)));
-        assertUnsatisfied(evaluate(absent, presentValue));
+        assertFailure(TIMEOUT, () -> missing.until(present));
+        assertFailure(TIMEOUT, () -> missing.until(absent));
+        assertFailure(TIMEOUT, () -> emptySource.until(present));
+        assertSame(empty, emptySource.until(absent));
+        String selected = presentSource.until(present);
+        assertSame("value", selected);
+        assertFailure(TIMEOUT, () -> presentSource.until(absent));
     }
 
     @Test
@@ -72,13 +80,20 @@ class ObjectAndOptionalConditionsTest {
         var differentActual = "2";
         var equal = hasValue(equalTo(expected));
         var notEqual = hasValue(notEqualTo(expected));
+        var time = new FakeTime(0);
+        var equalSource = await(() -> Optional.of(equalActual)).usingTime(time, time).upTo(ofNanos(1));
+        var differentSource = await(() -> Optional.of(differentActual)).usingTime(time, time).upTo(ofNanos(1));
 
-        assertUnsatisfied(evaluate(equal, null));
-        assertUnsatisfied(evaluate(equal, Optional.empty()));
-        assertSame(equalActual, result(evaluate(equal, Optional.of(equalActual))));
-        assertUnsatisfied(evaluate(notEqual, Optional.of(equalActual)));
-        assertUnsatisfied(evaluate(equal, Optional.of(differentActual)));
-        assertSame(differentActual, result(evaluate(notEqual, Optional.of(differentActual))));
+        assertFailure(TIMEOUT, () -> await(() -> (Optional<String>) null)
+                .usingTime(time, time).upTo(ofNanos(1)).until(equal));
+        Optional<String> empty = Optional.empty();
+        assertFailure(TIMEOUT, () -> await(() -> empty).usingTime(time, time).upTo(ofNanos(1)).until(equal));
+        String selectedEqual = equalSource.until(equal);
+        assertSame(equalActual, selectedEqual);
+        assertFailure(TIMEOUT, () -> equalSource.until(notEqual));
+        assertFailure(TIMEOUT, () -> differentSource.until(equal));
+        String selectedDifferent = differentSource.until(notEqual);
+        assertSame(differentActual, selectedDifferent);
     }
 
     @Test
@@ -86,13 +101,13 @@ class ObjectAndOptionalConditionsTest {
         var expected = new Directional(false);
         var actual = new Directional(true);
 
-        assertSame(actual, result(evaluate(hasValue(equalTo((Object) expected)),
-                Optional.of(actual))));
+        Directional selected = await(() -> Optional.of(actual)).until(hasValue(equalTo(expected)));
+        assertSame(actual, selected);
         assertEquals(1, actual.equalsCalls);
 
         int[] actualArray = {1, 2};
-        assertSame(actualArray, result(evaluate(hasValue(equalTo(
-                new int[]{1, 2})), Optional.of(actualArray))));
+        int[] selectedArray = await(() -> Optional.of(actualArray)).until(hasValue(equalTo(new int[]{1, 2})));
+        assertSame(actualArray, selectedArray);
     }
 
     @Test

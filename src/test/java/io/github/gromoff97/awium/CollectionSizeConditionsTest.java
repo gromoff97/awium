@@ -54,10 +54,12 @@ class CollectionSizeConditionsTest {
         assertSame(element, selected);
         assertSame(element, explained);
         assertNull(nullElement);
-        assertEquals("collection size was 0",
-                mismatch(evaluate(single, List.of())));
-        assertEquals("collection size was greater than 1",
-                mismatch(evaluate(single, List.of("first", "second"))));
+        assertTrue(assertFailure(TIMEOUT, () -> await(() -> List.of())
+                .usingTime(pollingTime, pollingTime).upTo(ofNanos(1)).until(single))
+                .getMessage().contains("collection size was 0"));
+        assertTrue(assertFailure(TIMEOUT, () -> await(() -> List.of("first", "second"))
+                .usingTime(pollingTime, pollingTime).upTo(ofNanos(1)).until(single))
+                .getMessage().contains("collection size was greater than 1"));
     }
 
     @Test

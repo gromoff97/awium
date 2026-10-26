@@ -193,15 +193,14 @@ class CollectionSelectionConditionsTest {
 
     @Test
     void singleMatchingConditionRequiresExactlyOneMatch() {
-        ConditionResult<?> none = evaluate(
-                CollectionConditions.single(matches((Integer value) -> value > 10)), List.of(1, 2));
-        ConditionResult<?> many = evaluate(
-                CollectionConditions.single(matches((Integer value) -> value > 0)), List.of(1, 2));
+        var time = new FakeTime(0);
+        var waiting = await(() -> List.of(1, 2)).usingTime(time, time).upTo(ofNanos(1));
 
-        assertEquals(Unsatisfied.class, none.getClass());
-        assertEquals(Unsatisfied.class, many.getClass());
-        assertEquals("value did not match", ((Unsatisfied<?>) none).mismatch());
-        assertEquals("more than one value matched", ((Unsatisfied<?>) many).mismatch());
+        var none = assertFailure(TIMEOUT, () -> waiting.until(single(matches(value -> value > 10))));
+        var many = assertFailure(TIMEOUT, () -> waiting.until(single(matches(value -> value > 0))));
+
+        assertTrue(none.getMessage().contains("value did not match"));
+        assertTrue(many.getMessage().contains("more than one value matched"));
     }
 
     @Test
@@ -301,26 +300,24 @@ class CollectionSelectionConditionsTest {
 
     @Test
     void selectorsCoverMissingNullAndInvalidPositions() {
-        assertEquals(Unsatisfied.class, evaluate(first, List.of()).getClass());
-        assertEquals(Unsatisfied.class, evaluate(last, null).getClass());
-        assertEquals(Unsatisfied.class, evaluate(CollectionConditions.<String>first(value -> true), null).getClass());
-        assertEquals(Unsatisfied.class, evaluate(CollectionConditions.element(0), null).getClass());
-        assertEquals(Unsatisfied.class, evaluate(CollectionConditions.<String>first(
-                value -> value.startsWith("r")), List.of("failed")).getClass());
-        assertEquals(Unsatisfied.class, evaluate(CollectionConditions.<String>last(
-                value -> value.startsWith("r")), List.of("failed")).getClass());
-        assertEquals(Unsatisfied.class, evaluate(
-                CollectionConditions.element(2), List.of("only")).getClass());
-        assertEquals(Unsatisfied.class, evaluate(
-                CollectionConditions.element(1), List.of("only")).getClass());
-        assertEquals(Unsatisfied.class, evaluate(CollectionConditions.<String>element(
-                0, value -> value.startsWith("r")), List.of("failed")).getClass());
-        assertEquals(Unsatisfied.class, evaluate(
-                CollectionConditions.single(instanceOf(String.class)),
-                List.of(1, 2)).getClass());
-        assertEquals(Unsatisfied.class, evaluate(
-                CollectionConditions.single(instanceOf(String.class)),
-                List.of("first", "second")).getClass());
+        var time = new FakeTime(0);
+        var missing = await(() -> (List<String>) null).usingTime(time, time).upTo(ofNanos(1));
+        var values = await(() -> List.of("failed")).usingTime(time, time).upTo(ofNanos(1));
+
+        assertFailure(TIMEOUT, () -> await(() -> List.of())
+                .usingTime(time, time).upTo(ofNanos(1)).until(first));
+        assertFailure(TIMEOUT, () -> missing.until(last));
+        assertFailure(TIMEOUT, () -> missing.until(CollectionConditions.first(value -> true)));
+        assertFailure(TIMEOUT, () -> missing.until(CollectionConditions.element(0)));
+        assertFailure(TIMEOUT, () -> values.until(CollectionConditions.first(value -> value.startsWith("r"))));
+        assertFailure(TIMEOUT, () -> values.until(CollectionConditions.last(value -> value.startsWith("r"))));
+        assertFailure(TIMEOUT, () -> values.until(CollectionConditions.element(2)));
+        assertFailure(TIMEOUT, () -> values.until(CollectionConditions.element(1)));
+        assertFailure(TIMEOUT, () -> values.until(CollectionConditions.element(0, value -> value.startsWith("r"))));
+        assertFailure(TIMEOUT, () -> await(() -> List.of(1, 2))
+                .usingTime(time, time).upTo(ofNanos(1)).until(single(instanceOf(String.class))));
+        assertFailure(TIMEOUT, () -> await(() -> List.of("first", "second"))
+                .usingTime(time, time).upTo(ofNanos(1)).until(single(instanceOf(String.class))));
         assertEquals("index must be non-negative", assertThrows(
                 IllegalArgumentException.class,
                 () -> CollectionConditions.element(-1)).getMessage());

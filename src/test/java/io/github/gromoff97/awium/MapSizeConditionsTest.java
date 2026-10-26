@@ -53,10 +53,12 @@ class MapSizeConditionsTest {
         assertEquals("key", selected.getKey());
         assertEquals(42, selected.getValue());
         assertEquals(selected, explained);
-        assertEquals("map size was 0",
-                mismatch(evaluate(singleEntry, Map.of())));
-        assertEquals("map size was greater than 1",
-                mismatch(evaluate(singleEntry, Map.of("first", 1, "second", 2))));
+        assertTrue(assertFailure(TIMEOUT, () -> await(() -> Map.of())
+                .usingTime(pollingTime, pollingTime).upTo(ofNanos(1)).until(singleEntry))
+                .getMessage().contains("map size was 0"));
+        assertTrue(assertFailure(TIMEOUT, () -> await(() -> Map.of("first", 1, "second", 2))
+                .usingTime(pollingTime, pollingTime).upTo(ofNanos(1)).until(singleEntry))
+                .getMessage().contains("map size was greater than 1"));
     }
 
     @Test
