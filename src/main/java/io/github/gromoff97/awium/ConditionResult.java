@@ -24,23 +24,23 @@ public sealed interface ConditionResult<RESULT> {
     }
 
     /** Signals satisfaction without a payload; preserving checks still return their original observation. */
-    static <RESULT> ConditionResult<RESULT> satisfied() {
+    static <RESULT> Satisfied<RESULT> satisfied() {
         return satisfied(null);
     }
 
-    static <RESULT> ConditionResult<RESULT> satisfied(RESULT result) {
+    static <RESULT> Satisfied<RESULT> satisfied(RESULT result) {
         return new Satisfied<>(result);
     }
 
-    static <RESULT> ConditionResult<RESULT> unsatisfied() {
+    static <RESULT> Unsatisfied<RESULT> unsatisfied() {
         return unsatisfied(null, null);
     }
 
-    static <RESULT> ConditionResult<RESULT> unsatisfied(String mismatch) {
+    static <RESULT> Unsatisfied<RESULT> unsatisfied(String mismatch) {
         return unsatisfied(mismatch, null);
     }
 
-    static <RESULT> ConditionResult<RESULT> unsatisfied(String mismatch, Throwable cause) {
+    static <RESULT> Unsatisfied<RESULT> unsatisfied(String mismatch, Throwable cause) {
         return new Unsatisfied<>(mismatch, cause);
     }
 

@@ -49,11 +49,12 @@ class ConditionResultContractTest {
 
     @Test
     void mappingSatisfiedResultChangesItsValue() {
-        ConditionResult<String> mapped = satisfied(42)
-                .mapSatisfied(Object::toString);
+        var original = satisfied(new User(42));
+        ConditionResult<Integer> mapped = original.mapSatisfied(User::id);
 
         var result = assertInstanceOf(ConditionResult.Satisfied.class, mapped);
-        assertEquals("42", result.result());
+        assertEquals(42, original.result().id());
+        assertEquals(42, result.result());
         assertNull(mapped.cause());
     }
 
@@ -90,6 +91,9 @@ class ConditionResultContractTest {
         assertEquals(plain, unsatisfied(null));
         assertEquals(plain, unsatisfied(null, null));
         var cause = new IllegalStateException("details");
+        var detailed = unsatisfied("not ready", cause);
+        assertEquals("not ready", detailed.mismatch());
+        assertSame(cause, detailed.cause());
         assertSame(cause, unsatisfied(null, cause).cause());
         assertEquals(new Unsatisfied<>("failed", null), unsatisfied("failed", null));
     }

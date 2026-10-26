@@ -206,8 +206,7 @@ final class ConditionSupport {
 
     private static <ELEMENT, RESULT> AttemptResult<? extends RESULT> evaluateSingle(Iterable<? extends ELEMENT> values,
             ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT> evaluator) {
-        AttemptResult.Evaluated<? extends RESULT> result = new AttemptResult.Evaluated<>(
-                unsatisfied("no value matched"), null, null);
+        AttemptResult.Evaluated<? extends RESULT> result = AttemptResult.of(unsatisfied("no value matched"));
         for (ELEMENT value : values) {
             switch (evaluator.probe(value)) {
                 case AttemptResult.Uncontrolled<? extends RESULT> failure -> { return failure; }

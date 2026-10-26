@@ -8,7 +8,7 @@ sealed interface AttemptResult<RESULT> {
 
     AttemptRecord.Progress progress();
 
-    static <RESULT> AttemptResult<RESULT> of(ConditionResult<? extends RESULT> result) {
+    static <RESULT> Evaluated<RESULT> of(ConditionResult<? extends RESULT> result) {
         return new Evaluated<>(result, null, null);
     }
 
