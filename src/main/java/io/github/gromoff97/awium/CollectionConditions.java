@@ -12,6 +12,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.SequencedCollection;
+import java.util.function.Function;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 
@@ -245,6 +246,19 @@ public final class CollectionConditions {
         return selected("collection has a matching element", actual -> selectFirst(actual, predicate));
     }
 
+    /**
+     * Selects the first satisfied nested result in encounter order.
+     *
+     * @param <ELEMENT> input type accepted by the nested condition
+     * @param <RESULT> result produced by the nested condition
+     * @param nested condition applied to each visited element
+     * @return an immutable condition with the nested result type
+     */
+    public static <ELEMENT, RESULT> Condition<SequencedCollection<? extends ELEMENT>, RESULT> first(
+            Condition<? super ELEMENT, RESULT> nested) {
+        return matching("collection has a first matching value: ", required(nested), actual -> actual);
+    }
+
     public static final SelectedCondition<SequencedCollection<?>> last = selected("collection has a last element",
             actual -> selectFirst(actual == null ? null : actual.reversed(), value -> true));
 
@@ -252,6 +266,19 @@ public final class CollectionConditions {
         requireNonNull(predicate, "predicate must not be null");
         return selected("collection has a last matching element",
                 actual -> selectFirst(actual == null ? null : actual.reversed(), predicate));
+    }
+
+    /**
+     * Selects the first satisfied nested result in reverse encounter order.
+     *
+     * @param <ELEMENT> input type accepted by the nested condition
+     * @param <RESULT> result produced by the nested condition
+     * @param nested condition applied to each visited element
+     * @return an immutable condition with the nested result type
+     */
+    public static <ELEMENT, RESULT> Condition<SequencedCollection<? extends ELEMENT>, RESULT> last(
+            Condition<? super ELEMENT, RESULT> nested) {
+        return matching("collection has a last matching value: ", required(nested), SequencedCollection::reversed);
     }
 
     public static SelectedCondition<List<?>> element(int index) {
@@ -263,18 +290,24 @@ public final class CollectionConditions {
             throw new IllegalArgumentException("index must be non-negative");
         }
         requireNonNull(predicate, "predicate must not be null");
-        return selected("list has a matching element at index " + index, actual -> {
-            if (actual == null) {
-                return unsatisfied("list was null");
-            }
-            int position = 0;
-            for (ELEMENT value : actual) {
-                if (position++ == index) {
-                    return predicate.test(value) ? satisfied(value) : unsatisfied("element at index " + index + " did not match");
-                }
-            }
-            return unsatisfied("list size was " + position);
-        });
+        return selected("list has a matching element at index " + index,
+                actual -> selectElement(actual, index, predicate));
+    }
+
+    /**
+     * Evaluates the indexed value once per attempt and returns the nested result.
+     *
+     * @param <ELEMENT> input type accepted by the nested condition
+     * @param <RESULT> result produced by the nested condition
+     * @param index non-negative element index
+     * @param nested condition applied to the indexed value
+     * @return an immutable condition with the nested result type
+     */
+    public static <ELEMENT, RESULT> Condition<List<? extends ELEMENT>, RESULT> element(int index,
+            Condition<? super ELEMENT, RESULT> nested) {
+        var extraction = element(index);
+        return ConditionSupport.compose("element at index " + index + " matches: ", required(nested), extraction.definition,
+                actual -> selectElement(actual, index, value -> true), () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <ELEMENT> PreservingCondition<SequencedCollection<? extends ELEMENT>> sorted(Comparator<? super ELEMENT> comparator) {
@@ -293,6 +326,43 @@ public final class CollectionConditions {
             }
         }
         return unsatisfied("no collection element matched");
+    }
+
+    private static <ELEMENT, RESULT> Condition<SequencedCollection<? extends ELEMENT>, RESULT> matching(
+            String description, Condition<? super ELEMENT, RESULT> nested,
+            Function<SequencedCollection<? extends ELEMENT>, ? extends Iterable<? extends ELEMENT>> order) {
+        return new Condition<>(description + nested.description(), nested, () -> {
+            var evaluator = new ConditionAwaitAttempt<ELEMENT, RESULT>(nested);
+            return actual -> actual == null ? AttemptResult.of(unsatisfied("collection was null"))
+                    : selectFirst(order.apply(actual), evaluator);
+        });
+    }
+
+    private static <ELEMENT, RESULT> AttemptResult<? extends RESULT> selectFirst(Iterable<? extends ELEMENT> values,
+            ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT> evaluator) {
+        AttemptResult<? extends RESULT> result = AttemptResult.of(unsatisfied("no value matched"));
+        for (ELEMENT value : values) {
+            switch (evaluator.probe(value)) {
+                case AttemptResult.Uncontrolled<? extends RESULT> failure -> { return failure; }
+                case AttemptResult.Evaluated<? extends RESULT> evaluated -> {
+                    if (evaluated.result() instanceof ConditionResult.Satisfied<?>) return evaluated;
+                    result = evaluated;
+                }
+            }
+        }
+        return result;
+    }
+
+    private static <ELEMENT> ConditionResult<ELEMENT> selectElement(List<? extends ELEMENT> actual, int index,
+            Predicate<? super ELEMENT> predicate) {
+        if (actual == null) return unsatisfied("list was null");
+        int position = 0;
+        for (ELEMENT value : actual) {
+            if (position++ == index) {
+                return predicate.test(value) ? satisfied(value) : unsatisfied("element at index " + index + " did not match");
+            }
+        }
+        return unsatisfied("list size was " + position);
     }
 
     private static PreservingCondition<Collection<?>> sized(int bound, IntPredicate matches,

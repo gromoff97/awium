@@ -265,7 +265,16 @@ Type selection uses the same composition:
 ```java
 Payment payment = await(repository::findAll).until(single(instanceOf(Payment.class)));
 Payment found = await(repository::find).until(hasValue(instanceOf(Payment.class)));
+Payment firstPayment = await(repository::findAll).until(first(instanceOf(Payment.class)).because("First payment"));
+Payment lastPayment = await(repository::findAll).until(last(instanceOf(Payment.class)).because("Last payment"));
+Payment indexedPayment = await(repository::findAll).until(element(0, instanceOf(Payment.class)).because("Payment at index zero"));
 ```
+
+`first`, `last`, and `element` accept conditions with a declared result type,
+such as `instanceOf`. They retain that result type through `because(...)`,
+including when the source contains `Object` values. The first two search in
+encounter order or reverse encounter order; `element` checks only the indexed
+value. If nested evaluation throws, the wait stops immediately.
 
 To collect selected values in order, pass several selections to the terminal:
 

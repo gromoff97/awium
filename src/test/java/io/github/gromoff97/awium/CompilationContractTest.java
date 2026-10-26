@@ -14,6 +14,31 @@ class CompilationContractTest {
     Path temporaryDirectory;
 
     @Test
+    void typedCollectionSelectionsKeepSourceAndResultConstraints() throws IOException {
+        for (String body : List.of(
+                "await(() -> \"wrong\").until(first(instanceOf(User.class)));",
+                "await(() -> Set.of(new User(1))).until(last(instanceOf(User.class)));",
+                "await(() -> new ArrayDeque<>(List.of(new User(1)))).until(element(0,instanceOf(User.class)));",
+                "String wrong = await(() -> values).until(first(instanceOf(User.class)).because(\"wrong result\"));",
+                "AwaitResult<List<Object>,String> wrong = await(() -> values).tryUntil(last(instanceOf(User.class)));",
+                "await(() -> values).until(first(instanceOf(User.class)),last(instanceOf(String.class)));",
+                "await(() -> values).<Object>until(first(instanceOf(User.class)),last(instanceOf(String.class)));",
+                "await(() -> values).tryUntil(element(0,instanceOf(User.class)).because(\"user\"),first(instanceOf(Integer.class)).because(\"number\"));")) {
+            assertRejected("""
+                    import java.util.*;
+                    import io.github.gromoff97.awium.AwaitResult;
+                    import static io.github.gromoff97.awium.Await.await;
+                    import static io.github.gromoff97.awium.Conditions.*;
+                    import static io.github.gromoff97.awium.CollectionConditions.*;
+                    final class Contract {
+                        record User(int id) {}
+                        void check(List<Object> values) { %s }
+                    }
+                    """.formatted(body));
+        }
+    }
+
+    @Test
     void mapsThatAlsoIterateValuesCannotConfuseTheirSelectionResults() throws IOException {
         for (String terminal : List.of("until", "tryUntil")) {
             for (String condition : List.of("single", "single(matches(User::active))", "single(equalTo(new User(true)))")) {
