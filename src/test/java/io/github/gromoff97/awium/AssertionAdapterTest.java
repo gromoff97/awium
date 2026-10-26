@@ -24,22 +24,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class AssertionAdapterTest {
 
     @Test
-    void interruptedAssertionsRetainTheirCauseInBothTerminals() {
-        for (boolean capture : List.of(false, true)) {
+    void assertionFailuresRetainTheirCauseWithAndWithoutInterruption() {
+        // Exercise ordinary diagnostics first: PIT clears interrupt flags while loading classes.
+        for (boolean interrupt : List.of(false, true)) {
             var cause = new AssertionError("payment is not ready");
             var check = asserted((String value) -> {
-                Thread.currentThread().interrupt();
+                if (interrupt) Thread.currentThread().interrupt();
                 throw cause;
             }).because("payment state");
+            var time = new FakeTime(0);
+            var waiting = await(() -> "pending").usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+            var reason = interrupt ? INTERRUPTED : TIMEOUT;
             try {
-                var waiting = await(() -> "pending");
-                var failure = capture
-                        ? assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(check)).failure()
-                        : assertThrows(AwaitExecutionException.class, () -> waiting.until(check)).failure();
-                assertEquals(INTERRUPTED, failure.reason());
+                var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(check)).failure();
+                assertEquals(interrupt, Thread.interrupted());
+                assertEquals(reason, failure.reason());
                 assertSame(cause, failure.cause());
                 assertTrue(failure.message().contains("Because: payment state"));
-                assertTrue(Thread.currentThread().isInterrupted());
+
+                var thrown = assertFailure(reason, () -> waiting.until(check));
+                assertEquals(interrupt, Thread.interrupted());
+                assertSame(cause, thrown.getCause());
+                assertEquals(failure.message(), thrown.getMessage());
             } finally {
                 Thread.interrupted();
             }
