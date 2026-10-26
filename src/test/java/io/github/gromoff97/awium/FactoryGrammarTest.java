@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
-import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -56,8 +55,8 @@ class FactoryGrammarTest {
     void everyTerminalOverloadRejectsNullConditions() {
         var pollingTime = new FakeTime(0);
         var object = await(() -> "value").usingTime(pollingTime, pollingTime).every(ofSeconds(20));
-        assertNullRejected("predicate", () -> object.until(matches((Predicate<String>) null)));
-        assertNullRejected("predicate", () -> object.tryUntil(matches((Predicate<String>) null)));
+        assertNullRejected("predicate", () -> object.until(matches((CheckedPredicate<String>) null)));
+        assertNullRejected("predicate", () -> object.tryUntil(matches((CheckedPredicate<String>) null)));
         assertNullRejected("condition", () -> object.until((PreservingCondition<String>) null));
         assertNullRejected("condition", () -> object.until((Condition<String, String>) null));
         assertNullRejected("condition", () -> object.until((Condition.ComparisonCondition<String>) null));

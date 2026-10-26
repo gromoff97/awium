@@ -170,9 +170,9 @@ class DirectBecauseTest {
         BiPredicate<CharSequence, Number> valid = (key, value) -> !key.isEmpty() && value.intValue() > 0;
 
         List<LinkedHashMap<String, Integer>> results = List.of(
-                waiting.until(allEntries(valid).because("valid entries")),
-                waiting.until(anyEntry(valid).because("a valid entry")),
-                waiting.until(noEntry(valid.negate()).because("no invalid entries")));
+                waiting.until(allEntries(valid::test).because("valid entries")),
+                waiting.until(anyEntry(valid::test).because("a valid entry")),
+                waiting.until(noEntry(valid.negate()::test).because("no invalid entries")));
 
         results.forEach(result -> assertSame(actual, result));
     }
@@ -186,7 +186,7 @@ class DirectBecauseTest {
         List<ArrayList<String>> results = List.of(
                 waiting.until(all(CharSequence::isEmpty).because("empty elements")),
                 waiting.until(any(CharSequence::isEmpty).because("an empty element")),
-                waiting.until(none(not(CharSequence::isEmpty)).because("no nonempty elements")));
+                waiting.until(none(not(CharSequence::isEmpty)::test).because("no nonempty elements")));
 
         results.forEach(result -> assertSame(actual, result));
     }

@@ -209,12 +209,12 @@ class PositiveFluentMatrixTest {
         Consumer<String> first = value -> calls.add("first " + value);
         BiPredicate<String, Integer> entry = (key, value) -> value > 0;
 
-        String matched = await(() -> "ready").until(matches(Predicate.not(text).negate()));
+        String matched = await(() -> "ready").until(matches(Predicate.not(text).negate()::test));
         String transformed = await(() -> trim.apply(" ready ")).until(isNotNull);
         String custom = await(() -> trim.apply(" ready ")).until(condition("ready", ConditionResult::satisfied));
         String asserted = await(() -> "ready").until(asserted(first.andThen(value -> calls.add("second " + value))::accept));
         Map<String, Integer> matchingEntry = await(() -> Map.of("ready", 1))
-                .until(MapConditions.anyEntry(entry.and((key, value) -> !key.isBlank())));
+                .until(MapConditions.anyEntry(entry.and((key, value) -> !key.isBlank())::test));
 
         assertEquals(List.of("ready", "ready", "ready", "ready"), List.of(matched, transformed, custom, asserted));
         assertEquals(List.of("first ready", "second ready"), calls);

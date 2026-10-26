@@ -112,7 +112,7 @@ class TypedCollectionSelectionTest {
                 Thread.currentThread().interrupt();
                 return false;
             };
-            var selection = reverse ? last(predicate) : first(predicate);
+            var selection = reverse ? last(predicate::test) : first(predicate::test);
             var time = new FakeTime(0);
             try {
                 var result = await(() -> List.of(FIRST, LAST)).usingTime(time, time).tryUntil(selection);

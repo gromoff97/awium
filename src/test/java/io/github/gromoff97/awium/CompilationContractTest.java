@@ -139,6 +139,8 @@ class CompilationContractTest {
     void conditionsAndResultsRejectUnrelatedTypes() throws IOException {
         for (String expression : List.of(
                 "await(strings).until(equalTo(42));",
+                "await(strings).until(matches(value -> \"wrong boolean\"));",
+                "await(strings).until(matches(value -> null));",
                 "await(() -> new String[]{\"ready\"}).until(in(java.util.Collections.singletonList(new Integer[]{1})).because(\"incompatible array\"));",
                 "String wrong = await(objects).until(instanceOf(Integer.class));",
                 "AwaitResult<Optional<Integer>, String> wrong = await(optional).tryUntil(present);",

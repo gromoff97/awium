@@ -82,8 +82,10 @@ Payment payment = await(paymentRepository::load).until(asserted(actual -> {
 ```
 
 `asserted(...)` accepts a `CheckedConsumer`; `condition(...)` accepts a
-`CheckedFunction`. Both callbacks may declare `throws Throwable`, so existing
-methods declaring `throws Exception` or `throws Throwable` can be passed directly.
+`CheckedFunction`. Boolean checks use `CheckedPredicate` or `CheckedBiPredicate`.
+These callbacks may declare `throws Throwable`, so existing methods declaring
+`throws Exception` or `throws Throwable` can be passed directly, including to
+`matches(...)`, collection predicates, and map predicates.
 Callback failures stop polling immediately and retain the
 original cause; only `AssertionError` inside `asserted(...)` means retry.
 
@@ -91,8 +93,9 @@ Use `matches(Payment::paid)` for a boolean check. Java discards a value returned
 by a method reference adapted to `asserted(...)`, so returning `false` does not
 make that assertion fail.
 
-For callbacks already stored in JDK `Function` or `Consumer` variables, pass
-`function::apply` or `consumer::accept`. Predicates still use the JDK interfaces.
+For callbacks already stored in JDK `Function`, `Consumer`, `Predicate`, or
+`BiPredicate` variables, pass `function::apply`, `consumer::accept`,
+`predicate::test`, or `entryPredicate::test`.
 
 ### Ordered states
 

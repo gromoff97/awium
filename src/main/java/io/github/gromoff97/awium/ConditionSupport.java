@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 
@@ -93,18 +92,18 @@ final class ConditionSupport {
     }
 
     static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description, String mismatch,
-            Predicate<? super OBSERVED> matches) {
+            CheckedPredicate<? super OBSERVED> matches) {
         return preserving(description, actual -> matches.test(actual)
                 ? satisfied(actual) : unsatisfied(mismatch));
     }
 
     static <OBSERVED> PreservingCondition<OBSERVED> preservingNonNull(String subject, String description,
-            String mismatch, Predicate<? super OBSERVED> matches) {
+            String mismatch, CheckedPredicate<? super OBSERVED> matches) {
         return preservingNonNull(subject, description, mismatch, null, matches);
     }
 
     static <OBSERVED> PreservingCondition<OBSERVED> preservingNonNull(String subject, String description,
-            String mismatch, Reference<?> reference, Predicate<? super OBSERVED> matches) {
+            String mismatch, Reference<?> reference, CheckedPredicate<? super OBSERVED> matches) {
         return preserving(description, reference, actual -> actual == null
                 ? unsatisfied(subject + " was null")
                 : matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch));

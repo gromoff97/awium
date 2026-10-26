@@ -10,9 +10,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.BiPredicate;
 import java.util.function.IntPredicate;
-import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.Condition.required;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
@@ -99,53 +97,53 @@ public final class MapConditions {
                 () -> ConditionAwaitAttempt.bind(nested.definition)));
     }
 
-    public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> allEntries(BiPredicate<? super KEY, ? super VALUE> predicate) {
+    public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> allEntries(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all map entries match", "not all map entries matched",
                 actual -> matchesAll(actual.entrySet(),
                         entry -> predicate.test(entry.getKey(), entry.getValue())));
     }
 
-    public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> anyEntry(BiPredicate<? super KEY, ? super VALUE> predicate) {
+    public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> anyEntry(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any map entry matches", "no map entry matched",
                 actual -> matchesAny(actual.entrySet(),
                         entry -> predicate.test(entry.getKey(), entry.getValue())));
     }
 
-    public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> noEntry(BiPredicate<? super KEY, ? super VALUE> predicate) {
+    public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> noEntry(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no map entry matches", "a map entry matched",
                 actual -> !matchesAny(actual.entrySet(),
                         entry -> predicate.test(entry.getKey(), entry.getValue())));
     }
 
-    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> allKeys(Predicate<? super KEY> predicate) {
+    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> allKeys(CheckedPredicate<? super KEY> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all map keys match", "not all map keys matched", actual -> matchesAll(actual.keySet(), predicate));
     }
 
-    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> anyKey(Predicate<? super KEY> predicate) {
+    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> anyKey(CheckedPredicate<? super KEY> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any map key matches", "no map key matched", actual -> matchesAny(actual.keySet(), predicate));
     }
 
-    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> noKey(Predicate<? super KEY> predicate) {
+    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> noKey(CheckedPredicate<? super KEY> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no map key matches", "a map key matched", actual -> !matchesAny(actual.keySet(), predicate));
     }
 
-    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> allValues(Predicate<? super VALUE> predicate) {
+    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> allValues(CheckedPredicate<? super VALUE> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all map values match", "not all map values matched", actual -> matchesAll(actual.values(), predicate));
     }
 
-    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> anyValue(Predicate<? super VALUE> predicate) {
+    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> anyValue(CheckedPredicate<? super VALUE> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any map value matches", "no map value matched", actual -> matchesAny(actual.values(), predicate));
     }
 
-    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> noValue(Predicate<? super VALUE> predicate) {
+    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> noValue(CheckedPredicate<? super VALUE> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no map value matches", "a map value matched", actual -> !matchesAny(actual.values(), predicate));
     }
@@ -303,16 +301,16 @@ public final class MapConditions {
     }
 
     private static <ENTRIES extends Map<?, ?>> PreservingCondition<ENTRIES> preserving(String description, String mismatch,
-            Predicate<? super ENTRIES> matches) {
+            CheckedPredicate<? super ENTRIES> matches) {
         return preservingNonNull("map", description, mismatch, matches);
     }
 
     private static <ENTRIES extends Map<?, ?>> PreservingCondition<ENTRIES> preserving(String description, String mismatch,
-            Reference<?> reference, Predicate<? super ENTRIES> matches) {
+            Reference<?> reference, CheckedPredicate<? super ENTRIES> matches) {
         return preservingNonNull("map", description, mismatch, reference, matches);
     }
 
-    private static boolean exactContent(Map<?, ?> actual, List<? extends Entry<?, ?>> expected) {
+    private static boolean exactContent(Map<?, ?> actual, List<? extends Entry<?, ?>> expected) throws Throwable {
         return actual.size() == expected.size()
                 && exactly(actual.entrySet().iterator(), expected, MapConditions::entryMatches);
     }

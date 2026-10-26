@@ -14,7 +14,6 @@ import java.util.Objects;
 import java.util.SequencedCollection;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import static io.github.gromoff97.awium.Condition.required;
@@ -106,19 +105,19 @@ public final class CollectionConditions {
                 () -> ConditionAwaitAttempt.bind(nested.definition)));
     }
 
-    public static <ELEMENT> PreservingCondition<Iterable<? extends ELEMENT>> all(Predicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> PreservingCondition<Iterable<? extends ELEMENT>> all(CheckedPredicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("all collection elements match", "not all collection elements matched",
                 actual -> matchesAll(actual, predicate));
     }
 
-    public static <ELEMENT> PreservingCondition<Iterable<? extends ELEMENT>> any(Predicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> PreservingCondition<Iterable<? extends ELEMENT>> any(CheckedPredicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("any collection element matches", "no collection element matched",
                 actual -> matchesAny(actual, predicate));
     }
 
-    public static <ELEMENT> PreservingCondition<Iterable<? extends ELEMENT>> none(Predicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> PreservingCondition<Iterable<? extends ELEMENT>> none(CheckedPredicate<? super ELEMENT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return preserving("no collection element matches", "a collection element matched",
                 actual -> !matchesAny(actual, predicate));
@@ -242,7 +241,7 @@ public final class CollectionConditions {
     public static final SelectedCondition<SequencedCollection<?>> first = selected("collection has a first element",
             CollectionConditions::selectFirst);
 
-    public static <ELEMENT> SelectedCondition<SequencedCollection<? extends ELEMENT>> first(Predicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> SelectedCondition<SequencedCollection<? extends ELEMENT>> first(CheckedPredicate<? super ELEMENT> predicate) {
         return first(Conditions.matches(predicate));
     }
 
@@ -275,7 +274,7 @@ public final class CollectionConditions {
     public static final SelectedCondition<SequencedCollection<?>> last = selected("collection has a last element",
             actual -> selectFirst(actual == null ? null : actual.reversed()));
 
-    public static <ELEMENT> SelectedCondition<SequencedCollection<? extends ELEMENT>> last(Predicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> SelectedCondition<SequencedCollection<? extends ELEMENT>> last(CheckedPredicate<? super ELEMENT> predicate) {
         return last(Conditions.matches(predicate));
     }
 
@@ -313,7 +312,7 @@ public final class CollectionConditions {
                 actual -> selectElement(actual, index));
     }
 
-    public static <ELEMENT> SelectedCondition<List<? extends ELEMENT>> element(int index, Predicate<? super ELEMENT> predicate) {
+    public static <ELEMENT> SelectedCondition<List<? extends ELEMENT>> element(int index, CheckedPredicate<? super ELEMENT> predicate) {
         return element(index, Conditions.matches(predicate));
     }
 
@@ -405,12 +404,12 @@ public final class CollectionConditions {
     }
 
     private static <VALUES extends Iterable<?>> PreservingCondition<VALUES> preserving(String description, String mismatch,
-            Predicate<? super VALUES> matches) {
+            CheckedPredicate<? super VALUES> matches) {
         return preservingNonNull("collection", description, mismatch, matches);
     }
 
     private static <VALUES extends Iterable<?>> PreservingCondition<VALUES> preserving(String description, String mismatch,
-            Reference<?> reference, Predicate<? super VALUES> matches) {
+            Reference<?> reference, CheckedPredicate<? super VALUES> matches) {
         return preservingNonNull("collection", description, mismatch, reference, matches);
     }
 
@@ -422,7 +421,7 @@ public final class CollectionConditions {
         return prefixMatches(values, expected) && !values.hasNext();
     }
 
-    private static boolean exactContentInAnyOrder(Collection<?> actual, Collection<?> expected) {
+    private static boolean exactContentInAnyOrder(Collection<?> actual, Collection<?> expected) throws Throwable {
         return actual.size() == expected.size()
                 && exactly(actual.iterator(), expected, Objects::deepEquals);
     }
@@ -458,7 +457,7 @@ public final class CollectionConditions {
         return true;
     }
 
-    private static boolean hasUniqueElements(Collection<?> actual) {
+    private static boolean hasUniqueElements(Collection<?> actual) throws Throwable {
         List<Object> seen = new ArrayList<>();
         for (Object value : actual) {
             if (matchesAny(seen, previous -> deepEquals(previous, value))) {

@@ -3,8 +3,6 @@ package io.github.gromoff97.awium;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 
 import static java.util.Objects.deepEquals;
 
@@ -12,7 +10,7 @@ final class ValueMatching {
 
     private ValueMatching() {}
 
-    static <VALUE> boolean matchesAny(Iterable<VALUE> values, Predicate<? super VALUE> matches) {
+    static <VALUE> boolean matchesAny(Iterable<VALUE> values, CheckedPredicate<? super VALUE> matches) throws Throwable {
         for (VALUE value : values) {
             if (matches.test(value)) {
                 return true;
@@ -21,22 +19,22 @@ final class ValueMatching {
         return false;
     }
 
-    static <VALUE> boolean matchesAll(Iterable<VALUE> values, Predicate<? super VALUE> matches) {
+    static <VALUE> boolean matchesAll(Iterable<VALUE> values, CheckedPredicate<? super VALUE> matches) throws Throwable {
         return !matchesAny(values, value -> !matches.test(value));
     }
 
     static <ACTUAL, EXPECTED> boolean containsAll(Iterable<ACTUAL> actual, Collection<EXPECTED> expected,
-            BiPredicate<? super ACTUAL, ? super EXPECTED> matches) {
+            CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) throws Throwable {
         return matchesAll(expected, candidate -> matchesAny(actual, value -> matches.test(value, candidate)));
     }
 
     static <ACTUAL, EXPECTED> boolean containsAny(Iterable<ACTUAL> actual, Iterable<EXPECTED> expected,
-            BiPredicate<? super ACTUAL, ? super EXPECTED> matches) {
+            CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) throws Throwable {
         return matchesAny(actual, value -> matchesAny(expected, candidate -> matches.test(value, candidate)));
     }
 
     static <ACTUAL, EXPECTED> boolean exactly(Iterator<ACTUAL> actual, Collection<EXPECTED> expected,
-            BiPredicate<? super ACTUAL, ? super EXPECTED> matches) {
+            CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) throws Throwable {
         var remainingExpected = new ArrayList<>(expected);
         while (actual.hasNext()) {
             ACTUAL value = actual.next();
@@ -52,7 +50,7 @@ final class ValueMatching {
         return remainingExpected.isEmpty();
     }
 
-    static boolean sameDistinctElements(Collection<?> actual, Collection<?> expected) {
+    static boolean sameDistinctElements(Collection<?> actual, Collection<?> expected) throws Throwable {
         return matchesAll(actual, value -> matchesAny(expected, candidate -> deepEquals(value, candidate)))
                 && matchesAll(expected, value -> matchesAny(actual, candidate -> deepEquals(candidate, value)));
     }

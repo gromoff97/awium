@@ -5,7 +5,6 @@ import io.github.gromoff97.awium.Condition.Reference;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.IntPredicate;
-import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
@@ -141,12 +140,12 @@ public final class StringConditions {
     }
 
     private static PreservingCondition<CharSequence> matching(String description, String mismatch,
-            Predicate<String> matches) {
+            CheckedPredicate<String> matches) {
         return preservingNonNull("string", description, mismatch, actual -> matches.test(actual.toString()));
     }
 
     private static PreservingCondition<CharSequence> matching(String description, String mismatch,
-            Reference<?> reference, Predicate<String> matches) {
+            Reference<?> reference, CheckedPredicate<String> matches) {
         return preservingNonNull("string", description, mismatch, reference, actual -> matches.test(actual.toString()));
     }
 

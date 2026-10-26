@@ -5,7 +5,6 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.IntPredicate;
-import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
@@ -98,7 +97,7 @@ public final class Conditions {
                 ? satisfied(actual) : unsatisfied("value was in the unexpected values")));
     }
 
-    public static <OBSERVED> PreservingCondition<OBSERVED> matches(Predicate<? super OBSERVED> predicate) {
+    public static <OBSERVED> PreservingCondition<OBSERVED> matches(CheckedPredicate<? super OBSERVED> predicate) {
         requireNonNull(predicate, "predicate must not be null");
         return ConditionSupport.preserving("value matches", "value did not match", predicate);
     }

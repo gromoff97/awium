@@ -47,7 +47,7 @@ class TryUntilFailureTest {
         };
 
         var result = assertParity(time -> timedAwait(() -> "actual", config(1, 2, 0), time, time),
-                () -> matches(predicate));
+                () -> matches(predicate::test));
 
         assertEquals(CONDITION_FAILED, result.failure().reason());
         assertSame(assertion, result.failure().cause());

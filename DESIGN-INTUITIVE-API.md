@@ -270,6 +270,29 @@
   даёт timeout для неактивного пользователя. README явно различает callback
   утверждения и boolean-проверку; это уточнение контракта, а не исправление
   статической проверки или поведения asserted.
+- Проверена поддержка checked boolean callbacks. Простая дополнительная
+  перегрузка matches(CheckedFunction<..., Boolean>) не подошла: три обычные
+  lambda-формы стали неоднозначными, а checked method reference по-прежнему
+  выбирал Predicate и отклонялся. Вариант не внедрён.
+  Вместо него predicate-контракты заменены на CheckedPredicate и
+  CheckedBiPredicate: по одному абстрактному test, primitive boolean и
+  throws Throwable. Это тот же подход, что существующие CheckedFunction /
+  CheckedConsumer. Привычные lambda / method reference сохраняют запись;
+  JDK-переменные и их комбинаторы передаются через predicate::test /
+  entryPredicate::test. Это изменение публичных сигнатур, отражённое в README.
+  Прототип из 28 вызовов проверил обычные / checked формы, адаптацию JDK и
+  несовместимые типы. checkedReference.because(...) работает в matches,
+  first / last / element и кванторах коллекций / Map без явных generics.
+  Два небольших интерфейса добавляют суммарно восемь строк продуктового кода
+  с учётом удалённых импортов; новых try/catch, casts и runtime-зависимостей нет.
+  Проверки boolean false продолжают ожидание, любой выброшенный Throwable
+  останавливает его с исходной причиной. Четыре поведенческих теста проверяют
+  конкретные User / ArrayList / LinkedHashMap, оба терминала и 17 форм callback
+  с IOException, AssertionError, Throwable и InterruptedException без флага.
+  Последний не распознаётся особо и флаг не восстанавливает.
+  `check javadoc` прошёл: 470 тестов без ошибок и пропусков; все 25 примеров
+  README скомпилированы и выполнены. Ограничение raw generic method reference
+  вроде matches(List::isEmpty).because(...) этим не исправлено.
 
 Проверенные варианты, которые пока не подходят:
 
