@@ -192,8 +192,8 @@ class ObjectAndOptionalAwaitTest {
         var pollingTime = new FakeTime(0);
         var equalValue = new Object();
 
-        assertSame(equalValue, await((java.util.concurrent.Callable<java.util.Optional<Object>>)
-                () -> Optional.of(equalValue)).usingTime(pollingTime, pollingTime).until(hasValue(equalTo(equalValue))));
+        assertSame(equalValue, await(() -> Optional.of(equalValue)).usingTime(pollingTime, pollingTime)
+                .until(hasValue(equalTo(equalValue))));
     }
 
     @Test

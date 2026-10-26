@@ -236,6 +236,10 @@ await(paymentRepository::load).until(matches((Payment payment) -> payment.status
         "Settlement requires a finished payment"));
 ```
 
+Generic helpers without a concrete input type have the same limitation:
+`sorted(Comparator.naturalOrder()).because(...)` cannot infer the element type.
+Use a typed method reference such as `sorted(Integer::compareTo).because(...)`.
+
 For emptiness, use `empty.because(...)` or `nonEmpty.because(...)` from the
 appropriate catalogue. A generic factory cannot infer its operand type from
 an untyped empty `List.of()`, an empty varargs list, or a `null` literal before

@@ -46,7 +46,7 @@ class CollectionSelectionConditionsTest {
 
         User matching = await(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(matches(user -> user.id() == 2)));
         String typed = await((java.util.concurrent.Callable<List<Object>>) () -> List.of("text", 42)).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(instanceOf(String.class)));
-        String nullable = await((java.util.concurrent.Callable<List<String>>) () -> Arrays.asList((String) null)).usingTime(pollingTime, pollingTime).until(CollectionConditions.single);
+        String nullable = await(() -> Arrays.asList((String) null)).usingTime(pollingTime, pollingTime).until(CollectionConditions.single);
 
         assertSame(users.get(1), matching);
         assertEquals("text", typed);
@@ -180,14 +180,15 @@ class CollectionSelectionConditionsTest {
                 CollectionConditions.doesNotContainSubsequence(List.of(1, 3, 5)), values).getClass());
         assertEquals(Unsatisfied.class, evaluate(CollectionConditions.sorted(Integer::compareTo),
                 List.of(1, 3, 2)).getClass());
-        assertEquals(Satisfied.class, evaluate(CollectionConditions.sorted(Integer::compareTo),
-                List.of(1, 1)).getClass());
+        var equalElements = List.of(1, 1);
+        assertSame(equalElements, await(() -> equalElements).usingTime(pollingTime, pollingTime)
+                .until(CollectionConditions.sorted(Integer::compareTo).because("equal elements retain their order")));
         assertEquals(Satisfied.class, evaluate(CollectionConditions.sorted(
                 java.util.Comparator.comparingInt(Integer::intValue).reversed()), List.of(3, 2, 1)).getClass());
 
         var sequencedSet = new LinkedHashSet<>(List.of(1, 2, 3));
-        assertEquals(1, await((java.util.concurrent.Callable<LinkedHashSet<Integer>>) () -> sequencedSet).usingTime(pollingTime, pollingTime).until(first));
-        assertSame(sequencedSet, await((java.util.concurrent.Callable<LinkedHashSet<Integer>>) () -> sequencedSet).usingTime(pollingTime, pollingTime).until(
+        assertEquals(1, await(() -> sequencedSet).usingTime(pollingTime, pollingTime).until(first));
+        assertSame(sequencedSet, await(() -> sequencedSet).usingTime(pollingTime, pollingTime).until(
                 CollectionConditions.startsWith(List.of(1, 2))));
     }
 
