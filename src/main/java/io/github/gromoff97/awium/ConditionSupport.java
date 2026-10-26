@@ -62,24 +62,6 @@ final class ConditionSupport {
         return new SelectedCondition<>(condition(description, null, evaluator));
     }
 
-    static <OBSERVED, RESULT> Condition<OBSERVED, RESULT> filtered(Condition<OBSERVED, RESULT> condition,
-            CheckedPredicate<? super RESULT> predicate) {
-        requireNonNull(predicate, "predicate must not be null");
-        return new Condition<>(condition.description() + " and value matches", condition, () -> {
-            var evaluator = new ConditionAwaitAttempt<>(condition);
-            return actual -> {
-                var evaluation = evaluator.probe(actual);
-                if (evaluation instanceof AttemptResult.Evaluated<? extends RESULT> evaluated
-                        && evaluated.result() instanceof ConditionResult.Satisfied<? extends RESULT> satisfied
-                        && !predicate.test(satisfied.result())) {
-                    return new AttemptResult.Evaluated<>(unsatisfied("value did not match"),
-                            evaluated.condition(), evaluated.progress());
-                }
-                return evaluation;
-            };
-        });
-    }
-
     static <VALUE> Reference<VALUE> expectedReference(VALUE value) {
         return new Reference<>("Expected", value);
     }

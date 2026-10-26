@@ -68,11 +68,6 @@ public final class Condition<OBSERVED, RESULT> {
         return String.format(Locale.ROOT, format, arguments);
     }
 
-    /** Checks a satisfied result without changing its type; mismatches and failures skip the predicate. */
-    public Condition<OBSERVED, RESULT> where(CheckedPredicate<? super RESULT> predicate) {
-        return ConditionSupport.filtered(this, predicate);
-    }
-
     public Condition<OBSERVED, RESULT> because(String explanation) {
         return new Condition<>(description, nonBlank(explanation, "explanation"), reference, evaluatorFactory);
     }
@@ -137,11 +132,6 @@ public final class Condition<OBSERVED, RESULT> {
         @Override
         Condition<OBSERVED, OBSERVED> definition() {
             return definition;
-        }
-
-        /** Checks the same observation after this condition succeeds, preserving its established input type. */
-        public PreservingCondition<OBSERVED> where(CheckedPredicate<? super OBSERVED> predicate) {
-            return new PreservingCondition<>(ConditionSupport.filtered(definition, predicate));
         }
 
         public PreservingCondition<OBSERVED> because(String explanation) {

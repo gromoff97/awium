@@ -57,7 +57,6 @@ class FactoryGrammarTest {
         var object = await(() -> "value").usingTime(pollingTime, pollingTime).every(ofSeconds(20));
         assertNullRejected("predicate", () -> object.until(matches((CheckedPredicate<String>) null)));
         assertNullRejected("predicate", () -> object.tryUntil(matches((CheckedPredicate<String>) null)));
-        assertNullRejected("predicate", () -> instanceOf(String.class).where(null));
         assertNullRejected("predicate", () -> CollectionConditions.single((CheckedPredicate<String>) null));
         assertNullRejected("predicate", () -> OptionalConditions.hasValue((CheckedPredicate<String>) null));
         assertNullRejected("predicate", () -> MapConditions.valueFor("key", (CheckedPredicate<String>) null));
