@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.ComparisonCondition;
-import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.Condition.Reference;
+import io.github.gromoff97.awium.Condition.SourceCondition;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -69,24 +69,16 @@ public sealed class ValueAwait<OBSERVED> permits Await {
         return new ValueAwait<>(source, configuration);
     }
 
-    public OBSERVED until(PreservingCondition<? super OBSERVED> condition) {
-        return complete(ConditionAwaitAttempt.bind(required(condition).definition));
-    }
-
-    public OBSERVED until(ComparisonCondition<? extends OBSERVED> condition) {
-        return complete(ConditionAwaitAttempt.bind(required(condition).definition));
+    public OBSERVED until(SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>> condition) {
+        return complete(ConditionAwaitAttempt.bind(required(condition).definition()));
     }
 
     public <RESULT> RESULT until(Condition<? super OBSERVED, ? extends RESULT> condition) {
         return complete(new ConditionAwaitAttempt<>(required(condition)));
     }
 
-    public AwaitResult<OBSERVED, OBSERVED> tryUntil(PreservingCondition<? super OBSERVED> condition) {
-        return capture(ConditionAwaitAttempt.bind(required(condition).definition));
-    }
-
-    public AwaitResult<OBSERVED, OBSERVED> tryUntil(ComparisonCondition<? extends OBSERVED> condition) {
-        return capture(ConditionAwaitAttempt.bind(required(condition).definition));
+    public AwaitResult<OBSERVED, OBSERVED> tryUntil(SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>> condition) {
+        return capture(ConditionAwaitAttempt.bind(required(condition).definition()));
     }
 
     public <RESULT> AwaitResult<OBSERVED, RESULT> tryUntil(Condition<? super OBSERVED, ? extends RESULT> condition) {
@@ -95,25 +87,13 @@ public sealed class ValueAwait<OBSERVED> permits Await {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final List<OBSERVED> until(PreservingCondition<? super OBSERVED>... conditions) {
+    public final List<OBSERVED> until(SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>>... conditions) {
         return until(ConditionSupport.captured(conditions));
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public final AwaitResult<OBSERVED, List<OBSERVED>> tryUntil(PreservingCondition<? super OBSERVED>... conditions) {
-        return tryUntil(ConditionSupport.captured(conditions));
-    }
-
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    public final List<OBSERVED> until(ComparisonCondition<? extends OBSERVED>... conditions) {
-        return until(ConditionSupport.captured(conditions));
-    }
-
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    public final AwaitResult<OBSERVED, List<OBSERVED>> tryUntil(ComparisonCondition<? extends OBSERVED>... conditions) {
+    public final AwaitResult<OBSERVED, List<OBSERVED>> tryUntil(SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>>... conditions) {
         return tryUntil(ConditionSupport.captured(conditions));
     }
 

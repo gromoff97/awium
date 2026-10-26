@@ -95,18 +95,48 @@ public final class Condition<OBSERVED, RESULT> {
     }
 
     /**
+     * A check that returns the original observation. Input and expected-value bounds
+     * jointly constrain the compatible source; the reference parameter carries only that constraint.
+     * Input checks use {@code Reference<?>}; comparisons use {@code Reference<? super EXPECTED>}.
+     * Terminals require that bound to contain {@code Reference<? super SOURCE>}, so an expected
+     * subtype is allowed while a broader input check can still accept the source.
+     *
+     * @param <OBSERVED> input type accepted by the check
+     * @param <REFERENCE> expected-value compatibility bound
+     */
+    public abstract static sealed class SourceCondition<OBSERVED, REFERENCE>
+            permits PreservingCondition, ComparisonCondition {
+
+        SourceCondition() {}
+
+        abstract Condition<OBSERVED, ?> definition();
+
+        public abstract SourceCondition<OBSERVED, REFERENCE> because(String explanation);
+
+        public abstract SourceCondition<OBSERVED, REFERENCE> because(String format, Object... arguments);
+
+        public abstract SourceCondition<OBSERVED, REFERENCE> because(Supplier<? extends String> explanation);
+    }
+
+    /**
      * Checks a value without replacing it. A successful wait returns the original observation
      * with its source type, even when this check accepts a supertype.
      * {@code because} returns a copy with a replacement diagnostic explanation.
      *
      * @param <OBSERVED> input type accepted by the check
      */
-    public static final class PreservingCondition<OBSERVED> {
+    public static final class PreservingCondition<OBSERVED>
+            extends SourceCondition<OBSERVED, Reference<?>> {
 
         final Condition<OBSERVED, OBSERVED> definition;
 
         PreservingCondition(Condition<OBSERVED, OBSERVED> definition) {
             this.definition = required(definition);
+        }
+
+        @Override
+        Condition<OBSERVED, OBSERVED> definition() {
+            return definition;
         }
 
         /** Checks the same observation after this condition succeeds, preserving its established input type. */
@@ -134,12 +164,18 @@ public final class Condition<OBSERVED, RESULT> {
      *
      * @param <EXPECTED> type of expected values
      */
-    public static final class ComparisonCondition<EXPECTED> {
+    public static final class ComparisonCondition<EXPECTED>
+            extends SourceCondition<Object, Reference<? super EXPECTED>> {
 
         final Condition<Object, Object> definition;
 
         ComparisonCondition(Condition<Object, Object> definition) {
             this.definition = required(definition);
+        }
+
+        @Override
+        Condition<Object, Object> definition() {
+            return definition;
         }
 
         public ComparisonCondition<EXPECTED> because(String explanation) {

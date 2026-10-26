@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
+import io.github.gromoff97.awium.Condition.SourceCondition;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -33,10 +34,10 @@ class PublicSurfaceTest {
 
     @Test
     void conditionsDoNotExposeRuntimeMechanicsOrAlternativeFactories() {
-        Set<String> excludedMethods = Set.of("evaluatorFactory", "newEvaluator", "newAttempt",
+        Set<String> excludedMethods = Set.of("definition", "evaluatorFactory", "newEvaluator", "newAttempt",
                 "preservingAttempt", "selectionAttempt", "yields", "preserving", "captured");
         for (Class<?> stage : List.of(Conditions.class, Condition.class, PreservingCondition.class, ComparisonCondition.class,
-                SelectedCondition.class, MapValueCondition.class)) {
+                SelectedCondition.class, MapValueCondition.class, SourceCondition.class)) {
             stream(stage.getMethods()).forEach(method ->
                     assertFalse(excludedMethods.contains(method.getName()), method.toGenericString()));
         }

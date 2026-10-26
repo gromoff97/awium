@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
+import io.github.gromoff97.awium.Condition.SourceCondition;
 import io.github.gromoff97.awium.Condition.Reference;
 import java.util.Arrays;
 import java.util.List;
@@ -183,11 +183,12 @@ final class ConditionSupport {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    static <OBSERVED> Condition<OBSERVED, List<OBSERVED>> captured(PreservingCondition<? super OBSERVED>... conditions) {
+    static <OBSERVED> Condition<OBSERVED, List<OBSERVED>> captured(
+            SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>>... conditions) {
         var stages = stages(conditions);
         return new Condition<>("conditions are satisfied in order", null, null, () ->
                 new SequenceExecution<OBSERVED, OBSERVED>(stages.stream()
-                        .map(stage -> ConditionAwaitAttempt.bind(stage.definition)))::step);
+                        .map(stage -> ConditionAwaitAttempt.bind(stage.definition())))::step);
     }
 
     @SafeVarargs
@@ -205,15 +206,6 @@ final class ConditionSupport {
         var stages = stages(conditions);
         return new Condition<>("conditions are satisfied in order", null, null,
                 () -> new SequenceExecution<OBSERVED, MAP_VALUE>(stages.stream()
-                        .map(stage -> ConditionAwaitAttempt.bind(stage.definition)))::step);
-    }
-
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    static <OBSERVED> Condition<OBSERVED, List<OBSERVED>> captured(ComparisonCondition<? extends OBSERVED>... conditions) {
-        var stages = stages(conditions);
-        return new Condition<>("conditions are satisfied in order", null, null, () ->
-                new SequenceExecution<OBSERVED, OBSERVED>(stages.stream()
                         .map(stage -> ConditionAwaitAttempt.bind(stage.definition)))::step);
     }
 

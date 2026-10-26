@@ -99,7 +99,23 @@ class DirectBecauseCompilationContractTest {
     }
 
     @Test
-    void sequencesRejectMixedConditionFamilies() throws IOException {
+    void mixedValueStagesRetainBothInputConstraints() throws IOException {
+        for (String terminal : List.of("until", "tryUntil")) {
+            for (String arguments : List.of(
+                    "equalTo(123), isNotNull",
+                    "isNotNull, equalTo(123).because(\"wrong type\")",
+                    "equalTo(new Object()), matches(String::isBlank)",
+                    "equalTo(\"ready\"), matches((Integer value) -> true)",
+                    "matches(String::isBlank), notIn(List.of(123))")) {
+                assertRejected("await(() -> \"ready\").%s(%s);".formatted(terminal, arguments));
+            }
+        }
+        assertRejected("List<Integer> wrong = await(() -> \"ready\").until(equalTo(\"ready\"), isNotNull);");
+        assertRejected("await(() -> \"ready\").<Object>until(equalTo(123), isNotNull);");
+    }
+
+    @Test
+    void sequencesRejectMixingValueChecksWithTypedTransformations() throws IOException {
         for (String terminal : List.of("until", "tryUntil")) {
             for (String decoration : List.of("", ".because(\"required value\")")) {
                 var checks = List.of("equalTo(\"ready\")" + decoration,
@@ -108,6 +124,7 @@ class DirectBecauseCompilationContractTest {
                 for (String first : checks) {
                     for (String second : checks) {
                         if (first.equals(second)) continue;
+                        if (!first.startsWith("instanceOf") && !second.startsWith("instanceOf")) continue;
                         String call = "await(() -> \"ready\").%s(%s, %s);".formatted(terminal, first, second);
                         assertRejected(call);
                     }

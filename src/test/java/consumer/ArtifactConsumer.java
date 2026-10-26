@@ -26,7 +26,7 @@ public final class ArtifactConsumer {
         String narrowed = await((Callable<Object>) ArtifactConsumer::text).until(instanceOf(String.class));
         long[] time = {0};
         List<String> stages = await(ArtifactConsumer::text).usingTime(() -> time[0], nanos -> time[0] += nanos).every(ofNanos(1)).upTo(ofNanos(5)).until(
-                equalTo("ready"), equalTo("ready"));
+                equalTo("ready").because("value"), contentEquals("ready").because("text"));
         boolean preserved = await(() -> values).until(asserted(actual -> {
             if (actual.size() != 1) throw new AssertionError("one value expected");
         })) == values;

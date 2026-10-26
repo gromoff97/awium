@@ -107,7 +107,7 @@ in stage order. `tryUntil(...)` returns the same list inside `AwaitResult`:
 List<Payment> payments = await(paymentRepository::load).until(
         matches(Payment::created),
         matches(Payment::pending),
-        matches(Payment::finished));
+        equalTo(expectedPayment).because("Expected final payment"));
 
 AwaitResult<String, List<String>> statuses = await(paymentRepository::status).tryUntil(
         equalTo("created").because("The order must be created"),
@@ -118,9 +118,10 @@ With `persisting(...)`, only the final stage is re-evaluated. Earlier captured
 values remain unchanged. Each factory-backed stage gets its own fresh evaluator
 for every terminal call. One condition still returns one value; zero conditions
 are invalid. A comma between terminal arguments always means ordered capture.
-The stages must belong to a compatible condition family; preserving conditions
-and comparisons cannot be mixed. A selection followed by a value check belongs
-inside the selection condition instead.
+Comparisons and preserving checks can be mixed: `equalTo(expectedPayment)` and
+`matches(Payment::paid)` both capture the original payment. Selections and typed
+transformations keep their own result rules. A selection followed by a value
+check belongs inside the selection condition instead.
 
 Type-narrowing stages and nested type selections can also be captured in order:
 
@@ -630,6 +631,8 @@ checks; `./gradlew pitest` runs mutation testing.
 
 `Condition` owns the immutable definition, explanation, and diagnostic reference.
 Its typed families let terminal overloads preserve or select the source's type.
+Preserving checks and comparisons share `SourceCondition`, whose input and
+expected-value bounds allow mixed stages while retaining the complete source type.
 Each terminal call creates fresh `ConditionAwaitAttempt` instances, which
 initialize callbacks lazily and convert thrown failures into internal
 uncontrolled results. `SequenceExecution` owns ordered stage progress and
