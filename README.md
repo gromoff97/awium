@@ -87,6 +87,10 @@ methods declaring `throws Exception` or `throws Throwable` can be passed directl
 Callback failures stop polling immediately and retain the
 original cause; only `AssertionError` inside `asserted(...)` means retry.
 
+Use `matches(Payment::paid)` for a boolean check. Java discards a value returned
+by a method reference adapted to `asserted(...)`, so returning `false` does not
+make that assertion fail.
+
 For callbacks already stored in JDK `Function` or `Consumer` variables, pass
 `function::apply` or `consumer::accept`. Predicates still use the JDK interfaces.
 

@@ -175,8 +175,8 @@ class MapSelectionConditionsTest {
     void selectorsCoverMissingMultipleAndWrongEntries() {
         var actual = new LinkedHashMap<>(Map.of("first", 1, "second", 2));
 
-        var none = evaluate(MapConditions.<String, Integer>singleEntry(matches(entry -> entry.getValue() > 2)), actual);
-        var many = evaluate(MapConditions.<String, Integer>singleEntry(matches(entry -> entry.getValue() > 0)), actual);
+        var none = evaluate(MapConditions.singleEntry(matches(entry -> entry.getValue() > 2)), actual);
+        var many = evaluate(MapConditions.singleEntry(matches(entry -> entry.getValue() > 0)), actual);
         assertEquals(Unsatisfied.class, none.getClass());
         assertEquals(Unsatisfied.class, many.getClass());
         assertEquals("value did not match", ((Unsatisfied<?>) none).mismatch());
