@@ -32,8 +32,6 @@ import static io.github.gromoff97.awium.ValueMatching.exactly;
 import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
-import static java.util.Collections.singletonList;
-import static java.util.Collections.singletonMap;
 import static java.util.Objects.requireNonNull;
 
 public final class MapConditions {
@@ -402,22 +400,26 @@ public final class MapConditions {
 
     /** Matches one key, including a collection or array as that single key. */
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsKey(KEY expected) {
-        return containsAllKeys(singletonList(expected));
+        return preserving("map contains expected key", "map did not contain expected key", expectedReference(expected),
+                actual -> matchesAny(actual.keySet(), key -> deepEquals(key, expected)));
     }
 
     /** Matches when the single unexpected key is absent. */
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> doesNotContainKey(KEY unexpected) {
-        return doesNotContainAnyKeys(singletonList(unexpected));
+        return preserving("map does not contain unexpected key", "map contained unexpected key", unexpectedReference(unexpected),
+                actual -> !matchesAny(actual.keySet(), key -> deepEquals(key, unexpected)));
     }
 
     /** Matches one value, including a collection or array as that single value. */
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> containsValue(VALUE expected) {
-        return containsAllValues(singletonList(expected));
+        return preserving("map contains expected value", "map did not contain expected value", expectedReference(expected),
+                actual -> matchesAny(actual.values(), value -> deepEquals(value, expected)));
     }
 
     /** Matches when the single unexpected value is absent. */
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> doesNotContainValue(VALUE unexpected) {
-        return doesNotContainAnyValues(singletonList(unexpected));
+        return preserving("map does not contain unexpected value", "map contained unexpected value", unexpectedReference(unexpected),
+                actual -> !matchesAny(actual.values(), value -> deepEquals(value, unexpected)));
     }
 
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsAllKeys(Iterable<? extends KEY> expected) {
@@ -451,48 +453,52 @@ public final class MapConditions {
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsEntry(KEY key, VALUE value) {
-        return containsAllEntries(singletonMap(key, value));
+        var expected = new SimpleImmutableEntry<>(key, value);
+        return preserving("map contains expected entry", "map did not contain expected entry", expectedReference(expected),
+                actual -> matchesAny(actual.entrySet(), entry -> entryMatches(entry, expected)));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainEntry(KEY key, VALUE value) {
-        return doesNotContainAnyEntries(singletonMap(key, value));
+        var unexpected = new SimpleImmutableEntry<>(key, value);
+        return preserving("map does not contain unexpected entry", "map contained unexpected entry", unexpectedReference(unexpected),
+                actual -> !matchesAny(actual.entrySet(), entry -> entryMatches(entry, unexpected)));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsAllEntries(Map<? extends KEY, ? extends VALUE> expected) {
-        var entries = nonEmpty(snapshotEntries(expected), "expected entries");
+        var entries = nonEmpty(snapshotEntries(expected, "expected entries"), "expected entries");
         return preserving("map contains all expected entries", "map did not contain all expected entries", expectedReference(entries),
                 actual -> containsAll(actual.entrySet(), entries,
                         MapConditions::entryMatches));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainAllEntries(Map<? extends KEY, ? extends VALUE> unexpected) {
-        var entries = nonEmpty(snapshotEntries(unexpected), "expected entries");
-        return preserving("map does not contain all expected entries", "map contained all expected entries", expectedReference(entries),
+        var entries = nonEmpty(snapshotEntries(unexpected, "unexpected entries"), "unexpected entries");
+        return preserving("map does not contain all unexpected entries", "map contained all unexpected entries", unexpectedReference(entries),
                 actual -> !containsAll(actual.entrySet(), entries,
                         MapConditions::entryMatches));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsAnyEntries(Map<? extends KEY, ? extends VALUE> expected) {
-        var entries = nonEmpty(snapshotEntries(expected), "expected entries");
+        var entries = nonEmpty(snapshotEntries(expected, "expected entries"), "expected entries");
         return preserving("map contains an expected entry", "map did not contain an expected entry", expectedReference(entries),
                 actual -> containsAny(actual.entrySet(), entries, MapConditions::entryMatches));
     }
 
-    public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainAnyEntries(Map<? extends KEY, ? extends VALUE> expected) {
-        var entries = nonEmpty(snapshotEntries(expected), "expected entries");
-        return preserving("map does not contain an expected entry", "map contained an expected entry", expectedReference(entries),
+    public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainAnyEntries(Map<? extends KEY, ? extends VALUE> unexpected) {
+        var entries = nonEmpty(snapshotEntries(unexpected, "unexpected entries"), "unexpected entries");
+        return preserving("map does not contain an unexpected entry", "map contained an unexpected entry", unexpectedReference(entries),
                 actual -> !containsAny(actual.entrySet(), entries, MapConditions::entryMatches));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsExactlyEntries(Map<? extends KEY, ? extends VALUE> expected) {
-        var entries = snapshotEntries(expected);
+        var entries = snapshotEntries(expected, "expected entries");
         return preserving("map contains exactly the expected entries", "map did not contain exactly the expected entries", expectedReference(entries),
                 actual -> exactContent(actual, entries));
     }
 
-    public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainExactlyEntries(Map<? extends KEY, ? extends VALUE> expected) {
-        var entries = snapshotEntries(expected);
-        return preserving("map does not contain exactly the expected entries", "map contained exactly the expected entries", expectedReference(entries),
+    public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainExactlyEntries(Map<? extends KEY, ? extends VALUE> unexpected) {
+        var entries = snapshotEntries(unexpected, "unexpected entries");
+        return preserving("map does not contain exactly the unexpected entries", "map contained exactly the unexpected entries", unexpectedReference(entries),
                 actual -> !exactContent(actual, entries));
     }
 
@@ -532,8 +538,8 @@ public final class MapConditions {
     }
 
     // Preserve encounter order and distinct entries without calling user equals/hashCode.
-    private static List<? extends Entry<?, ?>> snapshotEntries(Map<?, ?> values) {
-        return requireNonNull(values, "expected entries must not be null")
+    private static List<? extends Entry<?, ?>> snapshotEntries(Map<?, ?> values, String name) {
+        return requireNonNull(values, name + " must not be null")
                 .entrySet().stream().map(SimpleImmutableEntry::new).toList();
     }
 

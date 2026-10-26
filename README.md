@@ -451,6 +451,10 @@ Maps follow the same rule: `containsKey(key)`, `doesNotContainKey(key)`,
 `doesNotContainEntry(key, value)`, `doesNotContainAllEntries(map)`, and
 `doesNotContainAnyEntries(map)` express the corresponding absence checks.
 
+Diagnostics retain a single operand as one value and a bulk expectation as a
+snapshot of its elements or entries. Positive checks label the operand
+`Expected`; absence checks label it `Unexpected`.
+
 Factories accepting iterables of expected elements or maps of expected entries
 take a shallow snapshot when the condition is created.
 Changing the original input afterwards does not change the condition or its

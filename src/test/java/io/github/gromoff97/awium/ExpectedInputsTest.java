@@ -25,6 +25,27 @@ import static org.junit.jupiter.api.Assertions.*;
 class ExpectedInputsTest {
 
     @Test
+    void singleOperandsRemainWholeValuesInDiagnostics() {
+        int[] operand = {1, 2};
+        List<Condition<?>> conditions = List.of(contains(operand), doesNotContain(operand),
+                MapConditions.containsKey(operand), MapConditions.doesNotContainKey(operand),
+                MapConditions.containsValue(operand), MapConditions.doesNotContainValue(operand));
+        for (var condition : conditions) {
+            assertSame(operand, condition.reference().value());
+        }
+        for (boolean negative : List.of(false, true)) {
+            var actual = List.of(negative ? operand : new int[] {9});
+            var condition = negative ? doesNotContain(operand) : contains(operand);
+            var time = new FakeTime(0);
+            var outcome = await(() -> actual).usingTime(time, time)
+                    .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(1))
+                    .tryUntil(condition.because("one array"));
+            var failure = assertInstanceOf(AwaitResult.Failed.class, outcome).failure();
+            assertTrue(failure.message().contains((negative ? "Unexpected" : "Expected") + ": [1, 2]"));
+        }
+    }
+
+    @Test
     void validationUsesTheSnapshotInsteadOfTheOriginalContainersEmptinessQuery() {
         var expected = new ArrayList<>(List.of("before")) {
             @Override

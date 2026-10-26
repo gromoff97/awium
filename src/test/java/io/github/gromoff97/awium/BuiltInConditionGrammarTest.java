@@ -35,8 +35,8 @@ class BuiltInConditionGrammarTest {
         assertEquals("collection size is at least 2", description(CollectionConditions.sizeAtLeast(2)));
         assertEquals("collection size is less than 2", description(CollectionConditions.sizeLessThan(2)));
         assertEquals("collection size is at most 2", description(CollectionConditions.sizeAtMost(2)));
-        assertEquals("collection contains all expected elements", description(contains("expected")));
-        assertEquals("collection does not contain any unexpected elements", description(doesNotContain("expected")));
+        assertEquals("collection contains expected element", description(contains("expected")));
+        assertEquals("collection does not contain unexpected element", description(doesNotContain("expected")));
         assertEquals("collection contains all expected elements", description(containsAll(List.of("first", "second"))));
         assertEquals("collection does not contain all unexpected elements",
                 description(doesNotContainAll(List.of("first", "second"))));
@@ -45,11 +45,11 @@ class BuiltInConditionGrammarTest {
                 description(doesNotContainAny(List.of("expected"))));
         assertEquals("collection contains exactly the expected elements",
                 description(containsExactly(List.of("expected"))));
-        assertEquals("collection does not contain exactly the expected elements",
+        assertEquals("collection does not contain exactly the unexpected elements",
                 description(doesNotContainExactly(List.of("expected"))));
         assertEquals("collection contains exactly the expected elements in any order",
                 description(containsExactlyInAnyOrder(List.of("expected"))));
-        assertEquals("collection does not contain exactly the expected elements in any order",
+        assertEquals("collection does not contain exactly the unexpected elements in any order",
                 description(doesNotContainExactlyInAnyOrder(List.of("expected"))));
         assertEquals("map has a single entry", description(MapConditions.singleEntry));
         assertEquals("map is empty", description(MapConditions.empty));
@@ -60,21 +60,21 @@ class BuiltInConditionGrammarTest {
         assertEquals("map size is at least 2", description(MapConditions.sizeAtLeast(2)));
         assertEquals("map size is less than 2", description(MapConditions.sizeLessThan(2)));
         assertEquals("map size is at most 2", description(MapConditions.sizeAtMost(2)));
-        assertEquals("map contains all expected keys", description(containsKey("expected")));
-        assertEquals("map does not contain unexpected keys", description(doesNotContainKey("expected")));
-        assertEquals("map contains all expected values", description(containsValue("expected")));
-        assertEquals("map does not contain unexpected values", description(doesNotContainValue("expected")));
-        assertEquals("map contains all expected entries", description(containsEntry("key", "value")));
-        assertEquals("map does not contain an expected entry", description(doesNotContainEntry("key", "value")));
+        assertEquals("map contains expected key", description(containsKey("expected")));
+        assertEquals("map does not contain unexpected key", description(doesNotContainKey("expected")));
+        assertEquals("map contains expected value", description(containsValue("expected")));
+        assertEquals("map does not contain unexpected value", description(doesNotContainValue("expected")));
+        assertEquals("map contains expected entry", description(containsEntry("key", "value")));
+        assertEquals("map does not contain unexpected entry", description(doesNotContainEntry("key", "value")));
         assertEquals("map contains all expected entries", description(containsAllEntries(Map.of("key", "value"))));
-        assertEquals("map does not contain all expected entries",
+        assertEquals("map does not contain all unexpected entries",
                 description(doesNotContainAllEntries(Map.of("key", "value"))));
         assertEquals("map contains an expected entry", description(containsAnyEntries(Map.of("key", "value"))));
-        assertEquals("map does not contain an expected entry",
+        assertEquals("map does not contain an unexpected entry",
                 description(doesNotContainAnyEntries(Map.of("key", "value"))));
         assertEquals("map contains exactly the expected entries",
                 description(containsExactlyEntries(Map.of("key", "value"))));
-        assertEquals("map does not contain exactly the expected entries",
+        assertEquals("map does not contain exactly the unexpected entries",
                 description(doesNotContainExactlyEntries(Map.of("key", "value"))));
     }
 
