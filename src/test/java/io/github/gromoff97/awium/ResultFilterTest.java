@@ -13,6 +13,7 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.first;
 import static io.github.gromoff97.awium.CollectionConditions.single;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
+import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,6 +27,35 @@ class ResultFilterTest {
     private static final User PENDING = new User(0, false);
     private static final User FIRST = new User(1, true);
     private static final User LAST = new User(2, true);
+
+    @Test
+    void preservingChecksFilterTheSameObservationAndKeepItsConcreteType() {
+        var ready = new StringBuilder("ready");
+        var observations = List.of(new StringBuilder("failed"), new StringBuilder("really"), ready).iterator();
+        int[] filters = {0};
+        var condition = StringConditions.startsWith("rea").where(text -> {
+            filters[0]++;
+            return text.length() == 5;
+        }).because("ready text");
+        var time = new FakeTime(0);
+        StringBuilder selected = await(observations::next).usingTime(time, time)
+                .every(ofNanos(1)).upTo(ofNanos(3)).until(condition);
+        assertSame(ready, selected);
+        assertEquals(ready.capacity(), selected.capacity());
+        assertEquals(2, filters[0]);
+        assertFalse(observations.hasNext());
+
+        AwaitResult<StringBuilder, StringBuilder> result = await(() -> ready).usingTime(time, time).tryUntil(condition);
+        assertSame(ready, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        List<StringBuilder> stages = await(() -> ready).usingTime(time, time).every(ofNanos(1)).until(condition, condition);
+        assertSame(ready, stages.getFirst());
+        assertEquals(ready.capacity(), stages.getLast().capacity());
+
+        var firstUser = matches(User::active).where(user -> user.id() == 1).because("first active user");
+        User user = await(() -> List.of(PENDING, LAST, FIRST)).usingTime(time, time).until(single(firstUser));
+        assertSame(FIRST, user);
+        assertEquals(1, user.id());
+    }
 
     @Test
     void narrowedResultsBindUntypedLambdasAndCaptureOrderedValues() {

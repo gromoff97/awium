@@ -109,6 +109,11 @@ public final class Condition<OBSERVED, RESULT> {
             this.definition = required(definition);
         }
 
+        /** Checks the same observation after this condition succeeds, preserving its established input type. */
+        public PreservingCondition<OBSERVED> where(CheckedPredicate<? super OBSERVED> predicate) {
+            return new PreservingCondition<>(ConditionSupport.filtered(definition, predicate));
+        }
+
         public PreservingCondition<OBSERVED> because(String explanation) {
             return new PreservingCondition<>(definition.because(explanation));
         }

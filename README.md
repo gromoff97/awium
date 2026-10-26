@@ -295,8 +295,11 @@ reverse encounter order; `element` checks only the indexed value. If nested
 evaluation throws or the callback sets the thread's interrupt flag, the wait stops
 before the next callback.
 
-Conditions with a declared result type support `where(predicate)` to check that
-result without changing its type. In the example above, the lambda receives
+Checks with an established input type and conditions with a declared result type
+support `where(predicate)` to check that value without changing its type.
+For example, `StringConditions.startsWith("rea").where(text -> text.length() == 5)`
+checks prefix and length in one observation and preserves the original concrete type.
+In the selection example above, the lambda receives
 `Payment` even though the collection contains `Object`. The predicate runs only
 after the preceding condition succeeds and may throw checked exceptions.
 Inside `single`, it filters candidates before counting matches. After `single`,
