@@ -108,8 +108,8 @@ class ContainerInterruptionTest {
                 waiting -> waiting.tryUntil(MapConditions.allEntries((key, value) -> true)),
                 waiting -> waiting.tryUntil(MapConditions.anyEntry((key, value) -> true)),
                 waiting -> waiting.tryUntil(MapConditions.noEntry((key, value) -> false)),
-                waiting -> waiting.tryUntil(MapConditions.containsEntries("key", "ready")),
-                waiting -> waiting.tryUntil(MapConditions.containsEntries(Map.of("key", "ready"))),
+                waiting -> waiting.tryUntil(MapConditions.containsEntry("key", "ready")),
+                waiting -> waiting.tryUntil(MapConditions.containsAllEntries(Map.of("key", "ready"))),
                 waiting -> waiting.tryUntil(MapConditions.containsExactlyEntries(Map.of("key", "ready"))));
         for (String boundary : List.of("entrySet", "iterator", "hasNext", "next", "getKey", "getValue")) {
             for (int index = 0; index < waits.size(); index++) {

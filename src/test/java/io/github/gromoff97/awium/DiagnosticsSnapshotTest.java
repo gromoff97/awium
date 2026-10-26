@@ -867,9 +867,9 @@ class DiagnosticsSnapshotTest {
                         ? new ProbeContainers.EntryMap<>(List.of(new SimpleImmutableEntry<>(key, value)))
                         : Map.of("other", "other");
                 List<? extends PreservingCondition<? super Map<Object, Object>>> checks = negative
-                        ? List.of(MapConditions.doesNotContainEntries(expected), MapConditions.doesNotContainAllEntries(expected),
+                        ? List.of(MapConditions.doesNotContainAnyEntries(expected), MapConditions.doesNotContainAllEntries(expected),
                                 MapConditions.doesNotContainExactlyEntries(expected))
-                        : List.of(MapConditions.containsEntries(expected),
+                        : List.of(MapConditions.containsAllEntries(expected),
                                 MapConditions.containsAnyEntries(expected), MapConditions.containsExactlyEntries(expected));
                 for (var check : checks) {
                     renders[0] = renders[1] = 0;

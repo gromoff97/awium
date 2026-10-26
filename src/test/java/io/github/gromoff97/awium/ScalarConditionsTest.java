@@ -131,7 +131,7 @@ class ScalarConditionsTest {
         var time = new FakeTime(0);
         var waiting = await(() -> text).usingTime(time, time);
         var checks = List.of(StringConditions.nonEmpty, StringConditions.nonBlank,
-                StringConditions.contains("Ready", "42"), StringConditions.doesNotContain("failed"),
+                StringConditions.containsAll(List.of("Ready", "42")), StringConditions.doesNotContain("failed"),
                 StringConditions.containsIgnoringCase("READY"), StringConditions.startsWith("Ready"),
                 StringConditions.doesNotStartWith("failed"), StringConditions.endsWith("42"),
                 StringConditions.doesNotEndWith("failed"), StringConditions.matchesRegex("Ready \\d+"),
@@ -208,7 +208,7 @@ class ScalarConditionsTest {
         var waiting = await(() -> actual).usingTime(pollingTime, pollingTime);
 
         assertSame(actual, waiting.until(StringConditions.nonBlank));
-        assertSame(actual, waiting.until(StringConditions.contains("Ready", "42")));
+        assertSame(actual, waiting.until(StringConditions.containsAll(List.of("Ready", "42"))));
         assertSame(actual, waiting.until(StringConditions.doesNotContain("failed")));
         assertSame(actual, waiting.until(StringConditions.containsIgnoringCase("READY")));
         assertSame(actual, waiting.until(StringConditions.startsWith("Ready")));
@@ -250,8 +250,8 @@ class ScalarConditionsTest {
         assertPreserving(StringConditions.nonEmpty, "x", "");
         assertPreserving(StringConditions.blank, " \n", "x");
         assertPreserving(StringConditions.nonBlank, "x", " \n");
-        assertPreserving(StringConditions.contains("a", "b"), "abc", "ac");
-        assertPreserving(StringConditions.doesNotContain("x", "y"), "abc", "ayc");
+        assertPreserving(StringConditions.containsAll(List.of("a", "b")), "abc", "ac");
+        assertPreserving(StringConditions.doesNotContainAny(List.of("x", "y")), "abc", "ayc");
         assertPreserving(StringConditions.containsIgnoringCase("READY"), "ready", "failed");
         assertStatus(StringConditions.containsIgnoringCase("ς"), "Σ", Satisfied.class);
         assertPreserving(StringConditions.containsIgnoringCase("a+b[.]"), "xA+B[.]y", "aaabxy");
@@ -289,9 +289,9 @@ class ScalarConditionsTest {
                 assertThrows(IllegalArgumentException.class,
                         () -> StringConditions.lengthBetween(-1, 1)).getMessage());
         assertThrows(IllegalArgumentException.class, () -> StringConditions.lengthBetween(2, 1));
-        assertThrows(IllegalArgumentException.class, StringConditions::contains);
-        assertThrows(NullPointerException.class, () -> StringConditions.contains((String[]) null));
-        assertThrows(NullPointerException.class, () -> StringConditions.contains("ready", null));
+        assertThrows(IllegalArgumentException.class, () -> StringConditions.containsAll(List.of()));
+        assertThrows(NullPointerException.class, () -> StringConditions.containsAll(null));
+        assertThrows(NullPointerException.class, () -> StringConditions.containsAll(java.util.Arrays.asList("ready", null)));
     }
 
     private static <S> void assertPreserving(PreservingCondition<? super S> condition, S matching, S mismatching) {

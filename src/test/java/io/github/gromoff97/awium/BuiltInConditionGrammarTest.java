@@ -64,14 +64,14 @@ class BuiltInConditionGrammarTest {
         assertEquals("map does not contain unexpected keys", description(doesNotContainKey("expected")));
         assertEquals("map contains all expected values", description(containsValue("expected")));
         assertEquals("map does not contain unexpected values", description(doesNotContainValue("expected")));
-        assertEquals("map contains all expected entries", description(containsEntries("key", "value")));
-        assertEquals("map does not contain an expected entry", description(doesNotContainEntries("key", "value")));
-        assertEquals("map contains all expected entries", description(containsEntries(Map.of("key", "value"))));
+        assertEquals("map contains all expected entries", description(containsEntry("key", "value")));
+        assertEquals("map does not contain an expected entry", description(doesNotContainEntry("key", "value")));
+        assertEquals("map contains all expected entries", description(containsAllEntries(Map.of("key", "value"))));
         assertEquals("map does not contain all expected entries",
                 description(doesNotContainAllEntries(Map.of("key", "value"))));
         assertEquals("map contains an expected entry", description(containsAnyEntries(Map.of("key", "value"))));
         assertEquals("map does not contain an expected entry",
-                description(doesNotContainEntries(Map.of("key", "value"))));
+                description(doesNotContainAnyEntries(Map.of("key", "value"))));
         assertEquals("map contains exactly the expected entries",
                 description(containsExactlyEntries(Map.of("key", "value"))));
         assertEquals("map does not contain exactly the expected entries",

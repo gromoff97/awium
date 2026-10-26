@@ -115,9 +115,9 @@ class MapSelectionConditionsTest {
         assertSame(actual, waiting.until(MapConditions.anyKey(key -> key.equals("a"))));
         assertSame(actual, waiting.until(MapConditions.allValues(value -> value > 0)));
         assertSame(actual, waiting.until(MapConditions.anyValue(value -> value == 2)));
-        assertSame(actual, waiting.until(MapConditions.containsKeys(List.of("a", "b"))));
+        assertSame(actual, waiting.until(MapConditions.containsAllKeys(List.of("a", "b"))));
         assertSame(actual, waiting.until(MapConditions.containsOnlyKeys(List.of("b", "a"))));
-        assertSame(actual, waiting.until(MapConditions.containsValues(List.of(1, 2))));
+        assertSame(actual, waiting.until(MapConditions.containsAllValues(List.of(1, 2))));
         assertSame(actual, waiting.until(MapConditions.sizeBetween(1, 3)));
 
         assertEquals(Unsatisfied.class,
@@ -149,19 +149,19 @@ class MapSelectionConditionsTest {
         assertEquals(Unsatisfied.class, evaluate(MapConditions.noValue(
                 value -> value == 2), actual).getClass());
         assertEquals(Unsatisfied.class,
-                evaluate(MapConditions.containsKeys(List.of("a", "missing")), actual).getClass());
+                evaluate(MapConditions.containsAllKeys(List.of("a", "missing")), actual).getClass());
         assertEquals(Satisfied.class,
                 evaluate(MapConditions.doesNotContainKey("missing"), actual).getClass());
         assertEquals(Unsatisfied.class, evaluate(
-                MapConditions.doesNotContainKeys(List.of("a", "missing")), actual).getClass());
+                MapConditions.doesNotContainAnyKeys(List.of("a", "missing")), actual).getClass());
         assertEquals(Unsatisfied.class,
                 evaluate(MapConditions.containsOnlyKeys(java.util.Collections.singletonList("a")), actual).getClass());
         assertEquals(Unsatisfied.class,
-                evaluate(MapConditions.containsValues(List.of(1, 3)), actual).getClass());
+                evaluate(MapConditions.containsAllValues(List.of(1, 3)), actual).getClass());
         assertEquals(Satisfied.class,
                 evaluate(MapConditions.doesNotContainValue(3), actual).getClass());
         assertEquals(Unsatisfied.class,
-                evaluate(MapConditions.doesNotContainValues(List.of(2, 3)), actual).getClass());
+                evaluate(MapConditions.doesNotContainAnyValues(List.of(2, 3)), actual).getClass());
     }
 
     @Test

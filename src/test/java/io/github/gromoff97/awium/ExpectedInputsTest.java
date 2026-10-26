@@ -49,8 +49,8 @@ class ExpectedInputsTest {
                 CollectionConditions::startsWith, CollectionConditions::endsWith,
                 CollectionConditions::containsSequence, CollectionConditions::doesNotContainSequence,
                 CollectionConditions::containsSubsequence, CollectionConditions::doesNotContainSubsequence,
-                MapConditions::containsKeys, MapConditions::doesNotContainKeys,
-                MapConditions::containsValues, MapConditions::doesNotContainValues);
+                MapConditions::containsAllKeys, MapConditions::doesNotContainAnyKeys,
+                MapConditions::containsAllValues, MapConditions::doesNotContainAnyValues);
         for (var factory : factories) {
             var expected = new ChangingExpectedQueue();
             expected.add("before");
@@ -66,8 +66,8 @@ class ExpectedInputsTest {
     @Test
     void entryConditionsNeverKeepAnEmptySnapshotAfterRemovalBeforeSnapshot() {
         List<Function<Map<String, String>, PreservingCondition<?>>> factories = List.of(
-                MapConditions::containsEntries, MapConditions::doesNotContainAllEntries,
-                MapConditions::containsAnyEntries, MapConditions::doesNotContainEntries);
+                MapConditions::containsAllEntries, MapConditions::doesNotContainAllEntries,
+                MapConditions::containsAnyEntries, MapConditions::doesNotContainAnyEntries);
         for (var factory : factories) {
             var expected = new ChangingExpectedMap();
             expected.put("key", "before");
@@ -113,8 +113,8 @@ class ExpectedInputsTest {
         expected.put("a", "before");
         expected.put(null, null);
         Map<String, String> original = new LinkedHashMap<>(expected);
-        var conditions = List.of(MapConditions.containsEntries(expected), MapConditions.doesNotContainAllEntries(expected),
-                MapConditions.containsAnyEntries(expected), MapConditions.doesNotContainEntries(expected),
+        var conditions = List.of(MapConditions.containsAllEntries(expected), MapConditions.doesNotContainAllEntries(expected),
+                MapConditions.containsAnyEntries(expected), MapConditions.doesNotContainAnyEntries(expected),
                 MapConditions.containsExactlyEntries(expected), MapConditions.doesNotContainExactlyEntries(expected));
         assertStable(conditions, original, Map.of("a", "changed"), () -> {
                     expected.entrySet().iterator().next().setValue("changed");
@@ -129,9 +129,9 @@ class ExpectedInputsTest {
         var original = new LinkedHashMap<String, String>();
         original.put("a", "a");
         original.put(null, null);
-        assertStable(List.of(MapConditions.containsKeys(asList(expected)), MapConditions.doesNotContainKeys(asList(expected)),
-                MapConditions.containsOnlyKeys(asList(expected)), MapConditions.containsValues(asList(expected)),
-                MapConditions.doesNotContainValues(asList(expected))), original, Map.of("changed", "changed"),
+        assertStable(List.of(MapConditions.containsAllKeys(asList(expected)), MapConditions.doesNotContainAnyKeys(asList(expected)),
+                MapConditions.containsOnlyKeys(asList(expected)), MapConditions.containsAllValues(asList(expected)),
+                MapConditions.doesNotContainAnyValues(asList(expected))), original, Map.of("changed", "changed"),
                 () -> expected[0] = "changed");
     }
 
@@ -148,7 +148,7 @@ class ExpectedInputsTest {
         assertInstanceOf(Satisfied.class, evaluate(included, null));
 
         String[] fragments = {"before"};
-        assertStable(List.of(StringConditions.contains(fragments), StringConditions.doesNotContain(fragments)),
+        assertStable(List.of(StringConditions.containsAll(asList(fragments)), StringConditions.doesNotContainAny(asList(fragments))),
                 "before", "after", () -> fragments[0] = "after");
     }
 
@@ -183,7 +183,7 @@ class ExpectedInputsTest {
         var actual = List.of(element);
         assertSame(actual, result(evaluate(condition, actual)));
 
-        var strings = StringConditions.contains("before");
+        var strings = StringConditions.containsAll(List.of("before"));
         assertThrows(UnsupportedOperationException.class,
                 assertInstanceOf(List.class, strings.reference().value())::clear);
     }
@@ -193,7 +193,7 @@ class ExpectedInputsTest {
         var expected = new LinkedHashMap<String, String>();
         expected.put("b", "before");
         expected.put("a", null);
-        var condition = MapConditions.containsEntries(expected);
+        var condition = MapConditions.containsAllEntries(expected);
         expected.put("b", "after");
         expected.remove("a");
         assertEquals("[b=before, a=null]", condition.reference().value().toString());

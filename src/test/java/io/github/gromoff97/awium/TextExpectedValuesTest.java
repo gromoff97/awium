@@ -83,12 +83,12 @@ class TextExpectedValuesTest {
     }
 
     @Test
-    void fragmentExpectationsFreezeTheArrayAndItsMutableText() {
+    void fragmentExpectationsFreezeTheIterableAndItsMutableText() {
         var prefix = new StringBuilder("rea");
         char[] suffix = {'d', 'y'};
         CharSequence[] expected = {prefix, CharBuffer.wrap(suffix)};
-        var included = StringConditions.contains(expected);
-        var excluded = StringConditions.doesNotContain(expected);
+        var included = StringConditions.containsAll(java.util.Arrays.asList(expected));
+        var excluded = StringConditions.doesNotContainAny(java.util.Arrays.asList(expected));
         prefix.replace(0, prefix.length(), "changed");
         suffix[0] = 'x';
         expected[1] = "changed";
@@ -107,9 +107,9 @@ class TextExpectedValuesTest {
 
     @Test
     void invalidExpectedTextIsRejectedDuringConstruction() {
-        assertThrows(NullPointerException.class, () -> StringConditions.contains((CharSequence[]) null));
-        assertThrows(NullPointerException.class, () -> StringConditions.contains("ready", null));
-        assertThrows(IllegalArgumentException.class, StringConditions::contains);
+        assertThrows(NullPointerException.class, () -> StringConditions.containsAll(null));
+        assertThrows(NullPointerException.class, () -> StringConditions.containsAll(java.util.Arrays.asList("ready", null)));
+        assertThrows(IllegalArgumentException.class, () -> StringConditions.containsAll(List.of()));
         var invalid = new CharSequence() {
             @Override public int length() { return 0; }
             @Override public char charAt(int index) { throw new IndexOutOfBoundsException(index); }

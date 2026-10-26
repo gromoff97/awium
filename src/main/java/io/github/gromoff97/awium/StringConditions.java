@@ -2,7 +2,6 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.Reference;
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.IntPredicate;
 import java.util.regex.Pattern;
@@ -14,6 +13,7 @@ import static io.github.gromoff97.awium.ConditionSupport.validateRange;
 import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.StreamSupport.stream;
 
 /**
  * Text checks that preserve the original {@link CharSequence} type and instance.
@@ -28,13 +28,25 @@ public final class StringConditions {
 
     private StringConditions() {}
 
-    public static PreservingCondition<CharSequence> contains(CharSequence... expected) {
+    public static PreservingCondition<CharSequence> contains(CharSequence expected) {
+        String value = text(expected, "expected string");
+        return matching("string contains expected string", "string did not contain expected string", expectedReference(value),
+                actual -> actual.contains(value));
+    }
+
+    public static PreservingCondition<CharSequence> containsAll(Iterable<? extends CharSequence> expected) {
         List<String> values = nonEmpty(expected, "expected strings");
         return matching("string contains all expected strings", "string did not contain all expected strings", expectedReference(values),
                 actual -> matchesAll(values, actual::contains));
     }
 
-    public static PreservingCondition<CharSequence> doesNotContain(CharSequence... unexpected) {
+    public static PreservingCondition<CharSequence> doesNotContain(CharSequence unexpected) {
+        String value = text(unexpected, "unexpected string");
+        return matching("string does not contain unexpected string", "string contained unexpected string", unexpectedReference(value),
+                actual -> !actual.contains(value));
+    }
+
+    public static PreservingCondition<CharSequence> doesNotContainAny(Iterable<? extends CharSequence> unexpected) {
         List<String> values = nonEmpty(unexpected, "unexpected strings");
         return matching("string does not contain unexpected strings", "string contained an unexpected string", unexpectedReference(values),
                 actual -> !matchesAny(values, actual::contains));
@@ -156,8 +168,8 @@ public final class StringConditions {
         return preservingNonNull("string", description, mismatch, reference, actual -> matches.test(actual.toString()));
     }
 
-    private static List<String> nonEmpty(CharSequence[] values, String name) {
-        var snapshot = Arrays.stream(requireNonNull(values, name + " must not be null"))
+    private static List<String> nonEmpty(Iterable<? extends CharSequence> values, String name) {
+        var snapshot = stream(requireNonNull(values, name + " must not be null").spliterator(), false)
                 .map(value -> text(value, "text")).toList();
         return ConditionSupport.nonEmpty(snapshot, name);
     }

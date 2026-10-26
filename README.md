@@ -400,6 +400,10 @@ Text conditions accept any `CharSequence` and preserve the source's concrete typ
 and instance, including after `because(...)` and inside container selections.
 Expected fragments, prefixes, suffixes, and regex text also accept `CharSequence`,
 for example `StringConditions.startsWith(new StringBuilder("rea"))`.
+`StringConditions.contains(fragment)` checks one fragment;
+`StringConditions.containsAll(iterable)` checks a set of fragments.
+The corresponding absence checks are `doesNotContain(fragment)` and
+`doesNotContainAny(iterable)`, following the collection membership convention.
 Their text is frozen when the condition is created, so later changes to an
 expected `StringBuilder` or `CharBuffer` do not change the check.
 Use `StringConditions.contentEquals("ready")` to compare characters across
@@ -438,9 +442,14 @@ when a reference array is one element of the pattern.
 
 Maps follow the same rule: `containsKey(key)`, `doesNotContainKey(key)`,
 `containsValue(value)` and `doesNotContainValue(value)` check one object.
-`containsKeys(iterable)`, `doesNotContainKeys(iterable)`,
-`containsValues(iterable)`, `doesNotContainValues(iterable)` and
+`containsAllKeys(iterable)`, `doesNotContainAnyKeys(iterable)`,
+`containsAllValues(iterable)`, `doesNotContainAnyValues(iterable)` and
 `containsOnlyKeys(iterable)` accept iterables of expected keys or values.
+
+`containsEntry(key, value)` checks one entry. `containsAllEntries(map)` and
+`containsAnyEntries(map)` check all or any of the supplied entries;
+`doesNotContainEntry(key, value)`, `doesNotContainAllEntries(map)`, and
+`doesNotContainAnyEntries(map)` express the corresponding absence checks.
 
 Factories accepting iterables of expected elements or maps of expected entries
 take a shallow snapshot when the condition is created.

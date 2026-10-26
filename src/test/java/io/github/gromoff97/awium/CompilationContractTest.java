@@ -132,9 +132,9 @@ class CompilationContractTest {
                 "await(() -> List.of(\"ready\")).until(containsExactly(wrong).because(\"wrong\"));",
                 "await(() -> List.of(\"ready\")).until(containsOnly(wrong));",
                 "await(() -> List.of(\"ready\")).until(startsWith(wrong));",
-                "await(() -> Map.of(\"key\", \"ready\")).until(MapConditions.containsKeys(wrong));",
+                "await(() -> Map.of(\"key\", \"ready\")).until(MapConditions.containsAllKeys(wrong));",
                 "await(() -> Map.of(\"key\", \"ready\")).until(MapConditions.containsOnlyKeys(wrong));",
-                "await(() -> Map.of(\"key\", \"ready\")).until(MapConditions.containsValues(wrong).because(\"wrong\"));")) {
+                "await(() -> Map.of(\"key\", \"ready\")).until(MapConditions.containsAllValues(wrong).because(\"wrong\"));")) {
             assertRejected("""
                     import java.util.*;
                     import io.github.gromoff97.awium.MapConditions;
@@ -544,12 +544,12 @@ class CompilationContractTest {
         for (String terminal : List.of("until", "tryUntil")) {
             for (String explanation : List.of("", ".because(\"incompatible\")")) {
                 for (String condition : List.of("containsKey(1)", "containsValue(\"wrong\")",
-                        "containsKeys(List.of(1))", "containsValues(List.of(\"wrong\"))",
+                        "containsAllKeys(List.of(1))", "containsAllValues(List.of(\"wrong\"))",
                         "containsOnlyKeys(List.of(1))",
                         "doesNotContainKey(1)", "doesNotContainValue(\"wrong\")",
-                        "doesNotContainKeys(List.of(1))", "doesNotContainValues(List.of(\"wrong\"))",
-                        "containsEntries(1, 1)", "containsEntries(\"x\", \"wrong\")",
-                        "containsEntries(Map.of(1, 1))", "containsEntries(Map.of(\"x\", \"wrong\"))")) {
+                        "doesNotContainAnyKeys(List.of(1))", "doesNotContainAnyValues(List.of(\"wrong\"))",
+                        "containsEntry(1, 1)", "containsEntry(\"x\", \"wrong\")",
+                        "containsAllEntries(Map.of(1, 1))", "containsAllEntries(Map.of(\"x\", \"wrong\"))")) {
                     assertRejected("""
                             import static io.github.gromoff97.awium.Conditions.await;
                             import static io.github.gromoff97.awium.CollectionConditions.await;

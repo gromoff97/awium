@@ -42,11 +42,21 @@ class IterableExpectedValuesTest {
     @Test
     void mapKeyAndValueFactoriesSnapshotExpectedIterablesOnce() {
         List<Function<Iterable<String>, PreservingCondition<? super Map<String, String>>>> factories = List.of(
-                MapConditions::containsKeys, MapConditions::doesNotContainKeys, MapConditions::containsOnlyKeys,
-                MapConditions::containsValues, MapConditions::doesNotContainValues);
+                MapConditions::containsAllKeys, MapConditions::doesNotContainAnyKeys, MapConditions::containsOnlyKeys,
+                MapConditions::containsAllValues, MapConditions::doesNotContainAnyValues);
 
         for (var factory : factories) {
             assertStableSnapshot(factory, List.of("a", "b"), Map.of("a", "a", "b", "b"));
+        }
+    }
+
+    @Test
+    void textFactoriesSnapshotExpectedIterablesOnce() {
+        List<Function<Iterable<String>, PreservingCondition<? super StringBuilder>>> factories = List.of(
+                StringConditions::containsAll, StringConditions::doesNotContainAny);
+        for (var factory : factories) {
+            assertStableSnapshot(factory, List.of("a", "b"), new StringBuilder("abc"));
+            assertStableSnapshot(factory, List.of("x", "y"), new StringBuilder("abc"));
         }
     }
 
@@ -77,7 +87,7 @@ class IterableExpectedValuesTest {
         Iterable<String> absent = null;
         assertThrows(IllegalArgumentException.class, () -> containsAll(empty));
         assertThrows(IllegalArgumentException.class, () -> in(empty));
-        assertThrows(IllegalArgumentException.class, () -> MapConditions.containsKeys(empty));
+        assertThrows(IllegalArgumentException.class, () -> MapConditions.containsAllKeys(empty));
         assertThrows(NullPointerException.class, () -> containsAll(absent));
         assertThrows(NullPointerException.class, () -> notIn(absent));
         List<String> actual = List.of();

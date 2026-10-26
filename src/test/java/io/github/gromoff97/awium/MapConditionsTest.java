@@ -34,8 +34,8 @@ class MapConditionsTest {
     @Test
     void bulkKeyAndValueFactoriesRequireANonemptyCollection() {
         List<Function<Collection<String>, PreservingCondition<?>>> factories = List.of(
-                MapConditions::containsKeys, MapConditions::doesNotContainKeys,
-                MapConditions::containsValues, MapConditions::doesNotContainValues);
+                MapConditions::containsAllKeys, MapConditions::doesNotContainAnyKeys,
+                MapConditions::containsAllValues, MapConditions::doesNotContainAnyValues);
         for (var factory : factories) {
             assertThrows(NullPointerException.class, () -> factory.apply(null));
             assertThrows(IllegalArgumentException.class, () -> factory.apply(List.of()));
@@ -153,7 +153,7 @@ class MapConditionsTest {
         var arrayActual = entryMap(entry(new int[] {1}, new int[] {2}));
         assertStatus(containsKey(new int[] {1}), arrayActual, Satisfied.class);
         assertStatus(containsValue(new int[] {2}), arrayActual, Satisfied.class);
-        assertStatus(containsEntries(new int[] {1}, new int[] {2}),
+        assertStatus(containsEntry(new int[] {1}, new int[] {2}),
                 arrayActual, Satisfied.class);
 
         var objectArrayActual = entryMap(entry(new String[] {"key"}, new String[] {"value"}));
@@ -165,7 +165,7 @@ class MapConditionsTest {
         var valueFailure = new IllegalStateException("value equals");
         var keyMismatch = entryMap(entry("actual",
                 new ThrowingEquals(valueFailure)));
-        assertStatus(containsEntries("expected", new ThrowingEquals(null)),
+        assertStatus(containsEntry("expected", new ThrowingEquals(null)),
                 keyMismatch, Unsatisfied.class);
 
         Directional onlyActual = new Directional(true);
@@ -181,8 +181,8 @@ class MapConditionsTest {
         var actual = entryMap(entry(null, "value"), entry("key", null));
         assertStatus(containsKey((String) null), actual, Satisfied.class);
         assertStatus(containsValue((String) null), actual, Satisfied.class);
-        assertStatus(containsEntries(null, "value"), actual, Satisfied.class);
-        assertStatus(containsEntries("key", null), actual, Satisfied.class);
+        assertStatus(containsEntry(null, "value"), actual, Satisfied.class);
+        assertStatus(containsEntry("key", null), actual, Satisfied.class);
     }
 
     @Test
@@ -200,7 +200,7 @@ class MapConditionsTest {
         assertSame(actualCause, assertFailure(CONDITION_FAILED,
                 () -> awaitMap(brokenActual, doesNotContainKey("a"))).getCause());
         assertSame(expectedCause, assertThrows(IllegalStateException.class,
-                () -> doesNotContainEntries(brokenExpected)));
+                () -> doesNotContainAnyEntries(brokenExpected)));
         assertSame(equalityCause, assertFailure(CONDITION_FAILED,
                 () -> awaitMap(brokenEquality,
                         doesNotContainKey(new ThrowingEquals(null)))).getCause());
@@ -209,16 +209,16 @@ class MapConditionsTest {
     @Test
     void nullActualShortCircuitsAndAggregateFactoriesValidateInputs() {
         ConditionResult<?> evaluation = evaluate(
-                containsEntries(map("a", "1")), null);
+                containsAllEntries(map("a", "1")), null);
         assertEquals(Unsatisfied.class, evaluation.getClass());
         assertFalse(mismatch(evaluation).isBlank());
 
         assertValidation(NullPointerException.class,
-                () -> containsEntries(null));
+                () -> containsAllEntries(null));
         assertValidation(NullPointerException.class,
                 () -> containsExactlyEntries(null));
         assertValidation(IllegalArgumentException.class,
-                () -> containsEntries(Map.of()));
+                () -> containsAllEntries(Map.of()));
     }
 
     @Test
@@ -243,7 +243,7 @@ class MapConditionsTest {
         var actual = map("a", "1");
         java.util.concurrent.Callable<LinkedHashMap<String, String>> source = () -> actual;
 
-        LinkedHashMap<String, String> result = await(source).usingTime(pollingTime, pollingTime).until(containsEntries("a", "1"));
+        LinkedHashMap<String, String> result = await(source).usingTime(pollingTime, pollingTime).until(containsEntry("a", "1"));
 
         assertSame(actual, result);
     }
@@ -302,15 +302,15 @@ class MapConditionsTest {
                         map("a", "1", "b", "2"), map("a", "1", "c", "2")),
                 new Pair("value", containsValue("2"), doesNotContainValue("2"),
                         map("a", "1", "b", "2"), map("a", "1", "b", "3")),
-                new Pair("entry", containsEntries("b", "2"),
-                        doesNotContainEntries("b", "2"),
+                new Pair("entry", containsEntry("b", "2"),
+                        doesNotContainEntry("b", "2"),
                         map("a", "1", "b", "2"), map("a", "1", "b", "3")),
-                new Pair("all", containsEntries(map("a", "1", "b", "2")),
+                new Pair("all", containsAllEntries(map("a", "1", "b", "2")),
                         doesNotContainAllEntries(map("a", "1", "b", "2")),
                         map("a", "1", "b", "2", "c", "3"),
                         map("a", "1", "b", "3")),
                 new Pair("any", containsAnyEntries(map("x", "9", "b", "2")),
-                        doesNotContainEntries(map("x", "9", "b", "2")),
+                        doesNotContainAnyEntries(map("x", "9", "b", "2")),
                         map("a", "1", "b", "2"),
                         map("a", "1", "c", "3")),
                 new Pair("empty exact", containsExactlyEntries(Map.of()),

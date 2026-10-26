@@ -402,31 +402,31 @@ public final class MapConditions {
 
     /** Matches one key, including a collection or array as that single key. */
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsKey(KEY expected) {
-        return containsKeys(singletonList(expected));
+        return containsAllKeys(singletonList(expected));
     }
 
     /** Matches when the single unexpected key is absent. */
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> doesNotContainKey(KEY unexpected) {
-        return doesNotContainKeys(singletonList(unexpected));
+        return doesNotContainAnyKeys(singletonList(unexpected));
     }
 
     /** Matches one value, including a collection or array as that single value. */
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> containsValue(VALUE expected) {
-        return containsValues(singletonList(expected));
+        return containsAllValues(singletonList(expected));
     }
 
     /** Matches when the single unexpected value is absent. */
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> doesNotContainValue(VALUE unexpected) {
-        return doesNotContainValues(singletonList(unexpected));
+        return doesNotContainAnyValues(singletonList(unexpected));
     }
 
-    public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsKeys(Iterable<? extends KEY> expected) {
+    public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsAllKeys(Iterable<? extends KEY> expected) {
         var keys = nonEmpty(snapshot(expected, "expected keys"), "expected keys");
         return preserving("map contains all expected keys", "map did not contain all expected keys", expectedReference(keys),
                 actual -> containsAll(actual.keySet(), keys, Objects::deepEquals));
     }
 
-    public static <KEY> PreservingCondition<Map<? super KEY, ?>> doesNotContainKeys(Iterable<? extends KEY> unexpected) {
+    public static <KEY> PreservingCondition<Map<? super KEY, ?>> doesNotContainAnyKeys(Iterable<? extends KEY> unexpected) {
         var keys = nonEmpty(snapshot(unexpected, "unexpected keys"), "unexpected keys");
         return preserving("map does not contain unexpected keys", "map contained an unexpected key", unexpectedReference(keys),
                 actual -> !containsAny(actual.keySet(), keys, Objects::deepEquals));
@@ -438,27 +438,27 @@ public final class MapConditions {
                 actual -> sameDistinctElements(actual.keySet(), keys));
     }
 
-    public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> containsValues(Iterable<? extends VALUE> expected) {
+    public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> containsAllValues(Iterable<? extends VALUE> expected) {
         var values = nonEmpty(snapshot(expected, "expected values"), "expected values");
         return preserving("map contains all expected values", "map did not contain all expected values", expectedReference(values),
                 actual -> containsAll(actual.values(), values, Objects::deepEquals));
     }
 
-    public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> doesNotContainValues(Iterable<? extends VALUE> unexpected) {
+    public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> doesNotContainAnyValues(Iterable<? extends VALUE> unexpected) {
         var values = nonEmpty(snapshot(unexpected, "unexpected values"), "unexpected values");
         return preserving("map does not contain unexpected values", "map contained an unexpected value", unexpectedReference(values),
                 actual -> !containsAny(actual.values(), values, Objects::deepEquals));
     }
 
-    public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsEntries(KEY key, VALUE value) {
-        return containsEntries(singletonMap(key, value));
+    public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsEntry(KEY key, VALUE value) {
+        return containsAllEntries(singletonMap(key, value));
     }
 
-    public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainEntries(KEY key, VALUE value) {
-        return doesNotContainEntries(singletonMap(key, value));
+    public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainEntry(KEY key, VALUE value) {
+        return doesNotContainAnyEntries(singletonMap(key, value));
     }
 
-    public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsEntries(Map<? extends KEY, ? extends VALUE> expected) {
+    public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsAllEntries(Map<? extends KEY, ? extends VALUE> expected) {
         var entries = nonEmpty(snapshotEntries(expected), "expected entries");
         return preserving("map contains all expected entries", "map did not contain all expected entries", expectedReference(entries),
                 actual -> containsAll(actual.entrySet(), entries,
@@ -478,7 +478,7 @@ public final class MapConditions {
                 actual -> containsAny(actual.entrySet(), entries, MapConditions::entryMatches));
     }
 
-    public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainEntries(Map<? extends KEY, ? extends VALUE> expected) {
+    public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainAnyEntries(Map<? extends KEY, ? extends VALUE> expected) {
         var entries = nonEmpty(snapshotEntries(expected), "expected entries");
         return preserving("map does not contain an expected entry", "map contained an expected entry", expectedReference(entries),
                 actual -> !containsAny(actual.entrySet(), entries, MapConditions::entryMatches));
