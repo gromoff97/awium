@@ -387,6 +387,9 @@ Expected fragments, prefixes, suffixes, and regex text also accept `CharSequence
 for example `StringConditions.startsWith(new StringBuilder("rea"))`.
 Their text is frozen when the condition is created, so later changes to an
 expected `StringBuilder` or `CharBuffer` do not change the check.
+Use `StringConditions.contentEquals("ready")` to compare characters across
+different text implementations. General `equalTo` follows object equality:
+two distinct `StringBuilder` instances need not be equal despite identical text.
 
 Single-bound checks use only the source's `Comparable<BOUND>` contract; the
 bound itself need not implement `Comparable`. Range bounds must also compare
@@ -454,6 +457,9 @@ await(paymentRepository::index).until(MapConditions.nonEmpty);
 `await(...)` accepts a repeatedly invokable source, never a direct value.
 Sources may throw checked exceptions. Concrete-return lambdas and method
 references normally select the right source category automatically.
+An overloaded constructor or generic method reference can be ambiguous between
+source categories: `await(StringBuilder::new)` and `await(Optional::empty)` are
+examples. Use a lambda for these sources, such as `await(() -> new StringBuilder())`.
 
 The marker interfaces are an escape hatch for an otherwise ambiguous source,
 such as one that only returns `null`:

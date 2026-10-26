@@ -92,6 +92,13 @@ public final class StringConditions {
                 actual -> !unexpected.matcher(actual).matches());
     }
 
+    /** Compares characters, including case, rather than the source object's equality contract. */
+    public static PreservingCondition<CharSequence> contentEquals(CharSequence expected) {
+        String value = text(expected, "expected string");
+        return matching("string content equals expected string",
+                "string content was not equal to expected string", expectedReference(value), actual -> actual.equals(value));
+    }
+
     public static PreservingCondition<CharSequence> equalToIgnoringCase(CharSequence expected) {
         String value = text(expected, "expected string");
         return matching("string equals expected string ignoring case",

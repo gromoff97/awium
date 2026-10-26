@@ -28,6 +28,7 @@ class TextExpectedValuesTest {
                 new Check(StringConditions::doesNotEndWith, "ready now", "already"),
                 new Check(StringConditions::matchesRegex, "ready", "ready now"),
                 new Check(StringConditions::doesNotMatchRegex, "ready now", "ready"),
+                new Check(StringConditions::contentEquals, "ready", "READY"),
                 new Check(StringConditions::equalToIgnoringCase, "READY", "failed"),
                 new Check(StringConditions::notEqualToIgnoringCase, "failed", "READY"));
 
@@ -50,6 +51,32 @@ class TextExpectedValuesTest {
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
             assertFalse(failure.message().contains("changed"));
         }
+    }
+
+    @Test
+    void contentEqualityComparesCharactersAndKeepsTheObservedObject() {
+        var text = new StringBuilder("ready");
+        var expected = CharBuffer.wrap("ready");
+        var condition = StringConditions.contentEquals(expected).because("same characters");
+        var values = await(() -> text).until(condition, condition);
+        assertSame(text, values.getFirst());
+        assertEquals(text.capacity(), values.getLast().capacity());
+
+        StringBuilder selected = await(() -> List.of(text)).until(CollectionConditions.single(
+                StringConditions.contentEquals(expected)).because("one matching text"));
+        assertSame(text, selected);
+        CharBuffer buffer = await(() -> expected).until(StringConditions.contentEquals(text).because("buffer"));
+        assertSame(expected, buffer);
+        assertEquals(0, buffer.position());
+
+        assertSame(text, await(() -> Map.of("status", text)).until(MapConditions.valueFor("status",
+                StringConditions.contentEquals(expected)).because("status text")));
+        assertTrue(await(() -> new StringBuilder()).until(StringConditions.contentEquals("")).isEmpty());
+
+        var time = new FakeTime(0);
+        var absent = await(() -> (StringBuilder) null).usingTime(time, time)
+                .every(ofNanos(1)).upTo(ofNanos(1)).tryUntil(condition);
+        assertEquals(AwaitFailure.Reason.TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, absent).failure().reason());
     }
 
     @Test
@@ -89,6 +116,8 @@ class TextExpectedValuesTest {
         assertThrows(NullPointerException.class, () -> StringConditions.startsWith(invalid));
         assertThrows(NullPointerException.class, () -> StringConditions.contains(invalid));
         assertThrows(NullPointerException.class, () -> StringConditions.equalToIgnoringCase(invalid));
+        assertThrows(NullPointerException.class, () -> StringConditions.contentEquals(invalid));
+        assertThrows(NullPointerException.class, () -> StringConditions.contentEquals(null));
         assertThrows(NullPointerException.class, () -> StringConditions.matchesRegex(invalid));
     }
 }

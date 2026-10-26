@@ -137,7 +137,7 @@ class CompilationContractTest {
     void textExpectationsRejectNonTextValues() throws IOException {
         for (String method : List.of("contains", "doesNotContain", "containsIgnoringCase",
                 "startsWith", "doesNotStartWith", "endsWith", "doesNotEndWith",
-                "matchesRegex", "doesNotMatchRegex", "equalToIgnoringCase", "notEqualToIgnoringCase")) {
+                "matchesRegex", "doesNotMatchRegex", "contentEquals", "equalToIgnoringCase", "notEqualToIgnoringCase")) {
             assertRejected("""
                     import io.github.gromoff97.awium.StringConditions;
                     final class Contract {
@@ -192,7 +192,7 @@ class CompilationContractTest {
                         }
                         """.formatted(terminal, condition));
             }
-            for (String condition : List.of("nonBlank", "length(1)")) {
+            for (String condition : List.of("nonBlank", "length(1)", "contentEquals(\"ready\")")) {
                 assertRejected("""
                         import static io.github.gromoff97.awium.Await.await;
                         import io.github.gromoff97.awium.StringConditions;
