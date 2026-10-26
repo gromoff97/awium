@@ -498,6 +498,8 @@ For a file using several source kinds, import each required `await` explicitly.
 The call stays `await(source).until(condition)`. Factories accept JDK `Callable`
 variables, lambdas, and method references, and the source may throw checked exceptions.
 They never accept a direct observed value.
+All four factories also accept covariant sources such as
+`Callable<? extends Optional<Payment>>`, retaining their selection types.
 
 A typed JDK source also establishes the category of a source returning `null`:
 

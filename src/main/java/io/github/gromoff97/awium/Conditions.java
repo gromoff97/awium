@@ -31,7 +31,7 @@ public final class Conditions {
      * @param source repeatedly invoked source
      * @return immutable wait configuration
      */
-    public static <VALUE> ValueAwait<VALUE> await(Callable<VALUE> source) {
+    public static <VALUE> ValueAwait<VALUE> await(Callable<? extends VALUE> source) {
         return new ValueAwait<>(source, WaitConfiguration.DEFAULT);
     }
 

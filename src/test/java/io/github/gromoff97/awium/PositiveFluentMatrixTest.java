@@ -189,6 +189,37 @@ class PositiveFluentMatrixTest {
     }
 
     @Test
+    void covariantJdkSourcesRetainTheirValuesAndSelectionTypes() {
+        var text = new StringBuilder("ready");
+        var values = new ArrayList<>(List.of("ready"));
+        var entries = new LinkedHashMap<>(Map.of("ready", 1));
+        Callable<? extends StringBuilder> scalar = () -> text;
+        Callable<? extends Optional<String>> optional = () -> Optional.of("ready");
+        Callable<? extends ArrayList<String>> collection = () -> values;
+        Callable<? extends LinkedHashMap<String, Integer>> map = () -> entries;
+
+        var actual = await(scalar).until(Conditions.isNotNull.because("original value"));
+        var selected = await(optional).until(present.because("contained value"));
+        var element = await(collection).until(single.because("one element"));
+        var entry = await(map).until(MapConditions.singleEntry.because("one entry"));
+        AwaitResult<Optional<String>, String> result = await(optional).tryUntil(present.because("contained value"));
+
+        assertEquals(5, actual.length());
+        assertSame(text, actual);
+        assertEquals(5, selected.length());
+        assertEquals(5, element.length());
+        assertEquals(5, entry.getKey().length());
+        assertEquals(1, entry.getValue().intValue());
+        assertEquals(selected, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertSame(values, await(collection).until(CollectionConditions.nonEmpty));
+        assertSame(entries, await(map).until(MapConditions.nonEmpty));
+        assertEquals(selected, await(optional::call).until(present));
+        var time = new FakeTime(0);
+        List<String> stages = await(optional).usingTime(time, time).every(ofNanos(1)).until(present, present);
+        assertEquals(List.of("ready", "ready"), stages);
+    }
+
+    @Test
     void explicitCatalogFactoriesAcceptOverloadedConstructors() {
         StringBuilder text = Conditions.await(StringBuilder::new).until(StringConditions.empty);
         ArrayList<String> values = CollectionConditions.await(ArrayList<String>::new).until(CollectionConditions.empty);

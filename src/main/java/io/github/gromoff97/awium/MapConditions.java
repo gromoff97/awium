@@ -51,7 +51,7 @@ public final class MapConditions {
      * @param source repeatedly invoked source
      * @return immutable wait configuration
      */
-    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> Await<ENTRIES, Map.Entry<KEY, VALUE>, VALUE> await(Callable<ENTRIES> source) {
+    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> Await<ENTRIES, Map.Entry<KEY, VALUE>, VALUE> await(Callable<? extends ENTRIES> source) {
         return new Await<>(source, WaitConfiguration.DEFAULT);
     }
 

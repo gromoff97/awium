@@ -60,7 +60,7 @@ public final class CollectionConditions {
      * @param source repeatedly invoked source
      * @return immutable wait configuration
      */
-    public static <ELEMENT, VALUES extends Collection<ELEMENT>> Await<VALUES, ELEMENT, Void> await(Callable<VALUES> source) {
+    public static <ELEMENT, VALUES extends Collection<ELEMENT>> Await<VALUES, ELEMENT, Void> await(Callable<? extends VALUES> source) {
         return new Await<>(source, WaitConfiguration.DEFAULT);
     }
 
