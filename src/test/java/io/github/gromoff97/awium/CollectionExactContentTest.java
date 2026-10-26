@@ -7,7 +7,6 @@ import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
@@ -24,8 +23,6 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
-import static io.github.gromoff97.awium.ProbeContainers.ExpectedValue;
-import static io.github.gromoff97.awium.ProbeContainers.GreedyValue;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.ofNanos;
@@ -140,16 +137,19 @@ class CollectionExactContentTest {
     }
 
     @Test
-    void anyOrderMatchingRemainsGreedyInEncounterOrder() {
-        GreedyValue first = new GreedyValue(Set.of("x", "y"));
-        GreedyValue second = new GreedyValue(Set.of("x"));
-        ExpectedValue x = new ExpectedValue("x");
-        ExpectedValue y = new ExpectedValue("y");
+    void anyOrderMatchingIgnoresPermutationButRetainsMultiplicity() {
+        var actual = new ArrayList<>(List.of("a", "b", "a"));
+        var time = new FakeTime(0);
+        var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1));
 
-        assertStatus(containsExactlyInAnyOrder(asList(x, y)),
-                List.of(first, second), Unsatisfied.class);
-        assertStatus(containsExactlyInAnyOrder(asList(y, x)),
-                List.of(first, second), Satisfied.class);
+        for (var expected : List.of(List.of("a", "b", "a"), List.of("b", "a", "a"), List.of("a", "a", "b"))) {
+            assertSame(actual, waiting.until(containsExactlyInAnyOrder(expected).because("same multiplicities")));
+        }
+        var differentCounts = List.of("a", "b", "b");
+        var failed = assertInstanceOf(AwaitResult.Failed.class,
+                waiting.tryUntil(containsExactlyInAnyOrder(differentCounts)));
+        assertEquals(TIMEOUT, failed.failure().reason());
+        assertSame(actual, waiting.until(doesNotContainExactlyInAnyOrder(differentCounts)));
     }
 
     @Test

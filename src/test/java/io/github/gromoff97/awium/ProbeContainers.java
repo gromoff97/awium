@@ -209,21 +209,6 @@ final class ProbeContainers {
         }
     }
 
-    record GreedyValue(Set<String> matches) {
-        @Override
-        public boolean equals(Object other) {
-            return other instanceof ExpectedValue expected
-                    && matches.contains(expected.value());
-        }
-
-        @Override
-        public int hashCode() {
-            throw new AssertionError("hashCode must not be called");
-        }
-    }
-
-    record ExpectedValue(String value) {}
-
     record ThrowingEquals(RuntimeException failure) {
         @Override
         public boolean equals(Object other) {
