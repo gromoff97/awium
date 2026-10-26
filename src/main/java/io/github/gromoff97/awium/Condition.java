@@ -91,7 +91,7 @@ public abstract sealed class Condition<SELF extends Condition<SELF>>
         return explanation == null ? null : () -> explanation;
     }
 
-    static <C> C required(C condition) {
+    static <C extends Condition<?>> C required(C condition) {
         return requireNonNull(condition, "condition must not be null");
     }
 

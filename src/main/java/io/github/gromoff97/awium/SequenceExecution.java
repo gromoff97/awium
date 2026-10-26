@@ -45,6 +45,6 @@ final class SequenceExecution<OBSERVED, RESULT> {
 
     private AttemptRecord.Progress progress(AttemptResult<?> evaluation, int stage) {
         return new AttemptRecord.Progress(stage, stages.size(), stage + 1,
-                evaluation.conditionOr(stages.get(stage).condition));
+                evaluation.diagnosticCondition(stages.get(stage).condition));
     }
 }

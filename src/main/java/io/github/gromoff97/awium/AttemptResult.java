@@ -12,10 +12,9 @@ sealed interface AttemptResult<RESULT> {
         return new Evaluated<>(result, null, null);
     }
 
-    default Condition<?> conditionOr(Condition<?> fallback) {
+    default Condition<?> diagnosticCondition(Condition<?> outer) {
         var condition = condition();
-        return condition == null ? fallback
-                : condition.withExplanationFrom(fallback);
+        return condition == null ? outer : condition.withExplanationFrom(outer);
     }
 
     record Evaluated<RESULT>(ConditionResult<? extends RESULT> result,

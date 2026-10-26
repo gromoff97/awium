@@ -23,12 +23,12 @@ final class ValueMatching {
         return !matchesAny(values, value -> !matches.test(value));
     }
 
-    static <ACTUAL, EXPECTED> boolean containsAll(Iterable<ACTUAL> actual, Collection<EXPECTED> expected,
+    static <ACTUAL, EXPECTED> boolean containsAll(Collection<ACTUAL> actual, Collection<EXPECTED> expected,
             CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) throws Throwable {
         return matchesAll(expected, candidate -> matchesAny(actual, value -> matches.test(value, candidate)));
     }
 
-    static <ACTUAL, EXPECTED> boolean containsAny(Iterable<ACTUAL> actual, Iterable<EXPECTED> expected,
+    static <ACTUAL, EXPECTED> boolean containsAny(Collection<ACTUAL> actual, Collection<EXPECTED> expected,
             CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) throws Throwable {
         return matchesAny(actual, value -> matchesAny(expected, candidate -> matches.test(value, candidate)));
     }

@@ -140,7 +140,7 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, Callable<? 
 
         AttemptRecord.Timing timing = afterObservation(attemptStarted,
                 retrievalStarted, observed, completed);
-        var condition = evaluation.conditionOr(evaluator.condition);
+        var condition = evaluation.diagnosticCondition(evaluator.condition);
         AttemptRecord.Outcome<OBSERVED, RESULT> outcome = switch (evaluation) {
             case AttemptResult.Evaluated<? extends RESULT> value -> new Evaluated<>(
                     actual, value.result());
