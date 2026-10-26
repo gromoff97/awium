@@ -8,7 +8,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
@@ -17,7 +16,6 @@ import static io.github.gromoff97.awium.CollectionConditions.await;
 import static io.github.gromoff97.awium.OptionalConditions.await;
 import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedMapAwait;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
@@ -25,7 +23,6 @@ import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.*;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -227,12 +224,11 @@ class MapConditionsTest {
         FakeTime time = new FakeTime(0);
 
         assertFailure(TIMEOUT,
-                () -> timedMapAwait((Callable<ProbeContainers.EntryMap<
-                                String, String>>) () -> {
-                            time.advanceNanos(2);
-                            return actual;
-                        }, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
-                        time, time).until(doesNotContainKey("a").because("business reason")));
+                () -> await(() -> {
+                    time.advanceNanos(2);
+                    return actual;
+                }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
+                        .until(doesNotContainKey("a").because("business reason")));
 
         assertEquals(1, actual.entrySetCalls);
     }

@@ -7,7 +7,6 @@ import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static java.util.Arrays.asList;
@@ -16,7 +15,6 @@ import static io.github.gromoff97.awium.CollectionConditions.await;
 import static io.github.gromoff97.awium.OptionalConditions.await;
 import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
@@ -24,7 +22,6 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -185,11 +182,11 @@ class CollectionExactContentTest {
         FakeTime time = new FakeTime(0);
 
         var failure = assertFailure(TIMEOUT,
-                () -> timedCollectionAwait((Callable<ProbeList<String>>) () -> {
-                            time.advanceNanos(2);
-                            return actual;
-                        }, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
-                        time, time).until(containsExactly(List.of("b")).because("business reason")));
+                () -> await(() -> {
+                    time.advanceNanos(2);
+                    return actual;
+                }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
+                        .until(containsExactly(List.of("b")).because("business reason")));
 
         assertEquals(1, actual.iteratorCalls);
         assertTrue(failure.getMessage().contains("Expected: [b]"));

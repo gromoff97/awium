@@ -17,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.ConditionSupport.captured;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.Conditions.condition;
@@ -228,8 +227,9 @@ class CapturedConditionTest {
         int[] reads = {0};
         var time = new FakeTime(0);
 
-        AwaitResult<List<String>, List<String>> result = timedCollectionAwait(() -> observations.get(reads[0]++),
-                config(1, 5, 1), time, time).tryUntil(CollectionConditions.first, CollectionConditions.last);
+        AwaitResult<List<String>, List<String>> result = await(() -> observations.get(reads[0]++))
+                .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).persisting(ofNanos(1))
+                .tryUntil(CollectionConditions.first, CollectionConditions.last);
 
         var values = assertInstanceOf(List.class, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
         assertSame(first, values.get(0));

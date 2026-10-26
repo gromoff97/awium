@@ -13,7 +13,6 @@ import static io.github.gromoff97.awium.CollectionConditions.await;
 import static io.github.gromoff97.awium.OptionalConditions.await;
 import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedMapAwait;
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
@@ -29,7 +28,6 @@ import static io.github.gromoff97.awium.MapConditions.sizeBetween;
 import static io.github.gromoff97.awium.MapConditions.sizeGreaterThan;
 import static io.github.gromoff97.awium.MapConditions.sizeIsNot;
 import static io.github.gromoff97.awium.MapConditions.sizeLessThan;
-import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -78,11 +76,11 @@ class MapSizeConditionsTest {
     @Test
     void nullMapRemainsUnsatisfied() {
         FakeTime time = new FakeTime(0);
+        Map<Object, Object> actual = null;
 
         assertFailure(TIMEOUT,
-                () -> timedMapAwait((Callable<Map<Object, Object>>) () -> null,
-                        DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
-                        time, time).until(empty));
+                () -> await(() -> actual).usingTime(time, time)
+                        .every(ofNanos(1)).upTo(ofNanos(2)).until(empty));
     }
 
     @Test
@@ -91,12 +89,10 @@ class MapSizeConditionsTest {
         FakeTime time = new FakeTime(0);
 
         var failure = assertFailure(TIMEOUT,
-                () -> timedMapAwait(
-                        (Callable<ProbeContainers.ProbeMap<Object, Object>>) () -> {
-                            time.advanceNanos(2);
-                            return actual;
-                        }, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
-                        time, time).until(empty));
+                () -> await(() -> {
+                    time.advanceNanos(2);
+                    return actual;
+                }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(empty));
 
         assertTrue(failure.getMessage().contains("map"));
         assertFalse(failure.getMessage().contains("collection"));
@@ -141,7 +137,7 @@ class MapSizeConditionsTest {
         };
 
         assertTrue(assertThrows(NullPointerException.class,
-                () -> timedMapAwait(source, DEFAULT, time, time).until((PreservingCondition<Map<String, String>>) null))
+                () -> await(source).usingTime(time, time).until((PreservingCondition<Map<String, String>>) null))
                 .getMessage().contains("condition"));
         assertEquals(0, sourceCalls[0]);
     }

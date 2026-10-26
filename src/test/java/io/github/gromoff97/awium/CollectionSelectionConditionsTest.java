@@ -19,7 +19,6 @@ import static io.github.gromoff97.awium.CollectionConditions.await;
 import static io.github.gromoff97.awium.OptionalConditions.await;
 import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.CollectionConditions.first;
 import static io.github.gromoff97.awium.CollectionConditions.last;
 import static io.github.gromoff97.awium.CollectionConditions.single;
@@ -28,6 +27,7 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
+import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -333,8 +333,8 @@ class CollectionSelectionConditionsTest {
         java.util.concurrent.Callable<List<Integer>> source = observations::removeFirst;
         FakeTime time = new FakeTime(0);
 
-        assertEquals(3, timedCollectionAwait(source,
-                AwaitTestAccess.config(1, 5, 2), time, time).until(last));
+        assertEquals(3, await(source).usingTime(time, time).every(ofNanos(1))
+                .upTo(ofNanos(5)).persisting(ofNanos(2)).until(last));
     }
 
     @Test
@@ -343,9 +343,8 @@ class CollectionSelectionConditionsTest {
         java.util.concurrent.Callable<List<String>> source = List::of;
 
         var failure = assertFailure(TIMEOUT,
-                () -> timedCollectionAwait(source,
-                        AwaitTestAccess.config(1, 3, 0),
-                        time, time).until(first.because("a first result is required")));
+                () -> await(source).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
+                        .until(first.because("a first result is required")));
 
         assertTrue(failure.getMessage().contains("Condition: collection has a first element"));
         assertTrue(failure.getMessage().contains("Because: a first result is required"));

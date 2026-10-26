@@ -11,12 +11,10 @@ import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static java.util.Arrays.asList;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
@@ -25,7 +23,6 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
-import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.ofNanos;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.*;
@@ -201,14 +198,11 @@ class CollectionMembershipTest {
         FakeTime time = new FakeTime(0);
 
         assertFailure(TIMEOUT,
-                () -> timedCollectionAwait(
-                        (Callable<ProbeContainers.MembershipCollection<String>>)
-                                () -> {
-                                    time.advanceNanos(2);
-                                    return actual;
-                                },
-                        DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
-                        time, time).until(doesNotContain("a").because("business reason")));
+                () -> await(() -> {
+                    time.advanceNanos(2);
+                    return actual;
+                }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
+                        .until(doesNotContain("a").because("business reason")));
 
         assertEquals(1, actual.iteratorCalls);
     }

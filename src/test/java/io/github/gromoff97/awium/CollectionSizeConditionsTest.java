@@ -14,7 +14,6 @@ import static io.github.gromoff97.awium.CollectionConditions.await;
 import static io.github.gromoff97.awium.OptionalConditions.await;
 import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedCollectionAwait;
 import static io.github.gromoff97.awium.CollectionConditions.empty;
 import static io.github.gromoff97.awium.CollectionConditions.nonEmpty;
 import static io.github.gromoff97.awium.CollectionConditions.single;
@@ -30,7 +29,6 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -81,11 +79,11 @@ class CollectionSizeConditionsTest {
     @Test
     void nullCollectionRemainsUnsatisfied() {
         FakeTime time = new FakeTime(0);
+        Collection<Object> actual = null;
 
         assertFailure(TIMEOUT,
-                () -> timedCollectionAwait((Callable<Collection<Object>>) () -> null,
-                        DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
-                        time, time).until(empty));
+                () -> await(() -> actual).usingTime(time, time)
+                        .every(ofNanos(1)).upTo(ofNanos(2)).until(empty));
     }
 
     @Test
@@ -94,12 +92,10 @@ class CollectionSizeConditionsTest {
         FakeTime time = new FakeTime(0);
 
         var failure = assertFailure(TIMEOUT,
-                () -> timedCollectionAwait(
-                        (Callable<ProbeContainers.ProbeCollection<Object>>) () -> {
-                            time.advanceNanos(2);
-                            return actual;
-                        }, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(2)),
-                        time, time).until(empty));
+                () -> await(() -> {
+                    time.advanceNanos(2);
+                    return actual;
+                }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(empty));
 
         assertTrue(failure.getMessage().contains("collection"));
         assertFalse(failure.getMessage().contains("map"));
@@ -146,7 +142,7 @@ class CollectionSizeConditionsTest {
         };
 
         assertTrue(assertThrows(NullPointerException.class,
-                () -> timedCollectionAwait(source, DEFAULT, time, time).until((PreservingCondition<Collection<String>>) null))
+                () -> await(source).usingTime(time, time).until((PreservingCondition<Collection<String>>) null))
                 .getMessage().contains("condition"));
         assertEquals(0, sourceCalls[0]);
     }

@@ -20,7 +20,6 @@ import static io.github.gromoff97.awium.AttemptRecord.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedMapAwait;
 import static io.github.gromoff97.awium.ConditionSupport.captured;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
@@ -31,6 +30,7 @@ import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.WaitCompletion.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
+import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -864,10 +864,10 @@ class DiagnosticsSnapshotTest {
                 for (var check : checks) {
                     renders[0] = renders[1] = 0;
                     var time = new FakeTime(0);
-                    var waiting = timedMapAwait(() -> {
+                    var waiting = await(() -> {
                         time.advanceNanos(2);
                         return actual;
-                    }, config(1, 2, 0), time, time);
+                    }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
                     try {
                         AwaitFailure failure = capture
                                 ? ((AwaitResult.Failed<?, ?>) waiting.tryUntil(check)).failure()
