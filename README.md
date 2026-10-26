@@ -220,7 +220,9 @@ replacing the wait's outcome or cause. Reading `Condition.explanation()`
 explicitly also evaluates a lazy supplier; the resulting failure message
 remains a frozen string.
 
-Java does not propagate a target type through a chained generic factory call.
+Java does not use the surrounding target type to infer the receiver of a method
+call ([JLS 15.12](https://docs.oracle.com/javase/specs/jls/se21/html/jls-15.html#jls-15.12)).
+In `matches(...).because(...)`, `matches(...)` must be typed before `because(...)`.
 Generic predicate factories such as `matches`, `single`, and `hasValue` may lose
 a lambda's input type before `because(...)`. Method references such as
 `Payment::finished` supply that type; a lambda may need an explicit parameter type:
