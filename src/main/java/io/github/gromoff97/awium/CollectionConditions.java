@@ -418,7 +418,7 @@ public final class CollectionConditions {
             return unsatisfied("collection was null");
         }
         var iterator = actual.iterator();
-        return iterator.hasNext() ? satisfied(iterator.next()) : unsatisfied("no collection element matched");
+        return iterator.hasNext() ? satisfied(iterator.next()) : unsatisfied("collection was empty");
     }
 
     private static <OBSERVED, ELEMENT, RESULT> Condition.Typed<OBSERVED, RESULT> matching(

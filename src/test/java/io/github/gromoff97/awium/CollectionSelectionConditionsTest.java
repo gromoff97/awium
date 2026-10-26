@@ -345,7 +345,7 @@ class CollectionSelectionConditionsTest {
 
         assertTrue(failure.getMessage().contains("Condition: collection has a first element"));
         assertTrue(failure.getMessage().contains("Because: a first result is required"));
-        assertTrue(failure.getMessage().contains("Mismatch: no collection element matched"));
+        assertTrue(failure.getMessage().contains("Mismatch: collection was empty"));
     }
 
     private record User(int id) {
