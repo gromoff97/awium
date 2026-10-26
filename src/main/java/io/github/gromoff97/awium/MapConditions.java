@@ -20,6 +20,7 @@ import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.nonEmpty;
+import static io.github.gromoff97.awium.ConditionSupport.nonEmptySnapshot;
 import static io.github.gromoff97.awium.ConditionSupport.snapshot;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.selected;
@@ -423,13 +424,13 @@ public final class MapConditions {
     }
 
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsAllKeys(Iterable<? extends KEY> expected) {
-        var keys = nonEmpty(snapshot(expected, "expected keys"), "expected keys");
+        var keys = nonEmptySnapshot(expected, "expected keys");
         return preserving("map contains all expected keys", "map did not contain all expected keys", expectedReference(keys),
                 actual -> containsAll(actual.keySet(), keys, Objects::deepEquals));
     }
 
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> doesNotContainAnyKeys(Iterable<? extends KEY> unexpected) {
-        var keys = nonEmpty(snapshot(unexpected, "unexpected keys"), "unexpected keys");
+        var keys = nonEmptySnapshot(unexpected, "unexpected keys");
         return preserving("map does not contain unexpected keys", "map contained an unexpected key", unexpectedReference(keys),
                 actual -> !containsAny(actual.keySet(), keys, Objects::deepEquals));
     }
@@ -441,13 +442,13 @@ public final class MapConditions {
     }
 
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> containsAllValues(Iterable<? extends VALUE> expected) {
-        var values = nonEmpty(snapshot(expected, "expected values"), "expected values");
+        var values = nonEmptySnapshot(expected, "expected values");
         return preserving("map contains all expected values", "map did not contain all expected values", expectedReference(values),
                 actual -> containsAll(actual.values(), values, Objects::deepEquals));
     }
 
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> doesNotContainAnyValues(Iterable<? extends VALUE> unexpected) {
-        var values = nonEmpty(snapshot(unexpected, "unexpected values"), "unexpected values");
+        var values = nonEmptySnapshot(unexpected, "unexpected values");
         return preserving("map does not contain unexpected values", "map contained an unexpected value", unexpectedReference(values),
                 actual -> !containsAny(actual.values(), values, Objects::deepEquals));
     }
