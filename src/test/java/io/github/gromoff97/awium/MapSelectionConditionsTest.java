@@ -8,17 +8,21 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitFailure.Reason.TIMEOUT;
 import static io.github.gromoff97.awium.Conditions.await;
 import static io.github.gromoff97.awium.CollectionConditions.await;
 import static io.github.gromoff97.awium.OptionalConditions.await;
 import static io.github.gromoff97.awium.MapConditions.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.Conditions.matches;
+import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
+import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MapSelectionConditionsTest {
 
@@ -89,16 +93,19 @@ class MapSelectionConditionsTest {
         var pollingTime = new FakeTime(0);
         var actual = new LinkedHashMap<String[], String>();
         actual.put(new String[] {"nullable"}, null);
+        var waiting = await(() -> actual).usingTime(pollingTime, pollingTime).upTo(ofNanos(1));
 
-        String selected = await(() -> actual).usingTime(pollingTime, pollingTime)
-                .until(MapConditions.valueFor(new String[] {"nullable"}).because("one array key with a null value"));
+        String selected = waiting.until(MapConditions.valueFor(new String[] {"nullable"})
+                .because("one array key with a null value"));
         assertNull(selected);
-        assertEquals(Satisfied.class,
-                evaluate(MapConditions.valueFor(new String[] {"nullable"}), actual).getClass());
-        assertEquals("map did not contain the expected key",
-                ((Unsatisfied<?>) evaluate(MapConditions.valueFor(new String[] {"missing"}), actual)).mismatch());
-        assertEquals("map was null",
-                ((Unsatisfied<?>) evaluate(MapConditions.valueFor(new String[] {"missing"}), null)).mismatch());
+        assertNull(assertInstanceOf(AwaitResult.Satisfied.class,
+                waiting.tryUntil(MapConditions.valueFor(new String[] {"nullable"}))).result());
+        assertTrue(assertFailure(TIMEOUT, () -> waiting.until(MapConditions.valueFor(new String[] {"missing"})))
+                .getMessage().contains("map did not contain the expected key"));
+        assertTrue(assertFailure(TIMEOUT, () -> await(() -> (Map<String[], String>) null)
+                .usingTime(pollingTime, pollingTime).upTo(ofNanos(1))
+                .until(MapConditions.valueFor(new String[] {"missing"})))
+                .getMessage().contains("map was null"));
     }
 
     @Test
@@ -176,6 +183,8 @@ class MapSelectionConditionsTest {
     @Test
     void selectorsCoverMissingMultipleAndWrongEntries() {
         var actual = new LinkedHashMap<>(Map.of("first", 1, "second", 2));
+        var time = new FakeTime(0);
+        var waiting = await(() -> actual).usingTime(time, time).upTo(ofNanos(1));
 
         var none = evaluate(MapConditions.singleEntry(matches((Map.Entry<String, Integer> entry) -> entry.getValue() > 2)), actual);
         var many = evaluate(MapConditions.singleEntry(matches((Map.Entry<String, Integer> entry) -> entry.getValue() > 0)), actual);
@@ -183,18 +192,13 @@ class MapSelectionConditionsTest {
         assertEquals(Unsatisfied.class, many.getClass());
         assertEquals("value did not match", ((Unsatisfied<?>) none).mismatch());
         assertEquals("more than one value matched", ((Unsatisfied<?>) many).mismatch());
-        assertEquals(Unsatisfied.class,
-                evaluate(MapConditions.valueFor("missing"), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(
-                MapConditions.valueFor(
-                        "first", Conditions.greaterThan(1)), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(
-                MapConditions.onlyValueFor("first"), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(
-                MapConditions.onlyValueFor("other"),
-                Map.of("first", 1)).getClass());
-        assertEquals(Unsatisfied.class, evaluate(
-                MapConditions.onlyValueFor("first"), null).getClass());
+        assertFailure(TIMEOUT, () -> waiting.until(MapConditions.valueFor("missing")));
+        assertFailure(TIMEOUT, () -> waiting.until(MapConditions.valueFor("first", Conditions.greaterThan(1))));
+        assertFailure(TIMEOUT, () -> waiting.until(MapConditions.onlyValueFor("first")));
+        assertFailure(TIMEOUT, () -> await(() -> Map.of("first", 1))
+                .usingTime(time, time).upTo(ofNanos(1)).until(MapConditions.onlyValueFor("other")));
+        assertFailure(TIMEOUT, () -> await(() -> (Map<String, Integer>) null)
+                .usingTime(time, time).upTo(ofNanos(1)).until(MapConditions.onlyValueFor("first")));
         assertThrows(NullPointerException.class, () -> MapConditions.singleEntry(
                 (Condition.PreservingCondition<Map.Entry<?, ?>>) null));
         assertThrows(NullPointerException.class, () -> MapConditions.allEntries((CheckedBiPredicate<Object, Object>) null));

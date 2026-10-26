@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Condition.SourceCondition;
@@ -26,10 +25,6 @@ final class ConditionTestRuntime {
 
     static <S> ConditionResult<?> evaluate(
             SelectedCondition<? super S, ?, ?> condition, S actual) {
-        return evaluated(ConditionAwaitAttempt.<S, Object>bind(condition).probe(actual));
-    }
-
-    static <S> ConditionResult<?> evaluate(MapValueCondition<? super S, ?, ?> condition, S actual) {
         return evaluated(ConditionAwaitAttempt.<S, Object>bind(condition).probe(actual));
     }
 
