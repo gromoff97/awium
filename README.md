@@ -260,6 +260,13 @@ Nested entry conditions can accept exact `Map.Entry<KEY, VALUE>` parameters,
 including after `because(...)`. Their key and value types must match the source;
 read-only wildcard entry checks are also supported.
 
+Map membership checks compare keys and values with `Objects.deepEquals`, with
+the observed operand first. Key selections use the same key comparison. This
+includes array content and applies to maps with comparators or identity keys as well.
+`valueFor` and
+`entryFor` take the first entry whose key matches; `onlyValueFor` also requires
+the map to have exactly one entry.
+
 The source is read once per attempt. `singleEntry(...)` applies the same rule to
 map entries; `hasValue(...)` checks an optional value.
 
