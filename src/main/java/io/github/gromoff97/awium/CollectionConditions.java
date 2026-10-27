@@ -92,14 +92,12 @@ public final class CollectionConditions {
     public static <CHECKED, REFERENCE> SelectedCondition<Collection<?>, CHECKED, REFERENCE> singleElement(
             SourceCondition<CHECKED, REFERENCE> nested) {
         return new SelectedCondition<>(ConditionSupport.compose("single element", nested, singleElement,
-                actual -> ConditionSupport.single("collection", actual),
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 
     /** Checks the sole element using a condition with a declared result type. */
     public static <ELEMENT, RESULT> Condition.Typed<Collection<? extends ELEMENT>, RESULT> singleElement(Condition.Typed<? super ELEMENT, RESULT> nested) {
         return ConditionSupport.compose("single element", nested, singleElement,
-                actual -> ConditionSupport.single("collection", actual),
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
@@ -298,7 +296,7 @@ public final class CollectionConditions {
     public static <CHECKED, REFERENCE> SelectedCondition<SequencedCollection<?>, CHECKED, REFERENCE> firstElement(
             SourceCondition<CHECKED, REFERENCE> nested) {
         return new SelectedCondition<>(ConditionSupport.compose("first element", nested, firstElement,
-                CollectionConditions::selectFirst, () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 
     /**
@@ -312,7 +310,7 @@ public final class CollectionConditions {
     public static <ELEMENT, RESULT> Condition.Typed<SequencedCollection<? extends ELEMENT>, RESULT> firstElement(
             Condition.Typed<? super ELEMENT, RESULT> nested) {
         return ConditionSupport.compose("first element", nested, firstElement,
-                CollectionConditions::selectFirst, () -> new ConditionAwaitAttempt<>(nested));
+                () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static final SelectedCondition<SequencedCollection<?>, Object, Reference<?>> lastElement = selected("collection has a last element",
@@ -327,7 +325,7 @@ public final class CollectionConditions {
     public static <CHECKED, REFERENCE> SelectedCondition<SequencedCollection<?>, CHECKED, REFERENCE> lastElement(
             SourceCondition<CHECKED, REFERENCE> nested) {
         return new SelectedCondition<>(ConditionSupport.compose("last element", nested, lastElement,
-                CollectionConditions::selectLast, () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 
     /**
@@ -341,7 +339,7 @@ public final class CollectionConditions {
     public static <ELEMENT, RESULT> Condition.Typed<SequencedCollection<? extends ELEMENT>, RESULT> lastElement(
             Condition.Typed<? super ELEMENT, RESULT> nested) {
         return ConditionSupport.compose("last element", nested, lastElement,
-                CollectionConditions::selectLast, () -> new ConditionAwaitAttempt<>(nested));
+                () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static SelectedCondition<List<?>, Object, Reference<?>> elementAt(int index) {
@@ -360,9 +358,7 @@ public final class CollectionConditions {
     /** Checks the indexed element, retaining the source's element type. */
     public static <CHECKED, REFERENCE> SelectedCondition<List<?>, CHECKED, REFERENCE> elementAt(
             int index, SourceCondition<CHECKED, REFERENCE> nested) {
-        var extraction = elementAt(index);
-        return new SelectedCondition<>(ConditionSupport.compose("element at index " + index, nested,
-                extraction, actual -> selectElement(actual, index),
+        return new SelectedCondition<>(ConditionSupport.compose("element at index " + index, nested, elementAt(index),
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 
@@ -377,9 +373,8 @@ public final class CollectionConditions {
      */
     public static <ELEMENT, RESULT> Condition.Typed<List<? extends ELEMENT>, RESULT> elementAt(int index,
             Condition.Typed<? super ELEMENT, RESULT> nested) {
-        var extraction = elementAt(index);
-        return ConditionSupport.compose("element at index " + index, nested, extraction,
-                actual -> selectElement(actual, index), () -> new ConditionAwaitAttempt<>(nested));
+        return ConditionSupport.compose("element at index " + index, nested, elementAt(index),
+                () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <ELEMENT> PreservingCondition<SequencedCollection<? extends ELEMENT>> sorted(Comparator<? super ELEMENT> comparator) {

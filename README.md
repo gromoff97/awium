@@ -762,7 +762,8 @@ too late.
 composition. Failed extraction reports its own condition: optional presence,
 the requested list position, or the map lookup key. Map entry access failures
 also retain the lookup key. After extraction succeeds, diagnostics use the
-nested condition's expectation.
+nested condition's expectation. Interruption during extraction keeps the selector
+context and skips the nested check.
 
 Catalog and fluent behavior tests use virtual time. Integration tests verify
 caller-thread execution and external cancellation on both platform and virtual

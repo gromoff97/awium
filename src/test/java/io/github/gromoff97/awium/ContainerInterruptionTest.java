@@ -53,6 +53,38 @@ class ContainerInterruptionTest {
     }
 
     @Test
+    void interruptedExtractionReportsTheSelectorBeforeStartingTheNestedCheck() {
+        int[] factories = {0};
+        var check = Conditions.conditionPerWait("nested check", () -> {
+            factories[0]++;
+            return (String value) -> ConditionResult.satisfied(value);
+        });
+        var selected = MapConditions.valueFor("key", check).because("value must be readable");
+        var narrowed = MapConditions.valueFor("key", Conditions.instanceOf(String.class)).because("value must be readable");
+        List<Function<Await<SignallingMap, Map.Entry<String, String>, String>, AwaitResult<?, ?>>> waits = List.of(
+                waiting -> waiting.tryUntil(selected), waiting -> waiting.tryUntil(narrowed),
+                waiting -> waiting.tryUntil(selected, selected), waiting -> waiting.tryUntil(narrowed, narrowed));
+        for (var wait : waits) {
+            var actual = new SignallingMap("getValue");
+            try {
+                var result = wait.apply(await(() -> actual));
+                var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+                var attempt = result.attempts().getFirst();
+                var condition = attempt.progress() == null ? attempt.condition() : attempt.progress().activeCondition();
+
+                assertEquals(INTERRUPTED, failure.reason());
+                assertEquals(0, factories[0]);
+                assertEquals(MapConditions.valueFor("key").description(), condition.description());
+                assertEquals("key", condition.reference().value());
+                assertEquals("value must be readable", condition.explanation());
+                assertTrue(Thread.currentThread().isInterrupted());
+            } finally {
+                Thread.interrupted();
+            }
+        }
+    }
+
+    @Test
     void interruptionDuringExtractionStillAllowsTheComparator() {
         var actual = new SignallingList("secondNext");
         int[] comparisons = {0};

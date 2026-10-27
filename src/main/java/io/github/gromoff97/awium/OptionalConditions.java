@@ -25,13 +25,13 @@ public final class OptionalConditions {
     }
 
     public static <VALUE, RESULT> Condition.Typed<Optional<? extends VALUE>, RESULT> hasValue(Condition.Typed<? super VALUE, RESULT> nested) {
-        return compose("optional value", nested, present, OptionalConditions::present,
+        return compose("optional value", nested, present,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <CHECKED, REFERENCE> SelectedCondition<Optional<?>, CHECKED, REFERENCE> hasValue(
             SourceCondition<CHECKED, REFERENCE> nested) {
-        return new SelectedCondition<>(compose("optional value", nested, present, OptionalConditions::present,
+        return new SelectedCondition<>(compose("optional value", nested, present,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 

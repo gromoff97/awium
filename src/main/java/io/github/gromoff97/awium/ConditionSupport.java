@@ -133,22 +133,21 @@ final class ConditionSupport {
 
     static <OBSERVED, VALUE, RESULT> Condition.Typed<OBSERVED, RESULT> compose(String selection, Condition condition,
             Condition extractionCondition,
-            CheckedFunction<? super OBSERVED, ? extends ConditionResult<VALUE>> extract,
             Supplier<? extends ConditionAwaitAttempt<? super VALUE, ? extends RESULT>> evaluatorFactory) {
         Condition.required(condition);
         return new Condition.Typed<>(condition, selection + ": " + condition.description(), () -> {
+            // Bare selectors obtain their value type from the enclosing selector factory's source constraints.
+            var extraction = ConditionAwaitAttempt.<OBSERVED, VALUE>bind(extractionCondition);
             var evaluator = evaluatorFactory.get();
-            return actual -> {
-                try {
-                    return switch (extract.apply(actual)) {
-                        case ConditionResult.Satisfied<VALUE> value -> evaluator.probe(value.result());
-                        case ConditionResult.Unsatisfied<VALUE> mismatch -> new AttemptResult.Evaluated<>(
-                                new ConditionResult.Unsatisfied<>(mismatch.mismatch(), mismatch.cause()),
-                                extractionCondition, null);
-                    };
-                } catch (Throwable failure) {
-                    return new AttemptResult.Uncontrolled<>(failure, extractionCondition, null);
-                }
+            return actual -> switch (extraction.probe(actual)) {
+                case AttemptResult.Evaluated<? extends VALUE> evaluated -> switch (evaluated.result()) {
+                    case ConditionResult.Satisfied<? extends VALUE> value -> evaluator.probe(value.result());
+                    case ConditionResult.Unsatisfied<?> mismatch -> new AttemptResult.Evaluated<>(
+                            new ConditionResult.Unsatisfied<>(mismatch.mismatch(), mismatch.cause()),
+                            extractionCondition, null);
+                };
+                case AttemptResult.Uncontrolled<?> failure -> new AttemptResult.Uncontrolled<>(
+                        failure.cause(), extractionCondition, null);
             };
         });
     }
