@@ -403,10 +403,9 @@ class CompilationContractTest {
     }
 
     @Test
-    void jdkCallableSelectionsRejectIncompatibleResultTypes() throws IOException {
+    void adaptedCallableSelectionsRejectIncompatibleResultTypes() throws IOException {
         for (String condition : List.of("present", "singleElement", "firstElement", "lastElement", "singleEntry")) {
             String source = condition.equals("present") ? "optional" : condition.equals("singleEntry") ? "map" : "collection";
-            String factory = condition.equals("present") ? "await" : condition.equals("singleEntry") ? "await" : "await";
             String contract = """
                     import static io.github.gromoff97.awium.Await.await;
                     import static io.github.gromoff97.awium.CollectionConditions.*;
@@ -418,12 +417,11 @@ class CompilationContractTest {
                         void check(Callable<Optional<String>> optional,
                                 Callable<List<String>> collection,
                                 Callable<Map<String, String>> map) {
-                            %s result = %s(%s).until(%s);
+                            Integer result = await(%s::call).until(%s);
                         }
                     }
                     """;
-            assertRejected(contract.formatted("Integer", factory, source, condition));
-            assertRejected(contract.formatted("Integer", factory, source, condition + ""));
+            assertRejected(contract.formatted(source, condition));
         }
     }
 
@@ -479,25 +477,14 @@ class CompilationContractTest {
                 import java.util.List;
                 final class Contract {
                     void check() {
-                        Integer wrong = await((java.util.concurrent.Callable<List<String>>)
-                                () -> List.of("value")).until(singleElement);
+                        Integer wrong = await(() -> List.of("value")).until(singleElement);
                     }
                 }
                 """);
     }
 
     @Test
-    void orderedSelectionRejectsUnrelatedResultsAndUnorderedSources() throws IOException {
-        assertRejected("""
-                import static io.github.gromoff97.awium.Await.await;
-                import static io.github.gromoff97.awium.CollectionConditions.firstElement;
-                import java.util.List;
-                final class Contract {
-                    void check(java.util.concurrent.Callable<List<String>> source) {
-                        Integer wrong = await(source::call).until(firstElement);
-                    }
-                }
-                """);
+    void orderedSelectionRejectsUnorderedSources() throws IOException {
         assertRejected("""
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.CollectionConditions.firstElement;
