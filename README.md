@@ -544,8 +544,8 @@ Factories accepting iterables of expected elements or maps of expected entries
 take a shallow snapshot when the condition is created.
 Changing the original input afterwards does not change the condition or its
 diagnostic reference. Encounter order, duplicates and supported nulls are retained.
-Each iterable is traversed once during construction; a failure to read these
-inputs is thrown there, before polling starts.
+Each iterable is traversed once during construction, on the calling thread;
+a failure to read these inputs is thrown there, before polling starts.
 
 Elements, keys, values, and callbacks remain caller-owned; they are not deeply
 copied. Single-value operands such as `equalTo(value)`, `sameAs(value)`,

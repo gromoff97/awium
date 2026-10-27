@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Spliterator;
+import java.util.stream.IntStream;
 import java.util.function.Function;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
@@ -54,6 +56,32 @@ class IterableExpectedValuesTest {
         for (var factory : factories) {
             assertStableSnapshot(factory, List.of("a", "b"), new StringBuilder("abc"));
             assertStableSnapshot(factory, List.of("x", "y"), new StringBuilder("abc"));
+        }
+    }
+
+    @Test
+    void expectedSnapshotsReadSplittableInputsOnTheCallingThread() {
+        var caller = Thread.currentThread();
+        var elements = IntStream.range(0, 2048).mapToObj(Integer::toString).toList();
+        int[] reads = {0};
+        var expected = new Iterable<String>() {
+            @Override public Iterator<String> iterator() { return elements.iterator(); }
+            @Override public Spliterator<String> spliterator() {
+                return elements.parallelStream().map(value -> {
+                    assertSame(caller, Thread.currentThread(), "expected values must be read on the caller thread");
+                    reads[0]++;
+                    return value;
+                }).spliterator();
+            }
+        };
+        List<Function<Iterable<String>, Condition>> factories = List.of(
+                CollectionConditions::containsExactly, MapConditions::containsAllKeys,
+                Conditions::in, StringConditions::containsAll, StringConditions::doesNotContainAny);
+        for (var factory : factories) {
+            reads[0] = 0;
+            var condition = factory.apply(expected);
+            assertEquals(elements.size(), reads[0]);
+            assertEquals(elements, condition.reference().value());
         }
     }
 

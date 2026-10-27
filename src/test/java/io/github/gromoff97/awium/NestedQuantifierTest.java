@@ -72,20 +72,26 @@ class NestedQuantifierTest {
     }
 
     @Test
-    void comparisonsAndTypeChecksCannotSkipTheObservedCollection() {
+    void quantifierFamiliesRejectMismatchesAndNullCollections() {
         List<User> source = List.of(ACTIVE);
         List<Condition.PreservingCondition<? super List<User>>> checks = List.of(
-                all(equalTo(PENDING)), all(instanceOf(String.class)),
-                none(equalTo(ACTIVE)), none(instanceOf(User.class)));
+                all(equalTo(PENDING)), all(instanceOf(String.class)), all(matches(user -> !user.active())),
+                any(equalTo(PENDING)), any(instanceOf(String.class)), any(matches(user -> !user.active())),
+                none(equalTo(ACTIVE)), none(instanceOf(User.class)), none(matches(User::active)));
         for (var check : checks) {
-            var time = new FakeTime(0);
-            var result = await(() -> source).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1)).tryUntil(check);
-            assertEquals(AwaitFailure.Reason.TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
+            for (var actual : java.util.Arrays.asList(source, null)) {
+                var time = new FakeTime(0);
+                var result = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1)).tryUntil(check);
+                var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+                assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+                assertNull(failure.cause());
+                if (actual == null) assertTrue(failure.message().contains("collection was null"), failure.message());
+            }
         }
     }
 
     @Test
-    void everyMapQuantifierFamilyChecksMatchingAndMismatchingEntries() {
+    void everyMapQuantifierFamilyHandlesMatchesMismatchesAndNullMaps() {
         Map<String, User> ready = new ProbeContainers.EntryMap<>(List.of(new UserEntry()));
         Map<String, User> pending = new ProbeContainers.EntryMap<>(List.of(new java.util.AbstractMap.SimpleImmutableEntry<>(null, null)));
         var key = matches(NestedQuantifierTest::readyKey);
@@ -109,13 +115,16 @@ class NestedQuantifierTest {
     private static void assertMapChecks(Map<String, User> successful, Map<String, User> unsuccessful,
             List<Condition.PreservingCondition<? super Map<String, User>>> checks) {
         for (var check : checks) {
-            for (var source : List.of(successful, unsuccessful)) {
+            for (var source : java.util.Arrays.asList(successful, unsuccessful, null)) {
                 var time = new FakeTime(0);
                 var result = await(() -> source).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1)).tryUntil(check);
                 if (source == successful) {
                     assertSame(source, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
                 } else {
-                    assertEquals(AwaitFailure.Reason.TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
+                    var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+                    assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+                    assertNull(failure.cause());
+                    if (source == null) assertTrue(failure.message().contains("map was null"), failure.message());
                 }
             }
         }

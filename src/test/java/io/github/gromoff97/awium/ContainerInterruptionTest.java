@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import java.util.AbstractList;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayList;
@@ -20,6 +21,34 @@ import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ContainerInterruptionTest {
+
+    @Test
+    void interruptionBeforeTheFirstNestedCheckSkipsItsFactory() {
+        var actual = new AbstractList<String>() {
+            @Override public int size() { return 1; }
+            @Override public String get(int index) {
+                java.util.Objects.checkIndex(index, size());
+                Thread.currentThread().interrupt();
+                return "ready";
+            }
+            @Override public String toString() { return "interrupting collection"; }
+        };
+        int[] factories = {0};
+        var nested = Conditions.conditionPerWait("nested check", () -> {
+            factories[0]++;
+            return (String value) -> ConditionResult.satisfied();
+        });
+        for (var condition : List.of(all(nested), any(nested), none(nested))) {
+            try {
+                var result = await(() -> actual).tryUntil(condition);
+                assertEquals(INTERRUPTED, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
+                assertTrue(Thread.currentThread().isInterrupted());
+                assertEquals(0, factories[0]);
+            } finally {
+                Thread.interrupted();
+            }
+        }
+    }
 
     @Test
     void getterFailuresKeepTheirOriginalCauseWhenTheyAlsoInterrupt() {
