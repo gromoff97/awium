@@ -63,8 +63,8 @@ class NestedQuantifierTest {
         assertSame(source, await(() -> source).until(MapConditions.anyKey(instanceOf(String.class))));
         assertSame(source, await(() -> source).until(MapConditions.noKey(key)));
         assertSame(source, await(() -> source).until(MapConditions.allEntries(entry)));
-        assertSame(source, await(() -> source).until(MapConditions.anyEntry(equalTo(Map.entry("user", ACTIVE)))));
-        assertSame(source, await(() -> source).until(MapConditions.noEntry(instanceOf(String.class))));
+        assertSame(source, await(() -> source).until(MapConditions.hasEntry(equalTo(Map.entry("user", ACTIVE)))));
+        assertSame(source, await(() -> source).until(MapConditions.hasNoEntry(instanceOf(String.class))));
 
         Map<String, Number> numbers = Map.of("count", 1);
         assertSame(numbers, await(() -> numbers).until(MapConditions.allEntries(equalTo(Map.entry("count", 1)))));
@@ -99,11 +99,11 @@ class NestedQuantifierTest {
                 MapConditions.allValues(value), MapConditions.allValues(equalTo(ACTIVE)), MapConditions.allValues(instanceOf(User.class)),
                 MapConditions.anyValue(value), MapConditions.anyValue(equalTo(ACTIVE)), MapConditions.anyValue(instanceOf(User.class)),
                 MapConditions.allEntries(entry), MapConditions.allEntries(expectedEntry), MapConditions.allEntries(instanceOf(UserEntry.class)),
-                MapConditions.anyEntry(entry), MapConditions.anyEntry(expectedEntry), MapConditions.anyEntry(instanceOf(UserEntry.class))));
+                MapConditions.hasEntry(entry), MapConditions.hasEntry(expectedEntry), MapConditions.hasEntry(instanceOf(UserEntry.class))));
         assertMapChecks(pending, ready, List.of(
                 MapConditions.noKey(key), MapConditions.noKey(equalTo("user")), MapConditions.noKey(instanceOf(String.class)),
                 MapConditions.noValue(value), MapConditions.noValue(equalTo(ACTIVE)), MapConditions.noValue(instanceOf(User.class)),
-                MapConditions.noEntry(entry), MapConditions.noEntry(expectedEntry), MapConditions.noEntry(instanceOf(UserEntry.class))));
+                MapConditions.hasNoEntry(entry), MapConditions.hasNoEntry(expectedEntry), MapConditions.hasNoEntry(instanceOf(UserEntry.class))));
     }
 
     private static void assertMapChecks(Map<String, User> successful, Map<String, User> unsuccessful,

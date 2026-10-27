@@ -34,7 +34,7 @@ class PublicSurfaceTest {
 
     @Test
     void conditionsDoNotExposeRuntimeMechanicsOrAlternativeFactories() {
-        Set<String> excludedMethods = Set.of("because", "explanation", "definition", "evaluatorFactory", "newEvaluator", "newAttempt",
+        Set<String> excludedMethods = Set.of("definition", "evaluatorFactory", "newEvaluator", "newAttempt",
                 "preservingAttempt", "selectionAttempt", "yields", "preserving", "captured");
         for (Class<?> stage : List.of(Conditions.class, Condition.class, Condition.Typed.class, PreservingCondition.class, ComparisonCondition.class,
                 SelectedCondition.class, MapValueCondition.class, SourceCondition.class)) {

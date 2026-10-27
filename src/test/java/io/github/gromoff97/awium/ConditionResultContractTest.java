@@ -34,9 +34,9 @@ class ConditionResultContractTest {
         assertSame(actual, await(() -> java.util.Optional.of(actual)).usingTime(time, time)
                 .until(OptionalConditions.hasValue(Conditions.condition("present", ignored -> satisfied()))));
         assertEquals(42, await(() -> java.util.List.of(actual)).usingTime(time, time)
-                .until(CollectionConditions.single(Conditions.condition("single", ignored -> satisfied()))).id());
+                .until(CollectionConditions.singleElement(Conditions.condition("single", ignored -> satisfied()))).id());
         assertEquals(42, await(() -> java.util.List.of(actual)).usingTime(time, time)
-                .until(CollectionConditions.first(Conditions.condition("first", ignored -> satisfied()))).id());
+                .until(CollectionConditions.firstElement(Conditions.condition("first", ignored -> satisfied()))).id());
         assertEquals(42, await(() -> java.util.Map.of("user", actual)).usingTime(time, time)
                 .until(MapConditions.valueFor("user", Conditions.condition("mapped", ignored -> satisfied()))).id());
         User absent = null;

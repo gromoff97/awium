@@ -9,16 +9,23 @@ public abstract sealed class Condition
         permits Condition.Typed, Condition.SourceCondition, Condition.SelectedCondition, Condition.MapValueCondition {
 
     private final String description;
+    private final String explanation;
     private final Reference<?> reference;
     final Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory;
 
     Condition(Condition original) {
-        this(required(original).description, original.reference, original.evaluatorFactory);
+        this(required(original).description, original.reference, original.evaluatorFactory, original.explanation);
+    }
+
+    Condition(Condition original, String explanation) {
+        this(required(original).description, original.reference, original.evaluatorFactory,
+                nonBlank(explanation, "explanation"));
     }
 
     private Condition(String description, Reference<?> reference,
-            Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory) {
+            Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory, String explanation) {
         this.description = nonBlank(description, "description");
+        this.explanation = explanation;
         this.reference = reference;
         this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
     }
@@ -26,6 +33,24 @@ public abstract sealed class Condition
     public final String description() {
         return description;
     }
+
+    /** Returns the reason for this condition, or null when no reason was supplied. */
+    public final String explanation() {
+        return explanation;
+    }
+
+    /**
+     * Returns an independent copy with the supplied reason and the same evaluation.
+     * Replaces any earlier reason. Inline generic factories before this call may need
+     * a typed lambda parameter or method reference because Java cannot use the terminal's
+     * target type to infer their input types through a chained method call.
+     *
+     * @param explanation non-null, non-blank reason for the condition
+     * @return a condition with the same input and result constraints
+     * @throws NullPointerException if the explanation is null
+     * @throws IllegalArgumentException if the explanation is blank
+     */
+    public abstract Condition because(String explanation);
 
     public final Reference<?> reference() {
         return reference;
@@ -45,12 +70,21 @@ public abstract sealed class Condition
 
         Typed(String description, Reference<?> reference,
                 Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
-            super(description, reference, evaluatorFactory);
+            super(description, reference, evaluatorFactory, null);
         }
 
         Typed(Condition metadata, String description,
                 Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
-            super(description, required(metadata).reference, evaluatorFactory);
+            super(description, required(metadata).reference, evaluatorFactory, metadata.explanation);
+        }
+
+        private Typed(Typed<OBSERVED, RESULT> original, String explanation) {
+            super(original, explanation);
+        }
+
+        @Override
+        public Typed<OBSERVED, RESULT> because(String explanation) {
+            return new Typed<>(this, explanation);
         }
     }
 
@@ -67,6 +101,13 @@ public abstract sealed class Condition
         SourceCondition(Typed<OBSERVED, ?> definition) {
             super(definition);
         }
+
+        SourceCondition(SourceCondition<OBSERVED, REFERENCE> original, String explanation) {
+            super(original, explanation);
+        }
+
+        @Override
+        public abstract SourceCondition<OBSERVED, REFERENCE> because(String explanation);
     }
 
     /**
@@ -79,6 +120,15 @@ public abstract sealed class Condition
         PreservingCondition(Typed<OBSERVED, OBSERVED> definition) {
             super(definition);
         }
+
+        private PreservingCondition(PreservingCondition<OBSERVED> original, String explanation) {
+            super(original, explanation);
+        }
+
+        @Override
+        public PreservingCondition<OBSERVED> because(String explanation) {
+            return new PreservingCondition<>(this, explanation);
+        }
     }
 
     /**
@@ -90,6 +140,15 @@ public abstract sealed class Condition
 
         ComparisonCondition(Typed<Object, Object> definition) {
             super(definition);
+        }
+
+        private ComparisonCondition(ComparisonCondition<EXPECTED> original, String explanation) {
+            super(original, explanation);
+        }
+
+        @Override
+        public ComparisonCondition<EXPECTED> because(String explanation) {
+            return new ComparisonCondition<>(this, explanation);
         }
     }
 
@@ -106,6 +165,15 @@ public abstract sealed class Condition
         SelectedCondition(Typed<OBSERVED, ?> definition) {
             super(definition);
         }
+
+        private SelectedCondition(SelectedCondition<OBSERVED, CHECKED, REFERENCE> original, String explanation) {
+            super(original, explanation);
+        }
+
+        @Override
+        public SelectedCondition<OBSERVED, CHECKED, REFERENCE> because(String explanation) {
+            return new SelectedCondition<>(this, explanation);
+        }
     }
 
     /**
@@ -120,6 +188,15 @@ public abstract sealed class Condition
 
         MapValueCondition(Typed<OBSERVED, ?> definition) {
             super(definition);
+        }
+
+        private MapValueCondition(MapValueCondition<OBSERVED, CHECKED, REFERENCE> original, String explanation) {
+            super(original, explanation);
+        }
+
+        @Override
+        public MapValueCondition<OBSERVED, CHECKED, REFERENCE> because(String explanation) {
+            return new MapValueCondition<>(this, explanation);
         }
     }
 

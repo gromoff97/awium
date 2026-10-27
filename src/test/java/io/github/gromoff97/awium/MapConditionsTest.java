@@ -16,6 +16,7 @@ import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.*;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
@@ -26,13 +27,12 @@ import static org.junit.jupiter.api.Assertions.*;
 class MapConditionsTest {
 
     @Test
-    void bulkKeyAndValueFactoriesRequireANonemptyCollection() {
+    void bulkKeyAndValueFactoriesRejectNullInputs() {
         List<Function<Collection<String>, PreservingCondition<?>>> factories = List.of(
                 MapConditions::containsAllKeys, MapConditions::doesNotContainAnyKeys,
                 MapConditions::containsAllValues, MapConditions::doesNotContainAnyValues);
         for (var factory : factories) {
             assertThrows(NullPointerException.class, () -> factory.apply(null));
-            assertThrows(IllegalArgumentException.class, () -> factory.apply(List.of()));
         }
         assertThrows(NullPointerException.class, () -> containsOnlyKeys(null));
     }
@@ -147,7 +147,7 @@ class MapConditionsTest {
         var arrayActual = entryMap(entry(new int[] {1}, new int[] {2}));
         assertStatus(containsKey(new int[] {1}), arrayActual, Satisfied.class);
         assertStatus(containsValue(new int[] {2}), arrayActual, Satisfied.class);
-        assertStatus(containsEntry(new int[] {1}, new int[] {2}),
+        assertStatus(hasEntry(new int[] {1}, new int[] {2}),
                 arrayActual, Satisfied.class);
 
         var objectArrayActual = entryMap(entry(new String[] {"key"}, new String[] {"value"}));
@@ -159,7 +159,7 @@ class MapConditionsTest {
         var valueFailure = new IllegalStateException("value equals");
         var keyMismatch = entryMap(entry("actual",
                 new ThrowingEquals(valueFailure)));
-        assertStatus(containsEntry("expected", new ThrowingEquals(null)),
+        assertStatus(hasEntry("expected", new ThrowingEquals(null)),
                 keyMismatch, Unsatisfied.class);
 
         Directional onlyActual = new Directional(true);
@@ -175,8 +175,8 @@ class MapConditionsTest {
         var actual = entryMap(entry(null, "value"), entry("key", null));
         assertStatus(containsKey((String) null), actual, Satisfied.class);
         assertStatus(containsValue((String) null), actual, Satisfied.class);
-        assertStatus(containsEntry(null, "value"), actual, Satisfied.class);
-        assertStatus(containsEntry("key", null), actual, Satisfied.class);
+        assertStatus(hasEntry(null, "value"), actual, Satisfied.class);
+        assertStatus(hasEntry("key", null), actual, Satisfied.class);
     }
 
     @Test
@@ -211,8 +211,43 @@ class MapConditionsTest {
                 () -> containsAllEntries(null));
         assertValidation(NullPointerException.class,
                 () -> containsExactlyEntries(null));
-        assertValidation(IllegalArgumentException.class,
-                () -> containsAllEntries(Map.of()));
+        assertValidation(NullPointerException.class,
+                () -> containsAnyEntries(null));
+        assertValidation(NullPointerException.class,
+                () -> doesNotContainAllEntries(null));
+        assertValidation(NullPointerException.class,
+                () -> doesNotContainAnyEntries(null));
+    }
+
+    @Test
+    void emptyExpectedSetsFollowTheSameRulesForEntriesKeysAndValues() {
+        List<PreservingCondition<? super Map<String, String>>> satisfied = List.of(
+                containsAllEntries(Map.of()), doesNotContainAnyEntries(Map.of()),
+                containsAllKeys(List.of()), doesNotContainAnyKeys(List.of()),
+                containsAllValues(List.of()), doesNotContainAnyValues(List.of()));
+        List<PreservingCondition<? super Map<String, String>>> unsatisfied = List.of(
+                containsAnyEntries(Map.of()), doesNotContainAllEntries(Map.of()));
+        for (var checks : List.of(satisfied, unsatisfied)) {
+            for (var check : checks) assertInstanceOf(Unsatisfied.class, evaluate(check, null));
+        }
+
+        for (var entries : List.of(Map.<String, String>of(), Map.of("key", "value"))) {
+            var actual = new LinkedHashMap<>(entries);
+            var time = new FakeTime(0);
+            var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+            for (var check : satisfied) {
+                LinkedHashMap<String, String> selected = waiting.until(check);
+                assertSame(actual, selected);
+                assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, waiting.tryUntil(check)).result());
+            }
+            for (var check : unsatisfied) {
+                var result = waiting.tryUntil(check);
+                assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
+                assertEquals(List.of(), result.attempts().getLast().condition().reference().value());
+            }
+            assertEquals(actual.isEmpty() ? Satisfied.class : Unsatisfied.class,
+                    evaluate(containsExactlyEntries(Map.<String, String>of()), actual).getClass());
+        }
     }
 
     @Test
@@ -231,14 +266,89 @@ class MapConditionsTest {
     }
 
     @Test
-    void mapFactoriesPreserveConcreteResultTypes() {
+    void entryChecksPreserveConcreteResultTypesInBothTerminalsAndSequences() {
         var pollingTime = new FakeTime(0);
-        var actual = map("a", "1");
-        java.util.concurrent.Callable<LinkedHashMap<String, String>> source = () -> actual;
+        var actual = map("pending", "0", "ready", "1", "alsoReady", "2");
+        Await.MapSource<LinkedHashMap<String, String>> source = () -> actual;
+        var waiting = await(source).usingTime(pollingTime, pollingTime).every(ofNanos(1));
 
-        LinkedHashMap<String, String> result = await(source::call).usingTime(pollingTime, pollingTime).until(containsEntry("a", "1"));
+        LinkedHashMap<String, String> exact = waiting.until(hasEntry("ready", "1").because("ready entry required"));
+        LinkedHashMap<String, String> checked = waiting.until(hasEntry(matches(entry -> !entry.getValue().equals("0"))));
+        LinkedHashMap<String, String> direct = waiting.until(
+                hasEntry(entry -> entry.getKey().startsWith("ready") && entry.getValue().startsWith("1")));
+        AwaitResult<LinkedHashMap<String, String>, LinkedHashMap<String, String>> directResult = waiting.tryUntil(
+                hasEntry((Map.Entry<String, String> entry) -> !entry.getValue().equals("0"))
+                        .because("positive entry required"));
+        AwaitResult<LinkedHashMap<String, String>, LinkedHashMap<String, String>> checkedResult = waiting.tryUntil(
+                hasEntry(matches((Map.Entry<String, String> entry) -> !entry.getValue().equals("0")))
+                        .because("positive entry required"));
+        AwaitResult<LinkedHashMap<String, String>, LinkedHashMap<String, String>> exactResult = waiting.tryUntil(
+                hasEntry("ready", "1").because("ready entry required"));
+        List<LinkedHashMap<String, String>> stages = waiting.until(
+                hasEntry("ready", "1"), hasEntry(entry -> entry.getValue().equals("2")));
 
-        assertSame(actual, result);
+        assertSame(actual, exact);
+        assertSame(actual, checked);
+        assertSame(actual, direct);
+        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, directResult).result());
+        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, checkedResult).result());
+        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, exactResult).result());
+        assertEquals(2, stages.size());
+        stages.forEach(stage -> assertSame(actual, stage));
+    }
+
+    @Test
+    void entryChecksReportMissingAndMismatchingEntriesWithReasons() {
+        List<PreservingCondition<? super Map<String, String>>> checks = List.of(
+                hasEntry("ready", "1").because("ready entry required"),
+                hasEntry((Map.Entry<String, String> entry) ->
+                        entry.getKey().equals("ready") && entry.getValue().equals("1"))
+                        .because("ready entry required"),
+                hasEntry(matches((Map.Entry<String, String> entry) ->
+                        entry.getKey().equals("ready") && entry.getValue().equals("1")))
+                        .because("ready entry required"));
+        for (var actual : List.of(Map.<String, String>of(), Map.of("other", "1"), Map.of("ready", "0"))) {
+            Await.MapSource<Map<String, String>> source = () -> actual;
+            for (var check : checks) {
+                var time = new FakeTime(0);
+                var result = await(source).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1)).tryUntil(check);
+                var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+
+                assertEquals(TIMEOUT, failure.reason());
+                assertTrue(failure.message().contains("Because: ready entry required"), failure.message());
+            }
+        }
+    }
+
+    @Test
+    void entryAbsenceChecksPreserveMapsAndRejectAnyMatchingEntry() {
+        for (var actual : List.of(map(), map("ready", "1"), map("failed", "0"), map("ready", "1", "failed", "1"))) {
+            Await.MapSource<LinkedHashMap<String, String>> source = () -> actual;
+            var time = new FakeTime(0);
+            var waiting = await(source).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1));
+            AwaitResult<LinkedHashMap<String, String>, LinkedHashMap<String, String>> direct = waiting.tryUntil(
+                    hasNoEntry(entry -> entry.getKey().startsWith("failed") && entry.getValue().startsWith("1")));
+            var exact = waiting.tryUntil(hasNoEntry("failed", "1"));
+            var explained = waiting.tryUntil(hasNoEntry((Map.Entry<String, String> entry) ->
+                    entry.getKey().startsWith("failed") && entry.getValue().startsWith("1"))
+                    .because("failed entry must be absent"));
+
+            for (var result : List.of(direct, exact, explained)) {
+                if ("1".equals(actual.get("failed"))) {
+                    assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
+                } else {
+                    assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+                }
+            }
+            if (!"1".equals(actual.get("failed"))) {
+                LinkedHashMap<String, String> observed = waiting.until(hasNoEntry(entry ->
+                        entry.getKey().startsWith("failed") && entry.getValue().startsWith("1")));
+                assertSame(actual, observed);
+            } else {
+                var failure = assertInstanceOf(AwaitResult.Failed.class, explained).failure();
+                assertTrue(failure.message().contains("Because: failed entry must be absent"), failure.message());
+            }
+        }
     }
 
     private static void assertPair(Pair pair,
@@ -295,8 +405,8 @@ class MapConditionsTest {
                         map("a", "1", "b", "2"), map("a", "1", "c", "2")),
                 new Pair("value", containsValue("2"), doesNotContainValue("2"),
                         map("a", "1", "b", "2"), map("a", "1", "b", "3")),
-                new Pair("entry", containsEntry("b", "2"),
-                        doesNotContainEntry("b", "2"),
+                new Pair("entry", hasEntry("b", "2"),
+                        hasNoEntry("b", "2"),
                         map("a", "1", "b", "2"), map("a", "1", "b", "3")),
                 new Pair("all", containsAllEntries(map("a", "1", "b", "2")),
                         doesNotContainAllEntries(map("a", "1", "b", "2")),

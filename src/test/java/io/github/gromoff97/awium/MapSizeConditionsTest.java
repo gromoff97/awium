@@ -18,13 +18,13 @@ import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.empty;
 import static io.github.gromoff97.awium.MapConditions.nonEmpty;
 import static io.github.gromoff97.awium.MapConditions.singleEntry;
-import static io.github.gromoff97.awium.MapConditions.size;
-import static io.github.gromoff97.awium.MapConditions.sizeAtLeast;
-import static io.github.gromoff97.awium.MapConditions.sizeAtMost;
-import static io.github.gromoff97.awium.MapConditions.sizeBetween;
-import static io.github.gromoff97.awium.MapConditions.sizeGreaterThan;
-import static io.github.gromoff97.awium.MapConditions.sizeIsNot;
-import static io.github.gromoff97.awium.MapConditions.sizeLessThan;
+import static io.github.gromoff97.awium.MapConditions.hasSize;
+import static io.github.gromoff97.awium.MapConditions.hasSizeAtLeast;
+import static io.github.gromoff97.awium.MapConditions.hasSizeAtMost;
+import static io.github.gromoff97.awium.MapConditions.hasSizeBetween;
+import static io.github.gromoff97.awium.MapConditions.hasSizeGreaterThan;
+import static io.github.gromoff97.awium.MapConditions.hasSizeNotEqualTo;
+import static io.github.gromoff97.awium.MapConditions.hasSizeLessThan;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -67,7 +67,7 @@ class MapSizeConditionsTest {
             assertEquals("map was null", mismatch(evaluate(testCase.condition(), null)));
         }
         assertEquals("map size was 1",
-                mismatch(evaluate(size(2), Map.of("key", "value"))));
+                mismatch(evaluate(hasSize(2), Map.of("key", "value"))));
     }
 
     @Test
@@ -109,19 +109,19 @@ class MapSizeConditionsTest {
 
     @Test
     void sizedFactoriesRejectNegativeBoundsAndAllowZero() {
-        assertThrows(IllegalArgumentException.class, () -> size(-1));
-        assertThrows(IllegalArgumentException.class, () -> sizeBetween(-1, 1));
-        assertThrows(IllegalArgumentException.class, () -> sizeBetween(2, 1));
-        assertDoesNotThrow(() -> size(0));
-        assertDoesNotThrow(() -> sizeBetween(0, 0));
+        assertThrows(IllegalArgumentException.class, () -> hasSize(-1));
+        assertThrows(IllegalArgumentException.class, () -> hasSizeBetween(-1, 1));
+        assertThrows(IllegalArgumentException.class, () -> hasSizeBetween(2, 1));
+        assertDoesNotThrow(() -> hasSize(0));
+        assertDoesNotThrow(() -> hasSizeBetween(0, 0));
     }
 
     @Test
     void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() {
-        assertEquals(Satisfied.class, evaluate(sizeBetween(2, 4), mapWithSize(2)).getClass());
-        assertEquals(Satisfied.class, evaluate(sizeBetween(2, 4), mapWithSize(4)).getClass());
-        assertUnsatisfied(evaluate(sizeBetween(2, 4), mapWithSize(1)));
-        assertUnsatisfied(evaluate(sizeBetween(2, 4), mapWithSize(5)));
+        assertEquals(Satisfied.class, evaluate(hasSizeBetween(2, 4), mapWithSize(2)).getClass());
+        assertEquals(Satisfied.class, evaluate(hasSizeBetween(2, 4), mapWithSize(4)).getClass());
+        assertUnsatisfied(evaluate(hasSizeBetween(2, 4), mapWithSize(1)));
+        assertUnsatisfied(evaluate(hasSizeBetween(2, 4), mapWithSize(5)));
     }
 
     @Test
@@ -149,12 +149,12 @@ class MapSizeConditionsTest {
 
     private static List<Case> cases() {
         return List.of(new Case(empty, 0, 1), new Case(nonEmpty, 1, 0),
-                new Case(size(2), 2, 1),
-                new Case(sizeIsNot(2), 1, 2),
-                new Case(sizeGreaterThan(2), 3, 2),
-                new Case(sizeAtLeast(2), 2, 1),
-                new Case(sizeLessThan(2), 1, 2),
-                new Case(sizeAtMost(2), 2, 3));
+                new Case(hasSize(2), 2, 1),
+                new Case(hasSizeNotEqualTo(2), 1, 2),
+                new Case(hasSizeGreaterThan(2), 3, 2),
+                new Case(hasSizeAtLeast(2), 2, 1),
+                new Case(hasSizeLessThan(2), 1, 2),
+                new Case(hasSizeAtMost(2), 2, 3));
     }
 
     private record Case(PreservingCondition<Map<?, ?>> condition, int matchingSize,

@@ -79,11 +79,22 @@ class ObjectAndOptionalAwaitTest {
     }
 
     @Test
-    void candidateCollectionsMustExistAndContainAtLeastOneCandidate() {
+    void candidateCollectionsMayBeEmptyButNotNull() {
         assertThrows(NullPointerException.class, () -> in(null));
         assertThrows(NullPointerException.class, () -> notIn(null));
-        assertThrows(IllegalArgumentException.class, () -> in(List.of()));
-        assertThrows(IllegalArgumentException.class, () -> notIn(List.of()));
+        for (String actual : Arrays.asList(null, "", "ready")) {
+            var time = new FakeTime(0);
+            var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+            String excluded = waiting.until(notIn(List.of()));
+            assertSame(actual, excluded);
+            AwaitResult<String, String> captured = waiting.tryUntil(notIn(List.of()));
+            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+
+            var failed = waiting.tryUntil(in(List.of()));
+            assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, failed).failure().reason());
+            assertEquals(List.of(), failed.attempts().getLast().condition().reference().value());
+            assertFailure(TIMEOUT, () -> waiting.until(in(List.of())));
+        }
     }
 
     @Test
@@ -169,11 +180,11 @@ class ObjectAndOptionalAwaitTest {
     @Test
     void nestedAbsenceChecksPreserveTheSelectedTypes() {
         var time = new FakeTime(0);
-        var items = Arrays.asList("value", null);
+        var items = java.util.Collections.singletonList((String) null);
         Optional<String> empty = Optional.empty();
 
         String missing = await(() -> items).usingTime(time, time).upTo(ofNanos(1))
-                .until(CollectionConditions.single(isNull));
+                .until(CollectionConditions.singleElement(isNull));
         Optional<String> nested = await(() -> Optional.of(empty)).usingTime(time, time).upTo(ofNanos(1))
                 .until(hasValue(absent));
         Optional<String> mapped = await(() -> Map.of("key", empty)).usingTime(time, time).upTo(ofNanos(1))
@@ -235,7 +246,7 @@ class ObjectAndOptionalAwaitTest {
 
     @Test
     void narrowingWaitsForANullSourceToProduceAValue() {
-        for (var check : List.of(Conditions.instanceOf(String.class), Conditions.exactInstanceOf(String.class))) {
+        for (var check : List.of(Conditions.instanceOf(String.class), Conditions.exactlyInstanceOf(String.class))) {
             var observations = java.util.Arrays.asList(null, "ready").iterator();
             var time = new FakeTime(0);
 
@@ -250,7 +261,7 @@ class ObjectAndOptionalAwaitTest {
 
     @Test
     void unrelatedTypeChecksRemainOrdinaryMismatches() {
-        for (var check : List.<Condition.Typed<? super String, ?>>of(Conditions.instanceOf(Integer.class), Conditions.exactInstanceOf(Integer.class))) {
+        for (var check : List.<Condition.Typed<? super String, ?>>of(Conditions.instanceOf(Integer.class), Conditions.exactlyInstanceOf(Integer.class))) {
             var time = new FakeTime(0);
             var waiting = await(() -> "actual").usingTime(time, time)
                     .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(2));
@@ -278,12 +289,12 @@ class ObjectAndOptionalAwaitTest {
         assertSame(actual, waiting.until(Conditions.matches(value -> value instanceof Child)));
 
         Child child = waiting.until(Conditions.instanceOf(Child.class));
-        Child exact = waiting.until(Conditions.exactInstanceOf(Child.class));
+        Child exact = waiting.until(Conditions.exactlyInstanceOf(Child.class));
 
         assertSame(actual, child);
         assertSame(actual, exact);
         assertEquals(Unsatisfied.class, evaluate(
-                Conditions.exactInstanceOf(Parent.class), actual).getClass());
+                Conditions.exactlyInstanceOf(Parent.class), actual).getClass());
     }
 
     @Test

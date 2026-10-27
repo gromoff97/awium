@@ -184,43 +184,13 @@ final class ConditionSupport {
         });
     }
 
-    static <ELEMENT, RESULT> ConditionResult<RESULT> single(String subject, Iterable<? extends ELEMENT> values,
-            Function<? super ELEMENT, ? extends ConditionResult<RESULT>> selection) {
+    static <ELEMENT> ConditionResult<ELEMENT> single(String subject, Iterable<? extends ELEMENT> values) {
         if (values == null) return unsatisfied(subject + " was null");
         var iterator = values.iterator();
         if (!iterator.hasNext()) return unsatisfied(subject + " size was 0");
         ELEMENT value = iterator.next();
         return iterator.hasNext() ? unsatisfied(subject + " size was greater than 1")
-                : selection.apply(value);
-    }
-
-    static <OBSERVED, ELEMENT, RESULT> Condition.Typed<OBSERVED, RESULT> single(String subject, Condition condition,
-            Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
-            Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT>> evaluatorFactory) {
-        return new Condition.Typed<>(condition, subject + " has exactly one match: " + condition.description(), () -> {
-            var evaluator = evaluatorFactory.get();
-            return actual -> actual == null ? AttemptResult.of(unsatisfied(subject + " was null"))
-                    : evaluateSingle(elements.apply(actual), evaluator);
-        });
-    }
-
-    private static <ELEMENT, RESULT> AttemptResult<? extends RESULT> evaluateSingle(Iterable<? extends ELEMENT> values,
-            ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT> evaluator) {
-        AttemptResult.Evaluated<? extends RESULT> result = AttemptResult.of(unsatisfied("no value matched"));
-        for (ELEMENT value : values) {
-            switch (evaluator.probe(value)) {
-                case AttemptResult.Uncontrolled<? extends RESULT> failure -> { return failure; }
-                case AttemptResult.Evaluated<? extends RESULT> evaluated -> {
-                    // Keep the first match, otherwise the last mismatch.
-                    if (result.result() instanceof ConditionResult.Unsatisfied<?>) {
-                        result = evaluated;
-                    } else if (evaluated.result() instanceof ConditionResult.Satisfied<?>) {
-                        return AttemptResult.of(unsatisfied("more than one value matched"));
-                    }
-                }
-            }
-        }
-        return result;
+                : satisfied(value);
     }
 
     @SafeVarargs
@@ -253,7 +223,8 @@ final class ConditionSupport {
     private static <OBSERVED, RESULT, STAGE extends Condition> Condition.Typed<OBSERVED, List<RESULT>> captured(
             STAGE[] conditions,
             Function<? super STAGE, ? extends ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT>> bind) {
-        var stages = nonEmptySnapshot(conditions, "conditions");
+        var stages = Arrays.stream(requireNonNull(conditions, "conditions must not be null")).toList();
+        if (stages.isEmpty()) throw new IllegalArgumentException("conditions must not be empty");
         stages.forEach(Condition::required);
         return new Condition.Typed<>("conditions are satisfied in order", null,
                 () -> new SequenceExecution<>(stages.stream().map(bind))::step);
@@ -267,21 +238,6 @@ final class ConditionSupport {
 
     static <ELEMENT> List<ELEMENT> snapshot(Iterable<ELEMENT> values, String name) {
         return stream(requireNonNull(values, name + " must not be null").spliterator(), false).toList();
-    }
-
-    static <ELEMENT> List<ELEMENT> nonEmptySnapshot(ELEMENT[] values, String name) {
-        return nonEmpty(Arrays.stream(requireNonNull(values, name + " must not be null")).toList(), name);
-    }
-
-    static <ELEMENT> List<ELEMENT> nonEmptySnapshot(Iterable<ELEMENT> values, String name) {
-        return nonEmpty(snapshot(values, name), name);
-    }
-
-    static <ELEMENT> List<ELEMENT> nonEmpty(List<ELEMENT> values, String name) {
-        if (values.isEmpty()) {
-            throw new IllegalArgumentException(name + " must not be empty");
-        }
-        return values;
     }
 
 }

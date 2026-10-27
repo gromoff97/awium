@@ -66,6 +66,7 @@ class CapturedConditionTest {
                     assertEquals(reason, failure.reason());
                     assertSame(cause, failure.cause());
                     assertTrue(failure.message().contains("Sequence (captured " + completedStages + " of 2)"), failure.message());
+                    assertTrue(failure.message().contains("Stage: 2 of 2"), failure.message());
                 }
             }
         }
@@ -98,6 +99,7 @@ class CapturedConditionTest {
                     assertSame(second, attempt.progress().activeCondition());
                     assertSame(result.attempts().get(completedStages - 1).progress(), attempt.progress());
                     assertTrue(failure.message().contains("Sequence (captured " + completedStages + " of 2)"));
+                    assertTrue(failure.message().contains("Stage: 2 of 2"), failure.message());
                     assertEquals(1, result.attempts().getFirst().progress().capturedStages());
                     assertTrue(Thread.currentThread().isInterrupted());
                 } finally {
@@ -117,7 +119,7 @@ class CapturedConditionTest {
         var waiting = await(() -> observations[reads[0]++ % observations.length])
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10));
         var start = Conditions.instanceOf(String.class);
-        var finish = Conditions.exactInstanceOf(String.class);
+        var finish = Conditions.exactlyInstanceOf(String.class);
 
         var values = waiting.until(start, finish);
         AwaitResult<Object, List<String>> attempt = waiting.tryUntil(start, finish);
@@ -135,17 +137,17 @@ class CapturedConditionTest {
     void nestedNarrowingSequencesRetainTheirSelectedResultType() {
         Integer first = 1000;
         Integer second = 2000;
-        List<List<Number>> observations = List.of(List.of(1L, first), List.of(second, 2L));
+        List<List<Number>> observations = List.of(List.of(first), List.of(second));
         int[] reads = {0};
         var time = new FakeTime(0);
         var waiting = await(() -> observations.get(reads[0]++ % observations.size()))
                 .usingTime(time, time).every(ofNanos(1));
 
-        var values = waiting.until(CollectionConditions.single(Conditions.instanceOf(Integer.class)),
-                CollectionConditions.single(Conditions.exactInstanceOf(Integer.class)));
+        var values = waiting.until(CollectionConditions.singleElement(Conditions.instanceOf(Integer.class)),
+                CollectionConditions.singleElement(Conditions.exactlyInstanceOf(Integer.class)));
         AwaitResult<List<Number>, List<Integer>> attempt = waiting.tryUntil(
-                CollectionConditions.single(Conditions.instanceOf(Integer.class)),
-                CollectionConditions.single(Conditions.exactInstanceOf(Integer.class)));
+                CollectionConditions.singleElement(Conditions.instanceOf(Integer.class)),
+                CollectionConditions.singleElement(Conditions.exactlyInstanceOf(Integer.class)));
 
         assertEquals(1000, values.getFirst().intValue());
         assertSame(first, values.getFirst());
@@ -224,7 +226,7 @@ class CapturedConditionTest {
 
         AwaitResult<List<String>, List<String>> result = await(() -> observations.get(reads[0]++))
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).persisting(ofNanos(1))
-                .tryUntil(CollectionConditions.first, CollectionConditions.last);
+                .tryUntil(CollectionConditions.firstElement, CollectionConditions.lastElement);
 
         var values = assertInstanceOf(List.class, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
         assertSame(first, values.get(0));
@@ -292,6 +294,7 @@ class CapturedConditionTest {
                         assertEquals(INTERRUPTED, failure.reason());
                         assertInstanceOf(InterruptedException.class, failure.cause());
                         assertTrue(failure.message().contains("Sequence (captured " + (stage - 1) + " of 2)"));
+                        assertTrue(failure.message().contains("Stage: " + stage + " of 2"), failure.message());
                         assertEquals(stage, sources[0]);
                         assertTrue(Thread.currentThread().isInterrupted());
                     } finally {
@@ -314,6 +317,7 @@ class CapturedConditionTest {
             var failure = assertFailure(TIMEOUT,
                     () -> timedAwait(() -> "ready", config(1, 5, 0), time, time).until(sequence));
             assertTrue(failure.getMessage().contains("Sequence (captured 2 of 2)"), failure.getMessage());
+            assertTrue(failure.getMessage().contains("Stage: 2 of 2"), failure.getMessage());
             assertTrue(failure.getMessage().contains("final stage"), failure.getMessage());
         }
     }

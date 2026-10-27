@@ -9,7 +9,7 @@ import java.util.function.IntPredicate;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
-import static io.github.gromoff97.awium.ConditionSupport.nonEmptySnapshot;
+import static io.github.gromoff97.awium.ConditionSupport.snapshot;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static java.util.Objects.deepEquals;
@@ -77,7 +77,7 @@ public final class Conditions {
                         : unsatisfied("value was not an instance of " + type.getTypeName()));
     }
 
-    public static <RESULT> Condition.Typed<Object, RESULT> exactInstanceOf(Class<RESULT> type) {
+    public static <RESULT> Condition.Typed<Object, RESULT> exactlyInstanceOf(Class<RESULT> type) {
         requireNonNull(type, "type must not be null");
         return ConditionSupport.condition("value is exactly an instance of " + type.getTypeName(), null, actual ->
                 actual != null && actual.getClass() == type
@@ -86,14 +86,14 @@ public final class Conditions {
     }
 
     public static <EXPECTED> ComparisonCondition<EXPECTED> in(Iterable<? extends EXPECTED> expected) {
-        List<?> values = nonEmptySnapshot(expected, "expected values");
+        List<?> values = snapshot(expected, "expected values");
         return new ComparisonCondition<>(ConditionSupport.condition("value is in the expected values", expectedReference(values),
                 actual -> matchesAny(values, candidate -> deepEquals(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was not in the expected values")));
     }
 
     public static <EXPECTED> ComparisonCondition<EXPECTED> notIn(Iterable<? extends EXPECTED> unexpected) {
-        List<?> values = nonEmptySnapshot(unexpected, "unexpected values");
+        List<?> values = snapshot(unexpected, "unexpected values");
         return new ComparisonCondition<>(ConditionSupport.condition("value is not in the unexpected values", unexpectedReference(values),
                 actual -> !matchesAny(values, candidate -> deepEquals(actual, candidate))
                 ? satisfied(actual) : unsatisfied("value was in the unexpected values")));

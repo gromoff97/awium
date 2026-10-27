@@ -64,41 +64,36 @@ class ExpectedInputsTest {
     }
 
     @Test
-    void nonEmptyExpectationsRejectAnEmptySnapshotAfterRemovalBeforeSnapshot() {
-        List<Function<Collection<String>, PreservingCondition<?>>> factories = List.of(
+    void factoriesKeepEmptySnapshotsAfterRemovalBeforeSnapshot() {
+        List<Function<Collection<String>, Condition>> collections = List.of(
                 CollectionConditions::containsAll, CollectionConditions::doesNotContainAny,
                 CollectionConditions::doesNotContainAll, CollectionConditions::containsAny,
                 CollectionConditions::startsWith, CollectionConditions::endsWith,
                 CollectionConditions::containsSequence, CollectionConditions::doesNotContainSequence,
                 CollectionConditions::containsSubsequence, CollectionConditions::doesNotContainSubsequence,
+                Conditions::in, Conditions::notIn,
+                StringConditions::containsAll, StringConditions::doesNotContainAny,
                 MapConditions::containsAllKeys, MapConditions::doesNotContainAnyKeys,
                 MapConditions::containsAllValues, MapConditions::doesNotContainAnyValues);
-        for (var factory : factories) {
+        for (var factory : collections) {
             var expected = new ChangingExpectedQueue();
             expected.add("before");
-            try {
-                var condition = factory.apply(expected);
-                assertFalse(assertInstanceOf(List.class, condition.reference().value()).isEmpty());
-            } catch (IllegalArgumentException failure) {
-                assertTrue(failure.getMessage().endsWith("must not be empty"));
-            }
+            var condition = factory.apply(expected);
+            assertEquals(List.of(), condition.reference().value());
+            expected.add("after");
+            assertEquals(List.of(), condition.reference().value());
         }
-    }
 
-    @Test
-    void entryConditionsNeverKeepAnEmptySnapshotAfterRemovalBeforeSnapshot() {
-        List<Function<Map<String, String>, PreservingCondition<?>>> factories = List.of(
+        List<Function<Map<String, String>, PreservingCondition<?>>> maps = List.of(
                 MapConditions::containsAllEntries, MapConditions::doesNotContainAllEntries,
                 MapConditions::containsAnyEntries, MapConditions::doesNotContainAnyEntries);
-        for (var factory : factories) {
+        for (var factory : maps) {
             var expected = new ChangingExpectedMap();
             expected.put("key", "before");
-            try {
-                var condition = factory.apply(expected);
-                assertFalse(assertInstanceOf(List.class, condition.reference().value()).isEmpty());
-            } catch (IllegalArgumentException failure) {
-                assertTrue(failure.getMessage().endsWith("must not be empty"));
-            }
+            var condition = factory.apply(expected);
+            assertEquals(List.of(), condition.reference().value());
+            expected.put("key", "after");
+            assertEquals(List.of(), condition.reference().value());
         }
     }
 

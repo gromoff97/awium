@@ -26,7 +26,7 @@ class ConditionAwaitAttemptTest {
             factories[0]++;
             int[] calls = {0};
             return ignored -> ++calls[0] == 2 ? satisfied(replacement) : ConditionResult.unsatisfied("first observation");
-        });
+        }).because("second observation is required");
         var time = new FakeTime(0);
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
 
@@ -45,13 +45,13 @@ class ConditionAwaitAttemptTest {
         var actual = new Object();
         var replacement = new Object();
         PreservingCondition<Object> condition = Conditions.condition("preserve", ignored -> satisfied(replacement));
-        condition = condition;
+        condition = condition.because("preserve the observed instance");
         var waiting = await(() -> actual);
 
         assertSame(actual, waiting.until(condition));
         assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, waiting.tryUntil(condition)).result());
         assertSame(actual, await(() -> Optional.of(actual)).until(OptionalConditions.hasValue(condition)));
-        assertSame(actual, await(() -> List.of(actual)).until(CollectionConditions.single(condition)));
+        assertSame(actual, await(() -> List.of(actual)).until(CollectionConditions.singleElement(condition)));
         var time = new FakeTime(0);
         assertEquals(List.of(actual, actual), waiting.usingTime(time, time).until(condition, condition));
     }
@@ -66,7 +66,7 @@ class ConditionAwaitAttemptTest {
             return ignored -> ++calls[0] == 2 ? satisfied(42) : ConditionResult.unsatisfied("first observation");
         });
         var optional = OptionalConditions.hasValue(nested);
-        var collection = CollectionConditions.single(nested);
+        var collection = CollectionConditions.singleElement(nested);
         Condition.MapValueCondition<Map<? super String, ?>, Number, Condition.Reference<?>> map =
                 MapConditions.valueFor("key", nested);
         assertEquals(0, factories[0]);

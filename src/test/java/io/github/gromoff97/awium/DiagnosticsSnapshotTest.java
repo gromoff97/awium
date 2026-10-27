@@ -66,6 +66,7 @@ class DiagnosticsSnapshotTest {
 
         assertMessage(failure,
                 "Sequence (captured 0 of 2)",
+                "Stage: 1 of 2",
                 "Condition: value equals expected",
                 "Expected: first");
     }
@@ -86,6 +87,7 @@ class DiagnosticsSnapshotTest {
                     Actual: created
 
                 Sequence (captured 1 of 3):
+                    Stage: 2 of 3
                     Condition: payment status is pending
                         Mismatch: payment status was created
 
@@ -94,6 +96,21 @@ class DiagnosticsSnapshotTest {
                     Last attempt completed after: 1 nanosecond
                     Elapsed: 2 nanoseconds
                     Polling interval: 1 nanosecond""", failure.getMessage());
+    }
+
+    @Test
+    void timeoutAfterIntermediateSuccessPointsToTheNextCondition() {
+        var time = new FakeTime(0);
+
+        var failure = assertFailure(TIMEOUT,
+                () -> timedAwait(() -> "created", config(1, 1, 0), time, time)
+                        .until(equalTo("created"), equalTo("pending"), equalTo("completed")));
+
+        assertMessage(failure,
+                "Sequence (captured 1 of 3)",
+                "Stage: 2 of 3",
+                "Expected: pending",
+                "Mismatch: waiting for sequence stage 2");
     }
 
     @Test
@@ -115,6 +132,7 @@ class DiagnosticsSnapshotTest {
                     Actual: created
 
                 Sequence (captured 2 of 3):
+                    Stage: 3 of 3
                     Condition: payment status is completed
                         Mismatch: payment status was created
 
@@ -150,6 +168,7 @@ class DiagnosticsSnapshotTest {
                     Actual: created
 
                 Sequence (captured 1 of 3):
+                    Stage: 2 of 3
                     Condition: payment status is pending
                         Mismatch: payment status was created
 
@@ -186,6 +205,7 @@ class DiagnosticsSnapshotTest {
                     Actual: created
 
                 Sequence (captured 1 of 3):
+                    Stage: 2 of 3
                     Condition: payment status is pending
 
                 Timing:

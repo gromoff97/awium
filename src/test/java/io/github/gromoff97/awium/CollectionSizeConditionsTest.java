@@ -13,14 +13,14 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.CollectionConditions.empty;
 import static io.github.gromoff97.awium.CollectionConditions.nonEmpty;
-import static io.github.gromoff97.awium.CollectionConditions.single;
-import static io.github.gromoff97.awium.CollectionConditions.size;
-import static io.github.gromoff97.awium.CollectionConditions.sizeAtLeast;
-import static io.github.gromoff97.awium.CollectionConditions.sizeAtMost;
-import static io.github.gromoff97.awium.CollectionConditions.sizeBetween;
-import static io.github.gromoff97.awium.CollectionConditions.sizeGreaterThan;
-import static io.github.gromoff97.awium.CollectionConditions.sizeIsNot;
-import static io.github.gromoff97.awium.CollectionConditions.sizeLessThan;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.CollectionConditions.hasSize;
+import static io.github.gromoff97.awium.CollectionConditions.hasSizeAtLeast;
+import static io.github.gromoff97.awium.CollectionConditions.hasSizeAtMost;
+import static io.github.gromoff97.awium.CollectionConditions.hasSizeBetween;
+import static io.github.gromoff97.awium.CollectionConditions.hasSizeGreaterThan;
+import static io.github.gromoff97.awium.CollectionConditions.hasSizeNotEqualTo;
+import static io.github.gromoff97.awium.CollectionConditions.hasSizeLessThan;
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
@@ -43,17 +43,17 @@ class CollectionSizeConditionsTest {
         String element = new String("element");
         java.util.concurrent.Callable<ArrayList<String>> source = () -> new ArrayList<>(List.of(element));
 
-        String selected = await(source::call).usingTime(pollingTime, pollingTime).until(single);
+        String selected = await(source::call).usingTime(pollingTime, pollingTime).until(singleElement);
         String nullElement = await((Await.CollectionSource<List<String>>)
-                () -> Collections.singletonList(null)).usingTime(pollingTime, pollingTime).until(single);
+                () -> Collections.singletonList(null)).usingTime(pollingTime, pollingTime).until(singleElement);
 
         assertSame(element, selected);
         assertNull(nullElement);
         assertTrue(assertFailure(TIMEOUT, () -> await(() -> List.of())
-                .usingTime(pollingTime, pollingTime).upTo(ofNanos(1)).until(single))
+                .usingTime(pollingTime, pollingTime).upTo(ofNanos(1)).until(singleElement))
                 .getMessage().contains("collection size was 0"));
         assertTrue(assertFailure(TIMEOUT, () -> await(() -> List.of("first", "second"))
-                .usingTime(pollingTime, pollingTime).upTo(ofNanos(1)).until(single))
+                .usingTime(pollingTime, pollingTime).upTo(ofNanos(1)).until(singleElement))
                 .getMessage().contains("collection size was greater than 1"));
     }
 
@@ -70,7 +70,7 @@ class CollectionSizeConditionsTest {
             assertEquals(1, mismatching.sizeCalls);
         }
         assertEquals("collection size was 1",
-                mismatch(evaluate(size(2), List.of("value"))));
+                mismatch(evaluate(hasSize(2), List.of("value"))));
     }
 
     @Test
@@ -113,20 +113,20 @@ class CollectionSizeConditionsTest {
     @Test
     void sizedFactoriesRejectNegativeBoundsAndAllowZero() {
         assertEquals("size must be non-negative", assertThrows(
-                IllegalArgumentException.class, () -> size(-1)).getMessage());
-        assertThrows(IllegalArgumentException.class, () -> sizeBetween(-1, 1));
-        assertThrows(IllegalArgumentException.class, () -> sizeBetween(2, 1));
-        assertDoesNotThrow(() -> size(0));
-        assertDoesNotThrow(() -> sizeBetween(0, 0));
+                IllegalArgumentException.class, () -> hasSize(-1)).getMessage());
+        assertThrows(IllegalArgumentException.class, () -> hasSizeBetween(-1, 1));
+        assertThrows(IllegalArgumentException.class, () -> hasSizeBetween(2, 1));
+        assertDoesNotThrow(() -> hasSize(0));
+        assertDoesNotThrow(() -> hasSizeBetween(0, 0));
     }
 
     @Test
     void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() {
-        assertEquals(Satisfied.class, evaluate(sizeBetween(2, 4), List.of(1, 2)).getClass());
+        assertEquals(Satisfied.class, evaluate(hasSizeBetween(2, 4), List.of(1, 2)).getClass());
         assertEquals(Satisfied.class,
-                evaluate(sizeBetween(2, 4), List.of(1, 2, 3, 4)).getClass());
-        assertUnsatisfied(evaluate(sizeBetween(2, 4), List.of(1)));
-        assertUnsatisfied(evaluate(sizeBetween(2, 4), List.of(1, 2, 3, 4, 5)));
+                evaluate(hasSizeBetween(2, 4), List.of(1, 2, 3, 4)).getClass());
+        assertUnsatisfied(evaluate(hasSizeBetween(2, 4), List.of(1)));
+        assertUnsatisfied(evaluate(hasSizeBetween(2, 4), List.of(1, 2, 3, 4, 5)));
     }
 
     @Test
@@ -146,12 +146,12 @@ class CollectionSizeConditionsTest {
 
     private static List<Case> cases() {
         return List.of(new Case(empty, 0, 1), new Case(nonEmpty, 1, 0),
-                new Case(size(2), 2, 1),
-                new Case(sizeIsNot(2), 1, 2),
-                new Case(sizeGreaterThan(2), 3, 2),
-                new Case(sizeAtLeast(2), 2, 1),
-                new Case(sizeLessThan(2), 1, 2),
-                new Case(sizeAtMost(2), 2, 3));
+                new Case(hasSize(2), 2, 1),
+                new Case(hasSizeNotEqualTo(2), 1, 2),
+                new Case(hasSizeGreaterThan(2), 3, 2),
+                new Case(hasSizeAtLeast(2), 2, 1),
+                new Case(hasSizeLessThan(2), 1, 2),
+                new Case(hasSizeAtMost(2), 2, 3));
     }
 
     private record Case(PreservingCondition<Collection<?>> condition, int matchingSize,

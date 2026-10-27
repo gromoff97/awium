@@ -27,7 +27,7 @@ class ChangingContainerSelectionTest {
             if (++calls[0] == 2) values.add("ready");
             return values;
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
-                .tryUntil(CollectionConditions.element(0));
+                .tryUntil(CollectionConditions.elementAt(0));
 
         assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
         assertEquals(2, calls[0]);
@@ -45,7 +45,7 @@ class ChangingContainerSelectionTest {
                 if (++calls[0] == 2) values.add("ready");
                 return values;
             }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
-                    .tryUntil(last ? CollectionConditions.last : CollectionConditions.first);
+                    .tryUntil(last ? CollectionConditions.lastElement : CollectionConditions.firstElement);
 
             assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
             assertEquals(2, calls[0]);
@@ -62,31 +62,26 @@ class ChangingContainerSelectionTest {
         var result = await(() -> {
             if (++calls[0] == 2) values.add("ready");
             return values;
-        }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).tryUntil(CollectionConditions.single);
+        }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).tryUntil(CollectionConditions.singleElement);
 
         assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
         assertEquals(2, calls[0]);
     }
 
     @Test
-    void mapSelectionsRetryWhenTheMapIsEmptiedBeforeItsViewIsObtained() {
-        for (boolean onlyValue : new boolean[] {false, true}) {
-            var values = new ChangingMap();
-            values.put("key", "old");
-            int[] calls = {0};
-            var time = new FakeTime(0);
-            var waiting = await(() -> {
-                if (++calls[0] == 2) values.put("key", "ready");
-                return values;
-            }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5));
+    void singleEntryRetriesWhenTheMapIsEmptiedBeforeItsViewIsObtained() {
+        var values = new ChangingMap();
+        values.put("key", "old");
+        int[] calls = {0};
+        var time = new FakeTime(0);
+        var result = await(() -> {
+            if (++calls[0] == 2) values.put("key", "ready");
+            return values;
+        }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).tryUntil(MapConditions.singleEntry);
 
-            var result = onlyValue ? waiting.tryUntil(MapConditions.onlyValueFor("key"))
-                    : waiting.tryUntil(MapConditions.singleEntry);
-
-            assertEquals(onlyValue ? "ready" : Map.entry("key", "ready"),
-                    assertInstanceOf(AwaitResult.Satisfied.class, result).result());
-            assertEquals(2, calls[0]);
-        }
+        assertEquals(Map.entry("key", "ready"),
+                assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals(2, calls[0]);
     }
 
     private static final class ChangingQueue extends ConcurrentLinkedQueue<String> {

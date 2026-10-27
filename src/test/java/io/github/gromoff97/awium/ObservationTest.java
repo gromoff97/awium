@@ -204,8 +204,8 @@ class ObservationTest {
                     () -> waiting.tryUntil(check),
                     () -> await(() -> Optional.of("actual")).usingTime(time, time)
                             .tryUntil(OptionalConditions.hasValue(check)),
-                    () -> await(() -> List.of("actual", "later")).usingTime(time, time)
-                            .tryUntil(CollectionConditions.single(check)),
+                    () -> await(() -> List.of("actual")).usingTime(time, time)
+                            .tryUntil(CollectionConditions.singleElement(check)),
                     () -> waiting.tryUntil(Conditions.isNotNull, check));
             for (var wait : waits) {
                 AwaitResult.Failed<?, ?> result = assertInstanceOf(AwaitResult.Failed.class, wait.get());

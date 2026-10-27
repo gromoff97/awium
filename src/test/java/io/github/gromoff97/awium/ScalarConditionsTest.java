@@ -112,7 +112,7 @@ class ScalarConditionsTest {
             assertSame(reading, value);
             assertEquals(10, value.number());
         }
-        var selected = await(() -> List.of(reading)).until(CollectionConditions.single(
+        var selected = await(() -> List.of(reading)).until(CollectionConditions.singleElement(
                 Conditions.greaterThan(new Threshold(5))));
         assertSame(reading, selected);
         assertEquals(10, selected.number());
@@ -132,10 +132,10 @@ class ScalarConditionsTest {
                 StringConditions.doesNotStartWith("failed"), StringConditions.endsWith("42"),
                 StringConditions.doesNotEndWith("failed"), StringConditions.matchesRegex("Ready \\d+"),
                 StringConditions.doesNotMatchRegex("failed"), StringConditions.equalToIgnoringCase("ready 42"),
-                StringConditions.notEqualToIgnoringCase("failed"), StringConditions.length(8),
-                StringConditions.lengthIsNot(0), StringConditions.lengthGreaterThan(0),
-                StringConditions.lengthAtLeast(8), StringConditions.lengthLessThan(9),
-                StringConditions.lengthAtMost(8), StringConditions.lengthBetween(1, 10));
+                StringConditions.notEqualToIgnoringCase("failed"), StringConditions.hasLength(8),
+                StringConditions.hasLengthNotEqualTo(0), StringConditions.hasLengthGreaterThan(0),
+                StringConditions.hasLengthAtLeast(8), StringConditions.hasLengthLessThan(9),
+                StringConditions.hasLengthAtMost(8), StringConditions.hasLengthBetween(1, 10));
 
         for (var check : checks) {
             var value = waiting.until(check);
@@ -170,9 +170,9 @@ class ScalarConditionsTest {
         var optional = await(() -> Optional.of(text)).until(
                 OptionalConditions.hasValue(StringConditions.startsWith("rea")));
         var selected = await(() -> List.of(buffer)).until(
-                CollectionConditions.single(StringConditions.matchesRegex("ready")));
+                CollectionConditions.singleElement(StringConditions.matchesRegex("ready")));
         var mapped = await(() -> Map.of("text", text)).until(
-                MapConditions.valueFor("text", StringConditions.length(5)));
+                MapConditions.valueFor("text", StringConditions.hasLength(5)));
 
         assertSame(text, optional);
         assertSame(buffer, selected);
@@ -211,7 +211,7 @@ class ScalarConditionsTest {
         assertSame(actual, waiting.until(StringConditions.endsWith("42")));
         assertSame(actual, waiting.until(StringConditions.matchesRegex("Ready \\d+")));
         assertSame(actual, waiting.until(StringConditions.equalToIgnoringCase("ready 42")));
-        assertSame(actual, waiting.until(StringConditions.lengthBetween(1, 20)));
+        assertSame(actual, waiting.until(StringConditions.hasLengthBetween(1, 20)));
         assertEquals(Satisfied.class, evaluate(StringConditions.blank, " \n").getClass());
         assertEquals(Unsatisfied.class, evaluate(StringConditions.nonEmpty, "").getClass());
     }
@@ -261,31 +261,30 @@ class ScalarConditionsTest {
         assertPreserving(StringConditions.doesNotMatchRegex("f.*d"), "ready", "failed");
         assertPreserving(StringConditions.equalToIgnoringCase("READY"), "ready", "failed");
         assertPreserving(StringConditions.notEqualToIgnoringCase("FAILED"), "ready", "failed");
-        assertPreserving(StringConditions.length(5), "ready", "read");
-        assertPreserving(StringConditions.lengthIsNot(4), "ready", "read");
-        assertPreserving(StringConditions.lengthGreaterThan(4), "ready", "read");
-        assertPreserving(StringConditions.lengthAtLeast(5), "ready", "read");
-        assertPreserving(StringConditions.lengthLessThan(6), "ready", "failed");
-        assertPreserving(StringConditions.lengthAtMost(5), "ready", "failed");
-        assertStatus(StringConditions.length(0), "", Satisfied.class);
-        assertStatus(StringConditions.length(0), null, Unsatisfied.class);
-        assertStatus(StringConditions.lengthAtMost(0), "", Satisfied.class);
-        assertStatus(StringConditions.lengthBetween(4, 6), "read", Satisfied.class);
-        assertStatus(StringConditions.lengthBetween(4, 6), "failed", Satisfied.class);
-        assertStatus(StringConditions.lengthBetween(4, 6), "hey", Unsatisfied.class);
-        assertStatus(StringConditions.lengthBetween(4, 6), "failure", Unsatisfied.class);
+        assertPreserving(StringConditions.hasLength(5), "ready", "read");
+        assertPreserving(StringConditions.hasLengthNotEqualTo(4), "ready", "read");
+        assertPreserving(StringConditions.hasLengthGreaterThan(4), "ready", "read");
+        assertPreserving(StringConditions.hasLengthAtLeast(5), "ready", "read");
+        assertPreserving(StringConditions.hasLengthLessThan(6), "ready", "failed");
+        assertPreserving(StringConditions.hasLengthAtMost(5), "ready", "failed");
+        assertStatus(StringConditions.hasLength(0), "", Satisfied.class);
+        assertStatus(StringConditions.hasLength(0), null, Unsatisfied.class);
+        assertStatus(StringConditions.hasLengthAtMost(0), "", Satisfied.class);
+        assertStatus(StringConditions.hasLengthBetween(4, 6), "read", Satisfied.class);
+        assertStatus(StringConditions.hasLengthBetween(4, 6), "failed", Satisfied.class);
+        assertStatus(StringConditions.hasLengthBetween(4, 6), "hey", Unsatisfied.class);
+        assertStatus(StringConditions.hasLengthBetween(4, 6), "failure", Unsatisfied.class);
         assertStatus(StringConditions.nonBlank, null, Unsatisfied.class);
-        assertEquals("string length is 5", StringConditions.length(5).description());
+        assertEquals("string length is 5", StringConditions.hasLength(5).description());
         assertEquals("string length was 4",
-                mismatch(evaluate(StringConditions.length(5), "read")));
+                mismatch(evaluate(StringConditions.hasLength(5), "read")));
 
         assertEquals("length must be non-negative",
-                assertThrows(IllegalArgumentException.class, () -> StringConditions.length(-1)).getMessage());
+                assertThrows(IllegalArgumentException.class, () -> StringConditions.hasLength(-1)).getMessage());
         assertEquals("length range must be non-negative and ordered",
                 assertThrows(IllegalArgumentException.class,
-                        () -> StringConditions.lengthBetween(-1, 1)).getMessage());
-        assertThrows(IllegalArgumentException.class, () -> StringConditions.lengthBetween(2, 1));
-        assertThrows(IllegalArgumentException.class, () -> StringConditions.containsAll(List.of()));
+                        () -> StringConditions.hasLengthBetween(-1, 1)).getMessage());
+        assertThrows(IllegalArgumentException.class, () -> StringConditions.hasLengthBetween(2, 1));
         assertThrows(NullPointerException.class, () -> StringConditions.containsAll(null));
         assertThrows(NullPointerException.class, () -> StringConditions.containsAll(java.util.Arrays.asList("ready", null)));
     }

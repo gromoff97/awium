@@ -209,7 +209,7 @@ class TryUntilFailureTest {
                     () -> await(() -> "actual").tryUntil(preserved),
                     () -> await(() -> "actual").tryUntil(preserved, preserved),
                     () -> await(() -> Optional.of("actual")).tryUntil(OptionalConditions.hasValue(preserved)),
-                    () -> await(() -> List.of("actual")).tryUntil(CollectionConditions.single(preserved)),
+                    () -> await(() -> List.of("actual")).tryUntil(CollectionConditions.singleElement(preserved)),
                     () -> await(() -> Map.of("key", "actual")).tryUntil(MapConditions.valueFor("key", preserved)));
             for (var path : paths) {
                 try {

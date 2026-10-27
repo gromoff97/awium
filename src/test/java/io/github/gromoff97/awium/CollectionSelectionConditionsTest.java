@@ -16,9 +16,9 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
-import static io.github.gromoff97.awium.CollectionConditions.first;
-import static io.github.gromoff97.awium.CollectionConditions.last;
-import static io.github.gromoff97.awium.CollectionConditions.single;
+import static io.github.gromoff97.awium.CollectionConditions.firstElement;
+import static io.github.gromoff97.awium.CollectionConditions.lastElement;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.CollectionConditions.subsetOf;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
@@ -38,17 +38,17 @@ class CollectionSelectionConditionsTest {
     @Test
     void singleFieldAndOverloadsReturnTypedElements() {
         var pollingTime = new FakeTime(0);
-        var users = new ArrayList<>(List.of(new User(1), new User(2)));
+        var users = new ArrayList<>(List.of(new User(2)));
         java.util.concurrent.Callable<ArrayList<User>> source = () -> users;
 
-        User matching = await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(matches(user -> user.id() == 2)));
-        String typed = await((java.util.concurrent.Callable<List<Object>>) () -> List.of("text", 42)).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(instanceOf(String.class)));
-        String nullable = await(() -> Arrays.asList((String) null)).usingTime(pollingTime, pollingTime).until(CollectionConditions.single);
+        User matching = await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.singleElement(matches(user -> user.id() == 2)));
+        String typed = await((java.util.concurrent.Callable<List<Object>>) () -> List.of("text")).usingTime(pollingTime, pollingTime).until(CollectionConditions.singleElement(instanceOf(String.class)));
+        String nullable = await(() -> Arrays.asList((String) null)).usingTime(pollingTime, pollingTime).until(CollectionConditions.singleElement);
 
-        assertSame(users.get(1), matching);
+        assertSame(users.getFirst(), matching);
         assertEquals("text", typed);
         assertNull(nullable);
-        assertNull(await(() -> Arrays.asList(null, "other")).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(matches(value -> value == null))));
+        assertNull(await(() -> singletonList((String) null)).usingTime(pollingTime, pollingTime).until(CollectionConditions.singleElement(matches(value -> value == null))));
     }
 
     @Test
@@ -77,7 +77,7 @@ class CollectionSelectionConditionsTest {
         var actual = new ArrayList<>(List.of("ready"));
         var time = new FakeTime(0);
         var plain = await(() -> actual).until(subsetOf(List.of("ready", "done")));
-        var selected = await(() -> List.of(actual)).until(single(subsetOf(List.of("ready"))));
+        var selected = await(() -> List.of(actual)).until(singleElement(subsetOf(List.of("ready"))));
         var captured = await(() -> actual).usingTime(time, time)
                 .until(subsetOf(List.of("ready")), subsetOf(List.of("ready", "done")));
 
@@ -113,9 +113,9 @@ class CollectionSelectionConditionsTest {
         assertEquals(Satisfied.class, evaluate(CollectionConditions.subsetOf(
                 Arrays.asList("a", "b", null)), values).getClass());
         assertEquals(Satisfied.class,
-                evaluate(CollectionConditions.sizeBetween(2, 4), values).getClass());
+                evaluate(CollectionConditions.hasSizeBetween(2, 4), values).getClass());
         assertEquals(Satisfied.class, evaluate(
-                CollectionConditions.size(3), values).getClass());
+                CollectionConditions.hasSize(3), values).getClass());
         assertEquals(Unsatisfied.class,
                 evaluate(CollectionConditions.containsOnlyNulls, List.of()).getClass());
         assertEquals(Unsatisfied.class,
@@ -140,11 +140,11 @@ class CollectionSelectionConditionsTest {
         var values = new ArrayList<>(List.of(1, 2, 3, 5));
         java.util.concurrent.Callable<ArrayList<Integer>> source = () -> values;
 
-        assertEquals(1, await(source::call).usingTime(pollingTime, pollingTime).until(first));
-        assertEquals(5, await(source::call).usingTime(pollingTime, pollingTime).until(last));
-        assertEquals(3, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.element(2)));
-        assertEquals(3, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.first(value -> value > 2)));
-        assertEquals(3, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.last(value -> value < 5)));
+        assertEquals(1, await(source::call).usingTime(pollingTime, pollingTime).until(firstElement));
+        assertEquals(5, await(source::call).usingTime(pollingTime, pollingTime).until(lastElement));
+        assertEquals(3, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.elementAt(2)));
+        assertEquals(1, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.firstElement(value -> value > 0)));
+        assertEquals(5, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.lastElement(value -> value < 6)));
         assertSame(values, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.startsWith(List.of(1, 2))));
         assertSame(values, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.endsWith(List.of(3, 5))));
         var pair = List.of(1, 2);
@@ -182,21 +182,52 @@ class CollectionSelectionConditionsTest {
                 java.util.Comparator.comparingInt(Integer::intValue).reversed()), List.of(3, 2, 1)).getClass());
 
         var sequencedSet = new LinkedHashSet<>(List.of(1, 2, 3));
-        assertEquals(1, await(() -> sequencedSet).usingTime(pollingTime, pollingTime).until(first));
+        assertEquals(1, await(() -> sequencedSet).usingTime(pollingTime, pollingTime).until(firstElement));
         assertSame(sequencedSet, await(() -> sequencedSet).usingTime(pollingTime, pollingTime).until(
                 CollectionConditions.startsWith(List.of(1, 2))));
     }
 
     @Test
-    void singleMatchingConditionRequiresExactlyOneMatch() {
+    void singleElementRequiresOneElementBeforeApplyingTheCheck() {
         var time = new FakeTime(0);
         var waiting = await(() -> List.of(1, 2)).usingTime(time, time).upTo(ofNanos(1));
 
-        var none = assertFailure(TIMEOUT, () -> waiting.until(single(matches(value -> value > 10))));
-        var many = assertFailure(TIMEOUT, () -> waiting.until(single(matches(value -> value > 0))));
+        var none = assertFailure(TIMEOUT, () -> await(() -> List.of(1)).usingTime(time, time).upTo(ofNanos(1))
+                .until(singleElement(matches(value -> value > 10))));
+        var many = assertFailure(TIMEOUT, () -> waiting.until(singleElement(matches(value -> value == 2))));
 
         assertTrue(none.getMessage().contains("value did not match"));
-        assertTrue(many.getMessage().contains("more than one value matched"));
+        assertTrue(many.getMessage().contains("collection size was greater than 1"));
+    }
+
+    @Test
+    void emptyOrderedPatternsMatchEmptyAndNonEmptyCollections() {
+        List<Condition.PreservingCondition<SequencedCollection<? super String>>> positive = List.of(
+                CollectionConditions.startsWith(List.of()), CollectionConditions.endsWith(List.of()),
+                CollectionConditions.containsSequence(List.of()), CollectionConditions.containsSubsequence(List.of()));
+        List<Condition.PreservingCondition<SequencedCollection<? super String>>> negative = List.of(
+                CollectionConditions.doesNotContainSequence(List.of()), CollectionConditions.doesNotContainSubsequence(List.of()));
+        for (var checks : List.of(positive, negative)) {
+            for (var check : checks) assertInstanceOf(Unsatisfied.class, evaluate(check, null));
+        }
+
+        for (var values : List.of(List.<String>of(), List.of("a", "b"))) {
+            var actual = new ArrayList<>(values);
+            var time = new FakeTime(0);
+            var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+            for (var check : positive) {
+                ArrayList<String> selected = waiting.until(check);
+                assertSame(actual, selected);
+                assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, waiting.tryUntil(check)).result());
+            }
+            for (var check : negative) {
+                var failed = waiting.tryUntil(check.because("pattern must be absent"));
+                var failure = assertInstanceOf(AwaitResult.Failed.class, failed).failure();
+                assertEquals(TIMEOUT, failure.reason());
+                assertTrue(failure.message().contains("Because: pattern must be absent"));
+                assertEquals(List.of(), failed.attempts().getLast().condition().reference().value());
+            }
+        }
     }
 
     @Test
@@ -286,11 +317,11 @@ class CollectionSelectionConditionsTest {
         var waiting = await(observations::next).usingTime(time, time)
                 .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(3));
 
-        String last = waiting.until(CollectionConditions.last(String::isBlank));
-        String single = waiting.until(CollectionConditions.single(matches(String::isBlank)));
+        String last = waiting.until(CollectionConditions.lastElement(String::isBlank));
+        String singleElement = waiting.until(CollectionConditions.singleElement(matches(String::isBlank)));
 
         assertEquals(" ", last);
-        assertEquals(" ", single);
+        assertEquals(" ", singleElement);
         assertFalse(observations.hasNext());
     }
 
@@ -298,25 +329,27 @@ class CollectionSelectionConditionsTest {
     void selectorsCoverMissingNullAndInvalidPositions() {
         var time = new FakeTime(0);
         var missing = await(() -> (List<String>) null).usingTime(time, time).upTo(ofNanos(1));
-        var values = await(() -> List.of("failed")).usingTime(time, time).upTo(ofNanos(1));
+        var values = await(() -> List.of("failed", "ready", "failed")).usingTime(time, time).upTo(ofNanos(1));
 
         assertFailure(TIMEOUT, () -> await(() -> List.of())
-                .usingTime(time, time).upTo(ofNanos(1)).until(first));
-        assertFailure(TIMEOUT, () -> missing.until(last));
-        assertFailure(TIMEOUT, () -> missing.until(CollectionConditions.first(value -> true)));
-        assertFailure(TIMEOUT, () -> missing.until(CollectionConditions.element(0)));
-        assertFailure(TIMEOUT, () -> values.until(CollectionConditions.first(value -> value.startsWith("r"))));
-        assertFailure(TIMEOUT, () -> values.until(CollectionConditions.last(value -> value.startsWith("r"))));
-        assertFailure(TIMEOUT, () -> values.until(CollectionConditions.element(2)));
-        assertFailure(TIMEOUT, () -> values.until(CollectionConditions.element(1)));
-        assertFailure(TIMEOUT, () -> values.until(CollectionConditions.element(0, value -> value.startsWith("r"))));
+                .usingTime(time, time).upTo(ofNanos(1)).until(firstElement));
+        assertFailure(TIMEOUT, () -> missing.until(lastElement));
+        assertFailure(TIMEOUT, () -> missing.until(CollectionConditions.firstElement(value -> true)));
+        assertFailure(TIMEOUT, () -> missing.until(CollectionConditions.elementAt(0)));
+        assertFailure(TIMEOUT, () -> values.until(CollectionConditions.firstElement(value -> value.startsWith("r"))));
+        assertFailure(TIMEOUT, () -> values.until(CollectionConditions.lastElement(value -> value.startsWith("r"))));
+        assertFailure(TIMEOUT, () -> values.until(CollectionConditions.elementAt(4)));
+        assertFailure(TIMEOUT, () -> values.until(CollectionConditions.elementAt(3)));
+        assertFailure(TIMEOUT, () -> values.until(CollectionConditions.elementAt(0, value -> value.startsWith("r"))));
         assertFailure(TIMEOUT, () -> await(() -> List.of(1, 2))
-                .usingTime(time, time).upTo(ofNanos(1)).until(single(instanceOf(String.class))));
+                .usingTime(time, time).upTo(ofNanos(1)).until(singleElement(instanceOf(String.class))));
         assertFailure(TIMEOUT, () -> await(() -> List.of("first", "second"))
-                .usingTime(time, time).upTo(ofNanos(1)).until(single(instanceOf(String.class))));
+                .usingTime(time, time).upTo(ofNanos(1)).until(singleElement(instanceOf(String.class))));
+        assertFailure(TIMEOUT, () -> await(() -> List.<Object>of(1, "ready"))
+                .usingTime(time, time).upTo(ofNanos(1)).until(singleElement(instanceOf(String.class))));
         assertEquals("index must be non-negative", assertThrows(
                 IllegalArgumentException.class,
-                () -> CollectionConditions.element(-1)).getMessage());
+                () -> CollectionConditions.elementAt(-1)).getMessage());
         assertThrows(NullPointerException.class, () -> CollectionConditions.sorted(null));
     }
 
@@ -327,7 +360,7 @@ class CollectionSelectionConditionsTest {
         FakeTime time = new FakeTime(0);
 
         assertEquals(3, await(source::call).usingTime(time, time).every(ofNanos(1))
-                .upTo(ofNanos(5)).persisting(ofNanos(2)).until(last));
+                .upTo(ofNanos(5)).persisting(ofNanos(2)).until(lastElement));
     }
 
     @Test
@@ -337,7 +370,7 @@ class CollectionSelectionConditionsTest {
 
         var failure = assertFailure(TIMEOUT,
                 () -> await(source::call).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
-                        .until(first));
+                        .until(firstElement));
 
         assertTrue(failure.getMessage().contains("Condition: collection has a first element"));
         assertTrue(failure.getMessage().contains("Mismatch: collection was empty"));

@@ -59,6 +59,41 @@ class MapSelectionConditionsTest {
         assertSame(value, selected);
         assertSame(entry, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
         assertEquals(4, reads[0]);
+
+        var multiple = new ProbeContainers.EntryMap<String, Number>(List.of(entry, Map.entry("other", 1)));
+        var many = await(() -> multiple).usingTime(time, time).upTo(ofNanos(1));
+        assertFailure(TIMEOUT, () -> many.until(MapConditions.singleEntry(Conditions.equalTo(equalEntry))));
+        assertFailure(TIMEOUT, () -> many.until(MapConditions.singleEntry(Conditions.instanceOf(ReceiptEntry.class))));
+    }
+
+    @Test
+    void singleEntryInitializesTheNestedCheckOnlyAfterExtractingTheSoleEntry() {
+        List<Map<String, Integer>> observations = java.util.Arrays.asList(
+                null, Map.of(), Map.of("key", 2, "other", 1), Map.of("key", 1), Map.of("key", 2));
+        int[] reads = {0};
+        int[] factories = {0};
+        var checked = new java.util.ArrayList<Integer>();
+        var check = Conditions.conditionPerWait("entry is ready", () -> {
+            factories[0]++;
+            return (Map.Entry<String, Integer> entry) -> {
+                checked.add(entry.getValue());
+                return entry.getValue() == 2 ? ConditionResult.satisfied() : ConditionResult.unsatisfied("not ready");
+            };
+        });
+        var time = new FakeTime(0);
+        var result = await(() -> {
+            if (reads[0] <= 3) assertEquals(0, factories[0]);
+            return observations.get(reads[0]++);
+        }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
+                .tryUntil(MapConditions.singleEntry(check).because("one ready entry required"));
+
+        assertEquals(Map.entry("key", 2), assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals(5, result.totalAttempts());
+        assertEquals(1, factories[0]);
+        assertEquals(List.of(1, 2), checked);
+        var structural = result.attempts().get(2);
+        assertEquals(MapConditions.singleEntry.description(), structural.condition().description());
+        assertEquals("one ready entry required", structural.condition().explanation());
     }
 
     @Test
@@ -70,18 +105,19 @@ class MapSelectionConditionsTest {
         java.util.concurrent.Callable<LinkedHashMap<String, Integer>> source = () -> actual;
         var waiting = await(source::call).usingTime(pollingTime, pollingTime);
 
-        Map.Entry<String, Integer> selected = waiting.until(MapConditions.singleEntry(matches((Map.Entry<String, Integer> entry) -> entry.getValue() == 2)));
+        var sole = await(() -> Map.of("second", 2)).usingTime(pollingTime, pollingTime);
+        Map.Entry<String, Integer> selected = sole.until(MapConditions.singleEntry(matches((Map.Entry<String, Integer> entry) -> entry.getValue() == 2)));
         Map.Entry<String, Integer> byKey = waiting.until(MapConditions.entryFor("first"));
         Integer value = waiting.until(MapConditions.valueFor("second"));
         Integer nested = waiting.until(MapConditions.valueFor("second", Conditions.atLeast(2)));
-        String key = waiting.until(MapConditions.singleEntry(
-                matches(entry -> entry.getKey().startsWith("f")))).getKey();
+        String key = sole.until(MapConditions.singleEntry(
+                matches(entry -> entry.getKey().startsWith("s")))).getKey();
 
         assertEquals("second", selected.getKey());
         assertEquals("first", byKey.getKey());
         assertEquals(2, value);
         assertEquals(2, nested);
-        assertEquals("first", key);
+        assertEquals("second", key);
         assertEquals(2, selected.getValue());
     }
 
@@ -112,8 +148,8 @@ class MapSelectionConditionsTest {
         var waiting = await(source::call).usingTime(pollingTime, pollingTime);
 
         assertSame(actual, waiting.until(MapConditions.allEntries((key, value) -> value > 0)));
-        assertSame(actual, waiting.until(MapConditions.anyEntry((key, value) -> key.equals("b"))));
-        assertSame(actual, waiting.until(MapConditions.noEntry((key, value) -> value < 0)));
+        assertSame(actual, waiting.until(MapConditions.hasEntry((key, value) -> key.equals("b"))));
+        assertSame(actual, waiting.until(MapConditions.hasNoEntry((key, value) -> value < 0)));
         assertSame(actual, waiting.until(MapConditions.allKeys(key -> key.length() == 1)));
         assertSame(actual, waiting.until(MapConditions.anyKey(key -> key.equals("a"))));
         assertSame(actual, waiting.until(MapConditions.allValues(value -> value > 0)));
@@ -121,7 +157,7 @@ class MapSelectionConditionsTest {
         assertSame(actual, waiting.until(MapConditions.containsAllKeys(List.of("a", "b"))));
         assertSame(actual, waiting.until(MapConditions.containsOnlyKeys(List.of("b", "a"))));
         assertSame(actual, waiting.until(MapConditions.containsAllValues(List.of(1, 2))));
-        assertSame(actual, waiting.until(MapConditions.sizeBetween(1, 3)));
+        assertSame(actual, waiting.until(MapConditions.hasSizeBetween(1, 3)));
 
         assertEquals(Unsatisfied.class,
                 evaluate(MapConditions.doesNotContainKey("a"), actual).getClass());
@@ -135,9 +171,9 @@ class MapSelectionConditionsTest {
 
         assertEquals(Unsatisfied.class, evaluate(MapConditions.allEntries(
                 (String key, Integer value) -> value < 2), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.anyEntry(
+        assertEquals(Unsatisfied.class, evaluate(MapConditions.hasEntry(
                 (String key, Integer value) -> value > 2), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.noEntry(
+        assertEquals(Unsatisfied.class, evaluate(MapConditions.hasNoEntry(
                 (String key, Integer value) -> value == 2), actual).getClass());
         assertEquals(Unsatisfied.class, evaluate(MapConditions.allKeys(
                 key -> key.equals("a")), actual).getClass());
@@ -168,33 +204,20 @@ class MapSelectionConditionsTest {
     }
 
     @Test
-    void onlyReturnsTheValueOfTheSoleExpectedKey() {
-        var pollingTime = new FakeTime(0);
-        var actual = new LinkedHashMap<>(Map.of("only", 42));
-        Integer value = await(() -> actual).usingTime(pollingTime, pollingTime).until(MapConditions.onlyValueFor("only"));
-
-        assertEquals(42, value);
-    }
-
-    @Test
     void selectorsCoverMissingMultipleAndWrongEntries() {
         var actual = new LinkedHashMap<>(Map.of("first", 1, "second", 2));
         var time = new FakeTime(0);
         var waiting = await(() -> actual).usingTime(time, time).upTo(ofNanos(1));
 
         var none = assertFailure(TIMEOUT,
-                () -> waiting.until(MapConditions.singleEntry(matches(entry -> entry.getValue() > 2))));
+                () -> await(() -> Map.of("first", 1)).usingTime(time, time).upTo(ofNanos(1))
+                        .until(MapConditions.singleEntry(matches(entry -> entry.getValue() > 2))));
         var many = assertFailure(TIMEOUT,
-                () -> waiting.until(MapConditions.singleEntry(matches(entry -> entry.getValue() > 0))));
+                () -> waiting.until(MapConditions.singleEntry((key, value) -> value == 2)));
         assertTrue(none.getMessage().contains("value did not match"));
-        assertTrue(many.getMessage().contains("more than one value matched"));
+        assertTrue(many.getMessage().contains("map size was greater than 1"));
         assertFailure(TIMEOUT, () -> waiting.until(MapConditions.valueFor("missing")));
         assertFailure(TIMEOUT, () -> waiting.until(MapConditions.valueFor("first", Conditions.greaterThan(1))));
-        assertFailure(TIMEOUT, () -> waiting.until(MapConditions.onlyValueFor("first")));
-        assertFailure(TIMEOUT, () -> await(() -> Map.of("first", 1))
-                .usingTime(time, time).upTo(ofNanos(1)).until(MapConditions.onlyValueFor("other")));
-        assertFailure(TIMEOUT, () -> await(() -> (Map<String, Integer>) null)
-                .usingTime(time, time).upTo(ofNanos(1)).until(MapConditions.onlyValueFor("first")));
         assertThrows(NullPointerException.class, () -> MapConditions.singleEntry(
                 (Condition.PreservingCondition<Map.Entry<?, ?>>) null));
         assertThrows(NullPointerException.class, () -> MapConditions.allEntries((CheckedBiPredicate<Object, Object>) null));

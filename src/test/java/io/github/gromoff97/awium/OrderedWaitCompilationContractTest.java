@@ -27,9 +27,9 @@ class OrderedWaitCompilationContractTest {
         for (String expression : List.of(
                 "await(Contract::text).%s(matches((Integer value) -> true));",
                 "await(Contract::text).%s(matches(value -> value.length()));",
-                "await(Contract::optional).%s(first, last);",
+                "await(Contract::optional).%s(firstElement, lastElement);",
                 "await(Contract::collection).%s(present, present);",
-                "await(Contract::map).%s(first, last);",
+                "await(Contract::map).%s(firstElement, lastElement);",
                 "await(Contract::collection).%s(singleEntry, singleEntry);")) {
             assertRejected(expression.formatted(terminal));
         }
@@ -40,9 +40,9 @@ class OrderedWaitCompilationContractTest {
         for (String expression : List.of(
                 "String value = await(Contract::text).until(isNotNull, isNotNull);",
                 "AwaitResult<String, String> value = await(Contract::text).tryUntil(isNotNull, isNotNull);",
-                "List<Integer> value = await(Contract::collection).until(first, last);",
-                "Callable<List<String>> source = Contract::collection; List<Integer> wrong = await(source::call).until(first, last);",
-                "Callable<List<String>> source = Contract::collection; AwaitResult<List<String>,List<Integer>> wrong = await(source::call).tryUntil(first, last);",
+                "List<Integer> value = await(Contract::collection).until(firstElement, lastElement);",
+                "Callable<List<String>> source = Contract::collection; List<Integer> wrong = await(source::call).until(firstElement, lastElement);",
+                "Callable<List<String>> source = Contract::collection; AwaitResult<List<String>,List<Integer>> wrong = await(source::call).tryUntil(firstElement, lastElement);",
                 "List<Integer> result = await(Contract::text).until(instanceOf(String.class), instanceOf(String.class));")) {
             assertRejected(expression);
         }
@@ -54,7 +54,7 @@ class OrderedWaitCompilationContractTest {
         for (String expression : List.of(
                 "await(Contract::text).%s(instanceOf(String.class), instanceOf(Integer.class));",
                 "await(Contract::text).<Object>%s(instanceOf(String.class), instanceOf(Integer.class));",
-                "await(Contract::collection).%s(single(instanceOf(String.class)), single(instanceOf(Integer.class)));",
+                "await(Contract::collection).%s(singleElement(instanceOf(String.class)), singleElement(instanceOf(Integer.class)));",
                 "await(Contract::optional).%s(hasValue(instanceOf(String.class)), hasValue(instanceOf(Integer.class)));",
                 "await(Contract::map).%s(valueFor(\"ready\", instanceOf(String.class)), valueFor(\"ready\", instanceOf(Integer.class)));",
                 "await(Contract::map).%s(singleEntry(instanceOf(String.class)), singleEntry(instanceOf(Integer.class)));")) {

@@ -30,7 +30,7 @@ class FluentConditionTest {
 
         for (var condition : List.of(equalTo(1000), notEqualTo(0), sameAs(actual),
                 notSameAs(0), in(List.of(1000, 2)), notIn(List.of(0, -1)))) {
-            var check = condition;
+            var check = condition.because("numeric identity must be preserved");
             Number value = waiting.until(check);
             AwaitResult<Number, Number> attempt = waiting.tryUntil(check);
             List<Number> sequence = waiting.until(check, check, check);
@@ -75,7 +75,7 @@ class FluentConditionTest {
         Number actual = 1;
         var time = new FakeTime(0);
         var waiting = await(() -> Optional.of(actual)).usingTime(time, time);
-        var check = hasValue(equalTo(1));
+        var check = hasValue(equalTo(1)).because("optional contains the expected number");
 
         Number value = waiting.until(check);
         AwaitResult<Optional<Number>, Number> attempt = waiting.tryUntil(check);
@@ -94,14 +94,14 @@ class FluentConditionTest {
         var time = new FakeTime(0);
         var waiting = await(() -> List.of(actual)).usingTime(time, time);
 
-        Number nested = waiting.until(single(equalTo(1)));
-        Number indexed = waiting.until(element(0));
-        Number firstMatch = waiting.until(first((Number number) -> true));
-        Number lastMatch = waiting.until(last((Number number) -> true));
-        AwaitResult<List<Number>, Number> attempt = waiting.tryUntil(single(equalTo(1)));
-        List<Number> sequence = waiting.until(single, single(equalTo(1)), element(0));
+        Number nested = waiting.until(singleElement(equalTo(1)));
+        Number indexed = waiting.until(elementAt(0));
+        Number firstMatch = waiting.until(firstElement((Number number) -> true));
+        Number lastMatch = waiting.until(lastElement((Number number) -> true));
+        AwaitResult<List<Number>, Number> attempt = waiting.tryUntil(singleElement(equalTo(1)));
+        List<Number> sequence = waiting.until(singleElement, singleElement(equalTo(1)), elementAt(0));
         AwaitResult<List<Number>, List<Number>> attempts = waiting.tryUntil(
-                first, single(equalTo(1)), last);
+                firstElement, singleElement(equalTo(1)), lastElement);
 
         assertEquals(List.of(actual, actual, actual, actual), List.of(nested, indexed, firstMatch, lastMatch));
         assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, attempt).result());
@@ -114,19 +114,19 @@ class FluentConditionTest {
         Number actual = 1;
         var time = new FakeTime(0);
         var waiting = await(() -> Map.of("key", actual)).usingTime(time, time);
-        var check = valueFor("key", equalTo(1));
+        var check = valueFor("key", equalTo(1)).because("key selects the expected number");
 
         Number value = waiting.until(valueFor("key"));
         AwaitResult<Map<String, Number>, Number> attempt = waiting.tryUntil(check);
-        List<Number> sequence = waiting.until(valueFor("key"), check, onlyValueFor("key"));
-        AwaitResult<Map<String, Number>, List<Number>> attempts = waiting.tryUntil(check, check, check);
+        List<Number> sequence = waiting.until(valueFor("key"), check);
+        AwaitResult<Map<String, Number>, List<Number>> attempts = waiting.tryUntil(check, check);
         Map.Entry<String, Number> entry = waiting.until(singleEntry);
         Map.Entry<String, Number> matching = waiting.until(singleEntry(equalTo(Map.entry("key", 1))));
         Map.Entry<String, Number> byKey = waiting.until(entryFor("key"));
 
         assertSame(actual, value);
         assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, attempt).result());
-        assertEquals(List.of(actual, actual, actual), sequence);
+        assertEquals(List.of(actual, actual), sequence);
         assertEquals(sequence, assertInstanceOf(AwaitResult.Satisfied.class, attempts).result());
         assertEquals(Map.entry("key", actual), entry);
         assertEquals(entry, matching);
@@ -139,7 +139,7 @@ class FluentConditionTest {
         Number actual = 1;
         Integer direct = await(() -> actual).usingTime(time, time).until(instanceOf(Integer.class));
         Integer optional = await(() -> Optional.of(actual)).usingTime(time, time).until(hasValue(instanceOf(Integer.class)));
-        Integer element = await(() -> List.of(actual)).usingTime(time, time).until(single(instanceOf(Integer.class)));
+        Integer element = await(() -> List.of(actual)).usingTime(time, time).until(singleElement(instanceOf(Integer.class)));
         Integer mapped = await(() -> Map.of("key", actual)).usingTime(time, time).until(valueFor("key", instanceOf(Integer.class)));
 
         assertEquals(List.of(1, 1, 1, 1), List.of(direct, optional, element, mapped));
@@ -171,8 +171,8 @@ class FluentConditionTest {
 
         List<LinkedHashMap<String, Integer>> results = List.of(
                 waiting.until(allEntries(valid::test)),
-                waiting.until(anyEntry(valid::test)),
-                waiting.until(noEntry(valid.negate()::test)));
+                waiting.until(hasEntry(valid::test)),
+                waiting.until(hasNoEntry(valid.negate()::test)));
 
         results.forEach(result -> assertSame(actual, result));
     }
@@ -200,7 +200,7 @@ class FluentConditionTest {
 
         var payment = await(() -> actual).usingTime(time, time).until(condition("inline", value -> ConditionResult.satisfied(value)));
         var created = await(() -> actual).usingTime(time, time).until(conditionPerWait("factory", () -> ConditionResult::satisfied));
-        var selected = await(() -> List.of(actual)).usingTime(time, time).until(single(check));
+        var selected = await(() -> List.of(actual)).usingTime(time, time).until(singleElement(check));
         var optional = await(() -> Optional.of(actual)).usingTime(time, time).until(hasValue(check));
         var mapped = await(() -> Map.of("key", actual)).usingTime(time, time).until(valueFor("key", check));
         var sequence = await(() -> actual).usingTime(time, time)
@@ -226,7 +226,7 @@ class FluentConditionTest {
         var entries = Map.of("key", 1);
 
         var name = await(user::name).until(isNotNull);
-        var key = await(entries::keySet).until(single);
+        var key = await(entries::keySet).until(singleElement);
 
         assertEquals(5, name.length());
         assertEquals(3, key.length());
@@ -264,12 +264,12 @@ class FluentConditionTest {
         var collection = new CollectionViewSource<Number, List<? extends Number>>(values);
         var map = new MapViewSource<CharSequence, Number, Map<CharSequence, ? extends Number>>(entries);
 
-        Number value = await(collection).usingTime(time, time).until(single(isNotNull));
+        Number value = await(collection).usingTime(time, time).until(singleElement(isNotNull));
         Number mapped = await(map).usingTime(time, time).until(valueFor("key", isNotNull));
         Map.Entry<? extends CharSequence, ? extends Number> entry = await(map).usingTime(time, time).until(entryFor("key"));
         Map.Entry<String, Number> checked = await(() -> Map.<String, Number>of("key", 1)).usingTime(time, time).until(singleEntry(matches(
                 (Map.Entry<? extends String, ? extends Number> candidate) -> candidate.getValue() != null)));
-        Integer subtype = await(() -> List.of(1)).usingTime(time, time).until(first((Number number) -> true));
+        Integer subtype = await(() -> List.of(1)).usingTime(time, time).until(firstElement((Number number) -> true));
 
         assertEquals(List.of(1, 1, 1), List.of(value, mapped, subtype));
         assertEquals(Map.entry("key", 1), entry);

@@ -62,7 +62,7 @@ class TextExpectedValuesTest {
         assertSame(text, values.getFirst());
         assertEquals(text.capacity(), values.getLast().capacity());
 
-        StringBuilder selected = await(() -> List.of(text)).until(CollectionConditions.single(
+        StringBuilder selected = await(() -> List.of(text)).until(CollectionConditions.singleElement(
                 StringConditions.contentEquals(expected)));
         assertSame(text, selected);
         CharBuffer buffer = await(() -> expected).until(StringConditions.contentEquals(text));
@@ -98,15 +98,36 @@ class TextExpectedValuesTest {
 
         var nested = StringConditions.startsWith(CharBuffer.wrap("rea"));
         assertEquals(text.capacity(), await(() -> Optional.of(text)).until(OptionalConditions.hasValue(nested)).capacity());
-        assertEquals(text.capacity(), await(() -> List.of(text)).until(CollectionConditions.single(nested)).capacity());
+        assertEquals(text.capacity(), await(() -> List.of(text)).until(CollectionConditions.singleElement(nested)).capacity());
         assertEquals(text.capacity(), await(() -> Map.of("text", text)).until(MapConditions.valueFor("text", nested)).capacity());
+    }
+
+    @Test
+    void emptyFragmentSetsMatchNonNullTextAndPreserveItsType() {
+        for (String value : List.of("", "ready")) {
+            var actual = new StringBuilder(value);
+            var time = new FakeTime(0);
+            var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+            StringBuilder included = waiting.until(StringConditions.containsAll(List.of()));
+            StringBuilder excluded = waiting.until(StringConditions.doesNotContainAny(List.of()));
+            assertSame(actual, included);
+            assertSame(actual, excluded);
+            for (var check : List.of(StringConditions.containsAll(List.of()), StringConditions.doesNotContainAny(List.of()))) {
+                assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, waiting.tryUntil(check)).result());
+                var absent = await(() -> (StringBuilder) null).usingTime(time, time)
+                        .every(ofNanos(1)).upTo(ofNanos(2)).tryUntil(check);
+                assertEquals(AwaitFailure.Reason.TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, absent).failure().reason());
+            }
+            var emptyFragment = waiting.tryUntil(StringConditions.doesNotContainAny(List.of("")));
+            assertEquals(AwaitFailure.Reason.TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, emptyFragment).failure().reason());
+        }
     }
 
     @Test
     void invalidExpectedTextIsRejectedDuringConstruction() {
         assertThrows(NullPointerException.class, () -> StringConditions.containsAll(null));
         assertThrows(NullPointerException.class, () -> StringConditions.containsAll(java.util.Arrays.asList("ready", null)));
-        assertThrows(IllegalArgumentException.class, () -> StringConditions.containsAll(List.of()));
+        assertThrows(NullPointerException.class, () -> StringConditions.doesNotContainAny(null));
         var invalid = new CharSequence() {
             @Override public int length() { return 0; }
             @Override public char charAt(int index) { throw new IndexOutOfBoundsException(index); }

@@ -164,6 +164,9 @@ final class FailureDiagnostics {
         if (reference != null) {
             field(out, detailsIndentation, reference.label(), render(() -> renderValue(reference.value())));
         }
+        if (condition.explanation() != null) {
+            field(out, detailsIndentation, "Because", condition.explanation());
+        }
     }
 
     private void sequence(StringBuilder out, String mismatch) {
@@ -172,6 +175,8 @@ final class FailureDiagnostics {
         }
         out.append('\n').append("Sequence (captured ").append(sequence.capturedStages())
                 .append(" of ").append(sequence.totalStages()).append("):\n");
+        int activeStage = Math.min(sequence.capturedStages() + 1, sequence.totalStages());
+        field(out, "Stage", activeStage + " of " + sequence.totalStages());
         condition(out, sequence.activeCondition(), "    ");
         if (mismatch != null) {
             field(out, "        ", "Mismatch", mismatch);

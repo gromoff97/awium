@@ -53,16 +53,16 @@ the same way.
 Selection conditions return a value contained in the observation:
 
 ```java
-import static io.github.gromoff97.awium.CollectionConditions.single;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.MapConditions.singleEntry;
 import static io.github.gromoff97.awium.OptionalConditions.present;
 
 Payment payment = await(paymentRepository::find).until(present);
-Payment onlyPayment = await(paymentRepository::findAll).until(single);
+Payment onlyPayment = await(paymentRepository::findAll).until(singleElement);
 Map.Entry<String, Payment> entry = await(paymentRepository::index).until(singleEntry);
 ```
 
-`present`, `single`, `first`, `last`, and `singleEntry` are fields, so they do
+`present`, `singleElement`, `firstElement`, `lastElement`, and `singleEntry` are fields, so they do
 not need parentheses. `isNull` and `absent` preserve the source type: their
 successful results are `null` and the original empty `Optional`, respectively.
 
@@ -132,8 +132,8 @@ Type-narrowing stages and nested type selections can also be captured in order:
 
 ```java
 List<Payment> payments = await(repository::findAll).until(
-        single(instanceOf(Payment.class)),
-        single(instanceOf(Payment.class)));
+        singleElement(instanceOf(Payment.class)),
+        singleElement(instanceOf(Payment.class)));
 ```
 
 These stages must declare the same result type. Mixing `instanceOf(String.class)`
@@ -204,23 +204,52 @@ A standalone declaration such as `var check = matches(value -> value.finished())
 has no source type to infer from. Use a method reference such as
 `matches(Payment::finished)` when a condition needs to be stored and reused.
 
+## Explaining a condition
+
+Every condition supports `because(String)`. It returns an immutable copy with a
+non-blank reason, shown as `Because` in failure diagnostics. Repeating `because`
+replaces the reason on the new copy; the original condition stays unchanged.
+
+```java
+Payment found = await(paymentRepository::find).until(present.because("Payment must exist after checkout"));
+Payment paid = await(paymentRepository::findAll).until(singleElement(Payment::paid).because("One paid payment is required"));
+```
+
+Calling `because` after a generic factory can prevent Java from inferring a
+lambda parameter's type from `until`. For example,
+`all(value -> value.paid()).because("Paid payments required")` needs a typed
+lambda parameter or a method reference:
+
+```java
+List<Payment> payments = await(paymentRepository::findAll)
+        .until(all((Payment value) -> value.paid()).because("Paid payments required"));
+List<Payment> checked = await(paymentRepository::findAll)
+        .until(all(Payment::paid).because("Paid payments required"));
+```
+
+Without `because`, the inline forms above still infer their parameter types.
+Composed conditions inherit the nested condition's reason; an explicit outer
+`because` replaces it. Each stage in an ordered sequence retains its own reason,
+displayed alongside its stage number when the sequence fails.
+
 ## Selection and checking
 
 Put a check inside the selection:
 
 ```java
-Payment payment = await(paymentRepository::findAll).until(single(Payment::paid));
+Payment payment = await(paymentRepository::findAll).until(singleElement(Payment::paid));
 Payment found = await(paymentRepository::find).until(hasValue(Payment::paid));
 ```
 
-`single` requires a collection containing exactly one element.
-`single(condition)` requires exactly one matching element among all elements;
-other elements may be present. No matches or several matches cause a retry.
+`singleElement` requires a collection containing exactly one element.
+`singleElement(condition)` first requires exactly one element, then checks that element.
+An empty collection, several elements, or a failed nested check cause a retry.
+`singleEntry(condition)` follows the same rule for a map containing exactly one entry.
 Selectors that accept nested conditions also accept a predicate directly:
-`single(check)`, `hasValue(check)`, `valueFor(key, check)`, and `onlyValueFor(key, check)`. Use a full condition
+`singleElement(check)`, `hasValue(check)`, and `valueFor(key, check)`. Use a full condition
 for a type check, assertion adapter, or per-wait callback state.
-`singleEntry((key, value) -> ...)` accepts a two-argument check like the map's
-entry quantifiers and retains the source's key and value types.
+`singleEntry(entry -> ...)` checks the sole entry directly and retains its key
+and value types. The two-argument form `singleEntry((key, value) -> ...)` is also available.
 Nested entry conditions can accept exact `Map.Entry<KEY, VALUE>` parameters,
 whose key and value types match the source;
 read-only wildcard entry checks are also supported.
@@ -228,9 +257,7 @@ read-only wildcard entry checks are also supported.
 Map membership checks compare keys and values with `Objects.deepEquals`, with
 the observed operand first. Key selections use the same key comparison. This
 includes array content and applies to maps with comparators or identity keys as well.
-`valueFor` and
-`entryFor` take the first entry whose key matches; `onlyValueFor` also requires
-the map to have exactly one entry.
+`valueFor` and `entryFor` take the first entry whose key matches.
 
 `all`, `any`, `none`, and the map entry/key/value quantifiers also accept a nested
 condition, for example `all(matches(Payment::paid))`.
@@ -244,58 +271,58 @@ by its callback stops the wait before another candidate is checked.
 Every condition family exposes `description()` and `reference()` through the
 common immutable `Condition` model.
 
-The source is read once per attempt. `singleEntry(...)` applies the same rule to
-map entries; `hasValue(...)` checks an optional value.
+The source is read once per attempt. `hasValue(...)` checks an optional value.
 
 Structural single-value selections use one iterator to distinguish zero, one,
 and several values, without counting the whole collection. This also avoids
 using a stale size when a concurrent collection changes before iteration.
-`first` and `last` select through forward and reverse traversal; an empty
-traversal causes a retry. `element(index)` traverses up to the requested position,
+`firstElement` and `lastElement` select through forward and reverse traversal; an empty
+traversal causes a retry. `elementAt(index)` traverses up to the requested position,
 so its cost grows with the index even for an array-backed list. These selections
 use the values seen in one traversal instead of a separate size check and read.
 The observation remains a caller-owned object, not an atomic snapshot.
 
 The nested condition can preserve the selected value (`matches`, `asserted`,
 `condition`), compare it with an expected value (`equalTo`), or narrow its type
-(`instanceOf`). Its description and expected value are
-retained in diagnostics. Callback failures stop evaluation and retain their
-original cause. If a callback sets the thread's interrupt flag, selection stops
-before invoking the next callback. A nested factory initializes lazily on the first candidate and
-keeps its state across candidates and retries within that stage.
+(`instanceOf`). Extraction failures report the selector; nested failures report
+the nested condition and its expected value. Callback failures stop evaluation
+and retain their original cause. If a callback sets the thread's interrupt flag,
+the wait stops. A nested factory initializes lazily after successful extraction
+and keeps its state across retries within that stage. The nested check runs at
+most once per attempt.
 
-Selections such as bare `present`, `single`, and `valueFor(key)` obtain their
+Selections such as bare `present`, `singleElement`, and `valueFor(key)` obtain their
 result type from the source at the terminal. They cannot themselves be nested:
-`single(present)` and `single(single)` are not supported. Nested selections with
-a declared result type, such as `single(instanceOf(Payment.class))`, can be used
+`singleElement(present)` and `singleElement(singleElement)` are not supported. Nested selections with
+a declared result type, such as `singleElement(instanceOf(Payment.class))`, can be used
 as conditions inside another selection or quantifier.
 
 Type selection uses the same composition:
 
 ```java
-Payment payment = await(repository::findAll).until(single(instanceOf(Payment.class)));
+Payment payment = await(repository::findAll).until(singleElement(instanceOf(Payment.class)));
 Payment found = await(repository::find).until(hasValue(instanceOf(Payment.class)));
-Payment firstPayment = await(repository::findAll).until(first(instanceOf(Payment.class)));
-Payment lastPayment = await(repository::findAll).until(last(instanceOf(Payment.class)));
-Payment indexedPayment = await(repository::findAll).until(element(0, instanceOf(Payment.class)));
-Payment paid = await(paymentRepository::findAll).until(first(Payment::paid));
+Payment firstPayment = await(repository::findAll).until(firstElement(instanceOf(Payment.class)));
+Payment lastPayment = await(repository::findAll).until(lastElement(instanceOf(Payment.class)));
+Payment indexedPayment = await(repository::findAll).until(elementAt(0, instanceOf(Payment.class)));
+Payment paid = await(paymentRepository::findAll).until(firstElement(Payment::paid));
 ```
 
-`first`, `last`, and `element` accept nested conditions. Checks such as
-`first(Payment::paid)` and comparisons such as `last(equalTo(expectedPayment))`
+`firstElement`, `lastElement`, and `elementAt` accept nested conditions. Checks such as
+`firstElement(Payment::paid)` and comparisons such as `lastElement(equalTo(expectedPayment))`
 retain the source's element type. Conditions such as `instanceOf` return their
 declared result type, including when the source contains `Object` values.
-The first two search in encounter order or
-reverse encounter order; `element` checks only the indexed value. If nested
-evaluation throws or the callback sets the thread's interrupt flag, the wait stops
-before the next callback.
+Each selector first extracts its value, then applies the nested check:
+`firstElement` checks the first element, `lastElement` the last, and `elementAt` the
+indexed element. A mismatch causes a retry; it never makes the selector search
+for another element in the same observation.
 
 To collect selected values in order, pass several selections to the terminal:
 
 ```java
 List<Payment> payments = await(paymentRepository::findAll).until(
-        single(Payment::created),
-        single(Payment::paid));
+        singleElement(Payment::created),
+        singleElement(Payment::paid));
 ```
 
 ## Custom conditions
@@ -343,15 +370,21 @@ the source, for example `await(() -> paymentRepository.load().receipt())`.
 ## Condition catalogues
 
 Import only the catalogue used by a test. Shared names such as `empty`,
-`nonEmpty`, `contains`, and `size` are intentionally domain-specific.
+`nonEmpty`, `contains`, and `hasSize` are intentionally domain-specific.
 
 | Provider | Conditions | Successful result |
 | --- | --- | --- |
 | `Conditions` | `condition`, `conditionPerWait`, `asserted`, object equality and identity, type checks, `matches`, and comparable ranges | observed or narrowed value |
 | `OptionalConditions` | `present`, `absent`, `hasValue` | contained or narrowed value; original optional for `absent` |
-| `StringConditions` | empty/blank checks, content, prefix, suffix, regex, case-insensitive equality, and `length...` | observed text, including `StringBuilder` and `CharBuffer` |
-| `CollectionConditions` | `single`, empty/null/duplicate checks, quantifiers, membership, exact content, sequences, `first`, `last`, `element`, `sorted`, and `size...` | observed collection or selected element |
-| `MapConditions` | `singleEntry`, empty checks, entry/key/value quantifiers and membership, exact content, `valueFor`, `entryFor`, `onlyValueFor`, and `size...` | observed map, selected entry, or value |
+| `StringConditions` | empty/blank checks, content, prefix, suffix, regex, case-insensitive equality, and `hasLength...` | observed text, including `StringBuilder` and `CharBuffer` |
+| `CollectionConditions` | `singleElement`, empty/null/duplicate checks, quantifiers, membership, exact content, sequences, `firstElement`, `lastElement`, `elementAt`, `sorted`, and `hasSize...` | observed collection or selected element |
+| `MapConditions` | `singleEntry`, empty checks, entry/key/value quantifiers and membership, exact content, `valueFor`, `entryFor`, and `hasSize...` | observed map, selected entry, or value |
+
+Collection and map sizes use `hasSize(n)`, `hasSizeNotEqualTo(n)`,
+`hasSizeGreaterThan(n)`, `hasSizeAtLeast(n)`, `hasSizeLessThan(n)`,
+`hasSizeAtMost(n)`, and `hasSizeBetween(min, max)`.
+Text uses the same suffixes with `hasLength`, for example `hasLength(5)` and
+`hasLengthAtLeast(1)`. These checks preserve the observed object.
 
 All collection checks and selections require an observed `Collection`.
 Expected sets of values can come from any `Iterable`:
@@ -376,6 +409,9 @@ The corresponding absence checks are `doesNotContain(fragment)` and
 `doesNotContainAny(iterable)`, following the collection membership convention.
 Their text is frozen when the condition is created, so later changes to an
 expected `StringBuilder` or `CharBuffer` do not change the check.
+An empty set of fragments satisfies both `containsAll(...)` and
+`doesNotContainAny(...)` for non-null text. A set containing `""` is different:
+every string contains that fragment, so `doesNotContainAny(List.of(""))` is unsatisfied.
 Use `StringConditions.contentEquals("ready")` to compare characters across
 different text implementations. General `equalTo` follows object equality:
 two distinct `StringBuilder` instances need not be equal despite identical text.
@@ -386,8 +422,8 @@ with each other. Both forms preserve the source's concrete type and instance.
 
 Object membership uses `in(iterable)` and `notIn(iterable)`, for example
 `in(List.of("created", "paid"))`. To treat a collection or array as one candidate,
-wrap it in `Collections.singletonList(value)`. The candidate iterable must not
-be empty.
+wrap it in `Collections.singletonList(value)`. Empty candidate sets are allowed:
+`in(...)` is unsatisfied, while `notIn(...)` is satisfied for any value, including null.
 
 For collection membership, `contains(value)` and `doesNotContain(value)` compare
 one element. A collection or array remains one element. To check a set of
@@ -403,21 +439,86 @@ For an array as one expected element, use `Collections.singletonList(array)`,
 for example `containsOnly(Collections.singletonList(array))`.
 `List.of(array)` expands a reference array into separate elements.
 
+Collection membership accepts empty expected sets. For a non-null observed collection:
+
+| Condition with an empty expected set | Result |
+| --- | --- |
+| `containsAll(...)`, `doesNotContainAny(...)` | Satisfied |
+| `containsAny(...)`, `doesNotContainAll(...)` | Unsatisfied; polling continues |
+| `containsExactly(...)`, `containsExactlyInAnyOrder(...)`, `containsOnly(...)` | Satisfied only when the observed collection is empty |
+
+Expected sets are copied when the condition is created, including empty sets.
+A null expected iterable is rejected; a null observed collection is unsatisfied.
+
 Ordered expectations use the same iterable form: `startsWith(List.of("a", "b"))`,
 `endsWith(...)`, `containsSequence(...)`, and `containsSubsequence(...)`, as do
 `doesNotContainSequence(...)` and `doesNotContainSubsequence(...)`.
-A pattern must not be empty. Use `Collections.singletonList(array)`
-when a reference array is one element of the pattern.
+An empty pattern satisfies `startsWith(...)`, `endsWith(...)`, `containsSequence(...)`,
+and `containsSubsequence(...)` for any non-null collection, including an empty one.
+Their negative sequence checks are unsatisfied for an empty pattern.
+Use `Collections.singletonList(array)` when a reference array is one element of the pattern.
 
 Maps follow the same rule: `containsKey(key)`, `doesNotContainKey(key)`,
 `containsValue(value)` and `doesNotContainValue(value)` check one object.
 `containsAllKeys(iterable)`, `doesNotContainAnyKeys(iterable)`,
 `containsAllValues(iterable)`, `doesNotContainAnyValues(iterable)` and
 `containsOnlyKeys(iterable)` accept iterables of expected keys or values.
+Empty expected sets follow the same rules as collection membership:
+`containsAllKeys(...)`, `containsAllValues(...)`, `doesNotContainAnyKeys(...)`,
+and `doesNotContainAnyValues(...)` match any non-null map. Empty entry maps are
+also accepted: `containsAllEntries(...)` and `doesNotContainAnyEntries(...)`
+are satisfied, while `containsAnyEntries(...)` and `doesNotContainAllEntries(...)`
+are unsatisfied. `containsExactlyEntries(...)` with an empty expected map requires
+the observed map to be empty.
 
-`containsEntry(key, value)` checks one entry. `containsAllEntries(map)` and
-`containsAnyEntries(map)` check all or any of the supplied entries;
-`doesNotContainEntry(key, value)`, `doesNotContainAllEntries(map)`, and
+`hasEntry(key, value)` checks for an expected key-value pair.
+`hasEntry(entry -> ...)` applies a predicate to each `Map.Entry`; use
+`hasEntry(condition)` for a nested condition. Either check succeeds when at
+least one entry matches. All forms return the original map, preserving its
+concrete type. Use `singleEntry(condition)` when the map must contain exactly
+one entry and that entry must pass the check and be returned.
+`allEntries(entry -> ...)` checks every entry and returns the original map;
+it also succeeds for an empty map. `allEntries`, `hasEntry`, `hasNoEntry`, and
+`singleEntry` all accept an entry predicate, a `(key, value)` predicate, or a nested condition.
+
+```java
+import io.github.gromoff97.awium.Await.MapSource;
+import static io.github.gromoff97.awium.Conditions.matches;
+import static io.github.gromoff97.awium.MapConditions.hasEntry;
+import static io.github.gromoff97.awium.MapConditions.hasNoEntry;
+import static io.github.gromoff97.awium.MapConditions.allEntries;
+import static io.github.gromoff97.awium.MapConditions.singleEntry;
+
+MapSource<Map<String, String>> statuses = () -> Map.of("payment", "READY");
+
+Map<String, String> exact = await(statuses).until(
+        hasEntry("payment", "READY").because("Payment processing must finish"));
+Map<String, String> checked = await(statuses).until(
+        hasEntry(entry -> entry.getKey().startsWith("pay") && entry.getValue().startsWith("READY")));
+Map<String, String> nested = await(statuses).until(
+        hasEntry(matches(entry -> entry.getValue().equals("READY"))));
+Map<String, String> absentPair = await(statuses).until(
+        hasNoEntry("payment", "FAILED"));
+Map<String, String> absentMatch = await(statuses).until(
+        hasNoEntry(entry -> entry.getValue().startsWith("FAIL")));
+Map<String, String> all = await(statuses).until(
+        allEntries(entry -> entry.getValue().equals("READY")));
+Map.Entry<String, String> only = await(statuses).until(
+        singleEntry(entry -> entry.getValue().equals("READY")));
+```
+
+As with other generic conditions, appending `because` to a predicate or nested condition may
+require a typed lambda parameter or a method reference, for example
+`hasEntry((Map.Entry<String, String> entry) -> entry.getValue().equals("READY")).because("A ready entry is required")`.
+The two-argument predicate `hasEntry((key, value) -> ...)` is also available.
+
+`hasNoEntry` accepts the same argument forms: a key-value pair, a predicate on
+one entry, a predicate on its key and value, or a nested condition. It succeeds
+when no entry matches, including for an empty map, and returns the original map.
+Exceptions from a predicate or nested condition remain failures.
+
+`containsAllEntries(map)` and `containsAnyEntries(map)` check all or any of the supplied entries;
+`hasNoEntry(key, value)`, `doesNotContainAllEntries(map)`, and
 `doesNotContainAnyEntries(map)` express the corresponding absence checks.
 
 Diagnostics retain a single operand as one value and a bulk expectation as a
@@ -458,7 +559,7 @@ import static io.github.gromoff97.awium.Await.await;
 
 Payment loaded = await(paymentRepository::load).until(equalTo(expectedPayment));
 Payment found = await(paymentRepository::find).until(present);
-Payment onlyPayment = await(paymentRepository::findAll).upTo(TIMEOUT).every(POLL_INTERVAL).until(single);
+Payment onlyPayment = await(paymentRepository::findAll).upTo(TIMEOUT).every(POLL_INTERVAL).until(singleElement);
 Map.Entry<String, Payment> entry = await(paymentRepository::index).until(singleEntry);
 ```
 
@@ -477,7 +578,7 @@ Callable<List<Payment>> payments = paymentRepository::findAll;
 Callable<Map<String, Payment>> index = paymentRepository::index;
 
 Payment found = await(payment::call).until(present);
-Payment onlyPayment = await(payments::call).until(single);
+Payment onlyPayment = await(payments::call).until(singleElement);
 Map.Entry<String, Payment> onlyEntry = await(index::call).until(singleEntry);
 ```
 
@@ -500,7 +601,7 @@ await(source).until(isNull);
 ```
 
 Wildcard-returning sources can use a lambda such as
-`await(() -> paymentRepository.findAllView()).until(single)`.
+`await(() -> paymentRepository.findAllView()).until(singleElement)`.
 A direct method reference to that method may choose the general value overload.
 
 For covariant collection and map results, typed views establish both the complete
@@ -514,7 +615,7 @@ import io.github.gromoff97.awium.Await.MapViewSource;
 var payments = new CollectionViewSource<Payment, List<? extends Payment>>(paymentRepository::findAllView);
 var index = new MapViewSource<String, Payment, Map<? extends String, ? extends Payment>>(paymentRepository::indexView);
 
-Payment payment = await(payments).until(single);
+Payment payment = await(payments).until(singleElement);
 Map.Entry<? extends String, ? extends Payment> entry = await(index).until(singleEntry);
 ```
 
@@ -564,6 +665,9 @@ the associated `condition()`, sequence `progress()`, and an `outcome()`.
 Progress is `null` until a sequence stage has been evaluated. It exposes the
 number of captured stages, the total, `lastEvaluatedStageNumber()`, and
 `activeCondition()`. Source and waiting failures retain the last known progress.
+Sequence failure messages show the active condition's one-based position as
+`Stage: 2 of 3`. After an intermediate success, this points to the next condition;
+the final condition stays active during persistence checks.
 
 `AttemptRecord.Outcome.Evaluated` holds the observed value
 and its `evaluation()`: `ConditionResult.Satisfied` or `Unsatisfied`. Thrown

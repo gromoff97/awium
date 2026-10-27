@@ -35,7 +35,7 @@ public final class StringConditions {
     }
 
     public static PreservingCondition<CharSequence> containsAll(Iterable<? extends CharSequence> expected) {
-        List<String> values = nonEmpty(expected, "expected strings");
+        List<String> values = texts(expected, "expected strings");
         return matching("string contains all expected strings", "string did not contain all expected strings", expectedReference(values),
                 actual -> matchesAll(values, actual::contains));
     }
@@ -47,7 +47,7 @@ public final class StringConditions {
     }
 
     public static PreservingCondition<CharSequence> doesNotContainAny(Iterable<? extends CharSequence> unexpected) {
-        List<String> values = nonEmpty(unexpected, "unexpected strings");
+        List<String> values = texts(unexpected, "unexpected strings");
         return matching("string does not contain unexpected strings", "string contained an unexpected string", unexpectedReference(values),
                 actual -> !matchesAny(values, actual::contains));
     }
@@ -123,31 +123,31 @@ public final class StringConditions {
                 "string was equal to unexpected string ignoring case", unexpectedReference(value), actual -> !actual.equalsIgnoreCase(value));
     }
 
-    public static PreservingCondition<CharSequence> length(int expected) {
+    public static PreservingCondition<CharSequence> hasLength(int expected) {
         return matchingLength(expected, actual -> actual == expected, "is " + expected);
     }
 
-    public static PreservingCondition<CharSequence> lengthIsNot(int unexpected) {
+    public static PreservingCondition<CharSequence> hasLengthNotEqualTo(int unexpected) {
         return matchingLength(unexpected, actual -> actual != unexpected, "is not " + unexpected);
     }
 
-    public static PreservingCondition<CharSequence> lengthGreaterThan(int lowerBound) {
+    public static PreservingCondition<CharSequence> hasLengthGreaterThan(int lowerBound) {
         return matchingLength(lowerBound, actual -> actual > lowerBound, "is greater than " + lowerBound);
     }
 
-    public static PreservingCondition<CharSequence> lengthAtLeast(int lowerBound) {
+    public static PreservingCondition<CharSequence> hasLengthAtLeast(int lowerBound) {
         return matchingLength(lowerBound, actual -> actual >= lowerBound, "is at least " + lowerBound);
     }
 
-    public static PreservingCondition<CharSequence> lengthLessThan(int upperBound) {
+    public static PreservingCondition<CharSequence> hasLengthLessThan(int upperBound) {
         return matchingLength(upperBound, actual -> actual < upperBound, "is less than " + upperBound);
     }
 
-    public static PreservingCondition<CharSequence> lengthAtMost(int upperBound) {
+    public static PreservingCondition<CharSequence> hasLengthAtMost(int upperBound) {
         return matchingLength(upperBound, actual -> actual <= upperBound, "is at most " + upperBound);
     }
 
-    public static PreservingCondition<CharSequence> lengthBetween(int lowerBound, int upperBound) {
+    public static PreservingCondition<CharSequence> hasLengthBetween(int lowerBound, int upperBound) {
         validateRange(lowerBound, upperBound, "length");
         return matchingLength(lowerBound, length -> length >= lowerBound && length <= upperBound,
                 "is between " + lowerBound + " and " + upperBound);
@@ -168,10 +168,9 @@ public final class StringConditions {
         return preservingNonNull("string", description, mismatch, reference, actual -> matches.test(actual.toString()));
     }
 
-    private static List<String> nonEmpty(Iterable<? extends CharSequence> values, String name) {
-        var snapshot = stream(requireNonNull(values, name + " must not be null").spliterator(), false)
+    private static List<String> texts(Iterable<? extends CharSequence> values, String name) {
+        return stream(requireNonNull(values, name + " must not be null").spliterator(), false)
                 .map(value -> text(value, "text")).toList();
-        return ConditionSupport.nonEmpty(snapshot, name);
     }
 
     private static String text(CharSequence value, String name) {

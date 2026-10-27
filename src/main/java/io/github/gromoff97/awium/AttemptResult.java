@@ -14,7 +14,8 @@ sealed interface AttemptResult<RESULT> {
 
     default Condition diagnosticCondition(Condition outer) {
         var condition = condition();
-        return condition == null ? outer : condition;
+        if (condition == null) return outer;
+        return outer.explanation() == null ? condition : condition.because(outer.explanation());
     }
 
     record Evaluated<RESULT>(ConditionResult<? extends RESULT> result,

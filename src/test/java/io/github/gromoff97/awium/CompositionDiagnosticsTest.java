@@ -142,7 +142,7 @@ class CompositionDiagnosticsTest {
             var actual = new ProbeContainers.EntryMap<String, String>(List.of(entry));
             var selected = valueFor("customerId", conditionPerWait("nested", () -> {
                 throw new AssertionError("nested factory must not run before extraction succeeds");
-            }));
+            })).because("customer lookup must succeed");
             var waiting = await(() -> actual);
 
             var result = waiting.tryUntil(selected);
@@ -150,6 +150,7 @@ class CompositionDiagnosticsTest {
             assertEquals(CONDITION_FAILED, failure.reason());
             assertSame(cause, failure.cause());
             assertTrue(failure.message().contains("Expected: customerId"), failure.message());
+            assertTrue(failure.message().contains("Because: customer lookup must succeed"), failure.message());
             assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, result.attempts().getFirst().outcome());
             assertEquals("customerId", result.attempts().getFirst().condition().reference().value());
             assertSame(cause, assertFailure(CONDITION_FAILED, () -> waiting.until(selected)).getCause());
@@ -161,6 +162,7 @@ class CompositionDiagnosticsTest {
             var progress = captured.attempts().getFirst().progress();
             assertEquals(0, progress.capturedStages());
             assertEquals("customerId", progress.activeCondition().reference().value());
+            assertEquals("customer lookup must succeed", progress.activeCondition().explanation());
         }
     }
 }

@@ -51,7 +51,6 @@ class CollectionMembershipTest {
             }
         }
         for (var expected : inputs) {
-            if (expected.isEmpty()) continue;
             var condition = containsAll(expected);
             for (var actual : inputs) {
                 assertEquals(actual.containsAll(expected), evaluate(condition, actual) instanceof Satisfied<?>);
@@ -205,15 +204,44 @@ class CollectionMembershipTest {
     }
 
     @Test
-    void aggregateFactoriesRejectNullAndEmptyInputs() {
+    void aggregateFactoriesRejectNullInputs() {
         assertValidation(NullPointerException.class,
                 () -> doesNotContainAny(null));
         assertValidation(NullPointerException.class,
                 () -> containsAll(null));
-        assertValidation(IllegalArgumentException.class,
-                () -> doesNotContainAny(List.of()));
-        assertValidation(IllegalArgumentException.class,
-                () -> containsAll(List.of()));
+        assertValidation(NullPointerException.class,
+                () -> containsAny(null));
+        assertValidation(NullPointerException.class,
+                () -> doesNotContainAll(null));
+    }
+
+    @Test
+    void emptyExpectedSetsFollowMembershipSemanticsAcrossTerminals() {
+        List<PreservingCondition<Collection<? super String>>> checks = List.of(
+                containsAll(List.of()), doesNotContainAny(List.of()),
+                containsAny(List.of()), doesNotContainAll(List.of()));
+        for (var check : checks) assertUnsatisfied(evaluate(check, null));
+
+        for (var values : List.of(List.<String>of(), List.of("actual"))) {
+            var actual = new ArrayList<>(values);
+            var time = new FakeTime(0);
+            var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+
+            ArrayList<String> all = waiting.until(containsAll(List.of()));
+            ArrayList<String> absent = waiting.until(doesNotContainAny(List.of()));
+            assertSame(actual, all);
+            assertSame(actual, absent);
+            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class,
+                    waiting.tryUntil(containsAll(List.of()))).result());
+
+            for (var failed : List.of(waiting.tryUntil(containsAny(List.of())),
+                    waiting.tryUntil(doesNotContainAll(List.of())))) {
+                assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, failed).failure().reason());
+                assertEquals(List.of(), failed.attempts().getLast().condition().reference().value());
+            }
+            assertEquals(actual.isEmpty() ? Satisfied.class : Unsatisfied.class,
+                    evaluate(containsExactly(List.<String>of()), actual).getClass());
+        }
     }
 
     @Test

@@ -21,7 +21,7 @@ public final class ArtifactConsumer {
     public static Object[] run() {
         var values = List.of("ready");
         String optional = await(() -> Optional.of("ready")).until(present);
-        String selected = await(() -> values).until(single);
+        String selected = await(() -> values).until(singleElement);
         int length = await(() -> length(text())).until(isNotNull);
         String narrowed = await((Callable<Object>) ArtifactConsumer::text).until(instanceOf(String.class));
         long[] time = {0};

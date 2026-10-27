@@ -79,17 +79,18 @@ class IterableExpectedValuesTest {
     }
 
     @Test
-    void invalidExpectationsFailBeforePollingAndEmptyExactExpectationsStillWork() {
+    void invalidExpectationsFailBeforePollingAndEmptyMembershipExpectationsWork() {
         Iterable<String> empty = List.of();
         Iterable<String> absent = null;
-        assertThrows(IllegalArgumentException.class, () -> containsAll(empty));
-        assertThrows(IllegalArgumentException.class, () -> in(empty));
-        assertThrows(IllegalArgumentException.class, () -> MapConditions.containsAllKeys(empty));
         assertThrows(NullPointerException.class, () -> containsAll(absent));
         assertThrows(NullPointerException.class, () -> notIn(absent));
+        assertEquals("ready", waiting(() -> "ready").until(notIn(empty)));
         List<String> actual = List.of();
+        assertSame(actual, waiting(() -> actual).until(containsAll(empty)));
         assertSame(actual, waiting(() -> actual).until(containsOnly(empty)));
         assertSame(actual, waiting(() -> actual).until(containsExactly(empty)));
+        var entries = Map.of("key", "value");
+        assertSame(entries, waiting(() -> entries).until(MapConditions.containsAllKeys(empty)));
 
         int[] reads = {0};
         var cause = new IllegalStateException("expected iterator failed");
