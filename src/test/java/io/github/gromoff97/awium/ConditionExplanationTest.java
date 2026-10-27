@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -62,6 +63,31 @@ class ConditionExplanationTest {
         assertSame(users, referenced);
         for (User result : List.of(selected, only, found, mapped, narrowed, direct)) {
             assertSame(user, result);
+        }
+    }
+
+    @Test
+    void wildcardEntryChecksKeepTheMapTypeAndInheritedReason() {
+        CheckedPredicate<Map.Entry<String, ? extends Number>> positive = entry -> entry.getValue().intValue() > 0;
+        var check = matches(positive).because("entry requirement");
+        var opposite = matches(CheckedPredicate.not(positive)).because("entry requirement");
+        var actual = new LinkedHashMap<String, Integer>();
+        actual.put("ready", 1);
+        var time = new FakeTime(0);
+        var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+
+        List<LinkedHashMap<String, Integer>> checked = List.of(
+                waiting.until(MapConditions.allEntries(check)),
+                waiting.until(MapConditions.hasEntry(check)),
+                waiting.until(MapConditions.hasNoEntry(opposite)));
+        checked.forEach(value -> assertSame(actual, value));
+
+        for (var result : List.of(waiting.tryUntil(MapConditions.allEntries(opposite)),
+                waiting.tryUntil(MapConditions.hasEntry(opposite)), waiting.tryUntil(MapConditions.hasNoEntry(check)))) {
+            var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+            assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+            assertTrue(failure.message().contains("Because: entry requirement"), failure.message());
+            assertEquals("entry requirement", result.attempts().getLast().condition().explanation());
         }
     }
 

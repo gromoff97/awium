@@ -236,6 +236,21 @@ Composed conditions inherit the nested condition's reason; an explicit outer
 `because` replaces it. Each stage in an ordered sequence retains its own reason,
 displayed alongside its stage number when the sequence fails.
 
+For wildcard entry predicates, even a typed callback may leave the map's exact
+type unknown until `until`. For example, `allEntries(positive).because(...)`
+can infer `Map<String, Number>` when the source returns `Map<String, Integer>`.
+Put the reason on the nested check to keep that inference available:
+
+```java
+CheckedPredicate<Map.Entry<String, ? extends Number>> positive =
+        entry -> entry.getValue().intValue() > 0;
+Map<String, Integer> counts = Map.of("ready", 1);
+Map<String, Integer> checked = await(() -> counts).until(
+        MapConditions.allEntries(matches(positive).because("Positive counts required")));
+```
+
+The same form works with `hasEntry` and `hasNoEntry` and preserves the nested reason.
+
 ## Selection and checking
 
 Put a check inside the selection:
