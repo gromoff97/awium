@@ -423,7 +423,8 @@ The corresponding absence checks are `doesNotContain(fragment)` and
 Their text is frozen when the condition is created, so later changes to an
 expected `StringBuilder` or `CharBuffer` do not change the check.
 An empty set of fragments satisfies both `containsAll(...)` and
-`doesNotContainAny(...)` for non-null text. A set containing `""` is different:
+`doesNotContainAny(...)` for non-null text without reading its characters or
+rendering it as a string. A set containing `""` is different:
 every string contains that fragment, so `doesNotContainAny(List.of(""))` is unsatisfied.
 Use `StringConditions.contentEquals("ready")` to compare characters across
 different text implementations. General `equalTo` follows object equality:
@@ -469,6 +470,7 @@ Ordered expectations use the same iterable form: `startsWith(List.of("a", "b"))`
 An empty pattern satisfies `startsWith(...)`, `endsWith(...)`, `containsSequence(...)`,
 and `containsSubsequence(...)` for any non-null collection, including an empty one.
 Their negative sequence checks are unsatisfied for an empty pattern.
+These empty-pattern checks do not read the observed collection's size or elements.
 Use `Collections.singletonList(array)` when a reference array is one element of the pattern.
 
 Maps follow the same rule: `containsKey(key)`, `doesNotContainKey(key)`,

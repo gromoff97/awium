@@ -234,13 +234,13 @@ public final class CollectionConditions {
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> startsWith(Iterable<? extends ELEMENT> expected) {
         List<? extends ELEMENT> values = snapshot(expected, "expected elements");
         return preserving("collection contains expected prefix", "collection did not contain expected prefix", expectedReference(values),
-                actual -> actual.size() >= values.size() && prefixMatches(actual.iterator(), values));
+                actual -> values.isEmpty() || actual.size() >= values.size() && prefixMatches(actual.iterator(), values));
     }
 
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> endsWith(Iterable<? extends ELEMENT> expected) {
         List<? extends ELEMENT> values = snapshot(expected, "expected elements");
         return preserving("collection contains expected suffix", "collection did not contain expected suffix", expectedReference(values),
-                actual -> actual.size() >= values.size() && prefixMatches(actual.reversed().iterator(), values.reversed()));
+                actual -> values.isEmpty() || actual.size() >= values.size() && prefixMatches(actual.reversed().iterator(), values.reversed()));
     }
 
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> containsSequence(Iterable<? extends ELEMENT> expected) {

@@ -231,6 +231,28 @@ class CollectionSelectionConditionsTest {
     }
 
     @Test
+    void emptyOrderedPatternsDoNotReadTheObservedCollection() {
+        var actual = new AbstractList<Object>() {
+            @Override public Object get(int index) { throw new AssertionError("elements must not be read"); }
+            @Override public int size() { throw new AssertionError("size must not be read"); }
+            @Override public java.util.Iterator<Object> iterator() { throw new AssertionError("iterator must not be requested"); }
+            @Override public List<Object> reversed() { throw new AssertionError("reverse view must not be requested"); }
+            @Override public String toString() { return "unread collection"; }
+        };
+        var time = new FakeTime(0);
+        var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+        for (var check : List.of(CollectionConditions.startsWith(List.of()), CollectionConditions.endsWith(List.of()),
+                CollectionConditions.containsSequence(List.of()), CollectionConditions.containsSubsequence(List.of()))) {
+            assertSame(actual, waiting.until(check));
+        }
+        for (var check : List.of(CollectionConditions.doesNotContainSequence(List.of()),
+                CollectionConditions.doesNotContainSubsequence(List.of()))) {
+            var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(check)).failure();
+            assertEquals(TIMEOUT, failure.reason());
+        }
+    }
+
+    @Test
     void orderedConditionsRejectIncompletePrefixesAndSuffixes() {
         for (List<Integer> actual : List.of(List.<Integer>of(), List.of(1), List.of(1, 2))) {
             assertEquals(Unsatisfied.class, evaluate(CollectionConditions.startsWith(List.of(1, 2, 3)), actual).getClass());

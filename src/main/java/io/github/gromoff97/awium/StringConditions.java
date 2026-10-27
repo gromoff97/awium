@@ -37,8 +37,8 @@ public final class StringConditions {
 
     public static PreservingCondition<CharSequence> containsAll(Iterable<? extends CharSequence> expected) {
         List<String> values = texts(expected, "expected strings");
-        return matching("string contains all expected strings", "string did not contain all expected strings", expectedReference(values),
-                actual -> matchesAll(values, actual::contains));
+        return preservingNonNull("string", "string contains all expected strings", "string did not contain all expected strings", expectedReference(values),
+                actual -> values.isEmpty() || matchesAll(values, actual.toString()::contains));
     }
 
     public static PreservingCondition<CharSequence> doesNotContain(CharSequence unexpected) {
@@ -49,8 +49,8 @@ public final class StringConditions {
 
     public static PreservingCondition<CharSequence> doesNotContainAny(Iterable<? extends CharSequence> unexpected) {
         List<String> values = texts(unexpected, "unexpected strings");
-        return matching("string does not contain unexpected strings", "string contained an unexpected string", unexpectedReference(values),
-                actual -> !matchesAny(values, actual::contains));
+        return preservingNonNull("string", "string does not contain unexpected strings", "string contained an unexpected string", unexpectedReference(values),
+                actual -> values.isEmpty() || !matchesAny(values, actual.toString()::contains));
     }
 
     public static PreservingCondition<CharSequence> containsIgnoringCase(CharSequence expected) {

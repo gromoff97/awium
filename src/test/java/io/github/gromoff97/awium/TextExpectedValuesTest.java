@@ -124,6 +124,19 @@ class TextExpectedValuesTest {
     }
 
     @Test
+    void emptyFragmentSetsDoNotReadTheObservedText() {
+        var actual = new CharSequence() {
+            @Override public int length() { throw new AssertionError("length must not be read"); }
+            @Override public char charAt(int index) { throw new AssertionError("characters must not be read"); }
+            @Override public CharSequence subSequence(int start, int end) { throw new AssertionError("text must not be sliced"); }
+            @Override public String toString() { throw new AssertionError("text must not be rendered"); }
+        };
+        for (var check : List.of(StringConditions.containsAll(List.of()), StringConditions.doesNotContainAny(List.of()))) {
+            assertSame(actual, await(() -> actual).until(check));
+        }
+    }
+
+    @Test
     void invalidExpectedTextIsRejectedDuringConstruction() {
         assertThrows(NullPointerException.class, () -> StringConditions.containsAll(null));
         assertThrows(NullPointerException.class, () -> StringConditions.containsAll(java.util.Arrays.asList("ready", null)));
