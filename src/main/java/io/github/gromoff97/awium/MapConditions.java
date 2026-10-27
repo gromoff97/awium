@@ -85,9 +85,7 @@ public final class MapConditions {
     /** Checks the sole entry's key and value, retaining the source's entry type. */
     public static <KEY, VALUE> SelectedCondition<Map<?, ?>, Entry<? extends KEY, ? extends VALUE>, Reference<?>> singleEntry(
             CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
-        requireNonNull(predicate, "predicate must not be null");
-        return singleEntry(Conditions.matches((Entry<? extends KEY, ? extends VALUE> entry) ->
-                predicate.test(entry.getKey(), entry.getValue())));
+        return singleEntry(entryCheck(predicate));
     }
 
     public static <CHECKED, REFERENCE> SelectedCondition<Map<?, ?>, CHECKED, REFERENCE> singleEntry(
@@ -114,9 +112,7 @@ public final class MapConditions {
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> allEntries(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
-        requireNonNull(predicate, "predicate must not be null");
-        var nested = Conditions.matches((Entry<? extends KEY, ? extends VALUE> entry) ->
-                predicate.test(entry.getKey(), entry.getValue()));
+        var nested = entryCheck(predicate);
         return ConditionSupport.quantified("map", "all map entries match", "not all map entries matched",
                 ConditionSupport.Quantifier.ALL, nested, Map::entrySet,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
@@ -154,9 +150,7 @@ public final class MapConditions {
 
     /** Requires at least one matching key-value pair and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> hasEntry(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
-        requireNonNull(predicate, "predicate must not be null");
-        var nested = Conditions.matches((Entry<? extends KEY, ? extends VALUE> entry) ->
-                predicate.test(entry.getKey(), entry.getValue()));
+        var nested = entryCheck(predicate);
         return ConditionSupport.quantified("map", "any map entry matches", "no map entry matched",
                 ConditionSupport.Quantifier.ANY, nested, Map::entrySet,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
@@ -197,9 +191,7 @@ public final class MapConditions {
 
     /** Requires every key-value pair to fail the predicate and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> hasNoEntry(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
-        requireNonNull(predicate, "predicate must not be null");
-        var nested = Conditions.matches((Entry<? extends KEY, ? extends VALUE> entry) ->
-                predicate.test(entry.getKey(), entry.getValue()));
+        var nested = entryCheck(predicate);
         return ConditionSupport.quantified("map", "no map entry matches", "a map entry matched",
                 ConditionSupport.Quantifier.NONE, nested, Map::entrySet,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
@@ -394,9 +386,7 @@ public final class MapConditions {
 
     public static <KEY, ENTRY_KEY, VALUE> SelectedCondition<Map<? super KEY, ?>, Entry<? extends ENTRY_KEY, ? extends VALUE>, Reference<?>> entryFor(
             KEY key, CheckedBiPredicate<? super ENTRY_KEY, ? super VALUE> predicate) {
-        requireNonNull(predicate, "predicate must not be null");
-        return entryFor(key, Conditions.matches((Entry<? extends ENTRY_KEY, ? extends VALUE> entry) ->
-                predicate.test(entry.getKey(), entry.getValue())));
+        return entryFor(key, entryCheck(predicate));
     }
 
     public static <KEY, CHECKED, REFERENCE> SelectedCondition<Map<? super KEY, ?>, CHECKED, REFERENCE> entryFor(
@@ -507,6 +497,12 @@ public final class MapConditions {
         var entries = snapshotEntries(unexpected, "unexpected entries");
         return preserving("map does not contain exactly the unexpected entries", "map contained exactly the unexpected entries", unexpectedReference(entries),
                 actual -> !exactContent(actual, entries));
+    }
+
+    private static <KEY, VALUE> PreservingCondition<Entry<? extends KEY, ? extends VALUE>> entryCheck(
+            CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
+        requireNonNull(predicate, "predicate must not be null");
+        return Conditions.matches(entry -> predicate.test(entry.getKey(), entry.getValue()));
     }
 
     private static <KEY, VALUE> ConditionResult<Entry<KEY, VALUE>> selectSingleEntry(Map<KEY, VALUE> actual) {

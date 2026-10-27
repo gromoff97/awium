@@ -72,6 +72,27 @@ class MapSelectionConditionsTest {
     }
 
     @Test
+    void pairedEntryPredicatesRetryInsteadOfReturningANonMatchingEntry() {
+        for (boolean keyed : List.of(false, true)) {
+            var observations = new java.util.ArrayDeque<>(List.of(Map.of("key", 1), Map.of("key", 2)));
+            var checked = new java.util.ArrayList<Map.Entry<String, Integer>>();
+            CheckedBiPredicate<String, Integer> predicate = (key, value) -> {
+                checked.add(Map.entry(key, value));
+                return value == 2;
+            };
+            var time = new FakeTime(0);
+            var waiting = await(observations::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
+            var result = keyed ? waiting.tryUntil(MapConditions.entryFor("key", predicate))
+                    : waiting.tryUntil(MapConditions.singleEntry(predicate));
+
+            assertEquals(Map.entry("key", 2), assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+            assertEquals(2, result.totalAttempts());
+            assertEquals(List.of(Map.entry("key", 1), Map.entry("key", 2)), checked);
+            assertTrue(observations.isEmpty());
+        }
+    }
+
+    @Test
     void entryForInitializesItsCheckAfterFindingTheKeyAndChecksOnlyThatEntry() {
         List<Map<String, Integer>> observations = java.util.Arrays.asList(
                 null, Map.of(), Map.of("other", 2), Map.of("key", 1, "other", 2), Map.of("key", 2, "other", 1));

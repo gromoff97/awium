@@ -43,10 +43,12 @@ class CheckedPredicateTest {
                 .tryUntil(matches(not(User::checkReady)));
         assertSame(PENDING, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
 
-        Map.Entry<String, User> entry = await(() -> Map.of("pending", PENDING)).usingTime(time, time)
+        var entries = new ArrayDeque<>(List.of(Map.of("ready", FIRST), Map.of("pending", PENDING)));
+        Map.Entry<String, User> entry = await(entries::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
                 .until(MapConditions.singleEntry(CheckedBiPredicate.not(CheckedPredicateTest::readyEntry)));
         assertEquals("pending", entry.getKey());
         assertEquals(0, entry.getValue().id());
+        assertTrue(entries.isEmpty());
     }
 
     @Test
