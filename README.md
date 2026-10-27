@@ -490,6 +490,8 @@ An empty pattern satisfies `startsWith(...)`, `endsWith(...)`, `containsSequence
 and `containsSubsequence(...)` for any non-null collection, including an empty one.
 Their negative sequence checks are unsatisfied for an empty pattern.
 These empty-pattern checks do not read the observed collection's size or elements.
+When a non-empty pattern is longer than the collection, these checks decide from
+the size without retrieving elements.
 Use `Collections.singletonList(array)` when a reference array is one element of the pattern.
 
 Maps follow the same rule: `containsKey(key)`, `doesNotContainKey(key)`,

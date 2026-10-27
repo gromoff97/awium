@@ -303,12 +303,13 @@ class CollectionSelectionConditionsTest {
 
     @Test
     void impossiblePatternLengthDoesNotReenterContainerCallbacks() {
+        var expected = List.of(1, 2, 3);
         for (var elements : List.of(List.<Integer>of(), List.of(1), List.of(1, 2))) {
             for (boolean negative : List.of(false, true)) {
                 var conditions = negative
-                        ? List.of(CollectionConditions.doesNotContainSequence(List.of(1, 2, 3)))
-                        : List.of(CollectionConditions.startsWith(List.of(1, 2, 3)), CollectionConditions.endsWith(List.of(1, 2, 3)),
-                                CollectionConditions.containsSequence(List.of(1, 2, 3)));
+                        ? List.of(CollectionConditions.doesNotContainSequence(expected), CollectionConditions.doesNotContainSubsequence(expected))
+                        : List.of(CollectionConditions.startsWith(expected), CollectionConditions.endsWith(expected),
+                                CollectionConditions.containsSequence(expected), CollectionConditions.containsSubsequence(expected));
                 for (var condition : conditions) {
                     var actual = new AbstractList<Integer>() {
                         private int sizeReads;

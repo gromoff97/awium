@@ -424,8 +424,9 @@ public final class CollectionConditions {
         return false;
     }
 
-    private static boolean containsSubsequence(Iterable<?> actual, List<?> expected) {
+    private static boolean containsSubsequence(Collection<?> actual, List<?> expected) {
         if (expected.isEmpty()) return true;
+        if (actual.size() < expected.size()) return false;
         int expectedIndex = 0;
         for (Object value : actual) {
             if (deepEquals(value, expected.get(expectedIndex)) && ++expectedIndex == expected.size()) {
