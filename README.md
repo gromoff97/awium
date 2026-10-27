@@ -355,6 +355,9 @@ success, `unsatisfied()` when no extra mismatch text is needed, or
 `unsatisfied(message, cause)` to attach
 diagnostics. A condition returns only `Satisfied` or `Unsatisfied`; any thrown
 `Throwable` becomes an uncontrolled attempt and stops the wait.
+Callback payloads are ignored, so a callback returning `ConditionResult<Void>`
+works directly with both custom-condition factories. Its input type still
+constrains the observed value, and the terminal returns that original value.
 
 `condition(description, callback)` reuses the supplied callback.
 `conditionPerWait(description, factory)` accepts a JDK `Callable` supplying a

@@ -66,12 +66,12 @@ final class ConditionSupport {
     }
 
     static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description,
-            CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>> evaluator) {
+            CheckedFunction<? super OBSERVED, ? extends ConditionResult<?>> evaluator) {
         return preserving(description, null, evaluator);
     }
 
     static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description, Reference<?> reference,
-            CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>> evaluator) {
+            CheckedFunction<? super OBSERVED, ? extends ConditionResult<?>> evaluator) {
         var definition = condition(description, reference, (OBSERVED actual) ->
                 requireNonNull(evaluator.apply(actual), "condition returned null ConditionResult")
                         .mapSatisfied(ignored -> actual));
@@ -80,7 +80,7 @@ final class ConditionSupport {
     }
 
     static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description,
-            Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory) {
+            Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<?>>> evaluatorFactory) {
         var definition = new Condition.Typed<OBSERVED, OBSERVED>(description, null, () -> {
             var evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
             return actual -> AttemptResult.of(

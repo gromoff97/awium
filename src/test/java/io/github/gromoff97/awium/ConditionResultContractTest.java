@@ -1,5 +1,9 @@
 package io.github.gromoff97.awium;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -15,6 +19,36 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ConditionResultContractTest {
 
     private record User(int id) {}
+
+    @Test
+    void customChecksUseTheCallbacksStatusAndPreserveTheObservation() {
+        CheckedFunction<User, ConditionResult<Void>> status = user -> user.id() > 0
+                ? satisfied() : unsatisfied("id must be positive");
+        Callable<CheckedFunction<User, ConditionResult<Void>>> factory = () -> status;
+        var direct = Conditions.condition("positive id", status).because("user must be saved");
+        var lazy = Conditions.conditionPerWait("positive id", factory).because("user must be saved");
+        var ignoredPayload = Conditions.condition("payload is ignored", (User user) -> satisfied("unrelated value"));
+        var actual = new User(42);
+        var time = new FakeTime(0);
+        var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10));
+
+        assertEquals(42, waiting.until(direct).id());
+        AwaitResult<User, User> captured = waiting.tryUntil(lazy);
+        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+        List<User> values = waiting.until(direct, lazy, ignoredPayload);
+        for (User value : values) assertSame(actual, value);
+        assertSame(actual, await(() -> Optional.of(actual)).until(OptionalConditions.hasValue(direct)));
+        assertEquals(42, await(() -> List.of(actual)).until(CollectionConditions.singleElement(lazy)).id());
+        assertEquals(42, await(() -> Map.of("user", actual)).until(MapConditions.valueFor("user", direct)).id());
+
+        for (var check : List.of(direct, lazy)) {
+            var failed = await(() -> new User(0)).usingTime(time, time).upTo(ofNanos(1)).tryUntil(check);
+            var failure = assertInstanceOf(AwaitResult.Failed.class, failed).failure();
+            assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+            assertTrue(failure.message().contains("id must be positive"), failure.message());
+            assertTrue(failure.message().contains("Because: user must be saved"), failure.message());
+        }
+    }
 
     @Test
     void satisfactionWithoutAPayloadPreservesConcreteAndSelectedObservations() {

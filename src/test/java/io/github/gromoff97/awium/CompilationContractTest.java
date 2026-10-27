@@ -537,24 +537,30 @@ class CompilationContractTest {
     }
 
     @Test
-    void lazyConditionsRejectAnIncompatibleObservedType() throws IOException {
+    void customConditionsRejectAnIncompatibleObservedType() throws IOException {
         for (String terminal : List.of("until", "tryUntil")) {
-            assertRejected("""
-                    import static io.github.gromoff97.awium.Await.await;
-                    import static io.github.gromoff97.awium.Conditions.*;
-                    import io.github.gromoff97.awium.CheckedFunction;
-                    import io.github.gromoff97.awium.ConditionResult;
-                    import java.util.concurrent.Callable;
+            for (String condition : List.of("condition(\"typed\", Contract::status)",
+                    "conditionPerWait(\"typed\", Contract::evaluator)")) {
+                assertRejected("""
+                        import static io.github.gromoff97.awium.Await.await;
+                        import static io.github.gromoff97.awium.Conditions.*;
+                        import io.github.gromoff97.awium.CheckedFunction;
+                        import io.github.gromoff97.awium.ConditionResult;
+                        import java.util.concurrent.Callable;
 
-                    final class Contract {
-                        static CheckedFunction<String, ConditionResult<String>> evaluator() {
-                            return ConditionResult::satisfied;
+                        final class Contract {
+                            static ConditionResult<Void> status(String value) {
+                                return ConditionResult.satisfied();
+                            }
+                            static CheckedFunction<String, ConditionResult<Void>> evaluator() {
+                                return Contract::status;
+                            }
+                            void check(Callable<Integer> source) {
+                                await(source).%s(%s.because("reason"));
+                            }
                         }
-                        void check(Callable<Integer> source) {
-                            await(source).%s(condition("typed", Contract::evaluator));
-                        }
-                    }
-                    """.formatted(terminal));
+                        """.formatted(terminal, condition));
+            }
         }
     }
 

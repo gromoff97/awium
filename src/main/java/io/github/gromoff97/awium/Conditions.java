@@ -37,9 +37,10 @@ public final class Conditions {
      * Creates a named check using the supplied callback for every execution.
      * A satisfied result returns the original observation, ignoring the callback's result payload.
      * Use {@link ConditionResult#satisfied()} when only signaling success.
+     * Callbacks may return {@code ConditionResult<Void>} or any other result payload type.
      */
     public static <OBSERVED> PreservingCondition<OBSERVED> condition(String description,
-            CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>> evaluation) {
+            CheckedFunction<? super OBSERVED, ? extends ConditionResult<?>> evaluation) {
         return ConditionSupport.preserving(description, evaluation);
     }
 
@@ -49,7 +50,7 @@ public final class Conditions {
      * Like {@link #condition(String, CheckedFunction)}, a satisfied check returns the original observation.
      */
     public static <OBSERVED> PreservingCondition<OBSERVED> conditionPerWait(String description,
-            Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory) {
+            Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<?>>> evaluatorFactory) {
         return ConditionSupport.preserving(description, evaluatorFactory);
     }
 
