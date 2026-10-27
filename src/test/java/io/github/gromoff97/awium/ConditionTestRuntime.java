@@ -18,7 +18,7 @@ final class ConditionTestRuntime {
     }
 
     static <S> ConditionResult<? extends S> evaluate(
-            SourceCondition<? super S, ? super Reference<? super S>, ?> condition, S actual) {
+            SourceCondition<? super S, ? super Reference<? super S>> condition, S actual) {
         return evaluated(ConditionAwaitAttempt.<S, S>bind(condition).probe(actual));
     }
 

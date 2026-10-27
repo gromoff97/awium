@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.CollectionConditions.first;
 import static io.github.gromoff97.awium.CollectionConditions.last;
@@ -41,14 +41,14 @@ class CollectionSelectionConditionsTest {
         var users = new ArrayList<>(List.of(new User(1), new User(2)));
         java.util.concurrent.Callable<ArrayList<User>> source = () -> users;
 
-        User matching = awaitCollection(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(matches(user -> user.id() == 2)));
-        String typed = awaitCollection((java.util.concurrent.Callable<List<Object>>) () -> List.of("text", 42)).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(instanceOf(String.class)));
-        String nullable = awaitCollection(() -> Arrays.asList((String) null)).usingTime(pollingTime, pollingTime).until(CollectionConditions.single);
+        User matching = await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(matches(user -> user.id() == 2)));
+        String typed = await((java.util.concurrent.Callable<List<Object>>) () -> List.of("text", 42)).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(instanceOf(String.class)));
+        String nullable = await(() -> Arrays.asList((String) null)).usingTime(pollingTime, pollingTime).until(CollectionConditions.single);
 
         assertSame(users.get(1), matching);
         assertEquals("text", typed);
         assertNull(nullable);
-        assertNull(awaitCollection(() -> Arrays.asList(null, "other")).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(matches(value -> value == null))));
+        assertNull(await(() -> Arrays.asList(null, "other")).usingTime(pollingTime, pollingTime).until(CollectionConditions.single(matches(value -> value == null))));
     }
 
     @Test
@@ -57,9 +57,9 @@ class CollectionSelectionConditionsTest {
         var actual = new ArrayList<>(List.of(2, 4, 6));
         java.util.concurrent.Callable<ArrayList<Integer>> source = () -> actual;
 
-        assertSame(actual, awaitCollection(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.all(value -> value % 2 == 0)));
-        assertSame(actual, awaitCollection(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.any(value -> value == 4)));
-        assertSame(actual, awaitCollection(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.none(value -> value < 0)));
+        assertSame(actual, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.all(value -> value % 2 == 0)));
+        assertSame(actual, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.any(value -> value == 4)));
+        assertSame(actual, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.none(value -> value < 0)));
     }
 
     @Test
@@ -76,20 +76,18 @@ class CollectionSelectionConditionsTest {
     void subsetPreservesTypedCollectionsAcrossTerminalsAndComposition() {
         var actual = new ArrayList<>(List.of("ready"));
         var time = new FakeTime(0);
-        var plain = awaitCollection(() -> actual).until(subsetOf(List.of("ready", "done")));
-        var explained = awaitCollection(() -> actual).until(subsetOf(List.of("ready", "done")).because("allowed states"));
-        var selected = awaitCollection(() -> List.of(actual)).until(single(subsetOf(List.of("ready")).because("allowed states")));
-        var captured = awaitCollection(() -> actual).usingTime(time, time)
-                .until(subsetOf(List.of("ready")), subsetOf(List.of("ready", "done")).because("allowed states"));
+        var plain = await(() -> actual).until(subsetOf(List.of("ready", "done")));
+        var selected = await(() -> List.of(actual)).until(single(subsetOf(List.of("ready"))));
+        var captured = await(() -> actual).usingTime(time, time)
+                .until(subsetOf(List.of("ready")), subsetOf(List.of("ready", "done")));
 
         assertSame(actual, plain);
-        assertSame(actual, explained);
         assertSame(actual, selected);
         assertSame(actual, captured.getLast());
-        assertEquals(List.of(5, 5, 5, 5), List.of(plain.getFirst().length(), explained.getFirst().length(),
+        assertEquals(List.of(5, 5, 5), List.of(plain.getFirst().length(),
                 selected.getFirst().length(), captured.getLast().getFirst().length()));
 
-        var diagnostic = awaitCollection(() -> actual).tryUntil(subsetOf(List.of("ready")).because("allowed states"));
+        var diagnostic = await(() -> actual).tryUntil(subsetOf(List.of("ready")));
         if (diagnostic instanceof AwaitResult.Satisfied(var attempts, var value)) {
             assertSame(actual, value);
             assertEquals(5, value.getFirst().length());
@@ -98,7 +96,7 @@ class CollectionSelectionConditionsTest {
         }
 
         List<CharSequence> text = List.of("ready");
-        assertSame(text, awaitCollection(() -> text).until(subsetOf(List.of("ready")).because("compatible subtype")));
+        assertSame(text, await(() -> text).until(subsetOf(List.of("ready"))));
     }
 
     @Test
@@ -142,22 +140,22 @@ class CollectionSelectionConditionsTest {
         var values = new ArrayList<>(List.of(1, 2, 3, 5));
         java.util.concurrent.Callable<ArrayList<Integer>> source = () -> values;
 
-        assertEquals(1, awaitCollection(source).usingTime(pollingTime, pollingTime).until(first));
-        assertEquals(5, awaitCollection(source).usingTime(pollingTime, pollingTime).until(last.because("latest business result")));
-        assertEquals(3, awaitCollection(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.element(2)));
-        assertEquals(3, awaitCollection(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.first(value -> value > 2)));
-        assertEquals(3, awaitCollection(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.last(value -> value < 5)));
-        assertSame(values, awaitCollection(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.startsWith(List.of(1, 2))));
-        assertSame(values, awaitCollection(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.endsWith(List.of(3, 5))));
+        assertEquals(1, await(source::call).usingTime(pollingTime, pollingTime).until(first));
+        assertEquals(5, await(source::call).usingTime(pollingTime, pollingTime).until(last));
+        assertEquals(3, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.element(2)));
+        assertEquals(3, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.first(value -> value > 2)));
+        assertEquals(3, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.last(value -> value < 5)));
+        assertSame(values, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.startsWith(List.of(1, 2))));
+        assertSame(values, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.endsWith(List.of(3, 5))));
         var pair = List.of(1, 2);
-        var exact = awaitCollection(() -> pair).usingTime(pollingTime, pollingTime).upTo(java.time.Duration.ofNanos(1));
+        var exact = await(() -> pair).usingTime(pollingTime, pollingTime).upTo(java.time.Duration.ofNanos(1));
         assertSame(pair, exact.until(CollectionConditions.startsWith(List.of(1, 2))));
         assertSame(pair, exact.until(CollectionConditions.endsWith(List.of(1, 2))));
-        assertSame(values, awaitCollection(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.containsSequence(List.of(2, 3))));
+        assertSame(values, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.containsSequence(List.of(2, 3))));
         assertEquals(Satisfied.class, evaluate(CollectionConditions.containsSequence(List.of(1, 2)),
                 List.of(1, 2)).getClass());
-        assertSame(values, awaitCollection(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.containsSubsequence(List.of(1, 3, 5))));
-        assertSame(values, awaitCollection(source).usingTime(pollingTime, pollingTime).until(CollectionConditions.sorted(Integer::compareTo)));
+        assertSame(values, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.containsSubsequence(List.of(1, 3, 5))));
+        assertSame(values, await(source::call).usingTime(pollingTime, pollingTime).until(CollectionConditions.sorted(Integer::compareTo)));
 
         assertEquals(Unsatisfied.class,
                 evaluate(CollectionConditions.startsWith(List.of(1, 3)), values).getClass());
@@ -178,21 +176,21 @@ class CollectionSelectionConditionsTest {
         assertEquals(Unsatisfied.class, evaluate(CollectionConditions.sorted(Integer::compareTo),
                 List.of(1, 3, 2)).getClass());
         var equalElements = List.of(1, 1);
-        assertSame(equalElements, awaitCollection(() -> equalElements).usingTime(pollingTime, pollingTime)
-                .until(CollectionConditions.sorted(Integer::compareTo).because("equal elements retain their order")));
+        assertSame(equalElements, await(() -> equalElements).usingTime(pollingTime, pollingTime)
+                .until(CollectionConditions.sorted(Integer::compareTo)));
         assertEquals(Satisfied.class, evaluate(CollectionConditions.sorted(
                 java.util.Comparator.comparingInt(Integer::intValue).reversed()), List.of(3, 2, 1)).getClass());
 
         var sequencedSet = new LinkedHashSet<>(List.of(1, 2, 3));
-        assertEquals(1, awaitCollection(() -> sequencedSet).usingTime(pollingTime, pollingTime).until(first));
-        assertSame(sequencedSet, awaitCollection(() -> sequencedSet).usingTime(pollingTime, pollingTime).until(
+        assertEquals(1, await(() -> sequencedSet).usingTime(pollingTime, pollingTime).until(first));
+        assertSame(sequencedSet, await(() -> sequencedSet).usingTime(pollingTime, pollingTime).until(
                 CollectionConditions.startsWith(List.of(1, 2))));
     }
 
     @Test
     void singleMatchingConditionRequiresExactlyOneMatch() {
         var time = new FakeTime(0);
-        var waiting = awaitCollection(() -> List.of(1, 2)).usingTime(time, time).upTo(ofNanos(1));
+        var waiting = await(() -> List.of(1, 2)).usingTime(time, time).upTo(ofNanos(1));
 
         var none = assertFailure(TIMEOUT, () -> waiting.until(single(matches(value -> value > 10))));
         var many = assertFailure(TIMEOUT, () -> waiting.until(single(matches(value -> value > 0))));
@@ -220,10 +218,10 @@ class CollectionSelectionConditionsTest {
                 new LinkedList<>(elements), new LinkedHashSet<>(elements));
         for (var actual : containers) {
             var time = new FakeTime(0);
-            var waiting = awaitCollection(() -> actual).usingTime(time, time);
+            var waiting = await(() -> actual).usingTime(time, time);
 
-            assertSame(actual, waiting.until(CollectionConditions.startsWith(asList(null, new int[] {1, 2})).because("prefix")));
-            assertSame(actual, waiting.until(CollectionConditions.endsWith(List.of("gap", new int[] {3, 4})).because("suffix")));
+            assertSame(actual, waiting.until(CollectionConditions.startsWith(asList(null, new int[] {1, 2}))));
+            assertSame(actual, waiting.until(CollectionConditions.endsWith(List.of("gap", new int[] {3, 4}))));
             assertSame(actual, waiting.until(CollectionConditions.containsSequence(List.of(new int[] {1, 2}, "gap"))));
             var captured = waiting.tryUntil(CollectionConditions.containsSubsequence(asList(null, new int[] {3, 4})));
             assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
@@ -236,12 +234,12 @@ class CollectionSelectionConditionsTest {
         var unrelated = singletonList(new String[] {"other"});
         var actual = singletonList(new String[] {"a", "b"});
         var time = new FakeTime(0);
-        var waiting = awaitCollection(() -> actual).usingTime(time, time);
+        var waiting = await(() -> actual).usingTime(time, time);
 
         for (var check : List.of(CollectionConditions.startsWith(expected), CollectionConditions.endsWith(expected),
                 CollectionConditions.containsSequence(expected), CollectionConditions.containsSubsequence(expected),
                 CollectionConditions.doesNotContainSequence(unrelated), CollectionConditions.doesNotContainSubsequence(unrelated))) {
-            var selected = waiting.until(check.because("an array is one element"));
+            var selected = waiting.until(check);
             AwaitResult<List<String[]>, List<String[]>> attempt = waiting.tryUntil(check);
 
             assertEquals("a", selected.getFirst()[0]);
@@ -285,11 +283,11 @@ class CollectionSelectionConditionsTest {
     void nestedSelectorsWaitForANullCollectionToBecomeAvailable() {
         var observations = Arrays.asList(null, List.of(" "), null, List.of(" ")).iterator();
         var time = new FakeTime(0);
-        var waiting = awaitCollection(observations::next).usingTime(time, time)
+        var waiting = await(observations::next).usingTime(time, time)
                 .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(3));
 
-        String last = waiting.until(CollectionConditions.last(String::isBlank).because("latest blank value"));
-        String single = waiting.until(CollectionConditions.single(matches(String::isBlank)).because("only blank value"));
+        String last = waiting.until(CollectionConditions.last(String::isBlank));
+        String single = waiting.until(CollectionConditions.single(matches(String::isBlank)));
 
         assertEquals(" ", last);
         assertEquals(" ", single);
@@ -299,10 +297,10 @@ class CollectionSelectionConditionsTest {
     @Test
     void selectorsCoverMissingNullAndInvalidPositions() {
         var time = new FakeTime(0);
-        var missing = awaitCollection(() -> (List<String>) null).usingTime(time, time).upTo(ofNanos(1));
-        var values = awaitCollection(() -> List.of("failed")).usingTime(time, time).upTo(ofNanos(1));
+        var missing = await(() -> (List<String>) null).usingTime(time, time).upTo(ofNanos(1));
+        var values = await(() -> List.of("failed")).usingTime(time, time).upTo(ofNanos(1));
 
-        assertFailure(TIMEOUT, () -> awaitCollection(() -> List.of())
+        assertFailure(TIMEOUT, () -> await(() -> List.of())
                 .usingTime(time, time).upTo(ofNanos(1)).until(first));
         assertFailure(TIMEOUT, () -> missing.until(last));
         assertFailure(TIMEOUT, () -> missing.until(CollectionConditions.first(value -> true)));
@@ -312,9 +310,9 @@ class CollectionSelectionConditionsTest {
         assertFailure(TIMEOUT, () -> values.until(CollectionConditions.element(2)));
         assertFailure(TIMEOUT, () -> values.until(CollectionConditions.element(1)));
         assertFailure(TIMEOUT, () -> values.until(CollectionConditions.element(0, value -> value.startsWith("r"))));
-        assertFailure(TIMEOUT, () -> awaitCollection(() -> List.of(1, 2))
+        assertFailure(TIMEOUT, () -> await(() -> List.of(1, 2))
                 .usingTime(time, time).upTo(ofNanos(1)).until(single(instanceOf(String.class))));
-        assertFailure(TIMEOUT, () -> awaitCollection(() -> List.of("first", "second"))
+        assertFailure(TIMEOUT, () -> await(() -> List.of("first", "second"))
                 .usingTime(time, time).upTo(ofNanos(1)).until(single(instanceOf(String.class))));
         assertEquals("index must be non-negative", assertThrows(
                 IllegalArgumentException.class,
@@ -328,21 +326,20 @@ class CollectionSelectionConditionsTest {
         java.util.concurrent.Callable<List<Integer>> source = observations::removeFirst;
         FakeTime time = new FakeTime(0);
 
-        assertEquals(3, awaitCollection(source).usingTime(time, time).every(ofNanos(1))
+        assertEquals(3, await(source::call).usingTime(time, time).every(ofNanos(1))
                 .upTo(ofNanos(5)).persisting(ofNanos(2)).until(last));
     }
 
     @Test
-    void explainedFirstRetainsSelectedTimeoutDiagnostics() {
+    void firstRetainsSelectedTimeoutDiagnostics() {
         FakeTime time = new FakeTime(0);
         java.util.concurrent.Callable<List<String>> source = List::of;
 
         var failure = assertFailure(TIMEOUT,
-                () -> awaitCollection(source).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
-                        .until(first.because("a first result is required")));
+                () -> await(source::call).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
+                        .until(first));
 
         assertTrue(failure.getMessage().contains("Condition: collection has a first element"));
-        assertTrue(failure.getMessage().contains("Because: a first result is required"));
         assertTrue(failure.getMessage().contains("Mismatch: collection was empty"));
     }
 

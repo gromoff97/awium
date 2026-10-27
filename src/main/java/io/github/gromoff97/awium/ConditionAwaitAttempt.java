@@ -5,25 +5,25 @@ import io.github.gromoff97.awium.Condition.SourceCondition;
 /** Creates typed attempts and executes them lazily, converting thrown failures into uncontrolled results. */
 final class ConditionAwaitAttempt<OBSERVED, RESULT> implements AwaitAttempt<OBSERVED, RESULT> {
 
-    final Condition<?> condition;
+    final Condition condition;
     private AwaitAttempt<? super OBSERVED, ? extends RESULT> evaluator;
 
     ConditionAwaitAttempt(Condition.Typed<? super OBSERVED, ? extends RESULT> condition) {
-        this((Condition<?>) condition);
+        this((Condition) condition);
     }
 
-    private ConditionAwaitAttempt(Condition<?> condition) {
+    private ConditionAwaitAttempt(Condition condition) {
         this.condition = condition;
     }
 
     // Preservers and selectors bind to source types. Collection stays disjoint from Map; Iterable would overlap.
-    static <OBSERVED, RESULT> ConditionAwaitAttempt<OBSERVED, RESULT> bind(Condition<?> condition) {
+    static <OBSERVED, RESULT> ConditionAwaitAttempt<OBSERVED, RESULT> bind(Condition condition) {
         return new ConditionAwaitAttempt<>(condition);
     }
 
     // Selector terminals require SOURCE_VALUE to be accepted by CHECKED; their source protocol supplies that value.
     // This bridge is only for those nested checks. Sealed SourceCondition preserves the input instance.
-    static <VALUE> ConditionAwaitAttempt<VALUE, VALUE> bindSelectionCheck(SourceCondition<?, ?, ?> condition) {
+    static <VALUE> ConditionAwaitAttempt<VALUE, VALUE> bindSelectionCheck(SourceCondition<?, ?> condition) {
         return bind(condition);
     }
 

@@ -4,7 +4,6 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Condition.SourceCondition;
-import java.util.concurrent.Callable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -53,40 +52,6 @@ public final class CollectionConditions {
 
     private CollectionConditions() {}
 
-    /**
-     * Configures a collection wait, retaining its complete type and selected element type.
-     * @param <ELEMENT> element type
-     * @param <VALUES> complete collection type
-     * @param source repeatedly invoked source
-     * @return immutable wait configuration
-     */
-    public static <ELEMENT, VALUES extends Collection<ELEMENT>> Await<VALUES, ELEMENT, Void> awaitCollection(Callable<? extends VALUES> source) {
-        return new Await<>(source, WaitConfiguration.DEFAULT);
-    }
-
-    /** Short form of {@link #awaitCollection(Callable)}. */
-    public static <ELEMENT, VALUES extends Collection<ELEMENT>> Await<VALUES, ELEMENT, Void> ac(Callable<? extends VALUES> source) {
-        return awaitCollection(source);
-    }
-
-    /**
-     * Configures a wait using a covariant collection source description.
-     * @param <ELEMENT> selected element bound
-     * @param <VALUES> complete collection type
-     * @param source typed source description
-     * @return immutable wait configuration
-     */
-    public static <ELEMENT, VALUES extends Collection<? extends ELEMENT>>
-            Await<VALUES, ELEMENT, Void> awaitCollection(Await.CollectionViewSource<ELEMENT, VALUES> source) {
-        return new Await<>(requireNonNull(source, "source must not be null").delegate(), WaitConfiguration.DEFAULT);
-    }
-
-    /** Short form of {@link #awaitCollection(Await.CollectionViewSource)}. */
-    public static <ELEMENT, VALUES extends Collection<? extends ELEMENT>>
-            Await<VALUES, ELEMENT, Void> ac(Await.CollectionViewSource<ELEMENT, VALUES> source) {
-        return awaitCollection(source);
-    }
-
     public static PreservingCondition<Collection<?>> size(int expected) {
         return sized(expected, actual -> actual == expected,
                 "collection size is " + expected);
@@ -129,7 +94,7 @@ public final class CollectionConditions {
     }
 
     public static <CHECKED, REFERENCE> SelectedCondition<Collection<?>, CHECKED, REFERENCE> single(
-            SourceCondition<CHECKED, REFERENCE, ?> nested) {
+            SourceCondition<CHECKED, REFERENCE> nested) {
         return new SelectedCondition<>(ConditionSupport.single("collection", required(nested), actual -> actual,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
@@ -333,7 +298,7 @@ public final class CollectionConditions {
 
     /** Selects the first matching element, retaining the source's element type. */
     public static <CHECKED, REFERENCE> SelectedCondition<SequencedCollection<?>, CHECKED, REFERENCE> first(
-            SourceCondition<CHECKED, REFERENCE, ?> nested) {
+            SourceCondition<CHECKED, REFERENCE> nested) {
         return new SelectedCondition<>(matching("collection has a first matching value: ", required(nested),
                 actual -> actual, () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
@@ -362,7 +327,7 @@ public final class CollectionConditions {
 
     /** Selects the last matching element, retaining the source's element type. */
     public static <CHECKED, REFERENCE> SelectedCondition<SequencedCollection<?>, CHECKED, REFERENCE> last(
-            SourceCondition<CHECKED, REFERENCE, ?> nested) {
+            SourceCondition<CHECKED, REFERENCE> nested) {
         return new SelectedCondition<>(matching("collection has a last matching value: ", required(nested),
                 SequencedCollection::reversed, () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
@@ -396,7 +361,7 @@ public final class CollectionConditions {
 
     /** Checks the indexed element, retaining the source's element type. */
     public static <CHECKED, REFERENCE> SelectedCondition<List<?>, CHECKED, REFERENCE> element(
-            int index, SourceCondition<CHECKED, REFERENCE, ?> nested) {
+            int index, SourceCondition<CHECKED, REFERENCE> nested) {
         var extraction = element(index);
         return new SelectedCondition<>(ConditionSupport.compose("element at index " + index + " matches: ", required(nested),
                 extraction, actual -> selectElement(actual, index),
@@ -433,7 +398,7 @@ public final class CollectionConditions {
     }
 
     private static <OBSERVED, ELEMENT, RESULT> Condition.Typed<OBSERVED, RESULT> matching(
-            String description, Condition<?> nested,
+            String description, Condition nested,
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> order,
             Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT>> evaluatorFactory) {
         return new Condition.Typed<>(nested, description + nested.description(), () -> {

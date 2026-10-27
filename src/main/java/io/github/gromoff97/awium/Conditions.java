@@ -25,21 +25,6 @@ public final class Conditions {
 
     private Conditions() {}
 
-    /**
-     * Configures a wait for an observed value. Use the corresponding container catalogue for selections.
-     * @param <VALUE> observed value type
-     * @param source repeatedly invoked source
-     * @return immutable wait configuration
-     */
-    public static <VALUE> ValueAwait<VALUE> await(Callable<? extends VALUE> source) {
-        return new ValueAwait<>(source, WaitConfiguration.DEFAULT);
-    }
-
-    /** Short form of {@link #await(Callable)}. */
-    public static <VALUE> ValueAwait<VALUE> a(Callable<? extends VALUE> source) {
-        return await(source);
-    }
-
     /** Creates a named check using the supplied callback for every execution. */
     public static <OBSERVED> PreservingCondition<OBSERVED> condition(String description,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>> evaluation) {

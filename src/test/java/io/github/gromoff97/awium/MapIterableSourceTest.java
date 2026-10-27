@@ -7,7 +7,7 @@ import java.util.AbstractMap;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.MapConditions.awaitMap;
+import static io.github.gromoff97.awium.Await.await;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -19,11 +19,11 @@ class MapIterableSourceTest {
     void mapsThatAlsoIterateValuesKeepMapSelectionTypes() {
         var both = new MapWithUsers();
         var time = new FakeTime(0);
-        var waiting = awaitMap(() -> both).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+        var waiting = await(() -> both).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
 
         assertEquals(10, waiting.until(MapConditions.singleEntry).getValue().intValue());
         assertEquals(10, waiting.until(MapConditions.valueFor("key")).intValue());
-        assertEquals(10, waiting.until(MapConditions.singleEntry((key, value) -> true).because("map entry")).getValue().intValue());
+        assertEquals(10, waiting.until(MapConditions.singleEntry((key, value) -> true)).getValue().intValue());
         assertEquals(10, waiting.until(MapConditions.valueFor("key", java.util.Objects::nonNull)).intValue());
         AwaitResult<MapWithUsers, Map.Entry<String, Integer>> captured = waiting.tryUntil(MapConditions.singleEntry);
         switch (captured) {

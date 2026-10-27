@@ -4,7 +4,7 @@ import static java.util.Objects.requireNonNull;
 
 sealed interface AttemptResult<RESULT> {
 
-    Condition<?> condition();
+    Condition condition();
 
     AttemptRecord.Progress progress();
 
@@ -12,13 +12,13 @@ sealed interface AttemptResult<RESULT> {
         return new Evaluated<>(result, null, null);
     }
 
-    default Condition<?> diagnosticCondition(Condition<?> outer) {
+    default Condition diagnosticCondition(Condition outer) {
         var condition = condition();
-        return condition == null ? outer : condition.withExplanationFrom(outer);
+        return condition == null ? outer : condition;
     }
 
     record Evaluated<RESULT>(ConditionResult<? extends RESULT> result,
-            Condition<?> condition, AttemptRecord.Progress progress) implements AttemptResult<RESULT> {
+            Condition condition, AttemptRecord.Progress progress) implements AttemptResult<RESULT> {
 
         public Evaluated {
             requireNonNull(result, "condition returned null ConditionResult");
@@ -26,7 +26,7 @@ sealed interface AttemptResult<RESULT> {
     }
 
     record Uncontrolled<RESULT>(Throwable cause,
-            Condition<?> condition, AttemptRecord.Progress progress) implements AttemptResult<RESULT> {
+            Condition condition, AttemptRecord.Progress progress) implements AttemptResult<RESULT> {
 
         public Uncontrolled {
             requireNonNull(cause, "cause must not be null");

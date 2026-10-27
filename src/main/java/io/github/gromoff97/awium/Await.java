@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
@@ -26,6 +27,38 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
 
     Await(Callable<? extends OBSERVED> source, WaitConfiguration configuration) {
         super(source, configuration);
+    }
+
+    /** Configures a wait for an observed value. Container lambdas select a specialized overload. */
+    public static <VALUE> ValueAwait<VALUE> await(Callable<? extends VALUE> source) {
+        return new ValueAwait<>(source, WaitConfiguration.DEFAULT);
+    }
+
+    /** Configures an optional wait, retaining the contained value type. */
+    public static <VALUE> Await<Optional<VALUE>, VALUE, Void> await(OptionalSource<VALUE> source) {
+        return new Await<>(source, WaitConfiguration.DEFAULT);
+    }
+
+    /** Configures a collection wait, retaining its complete type and element type. */
+    public static <ELEMENT, VALUES extends Collection<ELEMENT>> Await<VALUES, ELEMENT, Void> await(CollectionSource<VALUES> source) {
+        return new Await<>(source, WaitConfiguration.DEFAULT);
+    }
+
+    /** Configures a map wait, retaining its complete type, entry type, and value type. */
+    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> Await<ENTRIES, Map.Entry<KEY, VALUE>, VALUE> await(MapSource<ENTRIES> source) {
+        return new Await<>(source, WaitConfiguration.DEFAULT);
+    }
+
+    /** Configures a wait with explicit bounds for a covariant collection source. */
+    public static <ELEMENT, VALUES extends Collection<? extends ELEMENT>>
+            Await<VALUES, ELEMENT, Void> await(CollectionViewSource<ELEMENT, VALUES> source) {
+        return new Await<>(requireNonNull(source, "source must not be null").delegate(), WaitConfiguration.DEFAULT);
+    }
+
+    /** Configures a wait with explicit bounds for a covariant map source. */
+    public static <KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>
+            Await<ENTRIES, Map.Entry<? extends KEY, ? extends VALUE>, VALUE> await(MapViewSource<KEY, VALUE, ENTRIES> source) {
+        return new Await<>(requireNonNull(source, "source must not be null").delegate(), WaitConfiguration.DEFAULT);
     }
 
     @Override
@@ -97,6 +130,18 @@ public final class Await<OBSERVED, ELEMENT, MAP_VALUE> extends ValueAwait<OBSERV
             MapValueCondition<? super OBSERVED, ? super MAP_VALUE, ? super Reference<? super MAP_VALUE>>... conditions) {
         return tryUntil(ConditionSupport.captured(conditions));
     }
+
+    /** A source whose optional value can be selected by a condition. */
+    @FunctionalInterface
+    public interface OptionalSource<VALUE> extends Callable<Optional<VALUE>> {}
+
+    /** A source retaining both the complete collection type and its selected element type. */
+    @FunctionalInterface
+    public interface CollectionSource<VALUES extends Collection<?>> extends Callable<VALUES> {}
+
+    /** A source retaining the complete map type and its selected key and value types. */
+    @FunctionalInterface
+    public interface MapSource<ENTRIES extends Map<?, ?>> extends Callable<ENTRIES> {}
 
     /**
      * Describes a covariant collection source with an explicit element bound for selections.

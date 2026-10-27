@@ -9,8 +9,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
-import static io.github.gromoff97.awium.MapConditions.awaitMap;
+import static io.github.gromoff97.awium.Await.await;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -24,7 +23,7 @@ class ChangingContainerSelectionTest {
         int[] calls = {0};
         var time = new FakeTime(0);
 
-        var result = awaitCollection(() -> {
+        var result = await(() -> {
             if (++calls[0] == 2) values.add("ready");
             return values;
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
@@ -42,7 +41,7 @@ class ChangingContainerSelectionTest {
             int[] calls = {0};
             var time = new FakeTime(0);
 
-            var result = awaitCollection(() -> {
+            var result = await(() -> {
                 if (++calls[0] == 2) values.add("ready");
                 return values;
             }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
@@ -60,7 +59,7 @@ class ChangingContainerSelectionTest {
         int[] calls = {0};
         var time = new FakeTime(0);
 
-        var result = awaitCollection(() -> {
+        var result = await(() -> {
             if (++calls[0] == 2) values.add("ready");
             return values;
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).tryUntil(CollectionConditions.single);
@@ -76,7 +75,7 @@ class ChangingContainerSelectionTest {
             values.put("key", "old");
             int[] calls = {0};
             var time = new FakeTime(0);
-            var waiting = awaitMap(() -> {
+            var waiting = await(() -> {
                 if (++calls[0] == 2) values.put("key", "ready");
                 return values;
             }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5));

@@ -18,7 +18,7 @@ final class FailureDiagnostics {
             TimeUnit.MILLISECONDS, TimeUnit.MICROSECONDS, TimeUnit.NANOSECONDS);
 
     private final WaitCompletion<?, ?> outcome;
-    private final Condition<?> condition;
+    private final Condition condition;
     private final WaitConfiguration configuration;
     private final Throwable cause;
     private final AttemptRecord.Progress sequence;
@@ -157,16 +157,12 @@ final class FailureDiagnostics {
         }
     }
 
-    private void condition(StringBuilder out, Condition<?> condition, String indentation) {
+    private void condition(StringBuilder out, Condition condition, String indentation) {
         field(out, indentation, "Condition", condition.description());
         String detailsIndentation = indentation + "    ";
         var reference = condition.reference();
         if (reference != null) {
             field(out, detailsIndentation, reference.label(), render(() -> renderValue(reference.value())));
-        }
-        String explanation = render(condition::explanation);
-        if (explanation != null) {
-            field(out, detailsIndentation, "Because", explanation);
         }
     }
 

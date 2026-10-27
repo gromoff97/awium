@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
@@ -43,18 +44,18 @@ class MapConditionsTest {
         String[] value = {"x", "y"};
         var actual = Map.of(key, value);
 
-        Map<String[], String[]> keyMatch = am(() -> actual).usingTime(time, time)
-                .until(containsKey(new String[] {"a", "b"}).because("one array key"));
-        Map<String[], String[]> valueMatch = am(() -> actual).usingTime(time, time)
-                .until(containsValue(new String[] {"x", "y"}).because("one array value"));
+        Map<String[], String[]> keyMatch = await(() -> actual).usingTime(time, time)
+                .until(containsKey(new String[] {"a", "b"}));
+        Map<String[], String[]> valueMatch = await(() -> actual).usingTime(time, time)
+                .until(containsValue(new String[] {"x", "y"}));
         assertSame(actual, keyMatch);
         assertSame(actual, valueMatch);
         assertEquals(2, keyMatch.keySet().iterator().next().length);
         assertEquals(2, valueMatch.get(key).length);
-        assertSame(actual, am(() -> actual).usingTime(time, time)
-                .until(doesNotContainKey(new String[] {"missing"}).because("the key must be absent")));
-        assertSame(actual, am(() -> actual).usingTime(time, time)
-                .until(doesNotContainValue(new String[] {"missing"}).because("the value must be absent")));
+        assertSame(actual, await(() -> actual).usingTime(time, time)
+                .until(doesNotContainKey(new String[] {"missing"})));
+        assertSame(actual, await(() -> actual).usingTime(time, time)
+                .until(doesNotContainValue(new String[] {"missing"})));
     }
 
     @Test
@@ -65,14 +66,14 @@ class MapConditionsTest {
         actual.put(null, new String[0]);
         actual.put(new String[0], null);
 
-        assertSame(actual, am(() -> actual).usingTime(time, time)
-                .until(containsKey(missing).because("one null key")));
-        assertSame(actual, am(() -> actual).usingTime(time, time)
-                .until(containsValue(missing).because("one null value")));
-        assertSame(actual, am(() -> actual).usingTime(time, time)
-                .until(containsKey(new String[0]).because("one empty array key")));
-        assertSame(actual, am(() -> actual).usingTime(time, time)
-                .until(containsValue(new String[0]).because("one empty array value")));
+        assertSame(actual, await(() -> actual).usingTime(time, time)
+                .until(containsKey(missing)));
+        assertSame(actual, await(() -> actual).usingTime(time, time)
+                .until(containsValue(missing)));
+        assertSame(actual, await(() -> actual).usingTime(time, time)
+                .until(containsKey(new String[0])));
+        assertSame(actual, await(() -> actual).usingTime(time, time)
+                .until(containsValue(new String[0])));
     }
 
     @Test
@@ -191,11 +192,11 @@ class MapConditionsTest {
                 new ThrowingEquals(equalityCause), "1"));
 
         assertSame(actualCause, assertFailure(CONDITION_FAILED,
-                () -> awaitMap(brokenActual, doesNotContainKey("a"))).getCause());
+                () -> awaitEntryMap(brokenActual, doesNotContainKey("a"))).getCause());
         assertSame(expectedCause, assertThrows(IllegalStateException.class,
                 () -> doesNotContainAnyEntries(brokenExpected)));
         assertSame(equalityCause, assertFailure(CONDITION_FAILED,
-                () -> awaitMap(brokenEquality,
+                () -> awaitEntryMap(brokenEquality,
                         doesNotContainKey(new ThrowingEquals(null)))).getCause());
     }
 
@@ -220,11 +221,11 @@ class MapConditionsTest {
         FakeTime time = new FakeTime(0);
 
         assertFailure(TIMEOUT,
-                () -> am(() -> {
+                () -> await(() -> {
                     time.advanceNanos(2);
                     return actual;
                 }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
-                        .until(doesNotContainKey("a").because("business reason")));
+                        .until(doesNotContainKey("a")));
 
         assertEquals(1, actual.entrySetCalls);
     }
@@ -235,7 +236,7 @@ class MapConditionsTest {
         var actual = map("a", "1");
         java.util.concurrent.Callable<LinkedHashMap<String, String>> source = () -> actual;
 
-        LinkedHashMap<String, String> result = am(source).usingTime(pollingTime, pollingTime).until(containsEntry("a", "1"));
+        LinkedHashMap<String, String> result = await(source::call).usingTime(pollingTime, pollingTime).until(containsEntry("a", "1"));
 
         assertSame(actual, result);
     }
@@ -255,12 +256,12 @@ class MapConditionsTest {
         assertEquals(status, evaluate(condition, actual).getClass());
     }
 
-    private static <K, V> ProbeContainers.EntryMap<K, V> awaitMap(
+    private static <K, V> ProbeContainers.EntryMap<K, V> awaitEntryMap(
             ProbeContainers.EntryMap<K, V> actual,
             PreservingCondition<? super ProbeContainers.EntryMap<K, V>>
                     condition) {
         var pollingTime = new FakeTime(0);
-        return am(() -> actual).usingTime(pollingTime, pollingTime).until(condition);
+        return await(() -> actual).usingTime(pollingTime, pollingTime).until(condition);
     }
 
     private static void assertValidation(Class<? extends Throwable> type,

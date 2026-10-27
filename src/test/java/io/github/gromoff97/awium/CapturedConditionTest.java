@@ -1,10 +1,5 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
-import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
-import static io.github.gromoff97.awium.MapConditions.awaitMap;
-
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -14,6 +9,7 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
@@ -49,8 +45,8 @@ class CapturedConditionTest {
                         if (reads[0] == completedStages && reason == WAIT_FAILED) throw cause;
                         time.accept(nanos);
                     }).every(ofNanos(1)).persisting(ofNanos(2));
-                    var first = Conditions.equalTo("ready").because("first stage");
-                    var second = Conditions.equalTo("done").because("finish the second stage");
+                    var first = Conditions.equalTo("ready");
+                    var second = Conditions.equalTo("done");
                     AwaitFailure failure;
                     if (capture) {
                         var result = waiting.tryUntil(first, second);
@@ -70,7 +66,6 @@ class CapturedConditionTest {
                     assertEquals(reason, failure.reason());
                     assertSame(cause, failure.cause());
                     assertTrue(failure.message().contains("Sequence (captured " + completedStages + " of 2)"), failure.message());
-                    assertTrue(failure.message().contains("Because: finish the second stage"), failure.message());
                 }
             }
         }
@@ -91,8 +86,8 @@ class CapturedConditionTest {
                     time.accept(nanos);
                 }).every(ofNanos(1)).persisting(ofNanos(2));
                 try {
-                    var first = Conditions.equalTo("ready").because("first stage");
-                    var second = Conditions.equalTo("done").because("second stage");
+                    var first = Conditions.equalTo("ready");
+                    var second = Conditions.equalTo("done");
                     var result = waiting.tryUntil(first, second);
                     var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
                     var attempt = result.attempts().getLast();
@@ -121,8 +116,8 @@ class CapturedConditionTest {
         var time = new FakeTime(0);
         var waiting = await(() -> observations[reads[0]++ % observations.length])
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10));
-        var start = Conditions.instanceOf(String.class).because("first text");
-        var finish = Conditions.exactInstanceOf(String.class).because("second text");
+        var start = Conditions.instanceOf(String.class);
+        var finish = Conditions.exactInstanceOf(String.class);
 
         var values = waiting.until(start, finish);
         AwaitResult<Object, List<String>> attempt = waiting.tryUntil(start, finish);
@@ -143,11 +138,11 @@ class CapturedConditionTest {
         List<List<Number>> observations = List.of(List.of(1L, first), List.of(second, 2L));
         int[] reads = {0};
         var time = new FakeTime(0);
-        var waiting = awaitCollection(() -> observations.get(reads[0]++ % observations.size()))
+        var waiting = await(() -> observations.get(reads[0]++ % observations.size()))
                 .usingTime(time, time).every(ofNanos(1));
 
-        var values = waiting.until(CollectionConditions.single(Conditions.instanceOf(Integer.class)).because("first integer"),
-                CollectionConditions.single(Conditions.exactInstanceOf(Integer.class)).because("second integer"));
+        var values = waiting.until(CollectionConditions.single(Conditions.instanceOf(Integer.class)),
+                CollectionConditions.single(Conditions.exactInstanceOf(Integer.class)));
         AwaitResult<List<Number>, List<Integer>> attempt = waiting.tryUntil(
                 CollectionConditions.single(Conditions.instanceOf(Integer.class)),
                 CollectionConditions.single(Conditions.exactInstanceOf(Integer.class)));
@@ -161,18 +156,18 @@ class CapturedConditionTest {
     }
 
     @Test
-    void explainedMapValueSequenceCapturesNullAndRefreshesOnlyTheLastStage() {
+    void mapValueSequenceCapturesNullAndRefreshesOnlyTheLastStage() {
         var first = java.util.Collections.<String, Number>singletonMap("first", null);
         Number acquired = new BigDecimal("2.00");
         Number persisted = new BigDecimal("3.00");
         var observations = List.of(first, Map.of("last", acquired), Map.of("last", persisted));
         int[] reads = {0};
         var time = new FakeTime(0);
-        var waiting = awaitMap(() -> observations.get(reads[0]++ % observations.size()))
+        var waiting = await(() -> observations.get(reads[0]++ % observations.size()))
                 .usingTime(time, time).every(java.time.Duration.ofNanos(1))
                 .persisting(java.time.Duration.ofNanos(1));
-        var start = MapConditions.valueFor("first").because("first value");
-        var finish = MapConditions.valueFor("last", Conditions.isNotNull).because("last value");
+        var start = MapConditions.valueFor("first");
+        var finish = MapConditions.valueFor("last", Conditions.isNotNull);
 
         List<Number> values = waiting.until(start, finish);
         AwaitResult<Map<String, Number>, List<Number>> attempt = waiting.tryUntil(start, finish);
@@ -227,7 +222,7 @@ class CapturedConditionTest {
         int[] reads = {0};
         var time = new FakeTime(0);
 
-        AwaitResult<List<String>, List<String>> result = awaitCollection(() -> observations.get(reads[0]++))
+        AwaitResult<List<String>, List<String>> result = await(() -> observations.get(reads[0]++))
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).persisting(ofNanos(1))
                 .tryUntil(CollectionConditions.first, CollectionConditions.last);
 
@@ -276,11 +271,11 @@ class CapturedConditionTest {
                             return matching;
                         }
                         return true;
-                    }).because("first stage");
+                    });
                     var second = Conditions.<String>matches(value -> {
                         Thread.currentThread().interrupt();
                         return matching;
-                    }).because("second stage");
+                    });
                     try {
                         AwaitFailure failure;
                         if (capture) {
@@ -297,7 +292,6 @@ class CapturedConditionTest {
                         assertEquals(INTERRUPTED, failure.reason());
                         assertInstanceOf(InterruptedException.class, failure.cause());
                         assertTrue(failure.message().contains("Sequence (captured " + (stage - 1) + " of 2)"));
-                        assertTrue(failure.message().contains("Because: " + (stage == 1 ? "first" : "second") + " stage"));
                         assertEquals(stage, sources[0]);
                         assertTrue(Thread.currentThread().isInterrupted());
                     } finally {
@@ -316,12 +310,11 @@ class CapturedConditionTest {
                     condition("final stage", (String value) -> {
                         time.advanceNanos(delay);
                         return satisfied(value);
-                    }).because("final business reason"));
+                    }));
             var failure = assertFailure(TIMEOUT,
                     () -> timedAwait(() -> "ready", config(1, 5, 0), time, time).until(sequence));
             assertTrue(failure.getMessage().contains("Sequence (captured 2 of 2)"), failure.getMessage());
             assertTrue(failure.getMessage().contains("final stage"), failure.getMessage());
-            assertTrue(failure.getMessage().contains("final business reason"), failure.getMessage());
         }
     }
 
@@ -451,14 +444,14 @@ class CapturedConditionTest {
     }
 
     @Test
-    void preservingSequenceMixesPlainAndExplainedStages() {
+    void preservingSequenceCapturesEveryStage() {
         var time = new FakeTime(0);
         String[] observations = {"alpha", "omega"};
         int[] next = {0};
 
         List<String> result = timedAwait(() -> observations[next[0]++],
                 config(1, 10, 0), time, time).until(matches((String value) -> value.startsWith("a")),
-                matches((String value) -> value.endsWith("a")).because("final state"));
+                matches((String value) -> value.endsWith("a")));
 
         assertEquals(List.of("alpha", "omega"), result);
     }
@@ -532,7 +525,7 @@ class CapturedConditionTest {
                 Optional.of("second"));
         int[] next = {0};
 
-        List<String> result = awaitOptional(() -> observations.get(next[0]++))
+        List<String> result = await(() -> observations.get(next[0]++))
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10))
                 .until(present, present);
 

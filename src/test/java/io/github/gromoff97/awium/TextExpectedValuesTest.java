@@ -8,10 +8,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
-import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
-import static io.github.gromoff97.awium.MapConditions.awaitMap;
+import static io.github.gromoff97.awium.Await.await;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -37,7 +34,7 @@ class TextExpectedValuesTest {
 
         for (var check : checks) {
             var expected = new StringBuilder("ready");
-            var condition = check.factory().apply(expected).because("snapshot");
+            var condition = check.factory().apply(expected);
             expected.replace(0, expected.length(), "changed");
             var actual = new StringBuilder(check.matching());
             var time = new FakeTime(0);
@@ -60,20 +57,20 @@ class TextExpectedValuesTest {
     void contentEqualityComparesCharactersAndKeepsTheObservedObject() {
         var text = new StringBuilder("ready");
         var expected = CharBuffer.wrap("ready");
-        var condition = StringConditions.contentEquals(expected).because("same characters");
+        var condition = StringConditions.contentEquals(expected);
         var values = await(() -> text).until(condition, condition);
         assertSame(text, values.getFirst());
         assertEquals(text.capacity(), values.getLast().capacity());
 
-        StringBuilder selected = awaitCollection(() -> List.of(text)).until(CollectionConditions.single(
-                StringConditions.contentEquals(expected)).because("one matching text"));
+        StringBuilder selected = await(() -> List.of(text)).until(CollectionConditions.single(
+                StringConditions.contentEquals(expected)));
         assertSame(text, selected);
-        CharBuffer buffer = await(() -> expected).until(StringConditions.contentEquals(text).because("buffer"));
+        CharBuffer buffer = await(() -> expected).until(StringConditions.contentEquals(text));
         assertSame(expected, buffer);
         assertEquals(0, buffer.position());
 
-        assertSame(text, awaitMap(() -> Map.of("status", text)).until(MapConditions.valueFor("status",
-                StringConditions.contentEquals(expected)).because("status text")));
+        assertSame(text, await(() -> Map.of("status", text)).until(MapConditions.valueFor("status",
+                StringConditions.contentEquals(expected))));
         assertTrue(await(() -> new StringBuilder()).until(StringConditions.contentEquals("")).isEmpty());
 
         var time = new FakeTime(0);
@@ -94,15 +91,15 @@ class TextExpectedValuesTest {
         expected[1] = "changed";
 
         var text = new StringBuilder("ready");
-        var values = await(() -> text).until(included.because("first"), included.because(() -> "second"));
+        var values = await(() -> text).until(included, included);
         assertSame(text, values.getFirst());
         assertEquals(text.capacity(), values.getLast().capacity());
         assertEquals(6, await(() -> "failed").until(excluded).length());
 
-        var nested = StringConditions.startsWith(CharBuffer.wrap("rea")).because("prefix");
-        assertEquals(text.capacity(), awaitOptional(() -> Optional.of(text)).until(OptionalConditions.hasValue(nested)).capacity());
-        assertEquals(text.capacity(), awaitCollection(() -> List.of(text)).until(CollectionConditions.single(nested)).capacity());
-        assertEquals(text.capacity(), awaitMap(() -> Map.of("text", text)).until(MapConditions.valueFor("text", nested)).capacity());
+        var nested = StringConditions.startsWith(CharBuffer.wrap("rea"));
+        assertEquals(text.capacity(), await(() -> Optional.of(text)).until(OptionalConditions.hasValue(nested)).capacity());
+        assertEquals(text.capacity(), await(() -> List.of(text)).until(CollectionConditions.single(nested)).capacity());
+        assertEquals(text.capacity(), await(() -> Map.of("text", text)).until(MapConditions.valueFor("text", nested)).capacity());
     }
 
     @Test

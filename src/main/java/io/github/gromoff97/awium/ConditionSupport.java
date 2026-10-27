@@ -85,7 +85,7 @@ final class ConditionSupport {
     }
 
     static <OBSERVED, ELEMENT> PreservingCondition<OBSERVED> quantified(
-            String subject, String description, String mismatch, Quantifier quantifier, Condition<?> nested,
+            String subject, String description, String mismatch, Quantifier quantifier, Condition nested,
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
             Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ?>> evaluatorFactory) {
         Condition.required(nested);
@@ -131,8 +131,8 @@ final class ConditionSupport {
         return new Reference<>("Unexpected", value);
     }
 
-    static <OBSERVED, VALUE, RESULT> Condition.Typed<OBSERVED, RESULT> compose(String prefix, Condition<?> condition,
-            Condition<?> extractionCondition,
+    static <OBSERVED, VALUE, RESULT> Condition.Typed<OBSERVED, RESULT> compose(String prefix, Condition condition,
+            Condition extractionCondition,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<VALUE>> extract,
             Supplier<? extends ConditionAwaitAttempt<? super VALUE, ? extends RESULT>> evaluatorFactory) {
         return new Condition.Typed<>(condition, prefix + condition.description(), () -> {
@@ -194,7 +194,7 @@ final class ConditionSupport {
                 : selection.apply(value);
     }
 
-    static <OBSERVED, ELEMENT, RESULT> Condition.Typed<OBSERVED, RESULT> single(String subject, Condition<?> condition,
+    static <OBSERVED, ELEMENT, RESULT> Condition.Typed<OBSERVED, RESULT> single(String subject, Condition condition,
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
             Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ? extends RESULT>> evaluatorFactory) {
         return new Condition.Typed<>(condition, subject + " has exactly one match: " + condition.description(), () -> {
@@ -226,7 +226,7 @@ final class ConditionSupport {
     @SafeVarargs
     @SuppressWarnings("varargs")
     static <OBSERVED> Condition.Typed<OBSERVED, List<OBSERVED>> captured(
-            SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>, ?>... conditions) {
+            SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>>... conditions) {
         return captured(conditions, ConditionAwaitAttempt::bind);
     }
 
@@ -250,7 +250,7 @@ final class ConditionSupport {
         return captured(conditions, ConditionAwaitAttempt::new);
     }
 
-    private static <OBSERVED, RESULT, STAGE extends Condition<?>> Condition.Typed<OBSERVED, List<RESULT>> captured(
+    private static <OBSERVED, RESULT, STAGE extends Condition> Condition.Typed<OBSERVED, List<RESULT>> captured(
             STAGE[] conditions,
             Function<? super STAGE, ? extends ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT>> bind) {
         var stages = nonEmptySnapshot(conditions, "conditions");

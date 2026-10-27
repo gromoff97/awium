@@ -17,8 +17,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.MapConditions.awaitMap;
-import static io.github.gromoff97.awium.MapConditions.am;
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.OptionalConditions.*;
@@ -38,15 +37,14 @@ class PositiveFluentMatrixTest {
         var actual = new Object();
         Callable<Object> source = () -> actual;
 
-        Object selected = a(source).usingTime(pollingTime, pollingTime)
-                .every(EVERY).upTo(UP_TO).persisting(ZERO).until(isNotNull.because("object full chain"));
+        Object selected = await(source).usingTime(pollingTime, pollingTime)
+                .every(EVERY).upTo(UP_TO).persisting(ZERO).until(isNotNull);
         assertSame(actual, selected);
 
         PreservingCondition<Object> selecting = condition(
                 "select actual", ConditionResult::satisfied);
         assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(selecting));
-        assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(selecting.because("selected object")));
-        String nil = await(() -> (String) null).usingTime(pollingTime, pollingTime).until(isNull.because("value is absent"));
+        String nil = await(() -> (String) null).usingTime(pollingTime, pollingTime).until(isNull);
         assertSame(null, nil);
     }
 
@@ -56,9 +54,9 @@ class PositiveFluentMatrixTest {
         var value = new String("value");
         java.util.concurrent.Callable<java.util.Optional<String>> source = () -> Optional.of(value);
 
-        String selected = ao(source).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).until(present.because("optional full chain"));
+        String selected = await(source::call).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).until(present);
         Optional<String> empty = Optional.empty();
-        Optional<String> absentValue = awaitOptional(() -> empty).usingTime(pollingTime, pollingTime).until(absent.because("optional is empty"));
+        Optional<String> absentValue = await(() -> empty).usingTime(pollingTime, pollingTime).until(absent);
 
         assertSame(value, selected);
         assertSame(empty, absentValue);
@@ -71,10 +69,8 @@ class PositiveFluentMatrixTest {
         java.util.concurrent.Callable<ArrayList<String>> source = () -> actual;
 
         Condition.PreservingCondition<Collection<?>> collectionCondition = nonEmpty;
-        Condition.PreservingCondition<Collection<?>> explained =
-                collectionCondition.because("collection full chain");
-        ArrayList<String> raw = awaitCollection(source).usingTime(pollingTime, pollingTime).until(collectionCondition);
-        ArrayList<String> selected = ac(source).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).until(explained);
+        ArrayList<String> raw = await(source::call).usingTime(pollingTime, pollingTime).until(collectionCondition);
+        ArrayList<String> selected = await(source::call).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).until(collectionCondition);
 
         assertSame(actual, raw);
         assertSame(actual, selected);
@@ -86,8 +82,8 @@ class PositiveFluentMatrixTest {
         var actual = new LinkedHashMap<>(java.util.Map.of("key", "value"));
         java.util.concurrent.Callable<LinkedHashMap<String, String>> source = () -> actual;
 
-        LinkedHashMap<String, String> raw = awaitMap(source).usingTime(pollingTime, pollingTime).until(MapConditions.nonEmpty);
-        LinkedHashMap<String, String> selected = am(source).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).until(MapConditions.nonEmpty.because("map full chain"));
+        LinkedHashMap<String, String> raw = await(source::call).usingTime(pollingTime, pollingTime).until(MapConditions.nonEmpty);
+        LinkedHashMap<String, String> selected = await(source::call).usingTime(pollingTime, pollingTime).every(EVERY).upTo(UP_TO).persisting(ZERO).until(MapConditions.nonEmpty);
 
         assertSame(actual, raw);
         assertSame(actual, selected);
@@ -100,10 +96,10 @@ class PositiveFluentMatrixTest {
         List<? extends Number> values = List.of(number);
         Map<? extends Number, ? extends CharSequence> index = Map.of(number, text);
 
-        var element = awaitCollection(() -> values).until(single.because("one covariant element"));
-        var entry = awaitMap(() -> index).until(MapConditions.singleEntry.because("one covariant entry"));
-        var original = awaitCollection(() -> values).until(nonEmpty.because("original covariant list"));
-        var result = awaitCollection(() -> values).tryUntil(single.because("covariant result"));
+        var element = await(() -> values).until(single);
+        var entry = await(() -> index).until(MapConditions.singleEntry);
+        var original = await(() -> values).until(nonEmpty);
+        var result = await(() -> values).tryUntil(single);
 
         assertEquals(1000, element.intValue());
         assertEquals(1000, entry.getKey().intValue());
@@ -140,54 +136,54 @@ class PositiveFluentMatrixTest {
                     return map;
                 });
 
-        assertSame(values, awaitCollection(collectionSource).usingTime(time, time).until(nonEmpty));
-        List<? extends Number> compared = awaitCollection(collectionSource).usingTime(time, time)
-                .until(equalTo(values).because("the original covariant list"));
+        assertSame(values, await(collectionSource).usingTime(time, time).until(nonEmpty));
+        List<? extends Number> compared = await(collectionSource).usingTime(time, time)
+                .until(equalTo(values));
         assertSame(values, compared);
-        var selected = ac(collectionSource).usingTime(time, time).until(single.because("covariant element"));
+        var selected = await(collectionSource).usingTime(time, time).until(single);
         assertEquals(1000, selected.intValue());
         assertSame(element, selected);
         assertSame(element, assertInstanceOf(AwaitResult.Satisfied.class,
-                awaitCollection(collectionSource).usingTime(time, time).tryUntil(single)).result());
-        assertSame(map, awaitMap(mapSource).usingTime(time, time).until(MapConditions.nonEmpty));
-        Map<? extends Number, ? extends CharSequence> comparedMap = awaitMap(mapSource).usingTime(time, time)
-                .until(equalTo(map).because("the original covariant map"));
+                await(collectionSource).usingTime(time, time).tryUntil(single)).result());
+        assertSame(map, await(mapSource).usingTime(time, time).until(MapConditions.nonEmpty));
+        Map<? extends Number, ? extends CharSequence> comparedMap = await(mapSource).usingTime(time, time)
+                .until(equalTo(map));
         assertSame(map, comparedMap);
-        var selectedEntry = am(mapSource).usingTime(time, time).until(MapConditions.singleEntry.because("covariant entry"));
+        var selectedEntry = await(mapSource).usingTime(time, time).until(MapConditions.singleEntry);
         assertEquals(1000, selectedEntry.getKey().intValue());
         assertEquals(5, selectedEntry.getValue().length());
         assertSame(entry, selectedEntry);
         assertSame(entry, assertInstanceOf(AwaitResult.Satisfied.class,
-                awaitMap(mapSource).usingTime(time, time).tryUntil(MapConditions.singleEntry)).result());
+                await(mapSource).usingTime(time, time).tryUntil(MapConditions.singleEntry)).result());
         assertEquals(4, collectionCalls[0]);
         assertEquals(4, mapCalls[0]);
     }
 
     @Test
-    void jdkVariablesAndMethodReferencesHaveTheSameSelectionTypes() {
+    void callableMethodReferencesRetainSelectionTypes() {
         Callable<Optional<String>> optional = () -> Optional.of("ready");
         Callable<ArrayList<String>> collection = () -> new ArrayList<>(List.of("ready"));
         Callable<LinkedHashMap<String, Integer>> map = () -> new LinkedHashMap<>(Map.of("ready", 1));
 
-        String optionalValue = awaitOptional(optional::call).until(present.because("required value"));
-        String element = awaitCollection(collection::call).until(single.because("unique value"));
-        Map.Entry<String, Integer> entry = awaitMap(map::call).until(MapConditions.singleEntry.because("unique entry"));
-        AwaitResult<Optional<String>, String> attempt = awaitOptional(optional::call).tryUntil(present);
+        String optionalValue = await(optional::call).until(present);
+        String element = await(collection::call).until(single);
+        Map.Entry<String, Integer> entry = await(map::call).until(MapConditions.singleEntry);
+        AwaitResult<Optional<String>, String> attempt = await(optional::call).tryUntil(present);
 
         assertEquals("ready", optionalValue);
         assertEquals("ready", element);
         assertEquals(Map.entry("ready", 1), entry);
         assertEquals(optionalValue, assertInstanceOf(AwaitResult.Satisfied.class, attempt).result());
-        assertEquals(optionalValue, awaitOptional(optional).until(present));
-        assertEquals(element, awaitCollection(collection).until(single));
-        assertEquals(entry, awaitMap(map).until(MapConditions.singleEntry));
+        assertEquals(optionalValue, await(() -> optional.call()).until(present));
+        assertEquals(element, await(() -> collection.call()).until(single));
+        assertEquals(entry, await(() -> map.call()).until(MapConditions.singleEntry));
         var time = new FakeTime(0);
-        List<String> stages = awaitCollection(collection).usingTime(time, time).every(ofNanos(1)).until(first, last);
+        List<String> stages = await(collection::call).usingTime(time, time).every(ofNanos(1)).until(first, last);
         assertEquals(List.of("ready", "ready"), stages);
     }
 
     @Test
-    void covariantJdkSourcesRetainTheirValuesAndSelectionTypes() {
+    void covariantCallableMethodReferencesRetainSelectionTypes() {
         var text = new StringBuilder("ready");
         var values = new ArrayList<>(List.of("ready"));
         var entries = new LinkedHashMap<>(Map.of("ready", 1));
@@ -196,11 +192,11 @@ class PositiveFluentMatrixTest {
         Callable<? extends ArrayList<String>> collection = () -> values;
         Callable<? extends LinkedHashMap<String, Integer>> map = () -> entries;
 
-        var actual = await(scalar).until(Conditions.isNotNull.because("original value"));
-        var selected = awaitOptional(optional).until(present.because("contained value"));
-        var element = awaitCollection(collection).until(single.because("one element"));
-        var entry = awaitMap(map).until(MapConditions.singleEntry.because("one entry"));
-        AwaitResult<Optional<String>, String> result = awaitOptional(optional).tryUntil(present.because("contained value"));
+        var actual = await(scalar).until(Conditions.isNotNull);
+        var selected = await(optional::call).until(present);
+        var element = await(collection::call).until(single);
+        var entry = await(map::call).until(MapConditions.singleEntry);
+        AwaitResult<Optional<String>, String> result = await(optional::call).tryUntil(present);
 
         assertEquals(5, actual.length());
         assertSame(text, actual);
@@ -209,20 +205,20 @@ class PositiveFluentMatrixTest {
         assertEquals(5, entry.getKey().length());
         assertEquals(1, entry.getValue().intValue());
         assertEquals(selected, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
-        assertSame(values, awaitCollection(collection).until(CollectionConditions.nonEmpty));
-        assertSame(entries, awaitMap(map).until(MapConditions.nonEmpty));
-        assertEquals(selected, awaitOptional(optional::call).until(present));
+        assertSame(values, await(collection::call).until(CollectionConditions.nonEmpty));
+        assertSame(entries, await(map::call).until(MapConditions.nonEmpty));
+        assertEquals(selected, await(optional::call).until(present));
         var time = new FakeTime(0);
-        List<String> stages = awaitOptional(optional).usingTime(time, time).every(ofNanos(1)).until(present, present);
+        List<String> stages = await(optional::call).usingTime(time, time).every(ofNanos(1)).until(present, present);
         assertEquals(List.of("ready", "ready"), stages);
     }
 
     @Test
-    void explicitCatalogFactoriesAcceptOverloadedConstructors() {
-        StringBuilder text = Conditions.await(StringBuilder::new).until(StringConditions.empty);
-        ArrayList<String> values = CollectionConditions.awaitCollection(ArrayList<String>::new).until(CollectionConditions.empty);
-        LinkedHashMap<String, Integer> entries = MapConditions.awaitMap(LinkedHashMap<String, Integer>::new).until(MapConditions.empty);
-        Optional<?> absent = OptionalConditions.awaitOptional(Optional::empty).until(OptionalConditions.absent);
+    void constructorLambdasRetainTheirConcreteTypes() {
+        StringBuilder text = Await.await(() -> new StringBuilder()).until(StringConditions.empty);
+        ArrayList<String> values = Await.await(() -> new ArrayList<String>()).until(CollectionConditions.empty);
+        LinkedHashMap<String, Integer> entries = Await.await(() -> new LinkedHashMap<String, Integer>()).until(MapConditions.empty);
+        Optional<?> absent = Await.await(() -> Optional.empty()).until(OptionalConditions.absent);
         assertEquals(0, text.length());
         assertEquals(0, values.size());
         assertEquals(0, entries.size());
@@ -235,11 +231,11 @@ class PositiveFluentMatrixTest {
         java.util.concurrent.Callable<List<String>> collection = () -> List.of("ready");
         java.util.concurrent.Callable<Map<String, Integer>> map = () -> Map.of("ready", 1);
 
-        AwaitResult<Optional<String>, String> optionalResult = awaitOptional(optional).tryUntil(present);
-        AwaitResult<List<String>, String> collectionResult = awaitCollection(collection).tryUntil(single);
-        AwaitResult<List<String>, String> firstResult = awaitCollection(collection).tryUntil(first);
-        AwaitResult<List<String>, String> lastResult = awaitCollection(collection).tryUntil(last);
-        AwaitResult<Map<String, Integer>, Map.Entry<String, Integer>> mapResult = awaitMap(map).tryUntil(MapConditions.singleEntry);
+        AwaitResult<Optional<String>, String> optionalResult = await(optional::call).tryUntil(present);
+        AwaitResult<List<String>, String> collectionResult = await(collection::call).tryUntil(single);
+        AwaitResult<List<String>, String> firstResult = await(collection::call).tryUntil(first);
+        AwaitResult<List<String>, String> lastResult = await(collection::call).tryUntil(last);
+        AwaitResult<Map<String, Integer>, Map.Entry<String, Integer>> mapResult = await(map::call).tryUntil(MapConditions.singleEntry);
 
         for (var result : List.of(optionalResult, collectionResult, firstResult, lastResult)) {
             assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
@@ -260,7 +256,7 @@ class PositiveFluentMatrixTest {
         String transformed = await(() -> trim.apply(" ready ")).until(isNotNull);
         String custom = await(() -> trim.apply(" ready ")).until(condition("ready", ConditionResult::satisfied));
         String asserted = await(() -> "ready").until(asserted(first.andThen(value -> calls.add("second " + value))::accept));
-        Map<String, Integer> matchingEntry = awaitMap(() -> Map.of("ready", 1))
+        Map<String, Integer> matchingEntry = await(() -> Map.of("ready", 1))
                 .until(MapConditions.anyEntry(entry.and((key, value) -> !key.isBlank())::test));
 
         assertEquals(List.of("ready", "ready", "ready", "ready"), List.of(matched, transformed, custom, asserted));
@@ -275,9 +271,9 @@ class PositiveFluentMatrixTest {
         Predicate<String> expectedPredicate = String::isBlank;
 
         Optional<Class<?>> actualClass = Optional.of(expectedClass);
-        Class<?> type = awaitOptional(() -> actualClass).until(hasValue(equalTo(expectedClass)));
-        PreservingCondition<String> condition = awaitOptional(() -> Optional.of(expectedCondition)).until(hasValue(equalTo(expectedCondition)));
-        Predicate<String> predicate = awaitOptional(() -> Optional.of(expectedPredicate)).until(hasValue(equalTo(expectedPredicate)));
+        Class<?> type = await(() -> actualClass).until(hasValue(equalTo(expectedClass)));
+        PreservingCondition<String> condition = await(() -> Optional.of(expectedCondition)).until(hasValue(equalTo(expectedCondition)));
+        Predicate<String> predicate = await(() -> Optional.of(expectedPredicate)).until(hasValue(equalTo(expectedPredicate)));
 
         assertSame(expectedClass, type);
         assertSame(expectedCondition, condition);
@@ -291,7 +287,7 @@ class PositiveFluentMatrixTest {
         var waiting = await(() -> "ready").usingTime(time, time);
 
         String direct = waiting.until(condition("direct", ConditionResult::satisfied));
-        String created = waiting.until(conditionPerWait("created", PositiveFluentMatrixTest::evaluator).because("ready"));
+        String created = waiting.until(conditionPerWait("created", PositiveFluentMatrixTest::evaluator));
         String preserved = waiting.until(conditionPerWait("preserved", PositiveFluentMatrixTest::evaluator));
         String concrete = waiting.until(conditionPerWait("broad", broadFactory));
         List<String> captured = waiting.until(conditionPerWait("first", PositiveFluentMatrixTest::evaluator),
@@ -299,6 +295,56 @@ class PositiveFluentMatrixTest {
 
         assertEquals(List.of("ready", "ready", "ready", "ready"), List.of(direct, created, preserved, concrete));
         assertEquals(List.of("ready", "ready"), captured);
+    }
+
+    private record User(boolean active) {}
+
+    @Test
+    void inlinePredicatesInferTypesAcrossSourceCategoriesAndSequences() {
+        var user = new User(true);
+        var users = new ArrayList<>(List.of(user));
+        var time = new FakeTime(0);
+
+        User matched = await(() -> user).until(matches(value -> value.active()));
+        ArrayList<User> allUsers = await(() -> users).until(all(value -> value.active()));
+        User selected = await(() -> users).until(single(value -> value.active()));
+        User optional = await(() -> Optional.of(user)).until(hasValue(value -> value.active()));
+        User mapped = await(() -> Map.of("id", user)).until(MapConditions.valueFor("id", value -> value.active()));
+        ArrayList<User> nested = await(() -> users).until(all(matches(value -> value.active())));
+        Map<String, User> entries = await(() -> Map.of("id", user))
+                .until(MapConditions.allEntries((key, value) -> key.length() == 2 && value.active()));
+        List<Integer> sortedValues = await(() -> List.of(1, 2)).until(sorted(java.util.Comparator.naturalOrder()));
+        List<User> stages = await(() -> users).usingTime(time, time).until(
+                single(value -> value.active()), single(value -> value.active()));
+
+        for (User result : List.of(matched, selected, optional, mapped)) assertSame(user, result);
+        assertSame(users, allUsers);
+        assertSame(users, nested);
+        assertSame(user, entries.get("id"));
+        assertEquals(List.of(1, 2), sortedValues);
+        assertEquals(List.of(user, user), stages);
+    }
+
+    @Test
+    void typedSourceVariablesAndLambdasSelectTheSameValues() {
+        var user = new User(true);
+        var users = new ArrayList<>(List.of(user));
+        var index = new LinkedHashMap<>(Map.of("id", user));
+        Await.CollectionSource<ArrayList<User>> collection = () -> users;
+        Await.OptionalSource<User> optional = () -> Optional.of(user);
+        Await.MapSource<LinkedHashMap<String, User>> map = () -> index;
+
+        User selected = await(collection).until(single);
+        User presentUser = await(optional).until(present);
+        User mapped = await(map).until(MapConditions.valueFor("id"));
+        ArrayList<User> originalUsers = await(collection).until(nonEmpty);
+        LinkedHashMap<String, User> originalIndex = await(map).until(MapConditions.nonEmpty);
+
+        assertSame(user, selected);
+        assertSame(user, presentUser);
+        assertSame(user, mapped);
+        assertSame(users, originalUsers);
+        assertSame(index, originalIndex);
     }
 
     private static CheckedFunction<String, ConditionResult<String>> evaluator() {

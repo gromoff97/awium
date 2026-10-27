@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.TIMEOUT;
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
@@ -59,9 +60,9 @@ class ObjectAndOptionalConditionsTest {
         Optional<String> empty = Optional.empty();
         Optional<String> presentValue = Optional.of("value");
         var time = new FakeTime(0);
-        var missing = awaitOptional(() -> (Optional<String>) null).usingTime(time, time).upTo(ofNanos(1));
-        var emptySource = awaitOptional(() -> empty).usingTime(time, time).upTo(ofNanos(1));
-        var presentSource = awaitOptional(() -> presentValue).usingTime(time, time).upTo(ofNanos(1));
+        var missing = await(() -> (Optional<String>) null).usingTime(time, time).upTo(ofNanos(1));
+        var emptySource = await(() -> empty).usingTime(time, time).upTo(ofNanos(1));
+        var presentSource = await(() -> presentValue).usingTime(time, time).upTo(ofNanos(1));
 
         assertFalse(present.description().isBlank());
         assertFailure(TIMEOUT, () -> missing.until(present));
@@ -81,13 +82,13 @@ class ObjectAndOptionalConditionsTest {
         var equal = hasValue(equalTo(expected));
         var notEqual = hasValue(notEqualTo(expected));
         var time = new FakeTime(0);
-        var equalSource = awaitOptional(() -> Optional.of(equalActual)).usingTime(time, time).upTo(ofNanos(1));
-        var differentSource = awaitOptional(() -> Optional.of(differentActual)).usingTime(time, time).upTo(ofNanos(1));
+        var equalSource = await(() -> Optional.of(equalActual)).usingTime(time, time).upTo(ofNanos(1));
+        var differentSource = await(() -> Optional.of(differentActual)).usingTime(time, time).upTo(ofNanos(1));
 
-        assertFailure(TIMEOUT, () -> awaitOptional(() -> (Optional<String>) null)
+        assertFailure(TIMEOUT, () -> await(() -> (Optional<String>) null)
                 .usingTime(time, time).upTo(ofNanos(1)).until(equal));
         Optional<String> empty = Optional.empty();
-        assertFailure(TIMEOUT, () -> awaitOptional(() -> empty).usingTime(time, time).upTo(ofNanos(1)).until(equal));
+        assertFailure(TIMEOUT, () -> await(() -> empty).usingTime(time, time).upTo(ofNanos(1)).until(equal));
         String selectedEqual = equalSource.until(equal);
         assertSame(equalActual, selectedEqual);
         assertFailure(TIMEOUT, () -> equalSource.until(notEqual));
@@ -101,12 +102,12 @@ class ObjectAndOptionalConditionsTest {
         var expected = new Directional(false);
         var actual = new Directional(true);
 
-        Directional selected = awaitOptional(() -> Optional.of(actual)).until(hasValue(equalTo(expected)));
+        Directional selected = await(() -> Optional.of(actual)).until(hasValue(equalTo(expected)));
         assertSame(actual, selected);
         assertEquals(1, actual.equalsCalls);
 
         int[] actualArray = {1, 2};
-        int[] selectedArray = awaitOptional(() -> Optional.of(actualArray)).until(hasValue(equalTo(new int[]{1, 2})));
+        int[] selectedArray = await(() -> Optional.of(actualArray)).until(hasValue(equalTo(new int[]{1, 2})));
         assertSame(actualArray, selectedArray);
     }
 

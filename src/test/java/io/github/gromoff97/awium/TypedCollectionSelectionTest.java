@@ -8,11 +8,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.function.Supplier;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
 import static io.github.gromoff97.awium.Conditions.equalTo;
@@ -34,13 +33,12 @@ class TypedCollectionSelectionTest {
     void firstLastAndIndexedConditionsReturnTheirDeclaredValues() {
         List<Object> values = List.of("skip", FIRST, 99, LAST);
         var time = new FakeTime(0);
-        var waiting = awaitCollection(() -> values).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
-        Supplier<String> forbidden = () -> { throw new AssertionError("successful selection rendered its reason"); };
+        var waiting = await(() -> values).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
 
-        assertEquals(1, waiting.until(first(instanceOf(User.class).because(forbidden)).because(forbidden)).id());
-        assertEquals(2, waiting.until(last(instanceOf(User.class)).because("last %s", "user")).id());
-        assertEquals(1, waiting.until(element(1, instanceOf(User.class)).because(forbidden)).id());
-        AwaitResult<List<Object>, User> captured = waiting.tryUntil(first(instanceOf(User.class)).because("first"));
+        assertEquals(1, waiting.until(first(instanceOf(User.class))).id());
+        assertEquals(2, waiting.until(last(instanceOf(User.class))).id());
+        assertEquals(1, waiting.until(element(1, instanceOf(User.class))).id());
+        AwaitResult<List<Object>, User> captured = waiting.tryUntil(first(instanceOf(User.class)));
         switch (captured) {
             case AwaitResult.Satisfied(var attempts, var user) -> assertEquals(1, user.id());
             case AwaitResult.Failed(var attempts, var failure) -> fail(failure.message());
@@ -51,29 +49,28 @@ class TypedCollectionSelectionTest {
     void checksAndComparisonsRetainTheSourceElementType() {
         List<User> values = List.of(new User(-1), FIRST, LAST);
         var time = new FakeTime(0);
-        var waiting = awaitCollection(() -> values).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
-        Supplier<String> forbidden = () -> { throw new AssertionError("successful check rendered its reason"); };
+        var waiting = await(() -> values).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
 
-        assertEquals(1, waiting.until(first(matches(User::positive).because(forbidden)).because(forbidden)).id());
-        assertEquals(2, waiting.until(last(matches(User::positive)).because("positive %s", "user")).id());
-        assertEquals(1, waiting.until(element(1, matches(User::positive)).because(forbidden)).id());
-        assertEquals(2, waiting.until(first(equalTo(LAST).because(forbidden)).because("first match")).id());
-        assertEquals(1, waiting.until(last(equalTo(FIRST)).because(forbidden)).id());
-        assertEquals(2, waiting.until(element(2, equalTo(LAST)).because(forbidden)).id());
-        assertEquals(-1, waiting.until(first(isNotNull).because(forbidden)).id());
+        assertEquals(1, waiting.until(first(matches(User::positive))).id());
+        assertEquals(2, waiting.until(last(matches(User::positive))).id());
+        assertEquals(1, waiting.until(element(1, matches(User::positive))).id());
+        assertEquals(2, waiting.until(first(equalTo(LAST))).id());
+        assertEquals(1, waiting.until(last(equalTo(FIRST))).id());
+        assertEquals(2, waiting.until(element(2, equalTo(LAST))).id());
+        assertEquals(-1, waiting.until(first(isNotNull)).id());
         assertEquals(2, waiting.until(last(isNotNull)).id());
         assertEquals(1, waiting.until(element(1, isNotNull)).id());
 
         var selected = waiting.until(first(matches(User::positive)), last(equalTo(LAST)), element(1, isNotNull));
         assertEquals(1, selected.getFirst().id());
         assertEquals(1, selected.getLast().id());
-        AwaitResult<List<User>, User> captured = waiting.tryUntil(last(equalTo(FIRST)).because("selected"));
+        AwaitResult<List<User>, User> captured = waiting.tryUntil(last(equalTo(FIRST)));
         switch (captured) {
             case AwaitResult.Satisfied(var attempts, var user) -> assertEquals(1, user.id());
             case AwaitResult.Failed(var attempts, var failure) -> fail(failure.message());
         }
         List<CharSequence> texts = List.of("ready");
-        assertEquals(5, awaitCollection(() -> texts).usingTime(time, time).until(first(equalTo("ready")).because("text")).length());
+        assertEquals(5, await(() -> texts).usingTime(time, time).until(first(equalTo("ready"))).length());
     }
 
     @Test
@@ -88,17 +85,17 @@ class TypedCollectionSelectionTest {
                 first(secondObservation), last(secondObservation), element(0, secondObservation));
         var time = new FakeTime(0);
         int[] reads = {0};
-        var waiting = awaitCollection(() -> { reads[0]++; return List.of(FIRST); })
+        var waiting = await(() -> { reads[0]++; return List.of(FIRST); })
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
         for (var selector : selectors) {
             for (int run = 0; run < 2; run++) {
-                assertEquals(1, waiting.until(selector.because("stateful")).id());
+                assertEquals(1, waiting.until(selector).id());
             }
         }
         assertEquals(6, factories[0]);
         assertEquals(12, reads[0]);
 
-        assertEquals(1, awaitCollection(() -> List.of(new User(-1), FIRST, LAST)).usingTime(time, time)
+        assertEquals(1, await(() -> List.of(new User(-1), FIRST, LAST)).usingTime(time, time)
                 .until(first(secondObservation)).id());
         assertEquals(7, factories[0]);
     }
@@ -115,7 +112,7 @@ class TypedCollectionSelectionTest {
             var selection = reverse ? last(predicate::test) : first(predicate::test);
             var time = new FakeTime(0);
             try {
-                var result = awaitCollection(() -> List.of(FIRST, LAST)).usingTime(time, time).tryUntil(selection);
+                var result = await(() -> List.of(FIRST, LAST)).usingTime(time, time).tryUntil(selection);
                 var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
                 assertEquals(AwaitFailure.Reason.INTERRUPTED, failure.reason());
                 assertInstanceOf(InterruptedException.class, failure.cause());
@@ -131,11 +128,11 @@ class TypedCollectionSelectionTest {
     @Test
     void typedSelectionsComposeWithOtherContainers() {
         List<List<Object>> nested = List.of(List.of("skip"), List.of(FIRST), List.of(LAST));
-        var user = waiting(() -> nested).until(first(first(instanceOf(User.class))).because("nested"));
+        var user = waiting(() -> nested).until(first(first(instanceOf(User.class))));
         assertEquals(1, user.id());
         assertEquals(2, waiting(() -> nested).until(last(last(instanceOf(User.class)))).id());
         assertEquals(1, waiting(() -> Optional.of(nested.get(1))).until(
-                OptionalConditions.hasValue(first(instanceOf(User.class))).because("optional")).id());
+                OptionalConditions.hasValue(first(instanceOf(User.class)))).id());
         assertEquals(2, waiting(() -> Map.of("users", nested.get(2))).until(
                 MapConditions.valueFor("users", element(0, instanceOf(User.class)))).id());
         assertEquals(1, waiting(() -> nested.subList(0, 2)).until(single(first(instanceOf(User.class)))).id());
@@ -146,8 +143,8 @@ class TypedCollectionSelectionTest {
         List<Object> values = List.of(FIRST, "skip", LAST);
         int[] reads = {0};
         var waiting = waiting(() -> { reads[0]++; return values; });
-        var firstUser = first(instanceOf(User.class)).because("first");
-        var lastUser = last(instanceOf(User.class)).because("last");
+        var firstUser = first(instanceOf(User.class));
+        var lastUser = last(instanceOf(User.class));
         var selected = waiting.until(firstUser, lastUser);
 
         assertEquals(2, reads[0]);
@@ -208,24 +205,20 @@ class TypedCollectionSelectionTest {
     }
 
     @Test
-    void mismatchesRetainLazyReasonsAndExtractionDetails() {
+    void mismatchesRetainExtractionDetails() {
         List<Object> values = List.of("wrong");
         List<Condition.Typed<? super List<Object>, User>> checks = List.of(
                 first(instanceOf(User.class)), last(instanceOf(User.class)), element(0, instanceOf(User.class)));
         for (var check : checks) {
-            int[] reasons = {0};
-            var result = waiting(() -> values).tryUntil(check.because(() -> { reasons[0]++; return "user required"; }));
+            var result = waiting(() -> values).tryUntil(check);
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
-            assertTrue(failure.message().contains("Because: user required"));
             assertTrue(failure.message().contains("value was not an instance of " + User.class.getTypeName()));
-            assertEquals(1, reasons[0]);
         }
-        var missing = waiting(() -> values).tryUntil(element(3, instanceOf(User.class).because("inner")).because("outer"));
+        var missing = waiting(() -> values).tryUntil(element(3, instanceOf(User.class)));
         var failure = assertInstanceOf(AwaitResult.Failed.class, missing).failure();
         assertTrue(failure.message().contains("index 3"));
         assertTrue(failure.message().contains("list size was 1"));
-        assertTrue(failure.message().contains("Because: outer"));
         assertThrows(IllegalArgumentException.class, () -> element(-1, instanceOf(User.class)));
 
         Condition.Typed<Object, User> absent = null;
@@ -261,7 +254,7 @@ class TypedCollectionSelectionTest {
     private static void assertNestedFailure(Condition.Typed<? super List<Map<String, Object>>, User> condition,
             List<Map<String, Object>> values, Throwable cause) {
         int[] reads = {0};
-        var result = waiting(() -> { reads[0]++; return values; }).tryUntil(condition.because("selected user"));
+        var result = waiting(() -> { reads[0]++; return values; }).tryUntil(condition);
         var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
         assertEquals(AwaitFailure.Reason.CONDITION_FAILED, failure.reason());
         assertSame(cause, failure.cause());

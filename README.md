@@ -4,10 +4,10 @@ Awium is a zero-dependency Java 21 library that waits for a condition in the
 calling thread and returns the result from the same successful observation.
 
 ```java
-import static io.github.gromoff97.awium.OptionalConditions.ao;
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.OptionalConditions.present;
 
-Payment payment = ao(() -> paymentRepository.findById(order.paymentId())).until(present.because("Checkout cannot continue without the payment"));
+Payment payment = await(() -> paymentRepository.findById(order.paymentId())).until(present);
 ```
 
 ## Installation
@@ -57,9 +57,9 @@ import static io.github.gromoff97.awium.CollectionConditions.single;
 import static io.github.gromoff97.awium.MapConditions.singleEntry;
 import static io.github.gromoff97.awium.OptionalConditions.present;
 
-Payment payment = awaitOptional(paymentRepository::find).until(present);
-Payment onlyPayment = awaitCollection(paymentRepository::findAll).until(single);
-Map.Entry<String, Payment> entry = awaitMap(paymentRepository::index).until(singleEntry);
+Payment payment = await(paymentRepository::find).until(present);
+Payment onlyPayment = await(paymentRepository::findAll).until(single);
+Map.Entry<String, Payment> entry = await(paymentRepository::index).until(singleEntry);
 ```
 
 `present`, `single`, `first`, `last`, and `singleEntry` are fields, so they do
@@ -97,7 +97,7 @@ For callbacks already stored in JDK `Function`, `Consumer`, `Predicate`, or
 `BiPredicate` variables, pass `function::apply`, `consumer::accept`,
 `predicate::test`, or `entryPredicate::test`.
 Negate a checked callback with `CheckedPredicate.not(check)` or `CheckedBiPredicate.not(check)`.
-For example, `matches(CheckedPredicate.not(Payment::paid)).because("Payment must be unpaid")`
+For example, `matches(CheckedPredicate.not(Payment::paid))`
 keeps the method reference's input type and also accepts checks that throw checked exceptions.
 
 ### Ordered states
@@ -110,11 +110,11 @@ in stage order. `tryUntil(...)` returns the same list inside `AwaitResult`:
 List<Payment> payments = await(paymentRepository::load).until(
         matches(Payment::created),
         matches(Payment::pending),
-        equalTo(expectedPayment).because("Expected final payment"));
+        equalTo(expectedPayment));
 
 AwaitResult<String, List<String>> statuses = await(paymentRepository::status).tryUntil(
-        equalTo("created").because("The order must be created"),
-        equalTo("paid").because("Payment must complete"));
+        equalTo("created"),
+        equalTo("paid"));
 ```
 
 With `persisting(...)`, only the final stage is re-evaluated. Earlier captured
@@ -131,9 +131,9 @@ by a value check belongs inside the selection condition instead.
 Type-narrowing stages and nested type selections can also be captured in order:
 
 ```java
-List<Payment> payments = awaitCollection(repository::findAll).until(
-        single(instanceOf(Payment.class)).because("First payment"),
-        single(instanceOf(Payment.class)).because("Next payment"));
+List<Payment> payments = await(repository::findAll).until(
+        single(instanceOf(Payment.class)),
+        single(instanceOf(Payment.class)));
 ```
 
 These stages must declare the same result type. Mixing `instanceOf(String.class)`
@@ -149,7 +149,7 @@ An empty array is rejected before invoking the source.
 any order, and may be repeated. The last supplied value wins:
 
 ```java
-Payment payment = awaitOptional(source).every(POLL_INTERVAL).upTo(TIMEOUT).persisting(STABILITY).until(present);
+Payment payment = await(source::call).every(POLL_INTERVAL).upTo(TIMEOUT).persisting(STABILITY).until(present);
 ```
 
 Defaults are:
@@ -179,7 +179,7 @@ independent:
 
 ```java
 var nanos = new java.util.concurrent.atomic.AtomicLong();
-Payment payment = awaitOptional(source).usingTime(nanos::get, delay -> nanos.addAndGet(delay)).until(present);
+Payment payment = await(source::call).usingTime(nanos::get, delay -> nanos.addAndGet(delay)).until(present);
 ```
 
 The example advances virtual time instead of sleeping. The clock and wait
@@ -189,71 +189,28 @@ early. Custom waiting failures use the normal waiting-failure handling; clock
 failures propagate directly. Defaults remain `System.nanoTime` and
 `LockSupport.parkNanos`.
 
-## Explain the condition
+## Inline predicates
 
-Every condition supports `because(...)`. It returns an immutable copy with
-an explanation for diagnostics, preserving the condition's type and evaluation.
-A repeated `because(...)` replaces the reason; the original condition and shared
-constants remain unchanged:
+Pass predicates directly inside `until` so Java can infer their input types from
+the source:
 
 ```java
-// Avoid: repeats the condition.
-nonEmpty.because("The collection must not be empty");
-
-// Prefer: explains the business consequence.
-nonEmpty.because("Settlement requires at least one eligible payment");
+Payment payment = await(paymentRepository::load).until(matches(value -> value.finished()));
+List<Payment> payments = await(paymentRepository::findAll).until(all(value -> value.paid()));
+Payment found = await(paymentRepository::find).until(hasValue(value -> value.paid()));
 ```
 
-String formatting is eager and uses `Locale.ROOT`. A supplier defers building
-the explanation:
-
-```java
-await(paymentRepository::load).until(equalTo(expectedPayment).because(
-        "Refund processing requires payment %s in the replica", paymentId));
-
-await(paymentRepository::load).until(equalTo(expectedPayment).because(
-        () -> "Expected payment: " + expectedPayment));
-```
-
-The supplier form is lazy: it runs when diagnostics need to render that
-condition. Reusing the condition can evaluate it again for a later failure.
-An explanation failure is recorded in `AwaitFailure.suppressed()` without
-replacing the wait's outcome or cause. Reading `Condition.explanation()`
-explicitly also evaluates a lazy supplier; the resulting failure message
-remains a frozen string.
-
-Java does not use the surrounding target type to infer the receiver of a method
-call ([JLS 15.12](https://docs.oracle.com/javase/specs/jls/se21/html/jls-15.html#jls-15.12)).
-In `matches(...).because(...)`, `matches(...)` must be typed before `because(...)`.
-Generic predicate factories such as `matches`, `single`, and `hasValue` may lose
-a lambda's input type before `because(...)`. Method references such as
-`Payment::finished` supply that type; a lambda may need an explicit parameter type:
-
-```java
-await(paymentRepository::load).until(matches(Payment::finished).because(
-        "Settlement requires a finished payment"));
-await(paymentRepository::load).until(matches((Payment payment) -> payment.status() == FINISHED).because(
-        "Settlement requires a finished payment"));
-```
-
-Generic helpers without a concrete input type have the same limitation:
-`sorted(Comparator.naturalOrder()).because(...)` cannot infer the element type.
-Use a typed method reference such as `sorted(Integer::compareTo).because(...)`.
-
-For emptiness, use `empty.because(...)` or `nonEmpty.because(...)` from the
-appropriate catalogue. A generic factory cannot infer its operand type from
-an untyped empty `List.of()`, an empty varargs list, or a `null` literal before
-a chained `because(...)`. Use `isNull` for a null check.
+A standalone declaration such as `var check = matches(value -> value.finished())`
+has no source type to infer from. Use a method reference such as
+`matches(Payment::finished)` when a condition needs to be stored and reused.
 
 ## Selection and checking
 
 Put a check inside the selection:
 
 ```java
-Payment payment = awaitCollection(paymentRepository::findAll).until(single(Payment::paid));
-Payment paid = awaitCollection(paymentRepository::findAll).until(single(Payment::paid).because(
-        "Settlement requires a paid payment"));
-Payment found = awaitOptional(paymentRepository::find).until(hasValue(Payment::paid));
+Payment payment = await(paymentRepository::findAll).until(single(Payment::paid));
+Payment found = await(paymentRepository::find).until(hasValue(Payment::paid));
 ```
 
 `single` requires a collection containing exactly one element.
@@ -261,11 +218,11 @@ Payment found = awaitOptional(paymentRepository::find).until(hasValue(Payment::p
 other elements may be present. No matches or several matches cause a retry.
 Selectors that accept nested conditions also accept a predicate directly:
 `single(check)`, `hasValue(check)`, `valueFor(key, check)`, and `onlyValueFor(key, check)`. Use a full condition
-for its own explanation, assertion adapter, or per-wait callback state.
+for a type check, assertion adapter, or per-wait callback state.
 `singleEntry((key, value) -> ...)` accepts a two-argument check like the map's
 entry quantifiers and retains the source's key and value types.
 Nested entry conditions can accept exact `Map.Entry<KEY, VALUE>` parameters,
-including after `because(...)`. Their key and value types must match the source;
+whose key and value types match the source;
 read-only wildcard entry checks are also supported.
 
 Map membership checks compare keys and values with `Objects.deepEquals`, with
@@ -276,7 +233,7 @@ includes array content and applies to maps with comparators or identity keys as 
 the map to have exactly one entry.
 
 `all`, `any`, `none`, and the map entry/key/value quantifiers also accept a nested
-condition, for example `all(matches(Payment::paid).because("Paid payment"))`.
+condition, for example `all(matches(Payment::paid))`.
 They preserve the complete observed container. A nested type check tests each
 candidate; it does not change the container's declared element type. Evaluation
 short-circuits on the first decisive candidate. Nested state is created lazily
@@ -284,9 +241,8 @@ and retained across candidates and retries, separately for each wait and stage.
 Each candidate is evaluated as a nested condition. An interrupt flag left set
 by its callback stops the wait before another candidate is checked.
 
-Every condition family exposes `description()`, `explanation()`, and `reference()`
-through the common immutable `Condition` model. `because(...)` returns the same
-concrete family with a replacement explanation; the original condition is unchanged.
+Every condition family exposes `description()` and `reference()` through the
+common immutable `Condition` model.
 
 The source is read once per attempt. `singleEntry(...)` applies the same rule to
 map entries; `hasValue(...)` checks an optional value.
@@ -302,7 +258,7 @@ The observation remains a caller-owned object, not an atomic snapshot.
 
 The nested condition can preserve the selected value (`matches`, `asserted`,
 `condition`), compare it with an expected value (`equalTo`), or narrow its type
-(`instanceOf`). Its explanation and expected value are
+(`instanceOf`). Its description and expected value are
 retained in diagnostics. Callback failures stop evaluation and retain their
 original cause. If a callback sets the thread's interrupt flag, selection stops
 before invoking the next callback. A nested factory initializes lazily on the first candidate and
@@ -317,19 +273,19 @@ as conditions inside another selection or quantifier.
 Type selection uses the same composition:
 
 ```java
-Payment payment = awaitCollection(repository::findAll).until(single(instanceOf(Payment.class)));
-Payment found = awaitOptional(repository::find).until(hasValue(instanceOf(Payment.class)));
-Payment firstPayment = awaitCollection(repository::findAll).until(first(instanceOf(Payment.class)).because("First payment"));
-Payment lastPayment = awaitCollection(repository::findAll).until(last(instanceOf(Payment.class)).because("Last payment"));
-Payment indexedPayment = awaitCollection(repository::findAll).until(element(0, instanceOf(Payment.class)).because("Payment at index zero"));
-Payment paid = awaitCollection(paymentRepository::findAll).until(first(Payment::paid).because("Paid payment"));
+Payment payment = await(repository::findAll).until(single(instanceOf(Payment.class)));
+Payment found = await(repository::find).until(hasValue(instanceOf(Payment.class)));
+Payment firstPayment = await(repository::findAll).until(first(instanceOf(Payment.class)));
+Payment lastPayment = await(repository::findAll).until(last(instanceOf(Payment.class)));
+Payment indexedPayment = await(repository::findAll).until(element(0, instanceOf(Payment.class)));
+Payment paid = await(paymentRepository::findAll).until(first(Payment::paid));
 ```
 
 `first`, `last`, and `element` accept nested conditions. Checks such as
 `first(Payment::paid)` and comparisons such as `last(equalTo(expectedPayment))`
 retain the source's element type. Conditions such as `instanceOf` return their
 declared result type, including when the source contains `Object` values.
-`because(...)` preserves both forms. The first two search in encounter order or
+The first two search in encounter order or
 reverse encounter order; `element` checks only the indexed value. If nested
 evaluation throws or the callback sets the thread's interrupt flag, the wait stops
 before the next callback.
@@ -337,9 +293,9 @@ before the next callback.
 To collect selected values in order, pass several selections to the terminal:
 
 ```java
-List<Payment> payments = awaitCollection(paymentRepository::findAll).until(
-        single(Payment::created).because("Creation"),
-        single(Payment::paid).because("Payment"));
+List<Payment> payments = await(paymentRepository::findAll).until(
+        single(Payment::created),
+        single(Payment::paid));
 ```
 
 ## Custom conditions
@@ -376,7 +332,7 @@ await(paymentRepository::load).until(conditionPerWait("two paid observations", (
     return (Payment actual) -> actual.paid() && ++paidObservations[0] >= 2
             ? satisfied()
             : unsatisfied();
-}).because("Payment must be observed as paid twice"));
+}));
 ```
 
 Creation is lazy, once per use of the condition in a wait; ordered stages have
@@ -402,16 +358,16 @@ Expected sets of values can come from any `Iterable`:
 
 ```java
 Collection<Payment> payments = List.of(expectedPayment);
-Collection<Payment> observed = awaitCollection(() -> payments).until(all(Payment::paid).because("All payments must be paid"));
-List<Payment> batch = awaitCollection(paymentRepository::findAll).until(
-        containsOnly(payments).because("The replica must contain the expected payment"));
+Collection<Payment> observed = await(() -> payments).until(all(Payment::paid));
+List<Payment> batch = await(paymentRepository::findAll).until(
+        containsOnly(payments));
 ```
 
 Ordered checks require `SequencedCollection`. These source requirements apply
 equally to predicates, comparisons, and conditions with a declared result type.
 
 Text conditions accept any `CharSequence` and preserve the source's concrete type
-and instance, including after `because(...)` and inside container selections.
+and instance, including inside container selections.
 Expected fragments, prefixes, suffixes, and regex text also accept `CharSequence`,
 for example `StringConditions.startsWith(new StringBuilder("rea"))`.
 `StringConditions.contains(fragment)` checks one fragment;
@@ -426,8 +382,7 @@ two distinct `StringBuilder` instances need not be equal despite identical text.
 
 Single-bound checks use only the source's `Comparable<BOUND>` contract; the
 bound itself need not implement `Comparable`. Range bounds must also compare
-with each other. Both forms preserve the source's concrete type and instance
-after `because(...)`.
+with each other. Both forms preserve the source's concrete type and instance.
 
 Object membership uses `in(iterable)` and `notIn(iterable)`, for example
 `in(List.of("created", "paid"))`. To treat a collection or array as one candidate,
@@ -490,73 +445,63 @@ emptiness itself is the expectation.
 Qualify a provider when a test needs colliding catalogues:
 
 ```java
-awaitCollection(paymentRepository::findAll).until(CollectionConditions.nonEmpty);
-awaitMap(paymentRepository::index).until(MapConditions.nonEmpty);
+await(paymentRepository::findAll).until(CollectionConditions.nonEmpty);
+await(paymentRepository::index).until(MapConditions.nonEmpty);
 ```
 
 ## Sources
 
-Choose the factory for the value returned by the source. Each factory has a full
-name and a short form with the same types and behavior:
-
-| Source result | Full name | Short form |
-| --- | --- | --- |
-| A value, including text | `Conditions.await` | `Conditions.a` |
-| A `Collection`, including lists and sets | `CollectionConditions.awaitCollection` | `CollectionConditions.ac` |
-| An `Optional` | `OptionalConditions.awaitOptional` | `OptionalConditions.ao` |
-| A `Map` | `MapConditions.awaitMap` | `MapConditions.am` |
+Import one entry point for all source categories:
 
 ```java
-import static io.github.gromoff97.awium.Conditions.a;
-import static io.github.gromoff97.awium.CollectionConditions.ac;
-import static io.github.gromoff97.awium.OptionalConditions.ao;
-import static io.github.gromoff97.awium.MapConditions.am;
+import static io.github.gromoff97.awium.Await.await;
 
-Payment loaded = a(paymentRepository::load).until(equalTo(expectedPayment));
-Payment found = ao(paymentRepository::find).until(present);
-Payment onlyPayment = ac(paymentRepository::findAll).upTo(TIMEOUT).every(POLL_INTERVAL).until(single);
-Map.Entry<String, Payment> entry = am(paymentRepository::index).until(singleEntry);
+Payment loaded = await(paymentRepository::load).until(equalTo(expectedPayment));
+Payment found = await(paymentRepository::find).until(present);
+Payment onlyPayment = await(paymentRepository::findAll).upTo(TIMEOUT).every(POLL_INTERVAL).until(single);
+Map.Entry<String, Payment> entry = await(paymentRepository::index).until(singleEntry);
 ```
 
-The names select the source category without competing `await` overloads.
-Use `ao` / `awaitOptional` for `present`, `ac` / `awaitCollection` for collection
-selections, and `am` / `awaitMap` for map selections. The generic `a` / `await`
-treats any source result as a whole value; it does not switch categories automatically.
+The compiler chooses an `await` overload from the lambda or method reference.
+Sources may throw checked exceptions and are invoked only when `until` or
+`tryUntil` starts the wait. Direct observed values are not accepted.
 
-Factories accept JDK `Callable` variables, lambdas, and method references, and
-the source may throw checked exceptions. They never accept a direct observed value.
-All four factories also accept covariant sources such as
-`Callable<? extends Optional<Payment>>`, retaining their selection types.
-
-The chosen name also establishes the category when a source returns `null`:
-
-```java
-import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
-
-awaitOptional(() -> null).until(isNull);
-```
-
-For sources with concrete contained types, JDK variables and references to their
-`call` method retain the same selections:
+A plain JDK `Callable` uses the general value overload. For container selections,
+pass its `call` method reference or wrap the call in a lambda:
 
 ```java
 import java.util.concurrent.Callable;
-import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
-import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
-import static io.github.gromoff97.awium.MapConditions.awaitMap;
 
 Callable<Optional<Payment>> payment = paymentRepository::find;
 Callable<List<Payment>> payments = paymentRepository::findAll;
 Callable<Map<String, Payment>> index = paymentRepository::index;
 
-Payment found = awaitOptional(payment).until(present.because("The payment is required"));
-Payment onlyPayment = awaitCollection(payments).until(single);
-Map.Entry<String, Payment> onlyEntry = awaitMap(index).until(singleEntry);
+Payment found = await(payment::call).until(present);
+Payment onlyPayment = await(payments::call).until(single);
+Map.Entry<String, Payment> onlyEntry = await(index::call).until(singleEntry);
 ```
 
-Different source factories can be imported together. Constructor references such
-as `await(StringBuilder::new)` and `awaitCollection(ArrayList<String>::new)` select
-their category directly.
+Alternatively, declare `Await.OptionalSource<VALUE>`,
+`Await.CollectionSource<VALUES>`, or `Await.MapSource<ENTRIES>` when storing a
+source for later container selection. These functional interfaces extend
+`Callable` and can be passed directly to `await`.
+
+Overloaded constructor and generic method references can be ambiguous:
+`await(StringBuilder::new)` and `await(Optional::empty)` are examples.
+Use a lambda such as `await(() -> new StringBuilder())` or
+`await(() -> Optional.empty())`. A source that only returns `null` also needs
+an explicit category:
+
+```java
+import io.github.gromoff97.awium.Await.OptionalSource;
+
+OptionalSource<Payment> source = () -> null;
+await(source).until(isNull);
+```
+
+Wildcard-returning sources can use a lambda such as
+`await(() -> paymentRepository.findAllView()).until(single)`.
+A direct method reference to that method may choose the general value overload.
 
 For covariant collection and map results, typed views establish both the complete
 container type and its selected bound. The view is an immutable source description;
@@ -569,8 +514,8 @@ import io.github.gromoff97.awium.Await.MapViewSource;
 var payments = new CollectionViewSource<Payment, List<? extends Payment>>(paymentRepository::findAllView);
 var index = new MapViewSource<String, Payment, Map<? extends String, ? extends Payment>>(paymentRepository::indexView);
 
-Payment payment = awaitCollection(payments).until(single);
-Map.Entry<? extends String, ? extends Payment> entry = awaitMap(index).until(singleEntry);
+Payment payment = await(payments).until(single);
+Map.Entry<? extends String, ? extends Payment> entry = await(index).until(singleEntry);
 ```
 
 Use typed views when collecting mutable covariant values across observations,
@@ -589,9 +534,9 @@ Finish the same source configuration with `tryUntil(...)` to return an
 `AwaitResult<OBSERVED, RESULT>` for both success and failure:
 
 ```java
-import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
+import static io.github.gromoff97.awium.Await.await;
 
-var result = awaitOptional(paymentRepository::find).upTo(TIMEOUT).tryUntil(present);
+var result = await(paymentRepository::find).upTo(TIMEOUT).tryUntil(present);
 ```
 
 `AwaitResult.Satisfied` contains the terminal result. `AwaitResult.Failed`
@@ -677,8 +622,7 @@ formatting failures are retained by identity in `suppressed()` and in
 throwable to attach diagnostics.
 
 Null sources and conditions, invalid durations, and invalid eager factory
-arguments fail before polling. Lazy explanation text is validated when
-diagnostics render it. Every thrown
+arguments fail before polling. Every thrown
 `Throwable` from a source, condition, evaluator factory, or wait operation
 stops polling and is retained as the cause. Only the explicit `asserted(...)`
 adapter treats an `AssertionError` as an unsatisfied condition.
@@ -688,7 +632,7 @@ adapter treats an `AssertionError` as an unsatisfied condition.
 Run `./gradlew check` for behavior, fluent compilation, and packaged-module
 checks; `./gradlew pitest` runs mutation testing.
 
-`Condition` owns the immutable definition, explanation, and diagnostic reference.
+`Condition` owns the immutable definition and diagnostic reference.
 Its typed families let terminal overloads preserve or select the source's type.
 Preserving checks and comparisons share `SourceCondition`, whose input and
 expected-value bounds allow mixed stages while retaining the complete source type.
@@ -708,7 +652,7 @@ too late.
 composition. Failed extraction reports its own condition: optional presence,
 the requested list position, or the map lookup key. Map entry access failures
 also retain the lookup key. After extraction succeeds, diagnostics use the
-nested condition's expectation. The explanation is retained on both paths.
+nested condition's expectation.
 
 Catalog and fluent behavior tests use virtual time. Integration tests verify
 caller-thread execution and external cancellation on both platform and virtual

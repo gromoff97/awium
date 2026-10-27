@@ -16,6 +16,7 @@ import java.util.function.Function;
 import java.util.Spliterator;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.await;
 import static java.util.Arrays.asList;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
@@ -27,7 +28,7 @@ class ExpectedInputsTest {
     @Test
     void singleOperandsRemainWholeValuesInDiagnostics() {
         int[] operand = {1, 2};
-        List<Condition<?>> conditions = List.of(contains(operand), doesNotContain(operand),
+        List<Condition> conditions = List.of(contains(operand), doesNotContain(operand),
                 MapConditions.containsKey(operand), MapConditions.doesNotContainKey(operand),
                 MapConditions.containsValue(operand), MapConditions.doesNotContainValue(operand));
         for (var condition : conditions) {
@@ -37,9 +38,9 @@ class ExpectedInputsTest {
             var actual = List.of(negative ? operand : new int[] {9});
             var condition = negative ? doesNotContain(operand) : contains(operand);
             var time = new FakeTime(0);
-            var outcome = awaitCollection(() -> actual).usingTime(time, time)
+            var outcome = await(() -> actual).usingTime(time, time)
                     .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(1))
-                    .tryUntil(condition.because("one array"));
+                    .tryUntil(condition);
             var failure = assertInstanceOf(AwaitResult.Failed.class, outcome).failure();
             assertTrue(failure.message().contains((negative ? "Unexpected" : "Expected") + ": [1, 2]"));
         }

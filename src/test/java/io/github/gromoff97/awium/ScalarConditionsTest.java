@@ -10,10 +10,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
-import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
-import static io.github.gromoff97.awium.MapConditions.awaitMap;
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
@@ -34,10 +31,10 @@ class ScalarConditionsTest {
         var measurement = new Measurement(10);
         var time = new FakeTime(0);
         var waiting = await(() -> measurement).usingTime(time, time);
-        var checks = List.of(Conditions.greaterThan(new Limit(5)).because("lower limit"),
-                Conditions.atLeast(new Limit(10)).because("inclusive lower limit"),
-                Conditions.lessThan(new Limit(15)).because("upper limit"),
-                Conditions.atMost(new Limit(10)).because("inclusive %s", "upper limit"));
+        var checks = List.of(Conditions.greaterThan(new Limit(5)),
+                Conditions.atLeast(new Limit(10)),
+                Conditions.lessThan(new Limit(15)),
+                Conditions.atMost(new Limit(10)));
 
         for (var check : checks) {
             var value = waiting.until(check);
@@ -48,10 +45,10 @@ class ScalarConditionsTest {
             assertSame(measurement, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
             assertEquals(10, values.getLast().number());
         }
-        var selected = awaitOptional(() -> Optional.of(measurement)).until(OptionalConditions.hasValue(
-                Conditions.atLeast(new Limit(5)).because("inner limit")).because("measurement"));
-        var mapped = awaitMap(() -> Map.of("measurement", measurement)).until(MapConditions.valueFor("measurement",
-                Conditions.lessThan(new Limit(15)).because("inner limit")).because("measurement"));
+        var selected = await(() -> Optional.of(measurement)).until(OptionalConditions.hasValue(
+                Conditions.atLeast(new Limit(5))));
+        var mapped = await(() -> Map.of("measurement", measurement)).until(MapConditions.valueFor("measurement",
+                Conditions.lessThan(new Limit(15))));
         assertSame(measurement, selected);
         assertEquals(10, selected.number());
         assertSame(measurement, mapped);
@@ -73,12 +70,12 @@ class ScalarConditionsTest {
         var score = new Score(10);
         var time = new FakeTime(0);
         var waiting = await(() -> score).usingTime(time, time);
-        var checks = List.of(Conditions.greaterThan(new Bound(5)).because("lower bound"),
-                Conditions.atLeast(new Bound(10)).because("inclusive lower bound"),
-                Conditions.lessThan(new Bound(15)).because("upper bound"),
-                Conditions.atMost(new Bound(10)).because("inclusive %s", "upper bound"),
-                Conditions.between(new Bound(5), new Bound(15)).because("inclusive range"),
-                Conditions.strictlyBetween(new Bound(5), new Bound(15)).because("exclusive range"));
+        var checks = List.of(Conditions.greaterThan(new Bound(5)),
+                Conditions.atLeast(new Bound(10)),
+                Conditions.lessThan(new Bound(15)),
+                Conditions.atMost(new Bound(10)),
+                Conditions.between(new Bound(5), new Bound(15)),
+                Conditions.strictlyBetween(new Bound(5), new Bound(15)));
 
         for (var check : checks) {
             var value = waiting.until(check);
@@ -103,20 +100,20 @@ class ScalarConditionsTest {
             public int compareTo(Threshold threshold) { return Integer.compare(number, threshold.number()); }
         }
         var reading = new Reading(10);
-        var checks = List.of(Conditions.greaterThan(new Threshold(5)).because("lower bound"),
-                Conditions.atLeast(new Threshold(10)).because("inclusive lower bound"),
-                Conditions.lessThan(new Threshold(15)).because("upper bound"),
-                Conditions.atMost(new Threshold(10)).because("inclusive upper bound"),
-                Conditions.between(new Threshold(5), new Threshold(15)).because("inclusive range"),
-                Conditions.strictlyBetween(new Threshold(5), new Threshold(15)).because("exclusive range"));
+        var checks = List.of(Conditions.greaterThan(new Threshold(5)),
+                Conditions.atLeast(new Threshold(10)),
+                Conditions.lessThan(new Threshold(15)),
+                Conditions.atMost(new Threshold(10)),
+                Conditions.between(new Threshold(5), new Threshold(15)),
+                Conditions.strictlyBetween(new Threshold(5), new Threshold(15)));
 
         for (var check : checks) {
             var value = await(() -> reading).until(check);
             assertSame(reading, value);
             assertEquals(10, value.number());
         }
-        var selected = awaitCollection(() -> List.of(reading)).until(CollectionConditions.single(
-                Conditions.greaterThan(new Threshold(5)).because("nested lower bound")).because("one reading"));
+        var selected = await(() -> List.of(reading)).until(CollectionConditions.single(
+                Conditions.greaterThan(new Threshold(5))));
         assertSame(reading, selected);
         assertEquals(10, selected.number());
 
@@ -141,10 +138,10 @@ class ScalarConditionsTest {
                 StringConditions.lengthAtMost(8), StringConditions.lengthBetween(1, 10));
 
         for (var check : checks) {
-            var value = waiting.until(check.because("mutable text"));
+            var value = waiting.until(check);
             assertSame(text, value);
             assertEquals(text.capacity(), value.capacity());
-            var captured = waiting.tryUntil(check.because("mutable %s", "text"));
+            var captured = waiting.tryUntil(check);
             switch (captured) {
                 case AwaitResult.Satisfied(var attempts, var result) -> {
                     assertSame(text, result);
@@ -154,14 +151,14 @@ class ScalarConditionsTest {
             }
         }
 
-        var values = waiting.until(StringConditions.nonEmpty.because("first"),
-                StringConditions.equalToIgnoringCase("ready 42").because("second"));
+        var values = waiting.until(StringConditions.nonEmpty,
+                StringConditions.equalToIgnoringCase("ready 42"));
         assertSame(text, values.getFirst());
         assertEquals(text.capacity(), values.getLast().capacity());
         text.setLength(0);
-        assertSame(text, waiting.until(StringConditions.empty.because("cleared")));
+        assertSame(text, waiting.until(StringConditions.empty));
         text.append(" \t");
-        assertSame(text, waiting.until(StringConditions.blank.because("whitespace")));
+        assertSame(text, waiting.until(StringConditions.blank));
     }
 
     @Test
@@ -170,12 +167,12 @@ class ScalarConditionsTest {
         var buffer = CharBuffer.wrap(" ready");
         buffer.position(1);
 
-        var optional = awaitOptional(() -> Optional.of(text)).until(
-                OptionalConditions.hasValue(StringConditions.startsWith("rea").because("prefix")));
-        var selected = awaitCollection(() -> List.of(buffer)).until(
-                CollectionConditions.single(StringConditions.matchesRegex("ready").because("remaining text")));
-        var mapped = awaitMap(() -> Map.of("text", text)).until(
-                MapConditions.valueFor("text", StringConditions.length(5).because("length")));
+        var optional = await(() -> Optional.of(text)).until(
+                OptionalConditions.hasValue(StringConditions.startsWith("rea")));
+        var selected = await(() -> List.of(buffer)).until(
+                CollectionConditions.single(StringConditions.matchesRegex("ready")));
+        var mapped = await(() -> Map.of("text", text)).until(
+                MapConditions.valueFor("text", StringConditions.length(5)));
 
         assertSame(text, optional);
         assertSame(buffer, selected);
@@ -185,7 +182,7 @@ class ScalarConditionsTest {
         assertEquals(text.capacity(), mapped.capacity());
 
         text.replace(0, text.length(), "finished");
-        assertSame(text, await(() -> text).until(StringConditions.endsWith("ed").because("updated text")));
+        assertSame(text, await(() -> text).until(StringConditions.endsWith("ed")));
     }
 
     @Test

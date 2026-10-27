@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
@@ -31,7 +32,7 @@ class AssertionAdapterTest {
             var check = asserted((String value) -> {
                 if (interrupt) Thread.currentThread().interrupt();
                 throw cause;
-            }).because("payment state");
+            });
             var time = new FakeTime(0);
             var waiting = await(() -> "pending").usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
             var reason = interrupt ? INTERRUPTED : TIMEOUT;
@@ -40,7 +41,6 @@ class AssertionAdapterTest {
                 assertEquals(interrupt, Thread.interrupted());
                 assertEquals(reason, failure.reason());
                 assertSame(cause, failure.cause());
-                assertTrue(failure.message().contains("Because: payment state"));
 
                 var thrown = assertFailure(reason, () -> waiting.until(check));
                 assertEquals(interrupt, Thread.interrupted());
@@ -116,7 +116,7 @@ class AssertionAdapterTest {
                 DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(10)), time, time).until(Conditions.<String>condition("checked value", value -> {
                             invocations[0]++;
                             throw assertion;
-                        }).because("payment selection")));
+                        })));
 
         assertEquals(1, invocations[0]);
         assertSame(assertion, failure.getCause());

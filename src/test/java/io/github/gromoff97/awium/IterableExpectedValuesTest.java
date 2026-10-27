@@ -9,7 +9,7 @@ import java.util.function.Function;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.in;
 import static io.github.gromoff97.awium.Conditions.notIn;
@@ -61,7 +61,7 @@ class IterableExpectedValuesTest {
     void candidateSnapshotsRetainNullsAndArraysAsWholeValues() {
         var values = new ArrayList<>(asList(null, "ready"));
         var expected = new Once<>(values);
-        var allowed = in(expected).because("allowed values");
+        var allowed = in(expected);
         values.clear();
         assertEquals(5, waiting(() -> "ready").until(allowed).length());
         String missing = null;
@@ -70,8 +70,8 @@ class IterableExpectedValuesTest {
 
         int[] element = {1, 2};
         Iterable<int[]> arrays = List.of(element);
-        assertEquals(2, waiting(() -> new int[] {1, 2}).until(in(arrays).because("whole array")).length);
-        assertEquals(1, waiting(() -> new int[] {3}).until(notIn(arrays).because("whole array")).length);
+        assertEquals(2, waiting(() -> new int[] {1, 2}).until(in(arrays)).length);
+        assertEquals(1, waiting(() -> new int[] {3}).until(notIn(arrays)).length);
         assertEquals(2, waiting(() -> List.of(element)).until(containsOnly(arrays)).getFirst().length);
 
         Iterable<List<String>> lists = List.of(List.of("ready"));
@@ -88,8 +88,8 @@ class IterableExpectedValuesTest {
         assertThrows(NullPointerException.class, () -> containsAll(absent));
         assertThrows(NullPointerException.class, () -> notIn(absent));
         List<String> actual = List.of();
-        assertSame(actual, waiting(() -> actual).until(containsOnly(empty).because("empty")));
-        assertSame(actual, waiting(() -> actual).until(containsExactly(empty).because("empty")));
+        assertSame(actual, waiting(() -> actual).until(containsOnly(empty)));
+        assertSame(actual, waiting(() -> actual).until(containsExactly(empty)));
 
         int[] reads = {0};
         var cause = new IllegalStateException("expected iterator failed");
@@ -104,7 +104,7 @@ class IterableExpectedValuesTest {
             List<String> expectedValues, ACTUAL actual) {
         var mutable = new ArrayList<>(expectedValues);
         var expected = new Once<>(mutable);
-        var condition = factory.apply(expected).because("frozen expectation");
+        var condition = factory.apply(expected);
         var waiting = waiting(() -> actual);
         var before = waiting.tryUntil(condition);
         mutable.clear();

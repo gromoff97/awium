@@ -1,7 +1,5 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.Conditions.await;
-
 import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
@@ -12,6 +10,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.await;
 import static java.util.Arrays.stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -28,14 +27,14 @@ class PublicSurfaceTest {
             return "ready";
         };
 
-        String value = await(source).until(Conditions.isNotNull.because("standard checked supplier"));
+        String value = await(source).until(Conditions.isNotNull);
 
         assertEquals("ready", value);
     }
 
     @Test
     void conditionsDoNotExposeRuntimeMechanicsOrAlternativeFactories() {
-        Set<String> excludedMethods = Set.of("definition", "evaluatorFactory", "newEvaluator", "newAttempt",
+        Set<String> excludedMethods = Set.of("because", "explanation", "definition", "evaluatorFactory", "newEvaluator", "newAttempt",
                 "preservingAttempt", "selectionAttempt", "yields", "preserving", "captured");
         for (Class<?> stage : List.of(Conditions.class, Condition.class, Condition.Typed.class, PreservingCondition.class, ComparisonCondition.class,
                 SelectedCondition.class, MapValueCondition.class, SourceCondition.class)) {

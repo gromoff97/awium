@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.*;
@@ -27,8 +28,8 @@ class MixedConditionSequenceTest {
         var source = observations.iterator();
         var time = new FakeTime(0);
         var users = await(source::next).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10)).until(
-                equalTo(CREATED).because("created"), matches(User::pending).because("pending"),
-                equalTo(READY).because("ready"), matches(User::ready).because("confirmed"));
+                equalTo(CREATED), matches(User::pending),
+                equalTo(READY), matches(User::ready));
         assertEquals(List.of(CREATED, PENDING, READY, READY), users);
         assertSame(CREATED, users.getFirst());
         assertEquals(3, users.getLast().stage());
@@ -37,8 +38,8 @@ class MixedConditionSequenceTest {
         var nextSource = observations.iterator();
         AwaitResult<User, List<User>> captured = await(nextSource::next).usingTime(time, time)
                 .every(ofNanos(1)).upTo(ofNanos(10)).tryUntil(
-                        equalTo(CREATED).because(() -> "created"), matches(User::pending).because("%s", "pending"),
-                        equalTo(READY).because("ready"), matches(User::ready).because("confirmed"));
+                        equalTo(CREATED), matches(User::pending),
+                        equalTo(READY), matches(User::ready));
         switch (captured) {
             case AwaitResult.Satisfied(var attempts, var values) -> {
                 assertEquals(users, values);
@@ -63,7 +64,7 @@ class MixedConditionSequenceTest {
         var values = List.of(CREATED, CREATED, PENDING, CREATED, CREATED);
         var source = values.iterator();
         List<User> users = await(source::next).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10)).until(
-                afterRetry.because("first retry"), equalTo(PENDING), afterRetry.because("last retry"));
+                afterRetry, equalTo(PENDING), afterRetry);
         assertEquals(List.of(CREATED, PENDING, CREATED), users);
         assertEquals(2, factories[0]);
         assertFalse(source.hasNext());
@@ -82,12 +83,11 @@ class MixedConditionSequenceTest {
         for (boolean comparisonLast : List.of(false, true)) {
             AwaitResult<User, List<User>> result = comparisonLast
                     ? await(() -> CREATED).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
-                            .tryUntil(matches(user -> user.stage() == 1), equalTo(READY).because("final state"))
+                            .tryUntil(matches(user -> user.stage() == 1), equalTo(READY))
                     : await(() -> CREATED).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
-                            .tryUntil(equalTo(CREATED), matches(User::ready).because("final state"));
+                            .tryUntil(equalTo(CREATED), matches(User::ready));
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
-            assertTrue(failure.message().contains("Because: final state"));
             var attempt = result.attempts().getLast();
             assertEquals(1, attempt.progress().capturedStages());
             assertEquals(2, attempt.progress().lastEvaluatedStageNumber());
@@ -96,7 +96,7 @@ class MixedConditionSequenceTest {
 
         var cause = new IOException("callback failed");
         var failed = await(() -> CREATED).usingTime(time, time).every(ofNanos(1)).tryUntil(
-                equalTo(CREATED), matches((User user) -> { throw cause; }).because("failed stage"), equalTo(READY));
+                equalTo(CREATED), matches((User user) -> { throw cause; }), equalTo(READY));
         var failure = assertInstanceOf(AwaitResult.Failed.class, failed).failure();
         assertEquals(AwaitFailure.Reason.CONDITION_FAILED, failure.reason());
         assertSame(cause, failure.cause());

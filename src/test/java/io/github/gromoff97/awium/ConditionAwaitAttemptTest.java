@@ -6,10 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
-import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
-import static io.github.gromoff97.awium.MapConditions.awaitMap;
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static java.time.Duration.ofNanos;
@@ -29,7 +26,7 @@ class ConditionAwaitAttemptTest {
             factories[0]++;
             int[] calls = {0};
             return ignored -> ++calls[0] == 2 ? satisfied(replacement) : ConditionResult.unsatisfied("first observation");
-        }).because("the original observation is needed");
+        });
         var time = new FakeTime(0);
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
 
@@ -48,19 +45,19 @@ class ConditionAwaitAttemptTest {
         var actual = new Object();
         var replacement = new Object();
         PreservingCondition<Object> condition = Conditions.condition("preserve", ignored -> satisfied(replacement));
-        condition = condition.because("original identity");
+        condition = condition;
         var waiting = await(() -> actual);
 
         assertSame(actual, waiting.until(condition));
         assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, waiting.tryUntil(condition)).result());
-        assertSame(actual, awaitOptional(() -> Optional.of(actual)).until(OptionalConditions.hasValue(condition)));
-        assertSame(actual, awaitCollection(() -> List.of(actual)).until(CollectionConditions.single(condition)));
+        assertSame(actual, await(() -> Optional.of(actual)).until(OptionalConditions.hasValue(condition)));
+        assertSame(actual, await(() -> List.of(actual)).until(CollectionConditions.single(condition)));
         var time = new FakeTime(0);
         assertEquals(List.of(actual, actual), waiting.usingTime(time, time).until(condition, condition));
     }
 
     @Test
-    void explainedNestedChecksPreserveSelectedIdentityAndIndependentSessions() {
+    void nestedChecksPreserveSelectedIdentityAndIndependentSessions() {
         int[] factories = {0};
         Number actual = new java.math.BigDecimal("1.00");
         var nested = Conditions.<Number>conditionPerWait("second observation", () -> {
@@ -68,19 +65,19 @@ class ConditionAwaitAttemptTest {
             int[] calls = {0};
             return ignored -> ++calls[0] == 2 ? satisfied(42) : ConditionResult.unsatisfied("first observation");
         });
-        var optional = OptionalConditions.hasValue(nested).because("optional reason");
-        var collection = CollectionConditions.single(nested).because("collection reason");
+        var optional = OptionalConditions.hasValue(nested);
+        var collection = CollectionConditions.single(nested);
         Condition.MapValueCondition<Map<? super String, ?>, Number, Condition.Reference<?>> map =
-                MapConditions.valueFor("key", nested).because("map reason");
+                MapConditions.valueFor("key", nested);
         assertEquals(0, factories[0]);
 
         for (int run = 0; run < 2; run++) {
             var time = new FakeTime(0);
-            Number optionalValue = awaitOptional(() -> Optional.of(actual)).usingTime(time, time)
+            Number optionalValue = await(() -> Optional.of(actual)).usingTime(time, time)
                     .every(ofNanos(1)).until(optional);
-            Number element = awaitCollection(() -> List.of(actual)).usingTime(time, time)
+            Number element = await(() -> List.of(actual)).usingTime(time, time)
                     .every(ofNanos(1)).until(collection);
-            var mapWait = awaitMap(() -> Map.of("key", actual)).usingTime(time, time).every(ofNanos(1));
+            var mapWait = await(() -> Map.of("key", actual)).usingTime(time, time).every(ofNanos(1));
             Number mapValue = mapWait.until(map);
             AwaitResult<Map<String, Number>, Number> mapResult = mapWait.tryUntil(map);
             assertSame(actual, optionalValue);
@@ -100,7 +97,6 @@ class ConditionAwaitAttemptTest {
                     return ignored -> AttemptResult.of(satisfied(++calls[0]));
                 });
         assertEquals("counted", ordinary.description());
-        assertNull(ordinary.explanation());
         AwaitAttempt<Integer, Integer> first = new ConditionAwaitAttempt<>(ordinary);
         AwaitAttempt<Integer, Integer> second = new ConditionAwaitAttempt<>(ordinary);
 

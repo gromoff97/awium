@@ -6,7 +6,6 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Condition.SourceCondition;
-import java.util.concurrent.Callable;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import java.util.Map.Entry;
@@ -42,42 +41,6 @@ public final class MapConditions {
     public static final PreservingCondition<Map<?, ?>> nonEmpty = preserving("map is not empty", "map was empty", actual -> !actual.isEmpty());
 
     private MapConditions() {}
-
-    /**
-     * Configures a map wait, retaining its complete type, entry type, and value type.
-     * @param <KEY> key type
-     * @param <VALUE> value type
-     * @param <ENTRIES> complete map type
-     * @param source repeatedly invoked source
-     * @return immutable wait configuration
-     */
-    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> Await<ENTRIES, Map.Entry<KEY, VALUE>, VALUE> awaitMap(Callable<? extends ENTRIES> source) {
-        return new Await<>(source, WaitConfiguration.DEFAULT);
-    }
-
-    /** Short form of {@link #awaitMap(Callable)}. */
-    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> Await<ENTRIES, Map.Entry<KEY, VALUE>, VALUE> am(Callable<? extends ENTRIES> source) {
-        return awaitMap(source);
-    }
-
-    /**
-     * Configures a wait using a covariant map source description.
-     * @param <KEY> selected key bound
-     * @param <VALUE> selected value bound
-     * @param <ENTRIES> complete map type
-     * @param source typed source description
-     * @return immutable wait configuration
-     */
-    public static <KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>
-            Await<ENTRIES, Map.Entry<? extends KEY, ? extends VALUE>, VALUE> awaitMap(Await.MapViewSource<KEY, VALUE, ENTRIES> source) {
-        return new Await<>(requireNonNull(source, "source must not be null").delegate(), WaitConfiguration.DEFAULT);
-    }
-
-    /** Short form of {@link #awaitMap(Await.MapViewSource)}. */
-    public static <KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>
-            Await<ENTRIES, Map.Entry<? extends KEY, ? extends VALUE>, VALUE> am(Await.MapViewSource<KEY, VALUE, ENTRIES> source) {
-        return awaitMap(source);
-    }
 
     public static PreservingCondition<Map<?, ?>> size(int expected) {
         return sized(expected, actual -> actual == expected,
@@ -124,7 +87,7 @@ public final class MapConditions {
     }
 
     public static <CHECKED, REFERENCE> SelectedCondition<Map<?, ?>, CHECKED, REFERENCE> singleEntry(
-            SourceCondition<CHECKED, REFERENCE, ?> nested) {
+            SourceCondition<CHECKED, REFERENCE> nested) {
         return new SelectedCondition<>(ConditionSupport.single("map", required(nested), Map::entrySet,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
@@ -372,7 +335,7 @@ public final class MapConditions {
     }
 
     public static <KEY, CHECKED, REFERENCE> MapValueCondition<Map<? super KEY, ?>, CHECKED, REFERENCE> valueFor(KEY key,
-            SourceCondition<CHECKED, REFERENCE, ?> nested) {
+            SourceCondition<CHECKED, REFERENCE> nested) {
         return new MapValueCondition<>(compose("map value ", required(nested),
                 valueFor(key), actual -> value(actual, key),
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
@@ -399,7 +362,7 @@ public final class MapConditions {
     }
 
     public static <KEY, CHECKED, REFERENCE> MapValueCondition<Map<? super KEY, ?>, CHECKED, REFERENCE> onlyValueFor(KEY key,
-            SourceCondition<CHECKED, REFERENCE, ?> nested) {
+            SourceCondition<CHECKED, REFERENCE> nested) {
         return new MapValueCondition<>(compose("only map value ", required(nested), onlyValueFor(key),
                 actual -> onlyValue(actual, key), () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }

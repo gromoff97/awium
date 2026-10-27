@@ -12,8 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
 import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
-import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.MapConditions.awaitMap;
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AttemptRecord.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
@@ -40,22 +39,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DiagnosticsSnapshotTest {
 
-    private static final Condition<?> CONDITION = diagnosticCondition("condition", null);
+    private static final Condition CONDITION = diagnosticCondition("condition", null);
     private static final long SECOND = 1_000_000_000L;
     private static final long MILLISECOND = 1_000_000L;
 
     @Test
-    void builtInOperandIsRetainedThroughBecause() {
+    void builtInOperandIsRetainedInDiagnostics() {
         var time = new FakeTime(0);
-        var condition = equalTo("expected").because("payment must reach the target state");
+        var condition = equalTo("expected");
 
         var failure = assertFailure(TIMEOUT,
                 () -> timedAwait(() -> "actual", config(1, 2, 0), time, time).until(condition));
 
         assertMessage(failure,
                 "Condition: value equals expected",
-                "Expected: expected",
-                "Because: payment must reach the target state");
+                "Expected: expected");
     }
 
     @Test
@@ -83,14 +81,12 @@ class DiagnosticsSnapshotTest {
                 Acquisition deadline elapsed
 
                 Condition: conditions are satisfied in order
-                    Because: payment must complete its lifecycle
 
                 Attempt: 2 (ACQUISITION)
                     Actual: created
 
                 Sequence (captured 1 of 3):
                     Condition: payment status is pending
-                        Because: processing must begin before completion
                         Mismatch: payment status was created
 
                 Timing:
@@ -114,14 +110,12 @@ class DiagnosticsSnapshotTest {
                 Condition did not persist for the required duration
 
                 Condition: conditions are satisfied in order
-                    Because: payment must complete its lifecycle
 
                 Attempt: 4 (PERSISTENCE)
                     Actual: created
 
                 Sequence (captured 2 of 3):
                     Condition: payment status is completed
-                        Because: completion must remain stable
                         Mismatch: payment status was created
 
                 Timing:
@@ -142,8 +136,7 @@ class DiagnosticsSnapshotTest {
         assertion.setStackTrace(new StackTraceElement[]{frame});
         PreservingCondition<String> assertedPending = Conditions.<String>condition(
                 "payment status is pending", value -> unsatisfied(
-                        "payment status was created", assertion))
-                .because("processing must begin before completion");
+                        "payment status was created", assertion));
 
         var failure = assertFailure(TIMEOUT,
                 () -> timedAwait(() -> "created", config(1, 2, 0), time, time).until(lifecycle(assertedPending, completed())));
@@ -152,14 +145,12 @@ class DiagnosticsSnapshotTest {
                 Acquisition deadline elapsed
 
                 Condition: conditions are satisfied in order
-                    Because: payment must complete its lifecycle
 
                 Attempt: 2 (ACQUISITION)
                     Actual: created
 
                 Sequence (captured 1 of 3):
                     Condition: payment status is pending
-                        Because: processing must begin before completion
                         Mismatch: payment status was created
 
                 Timing:
@@ -181,7 +172,7 @@ class DiagnosticsSnapshotTest {
         PreservingCondition<String> brokenPending = Conditions.<String>condition(
                 "payment status is pending", value -> {
                     throw cause;
-                }).because("processing must begin before completion");
+                });
 
         var failure = assertFailure(CONDITION_FAILED,
                 () -> timedAwait(() -> "created", config(1, 10, 0), time, time).until(lifecycle(brokenPending, completed())));
@@ -190,14 +181,12 @@ class DiagnosticsSnapshotTest {
                 Condition evaluation failed
 
                 Condition: conditions are satisfied in order
-                    Because: payment must complete its lifecycle
 
                 Attempt: 2 (ACQUISITION)
                     Actual: created
 
                 Sequence (captured 1 of 3):
                     Condition: payment status is pending
-                        Because: processing must begin before completion
 
                 Timing:
                     Acquisition timeout: 10 nanoseconds
@@ -214,16 +203,16 @@ class DiagnosticsSnapshotTest {
         var betweenAssertion = new AssertionError("collection was empty");
         var persistenceAssertion = new AssertionError("optional was empty");
         WaitCompletion<Object, Object> between = new Timeout<>(
-                10 * SECOND, evaluatedAttempt(diagnosticCondition("collection to be non-empty", null).because("Settlement requires an eligible payment"),
+                10 * SECOND, evaluatedAttempt(diagnosticCondition("collection to be non-empty", null),
                         null, unsatisfied("collection was empty",
                         betweenAssertion), 4, 9 * SECOND));
         WaitCompletion<Object, Object> lateUnsatisfied = new Timeout<>(
-                evaluatedAttempt(diagnosticCondition("status equals COMPLETED", null).because("payment must complete"), "Payment[PENDING]", unsatisfied("status was PENDING"),
+                evaluatedAttempt(diagnosticCondition("status equals COMPLETED", null), "Payment[PENDING]", unsatisfied("status was PENDING"),
                         100, 10 * SECOND + 200 * MILLISECOND));
         WaitCompletion<Object, Object> lateSatisfied = new Timeout<>(
-                evaluatedAttempt(diagnosticCondition("status equals COMPLETED", null).because("payment must complete"), "Payment[COMPLETED]", satisfied(new Object()), 100,
+                evaluatedAttempt(diagnosticCondition("status equals COMPLETED", null), "Payment[COMPLETED]", satisfied(new Object()), 100,
                         10 * SECOND + 200 * MILLISECOND));
-        var persistedAttempt = evaluatedAttempt(diagnosticCondition("optional to remain present", null).because("payment must remain available"),
+        var persistedAttempt = evaluatedAttempt(diagnosticCondition("optional to remain present", null),
                 "Optional.empty", unsatisfied("optional was empty",
                 persistenceAssertion), 71, 9 * SECOND + 100 * MILLISECOND);
         var persistence = new PersistenceFailure<>(7 * SECOND,
@@ -243,7 +232,6 @@ class DiagnosticsSnapshotTest {
                 Acquisition deadline elapsed
 
                 Condition: collection to be non-empty
-                    Because: Settlement requires an eligible payment
 
                 Attempt: 4 (ACQUISITION)
                     Actual: null
@@ -261,7 +249,6 @@ class DiagnosticsSnapshotTest {
                 Acquisition deadline elapsed
 
                 Condition: status equals COMPLETED
-                    Because: payment must complete
 
                 Attempt: 100 (ACQUISITION)
                     Actual: Payment[PENDING]
@@ -276,7 +263,6 @@ class DiagnosticsSnapshotTest {
                 Acquisition deadline elapsed
 
                 Condition: status equals COMPLETED
-                    Because: payment must complete
 
                 Attempt: 100 (ACQUISITION)
                     Actual: Payment[COMPLETED]
@@ -290,7 +276,6 @@ class DiagnosticsSnapshotTest {
                 Condition did not persist for the required duration
 
                 Condition: optional to remain present
-                    Because: payment must remain available
 
                 Attempt: 71 (PERSISTENCE)
                     Actual: Optional.empty
@@ -318,10 +303,10 @@ class DiagnosticsSnapshotTest {
         var interruption = new InterruptedException("stopped");
 
         var sourceFailure = assertFailure(SOURCE_FAILED,
-                () -> Await.complete(sourceFailure(diagnosticCondition("condition", null).because("business reason"), sourceCause, 2, SECOND),
+                () -> Await.complete(sourceFailure(diagnosticCondition("condition", null), sourceCause, 2, SECOND),
                         config(SECOND, 10 * SECOND, 0)));
         var conditionFailure = assertFailure(CONDITION_FAILED,
-                () -> Await.complete(conditionFailure(diagnosticCondition("condition", null).because("business reason"),
+                () -> Await.complete(conditionFailure(diagnosticCondition("condition", null),
                         "actual", conditionCause, 3, SECOND), config(SECOND, 10 * SECOND, 0)));
         var waitingFailure = assertFailure(WAIT_FAILED,
                 () -> Await.complete(waitingFailure(waitingCause, 4, SECOND), config(SECOND, 10 * SECOND, 0)));
@@ -336,7 +321,6 @@ class DiagnosticsSnapshotTest {
                 Source retrieval failed
 
                 Condition: condition
-                    Because: business reason
 
                 Attempt: 2 (ACQUISITION)
 
@@ -351,7 +335,6 @@ class DiagnosticsSnapshotTest {
                 Condition evaluation failed
 
                 Condition: condition
-                    Because: business reason
 
                 Attempt: 3 (ACQUISITION)
                     Actual: actual
@@ -501,7 +484,7 @@ class DiagnosticsSnapshotTest {
         var valueCause = new IllegalArgumentException("toString failed");
         var actual = new ThrowingValue(valueCause);
         WaitCompletion<Object, Object> outcome = new Timeout<>(
-                evaluatedAttempt(diagnosticCondition("condition", null).because("business reason"), actual, unsatisfied("not ready"), 1, 2));
+                evaluatedAttempt(diagnosticCondition("condition", null), actual, unsatisfied("not ready"), 1, 2));
 
         var valueFailure = assertFailure(TIMEOUT,
                 () -> Await.complete(outcome, config(1, 2, 0)));
@@ -512,7 +495,6 @@ class DiagnosticsSnapshotTest {
                 Acquisition deadline elapsed
 
                 Condition: condition
-                    Because: business reason
 
                 Attempt: 1 (ACQUISITION)
                     Actual: <value unavailable: diagnostics failed>
@@ -571,7 +553,7 @@ class DiagnosticsSnapshotTest {
     void diagnosticFailureRetainsSequenceContext() {
         var cause = new IllegalArgumentException("actual toString failed");
         var progress = new AttemptRecord.Progress(1, 2, 2,
-                diagnosticCondition("inner second", null).because("inner business reason"));
+                diagnosticCondition("inner second", null));
         var attempt = new AttemptRecord<>(2, ACQUISITION, afterObservation(2),
                 diagnosticCondition("conditions are satisfied in order", null), progress,
                 new AttemptRecord.Outcome.Evaluated<>(new ThrowingValue(cause),
@@ -581,7 +563,7 @@ class DiagnosticsSnapshotTest {
                 () -> Await.complete(new Timeout<>(attempt), config(1, 2, 0)));
 
         assertMessage(failure, "Sequence (captured 1 of 2)",
-                "Condition: inner second", "Because: inner business reason",
+                "Condition: inner second",
                 "Mismatch: inner mismatch");
     }
 
@@ -685,8 +667,7 @@ class DiagnosticsSnapshotTest {
                     new Condition.Reference<>("Expected", "stage operand")));
             var check = new Condition.Typed<Object, Object>("ordered conditions",
                     new Condition.Reference<>("Expected", expected),
-                    () -> value -> new AttemptResult.Evaluated<>(unsatisfied("not ready", original), null, progress))
-                    .because("business reason");
+                    () -> value -> new AttemptResult.Evaluated<>(unsatisfied("not ready", original), null, progress));
             var time = new FakeTime(0);
             var waiting = timedAwait(() -> actual, config(1, 2, 0), time, time);
             AwaitFailure failure = capture
@@ -695,7 +676,6 @@ class DiagnosticsSnapshotTest {
 
             assertSame(original, failure.cause());
             assertEquals(List.of(expectedFailure, actualFailure, causeFailure), failure.suppressed());
-            assertTrue(failure.message().contains("Because: business reason"));
             assertTrue(failure.message().contains("Condition: second stage\n        Expected: stage operand"));
             assertTrue(failure.message().contains("Mismatch: not ready"));
             assertTrue(failure.message().contains("Message: <value unavailable: diagnostics failed>"));
@@ -862,7 +842,7 @@ class DiagnosticsSnapshotTest {
                 for (var check : checks) {
                     renders[0] = renders[1] = 0;
                     var time = new FakeTime(0);
-                    var waiting = awaitMap(() -> {
+                    var waiting = await(() -> {
                         time.advanceNanos(2);
                         return actual;
                     }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
@@ -1049,7 +1029,7 @@ class DiagnosticsSnapshotTest {
         var time = new FakeTime(0);
         var waiting = await(() -> value).usingTime(time, time)
                 .every(Duration.ofNanos(1)).upTo(Duration.ofNanos(2));
-        var check = notEqualTo(value).because("the value must change");
+        var check = notEqualTo(value);
 
         var captured = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(check)).failure();
         var thrown = assertThrows(AwaitAssertionError.class, () -> waiting.until(check));
@@ -1101,8 +1081,7 @@ class DiagnosticsSnapshotTest {
         var time = new FakeTime(0);
         var sourceFailure = assertFailure(SOURCE_FAILED,
                 () -> await(source).usingTime(time, time).every(Duration.ofNanos(1)).upTo(Duration.ofNanos(2))
-                        .until(condition("condition\rdescription", ConditionResult::satisfied)
-                                .because("business\n\nreason")));
+                        .until(condition("condition\rdescription", ConditionResult::satisfied)));
         var arrayFailure = assertFailure(TIMEOUT,
                 () -> Await.complete(new Timeout<>(
                                 evaluatedAttempt(CONDITION, new int[] {1, 2}, unsatisfied("not ready"), 1, 2)), config(1, 2, 0)));
@@ -1113,10 +1092,6 @@ class DiagnosticsSnapshotTest {
                 Condition:
                     condition
                     description
-                    Because:
-                        business
-
-                        reason
 
                 Attempt: 1 (ACQUISITION)
 
@@ -1173,17 +1148,15 @@ class DiagnosticsSnapshotTest {
             PreservingCondition<String> pending,
             PreservingCondition<String> completed) {
         return captured(status("created", "payment status is created"),
-                pending, completed).because("payment must complete its lifecycle");
+                pending, completed);
     }
 
     private static PreservingCondition<String> pending() {
-        return status("pending", "payment status is pending")
-                .because("processing must begin before completion");
+        return status("pending", "payment status is pending");
     }
 
     private static PreservingCondition<String> completed() {
-        return status("completed", "payment status is completed")
-                .because("completion must remain stable");
+        return status("completed", "payment status is completed");
     }
 
     private static PreservingCondition<String> status(String expected, String description) {
@@ -1193,13 +1166,13 @@ class DiagnosticsSnapshotTest {
     }
 
     private static <S, R> AttemptRecord<S, R> evaluatedAttempt(
-            Condition<?> condition, S observed, ConditionResult<? extends R> result, long number, long completedNanos) {
+            Condition condition, S observed, ConditionResult<? extends R> result, long number, long completedNanos) {
         return new AttemptRecord<>(number, ACQUISITION, afterObservation(completedNanos), condition, null,
                 new AttemptRecord.Outcome.Evaluated<>(observed, result));
     }
 
     private static WaitCompletion<Object, Object> sourceFailure(
-            Condition<?> condition, Throwable failure, long number, long completedNanos) {
+            Condition condition, Throwable failure, long number, long completedNanos) {
         var timing = new AttemptRecord.Timing(Duration.ZERO, Duration.ZERO, null, Duration.ofNanos(completedNanos));
         return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION, timing, condition, null,
                 new AttemptRecord.Outcome.SourceRetrievalFailed<>(failure)));
@@ -1213,7 +1186,7 @@ class DiagnosticsSnapshotTest {
     }
 
     private static WaitCompletion<Object, Object> conditionFailure(
-            Condition<?> expectation, Object observed, Throwable failure, long number, long completedNanos) {
+            Condition expectation, Object observed, Throwable failure, long number, long completedNanos) {
         return new Uncontrolled<>(new AttemptRecord<>(number, ACQUISITION, afterObservation(completedNanos), expectation, null,
                 new AttemptRecord.Outcome.ConditionFailed<>(observed, failure)));
     }

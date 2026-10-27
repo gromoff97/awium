@@ -6,8 +6,7 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.Conditions.isNotNull;
@@ -61,7 +60,7 @@ class TryUntilTest {
         AwaitResult<String, String> nullSource = await((Callable<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(isNull);
         AwaitResult<String, String> nullPredicate = await((Callable<String>) () -> null).usingTime(pollingTime, pollingTime).tryUntil(matches(actual -> actual == null));
         AwaitResult<Optional<String>, String> selected =
-                awaitOptional(() -> Optional.of("payment")).usingTime(pollingTime, pollingTime).tryUntil(present);
+                await(() -> Optional.of("payment")).usingTime(pollingTime, pollingTime).tryUntil(present);
 
         assertNull(satisfied(nullSource).result());
         assertNull(satisfied(nullPredicate).result());

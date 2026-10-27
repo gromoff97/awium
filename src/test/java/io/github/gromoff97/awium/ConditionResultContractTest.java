@@ -1,12 +1,8 @@
 package io.github.gromoff97.awium;
 
-import static io.github.gromoff97.awium.Conditions.await;
-import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
-import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
-import static io.github.gromoff97.awium.MapConditions.awaitMap;
-
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionResult.*;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,19 +25,19 @@ class ConditionResultContractTest {
         var time = new FakeTime(0);
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
 
-        assertEquals(42, waiting.until(Conditions.condition("ready", ignored -> satisfied()).because("original user")).id());
+        assertEquals(42, waiting.until(Conditions.condition("ready", ignored -> satisfied())).id());
         AwaitResult<User, User> result = waiting.tryUntil(Conditions.condition("ready", ignored -> satisfied()));
         switch (result) {
             case AwaitResult.Satisfied(var attempts, var user) -> assertSame(actual, user);
             case AwaitResult.Failed(var attempts, var failure) -> org.junit.jupiter.api.Assertions.fail(failure.message());
         }
-        assertSame(actual, awaitOptional(() -> java.util.Optional.of(actual)).usingTime(time, time)
-                .until(OptionalConditions.hasValue(Conditions.condition("present", ignored -> satisfied())).because("optional")));
-        assertEquals(42, awaitCollection(() -> java.util.List.of(actual)).usingTime(time, time)
+        assertSame(actual, await(() -> java.util.Optional.of(actual)).usingTime(time, time)
+                .until(OptionalConditions.hasValue(Conditions.condition("present", ignored -> satisfied()))));
+        assertEquals(42, await(() -> java.util.List.of(actual)).usingTime(time, time)
                 .until(CollectionConditions.single(Conditions.condition("single", ignored -> satisfied()))).id());
-        assertEquals(42, awaitCollection(() -> java.util.List.of(actual)).usingTime(time, time)
+        assertEquals(42, await(() -> java.util.List.of(actual)).usingTime(time, time)
                 .until(CollectionConditions.first(Conditions.condition("first", ignored -> satisfied()))).id());
-        assertEquals(42, awaitMap(() -> java.util.Map.of("user", actual)).usingTime(time, time)
+        assertEquals(42, await(() -> java.util.Map.of("user", actual)).usingTime(time, time)
                 .until(MapConditions.valueFor("user", Conditions.condition("mapped", ignored -> satisfied()))).id());
         User absent = null;
         assertNull(await(() -> absent).usingTime(time, time).until(Conditions.condition("null is valid", ignored -> satisfied())));
@@ -74,12 +70,10 @@ class ConditionResultContractTest {
         var time = new FakeTime(0);
         AwaitResult<String, String> result = await(() -> "pending")
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
-                .tryUntil(Conditions.condition("status is ready", value -> unsatisfied())
-                        .because("delivery must complete"));
+                .tryUntil(Conditions.condition("status is ready", value -> unsatisfied()));
         var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
         assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
         assertTrue(failure.message().contains("Condition: status is ready"));
-        assertTrue(failure.message().contains("Because: delivery must complete"));
         assertTrue(failure.message().contains("Actual: pending"));
         assertFalse(failure.message().contains("Mismatch:"));
     }

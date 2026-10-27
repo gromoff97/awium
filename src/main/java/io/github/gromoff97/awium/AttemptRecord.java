@@ -17,7 +17,7 @@ import static java.util.Objects.requireNonNull;
  * @param outcome terminal outcome of this attempt
  */
 public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase, Timing timing,
-        Condition<?> condition, Progress progress, Outcome<OBSERVED, RESULT> outcome) {
+        Condition condition, Progress progress, Outcome<OBSERVED, RESULT> outcome) {
 
     public AttemptRecord {
         if (number <= 0) {
@@ -92,7 +92,7 @@ public record AttemptRecord<OBSERVED, RESULT>(long number, Phase phase, Timing t
      *                        otherwise for the evaluated stage
      */
     public record Progress(int capturedStages, int totalStages, int lastEvaluatedStageNumber,
-            Condition<?> activeCondition) {
+            Condition activeCondition) {
 
         public Progress {
             if (capturedStages < 0 || capturedStages > totalStages

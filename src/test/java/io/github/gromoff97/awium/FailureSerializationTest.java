@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Conditions.asserted;
 import static io.github.gromoff97.awium.Conditions.equalTo;
 import static java.time.Duration.ofNanos;
@@ -24,10 +24,10 @@ class FailureSerializationTest {
         var assertion = new AssertionError("not ready");
         var timeout = assertThrows(AwaitAssertionError.class,
                 () -> await(() -> display).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
-                        .until(asserted(value -> { throw assertion; }).because("must become ready")));
+                        .until(asserted(value -> { throw assertion; })));
         Callable<BrokenDisplay> source = () -> { throw new IOException("source failed"); };
         var execution = assertThrows(AwaitExecutionException.class,
-                () -> await(source).until(equalTo(display).because("must retrieve a value")));
+                () -> await(source).until(equalTo(display)));
 
         for (Throwable original : List.of(timeout, execution)) {
             var restored = roundTrip(original);

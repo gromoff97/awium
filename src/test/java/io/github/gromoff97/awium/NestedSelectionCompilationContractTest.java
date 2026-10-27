@@ -14,17 +14,14 @@ class NestedSelectionCompilationContractTest {
     @Test
     void nestedSelectionRejectsIncompatibleChecksAndResults() throws IOException {
         for (String body : List.of(
-                "awaitCollection(Contract::payments).until(single(matches(String::isBlank)));",
-                "String wrong = awaitCollection(Contract::payments).until(single(matches(Payment::paid)));",
-                "AwaitResult<List<Payment>, String> wrong = awaitCollection(Contract::payments).tryUntil(single(matches(Payment::paid)));",
-                "List<String> wrong = awaitCollection(Contract::payments).until(single(matches(Payment::paid)), single(matches(Payment::paid)));")) {
+                "await(Contract::payments).until(single(matches(String::isBlank)));",
+                "String wrong = await(Contract::payments).until(single(matches(Payment::paid)));",
+                "AwaitResult<List<Payment>, String> wrong = await(Contract::payments).tryUntil(single(matches(Payment::paid)));",
+                "List<String> wrong = await(Contract::payments).until(single(matches(Payment::paid)), single(matches(Payment::paid)));")) {
             CompilationSupport.assertRejected(directory, """
                     import java.util.List;
                     import io.github.gromoff97.awium.AwaitResult;
-                    import static io.github.gromoff97.awium.Conditions.await;
-                    import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
-                    import static io.github.gromoff97.awium.OptionalConditions.awaitOptional;
-                    import static io.github.gromoff97.awium.MapConditions.awaitMap;
+                    import static io.github.gromoff97.awium.Await.await;
                     import static io.github.gromoff97.awium.Conditions.*;
                     import static io.github.gromoff97.awium.CollectionConditions.single;
                     final class Contract {

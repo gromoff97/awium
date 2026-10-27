@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.CollectionConditions.awaitCollection;
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.CollectionConditions.empty;
 import static io.github.gromoff97.awium.CollectionConditions.nonEmpty;
@@ -43,18 +43,16 @@ class CollectionSizeConditionsTest {
         String element = new String("element");
         java.util.concurrent.Callable<ArrayList<String>> source = () -> new ArrayList<>(List.of(element));
 
-        String selected = awaitCollection(source).usingTime(pollingTime, pollingTime).until(single);
-        String explained = awaitCollection(source).usingTime(pollingTime, pollingTime).until(single.because("exactly one result is required"));
-        String nullElement = awaitCollection((java.util.concurrent.Callable<List<String>>)
+        String selected = await(source::call).usingTime(pollingTime, pollingTime).until(single);
+        String nullElement = await((Await.CollectionSource<List<String>>)
                 () -> Collections.singletonList(null)).usingTime(pollingTime, pollingTime).until(single);
 
         assertSame(element, selected);
-        assertSame(element, explained);
         assertNull(nullElement);
-        assertTrue(assertFailure(TIMEOUT, () -> awaitCollection(() -> List.of())
+        assertTrue(assertFailure(TIMEOUT, () -> await(() -> List.of())
                 .usingTime(pollingTime, pollingTime).upTo(ofNanos(1)).until(single))
                 .getMessage().contains("collection size was 0"));
-        assertTrue(assertFailure(TIMEOUT, () -> awaitCollection(() -> List.of("first", "second"))
+        assertTrue(assertFailure(TIMEOUT, () -> await(() -> List.of("first", "second"))
                 .usingTime(pollingTime, pollingTime).upTo(ofNanos(1)).until(single))
                 .getMessage().contains("collection size was greater than 1"));
     }
@@ -81,7 +79,7 @@ class CollectionSizeConditionsTest {
         Collection<Object> actual = null;
 
         assertFailure(TIMEOUT,
-                () -> awaitCollection(() -> actual).usingTime(time, time)
+                () -> await(() -> actual).usingTime(time, time)
                         .every(ofNanos(1)).upTo(ofNanos(2)).until(empty));
     }
 
@@ -91,7 +89,7 @@ class CollectionSizeConditionsTest {
         FakeTime time = new FakeTime(0);
 
         var failure = assertFailure(TIMEOUT,
-                () -> awaitCollection(() -> {
+                () -> await(() -> {
                     time.advanceNanos(2);
                     return actual;
                 }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(empty));
@@ -108,7 +106,7 @@ class CollectionSizeConditionsTest {
         var collection = new ProbeContainers.ProbeCollection<Object>(cause);
 
         assertSame(cause, assertFailure(CONDITION_FAILED,
-                () -> awaitCollection(() -> collection).usingTime(pollingTime, pollingTime).until(nonEmpty)).getCause());
+                () -> await(() -> collection).usingTime(pollingTime, pollingTime).until(nonEmpty)).getCause());
         assertEquals(1, collection.sizeCalls);
     }
 
@@ -141,7 +139,7 @@ class CollectionSizeConditionsTest {
         };
 
         assertTrue(assertThrows(NullPointerException.class,
-                () -> awaitCollection(source).usingTime(time, time).until((PreservingCondition<Collection<String>>) null))
+                () -> await(source::call).usingTime(time, time).until((PreservingCondition<Collection<String>>) null))
                 .getMessage().contains("condition"));
         assertEquals(0, sourceCalls[0]);
     }

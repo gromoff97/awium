@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.await;
 import static java.util.Arrays.asList;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.CollectionConditions.*;
@@ -74,7 +75,7 @@ class CollectionMembershipTest {
         var comparisons = new ArrayList<String>();
         var actual = List.of(new Value("a", comparisons), new Value("b", comparisons));
         var expected = List.of(new Value("b", List.of()), new Value("a", List.of()));
-        assertSame(actual, awaitCollection(() -> actual).until(containsAll(expected)));
+        assertSame(actual, await(() -> actual).until(containsAll(expected)));
         assertEquals(List.of("a->b", "b->b", "a->a"), comparisons);
     }
 
@@ -116,27 +117,27 @@ class CollectionMembershipTest {
         var time = new FakeTime(0);
         var element = List.of("a", "b");
         var lists = List.of(element);
-        List<List<String>> selectedList = awaitCollection(() -> lists).usingTime(time, time)
-                .until(contains(element).because("one nested list"));
+        List<List<String>> selectedList = await(() -> lists).usingTime(time, time)
+                .until(contains(element));
         assertSame(lists, selectedList);
         assertEquals(1, selectedList.getFirst().getFirst().length());
 
         String[] array = {"a", "b"};
         var arrays = singletonList(array);
-        List<String[]> selectedArray = awaitCollection(() -> arrays).usingTime(time, time)
-                .until(contains(array).because("one array"));
+        List<String[]> selectedArray = await(() -> arrays).usingTime(time, time)
+                .until(contains(array));
         assertSame(arrays, selectedArray);
         assertEquals(2, selectedArray.getFirst().length);
-        List<String[]> onlyArray = awaitCollection(() -> arrays).usingTime(time, time)
-                .until(containsOnly(singletonList(array)).because("the array is the whole expectation"));
+        List<String[]> onlyArray = await(() -> arrays).usingTime(time, time)
+                .until(containsOnly(singletonList(array)));
         assertSame(arrays, onlyArray);
 
         var otherLists = List.of(List.of("c"));
-        assertSame(otherLists, awaitCollection(() -> otherLists).usingTime(time, time)
-                .until(doesNotContain(element).because("the nested list must be absent")));
+        assertSame(otherLists, await(() -> otherLists).usingTime(time, time)
+                .until(doesNotContain(element)));
         var otherArrays = singletonList(new String[] {"c"});
-        assertSame(otherArrays, awaitCollection(() -> otherArrays).usingTime(time, time)
-                .until(doesNotContain(array).because("the array must be absent")));
+        assertSame(otherArrays, await(() -> otherArrays).usingTime(time, time)
+                .until(doesNotContain(array)));
     }
 
     @Test
@@ -144,18 +145,18 @@ class CollectionMembershipTest {
         var time = new FakeTime(0);
         var expected = new ArrayList<String>();
         var actual = singletonList(new ArrayList<String>());
-        var condition = contains(expected).because("one caller-owned list");
-        assertSame(actual, awaitCollection(() -> actual).usingTime(time, time).until(condition));
+        var condition = contains(expected);
+        assertSame(actual, await(() -> actual).usingTime(time, time).until(condition));
         expected.add("changed");
         actual.getFirst().add("changed");
-        assertSame(actual, awaitCollection(() -> actual).usingTime(time, time).until(condition));
+        assertSame(actual, await(() -> actual).usingTime(time, time).until(condition));
 
         String[] empty = {};
         var emptyArrays = singletonList(empty);
-        assertSame(emptyArrays, awaitCollection(() -> emptyArrays).usingTime(time, time).until(contains(empty).because("one empty array")));
+        assertSame(emptyArrays, await(() -> emptyArrays).usingTime(time, time).until(contains(empty)));
         String[] missing = null;
         var nullArrays = singletonList(missing);
-        assertSame(nullArrays, awaitCollection(() -> nullArrays).usingTime(time, time).until(contains(missing).because("one null value")));
+        assertSame(nullArrays, await(() -> nullArrays).usingTime(time, time).until(contains(missing)));
     }
 
     @Test
@@ -194,11 +195,11 @@ class CollectionMembershipTest {
         FakeTime time = new FakeTime(0);
 
         assertFailure(TIMEOUT,
-                () -> awaitCollection(() -> {
+                () -> await(() -> {
                     time.advanceNanos(2);
                     return actual;
                 }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
-                        .until(doesNotContain("a").because("business reason")));
+                        .until(doesNotContain("a")));
 
         assertEquals(1, actual.iteratorCalls);
     }
@@ -222,7 +223,7 @@ class CollectionMembershipTest {
         java.util.concurrent.Callable<ArrayList<Number>> source = () -> actual;
         PreservingCondition<Collection<? super Integer>> typed = containsAll(integers);
 
-        ArrayList<Number> result = awaitCollection(source).until(typed);
+        ArrayList<Number> result = await(source::call).until(typed);
 
         assertSame(actual, result);
     }
@@ -248,7 +249,7 @@ class CollectionMembershipTest {
             PreservingCondition<? super ProbeContainers.MembershipCollection<E>>
                     condition) {
         var time = new FakeTime(0);
-        return awaitCollection(() -> actual).usingTime(time, time).until(condition);
+        return await(() -> actual).usingTime(time, time).until(condition);
     }
 
     private static List<Pair> pairs() {

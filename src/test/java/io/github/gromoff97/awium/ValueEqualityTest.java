@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.Conditions.await;
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitFailure.Reason.CONDITION_FAILED;
 import static io.github.gromoff97.awium.Conditions.equalTo;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
