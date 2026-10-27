@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Condition.SourceCondition;
+import io.github.gromoff97.awium.ConditionSupport.Quantifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -18,6 +19,7 @@ import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
+import static io.github.gromoff97.awium.ConditionSupport.quantified;
 import static io.github.gromoff97.awium.ConditionSupport.selected;
 import static io.github.gromoff97.awium.ConditionSupport.snapshot;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
@@ -114,20 +116,17 @@ public final class CollectionConditions {
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> all(PreservingCondition<? super ELEMENT> nested) {
-        return ConditionSupport.quantified("collection", "all collection elements match", "not all collection elements matched",
-                ConditionSupport.Quantifier.ALL, nested, actual -> actual,
+        return quantified("collection", "elements", Quantifier.ALL, nested, actual -> actual,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
     }
 
     public static <EXPECTED> PreservingCondition<Collection<? super EXPECTED>> all(Condition.ComparisonCondition<EXPECTED> nested) {
-        return ConditionSupport.quantified("collection", "all collection elements match", "not all collection elements matched",
-                ConditionSupport.Quantifier.ALL, nested, actual -> actual,
+        return quantified("collection", "elements", Quantifier.ALL, nested, actual -> actual,
                 () -> ConditionAwaitAttempt.bind(nested));
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> all(Condition.Typed<? super ELEMENT, ?> nested) {
-        return ConditionSupport.quantified("collection", "all collection elements match", "not all collection elements matched",
-                ConditionSupport.Quantifier.ALL, nested, actual -> actual,
+        return quantified("collection", "elements", Quantifier.ALL, nested, actual -> actual,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
@@ -136,20 +135,17 @@ public final class CollectionConditions {
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> any(PreservingCondition<? super ELEMENT> nested) {
-        return ConditionSupport.quantified("collection", "any collection element matches", "no collection element matched",
-                ConditionSupport.Quantifier.ANY, nested, actual -> actual,
+        return quantified("collection", "elements", Quantifier.ANY, nested, actual -> actual,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
     }
 
     public static <EXPECTED> PreservingCondition<Collection<? super EXPECTED>> any(Condition.ComparisonCondition<EXPECTED> nested) {
-        return ConditionSupport.quantified("collection", "any collection element matches", "no collection element matched",
-                ConditionSupport.Quantifier.ANY, nested, actual -> actual,
+        return quantified("collection", "elements", Quantifier.ANY, nested, actual -> actual,
                 () -> ConditionAwaitAttempt.bind(nested));
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> any(Condition.Typed<? super ELEMENT, ?> nested) {
-        return ConditionSupport.quantified("collection", "any collection element matches", "no collection element matched",
-                ConditionSupport.Quantifier.ANY, nested, actual -> actual,
+        return quantified("collection", "elements", Quantifier.ANY, nested, actual -> actual,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
@@ -158,20 +154,17 @@ public final class CollectionConditions {
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> none(PreservingCondition<? super ELEMENT> nested) {
-        return ConditionSupport.quantified("collection", "no collection element matches", "a collection element matched",
-                ConditionSupport.Quantifier.NONE, nested, actual -> actual,
+        return quantified("collection", "elements", Quantifier.NONE, nested, actual -> actual,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
     }
 
     public static <EXPECTED> PreservingCondition<Collection<? super EXPECTED>> none(Condition.ComparisonCondition<EXPECTED> nested) {
-        return ConditionSupport.quantified("collection", "no collection element matches", "a collection element matched",
-                ConditionSupport.Quantifier.NONE, nested, actual -> actual,
+        return quantified("collection", "elements", Quantifier.NONE, nested, actual -> actual,
                 () -> ConditionAwaitAttempt.bind(nested));
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> none(Condition.Typed<? super ELEMENT, ?> nested) {
-        return ConditionSupport.quantified("collection", "no collection element matches", "a collection element matched",
-                ConditionSupport.Quantifier.NONE, nested, actual -> actual,
+        return quantified("collection", "elements", Quantifier.NONE, nested, actual -> actual,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 

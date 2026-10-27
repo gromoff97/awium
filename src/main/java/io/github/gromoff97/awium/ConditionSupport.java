@@ -24,7 +24,23 @@ final class ConditionSupport {
     private ConditionSupport() {}
 
     enum Quantifier {
-        ALL, ANY, NONE;
+        ALL("all", "not all"), ANY("some", "no"), NONE("no", "some");
+
+        private final String descriptionPrefix;
+        private final String mismatchPrefix;
+
+        Quantifier(String descriptionPrefix, String mismatchPrefix) {
+            this.descriptionPrefix = descriptionPrefix;
+            this.mismatchPrefix = mismatchPrefix;
+        }
+
+        String description(String elements) {
+            return descriptionPrefix + " " + elements + " match";
+        }
+
+        String mismatch(String elements) {
+            return mismatchPrefix + " " + elements + " matched";
+        }
 
         boolean stops(boolean matched) {
             return switch (this) {
@@ -85,10 +101,12 @@ final class ConditionSupport {
     }
 
     static <OBSERVED, ELEMENT> PreservingCondition<OBSERVED> quantified(
-            String subject, String description, String mismatch, Quantifier quantifier, Condition nested,
+            String subject, String items, Quantifier quantifier, Condition nested,
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
             Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ?>> evaluatorFactory) {
-        return new PreservingCondition<>(new Condition.Typed<>(nested, description, () -> {
+        String elementsDescription = subject + " " + items;
+        String mismatch = quantifier.mismatch(elementsDescription);
+        return new PreservingCondition<>(new Condition.Typed<>(nested, quantifier.description(elementsDescription), () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> actual == null ? AttemptResult.of(unsatisfied(subject + " was null"))
                     : evaluateQuantifier(actual, elements.apply(actual), evaluator, quantifier, mismatch);

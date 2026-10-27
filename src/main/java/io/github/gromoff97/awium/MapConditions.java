@@ -6,6 +6,7 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Condition.SourceCondition;
+import io.github.gromoff97.awium.ConditionSupport.Quantifier;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import java.util.Map.Entry;
@@ -19,6 +20,7 @@ import static io.github.gromoff97.awium.ConditionSupport.compose;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.snapshot;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
+import static io.github.gromoff97.awium.ConditionSupport.quantified;
 import static io.github.gromoff97.awium.ConditionSupport.selected;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
@@ -122,26 +124,22 @@ public final class MapConditions {
 
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> allEntries(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
         var nested = entryCheck(predicate);
-        return ConditionSupport.quantified("map", "all map entries match", "not all map entries matched",
-                ConditionSupport.Quantifier.ALL, nested, Map::entrySet,
+        return quantified("map", "entries", Quantifier.ALL, nested, Map::entrySet,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> allEntries(PreservingCondition<? super Entry<KEY, VALUE>> nested) {
-        return ConditionSupport.quantified("map", "all map entries match", "not all map entries matched",
-                ConditionSupport.Quantifier.ALL, nested, Map::entrySet,
+        return quantified("map", "entries", Quantifier.ALL, nested, Map::entrySet,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> allEntries(ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
-        return ConditionSupport.quantified("map", "all map entries match", "not all map entries matched",
-                ConditionSupport.Quantifier.ALL, nested, Map::entrySet,
+        return quantified("map", "entries", Quantifier.ALL, nested, Map::entrySet,
                 () -> ConditionAwaitAttempt.bind(nested));
     }
 
     public static PreservingCondition<Map<?, ?>> allEntries(Condition.Typed<? super Entry<?, ?>, ?> nested) {
-        return ConditionSupport.quantified("map", "all map entries match", "not all map entries matched",
-                ConditionSupport.Quantifier.ALL, nested, Map::entrySet,
+        return quantified("map", "entries", Quantifier.ALL, nested, Map::entrySet,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
@@ -160,29 +158,25 @@ public final class MapConditions {
     /** Requires at least one matching key-value pair and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> hasEntry(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
         var nested = entryCheck(predicate);
-        return ConditionSupport.quantified("map", "any map entry matches", "no map entry matched",
-                ConditionSupport.Quantifier.ANY, nested, Map::entrySet,
+        return quantified("map", "entries", Quantifier.ANY, nested, Map::entrySet,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
     }
 
     /** Applies the condition to entries until one matches, returning the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> hasEntry(PreservingCondition<? super Entry<KEY, VALUE>> nested) {
-        return ConditionSupport.quantified("map", "any map entry matches", "no map entry matched",
-                ConditionSupport.Quantifier.ANY, nested, Map::entrySet,
+        return quantified("map", "entries", Quantifier.ANY, nested, Map::entrySet,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
     }
 
     /** Requires at least one entry satisfying the comparison and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> hasEntry(ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
-        return ConditionSupport.quantified("map", "any map entry matches", "no map entry matched",
-                ConditionSupport.Quantifier.ANY, nested, Map::entrySet,
+        return quantified("map", "entries", Quantifier.ANY, nested, Map::entrySet,
                 () -> ConditionAwaitAttempt.bind(nested));
     }
 
     /** Requires at least one matching entry; the nested result is discarded and the original map is returned. */
     public static PreservingCondition<Map<?, ?>> hasEntry(Condition.Typed<? super Entry<?, ?>, ?> nested) {
-        return ConditionSupport.quantified("map", "any map entry matches", "no map entry matched",
-                ConditionSupport.Quantifier.ANY, nested, Map::entrySet,
+        return quantified("map", "entries", Quantifier.ANY, nested, Map::entrySet,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
@@ -201,29 +195,25 @@ public final class MapConditions {
     /** Requires every key-value pair to fail the predicate and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> hasNoEntry(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
         var nested = entryCheck(predicate);
-        return ConditionSupport.quantified("map", "no map entry matches", "a map entry matched",
-                ConditionSupport.Quantifier.NONE, nested, Map::entrySet,
+        return quantified("map", "entries", Quantifier.NONE, nested, Map::entrySet,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
     }
 
     /** Requires no entry to satisfy the condition and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> hasNoEntry(PreservingCondition<? super Entry<KEY, VALUE>> nested) {
-        return ConditionSupport.quantified("map", "no map entry matches", "a map entry matched",
-                ConditionSupport.Quantifier.NONE, nested, Map::entrySet,
+        return quantified("map", "entries", Quantifier.NONE, nested, Map::entrySet,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
     }
 
     /** Requires no entry to satisfy the comparison and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> hasNoEntry(ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
-        return ConditionSupport.quantified("map", "no map entry matches", "a map entry matched",
-                ConditionSupport.Quantifier.NONE, nested, Map::entrySet,
+        return quantified("map", "entries", Quantifier.NONE, nested, Map::entrySet,
                 () -> ConditionAwaitAttempt.bind(nested));
     }
 
     /** Requires no entry to satisfy the nested condition and returns the original map. */
     public static PreservingCondition<Map<?, ?>> hasNoEntry(Condition.Typed<? super Entry<?, ?>, ?> nested) {
-        return ConditionSupport.quantified("map", "no map entry matches", "a map entry matched",
-                ConditionSupport.Quantifier.NONE, nested, Map::entrySet,
+        return quantified("map", "entries", Quantifier.NONE, nested, Map::entrySet,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
@@ -232,20 +222,17 @@ public final class MapConditions {
     }
 
     public static <KEY> PreservingCondition<Map<? extends KEY, ?>> allKeys(PreservingCondition<? super KEY> nested) {
-        return ConditionSupport.quantified("map", "all map keys match", "not all map keys matched",
-                ConditionSupport.Quantifier.ALL, nested, Map::keySet,
+        return quantified("map", "keys", Quantifier.ALL, nested, Map::keySet,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
     }
 
     public static <EXPECTED> PreservingCondition<Map<? super EXPECTED, ?>> allKeys(ComparisonCondition<EXPECTED> nested) {
-        return ConditionSupport.quantified("map", "all map keys match", "not all map keys matched",
-                ConditionSupport.Quantifier.ALL, nested, Map::keySet,
+        return quantified("map", "keys", Quantifier.ALL, nested, Map::keySet,
                 () -> ConditionAwaitAttempt.bind(nested));
     }
 
     public static <KEY> PreservingCondition<Map<? extends KEY, ?>> allKeys(Condition.Typed<? super KEY, ?> nested) {
-        return ConditionSupport.quantified("map", "all map keys match", "not all map keys matched",
-                ConditionSupport.Quantifier.ALL, nested, Map::keySet,
+        return quantified("map", "keys", Quantifier.ALL, nested, Map::keySet,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
@@ -254,20 +241,17 @@ public final class MapConditions {
     }
 
     public static <KEY> PreservingCondition<Map<? extends KEY, ?>> anyKey(PreservingCondition<? super KEY> nested) {
-        return ConditionSupport.quantified("map", "any map key matches", "no map key matched",
-                ConditionSupport.Quantifier.ANY, nested, Map::keySet,
+        return quantified("map", "keys", Quantifier.ANY, nested, Map::keySet,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
     }
 
     public static <EXPECTED> PreservingCondition<Map<? super EXPECTED, ?>> anyKey(ComparisonCondition<EXPECTED> nested) {
-        return ConditionSupport.quantified("map", "any map key matches", "no map key matched",
-                ConditionSupport.Quantifier.ANY, nested, Map::keySet,
+        return quantified("map", "keys", Quantifier.ANY, nested, Map::keySet,
                 () -> ConditionAwaitAttempt.bind(nested));
     }
 
     public static <KEY> PreservingCondition<Map<? extends KEY, ?>> anyKey(Condition.Typed<? super KEY, ?> nested) {
-        return ConditionSupport.quantified("map", "any map key matches", "no map key matched",
-                ConditionSupport.Quantifier.ANY, nested, Map::keySet,
+        return quantified("map", "keys", Quantifier.ANY, nested, Map::keySet,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
@@ -276,20 +260,17 @@ public final class MapConditions {
     }
 
     public static <KEY> PreservingCondition<Map<? extends KEY, ?>> noKey(PreservingCondition<? super KEY> nested) {
-        return ConditionSupport.quantified("map", "no map key matches", "a map key matched",
-                ConditionSupport.Quantifier.NONE, nested, Map::keySet,
+        return quantified("map", "keys", Quantifier.NONE, nested, Map::keySet,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
     }
 
     public static <EXPECTED> PreservingCondition<Map<? super EXPECTED, ?>> noKey(ComparisonCondition<EXPECTED> nested) {
-        return ConditionSupport.quantified("map", "no map key matches", "a map key matched",
-                ConditionSupport.Quantifier.NONE, nested, Map::keySet,
+        return quantified("map", "keys", Quantifier.NONE, nested, Map::keySet,
                 () -> ConditionAwaitAttempt.bind(nested));
     }
 
     public static <KEY> PreservingCondition<Map<? extends KEY, ?>> noKey(Condition.Typed<? super KEY, ?> nested) {
-        return ConditionSupport.quantified("map", "no map key matches", "a map key matched",
-                ConditionSupport.Quantifier.NONE, nested, Map::keySet,
+        return quantified("map", "keys", Quantifier.NONE, nested, Map::keySet,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
@@ -298,20 +279,17 @@ public final class MapConditions {
     }
 
     public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> allValues(PreservingCondition<? super VALUE> nested) {
-        return ConditionSupport.quantified("map", "all map values match", "not all map values matched",
-                ConditionSupport.Quantifier.ALL, nested, Map::values,
+        return quantified("map", "values", Quantifier.ALL, nested, Map::values,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
     }
 
     public static <EXPECTED> PreservingCondition<Map<?, ? super EXPECTED>> allValues(ComparisonCondition<EXPECTED> nested) {
-        return ConditionSupport.quantified("map", "all map values match", "not all map values matched",
-                ConditionSupport.Quantifier.ALL, nested, Map::values,
+        return quantified("map", "values", Quantifier.ALL, nested, Map::values,
                 () -> ConditionAwaitAttempt.bind(nested));
     }
 
     public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> allValues(Condition.Typed<? super VALUE, ?> nested) {
-        return ConditionSupport.quantified("map", "all map values match", "not all map values matched",
-                ConditionSupport.Quantifier.ALL, nested, Map::values,
+        return quantified("map", "values", Quantifier.ALL, nested, Map::values,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
@@ -320,20 +298,17 @@ public final class MapConditions {
     }
 
     public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> anyValue(PreservingCondition<? super VALUE> nested) {
-        return ConditionSupport.quantified("map", "any map value matches", "no map value matched",
-                ConditionSupport.Quantifier.ANY, nested, Map::values,
+        return quantified("map", "values", Quantifier.ANY, nested, Map::values,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
     }
 
     public static <EXPECTED> PreservingCondition<Map<?, ? super EXPECTED>> anyValue(ComparisonCondition<EXPECTED> nested) {
-        return ConditionSupport.quantified("map", "any map value matches", "no map value matched",
-                ConditionSupport.Quantifier.ANY, nested, Map::values,
+        return quantified("map", "values", Quantifier.ANY, nested, Map::values,
                 () -> ConditionAwaitAttempt.bind(nested));
     }
 
     public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> anyValue(Condition.Typed<? super VALUE, ?> nested) {
-        return ConditionSupport.quantified("map", "any map value matches", "no map value matched",
-                ConditionSupport.Quantifier.ANY, nested, Map::values,
+        return quantified("map", "values", Quantifier.ANY, nested, Map::values,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
@@ -342,20 +317,17 @@ public final class MapConditions {
     }
 
     public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> noValue(PreservingCondition<? super VALUE> nested) {
-        return ConditionSupport.quantified("map", "no map value matches", "a map value matched",
-                ConditionSupport.Quantifier.NONE, nested, Map::values,
+        return quantified("map", "values", Quantifier.NONE, nested, Map::values,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
     }
 
     public static <EXPECTED> PreservingCondition<Map<?, ? super EXPECTED>> noValue(ComparisonCondition<EXPECTED> nested) {
-        return ConditionSupport.quantified("map", "no map value matches", "a map value matched",
-                ConditionSupport.Quantifier.NONE, nested, Map::values,
+        return quantified("map", "values", Quantifier.NONE, nested, Map::values,
                 () -> ConditionAwaitAttempt.bind(nested));
     }
 
     public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> noValue(Condition.Typed<? super VALUE, ?> nested) {
-        return ConditionSupport.quantified("map", "no map value matches", "a map value matched",
-                ConditionSupport.Quantifier.NONE, nested, Map::values,
+        return quantified("map", "values", Quantifier.NONE, nested, Map::values,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
