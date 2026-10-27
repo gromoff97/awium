@@ -2,6 +2,7 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.Condition.Reference;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.IntPredicate;
@@ -64,7 +65,7 @@ public final class Conditions {
         return ConditionSupport.preserving("value satisfies assertion", actual -> {
             try {
                 assertion.accept(actual);
-                return satisfied(actual);
+                return satisfied();
             } catch (AssertionError error) {
                 return unsatisfied("value did not satisfy assertion", error);
             }
@@ -72,23 +73,23 @@ public final class Conditions {
     }
 
     public static <EXPECTED> ComparisonCondition<EXPECTED> equalTo(EXPECTED expected) {
-        return new ComparisonCondition<>(ConditionSupport.condition("value equals expected", expectedReference(expected), actual -> deepEquals(actual, expected)
-                ? satisfied(actual) : unsatisfied("value was not equal")));
+        return comparison("value equals expected", "value was not equal", expectedReference(expected),
+                actual -> deepEquals(actual, expected));
     }
 
     public static <EXPECTED> ComparisonCondition<EXPECTED> notEqualTo(EXPECTED unexpected) {
-        return new ComparisonCondition<>(ConditionSupport.condition("value does not equal unexpected", unexpectedReference(unexpected), actual -> !deepEquals(actual, unexpected)
-                ? satisfied(actual) : unsatisfied("value was equal")));
+        return comparison("value does not equal unexpected", "value was equal", unexpectedReference(unexpected),
+                actual -> !deepEquals(actual, unexpected));
     }
 
     public static <EXPECTED> ComparisonCondition<EXPECTED> sameAs(EXPECTED expected) {
-        return new ComparisonCondition<>(ConditionSupport.condition("value is the same instance", expectedReference(expected), actual -> actual == expected
-                ? satisfied(actual) : unsatisfied("value was a different instance")));
+        return comparison("value is the same instance", "value was a different instance", expectedReference(expected),
+                actual -> actual == expected);
     }
 
     public static <EXPECTED> ComparisonCondition<EXPECTED> notSameAs(EXPECTED unexpected) {
-        return new ComparisonCondition<>(ConditionSupport.condition("value is not the same instance", unexpectedReference(unexpected), actual -> actual != unexpected
-                ? satisfied(actual) : unsatisfied("value was the same instance")));
+        return comparison("value is not the same instance", "value was the same instance", unexpectedReference(unexpected),
+                actual -> actual != unexpected);
     }
 
     public static <RESULT> Condition.Typed<Object, RESULT> instanceOf(Class<RESULT> type) {
@@ -109,16 +110,14 @@ public final class Conditions {
 
     public static <EXPECTED> ComparisonCondition<EXPECTED> in(Iterable<? extends EXPECTED> expected) {
         List<?> values = snapshot(expected, "expected values");
-        return new ComparisonCondition<>(ConditionSupport.condition("value is in the expected values", expectedReference(values),
-                actual -> matchesAny(values, candidate -> deepEquals(actual, candidate))
-                ? satisfied(actual) : unsatisfied("value was not in the expected values")));
+        return comparison("value is in the expected values", "value was not in the expected values", expectedReference(values),
+                actual -> matchesAny(values, candidate -> deepEquals(actual, candidate)));
     }
 
     public static <EXPECTED> ComparisonCondition<EXPECTED> notIn(Iterable<? extends EXPECTED> unexpected) {
         List<?> values = snapshot(unexpected, "unexpected values");
-        return new ComparisonCondition<>(ConditionSupport.condition("value is not in the unexpected values", unexpectedReference(values),
-                actual -> !matchesAny(values, candidate -> deepEquals(actual, candidate))
-                ? satisfied(actual) : unsatisfied("value was in the unexpected values")));
+        return comparison("value is not in the unexpected values", "value was in the unexpected values", unexpectedReference(values),
+                actual -> !matchesAny(values, candidate -> deepEquals(actual, candidate)));
     }
 
     public static <OBSERVED> PreservingCondition<OBSERVED> matches(CheckedPredicate<? super OBSERVED> predicate) {
@@ -160,6 +159,12 @@ public final class Conditions {
         return preservingNonNull("value", "value is strictly between the bounds", "value was outside the exclusive range",
                 expectedReference(List.of(lowerBound, upperBound)),
                 actual -> actual.compareTo(lowerBound) > 0 && actual.compareTo(upperBound) < 0);
+    }
+
+    private static <EXPECTED> ComparisonCondition<EXPECTED> comparison(String description, String mismatch,
+            Reference<?> reference, CheckedPredicate<Object> matches) {
+        return new ComparisonCondition<>(ConditionSupport.condition(description, reference,
+                actual -> matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch)));
     }
 
     private static <BOUND, OBSERVED extends Comparable<? super BOUND>>

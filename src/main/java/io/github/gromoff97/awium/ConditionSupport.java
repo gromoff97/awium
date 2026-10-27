@@ -197,14 +197,14 @@ final class ConditionSupport {
     static <OBSERVED> PreservingCondition<OBSERVED> preserving(String description, String mismatch,
             CheckedPredicate<? super OBSERVED> matches) {
         return preserving(description, actual -> matches.test(actual)
-                ? satisfied(actual) : unsatisfied(mismatch));
+                ? satisfied() : unsatisfied(mismatch));
     }
 
     static <OBSERVED> PreservingCondition<OBSERVED> preservingNonNull(String subject, String description,
             String mismatch, Reference<?> reference, CheckedPredicate<? super OBSERVED> matches) {
         return preserving(description, reference, actual -> actual == null
                 ? unsatisfied(subject + " was null")
-                : matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch));
+                : matches.test(actual) ? satisfied() : unsatisfied(mismatch));
     }
 
     static <OBSERVED> PreservingCondition<OBSERVED> sized(String subject, String measure, int bound, IntPredicate matches,
@@ -217,7 +217,7 @@ final class ConditionSupport {
                 return unsatisfied(subject + " was null");
             }
             int size = sizeOf.applyAsInt(actual);
-            return matches.test(size) ? satisfied(actual) : unsatisfied(subject + " " + measure + " was " + size);
+            return matches.test(size) ? satisfied() : unsatisfied(subject + " " + measure + " was " + size);
         });
     }
 
