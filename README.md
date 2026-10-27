@@ -138,6 +138,10 @@ List<Payment> payments = await(repository::findAll).until(
 
 These stages must declare the same result type. Mixing `instanceOf(String.class)`
 with `instanceOf(Integer.class)` is rejected instead of inferring `List<Object>`.
+For a class token stored in a variable, use a concrete type such as `Class<Integer>`
+or capture it in a generic helper accepting `Class<RESULT>`. Repeating a wildcard
+token such as `Class<? extends Number>` does not establish one result type: Java
+captures the wildcard separately for each argument, even when reusing a condition.
 
 An array of compatible conditions can be passed directly. It is copied before
 polling and always produces a captured list, including for a one-element array.
