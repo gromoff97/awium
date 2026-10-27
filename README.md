@@ -763,7 +763,8 @@ without replacing its category or cause. A successful check can still finish
 too late.
 
 `ConditionSupport` shares condition construction, checks, extraction, and
-composition. Failed extraction reports its own condition: optional presence,
+composition; catalogues supply nested conditions without creating execution
+attempts. Failed extraction reports its own condition: optional presence,
 the requested list position, or the map lookup key. Map entry access failures
 also retain the lookup key. After extraction succeeds, diagnostics use the
 nested condition's expectation. Interruption during extraction keeps the selector
@@ -776,6 +777,7 @@ threads, plus independent condition state during concurrent waits.
 The module exports one package. Implementation types are package-private on
 both the module path and the classpath; custom conditions use the factories in
 `Conditions`. Artifact checks also verify that execution classes do not depend
-on the fluent facade, condition catalogs, or diagnostic formatting.
+on the fluent facade, condition catalogs, or diagnostic formatting, and that
+catalogues do not depend directly on execution classes.
 
 Awium is licensed under the [Apache License 2.0](LICENSE).

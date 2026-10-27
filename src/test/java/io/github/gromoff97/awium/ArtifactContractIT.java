@@ -78,7 +78,9 @@ class ArtifactContractIT {
                 "SequenceExecution -> " + sequence);
         for (String catalog : Set.of("Conditions", "CollectionConditions", "MapConditions",
                 "OptionalConditions", "StringConditions")) {
-            assertTrue(classes.get(catalog).stream().noneMatch(Set.of("FailureDiagnostics")::contains),
+            assertTrue(classes.get(catalog).stream().noneMatch(Set.of("AwaitAttempt", "ConditionAwaitAttempt",
+                            "AttemptResult", "SequenceExecution", "WaitEngine", "WaitCompletion", "WaitConfiguration",
+                            "FailureDiagnostics")::contains),
                     catalog + " -> " + classes.get(catalog));
         }
         // Diagnostics describe failures; only the fluent facade chooses a terminal result or throws.

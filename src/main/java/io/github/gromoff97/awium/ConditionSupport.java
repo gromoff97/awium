@@ -101,6 +101,20 @@ final class ConditionSupport {
     }
 
     static <OBSERVED, ELEMENT> PreservingCondition<OBSERVED> quantified(
+            String subject, String items, Quantifier quantifier, SourceCondition<? super ELEMENT, ?> nested,
+            Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements) {
+        return quantified(subject, items, quantifier, nested, elements,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+    }
+
+    static <OBSERVED, ELEMENT> PreservingCondition<OBSERVED> quantified(
+            String subject, String items, Quantifier quantifier, Condition.Typed<? super ELEMENT, ?> nested,
+            Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements) {
+        return quantified(subject, items, quantifier, nested, elements,
+                () -> new ConditionAwaitAttempt<>(nested));
+    }
+
+    private static <OBSERVED, ELEMENT> PreservingCondition<OBSERVED> quantified(
             String subject, String items, Quantifier quantifier, Condition nested,
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
             Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ?>> evaluatorFactory) {
@@ -148,7 +162,19 @@ final class ConditionSupport {
         return new Reference<>("Unexpected", value);
     }
 
-    static <OBSERVED, VALUE, RESULT> Condition.Typed<OBSERVED, RESULT> compose(String selection, Condition nested,
+    static <OBSERVED, VALUE> Condition.Typed<OBSERVED, VALUE> compose(
+            String selection, SourceCondition<?, ?> nested, Condition extractionCondition) {
+        return compose(selection, nested, extractionCondition,
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+    }
+
+    static <OBSERVED, VALUE, RESULT> Condition.Typed<OBSERVED, RESULT> compose(
+            String selection, Condition.Typed<? super VALUE, RESULT> nested, Condition extractionCondition) {
+        return compose(selection, nested, extractionCondition,
+                () -> new ConditionAwaitAttempt<>(nested));
+    }
+
+    private static <OBSERVED, VALUE, RESULT> Condition.Typed<OBSERVED, RESULT> compose(String selection, Condition nested,
             Condition extractionCondition,
             Supplier<? extends ConditionAwaitAttempt<? super VALUE, ? extends RESULT>> evaluatorFactory) {
         return new Condition.Typed<>(nested, selection, () -> {

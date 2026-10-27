@@ -101,14 +101,12 @@ public final class CollectionConditions {
 
     public static <CHECKED, REFERENCE> SelectedCondition<Collection<?>, CHECKED, REFERENCE> singleElement(
             SourceCondition<CHECKED, REFERENCE> nested) {
-        return new SelectedCondition<>(ConditionSupport.compose("single element", nested, singleElement,
-                () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
+        return new SelectedCondition<>(ConditionSupport.compose("single element", nested, singleElement));
     }
 
     /** Checks the sole element using a condition with a declared result type. */
     public static <ELEMENT, RESULT> Condition.Typed<Collection<? extends ELEMENT>, RESULT> singleElement(Condition.Typed<? super ELEMENT, RESULT> nested) {
-        return ConditionSupport.compose("single element", nested, singleElement,
-                () -> new ConditionAwaitAttempt<>(nested));
+        return ConditionSupport.compose("single element", nested, singleElement);
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> all(CheckedPredicate<? super ELEMENT> predicate) {
@@ -116,18 +114,15 @@ public final class CollectionConditions {
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> all(PreservingCondition<? super ELEMENT> nested) {
-        return quantified("collection", "elements", Quantifier.ALL, nested, actual -> actual,
-                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+        return quantified("collection", "elements", Quantifier.ALL, nested, actual -> actual);
     }
 
     public static <EXPECTED> PreservingCondition<Collection<? super EXPECTED>> all(Condition.ComparisonCondition<EXPECTED> nested) {
-        return quantified("collection", "elements", Quantifier.ALL, nested, actual -> actual,
-                () -> ConditionAwaitAttempt.bind(nested));
+        return quantified("collection", "elements", Quantifier.ALL, nested, actual -> actual);
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> all(Condition.Typed<? super ELEMENT, ?> nested) {
-        return quantified("collection", "elements", Quantifier.ALL, nested, actual -> actual,
-                () -> new ConditionAwaitAttempt<>(nested));
+        return quantified("collection", "elements", Quantifier.ALL, nested, actual -> actual);
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> any(CheckedPredicate<? super ELEMENT> predicate) {
@@ -135,18 +130,15 @@ public final class CollectionConditions {
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> any(PreservingCondition<? super ELEMENT> nested) {
-        return quantified("collection", "elements", Quantifier.ANY, nested, actual -> actual,
-                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+        return quantified("collection", "elements", Quantifier.ANY, nested, actual -> actual);
     }
 
     public static <EXPECTED> PreservingCondition<Collection<? super EXPECTED>> any(Condition.ComparisonCondition<EXPECTED> nested) {
-        return quantified("collection", "elements", Quantifier.ANY, nested, actual -> actual,
-                () -> ConditionAwaitAttempt.bind(nested));
+        return quantified("collection", "elements", Quantifier.ANY, nested, actual -> actual);
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> any(Condition.Typed<? super ELEMENT, ?> nested) {
-        return quantified("collection", "elements", Quantifier.ANY, nested, actual -> actual,
-                () -> new ConditionAwaitAttempt<>(nested));
+        return quantified("collection", "elements", Quantifier.ANY, nested, actual -> actual);
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> none(CheckedPredicate<? super ELEMENT> predicate) {
@@ -154,18 +146,15 @@ public final class CollectionConditions {
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> none(PreservingCondition<? super ELEMENT> nested) {
-        return quantified("collection", "elements", Quantifier.NONE, nested, actual -> actual,
-                () -> ConditionAwaitAttempt.bindSelectionCheck(nested));
+        return quantified("collection", "elements", Quantifier.NONE, nested, actual -> actual);
     }
 
     public static <EXPECTED> PreservingCondition<Collection<? super EXPECTED>> none(Condition.ComparisonCondition<EXPECTED> nested) {
-        return quantified("collection", "elements", Quantifier.NONE, nested, actual -> actual,
-                () -> ConditionAwaitAttempt.bind(nested));
+        return quantified("collection", "elements", Quantifier.NONE, nested, actual -> actual);
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? extends ELEMENT>> none(Condition.Typed<? super ELEMENT, ?> nested) {
-        return quantified("collection", "elements", Quantifier.NONE, nested, actual -> actual,
-                () -> new ConditionAwaitAttempt<>(nested));
+        return quantified("collection", "elements", Quantifier.NONE, nested, actual -> actual);
     }
 
     /** Matches one element, including a collection or array as that single element. */
@@ -296,8 +285,7 @@ public final class CollectionConditions {
     /** Checks the first element, retaining the source's element type. */
     public static <CHECKED, REFERENCE> SelectedCondition<SequencedCollection<?>, CHECKED, REFERENCE> firstElement(
             SourceCondition<CHECKED, REFERENCE> nested) {
-        return new SelectedCondition<>(ConditionSupport.compose("first element", nested, firstElement,
-                () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
+        return new SelectedCondition<>(ConditionSupport.compose("first element", nested, firstElement));
     }
 
     /**
@@ -310,8 +298,7 @@ public final class CollectionConditions {
      */
     public static <ELEMENT, RESULT> Condition.Typed<SequencedCollection<? extends ELEMENT>, RESULT> firstElement(
             Condition.Typed<? super ELEMENT, RESULT> nested) {
-        return ConditionSupport.compose("first element", nested, firstElement,
-                () -> new ConditionAwaitAttempt<>(nested));
+        return ConditionSupport.compose("first element", nested, firstElement);
     }
 
     public static final SelectedCondition<SequencedCollection<?>, Object, Reference<?>> lastElement = selected("collection has a last element",
@@ -325,8 +312,7 @@ public final class CollectionConditions {
     /** Checks the last element, retaining the source's element type. */
     public static <CHECKED, REFERENCE> SelectedCondition<SequencedCollection<?>, CHECKED, REFERENCE> lastElement(
             SourceCondition<CHECKED, REFERENCE> nested) {
-        return new SelectedCondition<>(ConditionSupport.compose("last element", nested, lastElement,
-                () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
+        return new SelectedCondition<>(ConditionSupport.compose("last element", nested, lastElement));
     }
 
     /**
@@ -339,8 +325,7 @@ public final class CollectionConditions {
      */
     public static <ELEMENT, RESULT> Condition.Typed<SequencedCollection<? extends ELEMENT>, RESULT> lastElement(
             Condition.Typed<? super ELEMENT, RESULT> nested) {
-        return ConditionSupport.compose("last element", nested, lastElement,
-                () -> new ConditionAwaitAttempt<>(nested));
+        return ConditionSupport.compose("last element", nested, lastElement);
     }
 
     public static SelectedCondition<List<?>, Object, Reference<?>> elementAt(int index) {
@@ -359,8 +344,7 @@ public final class CollectionConditions {
     /** Checks the indexed element, retaining the source's element type. */
     public static <CHECKED, REFERENCE> SelectedCondition<List<?>, CHECKED, REFERENCE> elementAt(
             int index, SourceCondition<CHECKED, REFERENCE> nested) {
-        return new SelectedCondition<>(ConditionSupport.compose("element at index " + index, nested, elementAt(index),
-                () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
+        return new SelectedCondition<>(ConditionSupport.compose("element at index " + index, nested, elementAt(index)));
     }
 
     /**
@@ -374,8 +358,7 @@ public final class CollectionConditions {
      */
     public static <ELEMENT, RESULT> Condition.Typed<List<? extends ELEMENT>, RESULT> elementAt(int index,
             Condition.Typed<? super ELEMENT, RESULT> nested) {
-        return ConditionSupport.compose("element at index " + index, nested, elementAt(index),
-                () -> new ConditionAwaitAttempt<>(nested));
+        return ConditionSupport.compose("element at index " + index, nested, elementAt(index));
     }
 
     public static <ELEMENT> PreservingCondition<SequencedCollection<? extends ELEMENT>> sorted(Comparator<? super ELEMENT> comparator) {
