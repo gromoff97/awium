@@ -403,6 +403,9 @@ List<Payment> batch = await(paymentRepository::findAll).until(
 
 Ordered checks require `SequencedCollection`. These source requirements apply
 equally to predicates, comparisons, and conditions with a declared result type.
+For ordered views of a `SequencedMap`, use `sequencedKeySet()`, `sequencedValues()`,
+or `sequencedEntrySet()`. They retain the ordering contract needed by `firstElement`,
+`lastElement`, and `containsExactly(...)`; plain `values()` exposes only `Collection`.
 
 Text conditions accept any `CharSequence` and preserve the source's concrete type
 and instance, including inside container selections.
@@ -537,7 +540,6 @@ Factories accepting iterables of expected elements or maps of expected entries
 take a shallow snapshot when the condition is created.
 Changing the original input afterwards does not change the condition or its
 diagnostic reference. Encounter order, duplicates and supported nulls are retained.
-Non-empty requirements apply to the captured snapshot.
 Each iterable is traversed once during construction; a failure to read these
 inputs is thrown there, before polling starts.
 
