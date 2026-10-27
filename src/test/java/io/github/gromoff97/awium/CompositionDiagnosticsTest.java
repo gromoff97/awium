@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class CompositionDiagnosticsTest {
 
     @Test
-    void quantifiersRetainTheNamedCheckInFailureDiagnostics() {
+    void quantifiersReportTheirScopeAndNamedCheckOnFailure() {
         String description = "account is active";
         var mismatch = condition(description, ignored -> ConditionResult.unsatisfied());
         var match = condition(description, ignored -> ConditionResult.satisfied());
@@ -32,30 +32,48 @@ class CompositionDiagnosticsTest {
         var nested = await(() -> List.of(List.of("pending")))
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
 
-        var results = List.of(
-                collection.tryUntil(CollectionConditions.all(mismatch)),
-                collection.tryUntil(CollectionConditions.any(mismatch)),
-                collection.tryUntil(CollectionConditions.none(match)),
-                map.tryUntil(MapConditions.allEntries(mismatch)),
-                map.tryUntil(MapConditions.hasEntry(mismatch)),
-                map.tryUntil(MapConditions.hasNoEntry(match)),
-                map.tryUntil(MapConditions.allKeys(mismatch)),
-                map.tryUntil(MapConditions.anyKey(mismatch)),
-                map.tryUntil(MapConditions.noKey(match)),
-                map.tryUntil(MapConditions.allValues(mismatch)),
-                map.tryUntil(MapConditions.anyValue(mismatch)),
-                map.tryUntil(MapConditions.noValue(match)),
-                nested.tryUntil(CollectionConditions.all(CollectionConditions.any(mismatch))),
-                collection.tryUntil(isNotNull, CollectionConditions.all(mismatch)));
+        assertQuantifierFailure(collection.tryUntil(CollectionConditions.all(mismatch)),
+                "all collection elements match", "not all collection elements matched");
+        assertQuantifierFailure(collection.tryUntil(CollectionConditions.any(mismatch)),
+                "some collection elements match", "no collection elements matched");
+        assertQuantifierFailure(collection.tryUntil(CollectionConditions.none(match)),
+                "no collection elements match", "some collection elements matched");
+        assertQuantifierFailure(map.tryUntil(MapConditions.allEntries(mismatch)),
+                "all map entries match", "not all map entries matched");
+        assertQuantifierFailure(map.tryUntil(MapConditions.hasEntry(mismatch)),
+                "some map entries match", "no map entries matched");
+        assertQuantifierFailure(map.tryUntil(MapConditions.hasNoEntry(match)),
+                "no map entries match", "some map entries matched");
+        assertQuantifierFailure(map.tryUntil(MapConditions.allKeys(mismatch)),
+                "all map keys match", "not all map keys matched");
+        assertQuantifierFailure(map.tryUntil(MapConditions.anyKey(mismatch)),
+                "some map keys match", "no map keys matched");
+        assertQuantifierFailure(map.tryUntil(MapConditions.noKey(match)),
+                "no map keys match", "some map keys matched");
+        assertQuantifierFailure(map.tryUntil(MapConditions.allValues(mismatch)),
+                "all map values match", "not all map values matched");
+        assertQuantifierFailure(map.tryUntil(MapConditions.anyValue(mismatch)),
+                "some map values match", "no map values matched");
+        assertQuantifierFailure(map.tryUntil(MapConditions.noValue(match)),
+                "no map values match", "some map values matched");
+        assertQuantifierFailure(nested.tryUntil(CollectionConditions.all(CollectionConditions.any(mismatch))),
+                "all collection elements match: some collection elements match",
+                "not all collection elements matched: no collection elements matched");
+        assertQuantifierFailure(collection.tryUntil(isNotNull, CollectionConditions.all(mismatch)),
+                "all collection elements match", "not all collection elements matched");
+    }
 
-        for (var result : results) {
-            var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
-            assertEquals(TIMEOUT, failure.reason());
-            assertTrue(failure.message().contains(description), failure.message());
-            var last = result.attempts().getLast();
-            var failed = last.progress() == null ? last.condition() : last.progress().activeCondition();
-            assertTrue(failed.description().endsWith(": " + description), failed.description());
-        }
+    private static void assertQuantifierFailure(AwaitResult<?, ?> result, String scope, String mismatch) {
+        var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+        assertEquals(TIMEOUT, failure.reason());
+        String description = scope + ": account is active";
+        assertTrue(failure.message().contains(description), failure.message());
+        assertTrue(failure.message().contains(mismatch), failure.message());
+        var last = result.attempts().getLast();
+        var failed = last.progress() == null ? last.condition() : last.progress().activeCondition();
+        assertEquals(description, failed.description());
+        var evaluated = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, last.outcome());
+        assertEquals(mismatch, assertInstanceOf(ConditionResult.Unsatisfied.class, evaluated.evaluation()).mismatch());
     }
 
     @Test
