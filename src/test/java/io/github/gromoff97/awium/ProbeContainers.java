@@ -125,6 +125,7 @@ final class ProbeContainers {
     static final class EntryMap<K, V> extends AbstractMap<K, V> {
         private final List<Entry<K, V>> entries;
         RuntimeException entrySetFailure;
+        RuntimeException iteratorFailure;
         int entrySetCalls;
 
         EntryMap(List<Entry<K, V>> entries) {
@@ -145,6 +146,7 @@ final class ProbeContainers {
             return new AbstractSet<>() {
                 @Override
                 public Iterator<Entry<K, V>> iterator() {
+                    if (iteratorFailure != null) throw iteratorFailure;
                     return entries.iterator();
                 }
 

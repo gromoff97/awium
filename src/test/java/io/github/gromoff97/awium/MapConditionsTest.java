@@ -220,6 +220,23 @@ class MapConditionsTest {
     }
 
     @Test
+    void emptyExpectedMembershipDoesNotTraverseTheObservedMap() {
+        var actual = new ProbeContainers.EntryMap<>(List.of(Map.entry("key", "value")));
+        actual.iteratorFailure = new IllegalStateException("unnecessary traversal");
+        var time = new FakeTime(0);
+        var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+        List<PreservingCondition<? super Map<String, String>>> satisfied = List.of(
+                containsAllEntries(Map.of()), doesNotContainAnyEntries(Map.of()),
+                containsAllKeys(List.of()), doesNotContainAnyKeys(List.of()),
+                containsAllValues(List.of()), doesNotContainAnyValues(List.of()));
+        for (var condition : satisfied) assertSame(actual, waiting.until(condition));
+        for (var result : List.of(waiting.tryUntil(containsAnyEntries(Map.of())),
+                waiting.tryUntil(doesNotContainAllEntries(Map.of())))) {
+            assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
+        }
+    }
+
+    @Test
     void emptyExpectedSetsFollowTheSameRulesForEntriesKeysAndValues() {
         List<PreservingCondition<? super Map<String, String>>> satisfied = List.of(
                 containsAllEntries(Map.of()), doesNotContainAnyEntries(Map.of()),

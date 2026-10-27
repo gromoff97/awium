@@ -30,7 +30,7 @@ final class ValueMatching {
 
     static <ACTUAL, EXPECTED> boolean containsAny(Collection<ACTUAL> actual, Collection<EXPECTED> expected,
             CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) throws Throwable {
-        return matchesAny(actual, value -> matchesAny(expected, candidate -> matches.test(value, candidate)));
+        return matchesAny(expected, candidate -> matchesAny(actual, value -> matches.test(value, candidate)));
     }
 
     static <ACTUAL, EXPECTED> boolean exactly(Iterator<ACTUAL> actual, Collection<EXPECTED> expected,

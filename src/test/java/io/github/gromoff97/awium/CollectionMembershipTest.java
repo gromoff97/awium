@@ -216,6 +216,20 @@ class CollectionMembershipTest {
     }
 
     @Test
+    void emptyExpectedMembershipDoesNotTraverseTheObservedCollection() {
+        var actual = new ProbeContainers.MembershipCollection<String>(new IllegalStateException("unnecessary traversal"));
+        var time = new FakeTime(0);
+        var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+
+        assertSame(actual, waiting.until(containsAll(List.of())));
+        assertSame(actual, waiting.until(doesNotContainAny(List.of())));
+        for (var result : List.of(waiting.tryUntil(containsAny(List.of())), waiting.tryUntil(doesNotContainAll(List.of())))) {
+            assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
+        }
+        assertEquals(0, actual.iteratorCalls);
+    }
+
+    @Test
     void emptyExpectedSetsFollowMembershipSemanticsAcrossTerminals() {
         List<PreservingCondition<Collection<? super String>>> checks = List.of(
                 containsAll(List.of()), doesNotContainAny(List.of()),
