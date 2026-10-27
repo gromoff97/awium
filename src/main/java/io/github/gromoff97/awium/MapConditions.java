@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.IntPredicate;
 
-import static io.github.gromoff97.awium.Condition.required;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
@@ -90,19 +89,19 @@ public final class MapConditions {
 
     public static <CHECKED, REFERENCE> SelectedCondition<Map<?, ?>, CHECKED, REFERENCE> singleEntry(
             SourceCondition<CHECKED, REFERENCE> nested) {
-        return new SelectedCondition<>(compose("single entry: ", required(nested), singleEntry, MapConditions::selectSingleEntry,
+        return new SelectedCondition<>(compose("single entry", nested, singleEntry, MapConditions::selectSingleEntry,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 
     public static <KEY, VALUE, RESULT> Condition.Typed<Map<? extends KEY, ? extends VALUE>, RESULT> singleEntry(
             Condition.Typed<? super Entry<? extends KEY, ? extends VALUE>, RESULT> nested) {
-        return compose("single entry: ", required(nested), singleEntry, MapConditions::selectSingleEntry,
+        return compose("single entry", nested, singleEntry, MapConditions::selectSingleEntry,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <KEY, VALUE> SelectedCondition<Map<? super KEY, ? super VALUE>, Object, Reference<?>> singleEntry(
             ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
-        return new SelectedCondition<>(compose("single entry: ", required(nested), singleEntry, MapConditions::selectSingleEntry,
+        return new SelectedCondition<>(compose("single entry", nested, singleEntry, MapConditions::selectSingleEntry,
                 () -> ConditionAwaitAttempt.bind(nested)));
     }
 
@@ -362,14 +361,14 @@ public final class MapConditions {
 
     public static <KEY, VALUE, RESULT> Condition.Typed<Map<? super KEY, ? extends VALUE>, RESULT> valueFor(KEY key,
             Condition.Typed<? super VALUE, RESULT> nested) {
-        return compose("map value ", required(nested),
+        return compose("map value", nested,
                 valueFor(key), actual -> value(actual, key),
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <KEY, CHECKED, REFERENCE> MapValueCondition<Map<? super KEY, ?>, CHECKED, REFERENCE> valueFor(KEY key,
             SourceCondition<CHECKED, REFERENCE> nested) {
-        return new MapValueCondition<>(compose("map value ", required(nested),
+        return new MapValueCondition<>(compose("map value", nested,
                 valueFor(key), actual -> value(actual, key),
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
@@ -391,19 +390,19 @@ public final class MapConditions {
 
     public static <KEY, CHECKED, REFERENCE> SelectedCondition<Map<? super KEY, ?>, CHECKED, REFERENCE> entryFor(
             KEY key, SourceCondition<CHECKED, REFERENCE> nested) {
-        return new SelectedCondition<>(compose("map entry: ", required(nested), entryFor(key), actual -> findEntry(actual, key),
+        return new SelectedCondition<>(compose("map entry", nested, entryFor(key), actual -> findEntry(actual, key),
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 
     public static <KEY, VALUE, RESULT> Condition.Typed<Map<? super KEY, ? extends VALUE>, RESULT> entryFor(
             KEY key, Condition.Typed<? super Entry<? super KEY, ? extends VALUE>, RESULT> nested) {
-        return compose("map entry: ", required(nested), entryFor(key), actual -> findEntry(actual, key),
+        return compose("map entry", nested, entryFor(key), actual -> findEntry(actual, key),
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <KEY, VALUE> SelectedCondition<Map<? super KEY, ? super VALUE>, Object, Reference<?>> entryFor(
             KEY key, ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
-        return new SelectedCondition<>(compose("map entry: ", required(nested), entryFor(key), actual -> findEntry(actual, key),
+        return new SelectedCondition<>(compose("map entry", nested, entryFor(key), actual -> findEntry(actual, key),
                 () -> ConditionAwaitAttempt.bind(nested)));
     }
 

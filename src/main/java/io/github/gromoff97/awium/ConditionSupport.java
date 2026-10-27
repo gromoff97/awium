@@ -131,11 +131,12 @@ final class ConditionSupport {
         return new Reference<>("Unexpected", value);
     }
 
-    static <OBSERVED, VALUE, RESULT> Condition.Typed<OBSERVED, RESULT> compose(String prefix, Condition condition,
+    static <OBSERVED, VALUE, RESULT> Condition.Typed<OBSERVED, RESULT> compose(String selection, Condition condition,
             Condition extractionCondition,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<VALUE>> extract,
             Supplier<? extends ConditionAwaitAttempt<? super VALUE, ? extends RESULT>> evaluatorFactory) {
-        return new Condition.Typed<>(condition, prefix + condition.description(), () -> {
+        Condition.required(condition);
+        return new Condition.Typed<>(condition, selection + ": " + condition.description(), () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> {
                 try {

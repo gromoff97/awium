@@ -6,7 +6,6 @@ import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.Condition.SourceCondition;
 import java.util.Optional;
 
-import static io.github.gromoff97.awium.Condition.required;
 import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
@@ -26,13 +25,13 @@ public final class OptionalConditions {
     }
 
     public static <VALUE, RESULT> Condition.Typed<Optional<? extends VALUE>, RESULT> hasValue(Condition.Typed<? super VALUE, RESULT> nested) {
-        return compose("optional value: ", required(nested), present, OptionalConditions::present,
+        return compose("optional value", nested, present, OptionalConditions::present,
                 () -> new ConditionAwaitAttempt<>(nested));
     }
 
     public static <CHECKED, REFERENCE> SelectedCondition<Optional<?>, CHECKED, REFERENCE> hasValue(
             SourceCondition<CHECKED, REFERENCE> nested) {
-        return new SelectedCondition<>(compose("optional value: ", required(nested), present, OptionalConditions::present,
+        return new SelectedCondition<>(compose("optional value", nested, present, OptionalConditions::present,
                 () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
     }
 
