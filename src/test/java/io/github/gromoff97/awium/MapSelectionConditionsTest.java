@@ -50,20 +50,56 @@ class MapSelectionConditionsTest {
 
         Map.Entry<String, Number> matching = waiting.until(MapConditions.singleEntry(Conditions.equalTo(equalEntry)));
         ReceiptEntry narrowed = waiting.until(MapConditions.singleEntry(Conditions.instanceOf(ReceiptEntry.class)));
+        Map.Entry<String, Number> byKey = waiting.until(MapConditions.entryFor("receipt", Conditions.equalTo(equalEntry)));
+        ReceiptEntry narrowedByKey = waiting.until(MapConditions.entryFor("receipt", Conditions.instanceOf(ReceiptEntry.class))
+                .because("the receipt has arrived"));
         BigDecimal selected = waiting.until(MapConditions.valueFor("receipt", Conditions.instanceOf(BigDecimal.class)));
         AwaitResult<ProbeContainers.EntryMap<String, Number>, ReceiptEntry> captured =
                 waiting.tryUntil(MapConditions.singleEntry(Conditions.instanceOf(ReceiptEntry.class)));
 
         assertSame(entry, matching);
         assertSame(entry, narrowed);
+        assertSame(entry, byKey);
+        assertSame(entry, narrowedByKey);
         assertSame(value, selected);
         assertSame(entry, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
-        assertEquals(4, reads[0]);
+        assertEquals(6, reads[0]);
 
         var multiple = new ProbeContainers.EntryMap<String, Number>(List.of(entry, Map.entry("other", 1)));
         var many = await(() -> multiple).usingTime(time, time).upTo(ofNanos(1));
         assertFailure(TIMEOUT, () -> many.until(MapConditions.singleEntry(Conditions.equalTo(equalEntry))));
         assertFailure(TIMEOUT, () -> many.until(MapConditions.singleEntry(Conditions.instanceOf(ReceiptEntry.class))));
+    }
+
+    @Test
+    void entryForInitializesItsCheckAfterFindingTheKeyAndChecksOnlyThatEntry() {
+        List<Map<String, Integer>> observations = java.util.Arrays.asList(
+                null, Map.of(), Map.of("other", 2), Map.of("key", 1, "other", 2), Map.of("key", 2, "other", 1));
+        int[] reads = {0};
+        int[] factories = {0};
+        var checked = new java.util.ArrayList<Map.Entry<String, Integer>>();
+        var check = Conditions.conditionPerWait("entry is ready", () -> {
+            factories[0]++;
+            return (Map.Entry<String, Integer> entry) -> {
+                checked.add(entry);
+                return entry.getValue() == 2 ? ConditionResult.satisfied() : ConditionResult.unsatisfied("not ready");
+            };
+        });
+        var time = new FakeTime(0);
+        var result = await(() -> {
+            if (reads[0] <= 3) assertEquals(0, factories[0]);
+            return observations.get(reads[0]++);
+        }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
+                .tryUntil(MapConditions.entryFor("key", check).because("the selected entry must be ready"));
+
+        assertEquals(Map.entry("key", 2), assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals(5, result.totalAttempts());
+        assertEquals(1, factories[0]);
+        assertEquals(List.of(Map.entry("key", 1), Map.entry("key", 2)), checked);
+        var missing = result.attempts().get(2);
+        assertEquals(MapConditions.entryFor("key").description(), missing.condition().description());
+        assertEquals("key", missing.condition().reference().value());
+        assertEquals("the selected entry must be ready", missing.condition().explanation());
     }
 
     @Test

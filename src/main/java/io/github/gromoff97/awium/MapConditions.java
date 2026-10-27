@@ -386,6 +386,37 @@ public final class MapConditions {
         return new SelectedCondition<>(ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> findEntry(actual, key)));
     }
 
+    /** Checks the entry selected by its key, retaining the source's entry type. */
+    public static <KEY, ENTRY extends Entry<?, ?>> SelectedCondition<Map<? super KEY, ?>, ENTRY, Reference<?>> entryFor(
+            KEY key, CheckedPredicate<? super ENTRY> predicate) {
+        return entryFor(key, Conditions.matches(predicate));
+    }
+
+    public static <KEY, ENTRY_KEY, VALUE> SelectedCondition<Map<? super KEY, ?>, Entry<? extends ENTRY_KEY, ? extends VALUE>, Reference<?>> entryFor(
+            KEY key, CheckedBiPredicate<? super ENTRY_KEY, ? super VALUE> predicate) {
+        requireNonNull(predicate, "predicate must not be null");
+        return entryFor(key, Conditions.matches((Entry<? extends ENTRY_KEY, ? extends VALUE> entry) ->
+                predicate.test(entry.getKey(), entry.getValue())));
+    }
+
+    public static <KEY, CHECKED, REFERENCE> SelectedCondition<Map<? super KEY, ?>, CHECKED, REFERENCE> entryFor(
+            KEY key, SourceCondition<CHECKED, REFERENCE> nested) {
+        return new SelectedCondition<>(compose("map entry: ", required(nested), entryFor(key), actual -> findEntry(actual, key),
+                () -> ConditionAwaitAttempt.bindSelectionCheck(nested)));
+    }
+
+    public static <KEY, VALUE, RESULT> Condition.Typed<Map<? super KEY, ? extends VALUE>, RESULT> entryFor(
+            KEY key, Condition.Typed<? super Entry<? super KEY, ? extends VALUE>, RESULT> nested) {
+        return compose("map entry: ", required(nested), entryFor(key), actual -> findEntry(actual, key),
+                () -> new ConditionAwaitAttempt<>(nested));
+    }
+
+    public static <KEY, VALUE> SelectedCondition<Map<? super KEY, ? super VALUE>, Object, Reference<?>> entryFor(
+            KEY key, ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
+        return new SelectedCondition<>(compose("map entry: ", required(nested), entryFor(key), actual -> findEntry(actual, key),
+                () -> ConditionAwaitAttempt.bind(nested)));
+    }
+
     /** Matches one key, including a collection or array as that single key. */
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsKey(KEY expected) {
         return preserving("map contains expected key", "map did not contain expected key", expectedReference(expected),

@@ -246,7 +246,7 @@ Payment found = await(paymentRepository::find).until(hasValue(Payment::paid));
 An empty collection, several elements, or a failed nested check cause a retry.
 `singleEntry(condition)` follows the same rule for a map containing exactly one entry.
 Selectors that accept nested conditions also accept a predicate directly:
-`singleElement(check)`, `hasValue(check)`, and `valueFor(key, check)`. Use a full condition
+`singleElement(check)`, `hasValue(check)`, `valueFor(key, check)`, and `entryFor(key, check)`. Use a full condition
 for a type check, assertion adapter, or per-wait callback state.
 `singleEntry(entry -> ...)` checks the sole entry directly and retains its key
 and value types. The two-argument form `singleEntry((key, value) -> ...)` is also available.
@@ -258,6 +258,9 @@ Map membership checks compare keys and values with `Objects.deepEquals`, with
 the observed operand first. Key selections use the same key comparison. This
 includes array content and applies to maps with comparators or identity keys as well.
 `valueFor` and `entryFor` take the first entry whose key matches.
+`entryFor(key, check)` then checks that entry, even when the map contains other entries.
+It accepts an entry predicate, a key/value predicate, or a nested condition. A failed
+check causes a retry; it does not search for a different entry in the same observation.
 
 `all`, `any`, `none`, and the map entry/key/value quantifiers also accept a nested
 condition, for example `all(matches(Payment::paid))`.
@@ -487,6 +490,7 @@ import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.MapConditions.hasEntry;
 import static io.github.gromoff97.awium.MapConditions.hasNoEntry;
 import static io.github.gromoff97.awium.MapConditions.allEntries;
+import static io.github.gromoff97.awium.MapConditions.entryFor;
 import static io.github.gromoff97.awium.MapConditions.singleEntry;
 
 MapSource<Map<String, String>> statuses = () -> Map.of("payment", "READY");
@@ -505,6 +509,8 @@ Map<String, String> all = await(statuses).until(
         allEntries(entry -> entry.getValue().equals("READY")));
 Map.Entry<String, String> only = await(statuses).until(
         singleEntry(entry -> entry.getValue().equals("READY")));
+Map.Entry<String, String> paymentEntry = await(statuses).until(
+        entryFor("payment", entry -> entry.getValue().equals("READY")));
 ```
 
 As with other generic conditions, appending `because` to a predicate or nested condition may

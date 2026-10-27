@@ -93,6 +93,8 @@ class FactoryGrammarTest {
         assertNullRejected("predicate", () -> CollectionConditions.singleElement((CheckedPredicate<String>) null));
         assertNullRejected("predicate", () -> OptionalConditions.hasValue((CheckedPredicate<String>) null));
         assertNullRejected("predicate", () -> MapConditions.valueFor("key", (CheckedPredicate<String>) null));
+        assertNullRejected("predicate", () -> MapConditions.entryFor("key", (CheckedPredicate<Map.Entry<String, String>>) null));
+        assertNullRejected("predicate", () -> MapConditions.entryFor("key", (CheckedBiPredicate<String, String>) null));
         assertNullRejected("predicate", () -> MapConditions.singleEntry((CheckedBiPredicate<String, String>) null));
         assertNullRejected("predicate", () -> MapConditions.singleEntry((CheckedPredicate<Map.Entry<String, String>>) null));
         assertNullRejected("predicate", () -> MapConditions.allEntries((CheckedPredicate<Map.Entry<String, String>>) null));
@@ -103,6 +105,9 @@ class FactoryGrammarTest {
         assertNullRejected("condition", () -> CollectionConditions.none((Condition.Typed<Object, String>) null));
         assertNullRejected("condition", () -> MapConditions.valueFor("key", (PreservingCondition<String>) null));
         assertNullRejected("condition", () -> MapConditions.valueFor("key", (Condition.Typed<Object, String>) null));
+        assertNullRejected("condition", () -> MapConditions.entryFor("key", (PreservingCondition<Map.Entry<String, String>>) null));
+        assertNullRejected("condition", () -> MapConditions.entryFor("key", (Condition.Typed<Object, String>) null));
+        assertNullRejected("condition", () -> MapConditions.entryFor("key", (Condition.ComparisonCondition<Map.Entry<String, String>>) null));
         assertNullRejected("condition", () -> object.until((PreservingCondition<String>) null));
         assertNullRejected("condition", () -> object.until((Condition.Typed<String, String>) null));
         assertNullRejected("condition", () -> object.until((Condition.ComparisonCondition<String>) null));

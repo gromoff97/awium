@@ -198,6 +198,8 @@ class CheckedPredicateTest {
                     () -> values.tryUntil(any(check)),
                     () -> values.tryUntil(none(check)),
                     () -> map.tryUntil(MapConditions.valueFor("first", check)),
+                    () -> map.tryUntil(MapConditions.entryFor("first", entryCheck)),
+                    () -> map.tryUntil(MapConditions.entryFor("first", entry -> check.test(entry.getValue()))),
                     () -> soleEntry.tryUntil(MapConditions.singleEntry(entryCheck)),
                     () -> soleEntry.tryUntil(MapConditions.singleEntry(entry -> check.test(entry.getValue()))),
                     () -> map.tryUntil(MapConditions.allEntries(entryCheck)),
