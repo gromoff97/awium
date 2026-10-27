@@ -223,7 +223,7 @@ class DiagnosticsSnapshotTest {
         var betweenAssertion = new AssertionError("collection was empty");
         var persistenceAssertion = new AssertionError("optional was empty");
         WaitCompletion<Object, Object> between = new Timeout<>(
-                10 * SECOND, evaluatedAttempt(diagnosticCondition("collection to be non-empty", null),
+                ofNanos(10 * SECOND), evaluatedAttempt(diagnosticCondition("collection to be non-empty", null),
                         null, unsatisfied("collection was empty",
                         betweenAssertion), 4, 9 * SECOND));
         WaitCompletion<Object, Object> lateUnsatisfied = new Timeout<>(
@@ -235,7 +235,7 @@ class DiagnosticsSnapshotTest {
         var persistedAttempt = evaluatedAttempt(diagnosticCondition("optional to remain present", null),
                 "Optional.empty", unsatisfied("optional was empty",
                 persistenceAssertion), 71, 9 * SECOND + 100 * MILLISECOND);
-        var persistence = new PersistenceFailure<>(7 * SECOND,
+        var persistence = new PersistenceFailure<>(ofNanos(7 * SECOND),
                 new AttemptRecord<>(persistedAttempt.number(), AttemptRecord.Phase.PERSISTENCE,
                         persistedAttempt.timing(), persistedAttempt.condition(), persistedAttempt.progress(), persistedAttempt.outcome()));
 

@@ -15,6 +15,8 @@ import static java.lang.Thread.currentThread;
 record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, Callable<? extends OBSERVED> source,
         ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> evaluator, long started) {
 
+    private static final long NANOS_PER_SECOND = 1_000_000_000L;
+
     WaitEngine(WaitConfiguration configuration, Callable<? extends OBSERVED> source,
             ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> evaluator) {
         this(configuration, source, evaluator, now(configuration));
@@ -52,7 +54,7 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, Callable<? 
 
             long retrievalStarted = now(configuration);
             if (number > 1 && reached(retrievalStarted, deadline) && !currentThread().isInterrupted()) {
-                return new WaitCompletion.Timeout<>(retrievalStarted - started, lastUnsatisfied);
+                return new WaitCompletion.Timeout<>(offset(retrievalStarted), lastUnsatisfied);
             }
 
             AttemptRecord<OBSERVED, RESULT> attempt = evaluate(ACQUISITION,
@@ -99,7 +101,7 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, Callable<? 
                 return new WaitCompletion.Uncontrolled<>(attempt);
             }
             if (!(evaluated.evaluation() instanceof ConditionResult.Satisfied<?>)) {
-                return new WaitCompletion.PersistenceFailure<>(acquiredAt - started, attempt);
+                return new WaitCompletion.PersistenceFailure<>(acquired.attempt().timing().completionOffset(), attempt);
             }
             if (reached(completed, deadline)) {
                 return new WaitCompletion.Satisfied<>(attempt);
@@ -200,11 +202,16 @@ record WaitEngine<OBSERVED, RESULT>(WaitConfiguration configuration, Callable<? 
     }
 
     private long completedNanos(AttemptRecord<?, ?> attempt) {
-        return started + attempt.timing().completionOffset().toNanos();
+        var elapsed = attempt.timing().completionOffset();
+        // Reconstruct the clock reading with the same wrapping arithmetic as nanoTime.
+        return started + elapsed.getSeconds() * NANOS_PER_SECOND + elapsed.getNano();
     }
 
     private Duration offset(long stage) {
-        return Duration.ofNanos(stage - started);
+        // Acquisition and persistence each fit in signed nanos; their sum need not.
+        long elapsed = stage - started;
+        return Duration.ofSeconds(Long.divideUnsigned(elapsed, NANOS_PER_SECOND),
+                Long.remainderUnsigned(elapsed, NANOS_PER_SECOND));
     }
 
     private static long now(WaitConfiguration configuration) {

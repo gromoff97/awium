@@ -14,9 +14,62 @@ import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TimingConfigurationTest {
+
+    @ParameterizedTest
+    @ValueSource(longs = {0, Long.MAX_VALUE - 2, Long.MIN_VALUE + 2})
+    void persistenceKeepsPositiveElapsedTimeBeyondSignedNanoseconds(long origin) {
+        var acquiredAfter = ofNanos(Long.MAX_VALUE - 1);
+        for (long persistence : new long[] {2, Long.MAX_VALUE}) {
+            for (String outcome : List.of("success", "mismatch", "condition failure", "source failure")) {
+                var time = new FakeTime(origin);
+                var cause = new IllegalStateException(outcome);
+                int[] calls = {0};
+                var waiting = await(() -> {
+                    if (++calls[0] == 1) time.advanceNanos(Long.MAX_VALUE - 1);
+                    else if (outcome.equals("source failure")) throw cause;
+                    return "ready";
+                }).usingTime(time, time).every(ofNanos(Long.MAX_VALUE))
+                        .upTo(ofNanos(Long.MAX_VALUE)).persisting(ofNanos(persistence));
+                var result = waiting.tryUntil(Conditions.condition("ready", (String actual) -> {
+                    if (calls[0] > 1) {
+                        if (outcome.equals("condition failure")) throw cause;
+                        if (outcome.equals("mismatch")) return ConditionResult.unsatisfied("changed");
+                    }
+                    return ConditionResult.satisfied(actual);
+                }));
+
+                assertEquals(2, calls[0], outcome);
+                assertEquals(2, result.attempts().size(), outcome);
+                assertEquals(acquiredAfter, result.attempts().getFirst().timing().completionOffset(), outcome);
+                var last = result.attempts().getLast();
+                var elapsed = acquiredAfter.plusNanos(persistence);
+                assertEquals(AttemptRecord.Phase.PERSISTENCE, last.phase(), outcome);
+                assertEquals(acquiredAfter, last.timing().startOffset(), outcome);
+                assertEquals(elapsed, last.timing().retrievalOffset(), outcome);
+                assertEquals(outcome.equals("source failure") ? null : elapsed,
+                        last.timing().observationOffset(), outcome);
+                assertEquals(elapsed, last.timing().completionOffset(), outcome);
+                if (outcome.equals("success")) {
+                    assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+                } else {
+                    var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+                    assertEquals(switch (outcome) {
+                        case "mismatch" -> PERSISTENCE_FAILED;
+                        case "condition failure" -> CONDITION_FAILED;
+                        default -> SOURCE_FAILED;
+                    }, failure.reason());
+                    assertSame(outcome.equals("mismatch") ? null : cause, failure.cause());
+                    assertTrue(failure.message().contains("Elapsed: "
+                            + (persistence == 2 ? "106751 days" : "213503 days")), failure.message());
+                }
+            }
+        }
+    }
 
     @ParameterizedTest
     @ValueSource(longs = {50, 100})

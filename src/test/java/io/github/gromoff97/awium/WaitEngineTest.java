@@ -17,6 +17,7 @@ import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.WaitCompletion.*;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
+import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -141,7 +142,7 @@ class WaitEngineTest {
         assertEquals(List.of(100L, 104L, 108L), starts);
         assertEquals(List.of(4L, 4L, 2L), time.parkRequests);
         assertEquals(3, timeout.attempt().number());
-        assertEquals(10, timeout.elapsedNanos());
+        assertEquals(ofNanos(10), timeout.elapsed());
         assertEquals(8, completed(unsatisfied));
         assertEquals("mismatch 3", mismatch(unsatisfied));
         assertSame(assertion, unsatisfied.outcome().cause());
@@ -181,7 +182,7 @@ class WaitEngineTest {
         var unsatisfied = timeout.attempt();
         assertEquals(1, timeout.attempt().number());
         assertEquals(10, completed(unsatisfied));
-        assertEquals(10, timeout.elapsedNanos());
+        assertEquals(ofNanos(10), timeout.elapsed());
         assertSame(actual, observed(unsatisfied));
         assertEquals("late", mismatch(unsatisfied));
         assertSame(assertion, unsatisfied.outcome().cause());
@@ -204,7 +205,7 @@ class WaitEngineTest {
         var satisfied = timeout.attempt();
         assertEquals(1, timeout.attempt().number());
         assertEquals(11, completed(satisfied));
-        assertEquals(11, timeout.elapsedNanos());
+        assertEquals(ofNanos(11), timeout.elapsed());
         assertSame(actual, observed(satisfied));
         assertSame(result, result(satisfied));
     }
@@ -569,7 +570,7 @@ class WaitEngineTest {
 
         var loss = assertInstanceOf(PersistenceFailure.class, outcome);
         var unsatisfied = loss.attempt();
-        assertEquals(0, loss.acquiredAfterNanos());
+        assertEquals(ofNanos(0), loss.acquiredAfter());
         assertEquals(5, completed(unsatisfied));
         assertEquals(2, loss.attempt().number());
         assertSame(failingActual, observed(unsatisfied));

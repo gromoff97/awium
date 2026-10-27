@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -34,12 +35,12 @@ final class FailureDiagnostics {
         condition = attempt.condition();
     }
 
-    static String duration(long nanos) {
+    static String duration(Duration remaining) {
         StringJoiner result = new StringJoiner(" ").setEmptyValue("0 nanoseconds");
         for (TimeUnit unit : DURATION_UNITS) {
-            long unitNanos = unit.toNanos(1);
-            long count = nanos / unitNanos;
-            nanos %= unitNanos;
+            var unitDuration = Duration.ofNanos(unit.toNanos(1));
+            long count = remaining.dividedBy(unitDuration);
+            remaining = remaining.minus(unitDuration.multipliedBy(count));
             if (count != 0) {
                 String name = unit.name().toLowerCase(Locale.ROOT);
                 result.add(count + " " + (count == 1 ? name.substring(0, name.length() - 1) : name));
@@ -127,22 +128,22 @@ final class FailureDiagnostics {
     private void timing(StringBuilder out) {
         out.append('\n').append("Timing:\n");
         field(out, "Acquisition timeout",
-                duration(configuration.upToNanos()));
-        long completedAfter = outcome.attempt().timing().completionOffset().toNanos();
-        long elapsed = outcome instanceof WaitCompletion.Timeout<?, ?> timeout
-                ? timeout.elapsedNanos() : completedAfter;
-        if (elapsed != completedAfter) {
+                duration(Duration.ofNanos(configuration.upToNanos())));
+        var completedAfter = outcome.attempt().timing().completionOffset();
+        var elapsed = outcome instanceof WaitCompletion.Timeout<?, ?> timeout
+                ? timeout.elapsed() : completedAfter;
+        if (!elapsed.equals(completedAfter)) {
             field(out, "Last attempt completed after", duration(completedAfter));
         }
         field(out, "Elapsed", duration(elapsed));
         if (outcome instanceof WaitCompletion.PersistenceFailure<?, ?> failure) {
-            long acquiredAfter = failure.acquiredAfterNanos();
+            var acquiredAfter = failure.acquiredAfter();
             field(out, "Acquired after", duration(acquiredAfter));
-            field(out, "Required persistence", duration(configuration.persistenceNanos()));
-            field(out, "Failure detected after", duration(completedAfter - acquiredAfter));
+            field(out, "Required persistence", duration(Duration.ofNanos(configuration.persistenceNanos())));
+            field(out, "Failure detected after", duration(completedAfter.minus(acquiredAfter)));
         }
         field(out, "Polling interval",
-                duration(configuration.everyNanos()));
+                duration(Duration.ofNanos(configuration.everyNanos())));
     }
 
     private static void attempt(StringBuilder out, AttemptRecord<?, ?> attempt, String actual,

@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import java.time.Duration;
+
 import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 
 /**
@@ -43,14 +45,14 @@ sealed interface WaitCompletion<OBSERVED, RESULT> {
         }
     }
 
-    record Timeout<OBSERVED, RESULT>(long elapsedNanos,
+    record Timeout<OBSERVED, RESULT>(Duration elapsed,
             AttemptRecord<OBSERVED, RESULT> attempt) implements WaitCompletion<OBSERVED, RESULT> {
 
         Timeout(AttemptRecord<OBSERVED, RESULT> attempt) {
-            this(attempt.timing().completionOffset().toNanos(), attempt);
+            this(attempt.timing().completionOffset(), attempt);
         }
     }
 
-    record PersistenceFailure<OBSERVED, RESULT>(long acquiredAfterNanos,
+    record PersistenceFailure<OBSERVED, RESULT>(Duration acquiredAfter,
             AttemptRecord<OBSERVED, RESULT> attempt) implements WaitCompletion<OBSERVED, RESULT> {}
 }
