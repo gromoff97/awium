@@ -29,7 +29,15 @@ import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
 import static java.util.Objects.requireNonNull;
 
-/** Checks and selections for Collection sources. Expected values may come from any Iterable. */
+/**
+ * Checks and selections for {@link Collection} sources. Checks preserve the observed collection's
+ * type and instance; selections return an element or the nested condition's result.
+ * A null observed collection is unsatisfied, including for absence checks.
+ *
+ * <p>Ordered operations require {@link SequencedCollection}; indexed selection requires {@link List}.
+ * Expected sets and sequences may come from any {@link Iterable} and are copied when the condition
+ * is created, without copying their elements. A single expected element remains caller-owned.
+ */
 public final class CollectionConditions {
 
     public static final SelectedCondition<Collection<?>, Object, Reference<?>> singleElement = selected("collection has a single element",

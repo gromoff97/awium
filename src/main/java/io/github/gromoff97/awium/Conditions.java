@@ -16,6 +16,14 @@ import static java.util.Objects.deepEquals;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Value checks that preserve the observed type and instance; type checks narrow that type.
+ * Equality and membership use {@link java.util.Objects#deepEquals(Object, Object)},
+ * with the observed value first. Identity checks use {@code ==}.
+ *
+ * <p>Single expected values remain caller-owned. Membership factories copy their expected
+ * iterable when the condition is created, without copying the elements.
+ */
 public final class Conditions {
 
     public static final PreservingCondition<Object> isNull = ConditionSupport.preserving("value is null",
@@ -25,18 +33,30 @@ public final class Conditions {
 
     private Conditions() {}
 
-    /** Creates a named check using the supplied callback for every execution. */
+    /**
+     * Creates a named check using the supplied callback for every execution.
+     * A satisfied result returns the original observation, ignoring the callback's result payload.
+     * Use {@link ConditionResult#satisfied()} when only signaling success.
+     */
     public static <OBSERVED> PreservingCondition<OBSERVED> condition(String description,
             CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>> evaluation) {
         return ConditionSupport.preserving(description, evaluation);
     }
 
-    /** Creates callbacks lazily for each wait; separate sequence stages have independent callbacks. */
+    /**
+     * Creates callbacks lazily for each wait; separate sequence stages have independent callbacks.
+     * Like {@link #condition(String, CheckedFunction)}, a satisfied check returns the original observation.
+     */
     public static <OBSERVED> PreservingCondition<OBSERVED> conditionPerWait(String description,
             Callable<? extends CheckedFunction<? super OBSERVED, ? extends ConditionResult<? extends OBSERVED>>> evaluatorFactory) {
         return ConditionSupport.preserving(description, evaluatorFactory);
     }
 
+    /**
+     * Adapts an assertion to a check: normal return satisfies it, and {@link AssertionError}
+     * means a mismatch that can be retried. Any other throwable fails the attempt.
+     * Successful checks return the original observation.
+     */
     public static <OBSERVED> PreservingCondition<OBSERVED> asserted(CheckedConsumer<? super OBSERVED> assertion) {
         requireNonNull(assertion, "assertion must not be null");
         return ConditionSupport.preserving("value satisfies assertion", actual -> {

@@ -30,6 +30,16 @@ import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Checks and selections for {@link Map} sources. Checks preserve the observed map's type and
+ * instance; selections return an entry, a value, or the nested condition's result.
+ * A null observed map is unsatisfied, including for absence checks.
+ *
+ * <p>Membership and key lookup use {@link java.util.Objects#deepEquals(Object, Object)} with
+ * the observed key or value first, independently of the map's comparator or identity rules.
+ * Expected sets and entry maps are copied when the condition is created; their keys and values
+ * remain caller-owned.
+ */
 public final class MapConditions {
 
     public static final SelectedCondition<Map<?, ?>, Object, Reference<?>> singleEntry = selected("map has a single entry",

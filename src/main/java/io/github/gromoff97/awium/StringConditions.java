@@ -17,6 +17,7 @@ import static java.util.stream.StreamSupport.stream;
 
 /**
  * Text checks that preserve the original {@link CharSequence} type and instance.
+ * A null observed text is unsatisfied, including for absence checks.
  * Expected text is snapshotted as a string when a condition is created.
  */
 public final class StringConditions {

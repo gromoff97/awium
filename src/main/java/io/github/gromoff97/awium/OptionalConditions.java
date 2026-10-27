@@ -10,6 +10,12 @@ import static io.github.gromoff97.awium.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
 
+/**
+ * Checks and selections for {@link Optional} sources. {@link #absent} returns the original empty
+ * optional; {@link #present} returns its contained value. {@code hasValue(...)} first requires
+ * presence, then returns the checked value or the nested condition's result.
+ * A null observed optional is unsatisfied, including for {@code absent}.
+ */
 public final class OptionalConditions {
 
     public static final SelectedCondition<Optional<?>, Object, Reference<?>> present =
