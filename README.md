@@ -118,7 +118,7 @@ AwaitResult<String, List<String>> statuses = await(paymentRepository::status).tr
 ```
 
 With `persisting(...)`, only the final stage is re-evaluated. Earlier captured
-values remain unchanged. Each factory-backed stage gets its own fresh evaluator
+values remain unchanged. Each factory-backed stage invokes its factory separately
 for every terminal call. One condition still returns one value; zero conditions
 are invalid. A comma between terminal arguments always means ordered capture.
 Comparisons and preserving checks can be mixed: `equalTo(expectedPayment)` and
@@ -357,8 +357,8 @@ diagnostics. A condition returns only `Satisfied` or `Unsatisfied`; any thrown
 `Throwable` becomes an uncontrolled attempt and stops the wait.
 
 `condition(description, callback)` reuses the supplied callback.
-`conditionPerWait(description, factory)` accepts a JDK `Callable` that creates
-a `CheckedFunction` with fresh state for each wait:
+`conditionPerWait(description, factory)` accepts a JDK `Callable` supplying a
+`CheckedFunction`. Create mutable state inside the factory to isolate waits and stages:
 
 ```java
 import static io.github.gromoff97.awium.Conditions.conditionPerWait;
@@ -371,9 +371,10 @@ await(paymentRepository::load).until(conditionPerWait("two paid observations", (
 }));
 ```
 
-Creation is lazy, once per use of the condition in a wait; ordered stages have
-independent callbacks. Both creation and evaluation may throw checked exceptions; either failure stops
-the wait with its original cause. To observe a derived value, project it in
+The factory runs lazily, at most once per use of the condition in a wait;
+ordered stages invoke it separately. A shared callback or state captured outside
+the factory remains shared. Both creation and evaluation may throw checked exceptions;
+either failure stops the wait with its original cause. To observe a derived value, project it in
 the source, for example `await(() -> paymentRepository.load().receipt())`.
 
 ## Condition catalogues
@@ -639,8 +640,8 @@ too: they keep the observations' wildcard types independent despite
 
 `until(...)` or `tryUntil(...)` starts the wait. Success never invokes the source again merely to
 obtain the return value. A retained stage may be reused sequentially; every
-wait gets fresh timing. Built-in and factory-backed conditions also get fresh
-evaluation state. State in a callback passed directly to `condition(...)`
+wait gets fresh timing and built-in evaluation state. Callback factories are
+invoked again; state captured outside them or passed directly to `condition(...)`
 remains owned by the caller.
 
 ## Diagnostic waits

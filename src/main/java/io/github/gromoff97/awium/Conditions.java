@@ -44,7 +44,8 @@ public final class Conditions {
     }
 
     /**
-     * Creates callbacks lazily for each wait; separate sequence stages have independent callbacks.
+     * Lazily invokes the factory separately for each use of the condition in a wait.
+     * Create mutable callback state inside the factory to isolate waits and sequence stages.
      * Like {@link #condition(String, CheckedFunction)}, a satisfied check returns the original observation.
      */
     public static <OBSERVED> PreservingCondition<OBSERVED> conditionPerWait(String description,
