@@ -161,22 +161,18 @@ class CompilationContractTest {
     }
 
     @Test
-    void iterablesRejectIncompatibleQuantifiersResultsAndCollectionOnlyOperations() throws IOException {
+    void iterablesRejectContainerConditions() throws IOException {
         for (String expression : List.of(
                 "await(() -> users).until(all(User::active));",
                 "await(() -> users).until(any(matches(User::active)));",
                 "await(() -> users).until(none(equalTo(new User(true))));",
                 "await(() -> users).until(singleElement(instanceOf(User.class)));",
                 "await(() -> users).until(singleElement(User::active));",
-                "await(() -> users).until(all(String::isBlank));",
-                "await(() -> users).until(any(String::isBlank));",
-                "String wrong = await(() -> users).until(singleElement(instanceOf(User.class)));",
                 "await(() -> users).until(singleElement);",
                 "await(() -> users).until(firstElement);",
                 "await(() -> users).until(hasSize(1));",
                 "await(() -> users).until(present);",
                 "await(() -> users).until(valueFor(\"key\"));",
-                "await(() -> users).until(singleElement(instanceOf(String.class)), singleElement(instanceOf(Integer.class)));",
                 "await(() -> broad).until(all(User::active));")) {
             assertRejected("""
                     import java.util.*;

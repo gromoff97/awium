@@ -158,6 +158,9 @@ class ConditionTypeCompilationContractTest {
         for (String expression : List.of(
                 "String wrong = await(numbers).until(equalTo(1));",
                 "String wrong = await(collection::call).until(singleElement(equalTo(1)));",
+                "String wrong = await(collection::call).until(singleElement(matches((Number value) -> value.intValue() > 0)));",
+                "AwaitResult<List<Number>, String> wrong = await(collection::call).tryUntil(singleElement(matches((Number value) -> value.intValue() > 0)));",
+                "List<String> wrong = await(collection::call).until(singleElement(matches((Number value) -> value.intValue() > 0)), singleElement(matches((Number value) -> value.intValue() > 0)));",
                 "String wrong = await(map::call).until(valueFor(\"key\"));",
                 "Map.Entry<String, Number> wrong = await(map::call).until(valueFor(\"key\"));",
                 "Number wrong = await(map::call).until(entryFor(\"key\"));",
