@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.function.LongConsumer;
+import java.util.function.LongSupplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -59,11 +61,29 @@ class FactoryGrammarTest {
     }
 
     @Test
-    void missingConditionsAreRejectedBeforeReadingTheSource() {
-        Callable<String> source = () -> { throw new AssertionError("source must not be read"); };
-        var waiting = await(source);
+    void missingConditionsAreRejectedBeforeStartingTheWait() {
+        var unexpected = new AssertionError("waiting must not start");
+        Callable<String> source = () -> { throw unexpected; };
+        LongSupplier clock = () -> { throw unexpected; };
+        LongConsumer parker = nanos -> { throw unexpected; };
+        var waiting = await(source).usingTime(clock, parker);
         assertNullRejected("condition", () -> waiting.until((PreservingCondition<String>) null));
         assertNullRejected("condition", () -> waiting.tryUntil((PreservingCondition<String>) null));
+        assertNullRejected("condition", () -> waiting.until((Condition.Typed<String, String>) null));
+        assertNullRejected("condition", () -> waiting.tryUntil((Condition.Typed<String, String>) null));
+        assertNullRejected("condition", () -> waiting.until((Condition.ComparisonCondition<String>) null));
+        assertNullRejected("condition", () -> waiting.tryUntil((Condition.ComparisonCondition<String>) null));
+        assertNullRejected("condition", () -> waiting.until(equalTo("value"), equalTo("value"), (Condition.ComparisonCondition<String>) null));
+        assertNullRejected("condition", () -> waiting.tryUntil(equalTo("value"), equalTo("value"), (Condition.ComparisonCondition<String>) null));
+
+        Await.MapSource<Map<String, String>> mapSource = () -> { throw unexpected; };
+        var map = await(mapSource).usingTime(clock, parker);
+        SelectedCondition<Map<?, ?>, Object, Condition.Reference<?>> selected = null;
+        Condition.MapValueCondition<Map<?, ?>, Object, Condition.Reference<?>> mapped = null;
+        assertNullRejected("condition", () -> map.until(selected));
+        assertNullRejected("condition", () -> map.tryUntil(selected));
+        assertNullRejected("condition", () -> map.until(mapped));
+        assertNullRejected("condition", () -> map.tryUntil(mapped));
     }
 
     @Test
@@ -85,11 +105,8 @@ class FactoryGrammarTest {
     }
 
     @Test
-    void everyTerminalOverloadRejectsNullConditions() {
-        var pollingTime = new FakeTime(0);
-        var object = await(() -> "value").usingTime(pollingTime, pollingTime).every(ofSeconds(20));
-        assertNullRejected("predicate", () -> object.until(matches((CheckedPredicate<String>) null)));
-        assertNullRejected("predicate", () -> object.tryUntil(matches((CheckedPredicate<String>) null)));
+    void conditionFactoriesRejectMissingChecks() {
+        assertNullRejected("predicate", () -> matches((CheckedPredicate<String>) null));
         assertNullRejected("predicate", () -> CollectionConditions.singleElement((CheckedPredicate<String>) null));
         assertNullRejected("predicate", () -> OptionalConditions.hasValue((CheckedPredicate<String>) null));
         assertNullRejected("predicate", () -> MapConditions.valueFor("key", (CheckedPredicate<String>) null));
@@ -108,24 +125,10 @@ class FactoryGrammarTest {
         assertNullRejected("condition", () -> MapConditions.entryFor("key", (PreservingCondition<Map.Entry<String, String>>) null));
         assertNullRejected("condition", () -> MapConditions.entryFor("key", (Condition.Typed<Object, String>) null));
         assertNullRejected("condition", () -> MapConditions.entryFor("key", (Condition.ComparisonCondition<Map.Entry<String, String>>) null));
-        assertNullRejected("condition", () -> object.until((PreservingCondition<String>) null));
-        assertNullRejected("condition", () -> object.until((Condition.Typed<String, String>) null));
-        assertNullRejected("condition", () -> object.until((Condition.ComparisonCondition<String>) null));
-        assertNullRejected("condition", () -> object.tryUntil((Condition.ComparisonCondition<String>) null));
-        assertNullRejected("condition", () -> object.until(equalTo("value"), equalTo("value"), (Condition.ComparisonCondition<String>) null));
         assertNullRejected("condition", () -> OptionalConditions.hasValue((Condition.ComparisonCondition<String>) null));
         assertNullRejected("condition", () -> CollectionConditions.singleElement((Condition.ComparisonCondition<String>) null));
         assertNullRejected("condition", () -> MapConditions.valueFor("key", (Condition.ComparisonCondition<String>) null));
         assertNullRejected("condition", () -> MapConditions.singleEntry((Condition.ComparisonCondition<Map.Entry<String, String>>) null));
-
-        var optional = await((Await.OptionalSource<String>) Optional::empty).usingTime(pollingTime, pollingTime).every(ofSeconds(20));
-        assertNullRejected("condition", () -> optional.until((SelectedCondition<Optional<?>, Object, Condition.Reference<?>>) null));
-
-        var collection = await((Await.CollectionSource<Collection<String>>) List::of).usingTime(pollingTime, pollingTime).every(ofSeconds(20));
-        assertNullRejected("condition", () -> collection.until((SelectedCondition<Collection<?>, Object, Condition.Reference<?>>) null));
-
-        var map = await((Await.MapSource<Map<String, String>>) Map::of).usingTime(pollingTime, pollingTime).every(ofSeconds(20));
-        assertNullRejected("condition", () -> map.until((SelectedCondition<Map<?, ?>, Object, Condition.Reference<?>>) null));
     }
 
     private static void assertNullRejected(String argument, Executable action) {
