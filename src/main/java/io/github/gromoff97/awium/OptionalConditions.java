@@ -21,7 +21,7 @@ public final class OptionalConditions {
     public static final SelectedCondition<Optional<?>, Object, Reference<?>> present =
             ConditionSupport.selected("optional is present", OptionalConditions::present);
     public static final PreservingCondition<Optional<?>> absent = ConditionSupport.preservingNonNull(
-            "optional", "optional is absent", "optional was present", Optional::isEmpty);
+            "optional", "optional is absent", "optional was present", null, Optional::isEmpty);
 
     private OptionalConditions() {}
 

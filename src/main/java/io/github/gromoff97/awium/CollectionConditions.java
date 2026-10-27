@@ -390,7 +390,7 @@ public final class CollectionConditions {
 
     private static <VALUES extends Collection<?>> PreservingCondition<VALUES> preserving(String description, String mismatch,
             CheckedPredicate<? super VALUES> matches) {
-        return preservingNonNull("collection", description, mismatch, matches);
+        return preserving(description, mismatch, null, matches);
     }
 
     private static <VALUES extends Collection<?>> PreservingCondition<VALUES> preserving(String description, String mismatch,

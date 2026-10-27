@@ -201,11 +201,6 @@ final class ConditionSupport {
     }
 
     static <OBSERVED> PreservingCondition<OBSERVED> preservingNonNull(String subject, String description,
-            String mismatch, CheckedPredicate<? super OBSERVED> matches) {
-        return preservingNonNull(subject, description, mismatch, null, matches);
-    }
-
-    static <OBSERVED> PreservingCondition<OBSERVED> preservingNonNull(String subject, String description,
             String mismatch, Reference<?> reference, CheckedPredicate<? super OBSERVED> matches) {
         return preserving(description, reference, actual -> actual == null
                 ? unsatisfied(subject + " was null")

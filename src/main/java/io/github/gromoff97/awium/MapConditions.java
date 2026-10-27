@@ -446,14 +446,13 @@ public final class MapConditions {
     }
 
     private static <KEY, VALUE> ConditionResult<Entry<KEY, VALUE>> findEntry(Map<KEY, VALUE> actual, Object key) {
-        if (actual != null) {
-            for (Entry<KEY, VALUE> entry : actual.entrySet()) {
-                if (deepEquals(entry.getKey(), key)) {
-                    return satisfied(entry);
-                }
+        if (actual == null) return unsatisfied("map was null");
+        for (Entry<KEY, VALUE> entry : actual.entrySet()) {
+            if (deepEquals(entry.getKey(), key)) {
+                return satisfied(entry);
             }
         }
-        return unsatisfied(actual == null ? "map was null" : "map did not contain the expected key");
+        return unsatisfied("map did not contain the expected key");
     }
 
     private static PreservingCondition<Map<?, ?>> sized(int bound, IntPredicate matches,
@@ -463,7 +462,7 @@ public final class MapConditions {
 
     private static <ENTRIES extends Map<?, ?>> PreservingCondition<ENTRIES> preserving(String description, String mismatch,
             CheckedPredicate<? super ENTRIES> matches) {
-        return preservingNonNull("map", description, mismatch, matches);
+        return preserving(description, mismatch, null, matches);
     }
 
     private static <ENTRIES extends Map<?, ?>> PreservingCondition<ENTRIES> preserving(String description, String mismatch,

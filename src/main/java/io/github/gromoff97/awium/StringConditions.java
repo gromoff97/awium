@@ -161,7 +161,7 @@ public final class StringConditions {
 
     private static PreservingCondition<CharSequence> matching(String description, String mismatch,
             CheckedPredicate<String> matches) {
-        return preservingNonNull("string", description, mismatch, actual -> matches.test(actual.toString()));
+        return matching(description, mismatch, null, matches);
     }
 
     private static PreservingCondition<CharSequence> matching(String description, String mismatch,
