@@ -52,39 +52,33 @@ public final class MapConditions {
     private MapConditions() {}
 
     public static PreservingCondition<Map<?, ?>> hasSize(int expected) {
-        return sized(expected, actual -> actual == expected,
-                "map size is " + expected);
+        return sized(expected, actual -> actual == expected, "is " + expected);
     }
 
     public static PreservingCondition<Map<?, ?>> hasSizeNotEqualTo(int unexpected) {
-        return sized(unexpected, actual -> actual != unexpected,
-                "map size is not " + unexpected);
+        return sized(unexpected, actual -> actual != unexpected, "is not " + unexpected);
     }
 
     public static PreservingCondition<Map<?, ?>> hasSizeGreaterThan(int lowerBound) {
-        return sized(lowerBound, actual -> actual > lowerBound,
-                "map size is greater than " + lowerBound);
+        return sized(lowerBound, actual -> actual > lowerBound, "is greater than " + lowerBound);
     }
 
     public static PreservingCondition<Map<?, ?>> hasSizeAtLeast(int lowerBound) {
-        return sized(lowerBound, actual -> actual >= lowerBound,
-                "map size is at least " + lowerBound);
+        return sized(lowerBound, actual -> actual >= lowerBound, "is at least " + lowerBound);
     }
 
     public static PreservingCondition<Map<?, ?>> hasSizeLessThan(int upperBound) {
-        return sized(upperBound, actual -> actual < upperBound,
-                "map size is less than " + upperBound);
+        return sized(upperBound, actual -> actual < upperBound, "is less than " + upperBound);
     }
 
     public static PreservingCondition<Map<?, ?>> hasSizeAtMost(int upperBound) {
-        return sized(upperBound, actual -> actual <= upperBound,
-                "map size is at most " + upperBound);
+        return sized(upperBound, actual -> actual <= upperBound, "is at most " + upperBound);
     }
 
     public static PreservingCondition<Map<?, ?>> hasSizeBetween(int lowerBound, int upperBound) {
         validateRange(lowerBound, upperBound, "size");
         return sized(lowerBound, actual -> actual >= lowerBound && actual <= upperBound,
-                "map size is between " + lowerBound + " and " + upperBound);
+                "is between " + lowerBound + " and " + upperBound);
     }
 
     /** Checks the sole entry, retaining the source's entry type. */
@@ -463,8 +457,8 @@ public final class MapConditions {
     }
 
     private static PreservingCondition<Map<?, ?>> sized(int bound, IntPredicate matches,
-            String description) {
-        return ConditionSupport.sized("map", "size", bound, matches, description, Map::size);
+            String relation) {
+        return ConditionSupport.sized("map", "size", bound, matches, relation, Map::size);
     }
 
     private static <ENTRIES extends Map<?, ?>> PreservingCondition<ENTRIES> preserving(String description, String mismatch,

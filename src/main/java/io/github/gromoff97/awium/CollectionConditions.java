@@ -59,39 +59,33 @@ public final class CollectionConditions {
     private CollectionConditions() {}
 
     public static PreservingCondition<Collection<?>> hasSize(int expected) {
-        return sized(expected, actual -> actual == expected,
-                "collection size is " + expected);
+        return sized(expected, actual -> actual == expected, "is " + expected);
     }
 
     public static PreservingCondition<Collection<?>> hasSizeNotEqualTo(int unexpected) {
-        return sized(unexpected, actual -> actual != unexpected,
-                "collection size is not " + unexpected);
+        return sized(unexpected, actual -> actual != unexpected, "is not " + unexpected);
     }
 
     public static PreservingCondition<Collection<?>> hasSizeGreaterThan(int lowerBound) {
-        return sized(lowerBound, actual -> actual > lowerBound,
-                "collection size is greater than " + lowerBound);
+        return sized(lowerBound, actual -> actual > lowerBound, "is greater than " + lowerBound);
     }
 
     public static PreservingCondition<Collection<?>> hasSizeAtLeast(int lowerBound) {
-        return sized(lowerBound, actual -> actual >= lowerBound,
-                "collection size is at least " + lowerBound);
+        return sized(lowerBound, actual -> actual >= lowerBound, "is at least " + lowerBound);
     }
 
     public static PreservingCondition<Collection<?>> hasSizeLessThan(int upperBound) {
-        return sized(upperBound, actual -> actual < upperBound,
-                "collection size is less than " + upperBound);
+        return sized(upperBound, actual -> actual < upperBound, "is less than " + upperBound);
     }
 
     public static PreservingCondition<Collection<?>> hasSizeAtMost(int upperBound) {
-        return sized(upperBound, actual -> actual <= upperBound,
-                "collection size is at most " + upperBound);
+        return sized(upperBound, actual -> actual <= upperBound, "is at most " + upperBound);
     }
 
     public static PreservingCondition<Collection<?>> hasSizeBetween(int lowerBound, int upperBound) {
         validateRange(lowerBound, upperBound, "size");
         return sized(lowerBound, actual -> actual >= lowerBound && actual <= upperBound,
-                "collection size is between " + lowerBound + " and " + upperBound);
+                "is between " + lowerBound + " and " + upperBound);
     }
 
     /** Checks the sole element, retaining the source's element type. */
@@ -390,8 +384,8 @@ public final class CollectionConditions {
     }
 
     private static PreservingCondition<Collection<?>> sized(int bound, IntPredicate matches,
-            String description) {
-        return ConditionSupport.sized("collection", "size", bound, matches, description, Collection::size);
+            String relation) {
+        return ConditionSupport.sized("collection", "size", bound, matches, relation, Collection::size);
     }
 
     private static <VALUES extends Collection<?>> PreservingCondition<VALUES> preserving(String description, String mismatch,

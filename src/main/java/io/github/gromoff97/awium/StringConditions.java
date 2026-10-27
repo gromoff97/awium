@@ -125,38 +125,38 @@ public final class StringConditions {
     }
 
     public static PreservingCondition<CharSequence> hasLength(int expected) {
-        return matchingLength(expected, actual -> actual == expected, "is " + expected);
+        return sized(expected, actual -> actual == expected, "is " + expected);
     }
 
     public static PreservingCondition<CharSequence> hasLengthNotEqualTo(int unexpected) {
-        return matchingLength(unexpected, actual -> actual != unexpected, "is not " + unexpected);
+        return sized(unexpected, actual -> actual != unexpected, "is not " + unexpected);
     }
 
     public static PreservingCondition<CharSequence> hasLengthGreaterThan(int lowerBound) {
-        return matchingLength(lowerBound, actual -> actual > lowerBound, "is greater than " + lowerBound);
+        return sized(lowerBound, actual -> actual > lowerBound, "is greater than " + lowerBound);
     }
 
     public static PreservingCondition<CharSequence> hasLengthAtLeast(int lowerBound) {
-        return matchingLength(lowerBound, actual -> actual >= lowerBound, "is at least " + lowerBound);
+        return sized(lowerBound, actual -> actual >= lowerBound, "is at least " + lowerBound);
     }
 
     public static PreservingCondition<CharSequence> hasLengthLessThan(int upperBound) {
-        return matchingLength(upperBound, actual -> actual < upperBound, "is less than " + upperBound);
+        return sized(upperBound, actual -> actual < upperBound, "is less than " + upperBound);
     }
 
     public static PreservingCondition<CharSequence> hasLengthAtMost(int upperBound) {
-        return matchingLength(upperBound, actual -> actual <= upperBound, "is at most " + upperBound);
+        return sized(upperBound, actual -> actual <= upperBound, "is at most " + upperBound);
     }
 
     public static PreservingCondition<CharSequence> hasLengthBetween(int lowerBound, int upperBound) {
         validateRange(lowerBound, upperBound, "length");
-        return matchingLength(lowerBound, length -> length >= lowerBound && length <= upperBound,
+        return sized(lowerBound, length -> length >= lowerBound && length <= upperBound,
                 "is between " + lowerBound + " and " + upperBound);
     }
 
-    private static PreservingCondition<CharSequence> matchingLength(int bound, IntPredicate matches,
+    private static PreservingCondition<CharSequence> sized(int bound, IntPredicate matches,
             String relation) {
-        return ConditionSupport.sized("string", "length", bound, matches, "string length " + relation, CharSequence::length);
+        return ConditionSupport.sized("string", "length", bound, matches, relation, CharSequence::length);
     }
 
     private static PreservingCondition<CharSequence> matching(String description, String mismatch,

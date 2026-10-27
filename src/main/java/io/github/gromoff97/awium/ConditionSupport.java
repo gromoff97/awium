@@ -213,11 +213,11 @@ final class ConditionSupport {
     }
 
     static <OBSERVED> PreservingCondition<OBSERVED> sized(String subject, String measure, int bound, IntPredicate matches,
-            String description, ToIntFunction<? super OBSERVED> sizeOf) {
+            String relation, ToIntFunction<? super OBSERVED> sizeOf) {
         if (bound < 0) {
             throw new IllegalArgumentException(measure + " must be non-negative");
         }
-        return preserving(description, actual -> {
+        return preserving(subject + " " + measure + " " + relation, actual -> {
             if (actual == null) {
                 return unsatisfied(subject + " was null");
             }
