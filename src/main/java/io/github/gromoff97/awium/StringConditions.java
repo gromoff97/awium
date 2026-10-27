@@ -22,10 +22,12 @@ import static java.util.stream.StreamSupport.stream;
  */
 public final class StringConditions {
 
-    public static final PreservingCondition<CharSequence> empty = matching("string is empty", "string was not empty", String::isEmpty);
-    public static final PreservingCondition<CharSequence> nonEmpty = matching("string is not empty", "string was empty", value -> !value.isEmpty());
-    public static final PreservingCondition<CharSequence> blank = matching("string is blank", "string was not blank", String::isBlank);
-    public static final PreservingCondition<CharSequence> nonBlank = matching("string is not blank", "string was blank", value -> !value.isBlank());
+    public static final PreservingCondition<CharSequence> empty = preservingNonNull("string",
+            "string is empty", "string was not empty", null, CharSequence::isEmpty);
+    public static final PreservingCondition<CharSequence> nonEmpty = preservingNonNull("string",
+            "string is not empty", "string was empty", null, value -> !value.isEmpty());
+    public static final PreservingCondition<CharSequence> blank = matching("string is blank", "string was not blank", null, String::isBlank);
+    public static final PreservingCondition<CharSequence> nonBlank = matching("string is not blank", "string was blank", null, value -> !value.isBlank());
 
     private StringConditions() {}
 
@@ -157,11 +159,6 @@ public final class StringConditions {
     private static PreservingCondition<CharSequence> sized(int bound, IntPredicate matches,
             String relation) {
         return ConditionSupport.sized("string", "length", bound, matches, relation, CharSequence::length);
-    }
-
-    private static PreservingCondition<CharSequence> matching(String description, String mismatch,
-            CheckedPredicate<String> matches) {
-        return matching(description, mismatch, null, matches);
     }
 
     private static PreservingCondition<CharSequence> matching(String description, String mismatch,

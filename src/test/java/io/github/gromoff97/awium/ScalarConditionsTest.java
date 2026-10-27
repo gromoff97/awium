@@ -14,6 +14,7 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
+import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -119,6 +120,28 @@ class ScalarConditionsTest {
 
         PreservingCondition<Integer> positive = Conditions.greaterThan(0);
         assertEquals(1, await(() -> 1).until(positive));
+    }
+
+    @Test
+    void textEmptinessChecksDoNotRenderTheObservedCharacters() {
+        record Text(int length) implements CharSequence {
+            @Override public char charAt(int index) { throw new AssertionError("characters are not needed"); }
+            @Override public CharSequence subSequence(int start, int end) { throw new AssertionError("slice is not needed"); }
+            @Override public String toString() { throw new AssertionError("rendering is not needed for emptiness"); }
+        }
+        for (int length : List.of(0, 3)) {
+            var text = new Text(length);
+            var time = new FakeTime(0);
+            var waiting = await(() -> text).usingTime(time, time)
+                    .every(ofNanos(1)).upTo(ofNanos(2));
+            var matching = length == 0 ? StringConditions.empty : StringConditions.nonEmpty;
+            var mismatching = length == 0 ? StringConditions.nonEmpty : StringConditions.empty;
+
+            assertSame(text, waiting.until(matching));
+            assertSame(text, await(() -> Optional.of(text)).usingTime(time, time).until(OptionalConditions.hasValue(matching)));
+            var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(mismatching)).failure();
+            assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+        }
     }
 
     @Test

@@ -432,6 +432,7 @@ or `sequencedEntrySet()`. They retain the ordering contract needed by `firstElem
 
 Text conditions accept any `CharSequence` and preserve the source's concrete type
 and instance, including inside container selections.
+`empty`, `nonEmpty`, and length checks do not convert the observed text to a string.
 Expected fragments, prefixes, suffixes, and regex text also accept `CharSequence`,
 for example `StringConditions.startsWith(new StringBuilder("rea"))`.
 `StringConditions.contains(fragment)` checks one fragment;
