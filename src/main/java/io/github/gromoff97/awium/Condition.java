@@ -73,9 +73,9 @@ public abstract sealed class Condition
             super(description, reference, evaluatorFactory, null);
         }
 
-        Typed(Condition metadata, String description,
+        Typed(Condition nested, String description,
                 Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
-            super(description, required(metadata).reference, evaluatorFactory, metadata.explanation);
+            super(description + ": " + required(nested).description, nested.reference, evaluatorFactory, nested.explanation);
         }
 
         private Typed(Typed<OBSERVED, RESULT> original, String explanation) {

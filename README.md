@@ -270,6 +270,8 @@ short-circuits on the first decisive candidate. Nested state is created lazily
 and retained across candidates and retries, separately for each wait and stage.
 Each candidate is evaluated as a nested condition. An interrupt flag left set
 by its callback stops the wait before another candidate is checked.
+Composite descriptions retain the nested check's name, including custom names
+from `condition(...)` whose callback returns `unsatisfied()` without a message.
 
 Every condition family exposes `description()` and `reference()` through the
 common immutable `Condition` model.

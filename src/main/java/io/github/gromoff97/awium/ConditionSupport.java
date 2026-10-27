@@ -88,7 +88,6 @@ final class ConditionSupport {
             String subject, String description, String mismatch, Quantifier quantifier, Condition nested,
             Function<? super OBSERVED, ? extends Iterable<? extends ELEMENT>> elements,
             Supplier<? extends ConditionAwaitAttempt<? super ELEMENT, ?>> evaluatorFactory) {
-        Condition.required(nested);
         return new PreservingCondition<>(new Condition.Typed<>(nested, description, () -> {
             var evaluator = evaluatorFactory.get();
             return actual -> actual == null ? AttemptResult.of(unsatisfied(subject + " was null"))
@@ -131,11 +130,10 @@ final class ConditionSupport {
         return new Reference<>("Unexpected", value);
     }
 
-    static <OBSERVED, VALUE, RESULT> Condition.Typed<OBSERVED, RESULT> compose(String selection, Condition condition,
+    static <OBSERVED, VALUE, RESULT> Condition.Typed<OBSERVED, RESULT> compose(String selection, Condition nested,
             Condition extractionCondition,
             Supplier<? extends ConditionAwaitAttempt<? super VALUE, ? extends RESULT>> evaluatorFactory) {
-        Condition.required(condition);
-        return new Condition.Typed<>(condition, selection + ": " + condition.description(), () -> {
+        return new Condition.Typed<>(nested, selection, () -> {
             // Bare selectors obtain their value type from the enclosing selector factory's source constraints.
             var extraction = ConditionAwaitAttempt.<OBSERVED, VALUE>bind(extractionCondition);
             var evaluator = evaluatorFactory.get();

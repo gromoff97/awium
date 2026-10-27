@@ -20,6 +20,45 @@ import static org.junit.jupiter.api.Assertions.*;
 class CompositionDiagnosticsTest {
 
     @Test
+    void quantifiersRetainTheNamedCheckInFailureDiagnostics() {
+        String description = "account is active";
+        var mismatch = condition(description, ignored -> ConditionResult.unsatisfied());
+        var match = condition(description, ignored -> ConditionResult.satisfied());
+        var time = new FakeTime(0);
+        var collection = await(() -> List.of("pending"))
+                .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+        var map = await(() -> Map.of("account", "pending"))
+                .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+        var nested = await(() -> List.of(List.of("pending")))
+                .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+
+        var results = List.of(
+                collection.tryUntil(CollectionConditions.all(mismatch)),
+                collection.tryUntil(CollectionConditions.any(mismatch)),
+                collection.tryUntil(CollectionConditions.none(match)),
+                map.tryUntil(MapConditions.allEntries(mismatch)),
+                map.tryUntil(MapConditions.hasEntry(mismatch)),
+                map.tryUntil(MapConditions.hasNoEntry(match)),
+                map.tryUntil(MapConditions.allKeys(mismatch)),
+                map.tryUntil(MapConditions.anyKey(mismatch)),
+                map.tryUntil(MapConditions.noKey(match)),
+                map.tryUntil(MapConditions.allValues(mismatch)),
+                map.tryUntil(MapConditions.anyValue(mismatch)),
+                map.tryUntil(MapConditions.noValue(match)),
+                nested.tryUntil(CollectionConditions.all(CollectionConditions.any(mismatch))),
+                collection.tryUntil(isNotNull, CollectionConditions.all(mismatch)));
+
+        for (var result : results) {
+            var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+            assertEquals(TIMEOUT, failure.reason());
+            assertTrue(failure.message().contains(description), failure.message());
+            var last = result.attempts().getLast();
+            var failed = last.progress() == null ? last.condition() : last.progress().activeCondition();
+            assertTrue(failed.description().endsWith(": " + description), failed.description());
+        }
+    }
+
+    @Test
     void missingOptionalReportsPresenceBeforeEitherNestedConditionFamily() {
         List<Optional<String>> observations = asList(null, Optional.empty());
         for (var actual : observations) {
