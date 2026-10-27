@@ -288,12 +288,11 @@ class PositiveFluentMatrixTest {
 
         String direct = waiting.until(condition("direct", ConditionResult::satisfied));
         String created = waiting.until(conditionPerWait("created", PositiveFluentMatrixTest::evaluator));
-        String preserved = waiting.until(conditionPerWait("preserved", PositiveFluentMatrixTest::evaluator));
         String concrete = waiting.until(conditionPerWait("broad", broadFactory));
         List<String> captured = waiting.until(conditionPerWait("first", PositiveFluentMatrixTest::evaluator),
                 conditionPerWait("second", PositiveFluentMatrixTest::evaluator));
 
-        assertEquals(List.of("ready", "ready", "ready", "ready"), List.of(direct, created, preserved, concrete));
+        assertEquals(List.of("ready", "ready", "ready"), List.of(direct, created, concrete));
         assertEquals(List.of("ready", "ready"), captured);
     }
 

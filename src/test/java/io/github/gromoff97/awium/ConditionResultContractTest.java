@@ -27,17 +27,22 @@ class ConditionResultContractTest {
         Callable<CheckedFunction<User, ConditionResult<Void>>> factory = () -> status;
         var direct = Conditions.condition("positive id", status).because("user must be saved");
         var lazy = Conditions.conditionPerWait("positive id", factory).because("user must be saved");
-        var ignoredPayload = Conditions.condition("payload is ignored", (User user) -> satisfied("unrelated value"));
+        var ignoredPayload = Conditions.condition("payload is ignored", (User user) -> satisfied("unrelated value"))
+                .because("return the observed user");
         var actual = new User(42);
         var time = new FakeTime(0);
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10));
 
-        assertEquals(42, waiting.until(direct).id());
-        AwaitResult<User, User> captured = waiting.tryUntil(lazy);
-        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+        for (var check : List.of(direct, lazy, ignoredPayload)) {
+            var value = waiting.until(check);
+            assertEquals(42, value.id());
+            assertSame(actual, value);
+            AwaitResult<User, User> result = waiting.tryUntil(check);
+            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        }
         List<User> values = waiting.until(direct, lazy, ignoredPayload);
         for (User value : values) assertSame(actual, value);
-        assertSame(actual, await(() -> Optional.of(actual)).until(OptionalConditions.hasValue(direct)));
+        assertSame(actual, await(() -> Optional.of(actual)).until(OptionalConditions.hasValue(ignoredPayload)));
         assertEquals(42, await(() -> List.of(actual)).until(CollectionConditions.singleElement(lazy)).id());
         assertEquals(42, await(() -> Map.of("user", actual)).until(MapConditions.valueFor("user", direct)).id());
 

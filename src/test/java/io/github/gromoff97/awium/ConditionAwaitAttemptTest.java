@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -12,7 +11,6 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class ConditionAwaitAttemptTest {
@@ -38,22 +36,6 @@ class ConditionAwaitAttemptTest {
         assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
         assertEquals(2, result.totalAttempts());
         assertEquals(2, factories[0]);
-    }
-
-    @Test
-    void preservingConditionKeepsTheObservationAcrossTerminalsAndComposition() {
-        var actual = new Object();
-        var replacement = new Object();
-        PreservingCondition<Object> condition = Conditions.condition("preserve", ignored -> satisfied(replacement));
-        condition = condition.because("preserve the observed instance");
-        var waiting = await(() -> actual);
-
-        assertSame(actual, waiting.until(condition));
-        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, waiting.tryUntil(condition)).result());
-        assertSame(actual, await(() -> Optional.of(actual)).until(OptionalConditions.hasValue(condition)));
-        assertSame(actual, await(() -> List.of(actual)).until(CollectionConditions.singleElement(condition)));
-        var time = new FakeTime(0);
-        assertEquals(List.of(actual, actual), waiting.usingTime(time, time).until(condition, condition));
     }
 
     @Test
