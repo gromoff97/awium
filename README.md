@@ -432,7 +432,9 @@ or `sequencedEntrySet()`. They retain the ordering contract needed by `firstElem
 
 Text conditions accept any `CharSequence` and preserve the source's concrete type
 and instance, including inside container selections.
-`empty`, `nonEmpty`, `contentEquals`, and length checks do not convert the observed text to a string.
+`empty`, `nonEmpty`, `blank`, `nonBlank`, `contentEquals`, and length checks do not
+convert the observed text to a string. Blankness uses `Character.isWhitespace`
+on Unicode code points, as `String.isBlank()` does, on the calling thread.
 `matchesRegex`, `doesNotMatchRegex`, and `containsIgnoringCase` pass the original
 `CharSequence` to the JDK regex engine.
 Expected fragments, prefixes, suffixes, and regex text also accept `CharSequence`,

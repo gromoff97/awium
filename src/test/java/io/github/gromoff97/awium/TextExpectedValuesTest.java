@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -14,6 +15,45 @@ import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TextExpectedValuesTest {
+
+    @Test
+    void blanknessReadsCodePointsOnTheCallerThreadWithoutRenderingText() {
+        var caller = Thread.currentThread();
+        record Text(String value) implements CharSequence {
+            @Override public int length() { return value.length(); }
+            @Override public char charAt(int index) { return value.charAt(index); }
+            @Override public CharSequence subSequence(int start, int end) { return value.subSequence(start, end); }
+            @Override public String toString() { throw new AssertionError("blankness must not render text"); }
+        }
+        for (String value : List.of("", " \t\n\u2000", "\u00a0", "\u2007", "\u202f", "\uD83D\uDE00", "\uD800", "ready")) {
+            var text = new Text(value);
+            var time = new FakeTime(0);
+            var waiting = await(() -> text).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1));
+            var matching = value.isBlank() ? StringConditions.blank : StringConditions.nonBlank;
+            var mismatching = value.isBlank() ? StringConditions.nonBlank : StringConditions.blank;
+            assertSame(text, waiting.until(matching));
+            var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(mismatching)).failure();
+            assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+            assertNull(failure.cause());
+        }
+        CharSequence parallel = new CharSequence() {
+            @Override public int length() { return 4096; }
+            @Override public char charAt(int index) { return ' '; }
+            @Override public CharSequence subSequence(int start, int end) { throw new AssertionError("slice not needed"); }
+            @Override public String toString() { throw new AssertionError("blankness must not render text"); }
+            @Override public IntStream codePoints() {
+                return IntStream.range(0, length()).parallel().map(index -> {
+                    assertSame(caller, Thread.currentThread());
+                    return charAt(index);
+                });
+            }
+        };
+        var time = new FakeTime(0);
+        var waiting = await(() -> parallel).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1));
+        assertSame(parallel, waiting.until(StringConditions.blank));
+        var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(StringConditions.nonBlank)).failure();
+        assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+    }
 
     @Test
     void characterChecksReadCharactersWithoutRenderingTheObservation() {

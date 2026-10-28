@@ -26,8 +26,10 @@ public final class StringConditions {
             "string is empty", "string was not empty", null, CharSequence::isEmpty);
     public static final PreservingCondition<CharSequence> nonEmpty = preservingNonNull("string",
             "string is not empty", "string was empty", null, value -> !value.isEmpty());
-    public static final PreservingCondition<CharSequence> blank = matching("string is blank", "string was not blank", null, String::isBlank);
-    public static final PreservingCondition<CharSequence> nonBlank = matching("string is not blank", "string was blank", null, value -> !value.isBlank());
+    public static final PreservingCondition<CharSequence> blank = preservingNonNull("string",
+            "string is blank", "string was not blank", null, value -> value.codePoints().sequential().allMatch(Character::isWhitespace));
+    public static final PreservingCondition<CharSequence> nonBlank = preservingNonNull("string",
+            "string is not blank", "string was blank", null, value -> !value.codePoints().sequential().allMatch(Character::isWhitespace));
 
     private StringConditions() {}
 
