@@ -58,7 +58,7 @@ public final class StringConditions {
     public static PreservingCondition<CharSequence> containsIgnoringCase(CharSequence expected) {
         String value = text(expected, "expected string");
         var pattern = Pattern.compile(value, Pattern.LITERAL | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
-        return matching("string contains expected string ignoring case",
+        return preservingNonNull("string", "string contains expected string ignoring case",
                 "string did not contain expected string ignoring case", expectedReference(value),
                 actual -> pattern.matcher(actual).find());
     }
@@ -93,7 +93,7 @@ public final class StringConditions {
 
     public static PreservingCondition<CharSequence> matchesRegex(Pattern expected) {
         requireNonNull(expected, "pattern must not be null");
-        return matching("string matches expected pattern", "string did not match expected pattern", expectedReference(expected),
+        return preservingNonNull("string", "string matches expected pattern", "string did not match expected pattern", expectedReference(expected),
                 actual -> expected.matcher(actual).matches());
     }
 
@@ -103,7 +103,7 @@ public final class StringConditions {
 
     public static PreservingCondition<CharSequence> doesNotMatchRegex(Pattern unexpected) {
         requireNonNull(unexpected, "pattern must not be null");
-        return matching("string does not match unexpected pattern", "string matched unexpected pattern", unexpectedReference(unexpected),
+        return preservingNonNull("string", "string does not match unexpected pattern", "string matched unexpected pattern", unexpectedReference(unexpected),
                 actual -> !unexpected.matcher(actual).matches());
     }
 

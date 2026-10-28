@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -13,6 +14,35 @@ import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TextExpectedValuesTest {
+
+    @Test
+    void regexChecksReadCharactersWithoutRenderingTheObservation() {
+        var renderingFailure = new AssertionError("text must not be rendered for matching");
+        var actual = new CharSequence() {
+            private final String value = "Ready 42";
+            @Override public int length() { return value.length(); }
+            @Override public char charAt(int index) { return value.charAt(index); }
+            @Override public CharSequence subSequence(int start, int end) { return value.subSequence(start, end); }
+            @Override public String toString() { throw renderingFailure; }
+        };
+        var time = new FakeTime(0);
+        var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1));
+        for (var check : List.of(StringConditions.matchesRegex("Ready \\d+"),
+                StringConditions.matchesRegex(Pattern.compile("ready \\d+", Pattern.CASE_INSENSITIVE)),
+                StringConditions.doesNotMatchRegex("failed.*"),
+                StringConditions.doesNotMatchRegex(Pattern.compile("failed.*")),
+                StringConditions.containsIgnoringCase("READY"))) {
+            assertSame(actual, waiting.until(check.because("text is ready")));
+            assertSame(actual, await(() -> Optional.of(actual)).until(OptionalConditions.hasValue(check)));
+        }
+        for (var check : List.of(StringConditions.matchesRegex("failed.*"),
+                StringConditions.doesNotMatchRegex("Ready \\d+"), StringConditions.containsIgnoringCase("failed"))) {
+            var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(check)).failure();
+            assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+            assertNull(failure.cause());
+            assertEquals(List.of(renderingFailure), failure.suppressed());
+        }
+    }
 
     @Test
     void textFactoriesFreezeMutableExpectedTextAndPreserveTheSource() {
