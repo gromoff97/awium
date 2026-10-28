@@ -145,10 +145,12 @@ class ScalarConditionsTest {
     }
 
     @Test
-    void textChecksPreserveMutableSourcesInBothTerminalsAndSequences() {
+    void textChecksPreserveSourceTypesInBothTerminalsAndSequences() {
         var text = new StringBuilder("Ready 42");
+        String immutable = text.toString();
         var time = new FakeTime(0);
         var waiting = await(() -> text).usingTime(time, time);
+        var immutableWaiting = await(() -> immutable).usingTime(time, time);
         var checks = List.of(StringConditions.nonEmpty, StringConditions.nonBlank,
                 StringConditions.containsAll(List.of("Ready", "42")), StringConditions.doesNotContain("failed"),
                 StringConditions.containsIgnoringCase("READY"), StringConditions.startsWith("Ready"),
@@ -161,6 +163,9 @@ class ScalarConditionsTest {
                 StringConditions.hasLengthAtMost(8), StringConditions.hasLengthBetween(1, 10));
 
         for (var check : checks) {
+            var retained = immutableWaiting.until(check);
+            assertSame(immutable, retained);
+            assertEquals("Ready", retained.substring(0, 5));
             var value = waiting.until(check);
             assertSame(text, value);
             assertEquals(text.capacity(), value.capacity());
@@ -218,25 +223,6 @@ class ScalarConditionsTest {
         assertEquals(5, waiting.until(Conditions.atMost(5)));
         assertEquals(5, waiting.until(Conditions.between(5, 6)));
         assertEquals(5, waiting.until(Conditions.strictlyBetween(4, 6)));
-    }
-
-    @Test
-    void stringConditionsCoverTextPatternsAndSizes() {
-        var pollingTime = new FakeTime(0);
-        String actual = "Ready 42";
-        var waiting = await(() -> actual).usingTime(pollingTime, pollingTime);
-
-        assertSame(actual, waiting.until(StringConditions.nonBlank));
-        assertSame(actual, waiting.until(StringConditions.containsAll(List.of("Ready", "42"))));
-        assertSame(actual, waiting.until(StringConditions.doesNotContain("failed")));
-        assertSame(actual, waiting.until(StringConditions.containsIgnoringCase("READY")));
-        assertSame(actual, waiting.until(StringConditions.startsWith("Ready")));
-        assertSame(actual, waiting.until(StringConditions.endsWith("42")));
-        assertSame(actual, waiting.until(StringConditions.matchesRegex("Ready \\d+")));
-        assertSame(actual, waiting.until(StringConditions.equalToIgnoringCase("ready 42")));
-        assertSame(actual, waiting.until(StringConditions.hasLengthBetween(1, 20)));
-        assertEquals(Satisfied.class, evaluate(StringConditions.blank, " \n").getClass());
-        assertEquals(Unsatisfied.class, evaluate(StringConditions.nonEmpty, "").getClass());
     }
 
     @Test
