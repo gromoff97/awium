@@ -265,7 +265,7 @@ Payment found = await(paymentRepository::find).until(hasValue(Payment::paid));
 An empty collection, several elements, or a failed nested check cause a retry.
 `singleEntry(condition)` follows the same rule for a map containing exactly one entry.
 Selectors that accept nested conditions also accept a predicate directly:
-`singleElement(check)`, `hasValue(check)`, `valueFor(key, check)`, and `entryFor(key, check)`. Use a full condition
+`singleElement(check)`, `hasValue(check)`, and `valueFor(key, check)`. Use a full condition
 for a type check, assertion adapter, or per-wait callback state.
 `singleEntry(entry -> ...)` checks the sole entry directly and retains its key
 and value types. The two-argument form `singleEntry((key, value) -> ...)` is also available.
@@ -281,9 +281,9 @@ Nested conditions retain their own comparison rules: `hasEntry(equalTo(expectedE
 uses the entry's equality. Standard `Map.Entry` equality compares array keys and
 values by identity, whereas `hasEntry(key, value)` compares their contents.
 `valueFor` and `entryFor` take the first entry whose key matches.
-`entryFor(key, check)` then checks that entry, even when the map contains other entries.
-It accepts an entry predicate, a key/value predicate, or a nested condition. A failed
-check causes a retry; it does not search for a different entry in the same observation.
+`entryFor(key)` returns that entry. To check and return its value, use
+`valueFor(key, check)`, which accepts a value predicate or a nested condition.
+A failed check causes a retry; it does not search for a different entry in the same observation.
 Entry selections return the original entry object. Whether it remains connected to
 the map depends on that map's entry implementation.
 
@@ -530,11 +530,13 @@ it also succeeds for an empty map. `allEntries`, `hasEntry`, `hasNoEntry`, and
 
 ```java
 import io.github.gromoff97.awium.Await.MapSource;
+import static io.github.gromoff97.awium.Conditions.equalTo;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.MapConditions.hasEntry;
 import static io.github.gromoff97.awium.MapConditions.hasNoEntry;
 import static io.github.gromoff97.awium.MapConditions.allEntries;
 import static io.github.gromoff97.awium.MapConditions.entryFor;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static io.github.gromoff97.awium.MapConditions.singleEntry;
 
 MapSource<Map<String, String>> statuses = () -> Map.of("payment", "READY");
@@ -554,7 +556,9 @@ Map<String, String> all = await(statuses).until(
 Map.Entry<String, String> only = await(statuses).until(
         singleEntry(entry -> entry.getValue().equals("READY")));
 Map.Entry<String, String> paymentEntry = await(statuses).until(
-        entryFor("payment", entry -> entry.getValue().equals("READY")));
+        entryFor("payment"));
+String paymentStatus = await(statuses).until(
+        valueFor("payment", equalTo("READY")));
 ```
 
 As with other generic conditions, appending `because` to a predicate or nested condition may
