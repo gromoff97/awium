@@ -260,9 +260,9 @@ final class ConditionSupport {
     private static <OBSERVED, RESULT, STAGE extends Condition> Condition.Typed<OBSERVED, List<RESULT>> captured(
             STAGE[] conditions,
             Function<? super STAGE, ? extends ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT>> bind) {
-        var stages = Arrays.stream(requireNonNull(conditions, "conditions must not be null")).toList();
+        var stages = Arrays.stream(requireNonNull(conditions, "conditions must not be null"))
+                .map(Condition::required).toList();
         if (stages.isEmpty()) throw new IllegalArgumentException("conditions must not be empty");
-        stages.forEach(Condition::required);
         return new Condition.Typed<>("conditions are satisfied in order", null,
                 () -> new SequenceExecution<>(stages.stream().map(bind))::step);
     }
