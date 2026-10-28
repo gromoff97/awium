@@ -37,8 +37,12 @@ import static java.util.Objects.requireNonNull;
  * instance; selections return an entry, a value, or the nested condition's result.
  * A null observed map is unsatisfied, including for absence checks.
  *
- * <p>Membership and key lookup use {@link java.util.Objects#deepEquals(Object, Object)} with
- * the observed key or value first, independently of the map's comparator or identity rules.
+ * <p>Checks with explicit expected keys, values, or entry maps compare each key and value with
+ * {@link java.util.Objects#deepEquals(Object, Object)}, with the observed operand first,
+ * independently of the map's comparator or identity rules. Key lookup uses the same comparison.
+ * Nested conditions retain their own comparison rules; equality of a whole entry follows
+ * {@link Entry#equals(Object)}, which compares array keys and values by identity.
+ * Selected entries are the original entry objects, with the map implementation's lifecycle.
  * Expected sets and entry maps are copied when the condition is created; their keys and values
  * remain caller-owned.
  */

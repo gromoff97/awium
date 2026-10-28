@@ -273,13 +273,19 @@ Nested entry conditions can accept exact `Map.Entry<KEY, VALUE>` parameters,
 whose key and value types match the source;
 read-only wildcard entry checks are also supported.
 
-Map membership checks compare keys and values with `Objects.deepEquals`, with
-the observed operand first. Key selections use the same key comparison. This
-includes array content and applies to maps with comparators or identity keys as well.
+Map checks with explicit expected keys, values, or entry maps compare each key
+and value with `Objects.deepEquals`, with the observed operand first. Key selections
+use the same key comparison. This includes array content and applies to maps with
+comparators or identity keys as well.
+Nested conditions retain their own comparison rules: `hasEntry(equalTo(expectedEntry))`
+uses the entry's equality. Standard `Map.Entry` equality compares array keys and
+values by identity, whereas `hasEntry(key, value)` compares their contents.
 `valueFor` and `entryFor` take the first entry whose key matches.
 `entryFor(key, check)` then checks that entry, even when the map contains other entries.
 It accepts an entry predicate, a key/value predicate, or a nested condition. A failed
 check causes a retry; it does not search for a different entry in the same observation.
+Entry selections return the original entry object. Whether it remains connected to
+the map depends on that map's entry implementation.
 
 `all`, `any`, `none`, and the map entry/key/value quantifiers also accept a nested
 condition, for example `all(matches(Payment::paid))`.
