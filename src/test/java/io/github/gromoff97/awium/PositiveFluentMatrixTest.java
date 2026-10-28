@@ -1,8 +1,11 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.Await.CollectionViewSource;
 import io.github.gromoff97.awium.Await.MapViewSource;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.function.CheckedFunction;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,7 +26,6 @@ import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.OptionalConditions.*;
 import static java.time.Duration.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class PositiveFluentMatrixTest {
@@ -42,7 +44,7 @@ class PositiveFluentMatrixTest {
         assertSame(actual, selected);
 
         PreservingCondition<Object> selecting = condition(
-                "select actual", ConditionResult::satisfied);
+                "select actual", ignored -> ConditionResult.satisfied());
         assertSame(actual, await(source).usingTime(pollingTime, pollingTime).until(selecting));
         String nil = await(() -> (String) null).usingTime(pollingTime, pollingTime).until(isNull);
         assertSame(null, nil);
@@ -143,8 +145,7 @@ class PositiveFluentMatrixTest {
         var selected = await(collectionSource).usingTime(time, time).until(singleElement);
         assertEquals(1000, selected.intValue());
         assertSame(element, selected);
-        assertSame(element, assertInstanceOf(AwaitResult.Satisfied.class,
-                await(collectionSource).usingTime(time, time).tryUntil(singleElement)).result());
+        assertSame(element, await(collectionSource).usingTime(time, time).tryUntil(singleElement).orThrow());
         assertSame(map, await(mapSource).usingTime(time, time).until(MapConditions.nonEmpty));
         Map<? extends Number, ? extends CharSequence> comparedMap = await(mapSource).usingTime(time, time)
                 .until(equalTo(map));
@@ -153,10 +154,61 @@ class PositiveFluentMatrixTest {
         assertEquals(1000, selectedEntry.getKey().intValue());
         assertEquals(5, selectedEntry.getValue().length());
         assertSame(entry, selectedEntry);
-        assertSame(entry, assertInstanceOf(AwaitResult.Satisfied.class,
-                await(mapSource).usingTime(time, time).tryUntil(MapConditions.singleEntry)).result());
+        assertSame(entry, await(mapSource).usingTime(time, time).tryUntil(MapConditions.singleEntry).orThrow());
         assertEquals(4, collectionCalls[0]);
         assertEquals(4, mapCalls[0]);
+    }
+
+    @Test
+    void covariantCollectionSourcesUseTheSamePredicateSelectionDirectlyAndInCaptured() {
+        Number expected = new java.math.BigDecimal("42");
+        Number actual = new java.math.BigDecimal("42");
+        List<? extends Number> values = List.of(actual);
+        int[] calls = {0};
+        var source = new CollectionViewSource<Number, List<? extends Number>>(
+                () -> ++calls[0] == 1 ? List.of(0) : values);
+        var time = new FakeTime(0);
+        var waiting = await(source).usingTime(time, time).every(ofNanos(1));
+        var check = singleElement(expected::equals).because("the expected number must arrive");
+
+        var selected = waiting.until(check);
+        assertEquals(42, selected.intValue());
+        assertSame(actual, selected);
+        assertEquals(2, calls[0]);
+        var result = waiting.tryUntil(check);
+        assertEquals(42, result.orThrow().intValue());
+        assertSame(actual, result.orThrow());
+        assertSame(values, result.attempts().getFirst().observed());
+        assertEquals(3, calls[0]);
+        var observations = waiting.until(captured(nonEmpty, check));
+        assertEquals(42, observations.getLast().getFirst().intValue());
+        assertSame(values, observations.getFirst());
+        assertSame(values, observations.getLast());
+        assertEquals(5, calls[0]);
+    }
+
+    @Test
+    void covariantMapSourcesUseTheSamePredicateSelectionDirectlyAndInCaptured() {
+        Number expected = new java.math.BigDecimal("42");
+        Number actual = new java.math.BigDecimal("42");
+        Map<String, ? extends Number> values = Map.of("answer", actual);
+        var source = new MapViewSource<String, Number, Map<String, ? extends Number>>(() -> values);
+        var waiting = await(source);
+        var check = MapConditions.valueFor("answer", expected::equals).because("the answer must arrive");
+
+        var selected = waiting.until(check);
+        assertEquals(42, selected.intValue());
+        assertSame(actual, selected);
+        var result = waiting.tryUntil(check);
+        assertEquals(42, result.orThrow().intValue());
+        assertSame(actual, result.orThrow());
+        assertSame(values, result.attempts().getFirst().observed());
+        var time = new FakeTime(0);
+        var observations = waiting.usingTime(time, time).every(ofNanos(1))
+                .tryUntil(captured(MapConditions.nonEmpty, check)).orThrow();
+        assertEquals(42, observations.getLast().get("answer").intValue());
+        assertSame(values, observations.getFirst());
+        assertSame(values, observations.getLast());
     }
 
     @Test
@@ -173,13 +225,13 @@ class PositiveFluentMatrixTest {
         assertEquals("ready", optionalValue);
         assertEquals("ready", element);
         assertEquals(Map.entry("ready", 1), entry);
-        assertEquals(optionalValue, assertInstanceOf(AwaitResult.Satisfied.class, attempt).result());
+        assertEquals(optionalValue, attempt.orThrow());
         assertEquals(optionalValue, await(() -> optional.call()).until(present));
         assertEquals(element, await(() -> collection.call()).until(singleElement));
         assertEquals(entry, await(() -> map.call()).until(MapConditions.singleEntry));
         var time = new FakeTime(0);
-        List<String> stages = await(collection::call).usingTime(time, time).every(ofNanos(1)).until(firstElement, lastElement);
-        assertEquals(List.of("ready", "ready"), stages);
+        List<ArrayList<String>> stages = await(collection::call).usingTime(time, time).every(ofNanos(1)).until(captured(firstElement, lastElement));
+        assertEquals(List.of(List.of("ready"), List.of("ready")), stages);
     }
 
     @Test
@@ -204,13 +256,13 @@ class PositiveFluentMatrixTest {
         assertEquals(5, element.length());
         assertEquals(5, entry.getKey().length());
         assertEquals(1, entry.getValue().intValue());
-        assertEquals(selected, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals(selected, result.orThrow());
         assertSame(values, await(collection::call).until(CollectionConditions.nonEmpty));
         assertSame(entries, await(map::call).until(MapConditions.nonEmpty));
         assertEquals(selected, await(optional::call).until(present));
         var time = new FakeTime(0);
-        List<String> stages = await(optional::call).usingTime(time, time).every(ofNanos(1)).until(present, present);
-        assertEquals(List.of("ready", "ready"), stages);
+        List<Optional<String>> stages = await(optional::call).usingTime(time, time).every(ofNanos(1)).until(captured(present, present));
+        assertEquals(List.of(Optional.of("ready"), Optional.of("ready")), stages);
     }
 
     @Test
@@ -238,9 +290,9 @@ class PositiveFluentMatrixTest {
         AwaitResult<Map<String, Integer>, Map.Entry<String, Integer>> mapResult = await(map::call).tryUntil(MapConditions.singleEntry);
 
         for (var result : List.of(optionalResult, collectionResult, firstResult, lastResult)) {
-            assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+            assertEquals("ready", result.orThrow());
         }
-        assertEquals(Map.entry("ready", 1), assertInstanceOf(AwaitResult.Satisfied.class, mapResult).result());
+        assertEquals(Map.entry("ready", 1), mapResult.orThrow());
     }
 
     @Test
@@ -254,7 +306,7 @@ class PositiveFluentMatrixTest {
 
         String matched = await(() -> "ready").until(matches(Predicate.not(text).negate()::test));
         String transformed = await(() -> trim.apply(" ready ")).until(isNotNull);
-        String custom = await(() -> trim.apply(" ready ")).until(condition("ready", ConditionResult::satisfied));
+        String custom = await(() -> trim.apply(" ready ")).until(condition("ready", ignored -> ConditionResult.satisfied()));
         String asserted = await(() -> "ready").until(asserted(first.andThen(value -> calls.add("second " + value))::accept));
         Map<String, Integer> matchingEntry = await(() -> Map.of("ready", 1))
                 .until(MapConditions.hasEntry(entry.and((key, value) -> !key.isBlank())::test));
@@ -282,15 +334,15 @@ class PositiveFluentMatrixTest {
 
     @Test
     void evaluatorFactoriesPreserveObservationsInSingleAndOrderedWaits() {
-        Callable<CheckedFunction<CharSequence, ConditionResult<CharSequence>>> broadFactory = () -> ignored -> ConditionResult.satisfied("replacement");
+        Callable<CheckedFunction<CharSequence, ConditionResult>> broadFactory = () -> ignored -> ConditionResult.satisfied();
         var time = new FakeTime(0);
         var waiting = await(() -> "ready").usingTime(time, time);
 
-        String direct = waiting.until(condition("direct", ConditionResult::satisfied));
+        String direct = waiting.until(condition("direct", ignored -> ConditionResult.satisfied()));
         String created = waiting.until(conditionPerWait("created", PositiveFluentMatrixTest::evaluator));
         String concrete = waiting.until(conditionPerWait("broad", broadFactory));
-        List<String> captured = waiting.until(conditionPerWait("first", PositiveFluentMatrixTest::evaluator),
-                conditionPerWait("second", PositiveFluentMatrixTest::evaluator));
+        List<String> captured = waiting.until(captured(conditionPerWait("first", PositiveFluentMatrixTest::evaluator),
+                conditionPerWait("second", PositiveFluentMatrixTest::evaluator)));
 
         assertEquals(List.of("ready", "ready", "ready"), List.of(direct, created, concrete));
         assertEquals(List.of("ready", "ready"), captured);
@@ -313,15 +365,15 @@ class PositiveFluentMatrixTest {
         Map<String, User> entries = await(() -> Map.of("id", user))
                 .until(MapConditions.allEntries((key, value) -> key.length() == 2 && value.active()));
         List<Integer> sortedValues = await(() -> List.of(1, 2)).until(sorted(java.util.Comparator.naturalOrder()));
-        List<User> stages = await(() -> users).usingTime(time, time).until(
-                singleElement(value -> value.active()), singleElement(value -> value.active()));
+        List<ArrayList<User>> stages = await(() -> users).usingTime(time, time).until(captured(
+                singleElement(value -> value.active()), singleElement(value -> value.active())));
 
         for (User result : List.of(matched, selected, optional, mapped)) assertSame(user, result);
         assertSame(users, allUsers);
         assertSame(users, nested);
         assertSame(user, entries.get("id"));
         assertEquals(List.of(1, 2), sortedValues);
-        assertEquals(List.of(user, user), stages);
+        assertEquals(List.of(users, users), stages);
     }
 
     @Test
@@ -346,8 +398,8 @@ class PositiveFluentMatrixTest {
         assertSame(index, originalIndex);
     }
 
-    private static CheckedFunction<String, ConditionResult<String>> evaluator() {
-        return ConditionResult::satisfied;
+    private static CheckedFunction<String, ConditionResult> evaluator() {
+        return ignored -> ConditionResult.satisfied();
     }
 
 }

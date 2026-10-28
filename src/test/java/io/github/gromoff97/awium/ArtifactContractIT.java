@@ -1,5 +1,10 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.ConditionAwaitAttempt;
+
+import io.github.gromoff97.awium.internal.AwaitAttempt;
+import io.github.gromoff97.awium.internal.SequenceExecution;
+import io.github.gromoff97.awium.internal.WaitEngine;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.lang.module.ModuleFinder;
@@ -36,7 +41,8 @@ class ArtifactContractIT {
         ModuleReference module = ModuleFinder.of(JAR)
                 .find("io.github.gromoff97.awium").orElseThrow();
         assertFalse(module.descriptor().isAutomatic());
-        assertEquals(Set.of("io.github.gromoff97.awium"),
+        assertEquals(Set.of("io.github.gromoff97.awium", "io.github.gromoff97.awium.result",
+                        "io.github.gromoff97.awium.function"),
                 Set.copyOf(module.descriptor().exports().stream().map(export -> export.source()).toList()));
         assertEquals(Set.of("java.base"),
                 Set.copyOf(module.descriptor().requires().stream()
@@ -54,10 +60,10 @@ class ArtifactContractIT {
         assertEquals(0, exit, dependencies);
         Map<String, Set<String>> classes = classDependencies(dependencies);
         assertFalse(classes.isEmpty(), dependencies);
-        Set<String> facade = Set.of("Await", "ValueAwait", "Conditions", "CollectionConditions", "MapConditions",
+        Set<String> facade = Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "Conditions", "CollectionConditions", "MapConditions",
                 "OptionalConditions", "StringConditions", "FailureDiagnostics");
         for (String execution : Set.of("Condition", "AwaitAttempt", "ConditionAwaitAttempt", "ConditionSupport",
-                "ConditionResult", "AttemptResult", "SequenceExecution", "WaitEngine",
+                "ConditionResult", "ConditionEvaluation", "SequenceExecution", "WaitEngine",
                 "WaitCompletion", "WaitConfiguration")) {
             Set<String> used = classes.getOrDefault(execution, Set.of());
             assertTrue(used.stream().noneMatch(facade::contains), execution + " -> " + used);
@@ -66,7 +72,7 @@ class ArtifactContractIT {
         assertTrue(conditionResult.stream().noneMatch(Set.of("AttemptRecord", "AwaitResult")::contains),
                 "ConditionResult -> " + conditionResult);
         Set<String> definition = classes.get("Condition");
-        assertTrue(definition.stream().noneMatch(Set.of("ConditionAwaitAttempt", "AttemptResult")::contains),
+        assertTrue(definition.stream().noneMatch(Set.of("ConditionAwaitAttempt", "ConditionEvaluation")::contains),
                 "Condition -> " + definition);
         // Condition construction is independent of source protocols, timing, diagnostics, and value comparison.
         Set<String> support = classes.get("ConditionSupport");
@@ -79,12 +85,12 @@ class ArtifactContractIT {
         for (String catalog : Set.of("Conditions", "CollectionConditions", "MapConditions",
                 "OptionalConditions", "StringConditions")) {
             assertTrue(classes.get(catalog).stream().noneMatch(Set.of("AwaitAttempt", "ConditionAwaitAttempt",
-                            "AttemptResult", "SequenceExecution", "WaitEngine", "WaitCompletion", "WaitConfiguration",
+                            "SequenceExecution", "WaitEngine", "WaitCompletion", "WaitConfiguration",
                             "FailureDiagnostics")::contains),
                     catalog + " -> " + classes.get(catalog));
         }
         // Diagnostics describe failures; only the fluent facade chooses a terminal result or throws.
-        Set<String> terminals = Set.of("Await", "ValueAwait", "AwaitResult", "AwaitAssertionError", "AwaitExecutionException");
+        Set<String> terminals = Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "AwaitResult", "AwaitAssertionError", "AwaitExecutionException");
         Set<String> diagnostics = classes.get("FailureDiagnostics");
         assertTrue(diagnostics.stream().noneMatch(terminals::contains), "FailureDiagnostics -> " + diagnostics);
     }
@@ -119,33 +125,42 @@ class ArtifactContractIT {
     }
 
     @Test
-    void implementationTypesAreNotAccessibleToConsumers(@TempDir Path directory) throws Exception {
-        for (Class<?> internal : List.of(ConditionSupport.class, AwaitAttempt.class, ConditionAwaitAttempt.class,
-                AttemptResult.class, SequenceExecution.class, WaitEngine.class, WaitConfiguration.class,
-                WaitCompletion.class,
-                FailureDiagnostics.class, ValueMatching.class)) {
+    void definitionBindingsStayPackagePrivate(@TempDir Path directory) throws Exception {
+        for (Class<?> internal : List.of(ConditionSupport.class, ValueMatching.class)) {
             assertFalse(java.lang.reflect.Modifier.isPublic(internal.getModifiers()), internal.getName());
         }
         for (boolean modulePath : List.of(false, true)) {
-            Path consumer = java.nio.file.Files.createDirectory(directory.resolve(modulePath ? "module" : "classpath"));
-            Path source = consumer.resolve("Contract.java");
-            java.nio.file.Files.writeString(source, """
-                    package consumer;
-                    import io.github.gromoff97.awium.ConditionAwaitAttempt;
-                    final class Contract {}
-                    """);
-            var arguments = new java.util.ArrayList<>(List.of("--release", "21", "-proc:none", "-XDrawDiagnostics",
-                    modulePath ? "--module-path" : "-classpath", JAR.toString(), "-d", consumer.toString(), source.toString()));
-            if (modulePath) {
-                Path descriptor = consumer.resolve("module-info.java");
-                java.nio.file.Files.writeString(descriptor, "module consumer { requires io.github.gromoff97.awium; }");
-                arguments.add(descriptor.toString());
-            }
-            var output = new ByteArrayOutputStream();
-            int exit = javax.tools.ToolProvider.getSystemJavaCompiler().run(null, output, output, arguments.toArray(String[]::new));
-            assertEquals(1, exit, output.toString(UTF_8));
-            assertTrue(output.toString(UTF_8).contains("compiler.err.not.def.public.cant.access"), output.toString(UTF_8));
+            assertInaccessible(directory, ConditionSupport.class, modulePath, "compiler.err.not.def.public.cant.access");
         }
+    }
+
+    @Test
+    void executionPackageIsHiddenFromModuleConsumers(@TempDir Path directory) throws Exception {
+        assertInaccessible(directory, ConditionAwaitAttempt.class, true, "compiler.err.package.not.visible");
+        assertInaccessible(directory, WaitEngine.class, true, "compiler.err.package.not.visible");
+    }
+
+    private static void assertInaccessible(Path directory, Class<?> type, boolean modulePath,
+            String diagnostic) throws Exception {
+        Path consumer = java.nio.file.Files.createDirectory(directory.resolve(
+                (modulePath ? "module-" : "classpath-") + type.getSimpleName()));
+        Path source = consumer.resolve("Contract.java");
+        java.nio.file.Files.writeString(source, """
+                package consumer;
+                import %s;
+                final class Contract {}
+                """.formatted(type.getName()));
+        var arguments = new java.util.ArrayList<>(List.of("--release", "21", "-proc:none", "-XDrawDiagnostics",
+                modulePath ? "--module-path" : "-classpath", JAR.toString(), "-d", consumer.toString(), source.toString()));
+        if (modulePath) {
+            Path descriptor = consumer.resolve("module-info.java");
+            java.nio.file.Files.writeString(descriptor, "module consumer { requires io.github.gromoff97.awium; }");
+            arguments.add(descriptor.toString());
+        }
+        var output = new ByteArrayOutputStream();
+        int exit = javax.tools.ToolProvider.getSystemJavaCompiler().run(null, output, output, arguments.toArray(String[]::new));
+        assertEquals(1, exit, output.toString(UTF_8));
+        assertTrue(output.toString(UTF_8).contains(diagnostic), output.toString(UTF_8));
     }
 
     private static Map<String, Set<String>> classDependencies(String output) {
@@ -159,7 +174,7 @@ class ArtifactContractIT {
         return dependencies;
     }
     private static String owner(String className) {
-        return className.substring("io.github.gromoff97.awium.".length()).split("\\$", 2)[0];
+        return className.substring(className.lastIndexOf('.') + 1).split("\\$", 2)[0];
     }
 
 }

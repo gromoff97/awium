@@ -1,13 +1,21 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.FailureDiagnostics;
+import io.github.gromoff97.awium.internal.WaitCompletion;
+import io.github.gromoff97.awium.result.AttemptRecord;
+import io.github.gromoff97.awium.result.AttemptResult;
+import io.github.gromoff97.awium.result.AwaitAssertionError;
+import io.github.gromoff97.awium.result.AwaitExecutionException;
+import io.github.gromoff97.awium.result.AwaitFailure;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
 import static io.github.gromoff97.awium.Conditions.asserted;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
@@ -68,19 +76,18 @@ class FailureTaxonomyTest {
                     reason == AwaitFailure.Reason.WAIT_FAILED || reason == AwaitFailure.Reason.SOURCE_FAILED
                             ? null : Duration.ZERO, ofNanos(2));
             var metadata = diagnosticCondition("ready", new Condition.Reference<>("Expected", expected));
-            AttemptRecord.Outcome<Object, Object> observation = switch (reason) {
-                case WAIT_FAILED -> new AttemptRecord.Outcome.WaitingFailed<>(original);
-                case SOURCE_FAILED -> new AttemptRecord.Outcome.SourceRetrievalFailed<>(original);
-                case TIMEOUT, PERSISTENCE_FAILED -> new AttemptRecord.Outcome.Evaluated<>("actual",
-                        ConditionResult.unsatisfied("not ready", original));
-                default -> new AttemptRecord.Outcome.ConditionFailed<>("actual", original);
+            AttemptResult observation = switch (reason) {
+                case WAIT_FAILED -> new AttemptResult.Uncontrolled(AttemptResult.Operation.WAITING, original);
+                case SOURCE_FAILED -> new AttemptResult.Uncontrolled(AttemptResult.Operation.SOURCE, original);
+                case TIMEOUT, PERSISTENCE_FAILED -> new AttemptResult.Unsatisfied("not ready", original);
+                default -> new AttemptResult.Uncontrolled(AttemptResult.Operation.CONDITION, original);
             };
             var attempt = new AttemptRecord<>(1, reason == AwaitFailure.Reason.PERSISTENCE_FAILED
-                    ? AttemptRecord.Phase.PERSISTENCE : AttemptRecord.Phase.ACQUISITION, timing, metadata, null, observation);
-            WaitCompletion<Object, Object> outcome = switch (reason) {
-                case TIMEOUT -> new WaitCompletion.Timeout<>(attempt);
-                case PERSISTENCE_FAILED -> new WaitCompletion.PersistenceFailure<>(Duration.ZERO, attempt);
-                default -> new WaitCompletion.Uncontrolled<>(attempt, reason == AwaitFailure.Reason.INTERRUPTED);
+                    ? AttemptRecord.Phase.PERSISTENCE : AttemptRecord.Phase.ACQUISITION, timing, metadata, null, (Object) "actual", observation);
+            WaitCompletion outcome = switch (reason) {
+                case TIMEOUT -> new WaitCompletion.Timeout(attempt);
+                case PERSISTENCE_FAILED -> new WaitCompletion.PersistenceFailure(Duration.ZERO, attempt);
+                default -> new WaitCompletion.Uncontrolled(attempt, reason == AwaitFailure.Reason.INTERRUPTED);
             };
             var configuration = AwaitTestAccess.config(1, 2, 0);
             try {
@@ -88,7 +95,14 @@ class FailureTaxonomyTest {
                 assertEquals(reason, captured.reason());
                 assertSame(original, captured.cause());
                 assertEquals(List.of(rendering), captured.suppressed());
-                var thrown = assertFailure(reason, () -> Await.complete(outcome, configuration));
+                var report = new AwaitResult.Failed<Object, String>(List.of(attempt), captured);
+                var reported = assertFailure(reason, report::orThrow);
+                assertSame(captured, reported instanceof AwaitAssertionError assertion
+                        ? assertion.failure() : ((AwaitExecutionException) reported).failure());
+                assertSame(original, reported.getCause());
+                assertArrayEquals(new Throwable[]{rendering}, reported.getSuppressed());
+                assertNotSame(reported, assertFailure(reason, report::orThrow));
+                var thrown = assertFailure(reason, () -> ValueAwait.complete(outcome, configuration));
                 assertSame(original, thrown.getCause());
                 assertArrayEquals(new Throwable[]{rendering}, thrown.getSuppressed());
                 assertEquals(0, original.getSuppressed().length);

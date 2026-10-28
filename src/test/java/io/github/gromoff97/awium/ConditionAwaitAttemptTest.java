@@ -1,16 +1,19 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.internal.AwaitAttempt;
+import io.github.gromoff97.awium.internal.ConditionEvaluation;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class ConditionAwaitAttemptTest {
@@ -23,7 +26,7 @@ class ConditionAwaitAttemptTest {
         var condition = Conditions.conditionPerWait("two observations", () -> {
             factories[0]++;
             int[] calls = {0};
-            return ignored -> ++calls[0] == 2 ? satisfied(replacement) : ConditionResult.unsatisfied("first observation");
+            return ignored -> ++calls[0] == 2 ? satisfied() : ConditionResult.unsatisfied("first observation");
         }).because("second observation is required");
         var time = new FakeTime(0);
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
@@ -33,7 +36,7 @@ class ConditionAwaitAttemptTest {
         assertEquals(1, factories[0]);
 
         var result = waiting.tryUntil(condition);
-        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertSame(actual, result.orThrow());
         assertEquals(2, result.totalAttempts());
         assertEquals(2, factories[0]);
     }
@@ -45,11 +48,11 @@ class ConditionAwaitAttemptTest {
         var nested = Conditions.<Number>conditionPerWait("second observation", () -> {
             factories[0]++;
             int[] calls = {0};
-            return ignored -> ++calls[0] == 2 ? satisfied(42) : ConditionResult.unsatisfied("first observation");
+            return ignored -> ++calls[0] == 2 ? satisfied() : ConditionResult.unsatisfied("first observation");
         });
         var optional = OptionalConditions.hasValue(nested);
         var collection = CollectionConditions.singleElement(nested);
-        Condition.MapValueCondition<Map<? super String, ?>, Number, Condition.Reference<?>> map =
+        Condition.MapValueCondition<Map<? super String, ? extends Number>> map =
                 MapConditions.valueFor("key", nested);
         assertEquals(0, factories[0]);
 
@@ -65,7 +68,7 @@ class ConditionAwaitAttemptTest {
             assertSame(actual, optionalValue);
             assertSame(actual, element);
             assertSame(actual, mapValue);
-            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, mapResult).result());
+            assertSame(actual, mapResult.orThrow());
             assertEquals(2, mapResult.totalAttempts());
         }
         assertEquals(8, factories[0]);
@@ -76,11 +79,11 @@ class ConditionAwaitAttemptTest {
         Condition.Typed<Integer, Integer> ordinary = new Condition.Typed<>(
                 "counted", null, () -> {
                     int[] calls = {0};
-                    return ignored -> AttemptResult.of(satisfied(++calls[0]));
+                    return ignored -> ConditionEvaluation.satisfied(++calls[0]);
                 });
         assertEquals("counted", ordinary.description());
-        AwaitAttempt<Integer, Integer> first = new ConditionAwaitAttempt<>(ordinary);
-        AwaitAttempt<Integer, Integer> second = new ConditionAwaitAttempt<>(ordinary);
+        AwaitAttempt<Integer, Integer> first = ConditionSupport.bind(ordinary);
+        AwaitAttempt<Integer, Integer> second = ConditionSupport.bind(ordinary);
 
         assertEquals(1, result(ConditionTestRuntime.evaluated(first.probe(0))));
         assertEquals(2, result(ConditionTestRuntime.evaluated(first.probe(0))));

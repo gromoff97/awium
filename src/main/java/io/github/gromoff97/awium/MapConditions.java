@@ -1,12 +1,14 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.ConditionEvaluation;
 import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
-import io.github.gromoff97.awium.Condition.SourceCondition;
 import io.github.gromoff97.awium.ConditionSupport.Quantifier;
+import io.github.gromoff97.awium.function.CheckedBiPredicate;
+import io.github.gromoff97.awium.function.CheckedPredicate;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import java.util.Map.Entry;
@@ -14,22 +16,22 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.IntPredicate;
 
-import static io.github.gromoff97.awium.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.internal.ConditionEvaluation.satisfied;
+import static io.github.gromoff97.awium.internal.ConditionEvaluation.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
-import static io.github.gromoff97.awium.ConditionSupport.snapshot;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.quantified;
 import static io.github.gromoff97.awium.ConditionSupport.selected;
+import static io.github.gromoff97.awium.ConditionSupport.snapshot;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
 import static io.github.gromoff97.awium.ValueMatching.containsAll;
 import static io.github.gromoff97.awium.ValueMatching.containsAny;
-import static java.util.Objects.deepEquals;
 import static io.github.gromoff97.awium.ValueMatching.exactly;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
+import static java.util.Objects.deepEquals;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -49,7 +51,7 @@ import static java.util.Objects.requireNonNull;
  */
 public final class MapConditions {
 
-    public static final SelectedCondition<Map<?, ?>, Object, Reference<?>> singleEntry = selected("map has a single entry",
+    public static final SelectedCondition<Map<?, ?>> singleEntry = selected("map has a single entry",
             MapConditions::selectSingleEntry);
     public static final PreservingCondition<Map<?, ?>> empty = preserving("map is empty", "map was not empty", Map::isEmpty);
     public static final PreservingCondition<Map<?, ?>> nonEmpty = preserving("map is not empty", "map was empty", actual -> !actual.isEmpty());
@@ -87,19 +89,19 @@ public final class MapConditions {
     }
 
     /** Checks the sole entry, retaining the source's entry type. */
-    public static <ENTRY extends Entry<?, ?>> SelectedCondition<Map<?, ?>, ENTRY, Reference<?>> singleEntry(
-            CheckedPredicate<? super ENTRY> predicate) {
+    public static <KEY, VALUE> SelectedCondition<Map<KEY, VALUE>> singleEntry(
+            CheckedPredicate<? super Entry<KEY, VALUE>> predicate) {
         return singleEntry(Conditions.matches(predicate));
     }
 
     /** Checks the sole entry's key and value, retaining the source's entry type. */
-    public static <KEY, VALUE> SelectedCondition<Map<?, ?>, Entry<? extends KEY, ? extends VALUE>, Reference<?>> singleEntry(
+    public static <KEY, VALUE> SelectedCondition<Map<? extends KEY, ? extends VALUE>> singleEntry(
             CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
-        return singleEntry(entryCheck(predicate));
+        return new SelectedCondition<>(compose("single entry", entryCheck(predicate), singleEntry));
     }
 
-    public static <CHECKED, REFERENCE> SelectedCondition<Map<?, ?>, CHECKED, REFERENCE> singleEntry(
-            SourceCondition<CHECKED, REFERENCE> nested) {
+    public static <KEY, VALUE> SelectedCondition<Map<KEY, VALUE>> singleEntry(
+            PreservingCondition<? super Entry<KEY, VALUE>> nested) {
         return new SelectedCondition<>(compose("single entry", nested, singleEntry));
     }
 
@@ -108,7 +110,7 @@ public final class MapConditions {
         return compose("single entry", nested, singleEntry);
     }
 
-    public static <KEY, VALUE> SelectedCondition<Map<? super KEY, ? super VALUE>, Object, Reference<?>> singleEntry(
+    public static <KEY, VALUE> SelectedCondition<Map<? super KEY, ? super VALUE>> singleEntry(
             ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
         return new SelectedCondition<>(compose("single entry", nested, singleEntry));
     }
@@ -202,7 +204,7 @@ public final class MapConditions {
         return allKeys(Conditions.matches(predicate));
     }
 
-    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> allKeys(PreservingCondition<? super KEY> nested) {
+    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> allKeys(Condition.InputCondition<? super KEY> nested) {
         return quantified("map", "keys", Quantifier.ALL, nested, Map::keySet);
     }
 
@@ -210,15 +212,11 @@ public final class MapConditions {
         return quantified("map", "keys", Quantifier.ALL, nested, Map::keySet);
     }
 
-    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> allKeys(Condition.Typed<? super KEY, ?> nested) {
-        return quantified("map", "keys", Quantifier.ALL, nested, Map::keySet);
-    }
-
     public static <KEY> PreservingCondition<Map<? extends KEY, ?>> anyKey(CheckedPredicate<? super KEY> predicate) {
         return anyKey(Conditions.matches(predicate));
     }
 
-    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> anyKey(PreservingCondition<? super KEY> nested) {
+    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> anyKey(Condition.InputCondition<? super KEY> nested) {
         return quantified("map", "keys", Quantifier.ANY, nested, Map::keySet);
     }
 
@@ -226,15 +224,11 @@ public final class MapConditions {
         return quantified("map", "keys", Quantifier.ANY, nested, Map::keySet);
     }
 
-    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> anyKey(Condition.Typed<? super KEY, ?> nested) {
-        return quantified("map", "keys", Quantifier.ANY, nested, Map::keySet);
-    }
-
     public static <KEY> PreservingCondition<Map<? extends KEY, ?>> noKey(CheckedPredicate<? super KEY> predicate) {
         return noKey(Conditions.matches(predicate));
     }
 
-    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> noKey(PreservingCondition<? super KEY> nested) {
+    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> noKey(Condition.InputCondition<? super KEY> nested) {
         return quantified("map", "keys", Quantifier.NONE, nested, Map::keySet);
     }
 
@@ -242,15 +236,11 @@ public final class MapConditions {
         return quantified("map", "keys", Quantifier.NONE, nested, Map::keySet);
     }
 
-    public static <KEY> PreservingCondition<Map<? extends KEY, ?>> noKey(Condition.Typed<? super KEY, ?> nested) {
-        return quantified("map", "keys", Quantifier.NONE, nested, Map::keySet);
-    }
-
     public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> allValues(CheckedPredicate<? super VALUE> predicate) {
         return allValues(Conditions.matches(predicate));
     }
 
-    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> allValues(PreservingCondition<? super VALUE> nested) {
+    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> allValues(Condition.InputCondition<? super VALUE> nested) {
         return quantified("map", "values", Quantifier.ALL, nested, Map::values);
     }
 
@@ -258,15 +248,11 @@ public final class MapConditions {
         return quantified("map", "values", Quantifier.ALL, nested, Map::values);
     }
 
-    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> allValues(Condition.Typed<? super VALUE, ?> nested) {
-        return quantified("map", "values", Quantifier.ALL, nested, Map::values);
-    }
-
     public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> anyValue(CheckedPredicate<? super VALUE> predicate) {
         return anyValue(Conditions.matches(predicate));
     }
 
-    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> anyValue(PreservingCondition<? super VALUE> nested) {
+    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> anyValue(Condition.InputCondition<? super VALUE> nested) {
         return quantified("map", "values", Quantifier.ANY, nested, Map::values);
     }
 
@@ -274,15 +260,11 @@ public final class MapConditions {
         return quantified("map", "values", Quantifier.ANY, nested, Map::values);
     }
 
-    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> anyValue(Condition.Typed<? super VALUE, ?> nested) {
-        return quantified("map", "values", Quantifier.ANY, nested, Map::values);
-    }
-
     public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> noValue(CheckedPredicate<? super VALUE> predicate) {
         return noValue(Conditions.matches(predicate));
     }
 
-    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> noValue(PreservingCondition<? super VALUE> nested) {
+    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> noValue(Condition.InputCondition<? super VALUE> nested) {
         return quantified("map", "values", Quantifier.NONE, nested, Map::values);
     }
 
@@ -290,16 +272,12 @@ public final class MapConditions {
         return quantified("map", "values", Quantifier.NONE, nested, Map::values);
     }
 
-    public static <VALUE> PreservingCondition<Map<?, ? extends VALUE>> noValue(Condition.Typed<? super VALUE, ?> nested) {
-        return quantified("map", "values", Quantifier.NONE, nested, Map::values);
-    }
-
-    public static <KEY> MapValueCondition<Map<? super KEY, ?>, Object, Reference<?>> valueFor(KEY key) {
+    public static <KEY> MapValueCondition<Map<? super KEY, ?>> valueFor(KEY key) {
         return new MapValueCondition<>(ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> value(actual, key)));
     }
 
     /** Selects the key's value if it matches, retaining the source's value type. */
-    public static <KEY, VALUE> MapValueCondition<Map<? super KEY, ?>, VALUE, Reference<?>> valueFor(KEY key,
+    public static <KEY, VALUE> MapValueCondition<Map<? super KEY, ? extends VALUE>> valueFor(KEY key,
             CheckedPredicate<? super VALUE> predicate) {
         return valueFor(key, Conditions.matches(predicate));
     }
@@ -309,12 +287,17 @@ public final class MapConditions {
         return compose("map value", nested, valueFor(key));
     }
 
-    public static <KEY, CHECKED, REFERENCE> MapValueCondition<Map<? super KEY, ?>, CHECKED, REFERENCE> valueFor(KEY key,
-            SourceCondition<CHECKED, REFERENCE> nested) {
+    public static <KEY, CHECKED> MapValueCondition<Map<? super KEY, ? extends CHECKED>> valueFor(KEY key,
+            PreservingCondition<? super CHECKED> nested) {
         return new MapValueCondition<>(compose("map value", nested, valueFor(key)));
     }
 
-    public static <KEY> SelectedCondition<Map<? super KEY, ?>, Object, Reference<?>> entryFor(KEY key) {
+    public static <KEY, EXPECTED> MapValueCondition<Map<? super KEY, ? super EXPECTED>> valueFor(KEY key,
+            ComparisonCondition<EXPECTED> nested) {
+        return new MapValueCondition<>(compose("map value", nested, valueFor(key)));
+    }
+
+    public static <KEY> SelectedCondition<Map<? super KEY, ?>> entryFor(KEY key) {
         return new SelectedCondition<>(ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> findEntry(actual, key)));
     }
 
@@ -416,15 +399,15 @@ public final class MapConditions {
         return Conditions.matches(entry -> predicate.test(entry.getKey(), entry.getValue()));
     }
 
-    private static <KEY, VALUE> ConditionResult<Entry<KEY, VALUE>> selectSingleEntry(Map<KEY, VALUE> actual) {
+    private static <KEY, VALUE> ConditionEvaluation<Entry<KEY, VALUE>> selectSingleEntry(Map<KEY, VALUE> actual) {
         return ConditionSupport.single("map", actual == null ? null : actual.entrySet());
     }
 
-    private static <VALUE> ConditionResult<VALUE> value(Map<?, ? extends VALUE> actual, Object key) {
+    private static <VALUE> ConditionEvaluation<VALUE> value(Map<?, ? extends VALUE> actual, Object key) {
         return findEntry(actual, key).mapSatisfied(Entry::getValue);
     }
 
-    private static <KEY, VALUE> ConditionResult<Entry<KEY, VALUE>> findEntry(Map<KEY, VALUE> actual, Object key) {
+    private static <KEY, VALUE> ConditionEvaluation<Entry<KEY, VALUE>> findEntry(Map<KEY, VALUE> actual, Object key) {
         if (actual == null) return unsatisfied("map was null");
         for (Entry<KEY, VALUE> entry : actual.entrySet()) {
             if (deepEquals(entry.getKey(), key)) {

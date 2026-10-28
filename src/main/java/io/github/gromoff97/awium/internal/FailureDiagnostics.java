@@ -1,5 +1,9 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.internal;
 
+import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.result.AttemptRecord;
+import io.github.gromoff97.awium.result.AttemptResult;
+import io.github.gromoff97.awium.result.AwaitFailure;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,13 +16,13 @@ import static java.lang.Thread.currentThread;
 import static java.util.Arrays.deepToString;
 import static java.util.Objects.requireNonNull;
 
-final class FailureDiagnostics {
+public final class FailureDiagnostics {
 
     private static final List<TimeUnit> DURATION_UNITS = List.of(
             TimeUnit.DAYS, TimeUnit.HOURS, TimeUnit.MINUTES, TimeUnit.SECONDS,
             TimeUnit.MILLISECONDS, TimeUnit.MICROSECONDS, TimeUnit.NANOSECONDS);
 
-    private final WaitCompletion<?, ?> outcome;
+    private final WaitCompletion outcome;
     private final Condition condition;
     private final WaitConfiguration configuration;
     private final Throwable cause;
@@ -26,13 +30,13 @@ final class FailureDiagnostics {
 
     private final List<Throwable> diagnosticFailures = new ArrayList<>();
 
-    private FailureDiagnostics(WaitCompletion<?, ?> outcome, WaitConfiguration configuration) {
+    private FailureDiagnostics(WaitCompletion outcome, WaitConfiguration configuration) {
         this.outcome = requireNonNull(outcome, "outcome must not be null");
         this.configuration = requireNonNull(configuration, "configuration must not be null");
         var attempt = outcome.attempt();
-        cause = attempt.outcome().cause();
+        cause = attempt.result().cause();
         sequence = attempt.progress();
-        condition = attempt.condition();
+        condition = sequence == null ? attempt.condition() : sequence.sequence();
     }
 
     static String duration(Duration remaining) {
@@ -49,47 +53,41 @@ final class FailureDiagnostics {
         return result.toString();
     }
 
-    static AwaitFailure failure(WaitCompletion<?, ?> outcome, WaitConfiguration configuration) {
+    public static AwaitFailure failure(WaitCompletion outcome, WaitConfiguration configuration) {
         var diagnostics = new FailureDiagnostics(outcome, configuration);
         return new AwaitFailure(outcome.failureReason(), diagnostics.message(), diagnostics.cause,
                 diagnostics.diagnosticFailures);
     }
 
     private String uncontrolledHeading(boolean interrupted) {
-        return switch (outcome.attempt().outcome()) {
-            case AttemptRecord.Outcome.WaitingFailed<?, ?> ignored -> interrupted
+        return switch (((AttemptResult.Uncontrolled) outcome.attempt().result()).operation()) {
+            case WAITING -> interrupted
                     ? "Caller thread was interrupted while waiting" : "Waiting before the next attempt failed";
-            case AttemptRecord.Outcome.ConditionFailed<?, ?> ignored -> interrupted
+            case CONDITION -> interrupted
                     ? "Caller thread was interrupted during condition evaluation" : "Condition evaluation failed";
-            default -> interrupted
+            case SOURCE -> interrupted
                     ? "Caller thread was interrupted during source retrieval" : "Source retrieval failed";
         };
     }
 
     private String title() {
         return switch (outcome) {
-            case WaitCompletion.Timeout<?, ?> ignored -> "Acquisition deadline elapsed";
-            case WaitCompletion.PersistenceFailure<?, ?> ignored ->
+            case WaitCompletion.Timeout ignored -> "Acquisition deadline elapsed";
+            case WaitCompletion.PersistenceFailure ignored ->
                     "Condition did not persist for the required duration";
-            case WaitCompletion.Uncontrolled<?, ?> failure ->
+            case WaitCompletion.Uncontrolled failure ->
                     uncontrolledHeading(failure.interrupted());
-            case WaitCompletion.Satisfied<?, ?> ignored ->
+            case WaitCompletion.Satisfied ignored ->
                     throw new IllegalArgumentException("successful outcomes have no failure diagnostics");
         };
     }
 
     private String message() {
-        AttemptRecord<?, ?> attempt = outcome.attempt();
+        AttemptRecord<?> attempt = outcome.attempt();
         StringBuilder out = new StringBuilder(title()).append("\n\n");
         condition(out, condition, "");
-        String actual = switch (attempt.outcome()) {
-            case AttemptRecord.Outcome.Evaluated<?, ?> value -> render(() -> renderValue(value.observed()));
-            case AttemptRecord.Outcome.ConditionFailed<?, ?> value -> render(() -> renderValue(value.observed()));
-            case AttemptRecord.Outcome.SourceInterrupted<?, ?> value -> render(() -> renderValue(value.observed()));
-            default -> null;
-        };
-        var evaluation = attempt.outcome() instanceof AttemptRecord.Outcome.Evaluated<?, ?> value ? value.evaluation() : null;
-        String mismatch = evaluation instanceof ConditionResult.Unsatisfied<?> value ? value.mismatch() : null;
+        String actual = attempt.hasObservation() ? render(() -> renderValue(attempt.observed())) : null;
+        String mismatch = attempt.result() instanceof AttemptResult.Unsatisfied value ? value.mismatch() : null;
         attempt(out, attempt, actual, sequence == null ? mismatch : null);
         sequence(out, mismatch);
         timing(out);
@@ -130,13 +128,13 @@ final class FailureDiagnostics {
         field(out, "Acquisition timeout",
                 duration(Duration.ofNanos(configuration.upToNanos())));
         var completedAfter = outcome.attempt().timing().completionOffset();
-        var elapsed = outcome instanceof WaitCompletion.Timeout<?, ?> timeout
+        var elapsed = outcome instanceof WaitCompletion.Timeout timeout
                 ? timeout.elapsed() : completedAfter;
         if (!elapsed.equals(completedAfter)) {
             field(out, "Last attempt completed after", duration(completedAfter));
         }
         field(out, "Elapsed", duration(elapsed));
-        if (outcome instanceof WaitCompletion.PersistenceFailure<?, ?> failure) {
+        if (outcome instanceof WaitCompletion.PersistenceFailure failure) {
             var acquiredAfter = failure.acquiredAfter();
             field(out, "Acquired after", duration(acquiredAfter));
             field(out, "Required persistence", duration(Duration.ofNanos(configuration.persistenceNanos())));
@@ -146,7 +144,7 @@ final class FailureDiagnostics {
                 duration(Duration.ofNanos(configuration.everyNanos())));
     }
 
-    private static void attempt(StringBuilder out, AttemptRecord<?, ?> attempt, String actual,
+    private static void attempt(StringBuilder out, AttemptRecord<?> attempt, String actual,
             String mismatch) {
         out.append('\n').append("Attempt: ").append(attempt.number())
                 .append(" (").append(attempt.phase()).append(")\n");
@@ -175,12 +173,18 @@ final class FailureDiagnostics {
             return;
         }
         out.append('\n').append("Sequence (captured ").append(sequence.capturedStages())
-                .append(" of ").append(sequence.totalStages()).append("):\n");
-        int activeStage = Math.min(sequence.capturedStages() + 1, sequence.totalStages());
-        field(out, "Stage", activeStage + " of " + sequence.totalStages());
-        condition(out, sequence.activeCondition(), "    ");
+                .append(" of ").append(sequence.sequence().stages().size()).append("):\n");
+        int stage = sequence.stageNumber();
+        field(out, "Stage", stage + " of " + sequence.sequence().stages().size());
+        condition(out, outcome.attempt().condition(), "    ");
         if (mismatch != null) {
             field(out, "        ", "Mismatch", mismatch);
+        }
+        if (outcome.attempt().result() instanceof AttemptResult.Satisfied
+                && sequence.capturedStages() < sequence.sequence().stages().size()) {
+            int next = sequence.capturedStages() + 1;
+            field(out, "Next stage", next + " of " + sequence.sequence().stages().size());
+            condition(out, sequence.sequence().stages().get(next - 1), "    ");
         }
     }
 

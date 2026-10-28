@@ -1,10 +1,10 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.internal;
 
 import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
+import static io.github.gromoff97.awium.internal.WaitConfiguration.DEFAULT;
 import static java.time.Duration.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;

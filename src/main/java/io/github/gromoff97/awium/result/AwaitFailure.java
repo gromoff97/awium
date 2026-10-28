@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.result;
 
 import java.io.Serializable;
 import java.util.List;

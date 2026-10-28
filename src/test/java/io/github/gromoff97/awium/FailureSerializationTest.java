@@ -1,5 +1,8 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.AwaitAssertionError;
+import io.github.gromoff97.awium.result.AwaitExecutionException;
+import io.github.gromoff97.awium.result.AwaitFailure;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

@@ -1,14 +1,15 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.ConditionResult.Satisfied;
+import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
+import io.github.gromoff97.awium.result.AwaitResult;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.CONDITION_FAILED;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.Conditions.equalTo;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;

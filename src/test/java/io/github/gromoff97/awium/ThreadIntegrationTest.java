@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.AwaitExecutionException;
+import io.github.gromoff97.awium.result.AwaitFailure;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -14,8 +16,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.AwaitTestAccess.evaluated;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.condition;
 import static java.lang.System.nanoTime;
 import static java.lang.Thread.State.*;
@@ -45,7 +48,7 @@ class ThreadIntegrationTest {
             return ++observations[0];
         }).every(ofMillis(20)).upTo(ofSeconds(2)).until(condition("third observation", value -> {
             callbackThreads.add(currentThread());
-            return value == 3 ? satisfied(value)
+            return value == 3 ? satisfied()
                     : unsatisfied("not the third observation");
         })));
         caller.start();
@@ -82,7 +85,7 @@ class ThreadIntegrationTest {
                     rendezvous.await(3, SECONDS);
                     return unsatisfied("first observation");
                 }
-                return satisfied(actual);
+                return satisfied();
             };
         });
         var resultThreads = new HashSet<Thread>();
@@ -92,12 +95,11 @@ class ThreadIntegrationTest {
                     callers.submit(() -> waiting.tryUntil(check)));
             for (var future : results) {
                 var result = future.get(5, SECONDS);
-                var success = assertInstanceOf(AwaitResult.Satisfied.class, result);
-                Thread caller = assertInstanceOf(Thread.class, success.result());
+                Thread caller = result.orThrow();
                 assertTrue(caller.isVirtual());
                 assertEquals(2, result.totalAttempts());
                 for (var attempt : result.attempts()) {
-                    assertSame(caller, assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, attempt.outcome()).observed());
+                    assertSame(caller, evaluated(attempt).observed());
                 }
                 resultThreads.add(caller);
             }

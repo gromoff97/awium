@@ -1,8 +1,10 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.ConditionResult.Satisfied;
-import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
+import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
+import io.github.gromoff97.awium.internal.ConditionEvaluation.Unsatisfied;
+import io.github.gromoff97.awium.result.AwaitFailure;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.nio.CharBuffer;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +16,7 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.Conditions.captured;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -40,10 +43,10 @@ class ScalarConditionsTest {
         for (var check : checks) {
             var value = waiting.until(check);
             AwaitResult<Measurement, Measurement> captured = waiting.tryUntil(check);
-            var values = waiting.until(check, check);
+            var values = waiting.until(captured(check, check));
             assertSame(measurement, value);
             assertEquals(10, value.number());
-            assertSame(measurement, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+            assertSame(measurement, captured.orThrow());
             assertEquals(10, values.getLast().number());
         }
         var selected = await(() -> Optional.of(measurement)).until(OptionalConditions.hasValue(
@@ -81,10 +84,10 @@ class ScalarConditionsTest {
         for (var check : checks) {
             var value = waiting.until(check);
             AwaitResult<Score, Score> result = waiting.tryUntil(check);
-            var values = waiting.until(check, check);
+            var values = waiting.until(captured(check, check));
             assertSame(score, value);
             assertEquals(10, value.number());
-            assertSame(score, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+            assertSame(score, result.orThrow());
             assertSame(score, values.getFirst());
             assertEquals(10, values.getLast().number());
         }
@@ -179,8 +182,8 @@ class ScalarConditionsTest {
             }
         }
 
-        var values = waiting.until(StringConditions.nonEmpty,
-                StringConditions.equalToIgnoringCase("ready 42"));
+        var values = waiting.until(captured(StringConditions.nonEmpty,
+                StringConditions.equalToIgnoringCase("ready 42")));
         assertSame(text, values.getFirst());
         assertEquals(text.capacity(), values.getLast().capacity());
         text.setLength(0);

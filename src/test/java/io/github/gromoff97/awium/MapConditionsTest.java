@@ -1,10 +1,12 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.ConditionEvaluation;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.ConditionResult.Satisfied;
-import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
-import java.util.LinkedHashMap;
+import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
+import io.github.gromoff97.awium.internal.ConditionEvaluation.Unsatisfied;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,15 +14,16 @@ import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.*;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -202,7 +205,7 @@ class MapConditionsTest {
 
     @Test
     void nullActualShortCircuitsAndAggregateFactoriesValidateInputs() {
-        ConditionResult<?> evaluation = evaluate(
+        ConditionEvaluation<?> evaluation = evaluate(
                 containsAllEntries(map("a", "1")), null);
         assertEquals(Unsatisfied.class, evaluation.getClass());
         assertFalse(mismatch(evaluation).isBlank());
@@ -255,7 +258,7 @@ class MapConditionsTest {
             for (var check : satisfied) {
                 LinkedHashMap<String, String> selected = waiting.until(check);
                 assertSame(actual, selected);
-                assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, waiting.tryUntil(check)).result());
+                assertSame(actual, waiting.tryUntil(check).orThrow());
             }
             for (var check : unsatisfied) {
                 var result = waiting.tryUntil(check);
@@ -301,15 +304,15 @@ class MapConditionsTest {
                         .because("positive entry required"));
         AwaitResult<LinkedHashMap<String, String>, LinkedHashMap<String, String>> exactResult = waiting.tryUntil(
                 hasEntry("ready", "1").because("ready entry required"));
-        List<LinkedHashMap<String, String>> stages = waiting.until(
-                hasEntry("ready", "1"), hasEntry(entry -> entry.getValue().equals("2")));
+        List<LinkedHashMap<String, String>> stages = waiting.until(captured(
+                hasEntry("ready", "1"), hasEntry(entry -> entry.getValue().equals("2"))));
 
         assertSame(actual, exact);
         assertSame(actual, checked);
         assertSame(actual, direct);
-        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, directResult).result());
-        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, checkedResult).result());
-        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, exactResult).result());
+        assertSame(actual, directResult.orThrow());
+        assertSame(actual, checkedResult.orThrow());
+        assertSame(actual, exactResult.orThrow());
         assertEquals(2, stages.size());
         stages.forEach(stage -> assertSame(actual, stage));
     }
@@ -354,7 +357,7 @@ class MapConditionsTest {
                 if ("1".equals(actual.get("failed"))) {
                     assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
                 } else {
-                    assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+                    assertSame(actual, result.orThrow());
                 }
             }
             if (!"1".equals(actual.get("failed"))) {
@@ -370,8 +373,8 @@ class MapConditionsTest {
 
     private static void assertPair(Pair pair,
             LinkedHashMap<String, String> actual, boolean positiveSatisfied) {
-        ConditionResult<?> positive = evaluate(pair.positive(), actual);
-        ConditionResult<?> negative = evaluate(pair.negative(), actual);
+        ConditionEvaluation<?> positive = evaluate(pair.positive(), actual);
+        ConditionEvaluation<?> negative = evaluate(pair.negative(), actual);
         assertAll(pair.name(),
                 () -> assertSame(actual, result(positiveSatisfied ? positive : negative)),
                 () -> assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank()));

@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import static io.github.gromoff97.awium.Await.await;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 class ChangingContainerSelectionTest {
 
@@ -29,7 +28,7 @@ class ChangingContainerSelectionTest {
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
                 .tryUntil(CollectionConditions.elementAt(0));
 
-        assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals("ready", result.orThrow());
         assertEquals(2, calls[0]);
     }
 
@@ -47,7 +46,7 @@ class ChangingContainerSelectionTest {
             }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
                     .tryUntil(last ? CollectionConditions.lastElement : CollectionConditions.firstElement);
 
-            assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+            assertEquals("ready", result.orThrow());
             assertEquals(2, calls[0]);
         }
     }
@@ -64,7 +63,7 @@ class ChangingContainerSelectionTest {
             return values;
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).tryUntil(CollectionConditions.singleElement);
 
-        assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals("ready", result.orThrow());
         assertEquals(2, calls[0]);
     }
 
@@ -80,7 +79,7 @@ class ChangingContainerSelectionTest {
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).tryUntil(MapConditions.singleEntry);
 
         assertEquals(Map.entry("key", "ready"),
-                assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+                result.orThrow());
         assertEquals(2, calls[0]);
     }
 

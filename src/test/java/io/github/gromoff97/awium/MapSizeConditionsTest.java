@@ -1,29 +1,29 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.ConditionResult.Satisfied;
+import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.empty;
-import static io.github.gromoff97.awium.MapConditions.nonEmpty;
-import static io.github.gromoff97.awium.MapConditions.singleEntry;
 import static io.github.gromoff97.awium.MapConditions.hasSize;
 import static io.github.gromoff97.awium.MapConditions.hasSizeAtLeast;
 import static io.github.gromoff97.awium.MapConditions.hasSizeAtMost;
 import static io.github.gromoff97.awium.MapConditions.hasSizeBetween;
 import static io.github.gromoff97.awium.MapConditions.hasSizeGreaterThan;
-import static io.github.gromoff97.awium.MapConditions.hasSizeNotEqualTo;
 import static io.github.gromoff97.awium.MapConditions.hasSizeLessThan;
+import static io.github.gromoff97.awium.MapConditions.hasSizeNotEqualTo;
+import static io.github.gromoff97.awium.MapConditions.nonEmpty;
+import static io.github.gromoff97.awium.MapConditions.singleEntry;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;

@@ -18,9 +18,10 @@ class ConditionTypeCompilationContractTest {
                 "Conditions.conditionPerWait(\"failed\", () -> value -> failure);")) {
             CompilationSupport.assertRejected(directory, """
                     package io.github.gromoff97.awium;
+                    import io.github.gromoff97.awium.result.AttemptResult;
                     final class Contract {
                         void check() {
-                            var failure = new AttemptResult.Uncontrolled<String>(new IllegalStateException(), null, null);
+                            var failure = new AttemptResult.Uncontrolled(AttemptResult.Operation.CONDITION, new IllegalStateException());
                             %s
                         }
                     }
@@ -31,10 +32,10 @@ class ConditionTypeCompilationContractTest {
     @Test
     void customChecksCannotTransformTheObservedType() throws IOException {
         for (String expression : List.of(
-                "String wrong = await(numbers).until(condition(\"identity\", ConditionResult::satisfied));",
-                "AwaitResult<Number, String> wrong = await(numbers).tryUntil(condition(\"identity\", ConditionResult::satisfied));",
-                "List<String> wrong = await(numbers).until(condition(\"first\", ConditionResult::satisfied), isNotNull);",
-                "Condition.Typed<Number, String> wrong = condition(\"transform\", value -> ConditionResult.satisfied(\"text\"));")) {
+                "String wrong = await(numbers).until(condition(\"identity\", ignored -> ConditionResult.satisfied()));",
+                "AwaitResult<Number, String> wrong = await(numbers).tryUntil(condition(\"identity\", ignored -> ConditionResult.satisfied()));",
+                "List<String> wrong = await(numbers).until(captured(condition(\"first\", ignored -> ConditionResult.satisfied()), isNotNull));",
+                "Condition.Typed<Number, String> wrong = condition(\"transform\", value -> ConditionResult.satisfied());")) {
             assertRejected(expression);
         }
     }
@@ -47,7 +48,12 @@ class ConditionTypeCompilationContractTest {
                 "String wrong = await(optional::call).until(present.because(\"reason\"));",
                 "String wrong = await(collection::call).until(singleElement.because(\"reason\"));",
                 "String wrong = await(map::call).until(valueFor(\"key\").because(\"reason\"));",
-                "Integer wrong = await(() -> \"ready\").until(instanceOf(String.class).because(\"reason\"));")) {
+                "Integer wrong = await(() -> \"ready\").until(instanceOf(String.class).because(\"reason\"));",
+                "await(() -> \"ready\").until(captured(isNotNull, equalTo(123)).because(\"reason\"));",
+                "List<String> wrong = await(optional::call).until(captured(present, present).because(\"reason\"));",
+                "List<String> wrong = await(collection::call).until(captured(singleElement, singleElement).because(\"reason\"));",
+                "List<String> wrong = await(map::call).until(captured(valueFor(\"key\"), valueFor(\"key\")).because(\"reason\"));",
+                "List<Integer> wrong = await(() -> \"ready\").until(captured(instanceOf(String.class)).because(\"reason\"));")) {
             assertRejected(expression);
         }
     }
@@ -72,7 +78,7 @@ class ConditionTypeCompilationContractTest {
         for (String terminal : List.of("until", "tryUntil")) {
             for (String expression : List.of(
                     "await(() -> List.of(\"ready\")).%s(CollectionConditions.subsetOf(List.of(123)));",
-                    "await(() -> List.of(\"ready\")).%s(CollectionConditions.subsetOf(List.of(123)), isNotNull);",
+                    "await(() -> List.of(\"ready\")).%s(captured(CollectionConditions.subsetOf(List.of(123)), isNotNull));",
                     "await(() -> List.of(List.of(\"ready\"))).%s(singleElement(CollectionConditions.subsetOf(List.of(123))));")) {
                 String call = expression.formatted(terminal);
                 assertRejected(call);
@@ -96,6 +102,27 @@ class ConditionTypeCompilationContractTest {
     }
 
     @Test
+    void selectorConstraintsAlsoApplyToViewsAndMixedCaptureSequences() throws IOException {
+        for (String terminal : List.of("until", "tryUntil")) {
+            for (String expression : List.of(
+                    "await(new CollectionViewSource<Number, List<? extends Number>>(() -> List.of(1))).%s(singleElement(equalTo(\"wrong\")).because(\"reason\"));",
+                    "await(new MapViewSource<String, Number, Map<String, ? extends Number>>(() -> Map.of(\"key\", 1))).%s(valueFor(\"key\", equalTo(\"wrong\")).because(\"reason\"));",
+                    "await(collection::call).%s(captured(isNotNull, singleElement(equalTo(\"wrong\"))));",
+                    "await(optional::call).%s(captured(isNotNull, hasValue(equalTo(\"wrong\"))));",
+                    "await(map::call).%s(captured(isNotNull, valueFor(\"key\", equalTo(\"wrong\"))));",
+                    "await(collection::call).%s(captured(singleElement(equalTo(\"wrong\")), singleElement((Number value) -> true), isNotNull));",
+                    "await(optional::call).%s(captured(hasValue(equalTo(\"wrong\")), hasValue((Number value) -> true), isNotNull));",
+                    "await(map::call).%s(captured(valueFor(\"key\", equalTo(\"wrong\")), valueFor(\"key\", (Number value) -> true), isNotNull));",
+                    "await(map::call).%s(captured(isNotNull, singleEntry(matches((Map.Entry<String, Object> entry) -> entry.setValue(new Object()) != null))));",
+                    "await(collection::call).%s(present);",
+                    "await(optional::call).%s(singleElement);",
+                    "await(map::call).%s(singleElement);")) {
+                assertRejected(expression.formatted(terminal));
+            }
+        }
+    }
+
+    @Test
     void mixedValueStagesRetainBothInputConstraints() throws IOException {
         for (String terminal : List.of("until", "tryUntil")) {
             for (String arguments : List.of(
@@ -104,28 +131,15 @@ class ConditionTypeCompilationContractTest {
                     "equalTo(new Object()), matches(String::isBlank)",
                     "equalTo(\"ready\"), matches((Integer value) -> true)",
                     "matches(String::isBlank), notIn(List.of(123))")) {
-                assertRejected("await(() -> \"ready\").%s(%s);".formatted(terminal, arguments));
+                assertRejected("await(() -> \"ready\").%s(captured(%s));".formatted(terminal, arguments));
             }
         }
-        assertRejected("List<Integer> wrong = await(() -> \"ready\").until(equalTo(\"ready\"), isNotNull);");
-        assertRejected("await(() -> \"ready\").<Object>until(equalTo(123), isNotNull);");
+        assertRejected("List<Integer> wrong = await(() -> \"ready\").until(captured(equalTo(\"ready\"), isNotNull));");
+        assertRejected("await(() -> \"ready\").<Object>until(captured(equalTo(123), isNotNull));");
     }
 
     @Test
-    void sequencesRejectMixingValueChecksWithTypedTransformations() throws IOException {
-        for (String terminal : List.of("until", "tryUntil")) {
-            var checks = List.of("equalTo(\"ready\")",
-                    "matches(String::isBlank)",
-                    "instanceOf(String.class)");
-            for (String first : checks) {
-                for (String second : checks) {
-                    if (first.equals(second)) continue;
-                    if (!first.startsWith("instanceOf") && !second.startsWith("instanceOf")) continue;
-                    String call = "await(() -> \"ready\").%s(%s, %s);".formatted(terminal, first, second);
-                    assertRejected(call);
-                }
-            }
-        }
+    void preservingChecksCannotBeAssignedArbitraryResultTypes() throws IOException {
         assertRejected("Condition.Typed<Object, Object> erased = isNotNull;");
         assertRejected("Condition.Typed<String, String> erased = equalTo(\"ready\");");
     }
@@ -160,18 +174,18 @@ class ConditionTypeCompilationContractTest {
                 "String wrong = await(collection::call).until(singleElement(equalTo(1)));",
                 "String wrong = await(collection::call).until(singleElement(matches((Number value) -> value.intValue() > 0)));",
                 "AwaitResult<List<Number>, String> wrong = await(collection::call).tryUntil(singleElement(matches((Number value) -> value.intValue() > 0)));",
-                "List<String> wrong = await(collection::call).until(singleElement(matches((Number value) -> value.intValue() > 0)), singleElement(matches((Number value) -> value.intValue() > 0)));",
+                "List<String> wrong = await(collection::call).until(captured(singleElement(matches((Number value) -> value.intValue() > 0)), singleElement(matches((Number value) -> value.intValue() > 0))));",
                 "String wrong = await(map::call).until(valueFor(\"key\"));",
                 "Map.Entry<String, Number> wrong = await(map::call).until(valueFor(\"key\"));",
                 "Number wrong = await(map::call).until(entryFor(\"key\"));",
-                "Condition.SelectedCondition<Map<?, ?>, Object, io.github.gromoff97.awium.Condition.Reference<?>> wrong = valueFor(\"key\");",
+                "Condition.SelectedCondition<Map<?, ?>> wrong = valueFor(\"key\");",
                 "await(map::call).until(singleEntry(matches((Map.Entry<String, Object> entry) -> entry.setValue(new Object()) != null)));",
                 "await(map::call).until(singleEntry(matches((Map.Entry<Object, Number> entry) -> true)));",
                 "await(map::call).until(singleEntry(matches((Map.Entry<String, Integer> entry) -> true)));",
                 "Map.Entry<String, String> wrong = await(map::call).until(singleEntry(matches((Map.Entry<String, Number> entry) -> true)));",
                 "await(collection::call).until(singleElement(matches(String::isBlank)));",
                 "AwaitResult<Map<String, Number>, String> wrong = await(map::call).tryUntil(valueFor(\"key\"));",
-                "List<String> wrong = await(map::call).until(valueFor(\"key\"), valueFor(\"key\"));")) {
+                "List<String> wrong = await(map::call).until(captured(valueFor(\"key\"), valueFor(\"key\")));")) {
             assertRejected(expression);
         }
     }
@@ -210,7 +224,7 @@ class ConditionTypeCompilationContractTest {
                 "Condition.Typed<Map<?, ?>, Object> erased = valueFor(\"key\");",
                 "Object value = await(() -> List.of(Optional.of(1))).until(singleElement(present));",
                 "Object value = await(() -> Optional.of(Map.of(\"key\", 1))).until(hasValue(valueFor(\"key\")));",
-                "List<Object> values = await(collection::call).until(singleElement, isNotNull);",
+                "List<Object> values = await(collection::call).until(captured(singleElement, isNotNull));",
                 "Callable<Map<String, Number>> plain = map; String value = await(plain::call).until(valueFor(\"key\"));",
                 "await(collection::call).until(CollectionConditions.sorted(String::compareTo));")) {
             assertRejected(expression);
@@ -222,6 +236,8 @@ class ConditionTypeCompilationContractTest {
                 import java.util.*;
                 import java.util.concurrent.Callable;
                 import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.result.*;
+                import io.github.gromoff97.awium.function.*;
                 import io.github.gromoff97.awium.Await.*;
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.Conditions.*;

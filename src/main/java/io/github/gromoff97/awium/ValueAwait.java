@@ -1,11 +1,23 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.Condition.CapturedSource;
+import io.github.gromoff97.awium.Condition.ApplicableCondition;
+import io.github.gromoff97.awium.Condition.PreservesObservation;
 import io.github.gromoff97.awium.Condition.Reference;
-import io.github.gromoff97.awium.Condition.SourceCondition;
+import io.github.gromoff97.awium.internal.ConditionAwaitAttempt;
+import io.github.gromoff97.awium.internal.FailureDiagnostics;
+import io.github.gromoff97.awium.internal.SequenceExecution;
+import io.github.gromoff97.awium.internal.WaitCompletion;
+import io.github.gromoff97.awium.internal.WaitConfiguration;
+import io.github.gromoff97.awium.internal.WaitEngine;
+import io.github.gromoff97.awium.result.AttemptRecord;
+import io.github.gromoff97.awium.result.AwaitFailure;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
@@ -18,7 +30,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @param <OBSERVED> complete value returned by the source
  */
-public sealed class ValueAwait<OBSERVED> permits Await {
+public sealed class ValueAwait<OBSERVED> permits SelectionAwait {
 
     private static final int MAX_RETAINED_ATTEMPTS = 256;
 
@@ -69,73 +81,71 @@ public sealed class ValueAwait<OBSERVED> permits Await {
         return new ValueAwait<>(source, configuration);
     }
 
-    public OBSERVED until(SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>> condition) {
-        return complete(ConditionAwaitAttempt.bind(required(condition)));
+    public <CHECK extends ApplicableCondition<? super OBSERVED, ? super Reference<? super OBSERVED>> & PreservesObservation>
+            OBSERVED until(CHECK condition) {
+        return complete(ConditionSupport.bind(required(condition)));
     }
 
     public <RESULT> RESULT until(Condition.Typed<? super OBSERVED, ? extends RESULT> condition) {
-        return complete(new ConditionAwaitAttempt<>(required(condition)));
+        return complete(ConditionSupport.bind(required(condition)));
     }
 
-    public AwaitResult<OBSERVED, OBSERVED> tryUntil(SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>> condition) {
-        return capture(ConditionAwaitAttempt.bind(required(condition)));
+    public <CHECK extends ApplicableCondition<? super OBSERVED, ? super Reference<? super OBSERVED>> & PreservesObservation>
+            AwaitResult<OBSERVED, OBSERVED> tryUntil(CHECK condition) {
+        return capture(ConditionSupport.bind(required(condition)));
     }
 
     public <RESULT> AwaitResult<OBSERVED, RESULT> tryUntil(Condition.Typed<? super OBSERVED, ? extends RESULT> condition) {
-        return capture(new ConditionAwaitAttempt<>(required(condition)));
+        return capture(ConditionSupport.bind(required(condition)));
     }
 
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    public final List<OBSERVED> until(SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>>... conditions) {
-        return until(ConditionSupport.captured(conditions));
+    public List<OBSERVED> until(
+            CapturedSource<? extends ApplicableCondition<? super OBSERVED, ? super Reference<? super OBSERVED>>> condition) {
+        return complete(SequenceExecution.<OBSERVED>captured(required(condition), ConditionSupport::observing));
     }
 
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    public final AwaitResult<OBSERVED, List<OBSERVED>> tryUntil(SourceCondition<? super OBSERVED, ? super Reference<? super OBSERVED>>... conditions) {
-        return tryUntil(ConditionSupport.captured(conditions));
+    public AwaitResult<OBSERVED, List<OBSERVED>> tryUntil(
+            CapturedSource<? extends ApplicableCondition<? super OBSERVED, ? super Reference<? super OBSERVED>>> condition) {
+        return capture(SequenceExecution.<OBSERVED>captured(required(condition), ConditionSupport::observing));
     }
 
-    /** Captures stages with the same declared result type, without widening it to a common supertype. */
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    public final <RESULT> List<RESULT> until(Condition.Typed<? super OBSERVED, RESULT>... conditions) {
-        return until(ConditionSupport.captured(conditions));
+    final <RESULT> RESULT complete(ConditionAwaitAttempt<OBSERVED, RESULT> attempt) {
+        return complete(new SequenceExecution<>(attempt)).getFirst();
     }
 
-    @SafeVarargs
-    @SuppressWarnings("varargs")
-    public final <RESULT> AwaitResult<OBSERVED, List<RESULT>> tryUntil(Condition.Typed<? super OBSERVED, RESULT>... conditions) {
-        return tryUntil(ConditionSupport.captured(conditions));
+    private <VALUE> List<VALUE> complete(SequenceExecution<OBSERVED, VALUE> execution) {
+        complete(new WaitEngine<>(configuration, source, execution).waitFor(), configuration);
+        return execution.values();
     }
 
-    final <RESULT> RESULT complete(ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> session) {
-        return complete(new WaitEngine<>(configuration, source, session).waitFor(), configuration);
-    }
-
-    static <OBSERVED, RESULT> RESULT complete(WaitCompletion<OBSERVED, RESULT> outcome,
+    static void complete(WaitCompletion outcome,
             WaitConfiguration configuration) {
-        if (outcome instanceof WaitCompletion.Satisfied<OBSERVED, RESULT> success) {
-            return success.result();
+        if (outcome instanceof WaitCompletion.Satisfied) {
+            return;
         }
         AwaitFailure failure = FailureDiagnostics.failure(outcome, configuration);
-        switch (failure.reason()) {
-            case TIMEOUT, PERSISTENCE_FAILED -> throw new AwaitAssertionError(failure);
-            default -> throw new AwaitExecutionException(failure);
-        }
+        new AwaitResult.Failed<>(List.of(), failure).orThrow();
     }
 
-    final <RESULT> AwaitResult<OBSERVED, RESULT> capture(ConditionAwaitAttempt<? super OBSERVED, ? extends RESULT> session) {
-        var attempts = new ArrayList<AttemptRecord<OBSERVED, RESULT>>();
-        var outcome = new WaitEngine<OBSERVED, RESULT>(configuration, source, session).waitFor(attempt -> {
+    final <RESULT> AwaitResult<OBSERVED, RESULT> capture(ConditionAwaitAttempt<OBSERVED, RESULT> attempt) {
+        return capture(new SequenceExecution<>(attempt), List::getFirst);
+    }
+
+    private AwaitResult<OBSERVED, List<OBSERVED>> capture(SequenceExecution<OBSERVED, OBSERVED> execution) {
+        return capture(execution, Function.identity());
+    }
+
+    private <VALUE, RESULT> AwaitResult<OBSERVED, RESULT> capture(
+            SequenceExecution<OBSERVED, VALUE> execution, Function<List<VALUE>, RESULT> result) {
+        var attempts = new ArrayList<AttemptRecord<OBSERVED>>();
+        var outcome = new WaitEngine<>(configuration, source, execution).waitFor(attempt -> {
             if (attempts.size() == MAX_RETAINED_ATTEMPTS) {
                 attempts.remove(1);
             }
             attempts.add(attempt);
         });
-        if (outcome instanceof WaitCompletion.Satisfied<OBSERVED, RESULT> success) {
-            return new AwaitResult.Satisfied<>(attempts, success.result());
+        if (outcome instanceof WaitCompletion.Satisfied) {
+            return new AwaitResult.Satisfied<>(attempts, result.apply(execution.values()));
         }
         return new AwaitResult.Failed<>(attempts,
                 FailureDiagnostics.failure(outcome, configuration));

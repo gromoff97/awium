@@ -1,16 +1,19 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.AwaitFailure;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
-import static io.github.gromoff97.awium.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.*;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
@@ -21,6 +24,51 @@ class NestedQuantifierTest {
 
     private static final User ACTIVE = new User(1, true);
     private static final User PENDING = new User(2, false);
+
+    @Test
+    void selectionsInsideQuantifiersCheckEachValueAndKeepTheOriginalCollection() {
+        var ready = new ArrayList<>(List.of(Optional.of(ACTIVE)));
+        var mixed = new ArrayList<>(List.of(Optional.<User>empty(), Optional.of(ACTIVE)));
+        var empty = new ArrayList<>(List.of(Optional.<User>empty()));
+
+        ArrayList<Optional<User>> allReady = await(() -> ready)
+                .until(all(OptionalConditions.present).because("each user is available"));
+        ArrayList<Optional<User>> someReady = await(() -> mixed)
+                .tryUntil(any(OptionalConditions.present)).orThrow();
+        ArrayList<Optional<User>> noneReady = await(() -> empty)
+                .until(none(OptionalConditions.present));
+
+        assertSame(ready, allReady);
+        assertSame(mixed, someReady);
+        assertSame(empty, noneReady);
+        var time = new FakeTime(0);
+        var failed = await(() -> mixed).usingTime(time, time).upTo(ofNanos(1))
+                .tryUntil(all(OptionalConditions.present).because("each user is available"));
+        assertEquals(AwaitFailure.Reason.TIMEOUT,
+                assertInstanceOf(AwaitResult.Failed.class, failed).failure().reason());
+        assertSame(mixed, failed.attempts().getFirst().observed());
+        assertEquals("each user is available", failed.attempts().getFirst().condition().explanation());
+    }
+
+    @Test
+    void mapQuantifiersAcceptSelectionsWithoutReturningTheirExtractedValues() {
+        var values = new LinkedHashMap<Optional<User>, List<User>>();
+        values.put(Optional.of(ACTIVE), List.of(ACTIVE));
+
+        LinkedHashMap<Optional<User>, List<User>> checkedKeys = await(() -> values)
+                .until(MapConditions.allKeys(OptionalConditions.present).because("keys are available"));
+        LinkedHashMap<Optional<User>, List<User>> checkedValues = await(() -> values)
+                .tryUntil(MapConditions.allValues(singleElement).because("one user per key")).orThrow();
+        assertSame(values, checkedKeys);
+        assertSame(values, checkedValues);
+        assertSame(values, await(() -> values).until(MapConditions.anyKey(OptionalConditions.present)));
+        assertSame(values, await(() -> values).until(MapConditions.anyValue(singleElement)));
+        assertSame(values, await(() -> values).until(MapConditions.noKey(OptionalConditions.absent)));
+        assertSame(values, await(() -> values).until(MapConditions.noValue(firstElement(instanceOf(String.class)))));
+
+        var indexed = Map.of("group", Map.of("user", ACTIVE));
+        assertSame(indexed, await(() -> indexed).until(MapConditions.allValues(MapConditions.valueFor("user"))));
+    }
 
     @Test
     void allAnyAndNoneAcceptConditionsAndPreserveTheConcreteSource() {
@@ -43,8 +91,7 @@ class NestedQuantifierTest {
         assertSame(heterogeneous, await(() -> heterogeneous).until(any(instanceOf(User.class))));
         assertSame(active, await(() -> active).until(all(instanceOf(User.class))));
         assertSame(pending, await(() -> pending).until(none(instanceOf(String.class))));
-        assertSame(mixed, assertInstanceOf(AwaitResult.Satisfied.class,
-                await(() -> mixed).tryUntil(any(check))).result());
+        assertSame(mixed, await(() -> mixed).tryUntil(any(check)).orThrow());
     }
 
     @Test
@@ -119,7 +166,7 @@ class NestedQuantifierTest {
                 var time = new FakeTime(0);
                 var result = await(() -> source).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1)).tryUntil(check);
                 if (source == successful) {
-                    assertSame(source, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+                    assertSame(source, result.orThrow());
                 } else {
                     var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
                     assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
@@ -185,7 +232,7 @@ class NestedQuantifierTest {
         assertSame(source, waiting.until(any(check)));
         assertSame(source, waiting.until(any(check)));
         assertEquals(2, factories[0]);
-        assertEquals(List.of(source, source), waiting.until(any(check), any(check)));
+        assertEquals(List.of(source, source), waiting.until(captured(any(check), any(check))));
         assertEquals(4, factories[0]);
     }
 

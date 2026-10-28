@@ -1,45 +1,50 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.Reference;
-import io.github.gromoff97.awium.Condition.SourceCondition;
+import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.internal.ConditionEvaluation;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.fail;
 
 final class ConditionTestRuntime {
 
     static Condition.Typed<Object, Object> diagnosticCondition(String description, Condition.Reference<?> reference) {
-        return new Condition.Typed<>(description, reference,
-                () -> actual -> AttemptResult.of(ConditionResult.satisfied(actual)));
+        return new Condition.Typed<>(description, reference, () -> ConditionEvaluation::satisfied);
     }
 
-    static <S, R> ConditionResult<? extends R> evaluate(
-            Condition.Typed<? super S, ? extends R> condition, S actual) {
-        return evaluated(new ConditionAwaitAttempt<>(condition).probe(actual));
+    static <SOURCE, RESULT> ConditionEvaluation<? extends RESULT> evaluate(
+            Condition.Typed<? super SOURCE, ? extends RESULT> condition, SOURCE actual) {
+        return evaluated(ConditionSupport.bind(condition).probe(actual));
     }
 
-    static <S> ConditionResult<? extends S> evaluate(
-            SourceCondition<? super S, ? super Reference<? super S>> condition, S actual) {
-        return evaluated(ConditionAwaitAttempt.<S, S>bind(condition).probe(actual));
+    static <SOURCE> ConditionEvaluation<? extends SOURCE> evaluate(
+            PreservingCondition<? super SOURCE> condition, SOURCE actual) {
+        return evaluated(ConditionSupport.<SOURCE, SOURCE>bind(condition).probe(actual));
     }
 
-    static <RESULT> ConditionResult<? extends RESULT> evaluated(AttemptResult<? extends RESULT> attempt) {
-        return switch (attempt) {
-            case AttemptResult.Evaluated<? extends RESULT> value -> value.result();
-            case AttemptResult.Uncontrolled<?> failure -> throw new AssertionError("condition failed", failure.cause());
-        };
+    static <SOURCE> ConditionEvaluation<? extends SOURCE> evaluate(
+            Condition.ComparisonCondition<? extends SOURCE> condition, SOURCE actual) {
+        return evaluated(ConditionSupport.<SOURCE, SOURCE>bind(condition).probe(actual));
     }
 
-    static void assertUnsatisfied(ConditionResult<?> evaluation) {
-        assertInstanceOf(ConditionResult.Unsatisfied.class, evaluation);
+    static <RESULT> ConditionEvaluation<? extends RESULT> evaluated(ConditionEvaluation<? extends RESULT> attempt) {
+        if (attempt instanceof ConditionEvaluation.Uncontrolled<?> failure) {
+            throw new AssertionError("condition failed", failure.status().cause());
+        }
+        return attempt;
     }
 
-    static <RESULT> RESULT result(ConditionResult<? extends RESULT> evaluation) {
-        assertInstanceOf(ConditionResult.Satisfied.class, evaluation);
-        return ((ConditionResult.Satisfied<? extends RESULT>) evaluation).result();
+    static void assertUnsatisfied(ConditionEvaluation<?> evaluation) {
+        assertInstanceOf(ConditionEvaluation.Unsatisfied.class, evaluation);
     }
 
-    static String mismatch(ConditionResult<?> evaluation) {
-        return assertInstanceOf(ConditionResult.Unsatisfied.class, evaluation).mismatch();
+    static <RESULT> RESULT result(ConditionEvaluation<? extends RESULT> evaluation) {
+        return evaluation instanceof ConditionEvaluation.Satisfied<? extends RESULT> success
+                ? success.value() : fail("condition was not satisfied");
+    }
+
+    static String mismatch(ConditionEvaluation<?> evaluation) {
+        return assertInstanceOf(ConditionEvaluation.Unsatisfied.class, evaluation).status().mismatch();
     }
 
     @SuppressWarnings("unchecked")

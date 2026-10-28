@@ -1,5 +1,8 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptRecord;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
@@ -7,9 +10,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.Conditions.equalTo;
 import static io.github.gromoff97.awium.Conditions.isNotNull;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -40,7 +43,7 @@ class TimingConfigurationTest {
                         if (outcome.equals("condition failure")) throw cause;
                         if (outcome.equals("mismatch")) return ConditionResult.unsatisfied("changed");
                     }
-                    return ConditionResult.satisfied(actual);
+                    return ConditionResult.satisfied();
                 }));
 
                 assertEquals(2, calls[0], outcome);
@@ -55,7 +58,7 @@ class TimingConfigurationTest {
                         last.timing().observationOffset(), outcome);
                 assertEquals(elapsed, last.timing().completionOffset(), outcome);
                 if (outcome.equals("success")) {
-                    assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+                    assertEquals("ready", result.orThrow());
                 } else {
                     var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
                     assertEquals(switch (outcome) {
@@ -115,7 +118,7 @@ class TimingConfigurationTest {
             factories[0]++;
             int[] calls = {0};
             return actual -> ++calls[0] == 2
-                    ? ConditionResult.satisfied(actual) : ConditionResult.unsatisfied("first observation");
+                    ? ConditionResult.satisfied() : ConditionResult.unsatisfied("first observation");
         });
         var waiting = await(() -> "ready").usingTime(() -> {
             clockReads[0]++;
@@ -130,7 +133,7 @@ class TimingConfigurationTest {
 
         time.advanceNanos(1000);
         var result = waiting.tryUntil(condition);
-        assertEquals("ready", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals("ready", result.orThrow());
         assertEquals(2, factories[0]);
         assertEquals(2, result.totalAttempts());
         assertEquals(ofNanos(0), result.attempts().getFirst().timing().startOffset());

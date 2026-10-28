@@ -28,7 +28,9 @@ dependencies {
 ```
 
 Awium has no compile or runtime dependencies. JUnit is used only to test the
-library itself. All public types are in `io.github.gromoff97.awium`.
+library itself. Fluent entry points and conditions are in `io.github.gromoff97.awium`.
+Results, attempts, and failures are in `io.github.gromoff97.awium.result`;
+checked callback interfaces are in `io.github.gromoff97.awium.function`.
 
 ## Conditions and results
 
@@ -102,50 +104,71 @@ keeps the method reference's input type and also accepts checks that throw check
 
 ### Ordered states
 
-Pass several compatible conditions to `until(...)` to wait for them in order.
-Each stage captures a value from a separate observation; the result is a list
-in stage order. `tryUntil(...)` returns the same list inside `AwaitResult`:
+Pass `captured(...)` to `until(...)` to wait for compatible conditions in order.
+Each successful stage captures the complete source observation; the result is a list
+in stage order. Both terminals accept exactly one condition.
+`tryUntil(...)` returns the same list inside `AwaitResult`:
 
 ```java
-List<Payment> payments = await(paymentRepository::load).until(
+import static io.github.gromoff97.awium.Conditions.captured;
+
+List<Payment> payments = await(paymentRepository::load).until(captured(
         matches(Payment::created),
         matches(Payment::pending),
-        equalTo(expectedPayment));
+        equalTo(expectedPayment)));
 
-AwaitResult<String, List<String>> statuses = await(paymentRepository::status).tryUntil(
+var statuses = await(paymentRepository::status).tryUntil(captured(
         equalTo("created"),
-        equalTo("paid"));
+        equalTo("paid")));
+List<String> capturedStatuses = statuses.orThrow();
 ```
 
 With `persisting(...)`, only the final stage is re-evaluated. Earlier captured
 values remain unchanged. Each factory-backed stage invokes its factory separately
-for every terminal call. One condition still returns one value; zero conditions
-are invalid. A comma between terminal arguments always means ordered capture.
-Comparisons and preserving checks can be mixed: `equalTo(expectedPayment)` and
-`matches(Payment::paid)` both capture the original payment. A sequence must use
-source-preserving checks, selections of the same source component, or conditions
-with a declared result type throughout. These categories cannot currently be
-mixed, even when their successful values have the same type. A selection followed
-by a value check belongs inside the selection condition instead.
-
-Type-narrowing stages and nested type selections can also be captured in order:
+for every terminal call. `until(condition)` returns that condition's result;
+`until(captured(condition))` returns a one-element list.
+`captured(...)` describes a terminal sequence; its stages are individual checks,
+not other capture sequences.
+Checks and selections can be mixed freely when they accept the source type.
+Every stage receives a fresh source observation. A selection does not pass its
+extracted value into the following stage, and its result type does not change
+what `captured` collects:
 
 ```java
-List<Payment> payments = await(repository::findAll).until(
-        singleElement(instanceOf(Payment.class)),
-        singleElement(instanceOf(Payment.class)));
+List<List<Payment>> observations = await(paymentRepository::findAll).until(captured(
+        CollectionConditions.hasSize(1),
+        singleElement(equalTo(expectedPayment)),
+        singleElement(Payment::paid),
+        singleElement(instanceOf(Payment.class))));
 ```
 
-These stages must declare the same result type. Mixing `instanceOf(String.class)`
-with `instanceOf(Integer.class)` is rejected instead of inferring `List<Object>`.
-For a class token stored in a variable, use a concrete type such as `Class<Integer>`
-or capture it in a generic helper accepting `Class<RESULT>`. Repeating a wildcard
-token such as `Class<? extends Number>` does not establish one result type: Java
-captures the wildcard separately for each argument, even when reusing a condition.
+A source returning `Payment` produces `List<Payment>`; a source returning
+`Optional<Payment>` produces `List<Optional<Payment>>`. Conditions with different
+declared results, such as `instanceOf(String.class)` and `instanceOf(Integer.class)`,
+can be successive stages for an `Object` source. Only their accepted input types
+must agree with the source. The original observations are retained by reference;
+copy mutable containers in the source callback if independent snapshots are needed.
 
-An array of compatible conditions can be passed directly. It is copied before
-polling and always produces a captured list, including for a one-element array.
-An empty array is rejected before invoking the source.
+Capture definitions retain input and comparison constraints, independently of the
+source's concrete result type. For example, `captured(present, present).because("available twice")`
+can be stored and reused with different optional element types; each wait returns
+its own correctly typed observations.
+Chaining `because` onto combinations of nested comparisons and predicates can
+still need an explicit source type on `captured`: for example,
+`Conditions.<List<Payment>>captured(...)`,
+`Conditions.<Optional<Payment>>captured(...)`, or
+`Conditions.<Map<String, Payment>>captured(...)`. This also applies to `because`
+on combinations of selectors requiring different container interfaces. The hint
+specifies the source type once for the entire sequence; incompatible checks are
+still rejected. If the same sequence also compares the complete source, the
+factory can need both source and expected-value type hints, such as
+`Conditions.<List<Payment>, List<Payment>>captured(...)`.
+
+An array of compatible conditions can be passed to `captured(conditions)`.
+The factory copies the array immediately, so later edits to the array cannot change
+the sequence. An empty array, a null array, or a null stage is rejected at construction.
+The resulting condition can be reused across waits, and `.because(...)` can explain
+either the whole sequence or an individual stage.
 
 ## Timing
 
@@ -289,6 +312,10 @@ the map depends on that map's entry implementation.
 
 `all`, `any`, `none`, and the map entry/key/value quantifiers also accept a nested
 condition, for example `all(matches(Payment::paid))`.
+Collection element and map key/value quantifiers also accept selectors:
+`all(present)` checks a collection of optionals, and `allValues(singleElement)`
+checks that each collection in a map has one element. They return the original
+collection or map; the values extracted by the nested checks are discarded.
 They preserve the complete observed container. A nested type check tests each
 candidate; it does not change the container's declared element type. Evaluation
 short-circuits on the first decisive candidate. Nested state is created lazily
@@ -307,7 +334,8 @@ Structural single-value selections use one iterator to distinguish zero, one,
 and several values, without counting the whole collection. This also avoids
 using a stale size when a concurrent collection changes before iteration.
 `firstElement` and `lastElement` select through forward and reverse traversal; an empty
-traversal causes a retry. `elementAt(index)` traverses up to the requested position,
+traversal causes a retry. All three selectors accept `SequencedCollection`, including
+lists, deques, and sequenced sets. `elementAt(index)` traverses up to the requested position,
 so its cost grows with the index even for an array-backed list. These selections
 use the values seen in one traversal instead of a separate size check and read.
 The observation remains a caller-owned object, not an atomic snapshot.
@@ -322,7 +350,8 @@ and keeps its state across retries within that stage. The nested check runs at
 most once per attempt.
 
 Selections such as bare `present`, `singleElement`, and `valueFor(key)` obtain their
-result type from the source at the terminal. They cannot themselves be nested:
+result type from the source at the terminal. They can be checked by collection element
+and map key/value quantifiers, but cannot be nested inside another selection:
 `singleElement(present)` and `singleElement(singleElement)` are not supported. Nested selections with
 a declared result type, such as `singleElement(instanceOf(Payment.class))`, can be used
 as conditions inside another selection or quantifier.
@@ -347,12 +376,12 @@ Each selector first extracts its value, then applies the nested check:
 indexed element. A mismatch causes a retry; it never makes the selector search
 for another element in the same observation.
 
-To collect selected values in order, pass several selections to the terminal:
+To retain the source observations at successive selection stages, use `captured(...)`:
 
 ```java
-List<Payment> payments = await(paymentRepository::findAll).until(
+List<List<Payment>> observations = await(paymentRepository::findAll).until(captured(
         singleElement(Payment::created),
-        singleElement(Payment::paid));
+        singleElement(Payment::paid)));
 ```
 
 ## Custom conditions
@@ -360,8 +389,8 @@ List<Payment> payments = await(paymentRepository::findAll).until(
 Use `condition(...)` for a named check with an explicit satisfaction result:
 
 ```java
-import static io.github.gromoff97.awium.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.condition;
 
 Payment payment = await(paymentRepository::load).until(condition(
@@ -376,9 +405,10 @@ success, `unsatisfied()` when no extra mismatch text is needed, or
 `unsatisfied(message, cause)` to attach
 diagnostics. A condition returns only `Satisfied` or `Unsatisfied`; any thrown
 `Throwable` becomes an uncontrolled attempt and stops the wait.
-Callback payloads are ignored, so a callback returning `ConditionResult<Void>`
-works directly with both custom-condition factories. Its input type still
+`ConditionResult` has no type parameters or value payload. The callback input
 constrains the observed value, and the terminal returns that original value.
+The same satisfaction or mismatch status is available in each attempt record;
+`AttemptResult` additionally permits an `Uncontrolled` failure.
 
 `condition(description, callback)` reuses the supplied callback.
 `conditionPerWait(description, factory)` accepts a JDK `Callable` supplying a
@@ -408,7 +438,7 @@ Import only the catalogue used by a test. Shared names such as `empty`,
 
 | Provider | Conditions | Successful result |
 | --- | --- | --- |
-| `Conditions` | `condition`, `conditionPerWait`, `asserted`, object equality and identity, type checks, `matches`, and comparable ranges | observed or narrowed value |
+| `Conditions` | `condition`, `conditionPerWait`, `asserted`, object equality and identity, type checks, `matches`, comparable ranges, and `captured` | observed or narrowed value, or captured list |
 | `OptionalConditions` | `present`, `absent`, `hasValue` | contained or narrowed value; original optional for `absent` |
 | `StringConditions` | empty/blank checks, content, prefix, suffix, regex, case-insensitive equality, and `hasLength...` | observed text, including `StringBuilder` and `CharBuffer` |
 | `CollectionConditions` | `singleElement`, empty/null/duplicate checks, quantifiers, membership, exact content, sequences, `firstElement`, `lastElement`, `elementAt`, `sorted`, and `hasSize...` | observed collection or selected element |
@@ -434,7 +464,7 @@ Ordered checks require `SequencedCollection`. These source requirements apply
 equally to predicates, comparisons, and conditions with a declared result type.
 For ordered views of a `SequencedMap`, use `sequencedKeySet()`, `sequencedValues()`,
 or `sequencedEntrySet()`. They retain the ordering contract needed by `firstElement`,
-`lastElement`, and `containsExactly(...)`; plain `values()` exposes only `Collection`.
+`lastElement`, `elementAt(...)`, and `containsExactly(...)`; plain `values()` exposes only `Collection`.
 
 Text conditions accept any `CharSequence` and preserve the source's concrete type
 and instance, including inside container selections.
@@ -565,6 +595,10 @@ As with other generic conditions, appending `because` to a predicate or nested c
 require a typed lambda parameter or a method reference, for example
 `hasEntry((Map.Entry<String, String> entry) -> entry.getValue().equals("READY")).because("A ready entry is required")`.
 The two-argument predicate `hasEntry((key, value) -> ...)` is also available.
+Entry callbacks may call `setValue`, so they require compatible entry types.
+For a covariant map view, use the read-only key/value predicate with known
+parameter types. With an exact map type, putting `because` on the nested check
+inside `singleEntry(...)` also keeps the source available for type inference.
 
 `hasNoEntry` accepts the same argument forms: a key-value pair, a predicate on
 one entry, a predicate on its key and value, or a nested condition. It succeeds
@@ -672,6 +706,13 @@ Payment payment = await(payments).until(singleElement);
 Map.Entry<? extends String, ? extends Payment> entry = await(index).until(singleEntry);
 ```
 
+A view retains its source's wildcard type for condition compatibility. A nested
+comparison such as `singleElement(equalTo(expectedPayment))` can therefore be
+rejected for `List<? extends Payment>`, although bare `singleElement` returns a
+`Payment`. Use `singleElement(expectedPayment::equals)` for that view; the same
+condition works directly and inside `captured`. Map value comparisons have the
+same restriction when their value type has an upper-bounded wildcard.
+
 Use typed views when collecting mutable covariant values across observations,
 too: they keep the observations' wildcard types independent despite
 [Java's lambda capture limitation](https://bugs.openjdk.org/browse/JDK-8170887).
@@ -685,7 +726,11 @@ remains owned by the caller.
 ## Diagnostic waits
 
 Finish the same source configuration with `tryUntil(...)` to return an
-`AwaitResult<OBSERVED, RESULT>` for both success and failure:
+`AwaitResult<OBSERVED, RESULT>` for both success and failure.
+`OBSERVED` is the complete source value and `RESULT` is the final result.
+For example, selecting `present` from an optional gives
+`AwaitResult<Optional<Payment>, Payment>`. Capturing those selections in order
+gives `AwaitResult<Optional<Payment>, List<Optional<Payment>>>`:
 
 ```java
 import static io.github.gromoff97.awium.Await.await;
@@ -696,6 +741,12 @@ var result = await(paymentRepository::find).upTo(TIMEOUT).tryUntil(present);
 `AwaitResult.Satisfied` contains the terminal result. `AwaitResult.Failed`
 contains an `AwaitFailure` with `reason()`, `message()`, the original `cause()`
 and immutable `suppressed()` causes. It does not construct a wrapper exception.
+When failure should stop the calling code, `Payment payment = result.orThrow()`
+returns the typed value or throws the same failure as `until`. It keeps the
+existing attempt history and does not run the source or conditions again.
+For a captured result, `orThrow()` returns the list of source observations.
+A successful `null` remains `null`.
+
 Java 21 record patterns retain the result type: `payment` below is a `Payment`,
 without casts or repeated generic arguments.
 
@@ -714,19 +765,37 @@ switch (result) {
 
 Both results expose `attempts()`, an immutable list of `AttemptRecord` values.
 Each record has a one-based `number()`, an acquisition or persistence `phase()`,
-the associated `condition()`, sequence `progress()`, and an `outcome()`.
-Progress is `null` until a sequence stage has been evaluated. It exposes the
-number of captured stages, the total, `lastEvaluatedStageNumber()`, and
-`activeCondition()`. Source and waiting failures retain the last known progress.
-Sequence failure messages show the active condition's one-based position as
-`Stage: 2 of 3`. After an intermediate success, this points to the next condition;
-the final condition stays active during persistence checks.
+the associated `condition()`, sequence `progress()`, `observed()`, and `result()`.
+For a capture sequence, progress holds its immutable `sequence()` definition,
+the attempt's one-based `stageNumber()`, and `capturedStages()` after the attempt.
+The total is `sequence().stages().size()`. Progress is `null` for a single check.
+An attempt records the condition it checked, even when success advances the
+sequence. If waiting or source retrieval fails before evaluation, the condition
+and stage identify the intended check and the captured count stays unchanged.
 
-`AttemptRecord.Outcome.Evaluated` holds the observed value
-and its `evaluation()`: `ConditionResult.Satisfied` or `Unsatisfied`. Thrown
-condition failures use `ConditionFailed`. Waiting, source retrieval, and source
-interruption have their own outcomes, so an absent observation is distinct
-from a legitimate `null` value. All outcomes expose `cause()`.
+`AttemptRecord<OBSERVED>` keeps the source observation and a non-generic
+`AttemptResult`: `AttemptResult.Satisfied`, `AttemptResult.Unsatisfied`, or
+`AttemptResult.Uncontrolled`. The first two also implement `ConditionResult`,
+which is the restricted return type of a custom check. A mismatch
+retains its explanation and optional cause; an uncontrolled result retains
+its cause and `operation()` (`WAITING`, `SOURCE`, or `CONDITION`).
+The extracted value belongs to the final result, not to the diagnostic status.
+Use `hasObservation()` to distinguish a legitimate `null` returned by the source
+from a failure before a value was obtained. All attempt results expose `cause()`.
+
+A successful intermediate stage remains `Satisfied` in history while the
+overall sequence continues. For `captured(equalTo("created"), equalTo("paid"))`:
+
+| Attempt | Observation | Stage | Evaluation | Captured stages |
+| --- | --- | --- | --- | --- |
+| 1 | `"created"` | 1 | `Satisfied` | 1 |
+| 2 | `"pending"` | 2 | `Unsatisfied` | 1 |
+| 3 | `"paid"` | 2 | `Satisfied` | 2 |
+
+The final result is `["created", "paid"]`; individual attempts retain their
+observations and statuses. Sequence failure messages show the attempted
+stage as `Stage: 2 of 3`. A timeout after an intermediate success also identifies
+the next stage separately. Persistence rechecks only the final stage.
 
 Each attempt exposes `timing()`, an `AttemptRecord.Timing` with offsets from the start of the
 terminal call. `startOffset()` marks the attempt's start before waiting;
@@ -790,16 +859,32 @@ Run `./gradlew check` for behavior, fluent compilation, and packaged-module
 checks; `./gradlew pitest` runs mutation testing.
 
 `Condition` owns the immutable definition and diagnostic reference.
+`Condition.Check` describes one check; `Condition.Captured` holds ordered checks.
 Its typed families let terminal overloads preserve or select the source's type.
-Preserving checks and comparisons share `SourceCondition`, whose input and
-expected-value bounds allow mixed stages while retaining the complete source type.
-Selector contracts check the container type and the nested callback's input separately.
+Preserving checks and comparisons share one terminal overload through the sealed,
+non-generic `PreservesObservation` marker; selectors and narrowing checks cannot
+enter that overload.
+Checks share `ApplicableCondition`, which describes accepted inputs and expected-value
+compatibility. Selectors have one input type parameter; their complete container bounds
+also constrain nested checks. Direct waits and captured stages validate that same input. `Conditions.captured(...)` creates an explicit sequence
+of any source-compatible checks and captures their original observations. Its
+`Condition.CapturedSource<CHECK>` carries the stage checks' input and comparison
+constraints independently of their result types. Its factories retain those
+constraints when combining checks or adding `because`; mixed input shapes can
+also be inferred from the terminal call. Input-only checks share
+`InputCondition<INPUT>`, allowing reusable capture definitions without widening
+the observations returned by a particular source.
 Each terminal call creates fresh `ConditionAwaitAttempt` instances, which
 initialize callbacks lazily and convert thrown failures into internal
-uncontrolled results. `SequenceExecution` owns ordered stage progress and
-captured values. Public `ConditionResult` has only satisfaction and mismatch.
+uncontrolled evaluations. `SequenceExecution` owns ordered stage progress and
+captured values. The non-generic `ConditionResult` supplies satisfaction and mismatch
+statuses; `AttemptResult` also permits an uncontrolled failure. The internal
+`ConditionEvaluation<RESULT>` carries a selected value and diagnostic condition.
+Sequence execution passes its status directly to history.
 
-`ValueAwait` and `Await` retain immutable fluent configuration. `WaitEngine`
+`Await` supplies the source factories. `ValueAwait<OBSERVED>` and
+`SelectionAwait<OBSERVED, ELEMENT>` retain immutable fluent configuration;
+`MapAwait<OBSERVED, ENTRY, VALUE>` also supports map-value selection. `WaitEngine`
 owns polling, source retrieval, and attempt timing; `ValueAwait` bounds the
 history for `tryUntil`. `FailureDiagnostics` formats the terminal failure
 without replacing its category or cause. A successful check can still finish
@@ -808,7 +893,7 @@ too late.
 `ConditionSupport` shares condition construction, checks, extraction, and
 composition; catalogues supply nested conditions without creating execution
 attempts. Failed extraction reports its own condition: optional presence,
-the requested list position, or the map lookup key. Map entry access failures
+the requested collection position, or the map lookup key. Map entry access failures
 also retain the lookup key. After extraction succeeds, diagnostics use the
 nested condition's expectation. Interruption during extraction keeps the selector
 context and skips the nested check.
@@ -817,9 +902,11 @@ Catalog and fluent behavior tests use virtual time. Integration tests verify
 caller-thread execution and external cancellation on both platform and virtual
 threads, plus independent condition state during concurrent waits.
 
-The module exports one package. Implementation types are package-private on
-both the module path and the classpath; custom conditions use the factories in
-`Conditions`. Artifact checks also verify that execution classes do not depend
+The module exports the three public API packages. Execution lives in
+`io.github.gromoff97.awium.internal`, which the module does not export. These classes
+are accessible on the classpath but are not supported API. Condition binding and
+value-matching helpers remain package-private. Custom conditions use the factories
+in `Conditions`. Artifact checks also verify that execution classes do not depend
 on the fluent facade, condition catalogs, or diagnostic formatting, and that
 catalogues do not depend directly on execution classes.
 

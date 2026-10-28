@@ -1,6 +1,8 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.result.AwaitFailure;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.nio.CharBuffer;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +13,7 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Conditions.captured;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -115,7 +118,7 @@ class TextExpectedValuesTest {
             assertSame(actual, value);
             assertEquals(actual.capacity(), value.capacity());
             AwaitResult<StringBuilder, StringBuilder> captured = waiting.tryUntil(condition);
-            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+            assertSame(actual, captured.orThrow());
 
             actual.replace(0, actual.length(), check.mismatch());
             var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(condition)).failure();
@@ -129,7 +132,7 @@ class TextExpectedValuesTest {
         var text = new StringBuilder("ready");
         var expected = CharBuffer.wrap("ready");
         var condition = StringConditions.contentEquals(expected);
-        var values = await(() -> text).until(condition, condition);
+        var values = await(() -> text).until(captured(condition, condition));
         assertSame(text, values.getFirst());
         assertEquals(text.capacity(), values.getLast().capacity());
 
@@ -162,7 +165,7 @@ class TextExpectedValuesTest {
         expected[1] = "changed";
 
         var text = new StringBuilder("ready");
-        var values = await(() -> text).until(included, included);
+        var values = await(() -> text).until(captured(included, included));
         assertSame(text, values.getFirst());
         assertEquals(text.capacity(), values.getLast().capacity());
         assertEquals(6, await(() -> "failed").until(excluded).length());
@@ -184,7 +187,7 @@ class TextExpectedValuesTest {
             assertSame(actual, included);
             assertSame(actual, excluded);
             for (var check : List.of(StringConditions.containsAll(List.of()), StringConditions.doesNotContainAny(List.of()))) {
-                assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, waiting.tryUntil(check)).result());
+                assertSame(actual, waiting.tryUntil(check).orThrow());
                 var absent = await(() -> (StringBuilder) null).usingTime(time, time)
                         .every(ofNanos(1)).upTo(ofNanos(2)).tryUntil(check);
                 assertEquals(AwaitFailure.Reason.TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, absent).failure().reason());

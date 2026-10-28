@@ -1,5 +1,9 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.function.CheckedPredicate;
+import io.github.gromoff97.awium.result.AwaitAssertionError;
+import io.github.gromoff97.awium.result.AwaitFailure;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -24,7 +28,8 @@ class ConditionExplanationTest {
     @Test
     void reasonsAreIndependentCopiesForEveryConditionFamily() {
         for (Condition original : List.of(isNotNull, equalTo("ready"), present, singleElement,
-                valueFor("id"), instanceOf(User.class))) {
+                valueFor("id"), instanceOf(User.class), captured(isNotNull), captured(equalTo("ready")),
+                captured(present), captured(valueFor("id")), captured(instanceOf(User.class)))) {
             var first = original.because("first reason");
             var second = first.because("second reason");
 
@@ -56,7 +61,7 @@ class ConditionExplanationTest {
         User found = await(optional).until(present.because("user must exist"));
         User mapped = await(map).until(valueFor("id", (User value) -> value.active()).because("user must be active"));
         User narrowed = await(() -> (Object) user).until(instanceOf(User.class).because("user value required"));
-        Condition.SourceCondition<User, Condition.Reference<?>> check = matches(User::active);
+        Condition.PreservingCondition<User> check = matches(User::active);
         User direct = await(() -> user).until(check.because("active user required"));
 
         assertSame(users, checked);
@@ -98,17 +103,19 @@ class ConditionExplanationTest {
         var first = equalTo("created").because("payment must be created");
         var second = equalTo("paid").because("payment must be completed");
 
-        var result = waiting.tryUntil(first, second);
+        var sequence = captured(first, second).because("checkout lifecycle");
+        var result = waiting.tryUntil(sequence);
         var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
-        var thrown = assertThrows(AwaitAssertionError.class, () -> waiting.until(first, second));
+        var thrown = assertThrows(AwaitAssertionError.class, () -> waiting.until(sequence));
 
         assertEquals(thrown.getMessage(), failure.message());
         assertTrue(failure.message().contains("Stage: 2 of 2"), failure.message());
         assertTrue(failure.message().contains("Expected: paid"), failure.message());
         assertTrue(failure.message().contains("Because: payment must be completed"), failure.message());
+        assertTrue(failure.message().contains("Because: checkout lifecycle"), failure.message());
         assertTrue(failure.message().contains("Mismatch: value was not equal"), failure.message());
         assertFalse(failure.message().contains("payment must be created"), failure.message());
-        assertEquals(second.explanation(), result.attempts().getLast().progress().activeCondition().explanation());
+        assertEquals(second.explanation(), result.attempts().getLast().condition().explanation());
     }
 
     @Test

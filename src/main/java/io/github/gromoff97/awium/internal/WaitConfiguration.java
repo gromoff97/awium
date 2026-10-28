@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.internal;
 
 import java.time.Duration;
 import java.util.concurrent.locks.LockSupport;
@@ -7,14 +7,14 @@ import java.util.function.LongSupplier;
 
 import static java.util.Objects.requireNonNull;
 
-record WaitConfiguration(long everyNanos, long upToNanos, long persistenceNanos,
+public record WaitConfiguration(long everyNanos, long upToNanos, long persistenceNanos,
         LongSupplier clock, LongConsumer parker) {
 
-    static final WaitConfiguration DEFAULT = new WaitConfiguration(
+    public static final WaitConfiguration DEFAULT = new WaitConfiguration(
             Duration.ofMillis(100).toNanos(), Duration.ofSeconds(10).toNanos(), 0L,
             System::nanoTime, LockSupport::parkNanos);
 
-    WaitConfiguration {
+    public WaitConfiguration {
         requireNonNull(clock, "clock must not be null");
         requireNonNull(parker, "parker must not be null");
         requirePositive(everyNanos, "polling interval");
@@ -24,19 +24,19 @@ record WaitConfiguration(long everyNanos, long upToNanos, long persistenceNanos,
         }
     }
 
-    WaitConfiguration withEvery(Duration value) {
+    public WaitConfiguration withEvery(Duration value) {
         return new WaitConfiguration(nanos(value, "polling interval"), upToNanos, persistenceNanos, clock, parker);
     }
 
-    WaitConfiguration withUpTo(Duration value) {
+    public WaitConfiguration withUpTo(Duration value) {
         return new WaitConfiguration(everyNanos, nanos(value, "acquisition timeout"), persistenceNanos, clock, parker);
     }
 
-    WaitConfiguration withPersistence(Duration value) {
+    public WaitConfiguration withPersistence(Duration value) {
         return new WaitConfiguration(everyNanos, upToNanos, nanos(value, "persistence duration"), clock, parker);
     }
 
-    WaitConfiguration withTime(LongSupplier clock, LongConsumer parker) {
+    public WaitConfiguration withTime(LongSupplier clock, LongConsumer parker) {
         return new WaitConfiguration(everyNanos, upToNanos, persistenceNanos, clock, parker);
     }
 

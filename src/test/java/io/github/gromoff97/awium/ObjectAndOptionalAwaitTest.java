@@ -1,7 +1,11 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
+import io.github.gromoff97.awium.internal.ConditionEvaluation.Unsatisfied;
+import io.github.gromoff97.awium.result.AwaitAssertionError;
+import io.github.gromoff97.awium.result.AwaitFailure;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -10,15 +14,15 @@ import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.OptionalConditions.*;
-import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
+import static io.github.gromoff97.awium.internal.WaitConfiguration.DEFAULT;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -49,7 +53,7 @@ class ObjectAndOptionalAwaitTest {
         assertEquals(1, selectedMap.get("ready").intValue());
         assertSame(optional, selectedOptional);
         assertEquals(5, selectedOptional.orElseThrow().length());
-        assertSame(map, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+        assertSame(map, captured.orThrow());
     }
 
     @Test
@@ -62,12 +66,12 @@ class ObjectAndOptionalAwaitTest {
             var value = waiting.until(in(singletonList(actual.clone())));
             AwaitResult<String[], String[]> captured = waiting.tryUntil(
                     in(singletonList(actual.clone())));
-            var values = waiting.until(in(singletonList(actual.clone())),
-                    notIn(singletonList(new String[]{"failed"})));
+            var values = waiting.until(captured(in(singletonList(actual.clone())),
+                    notIn(singletonList(new String[]{"failed"}))));
 
             assertSame(actual, value);
             assertEquals(actual.length, value.length);
-            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+            assertSame(actual, captured.orThrow());
             assertSame(actual, values.getFirst());
             assertEquals(actual.length, values.getLast().length);
             if (value.length > 0) assertEquals(5, value[0].length());
@@ -88,7 +92,7 @@ class ObjectAndOptionalAwaitTest {
             String excluded = waiting.until(notIn(List.of()));
             assertSame(actual, excluded);
             AwaitResult<String, String> captured = waiting.tryUntil(notIn(List.of()));
-            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+            assertSame(actual, captured.orThrow());
 
             var failed = waiting.tryUntil(in(List.of()));
             assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, failed).failure().reason());
@@ -131,7 +135,7 @@ class ObjectAndOptionalAwaitTest {
         assertSame(ready, waiting.until(matches(actual -> actual == ready)));
         var result = waiting.tryUntil(matches(ready::equals));
 
-        assertSame(ready, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertSame(ready, result.orThrow());
         assertEquals(2, result.totalAttempts());
         assertEquals(4, calls[0]);
         assertEquals(List.of(2L, 2L), time.parkRequests);
@@ -148,7 +152,7 @@ class ObjectAndOptionalAwaitTest {
         AwaitResult<String, String> result = waiting.tryUntil(condition);
 
         assertSame(actual, value);
-        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertSame(actual, result.orThrow());
     }
 
     @Test
@@ -156,7 +160,7 @@ class ObjectAndOptionalAwaitTest {
         var pollingTime = new FakeTime(0);
         assertNull(await((Callable<Object>) () -> null).usingTime(pollingTime, pollingTime).until(isNull));
         assertNull(await((Callable<String>) () -> null).usingTime(pollingTime, pollingTime).until(matches(actual -> actual == null)));
-        assertNull(await((Callable<String>) () -> null).usingTime(pollingTime, pollingTime).until(condition("nullable property", ConditionResult::satisfied)));
+        assertNull(await((Callable<String>) () -> null).usingTime(pollingTime, pollingTime).until(condition("nullable property", ignored -> ConditionResult.satisfied())));
     }
 
     @Test
@@ -166,13 +170,13 @@ class ObjectAndOptionalAwaitTest {
         var time = new FakeTime(0);
         var waiting = await(() -> observations[reads[0]++]).usingTime(time, time).every(ofNanos(1));
 
-        List<String> values = waiting.until(isNull, isNotNull);
-        AwaitResult<String, List<String>> captured = waiting.tryUntil(
-                isNull, isNotNull);
+        List<String> values = waiting.until(captured(isNull, isNotNull));
+        AwaitResult<String, List<String>> captured = waiting.tryUntil(captured(
+                isNull, isNotNull));
 
         assertNull(values.getFirst());
         assertEquals("ready", values.getLast());
-        assertEquals(values, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+        assertEquals(values, captured.orThrow());
         assertEquals(2, captured.totalAttempts());
         assertEquals(4, reads[0]);
     }
@@ -211,7 +215,7 @@ class ObjectAndOptionalAwaitTest {
         ValueAwait<Integer> stage = stage(time, () -> ++calls[0]);
         PreservingCondition<Integer> evenObservation = condition(
                 "even observation", value -> value % 2 == 0
-                        ? satisfied(value)
+                        ? satisfied()
                         : unsatisfied("odd observation"));
 
         assertEquals(2, stage.until(evenObservation));
@@ -240,7 +244,7 @@ class ObjectAndOptionalAwaitTest {
                 () -> stage.until(broken)).getCause());
 
         assertEquals("value", stage.until(condition(
-                "ready", ConditionResult::satisfied)));
+                "ready", ignored -> ConditionResult.satisfied())));
         assertEquals(5, sourceCalls[0]);
     }
 

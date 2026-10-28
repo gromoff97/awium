@@ -1,16 +1,20 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptRecord;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.List;
 import java.util.stream.LongStream;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.AttemptRecord.Phase.ACQUISITION;
-import static io.github.gromoff97.awium.AttemptRecord.Phase.PERSISTENCE;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
-import static io.github.gromoff97.awium.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.Conditions.condition;
+import static io.github.gromoff97.awium.result.AttemptRecord.Phase.ACQUISITION;
+import static io.github.gromoff97.awium.result.AttemptRecord.Phase.PERSISTENCE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -21,7 +25,7 @@ class TryUntilHistoryTest {
         var time = new FakeTime(0);
         var probe = new ThrowingProbe();
         var execution = timedAwait(() -> probe,
-                config(1, 10, 3), time, time).tryUntil(condition("ready", actual -> satisfied(probe)));
+                config(1, 10, 3), time, time).tryUntil(condition("ready", actual -> satisfied()));
 
         assertEquals(4, execution.totalAttempts());
         assertEquals(List.of(1L, 2L, 3L, 4L), numbers(execution));
@@ -50,10 +54,10 @@ class TryUntilHistoryTest {
     void capturesEachStageEvenWhenDiagnosticsMatch() {
         var time = new FakeTime(0);
         var actual = new Object();
-        var result = timedAwait(() -> actual, config(1, 10, 0), time, time).tryUntil(
-                condition("same description", ConditionResult::satisfied),
-                condition("same description", ConditionResult::satisfied),
-                condition("same description", ConditionResult::satisfied));
+        var result = timedAwait(() -> actual, config(1, 10, 0), time, time).tryUntil(captured(
+                condition("same description", ignored -> ConditionResult.satisfied()),
+                condition("same description", ignored -> ConditionResult.satisfied()),
+                condition("same description", ignored -> ConditionResult.satisfied())));
 
         assertEquals(3, result.totalAttempts());
         assertEquals(List.of(1L, 2L, 3L), numbers(result));

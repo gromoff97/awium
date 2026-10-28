@@ -1,11 +1,13 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.ConditionResult.Satisfied;
+import io.github.gromoff97.awium.internal.ConditionEvaluation;
+
+
+import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.TIMEOUT;
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
@@ -13,6 +15,7 @@ import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.OptionalConditions.*;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -49,7 +52,7 @@ class ObjectAndOptionalConditionsTest {
         assertSame(equalActual, result(evaluate(notSameAs(expected), equalActual)));
         assertUnsatisfied(evaluate(notSameAs(equalActual), equalActual));
         assertNull(result(evaluate(equalTo(null), null)));
-        ConditionResult<?> arrays = evaluate(equalTo(
+        ConditionEvaluation<?> arrays = evaluate(equalTo(
                 new int[]{1, 2}), new int[]{1, 2});
         assertEquals(Satisfied.class, arrays.getClass());
         assertEquals(int[].class, result(arrays).getClass());

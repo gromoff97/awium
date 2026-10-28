@@ -1,5 +1,8 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.AttemptRecord;
+import io.github.gromoff97.awium.result.AttemptResult;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -8,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
+import static io.github.gromoff97.awium.AwaitTestAccess.evaluated;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.Conditions.isNotNull;
 import static io.github.gromoff97.awium.Conditions.isNull;
@@ -32,8 +36,10 @@ class TryUntilTest {
 
         AwaitResult<Number, BigDecimal> result = await(source).usingTime(time, time).tryUntil(Conditions.instanceOf(BigDecimal.class));
 
-        assertSame(actual, satisfied(result).result());
-        assertSame(actual, assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, result.attempts().getFirst().outcome()).observed());
+        BigDecimal selected = result.orThrow();
+        assertSame(actual, selected);
+        assertSame(selected, result.orThrow());
+        assertSame(actual, evaluated(result.attempts().getFirst()).observed());
         assertEquals(1, reads[0]);
     }
 
@@ -46,12 +52,11 @@ class TryUntilTest {
         AwaitResult<String, String> result = timedAwait(() -> results.get(calls[0]++),
                 config(2, 10, 3), time, time).tryUntil(isNotNull);
 
-        var success = satisfied(result);
-        assertEquals("boundary", success.result());
+        assertEquals("boundary", result.orThrow());
         assertEquals(List.of(AttemptRecord.Phase.ACQUISITION,
                         AttemptRecord.Phase.PERSISTENCE,
                         AttemptRecord.Phase.PERSISTENCE),
-                success.attempts().stream().map(AttemptRecord::phase).toList());
+                result.attempts().stream().map(AttemptRecord::phase).toList());
     }
 
     @Test
@@ -62,13 +67,12 @@ class TryUntilTest {
         AwaitResult<Optional<String>, String> selected =
                 await(() -> Optional.of("payment")).usingTime(pollingTime, pollingTime).tryUntil(present);
 
-        assertNull(satisfied(nullSource).result());
-        assertNull(satisfied(nullPredicate).result());
-        var observation = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class,
-                satisfied(nullSource).attempts().getFirst().outcome());
-        assertInstanceOf(ConditionResult.Satisfied.class, observation.evaluation());
+        assertNull(nullSource.orThrow());
+        assertNull(nullPredicate.orThrow());
+        var observation = evaluated(nullSource.attempts().getFirst());
+        assertInstanceOf(AttemptResult.Satisfied.class, observation.result());
         assertNull(observation.observed());
-        assertEquals("payment", satisfied(selected).result());
+        assertEquals("payment", selected.orThrow());
     }
 
     @Test
@@ -76,15 +80,14 @@ class TryUntilTest {
         var time = new FakeTime(0);
         var stage = timedAwait(() -> "actual", config(1, 2, 0), time, time);
 
-        var first = satisfied(stage.tryUntil(isNotNull));
-        var second = satisfied(stage.tryUntil(isNotNull));
+        var first = stage.tryUntil(isNotNull);
+        var second = stage.tryUntil(isNotNull);
+
+        assertEquals("actual", first.orThrow());
+        assertEquals("actual", second.orThrow());
 
         assertEquals(List.of(1L), first.attempts().stream().map(AttemptRecord::number).toList());
         assertEquals(List.of(1L), second.attempts().stream().map(AttemptRecord::number).toList());
     }
 
-    private static <S, R> AwaitResult.Satisfied<S, R> satisfied(AwaitResult<S, R> result) {
-        assertInstanceOf(AwaitResult.Satisfied.class, result);
-        return (AwaitResult.Satisfied<S, R>) result;
-    }
 }

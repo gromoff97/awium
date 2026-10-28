@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.AbstractList;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -13,10 +15,11 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.INTERRUPTED;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
+import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.Conditions.matches;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.INTERRUPTED;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -86,20 +89,20 @@ class ContainerInterruptionTest {
         int[] factories = {0};
         var check = Conditions.conditionPerWait("nested check", () -> {
             factories[0]++;
-            return (String value) -> ConditionResult.satisfied(value);
+            return (String value) -> ConditionResult.satisfied();
         });
         var selected = MapConditions.valueFor("key", check).because("value must be readable");
         var narrowed = MapConditions.valueFor("key", Conditions.instanceOf(String.class)).because("value must be readable");
-        List<Function<Await<SignallingMap, Map.Entry<String, String>, String>, AwaitResult<?, ?>>> waits = List.of(
+        List<Function<MapAwait<SignallingMap, Map.Entry<String, String>, String>, AwaitResult<?, ?>>> waits = List.of(
                 waiting -> waiting.tryUntil(selected), waiting -> waiting.tryUntil(narrowed),
-                waiting -> waiting.tryUntil(selected, selected), waiting -> waiting.tryUntil(narrowed, narrowed));
+                waiting -> waiting.tryUntil(captured(selected, selected)), waiting -> waiting.tryUntil(captured(narrowed, narrowed)));
         for (var wait : waits) {
             var actual = new SignallingMap("getValue");
             try {
                 var result = wait.apply(await(() -> actual));
                 var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
                 var attempt = result.attempts().getFirst();
-                var condition = attempt.progress() == null ? attempt.condition() : attempt.progress().activeCondition();
+                var condition = attempt.condition();
 
                 assertEquals(INTERRUPTED, failure.reason());
                 assertEquals(0, factories[0]);
@@ -126,7 +129,7 @@ class ContainerInterruptionTest {
 
     @Test
     void interruptionsWithinCollectionTraversalsStopAtTheConditionBoundary() {
-        List<Function<Await<SignallingList, String, Void>, AwaitResult<?, ?>>> waits = List.of(
+        List<Function<SelectionAwait<SignallingList, String>, AwaitResult<?, ?>>> waits = List.of(
                 waiting -> waiting.tryUntil(all(value -> true)),
                 waiting -> waiting.tryUntil(any(value -> true)),
                 waiting -> waiting.tryUntil(none(value -> false)),
@@ -157,7 +160,7 @@ class ContainerInterruptionTest {
 
     @Test
     void interruptionsWithinMapTraversalsStopAtTheConditionBoundary() {
-        List<Function<Await<SignallingMap, Map.Entry<String, String>, String>, AwaitResult<?, ?>>> waits = List.of(
+        List<Function<MapAwait<SignallingMap, Map.Entry<String, String>, String>, AwaitResult<?, ?>>> waits = List.of(
                 waiting -> waiting.tryUntil(MapConditions.singleEntry),
                 waiting -> waiting.tryUntil(MapConditions.singleEntry(matches(value -> true))),
                 waiting -> waiting.tryUntil(MapConditions.valueFor("key")),

@@ -1,5 +1,10 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.function.CheckedBiPredicate;
+import io.github.gromoff97.awium.function.CheckedPredicate;
+import io.github.gromoff97.awium.result.AwaitExecutionException;
+import io.github.gromoff97.awium.result.AwaitFailure;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -13,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.matches;
-import static io.github.gromoff97.awium.CheckedPredicate.not;
+import static io.github.gromoff97.awium.function.CheckedPredicate.not;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -41,7 +46,7 @@ class CheckedPredicateTest {
 
         AwaitResult<User, User> captured = await(() -> PENDING).usingTime(time, time)
                 .tryUntil(matches(not(User::checkReady)));
-        assertSame(PENDING, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+        assertSame(PENDING, captured.orThrow());
 
         var entries = new ArrayDeque<>(List.of(Map.of("ready", FIRST), Map.of("pending", PENDING)));
         Map.Entry<String, User> entry = await(entries::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))

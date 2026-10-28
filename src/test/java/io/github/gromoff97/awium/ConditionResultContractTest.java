@@ -1,5 +1,11 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.AttemptResult.Satisfied;
+import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied;
+import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.function.CheckedFunction;
+import io.github.gromoff97.awium.result.AwaitFailure;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -7,7 +13,8 @@ import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.ConditionResult.*;
+import static io.github.gromoff97.awium.result.ConditionResult.*;
+import static io.github.gromoff97.awium.Conditions.captured;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -22,27 +29,25 @@ class ConditionResultContractTest {
 
     @Test
     void customChecksUseTheCallbacksStatusAndPreserveTheObservation() {
-        CheckedFunction<User, ConditionResult<Void>> status = user -> user.id() > 0
+        CheckedFunction<User, ConditionResult> status = user -> user.id() > 0
                 ? satisfied() : unsatisfied("id must be positive");
-        Callable<CheckedFunction<User, ConditionResult<Void>>> factory = () -> status;
+        Callable<CheckedFunction<User, ConditionResult>> factory = () -> status;
         var direct = Conditions.condition("positive id", status).because("user must be saved");
         var lazy = Conditions.conditionPerWait("positive id", factory).because("user must be saved");
-        var ignoredPayload = Conditions.condition("payload is ignored", (User user) -> satisfied("unrelated value"))
-                .because("return the observed user");
         var actual = new User(42);
         var time = new FakeTime(0);
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10));
 
-        for (var check : List.of(direct, lazy, ignoredPayload)) {
+        for (var check : List.of(direct, lazy)) {
             var value = waiting.until(check);
             assertEquals(42, value.id());
             assertSame(actual, value);
             AwaitResult<User, User> result = waiting.tryUntil(check);
-            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+            assertSame(actual, result.orThrow());
         }
-        List<User> values = waiting.until(direct, lazy, ignoredPayload);
+        List<User> values = waiting.until(captured(direct, lazy));
         for (User value : values) assertSame(actual, value);
-        assertSame(actual, await(() -> Optional.of(actual)).until(OptionalConditions.hasValue(ignoredPayload)));
+        assertSame(actual, await(() -> Optional.of(actual)).until(OptionalConditions.hasValue(direct)));
         assertEquals(42, await(() -> List.of(actual)).until(CollectionConditions.singleElement(lazy)).id());
         assertEquals(42, await(() -> Map.of("user", actual)).until(MapConditions.valueFor("user", direct)).id());
 
@@ -57,8 +62,8 @@ class ConditionResultContractTest {
 
     @Test
     void satisfactionWithoutAPayloadPreservesConcreteAndSelectedObservations() {
-        ConditionResult<String> signal = satisfied();
-        assertNull(assertInstanceOf(Satisfied.class, signal).result());
+        ConditionResult signal = satisfied();
+        assertInstanceOf(Satisfied.class, signal);
         assertNull(signal.cause());
         var actual = new User(42);
         var time = new FakeTime(0);
@@ -83,28 +88,6 @@ class ConditionResultContractTest {
     }
 
     @Test
-    void mappingSatisfiedResultChangesItsValue() {
-        var original = satisfied(new User(42));
-        ConditionResult<Integer> mapped = original.mapSatisfied(User::id);
-
-        var result = assertInstanceOf(ConditionResult.Satisfied.class, mapped);
-        assertEquals(42, original.result().id());
-        assertEquals(42, result.result());
-        assertNull(mapped.cause());
-    }
-
-    @Test
-    void mappingUnsatisfiedSkipsTheCallbackAndKeepsItsCause() {
-        var cause = new IllegalStateException("cause");
-        ConditionResult<String> mapped = unsatisfied("mismatch", cause).mapSatisfied(value -> {
-            throw new AssertionError("mapping must not run");
-        });
-        var failure = assertInstanceOf(ConditionResult.Unsatisfied.class, mapped);
-        assertEquals("mismatch", failure.mismatch());
-        assertSame(cause, failure.cause());
-    }
-
-    @Test
     void conditionsCanFailWithoutDuplicatingTheirDescription() {
         var time = new FakeTime(0);
         AwaitResult<String, String> result = await(() -> "pending")
@@ -120,7 +103,7 @@ class ConditionResultContractTest {
     @Test
     void unsatisfiedAcceptsOptionalDiagnostics() {
         var plain = unsatisfied();
-        assertEquals(new Unsatisfied<>(null, null), plain);
+        assertEquals(new Unsatisfied(null, null), plain);
         assertEquals(plain, unsatisfied(null));
         assertEquals(plain, unsatisfied(null, null));
         var cause = new IllegalStateException("details");
@@ -128,7 +111,7 @@ class ConditionResultContractTest {
         assertEquals("not ready", detailed.mismatch());
         assertSame(cause, detailed.cause());
         assertSame(cause, unsatisfied(null, cause).cause());
-        assertEquals(new Unsatisfied<>("failed", null), unsatisfied("failed", null));
+        assertEquals(new Unsatisfied("failed", null), unsatisfied("failed", null));
     }
 
 }

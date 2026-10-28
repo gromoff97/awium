@@ -1,15 +1,18 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.result.AttemptResult;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.AwaitTestAccess.evaluated;
 import static io.github.gromoff97.awium.CollectionConditions.singleElement;
-import static io.github.gromoff97.awium.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.*;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
@@ -51,17 +54,17 @@ class NestedSelectionTest {
         var paid = new Payment(1, true);
         var observations = List.of(pending, paid).iterator();
         var time = new FakeTime(0);
-        List<Payment> values = await(() -> List.of(observations.next())).usingTime(time, time).every(ofNanos(1)).until(
+        List<List<Payment>> values = await(() -> List.of(observations.next())).usingTime(time, time).every(ofNanos(1)).until(captured(
                 singleElement(matches((Payment value) -> !value.paid())),
-                singleElement(matches(Payment::paid)));
-        assertEquals(List.of(pending, paid), values);
+                singleElement(matches(Payment::paid))));
+        assertEquals(List.of(List.of(pending), List.of(paid)), values);
         assertFalse(observations.hasNext());
 
-        var result = await(() -> List.of(pending)).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).tryUntil(
+        var result = await(() -> List.of(pending)).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).tryUntil(captured(
                 singleElement(matches((Payment value) -> !value.paid())),
-                singleElement(matches(Payment::paid)));
-        var observation = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, result.attempts().getLast().outcome());
-        assertInstanceOf(ConditionResult.Unsatisfied.class, observation.evaluation());
+                singleElement(matches(Payment::paid))));
+        var observation = evaluated(result.attempts().getLast());
+        assertInstanceOf(AttemptResult.Unsatisfied.class, observation.result());
         var progress = result.attempts().getLast().progress();
         assertEquals(1, progress.capturedStages());
     }
@@ -72,7 +75,7 @@ class NestedSelectionTest {
         PreservingCondition<String> ready = conditionPerWait("ready after retry", () -> {
             ++factories[0];
             int[] calls = {0};
-            return value -> ++calls[0] == 2 ? satisfied(value) : unsatisfied("retry");
+            return value -> ++calls[0] == 2 ? satisfied() : unsatisfied("retry");
         });
         var time = new FakeTime(0);
         for (List<String> invalid : java.util.Arrays.asList(null, List.<String>of(), List.of("ready", "other"))) {
@@ -81,7 +84,7 @@ class NestedSelectionTest {
         assertEquals(0, factories[0]);
         var waiting = await(() -> List.of("ready")).usingTime(time, time).every(ofNanos(1));
         assertEquals("ready", waiting.until(singleElement(ready)));
-        assertEquals(List.of("ready", "ready"), assertInstanceOf(AwaitResult.Satisfied.class, waiting.tryUntil(singleElement(ready), singleElement(ready))).result());
+        assertEquals(List.of(List.of("ready"), List.of("ready")), waiting.tryUntil(captured(singleElement(ready), singleElement(ready))).orThrow());
         assertEquals(3, factories[0]);
     }
 

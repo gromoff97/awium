@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.result;
 
 /** An uncontrolled source, condition, waiting, or interruption failure. */
 public final class AwaitExecutionException extends RuntimeException {

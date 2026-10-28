@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.function;
 
 /** An assertion callback that may propagate any throwable to the wait's failure handling. */
 @FunctionalInterface

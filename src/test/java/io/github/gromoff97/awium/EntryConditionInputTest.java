@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.function.CheckedPredicate;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -9,8 +11,9 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.MapConditions.singleEntry;
+import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.MapConditions.allEntries;
+import static io.github.gromoff97.awium.MapConditions.singleEntry;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -32,18 +35,18 @@ class EntryConditionInputTest {
                 waiting.tryUntil(allEntries(entry -> !entry.getKey().isBlank() && entry.getValue().active()));
         AwaitResult<LinkedHashMap<String, User>, Map.Entry<String, User>> singleResult =
                 waiting.tryUntil(singleEntry(entry -> !entry.getKey().isBlank() && entry.getValue().active()));
-        List<LinkedHashMap<String, User>> maps = waiting.until(
-                allEntries(entry -> entry.getValue().active()), allEntries(entry -> entry.getValue().active()));
-        List<Map.Entry<String, User>> entries = waiting.until(
-                singleEntry(entry -> entry.getValue().active()), singleEntry(entry -> entry.getValue().active()));
+        List<LinkedHashMap<String, User>> maps = waiting.until(captured(
+                allEntries(entry -> entry.getValue().active()), allEntries(entry -> entry.getValue().active())));
+        List<LinkedHashMap<String, User>> entries = waiting.until(captured(
+                singleEntry(entry -> entry.getValue().active()), singleEntry(entry -> entry.getValue().active())));
 
         assertSame(actual, all);
         assertSame(actual, explained);
         assertSame(actual.entrySet().iterator().next(), single);
-        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, allResult).result());
-        assertSame(single, assertInstanceOf(AwaitResult.Satisfied.class, singleResult).result());
+        assertSame(actual, allResult.orThrow());
+        assertSame(single, singleResult.orThrow());
         assertEquals(List.of(actual, actual), maps);
-        assertEquals(List.of(single, single), entries);
+        assertEquals(List.of(actual, actual), entries);
     }
 
     @Test
@@ -73,10 +76,10 @@ class EntryConditionInputTest {
     }
 
     @Test
-    void readonlyEntryConditionsStillAcceptCovariantSourcesAfterBecause() {
+    void readonlyKeyAndValueChecksAcceptCovariantSourcesAfterBecause() {
         Map<? extends String, ? extends User> source = Map.of("user", new User(true));
         var selected = await(() -> source).until(singleEntry(
-                (Map.Entry<? extends String, ? extends User> entry) -> entry.getValue().active()).because("user must be active"));
+                (String key, User value) -> value.active()).because("user must be active"));
         var all = await(() -> source).until(allEntries(entry -> entry.getValue().active()));
         assertEquals("user", selected.getKey());
         assertTrue(selected.getValue().active());

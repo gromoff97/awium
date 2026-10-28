@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.ConditionResult.Satisfied;
+import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -9,22 +9,22 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.CollectionConditions.empty;
-import static io.github.gromoff97.awium.CollectionConditions.nonEmpty;
-import static io.github.gromoff97.awium.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.CollectionConditions.hasSize;
 import static io.github.gromoff97.awium.CollectionConditions.hasSizeAtLeast;
 import static io.github.gromoff97.awium.CollectionConditions.hasSizeAtMost;
 import static io.github.gromoff97.awium.CollectionConditions.hasSizeBetween;
 import static io.github.gromoff97.awium.CollectionConditions.hasSizeGreaterThan;
-import static io.github.gromoff97.awium.CollectionConditions.hasSizeNotEqualTo;
 import static io.github.gromoff97.awium.CollectionConditions.hasSizeLessThan;
+import static io.github.gromoff97.awium.CollectionConditions.hasSizeNotEqualTo;
+import static io.github.gromoff97.awium.CollectionConditions.nonEmpty;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;

@@ -1,7 +1,8 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.ConditionResult.Satisfied;
-import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
+import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
+import io.github.gromoff97.awium.internal.ConditionEvaluation.Unsatisfied;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.AbstractList;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -12,19 +13,20 @@ import java.util.List;
 import java.util.SequencedCollection;
 import org.junit.jupiter.api.Test;
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.CollectionConditions.firstElement;
 import static io.github.gromoff97.awium.CollectionConditions.lastElement;
 import static io.github.gromoff97.awium.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.CollectionConditions.subsetOf;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
+import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -79,7 +81,7 @@ class CollectionSelectionConditionsTest {
         var plain = await(() -> actual).until(subsetOf(List.of("ready", "done")));
         var selected = await(() -> List.of(actual)).until(singleElement(subsetOf(List.of("ready"))));
         var captured = await(() -> actual).usingTime(time, time)
-                .until(subsetOf(List.of("ready")), subsetOf(List.of("ready", "done")));
+                .until(captured(subsetOf(List.of("ready")), subsetOf(List.of("ready", "done"))));
 
         assertSame(actual, plain);
         assertSame(actual, selected);
@@ -218,7 +220,7 @@ class CollectionSelectionConditionsTest {
             for (var check : positive) {
                 ArrayList<String> selected = waiting.until(check);
                 assertSame(actual, selected);
-                assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, waiting.tryUntil(check)).result());
+                assertSame(actual, waiting.tryUntil(check).orThrow());
             }
             for (var check : negative) {
                 var failed = waiting.tryUntil(check.because("pattern must be absent"));
@@ -258,10 +260,10 @@ class CollectionSelectionConditionsTest {
             assertEquals(Unsatisfied.class, evaluate(CollectionConditions.startsWith(List.of(1, 2, 3)), actual).getClass());
             assertEquals(Unsatisfied.class, evaluate(CollectionConditions.endsWith(List.of(1, 2, 3)), actual).getClass());
             assertEquals(Unsatisfied.class, evaluate(CollectionConditions.containsSequence(List.of(1, 2, 3)), actual).getClass());
-            assertSame(actual, ((Satisfied<?>) evaluate(CollectionConditions.doesNotContainSequence(List.of(1, 2, 3)), actual)).result());
+            assertSame(actual, ((Satisfied<?>) evaluate(CollectionConditions.doesNotContainSequence(List.of(1, 2, 3)), actual)).value());
         }
         var empty = new ArrayDeque<Integer>();
-        assertSame(empty, ((Satisfied<?>) evaluate(CollectionConditions.sorted(Integer::compareTo), empty)).result());
+        assertSame(empty, ((Satisfied<?>) evaluate(CollectionConditions.sorted(Integer::compareTo), empty)).value());
     }
 
     @Test
@@ -277,7 +279,7 @@ class CollectionSelectionConditionsTest {
             assertSame(actual, waiting.until(CollectionConditions.endsWith(List.of("gap", new int[] {3, 4}))));
             assertSame(actual, waiting.until(CollectionConditions.containsSequence(List.of(new int[] {1, 2}, "gap"))));
             var captured = waiting.tryUntil(CollectionConditions.containsSubsequence(asList(null, new int[] {3, 4})));
-            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+            assertSame(actual, captured.orThrow());
         }
     }
 
@@ -297,7 +299,7 @@ class CollectionSelectionConditionsTest {
 
             assertEquals("a", selected.getFirst()[0]);
             assertSame(actual, selected);
-            assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, attempt).result());
+            assertSame(actual, attempt.orThrow());
         }
     }
 
@@ -327,7 +329,7 @@ class CollectionSelectionConditionsTest {
                     };
                     var evaluation = evaluate(condition, actual);
                     assertEquals(negative ? Satisfied.class : Unsatisfied.class, evaluation.getClass());
-                    if (negative) assertSame(actual, ((Satisfied<?>) evaluation).result());
+                    if (negative) assertSame(actual, ((Satisfied<?>) evaluation).value());
                 }
             }
         }
@@ -396,7 +398,7 @@ class CollectionSelectionConditionsTest {
                         .until(firstElement));
 
         assertTrue(failure.getMessage().contains("Condition: collection has a first element"));
-        assertTrue(failure.getMessage().contains("Mismatch: collection was empty"));
+        assertTrue(failure.getMessage().contains("Mismatch: collection size was 0"));
     }
 
     private record User(int id) {

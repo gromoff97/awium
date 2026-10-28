@@ -1,9 +1,10 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.AwaitResult;
+import java.util.AbstractMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.AbstractMap;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 

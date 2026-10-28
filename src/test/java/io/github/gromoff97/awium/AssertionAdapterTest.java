@@ -1,18 +1,23 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.ConditionEvaluation;
+import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.function.CheckedConsumer;
+import io.github.gromoff97.awium.function.CheckedFunction;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-import static io.github.gromoff97.awium.WaitConfiguration.DEFAULT;
+import static io.github.gromoff97.awium.internal.WaitConfiguration.DEFAULT;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -61,7 +66,7 @@ class AssertionAdapterTest {
                     return satisfied();
                 });
 
-        ConditionResult<? extends String> evaluation = evaluate(condition, "42");
+        ConditionEvaluation<? extends String> evaluation = evaluate(condition, "42");
 
         assertEquals("42", result(evaluation));
         assertEquals(1, invocations[0]);
@@ -71,19 +76,19 @@ class AssertionAdapterTest {
     @Test
     void namedConditionValidatesItsArguments() {
         assertTrue(assertThrows(NullPointerException.class,
-                () -> condition(null, payment -> satisfied(payment)))
+                () -> condition(null, payment -> satisfied()))
                 .getMessage().contains("description"));
         assertTrue(assertThrows(NullPointerException.class,
-                () -> condition(null, (CheckedFunction<Object, ConditionResult<Object>>) null))
+                () -> condition(null, (CheckedFunction<Object, ConditionResult>) null))
                 .getMessage().contains("description"));
         assertTrue(assertThrows(IllegalArgumentException.class,
-                () -> condition(" \n ", payment -> satisfied(payment)))
+                () -> condition(" \n ", payment -> satisfied()))
                 .getMessage().contains("description"));
         assertTrue(assertThrows(NullPointerException.class,
-                () -> condition("payment", (CheckedFunction<Object, ConditionResult<Object>>) null))
+                () -> condition("payment", (CheckedFunction<Object, ConditionResult>) null))
                 .getMessage().contains("evaluation"));
         assertTrue(assertThrows(NullPointerException.class,
-                () -> conditionPerWait("payment", (Callable<CheckedFunction<Object, ConditionResult<Object>>>) null))
+                () -> conditionPerWait("payment", (Callable<CheckedFunction<Object, ConditionResult>>) null))
                 .getMessage().contains("evaluator factory"));
     }
 
@@ -95,7 +100,7 @@ class AssertionAdapterTest {
             invocations[0]++;
         });
 
-        ConditionResult<? extends String> evaluation = evaluate(condition, actual);
+        ConditionEvaluation<? extends String> evaluation = evaluate(condition, actual);
 
         assertSame(actual, result(evaluation));
         assertEquals(1, invocations[0]);

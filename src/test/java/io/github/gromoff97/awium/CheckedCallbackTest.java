@@ -1,5 +1,9 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.function.CheckedFunction;
+import io.github.gromoff97.awium.result.AttemptResult;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -13,12 +17,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
-import static io.github.gromoff97.awium.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.AwaitTestAccess.uncontrolled;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static io.github.gromoff97.awium.OptionalConditions.hasValue;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -29,7 +34,7 @@ class CheckedCallbackTest {
         var result = await(() -> "ready").tryUntil(condition("sleep", value -> {
             Thread.currentThread().interrupt();
             Thread.sleep(0);
-            return satisfied(value);
+            return satisfied();
         }));
         var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
         assertEquals(CONDITION_FAILED, failure.reason());
@@ -91,10 +96,10 @@ class CheckedCallbackTest {
 
     @Test
     void interruptionDuringFactoryCreationSkipsItsEvaluator() {
-        List<Function<Callable<CheckedFunction<String, ConditionResult<String>>>, AwaitResult<?, ?>>> waits = List.of(
+        List<Function<Callable<CheckedFunction<String, ConditionResult>>, AwaitResult<?, ?>>> waits = List.of(
                 factory -> await(() -> "ready").tryUntil(conditionPerWait("lazy", factory)),
                 factory -> await(() -> Optional.of("ready")).tryUntil(hasValue(conditionPerWait("lazy", factory))),
-                factory -> await(() -> "ready").tryUntil(conditionPerWait("lazy", factory), matches(value -> true)));
+                factory -> await(() -> "ready").tryUntil(captured(conditionPerWait("lazy", factory), matches(value -> true))));
         for (var wait : waits) {
             int[] factoryCalls = {0};
             int[] evaluatorCalls = {0};
@@ -102,7 +107,7 @@ class CheckedCallbackTest {
                 var result = wait.apply(() -> {
                     factoryCalls[0]++;
                     Thread.currentThread().interrupt();
-                    return actual -> { evaluatorCalls[0]++; return satisfied(actual); };
+                    return actual -> { evaluatorCalls[0]++; return satisfied(); };
                 });
                 var failure = assertInstanceOf(AwaitResult.Failed.class, result);
                 assertEquals(INTERRUPTED, failure.failure().reason());
@@ -131,7 +136,7 @@ class CheckedCallbackTest {
         int[] evaluatorCalls = {0};
         var result = await(() -> actual).usingTime(time, time).tryUntil(valueFor("key", conditionPerWait("nested", () -> {
             factoryCalls[0]++;
-            return value -> { evaluatorCalls[0]++; return satisfied(value); };
+            return value -> { evaluatorCalls[0]++; return satisfied(); };
         })));
 
         var failure = assertInstanceOf(AwaitResult.Failed.class, result);
@@ -150,16 +155,16 @@ class CheckedCallbackTest {
 
         var optional = await(() -> Optional.of("ready")).usingTime(time, time).tryUntil(hasValue(nested));
         var map = await(() -> Map.of("key", "ready")).usingTime(time, time).tryUntil(valueFor("key", nested));
-        var sequence = await(() -> "ready").usingTime(time, time).every(ofNanos(1)).tryUntil(isNotNull, nested);
+        var sequence = await(() -> "ready").usingTime(time, time).every(ofNanos(1)).tryUntil(captured(isNotNull, nested));
         for (AwaitResult<?, ?> result : List.of(optional, map, sequence)) {
             var failure = assertInstanceOf(AwaitResult.Failed.class, result);
             assertSame(cause, failure.failure().cause());
             assertTrue(failure.failure().message().contains("checked receipt"));
         }
-        assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, sequence.attempts().getLast().outcome());
+        uncontrolled(AttemptResult.Operation.CONDITION, sequence.attempts().getLast().result());
         var progress = sequence.attempts().getLast().progress();
         assertEquals(1, progress.capturedStages());
-        assertEquals(2, progress.lastEvaluatedStageNumber());
+        assertEquals(2, progress.stageNumber());
     }
 
     @Test
@@ -191,7 +196,7 @@ class CheckedCallbackTest {
             assertTrue(Thread.interrupted());
             return true;
         }));
-        assertSame(actual, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertSame(actual, result.orThrow());
         assertEquals(1, result.totalAttempts());
         assertFalse(Thread.currentThread().isInterrupted());
     }
@@ -219,8 +224,8 @@ class CheckedCallbackTest {
         return actual.length();
     }
 
-    private static ConditionResult<String> evaluate(String actual) throws Throwable {
-        return satisfied(actual);
+    private static ConditionResult evaluate(String actual) throws Throwable {
+        return satisfied();
     }
 
     private static void verifySecond(int actual) throws Throwable {

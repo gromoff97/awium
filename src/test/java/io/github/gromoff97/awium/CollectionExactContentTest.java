@@ -1,8 +1,10 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.ConditionEvaluation;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.ConditionResult.Satisfied;
-import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
+import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
+import io.github.gromoff97.awium.internal.ConditionEvaluation.Unsatisfied;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -10,8 +12,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static java.util.Arrays.asList;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
@@ -19,7 +19,9 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CollectionExactContentTest {
@@ -165,7 +167,7 @@ class CollectionExactContentTest {
 
     @Test
     void nullActualIsUnsatisfiedAndNullAggregateIsRejected() {
-        ConditionResult<?> evaluation = evaluate(
+        ConditionEvaluation<?> evaluation = evaluate(
                 containsExactly(List.of("a")), null);
         assertEquals(Unsatisfied.class, evaluation.getClass());
         assertFalse(mismatch(evaluation).isBlank());
@@ -191,8 +193,8 @@ class CollectionExactContentTest {
 
     private static void assertPair(Pair pair, List<String> actual,
             boolean positiveSatisfied) {
-        ConditionResult<?> positive = evaluate(pair.positive(), actual);
-        ConditionResult<?> negative = evaluate(pair.negative(), actual);
+        ConditionEvaluation<?> positive = evaluate(pair.positive(), actual);
+        ConditionEvaluation<?> negative = evaluate(pair.negative(), actual);
         assertAll(pair.name(),
                 () -> assertSame(actual, result(positiveSatisfied ? positive : negative)),
                 () -> assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank()));

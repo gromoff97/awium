@@ -1,18 +1,23 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitFailure.Reason.*;
-import static io.github.gromoff97.awium.Conditions.*;
+import static io.github.gromoff97.awium.AwaitTestAccess.evaluated;
+import static io.github.gromoff97.awium.AwaitTestAccess.uncontrolled;
 import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
+import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static io.github.gromoff97.awium.OptionalConditions.hasValue;
 import static io.github.gromoff97.awium.OptionalConditions.present;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
@@ -59,7 +64,7 @@ class CompositionDiagnosticsTest {
         assertQuantifierFailure(nested.tryUntil(CollectionConditions.all(CollectionConditions.any(mismatch))),
                 "all collection elements match: some collection elements match",
                 "not all collection elements matched: no collection elements matched");
-        assertQuantifierFailure(collection.tryUntil(isNotNull, CollectionConditions.all(mismatch)),
+        assertQuantifierFailure(collection.tryUntil(captured(isNotNull, CollectionConditions.all(mismatch))),
                 "all collection elements match", "not all collection elements matched");
     }
 
@@ -70,10 +75,10 @@ class CompositionDiagnosticsTest {
         assertTrue(failure.message().contains(description), failure.message());
         assertTrue(failure.message().contains(mismatch), failure.message());
         var last = result.attempts().getLast();
-        var failed = last.progress() == null ? last.condition() : last.progress().activeCondition();
-        assertEquals(description, failed.description());
-        var evaluated = assertInstanceOf(AttemptRecord.Outcome.Evaluated.class, last.outcome());
-        assertEquals(mismatch, assertInstanceOf(ConditionResult.Unsatisfied.class, evaluated.evaluation()).mismatch());
+        var condition = last.condition();
+        assertEquals(description, condition.description());
+        var evaluated = evaluated(last);
+        assertEquals(mismatch, assertInstanceOf(AttemptResult.Unsatisfied.class, evaluated.result()).mismatch());
     }
 
     @Test
@@ -110,7 +115,7 @@ class CompositionDiagnosticsTest {
         var selected = hasValue(nested);
         var result = await(observations::next).usingTime(time, time).every(ofNanos(1)).tryUntil(selected);
 
-        assertEquals("Bob", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals("Bob", result.orThrow());
         assertEquals(3, result.totalAttempts());
         var missing = result.attempts().getFirst().condition();
         assertEquals(present.description(), missing.description());
@@ -143,7 +148,7 @@ class CompositionDiagnosticsTest {
         var result = await(() -> observations.get(calls[0]++)).usingTime(time, time).every(ofNanos(1)).tryUntil(
                 valueFor("customerId", equalTo("Bob")));
 
-        assertEquals("Bob", assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals("Bob", result.orThrow());
         assertEquals(3, result.attempts().size());
         var lookup = result.attempts().get(0);
         var nested = result.attempts().get(1);
@@ -160,11 +165,11 @@ class CompositionDiagnosticsTest {
     @Test
     void missingKeyInsideCapturedKeepsLookupContextAndDoesNotCreateTheNestedSession() {
         var time = new FakeTime(0);
-        Condition.MapValueCondition<Map<? super String, ?>, String, Condition.Reference<?>> selected = valueFor("customerId", conditionPerWait("nested", () -> {
+        Condition.MapValueCondition<Map<? super String, ? extends String>> selected = valueFor("customerId", conditionPerWait("nested", () -> {
             throw new AssertionError("nested factory must not run before extraction succeeds");
         }));
         var failure = assertFailure(TIMEOUT, () -> await(() -> Map.<String, String>of())
-                .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).until(selected, selected));
+                .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).until(captured(selected, selected)));
         assertTrue(failure.getMessage().contains("Expected: customerId"), failure.getMessage());
         assertTrue(failure.getMessage().contains("Sequence (captured 0 of 2)"), failure.getMessage());
     }
@@ -208,18 +213,17 @@ class CompositionDiagnosticsTest {
             assertSame(cause, failure.cause());
             assertTrue(failure.message().contains("Expected: customerId"), failure.message());
             assertTrue(failure.message().contains("Because: customer lookup must succeed"), failure.message());
-            assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class, result.attempts().getFirst().outcome());
+            uncontrolled(AttemptResult.Operation.CONDITION, result.attempts().getFirst().result());
             assertEquals("customerId", result.attempts().getFirst().condition().reference().value());
             assertSame(cause, assertFailure(CONDITION_FAILED, () -> waiting.until(selected)).getCause());
 
-            var captured = waiting.tryUntil(selected, selected);
-            var capturedOutcome = assertInstanceOf(AttemptRecord.Outcome.ConditionFailed.class,
-                    captured.attempts().getFirst().outcome());
+            var captured = waiting.tryUntil(captured(selected, selected));
+            var capturedOutcome = uncontrolled(AttemptResult.Operation.CONDITION, captured.attempts().getFirst().result());
             assertSame(cause, capturedOutcome.cause());
             var progress = captured.attempts().getFirst().progress();
             assertEquals(0, progress.capturedStages());
-            assertEquals("customerId", progress.activeCondition().reference().value());
-            assertEquals("customer lookup must succeed", progress.activeCondition().explanation());
+            assertEquals("customerId", captured.attempts().getFirst().condition().reference().value());
+            assertEquals("customer lookup must succeed", captured.attempts().getFirst().condition().explanation());
         }
     }
 }

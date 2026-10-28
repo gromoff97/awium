@@ -1,14 +1,16 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
+import io.github.gromoff97.awium.result.AwaitAssertionError;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Spliterator;
-import java.util.stream.IntStream;
-import java.util.function.Function;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -142,10 +144,10 @@ class IterableExpectedValuesTest {
 
         assertEquals(1, expected.iterations);
         assertEquals(before.getClass(), after.getClass());
-        if (before instanceof AwaitResult.Satisfied<?, ?> success) {
+        if (before instanceof AwaitResult.Satisfied(var ignoredAttempts, var observed)) {
             ACTUAL value = waiting.until(condition);
             assertSame(actual, value);
-            assertSame(actual, success.result());
+            assertSame(actual, observed);
         } else {
             var original = assertInstanceOf(AwaitResult.Failed.class, before).failure();
             var current = assertInstanceOf(AwaitResult.Failed.class, after).failure();

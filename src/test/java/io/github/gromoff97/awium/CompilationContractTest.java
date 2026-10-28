@@ -19,6 +19,9 @@ class CompilationContractTest {
                 "await(() -> users).until(all(matches(String::isBlank)));",
                 "await(() -> users).until(any(equalTo(123)));",
                 "await(() -> users).until(none(OptionalConditions.hasValue(instanceOf(User.class))));",
+                "await(() -> users).until(all(OptionalConditions.present));",
+                "await(() -> map).until(MapConditions.allKeys(OptionalConditions.present));",
+                "await(() -> map).until(MapConditions.allValues(singleElement));",
                 "User wrong = await(() -> users).until(all(matches(User::active)));",
                 "await(() -> map).until(MapConditions.allKeys(matches(User::active)));",
                 "await(() -> map).until(MapConditions.anyKey(equalTo(123)));",
@@ -64,7 +67,7 @@ class CompilationContractTest {
         for (String body : List.of(
                 "await(() -> \"wrong\").until(firstElement(instanceOf(User.class)));",
                 "await(() -> Set.of(new User(1))).until(lastElement(instanceOf(User.class)));",
-                "await(() -> new ArrayDeque<>(List.of(new User(1)))).until(elementAt(0,instanceOf(User.class)));",
+                "await(() -> Set.of(new User(1))).until(elementAt(0,instanceOf(User.class)));",
                 "await(() -> List.of(new User(1))).until(firstElement(equalTo(123)));",
                 "await(() -> List.of(new User(1))).until(singleElement(String::isBlank));",
                 "await(() -> Optional.of(new User(1))).until(OptionalConditions.hasValue(String::isBlank));",
@@ -76,21 +79,18 @@ class CompilationContractTest {
                 "await(() -> List.of(new User(1))).until(elementAt(0,equalTo(123)));",
                 "String wrong = await(() -> List.of(new User(1))).until(firstElement(isNotNull));",
                 "await(() -> Set.of(new User(1))).until(firstElement(isNotNull));",
-                "await(() -> new ArrayDeque<>(List.of(new User(1)))).until(elementAt(0,isNotNull));",
+                "await(() -> Set.of(new User(1))).until(elementAt(0,isNotNull));",
                 "await(() -> List.of(\"ready\")).until(lastElement(equalTo(new Object())));",
                 "String wrong = await(() -> values).until(firstElement(instanceOf(User.class)));",
                 "String wrong = await(() -> new User(1)).until(matches((User user)->true));",
-                "await(() -> new User(1)).until(matches(io.github.gromoff97.awium.CheckedPredicate.not(String::isBlank)));",
-                "await(() -> new User(1)).until(matches(io.github.gromoff97.awium.CheckedPredicate.not((User user)->\"wrong boolean\")));",
-                "await(() -> Map.of(\"u\",new User(1))).until(MapConditions.singleEntry(io.github.gromoff97.awium.CheckedBiPredicate.not((Integer key,User user)->true)));",
-                "await(() -> values).until(firstElement(instanceOf(User.class)),firstElement(instanceOf(Integer.class)));",
-                "AwaitResult<List<Object>,String> wrong = await(() -> values).tryUntil(lastElement(instanceOf(User.class)));",
-                "await(() -> values).until(firstElement(instanceOf(User.class)),lastElement(instanceOf(String.class)));",
-                "await(() -> values).<Object>until(firstElement(instanceOf(User.class)),lastElement(instanceOf(String.class)));",
-                "await(() -> values).tryUntil(elementAt(0,instanceOf(User.class)),firstElement(instanceOf(Integer.class)));")) {
+                "await(() -> new User(1)).until(matches(io.github.gromoff97.awium.function.CheckedPredicate.not(String::isBlank)));",
+                "await(() -> new User(1)).until(matches(io.github.gromoff97.awium.function.CheckedPredicate.not((User user)->\"wrong boolean\")));",
+                "await(() -> Map.of(\"u\",new User(1))).until(MapConditions.singleEntry(io.github.gromoff97.awium.function.CheckedBiPredicate.not((Integer key,User user)->true)));",
+                "AwaitResult<List<Object>, String> wrong = await(() -> values).tryUntil(lastElement(instanceOf(User.class)));",
+                "AwaitResult<List<Object>, List<Integer>> wrong = await(() -> values).tryUntil(captured(elementAt(0,instanceOf(User.class)),firstElement(instanceOf(Integer.class))));")) {
             assertRejected("""
                     import java.util.*;
-                    import io.github.gromoff97.awium.AwaitResult;
+                    import io.github.gromoff97.awium.result.AwaitResult;
                     import io.github.gromoff97.awium.MapConditions;
                     import io.github.gromoff97.awium.OptionalConditions;
                     import static io.github.gromoff97.awium.Await.await;
@@ -207,6 +207,8 @@ class CompilationContractTest {
             assertRejected("""
                     import java.util.concurrent.Callable;
                     import io.github.gromoff97.awium.*;
+                    import io.github.gromoff97.awium.result.*;
+                    import io.github.gromoff97.awium.function.*;
                     import java.util.Optional;
                     import static io.github.gromoff97.awium.Await.await;
                     import static io.github.gromoff97.awium.Conditions.*;
@@ -372,13 +374,15 @@ class CompilationContractTest {
     @Test
     void categorySpecificTerminalsRejectWrongConditions() throws IOException {
         for (String type : List.of(
-                "SelectedCondition<java.util.Optional<?>, Object, io.github.gromoff97.awium.Condition.Reference<?>>",
-                "SelectedCondition<java.util.Collection<?>, Object, io.github.gromoff97.awium.Condition.Reference<?>>",
-                "SelectedCondition<java.util.Map<?, ?>, Object, io.github.gromoff97.awium.Condition.Reference<?>>")) {
+                "SelectedCondition<java.util.Optional<?>>",
+                "SelectedCondition<java.util.Collection<?>>",
+                "SelectedCondition<java.util.Map<?, ?>>")) {
             assertRejected("""
                     import static io.github.gromoff97.awium.Await.await;
                     import java.util.concurrent.Callable;
                     import io.github.gromoff97.awium.*;
+                    import io.github.gromoff97.awium.result.*;
+                    import io.github.gromoff97.awium.function.*;
                     import io.github.gromoff97.awium.Condition.SelectedCondition;
                     final class Contract {
                         void check(Callable<String> source, %s condition) {
@@ -518,15 +522,15 @@ class CompilationContractTest {
                 assertRejected("""
                         import static io.github.gromoff97.awium.Await.await;
                         import static io.github.gromoff97.awium.Conditions.*;
-                        import io.github.gromoff97.awium.CheckedFunction;
-                        import io.github.gromoff97.awium.ConditionResult;
+                        import io.github.gromoff97.awium.function.CheckedFunction;
+                        import io.github.gromoff97.awium.result.ConditionResult;
                         import java.util.concurrent.Callable;
 
                         final class Contract {
-                            static ConditionResult<Void> status(String value) {
+                            static ConditionResult status(String value) {
                                 return ConditionResult.satisfied();
                             }
-                            static CheckedFunction<String, ConditionResult<Void>> evaluator() {
+                            static CheckedFunction<String, ConditionResult> evaluator() {
                                 return Contract::status;
                             }
                             void check(Callable<Integer> source) {
@@ -554,19 +558,22 @@ class CompilationContractTest {
     }
 
     @Test
-    void covariantEntryViewsKeepIndependentValueTypesAcrossStages() throws IOException {
+    void covariantMapViewsKeepIndependentValueTypesAcrossStages() throws IOException {
         assertRejected("""
                 import java.util.*;
                 import io.github.gromoff97.awium.Await.MapViewSource;
                 import static io.github.gromoff97.awium.Await.await;
+                import static io.github.gromoff97.awium.Conditions.captured;
                 import static io.github.gromoff97.awium.MapConditions.singleEntry;
                 final class Contract {
-                    static <KEY, VALUE> void overwrite(List<Map.Entry<KEY, VALUE>> entries) {
-                        entries.getFirst().setValue(entries.getLast().getValue());
+                    static <KEY, VALUE> void overwrite(List<Map<KEY, VALUE>> maps) {
+                        KEY key = maps.getFirst().keySet().iterator().next();
+                        VALUE value = maps.getLast().values().iterator().next();
+                        maps.getFirst().put(key, value);
                     }
                     void check(MapViewSource<Number, CharSequence,
                             Map<? extends Number, ? extends CharSequence>> source) {
-                        overwrite(await(source).until(singleEntry, singleEntry));
+                        overwrite(await(source).until(captured(singleEntry, singleEntry)));
                     }
                 }
                 """);

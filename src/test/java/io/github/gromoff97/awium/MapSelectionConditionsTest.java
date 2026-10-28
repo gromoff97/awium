@@ -1,21 +1,23 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.ConditionResult.Satisfied;
-import io.github.gromoff97.awium.ConditionResult.Unsatisfied;
+import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
+import io.github.gromoff97.awium.internal.ConditionEvaluation.Unsatisfied;
+import io.github.gromoff97.awium.function.CheckedBiPredicate;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.AwaitFailure.Reason.TIMEOUT;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -60,7 +62,7 @@ class MapSelectionConditionsTest {
         assertSame(entry, narrowed);
         assertSame(entry, byKey);
         assertSame(value, selected);
-        assertSame(entry, assertInstanceOf(AwaitResult.Satisfied.class, captured).result());
+        assertSame(entry, captured.orThrow());
         assertEquals(5, reads[0]);
 
         var multiple = new ProbeContainers.EntryMap<String, Number>(List.of(entry, Map.entry("other", 1)));
@@ -81,7 +83,7 @@ class MapSelectionConditionsTest {
         var waiting = await(observations::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
         var result = waiting.tryUntil(MapConditions.singleEntry(predicate));
 
-        assertEquals(Map.entry("key", 2), assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals(Map.entry("key", 2), result.orThrow());
         assertEquals(2, result.totalAttempts());
         assertEquals(List.of(Map.entry("key", 1), Map.entry("key", 2)), checked);
         assertTrue(observations.isEmpty());
@@ -108,7 +110,7 @@ class MapSelectionConditionsTest {
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
                 .tryUntil(MapConditions.valueFor("key", check).because("the selected value must be ready"));
 
-        assertEquals(2, assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals(2, result.orThrow());
         assertEquals(5, result.totalAttempts());
         assertEquals(1, factories[0]);
         assertEquals(List.of(1, 2), checked);
@@ -139,7 +141,7 @@ class MapSelectionConditionsTest {
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
                 .tryUntil(MapConditions.singleEntry(check).because("one ready entry required"));
 
-        assertEquals(Map.entry("key", 2), assertInstanceOf(AwaitResult.Satisfied.class, result).result());
+        assertEquals(Map.entry("key", 2), result.orThrow());
         assertEquals(5, result.totalAttempts());
         assertEquals(1, factories[0]);
         assertEquals(List.of(1, 2), checked);
@@ -182,8 +184,7 @@ class MapSelectionConditionsTest {
 
         String selected = waiting.until(MapConditions.valueFor(new String[] {"nullable"}));
         assertNull(selected);
-        assertNull(assertInstanceOf(AwaitResult.Satisfied.class,
-                waiting.tryUntil(MapConditions.valueFor(new String[] {"nullable"}))).result());
+        assertNull(waiting.tryUntil(MapConditions.valueFor(new String[] {"nullable"})).orThrow());
         assertTrue(assertFailure(TIMEOUT, () -> waiting.until(MapConditions.valueFor(new String[] {"missing"})))
                 .getMessage().contains("map did not contain the expected key"));
         assertTrue(assertFailure(TIMEOUT, () -> await(() -> (Map<String[], String>) null)

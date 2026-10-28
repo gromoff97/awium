@@ -1,14 +1,14 @@
 package consumer;
 
-import io.github.gromoff97.awium.AttemptRecord;
-import io.github.gromoff97.awium.AwaitResult;
-import io.github.gromoff97.awium.ConditionResult;
 import io.github.gromoff97.awium.StringConditions;
+import io.github.gromoff97.awium.result.AttemptRecord;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.*;
@@ -25,16 +25,13 @@ public final class ArtifactConsumer {
         int length = await(() -> length(text())).until(isNotNull);
         String narrowed = await((Callable<Object>) ArtifactConsumer::text).until(instanceOf(String.class));
         long[] time = {0};
-        List<String> stages = await(ArtifactConsumer::text).usingTime(() -> time[0], nanos -> time[0] += nanos).every(ofNanos(1)).upTo(ofNanos(5)).until(
-                equalTo("ready"), contentEquals("ready"));
+        List<String> stages = await(ArtifactConsumer::text).usingTime(() -> time[0], nanos -> time[0] += nanos).every(ofNanos(1)).upTo(ofNanos(5)).until(captured(
+                equalTo("ready"), contentEquals("ready")));
         boolean preserved = await(() -> values).until(asserted(actual -> {
             if (actual.size() != 1) throw new AssertionError("one value expected");
         })) == values;
         var result = await(() -> Optional.of("ready")).tryUntil(present);
-        String captured = switch (result) {
-            case AwaitResult.Satisfied(var attempts, var value) -> value;
-            case AwaitResult.Failed(var attempts, var failure) -> throw new AssertionError(failure.reason());
-        };
+        String captured = result.orThrow();
         Number mapped = await(() -> Map.<String, Number>of("key", 1)).until(valueFor("key"));
         Map.Entry<String, Integer> entry = await(() -> Map.of("key", 1)).until(singleEntry);
         String text = await(ArtifactConsumer::text).until(StringConditions.contains("read"));
@@ -43,13 +40,11 @@ public final class ArtifactConsumer {
                 mapped, entry, text, regex, observed(result.attempts().getFirst())};
     }
 
-    private static String observed(AttemptRecord<Optional<String>, String> attempt) {
-        return switch (attempt.outcome()) {
-            case AttemptRecord.Outcome.Evaluated(var value, var evaluation) -> switch (evaluation) {
-                case ConditionResult.Satisfied(var result) -> result;
-                case ConditionResult.Unsatisfied(var mismatch, var cause) -> value.orElse(null);
-            };
-            default -> null;
+    private static String observed(AttemptRecord<Optional<String>> attempt) {
+        return switch (attempt.result()) {
+            case AttemptResult.Satisfied ignored -> attempt.observed().orElseThrow();
+            case AttemptResult.Unsatisfied ignored -> attempt.observed().orElse(null);
+            case AttemptResult.Uncontrolled ignored -> null;
         };
     }
 
