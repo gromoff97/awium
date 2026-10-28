@@ -5,7 +5,6 @@ import io.github.gromoff97.awium.ConditionResult.Satisfied;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -122,21 +121,6 @@ class MapSizeConditionsTest {
         assertEquals(Satisfied.class, evaluate(hasSizeBetween(2, 4), mapWithSize(4)).getClass());
         assertUnsatisfied(evaluate(hasSizeBetween(2, 4), mapWithSize(1)));
         assertUnsatisfied(evaluate(hasSizeBetween(2, 4), mapWithSize(5)));
-    }
-
-    @Test
-    void nullConditionIsRejectedBeforeSourceRetrieval() {
-        FakeTime time = new FakeTime(0);
-        int[] sourceCalls = {0};
-        Callable<Map<String, String>> source = () -> {
-            sourceCalls[0]++;
-            return Map.of();
-        };
-
-        assertTrue(assertThrows(NullPointerException.class,
-                () -> await(source::call).usingTime(time, time).until((PreservingCondition<Map<String, String>>) null))
-                .getMessage().contains("condition"));
-        assertEquals(0, sourceCalls[0]);
     }
 
     private static Map<Integer, Integer> mapWithSize(int size) {

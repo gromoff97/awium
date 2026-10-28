@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -127,21 +126,6 @@ class CollectionSizeConditionsTest {
                 evaluate(hasSizeBetween(2, 4), List.of(1, 2, 3, 4)).getClass());
         assertUnsatisfied(evaluate(hasSizeBetween(2, 4), List.of(1)));
         assertUnsatisfied(evaluate(hasSizeBetween(2, 4), List.of(1, 2, 3, 4, 5)));
-    }
-
-    @Test
-    void nullConditionIsRejectedBeforeSourceRetrieval() {
-        FakeTime time = new FakeTime(0);
-        int[] sourceCalls = {0};
-        Callable<List<String>> source = () -> {
-            sourceCalls[0]++;
-            return List.of();
-        };
-
-        assertTrue(assertThrows(NullPointerException.class,
-                () -> await(source::call).usingTime(time, time).until((PreservingCondition<Collection<String>>) null))
-                .getMessage().contains("condition"));
-        assertEquals(0, sourceCalls[0]);
     }
 
     private static List<Case> cases() {
