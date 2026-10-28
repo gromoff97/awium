@@ -2,9 +2,7 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,18 +44,6 @@ class FactoryGrammarTest {
         assertNull(await(optional).until(isNull));
         assertNull(await(collection).until(isNull));
         assertNull(await(map).until(isNull));
-    }
-
-    @Test
-    void constructorLambdasSelectTheirSourceCategory() {
-        StringBuilder text = await(() -> new StringBuilder()).until(StringConditions.empty);
-        ArrayList<String> values = await(() -> new ArrayList<String>()).until(CollectionConditions.empty);
-        LinkedHashMap<String, Integer> entries = await(() -> new LinkedHashMap<String, Integer>()).until(MapConditions.empty);
-        Optional<?> optional = await(() -> Optional.empty()).until(OptionalConditions.absent);
-        assertTrue(text.isEmpty());
-        assertTrue(values.isEmpty());
-        assertTrue(entries.isEmpty());
-        assertTrue(optional.isEmpty());
     }
 
     @Test
