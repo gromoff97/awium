@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TextExpectedValuesTest {
 
     @Test
-    void regexChecksReadCharactersWithoutRenderingTheObservation() {
+    void characterChecksReadCharactersWithoutRenderingTheObservation() {
         var renderingFailure = new AssertionError("text must not be rendered for matching");
         var actual = new CharSequence() {
             private final String value = "Ready 42";
@@ -31,12 +31,13 @@ class TextExpectedValuesTest {
                 StringConditions.matchesRegex(Pattern.compile("ready \\d+", Pattern.CASE_INSENSITIVE)),
                 StringConditions.doesNotMatchRegex("failed.*"),
                 StringConditions.doesNotMatchRegex(Pattern.compile("failed.*")),
-                StringConditions.containsIgnoringCase("READY"))) {
+                StringConditions.containsIgnoringCase("READY"), StringConditions.contentEquals("Ready 42"))) {
             assertSame(actual, waiting.until(check.because("text is ready")));
             assertSame(actual, await(() -> Optional.of(actual)).until(OptionalConditions.hasValue(check)));
         }
         for (var check : List.of(StringConditions.matchesRegex("failed.*"),
-                StringConditions.doesNotMatchRegex("Ready \\d+"), StringConditions.containsIgnoringCase("failed"))) {
+                StringConditions.doesNotMatchRegex("Ready \\d+"), StringConditions.containsIgnoringCase("failed"),
+                StringConditions.contentEquals("failed"))) {
             var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(check)).failure();
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
             assertNull(failure.cause());
