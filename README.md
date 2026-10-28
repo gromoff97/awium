@@ -514,8 +514,9 @@ Empty expected sets follow the same rules as collection membership:
 and `doesNotContainAnyValues(...)` match any non-null map. Empty entry maps are
 also accepted: `containsAllEntries(...)` and `doesNotContainAnyEntries(...)`
 are satisfied, while `containsAnyEntries(...)` and `doesNotContainAllEntries(...)`
-are unsatisfied. `containsExactlyEntries(...)` with an empty expected map requires
-the observed map to be empty.
+are unsatisfied. `containsExactlyEntries(...)` requires the same entries, regardless
+of encounter order; an empty expected map requires the observed map to be empty.
+`doesNotContainExactlyEntries(...)` is its opposite for a non-null observed map.
 
 `hasEntry(key, value)` checks for an expected key-value pair.
 `hasEntry(entry -> ...)` applies a predicate to each `Map.Entry`; use

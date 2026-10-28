@@ -40,6 +40,7 @@ import static java.util.Objects.requireNonNull;
  * <p>Checks with explicit expected keys, values, or entry maps compare each key and value with
  * {@link java.util.Objects#deepEquals(Object, Object)}, with the observed operand first,
  * independently of the map's comparator or identity rules. Key lookup uses the same comparison.
+ * Exact entry checks ignore encounter order.
  * Nested conditions retain their own comparison rules; equality of a whole entry follows
  * {@link Entry#equals(Object)}, which compares array keys and values by identity.
  * Selected entries are the original entry objects, with the map implementation's lifecycle.
