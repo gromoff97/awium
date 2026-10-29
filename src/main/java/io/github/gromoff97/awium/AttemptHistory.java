@@ -40,7 +40,8 @@ final class AttemptHistory<OBSERVED> {
 
     List<AttemptGroup<OBSERVED>> snapshot() {
         if (last == null) return List.of();
-        var groups = new ArrayList<>(completed);
+        var groups = new ArrayList<AttemptGroup<OBSERVED>>(completed.size() + 1);
+        groups.addAll(completed);
         groups.add(new AttemptGroup<>(firstNumber, count, first, last));
         return List.copyOf(groups);
     }
@@ -61,13 +62,9 @@ final class AttemptHistory<OBSERVED> {
     }
 
     private static boolean sameStatus(AttemptStatus previous, AttemptStatus next) {
-        return switch (previous) {
-            case AttemptStatus.Satisfied ignored -> next instanceof AttemptStatus.Satisfied;
-            case AttemptStatus.Unsatisfied first -> next instanceof AttemptStatus.Unsatisfied last
-                    && Objects.equals(first.mismatch(), last.mismatch());
-            case AttemptStatus.Uncontrolled first -> next instanceof AttemptStatus.Uncontrolled last
-                    && first.operation() == last.operation();
-        };
+        // Only controlled outcomes repeat; an uncontrolled outcome ends the wait.
+        return previous instanceof AttemptStatus.Satisfied && next instanceof AttemptStatus.Satisfied
+                || previous instanceof AttemptStatus.Unsatisfied first && next instanceof AttemptStatus.Unsatisfied last
+                        && Objects.equals(first.mismatch(), last.mismatch());
     }
-
 }
