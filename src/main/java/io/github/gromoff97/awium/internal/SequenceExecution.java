@@ -13,6 +13,7 @@ public final class SequenceExecution<OBSERVED, RESULT> {
     private final List<AttemptFactory<OBSERVED, RESULT>> stages;
     private final List<RESULT> results = new ArrayList<>();
     private Condition checkedCondition;
+    private HistoryEntry.Progress progressSnapshot;
 
     public SequenceExecution(AttemptFactory<OBSERVED, RESULT> attempt) {
         this(null, List.of(attempt));
@@ -41,7 +42,12 @@ public final class SequenceExecution<OBSERVED, RESULT> {
     }
 
     HistoryEntry.Progress progress(int stageNumber) {
-        return sequence == null ? null : new HistoryEntry.Progress(sequence, stageNumber, results.size());
+        if (sequence == null) return null;
+        if (progressSnapshot == null || progressSnapshot.stageNumber() != stageNumber
+                || progressSnapshot.capturedStages() != results.size()) {
+            progressSnapshot = new HistoryEntry.Progress(sequence, stageNumber, results.size());
+        }
+        return progressSnapshot;
     }
 
     boolean complete() {
