@@ -62,13 +62,13 @@ class AttemptHistoryTest {
     }
 
     @Test
-    void distinctConditionsDoNotMergeButReasonCopiesOfTheSameCheckDo() {
+    void repeatedDefinitionsGroupWhileIndependentCopiesRemainSeparate() {
         var history = new AttemptHistory<String>(true);
-        var condition = diagnosticCondition("ready", null);
-        history.add(entry(condition.because("reason"), "one", unsatisfied()));
-        history.add(entry(condition.because("reason"), "two", unsatisfied()));
-        history.add(entry(condition.because("another reason"), "three", unsatisfied()));
-        history.add(entry(diagnosticCondition("ready", null).because("another reason"), "four", unsatisfied()));
+        var condition = diagnosticCondition("ready", null).because("reason");
+        history.add(entry(condition, "one", unsatisfied()));
+        history.add(entry(condition, "two", unsatisfied()));
+        history.add(entry(condition.because("reason"), "three", unsatisfied()));
+        history.add(entry(diagnosticCondition("ready", null).because("reason"), "four", unsatisfied()));
 
         assertEquals(List.of(2L, 1L, 1L), history.snapshot().stream().map(group -> group.count()).toList());
     }

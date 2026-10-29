@@ -240,9 +240,9 @@ class TryAwaitHistoryTest {
         var emptyInner = List.of(List.<String>of());
         var ready = List.of(List.of("ready"));
         var observations = List.of(emptyOuter, emptyOuter, emptyInner, emptyInner, ready).iterator();
-        var result = tryAwait(observations::next).usingTime(time, time).every(ofNanos(1))
-                .until(CollectionConditions.singleElement(
-                        CollectionConditions.singleElement(Conditions.instanceOf(String.class))));
+        var check = CollectionConditions.singleElement(
+                CollectionConditions.singleElement(Conditions.instanceOf(String.class)));
+        var result = tryAwait(observations::next).usingTime(time, time).every(ofNanos(1)).until(check);
 
         String selected = result.orThrow();
         assertEquals("ready", selected);
@@ -250,8 +250,8 @@ class TryAwaitHistoryTest {
         assertEquals(List.of("collection size was 0", "single element: collection size was 0"),
                 result.attempts().subList(0, 2).stream().map(group ->
                         assertInstanceOf(AttemptStatus.Unsatisfied.class, group.first().result()).mismatch()).toList());
-        assertSame(CollectionConditions.singleElement, result.attempts().get(0).first().condition());
-        assertSame(CollectionConditions.singleElement, result.attempts().get(1).first().condition());
+        assertSame(check, result.attempts().get(0).first().condition());
+        assertSame(check, result.attempts().get(1).first().condition());
     }
 
     @Test

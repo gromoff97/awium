@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.internal.AwaitAttempt;
+import io.github.gromoff97.awium.internal.DiagnosticText;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -17,28 +18,20 @@ public abstract sealed class Condition
 
     private final String description;
     private final String explanation;
-    private final Reference<?> reference;
-    // Reason copies share identity without retaining an earlier condition object.
-    final Object identity;
+    private final List<Reference<?>> references;
 
     Condition(Condition original) {
-        this(required(original).description, original.reference, original.explanation, original.identity);
+        this(required(original).description, original.references, original.explanation);
     }
 
     Condition(Condition original, String explanation) {
-        this(required(original).description, original.reference,
-                nonBlank(explanation, "explanation"), original.identity);
+        this(required(original).description, original.references, nonBlank(explanation, "explanation"));
     }
 
-    private Condition(String description, Reference<?> reference, String explanation) {
-        this(description, reference, explanation, null);
-    }
-
-    private Condition(String description, Reference<?> reference, String explanation, Object identity) {
+    private Condition(String description, List<Reference<?>> references, String explanation) {
         this.description = nonBlank(description, "description");
         this.explanation = explanation;
-        this.reference = reference;
-        this.identity = identity == null ? new Object() : identity;
+        this.references = List.copyOf(references);
     }
 
     public final String description() {
@@ -63,8 +56,13 @@ public abstract sealed class Condition
      */
     public abstract Condition because(String explanation);
 
-    public final Reference<?> reference() {
-        return reference;
+    /**
+     * Diagnostic operands in selection order; their values are retained by reference.
+     *
+     * @return an immutable list, empty when the definition has no diagnostic operands
+     */
+    public final List<Reference<?>> references() {
+        return references;
     }
 
     static <C extends Condition> C required(C condition) {
@@ -77,9 +75,9 @@ public abstract sealed class Condition
 
         final Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory;
 
-        Check(String description, Reference<?> reference,
+        Check(String description, List<Reference<?>> references,
                 Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory, String explanation) {
-            super(description, reference, explanation);
+            super(description, references, explanation);
             this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
         }
 
@@ -104,9 +102,9 @@ public abstract sealed class Condition
     public abstract static sealed class ApplicableCondition<INPUT, REFERENCE> extends Check
             permits InputCondition, ComparisonCondition {
 
-        ApplicableCondition(String description, Reference<?> reference,
+        ApplicableCondition(String description, List<Reference<?>> references,
                 Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory, String explanation) {
-            super(description, reference, evaluatorFactory, explanation);
+            super(description, references, evaluatorFactory, explanation);
         }
 
         ApplicableCondition(Check original) {
@@ -126,9 +124,9 @@ public abstract sealed class Condition
             extends ApplicableCondition<INPUT, Reference<?>>
             permits Typed, PreservingCondition, SelectedCondition, MapValueCondition {
 
-        InputCondition(String description, Reference<?> reference,
+        InputCondition(String description, List<Reference<?>> references,
                 Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory, String explanation) {
-            super(description, reference, evaluatorFactory, explanation);
+            super(description, references, evaluatorFactory, explanation);
         }
 
         InputCondition(Check original) {
@@ -150,7 +148,7 @@ public abstract sealed class Condition
         private final List<Check> stages;
 
         Captured(Check[] conditions) {
-            super("conditions are satisfied in order", null, null);
+            super("conditions are satisfied in order", List.of(), null);
             stages = Arrays.stream(requireNonNull(conditions, "conditions must not be null"))
                     .map(Condition::required).toList();
             if (stages.isEmpty()) throw new IllegalArgumentException("conditions must not be empty");
@@ -179,12 +177,12 @@ public abstract sealed class Condition
 
         Typed(String description, Reference<?> reference,
                 Callable<? extends AwaitAttempt<? super INPUT, ? extends RESULT>> evaluatorFactory) {
-            super(description, reference, evaluatorFactory, null);
+            super(description, reference == null ? List.of() : List.of(reference), evaluatorFactory, null);
         }
 
-        Typed(Condition nested, String description,
+        Typed(Condition nested, String description, List<Reference<?>> references,
                 Callable<? extends AwaitAttempt<? super INPUT, ? extends RESULT>> evaluatorFactory) {
-            super(description + ": " + required(nested).description, nested.reference, evaluatorFactory, nested.explanation);
+            super(description + ": " + required(nested).description, references, evaluatorFactory, nested.explanation);
         }
 
         private Typed(Typed<INPUT, RESULT> original, String explanation) {
@@ -307,6 +305,11 @@ public abstract sealed class Condition
     public record Reference<VALUE>(String label, VALUE value) {
         public Reference {
             label = nonBlank(label, "reference label");
+        }
+
+        @Override
+        public String toString() {
+            return label + "=" + new DiagnosticText(null).value(value);
         }
     }
 

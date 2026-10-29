@@ -87,7 +87,7 @@ class ContainerInterruptionTest {
     }
 
     @Test
-    void interruptedExtractionReportsTheSelectorBeforeStartingTheNestedCheck() {
+    void interruptedExtractionKeepsTheDefinitionWithoutStartingTheNestedCheck() {
         int[] factories = {0};
         var check = Conditions.conditionPerWait("nested check", () -> {
             factories[0]++;
@@ -98,18 +98,18 @@ class ContainerInterruptionTest {
         List<Function<MapAwait<SignallingMap, Map.Entry<String, String>, String>, AwaitResult<?, ?>>> waits = List.of(
                 waiting -> diagnostic(waiting).until(selected), waiting -> diagnostic(waiting).until(narrowed),
                 waiting -> diagnostic(waiting).until(captured(selected, selected)), waiting -> diagnostic(waiting).until(captured(narrowed, narrowed)));
-        for (var wait : waits) {
+        for (int i = 0; i < waits.size(); i++) {
             var actual = new SignallingMap("getValue");
             try {
-                var result = wait.apply(await(() -> actual));
+                var result = waits.get(i).apply(await(() -> actual));
                 var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
                 var attempt = result.attempts().getFirst().last();
                 var condition = attempt.condition();
 
                 assertEquals(INTERRUPTED, failure.reason());
                 assertEquals(0, factories[0]);
-                assertEquals(MapConditions.valueFor("key").description(), condition.description());
-                assertEquals("key", condition.reference().value());
+                assertSame(i % 2 == 0 ? selected : narrowed, condition);
+                assertEquals("key", condition.references().getFirst().value());
                 assertEquals("value must be readable", condition.explanation());
                 assertTrue(Thread.currentThread().isInterrupted());
             } finally {

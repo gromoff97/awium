@@ -84,7 +84,7 @@ class IterableExpectedValuesTest {
             reads[0] = 0;
             var condition = factory.apply(expected);
             assertEquals(elements.size(), reads[0]);
-            assertEquals(elements, condition.reference().value());
+            assertEquals(elements, condition.references().getFirst().value());
         }
     }
 

@@ -331,8 +331,9 @@ in iteration order. `all` and `none` stop at the first decisive candidate; a fai
 the container's size. It preserves traversal progress in history without repeating
 the predicate or retaining intermediate elements.
 
-Every condition family exposes `description()` and `reference()` through the
-common immutable `Condition` model.
+Every condition family exposes `description()` and an immutable `references()`
+list through the common `Condition` model. A composed map selection retains its
+lookup keys alongside the nested check's expected values, in selection order.
 
 The source is read once per attempt. `hasValue(...)` checks an optional value.
 
@@ -348,9 +349,9 @@ The observation remains a caller-owned object, not an atomic snapshot.
 
 The nested condition can preserve the selected value (`matches`, `asserted`,
 `condition`), compare it with an expected value (`equalTo`), or narrow its type
-(`instanceOf`). Extraction failures report the selector; nested failures report
-the nested condition and its expected value. Callback failures stop evaluation
-and retain their original cause. If a callback sets the thread's interrupt flag,
+(`instanceOf`). Diagnostics retain the complete condition definition and its
+operands; the mismatch identifies failed extraction or a failed nested check.
+Callback failures stop evaluation and retain their original cause. If a callback sets the thread's interrupt flag,
 the wait stops. A nested factory initializes lazily after successful extraction
 and keeps its state across retries within that stage. The nested check runs at
 most once per attempt.
@@ -822,9 +823,13 @@ Individual `first()` and `last()` records use the same guarded formatting, witho
 an attempt number: numbering belongs to the group.
 Printing a status safely renders its cause's class and message; printing an
 `AwaitFailure` returns its saved diagnostic message without inspecting the cause again.
+Printing `condition.references()` also guards each operand's value formatting.
 
 Each record has an acquisition or persistence `phase()`,
 the associated `condition()`, sequence `progress()`, `observed()`, and `result()`.
+The condition is the original complete check passed to `until`, or the current
+captured stage. It stays associated with the source observation even when an
+inner selection or check fails; it is never replaced with a check on a different input type.
 For a capture sequence, progress holds its immutable `sequence()` definition,
 the attempt's one-based `stageNumber()`, and `capturedStages()` after the attempt.
 The total is `sequence().stages().size()`. Progress is `null` for a single check.
@@ -961,7 +966,7 @@ the observations returned by a particular source.
 Each terminal call creates fresh `AttemptFactory` instances, which lazily initialize
 one evaluator per check. A factory binds an observation to an immutable `Attempt`.
 Each `Attempt.call()` runs that check and returns a separate `AttemptResult<RESULT>`
-with the selected value or failure and diagnostic condition. The attempt retains no
+with the selected value or failure. The condition stays on the bound attempt. The attempt retains no
 previous result, timing, attempt number, or sequence progress. Its observation and
 callback may themselves be mutable; neither is copied.
 `SequenceExecution` selects the next attempt and accepts its result, retaining stage
@@ -988,11 +993,10 @@ A successful check can still finish too late.
 
 `ConditionSupport` shares condition construction, checks, extraction, and
 composition; catalogues supply nested conditions without creating execution
-attempts. Failed extraction reports its own condition: optional presence,
-the requested collection position, or the map lookup key. Map entry access failures
-also retain the lookup key. After extraction succeeds, diagnostics use the
-nested condition's expectation. Interruption during extraction keeps the selector
-context and skips the nested check.
+attempts. Composed definitions retain lookup keys and nested expectations in their
+immutable reference lists. Execution records the original definition and adds
+completed selection steps to nested mismatches and failure locations. Interruption
+during extraction skips the nested check.
 
 Catalog and fluent behavior tests use virtual time. Integration tests verify
 caller-thread execution and external cancellation on both platform and virtual

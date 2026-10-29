@@ -138,7 +138,7 @@ class MixedConditionSequenceTest {
             var attempt = result.attempts().getLast().last();
             assertEquals(1, attempt.progress().capturedStages());
             assertEquals(2, attempt.progress().stageNumber());
-            if (comparisonLast) assertSame(READY, attempt.condition().reference().value());
+            if (comparisonLast) assertSame(READY, attempt.condition().references().getFirst().value());
         }
 
         var cause = new IOException("callback failed");

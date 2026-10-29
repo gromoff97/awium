@@ -74,6 +74,10 @@ class ArtifactContractIT {
         Set<String> definition = classes.get("Condition");
         assertTrue(definition.stream().noneMatch(Set.of("AttemptFactory", "AttemptResult")::contains),
                 "Condition -> " + definition);
+        Set<String> reference = classes.get("Reference");
+        assertTrue(reference.stream().noneMatch(Set.of("AwaitAttempt", "Attempt", "AttemptFactory",
+                        "SequenceExecution", "AttemptExecution", "WaitEngine", "WaitCompletion")::contains),
+                "Reference -> " + reference);
         // Condition construction is independent of source protocols, timing, diagnostics, and value comparison.
         Set<String> support = classes.get("ConditionSupport");
         assertTrue(support.stream().noneMatch(Set.of("WaitEngine", "WaitCompletion", "FailureDiagnostics", "ValueMatching")::contains),
@@ -178,6 +182,8 @@ class ArtifactContractIT {
         return dependencies;
     }
     private static String owner(String className) {
+        // Diagnostic operands are value records, independently of the executable condition family.
+        if (className.equals(Condition.Reference.class.getName())) return "Reference";
         return className.substring(className.lastIndexOf('.') + 1).split("\\$", 2)[0];
     }
 

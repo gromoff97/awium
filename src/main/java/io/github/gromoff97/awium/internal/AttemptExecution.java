@@ -54,7 +54,7 @@ final class AttemptExecution<OBSERVED, RESULT> {
 
         var attempt = execution.attempt(actual);
         var evaluation = attempt.call();
-        execution.record(attempt, evaluation);
+        execution.record(evaluation);
         var result = evaluation.status();
         long completed = clock.getAsLong();
 
@@ -64,7 +64,7 @@ final class AttemptExecution<OBSERVED, RESULT> {
                     cause == null ? new InterruptedException("caller thread interrupt flag was set") : cause);
         }
         var timing = afterObservation(attemptStarted, retrievalStarted, observed, completed);
-        return new HistoryEntry<>(phase, timing, execution.checkedCondition(),
+        return new HistoryEntry<>(phase, timing, attempt.condition(),
                 execution.progress(stageNumber), actual, result);
     }
 

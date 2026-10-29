@@ -229,7 +229,7 @@ class CollectionSelectionConditionsTest {
                 var failure = assertInstanceOf(AwaitResult.Failed.class, failed).failure();
                 assertEquals(TIMEOUT, failure.reason());
                 assertTrue(failure.message().contains("Because: pattern must be absent"));
-                assertEquals(List.of(), failed.attempts().getLast().last().condition().reference().value());
+                assertEquals(List.of(), failed.attempts().getLast().last().condition().references().getFirst().value());
             }
         }
     }

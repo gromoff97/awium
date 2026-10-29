@@ -273,7 +273,7 @@ public final class MapConditions {
     }
 
     public static <KEY> MapValueCondition<Map<? super KEY, ?>> valueFor(KEY key) {
-        return new MapValueCondition<>(ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> value(actual, key)));
+        return new MapValueCondition<>(ConditionSupport.condition("map contains the expected key", new Reference<>("Key", key), actual -> value(actual, key)));
     }
 
     /** Selects the key's value if it matches, retaining the source's value type. */
@@ -298,7 +298,7 @@ public final class MapConditions {
     }
 
     public static <KEY> SelectedCondition<Map<? super KEY, ?>> entryFor(KEY key) {
-        return new SelectedCondition<>(ConditionSupport.condition("map contains the expected key", expectedReference(key), actual -> findEntry(actual, key)));
+        return new SelectedCondition<>(ConditionSupport.condition("map contains the expected key", new Reference<>("Key", key), actual -> findEntry(actual, key)));
     }
 
     /** Matches one key, including a collection or array as that single key. */

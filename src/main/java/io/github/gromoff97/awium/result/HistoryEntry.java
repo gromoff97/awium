@@ -15,7 +15,7 @@ import static java.util.Objects.requireNonNull;
  * @param <OBSERVED> complete value returned by the source
  * @param phase acquisition or persistence phase
  * @param timing checkpoints measured from the start of the terminal call
- * @param condition condition associated with this attempt, including attempts that fail before evaluation
+ * @param condition original complete source-compatible check or captured stage, including attempts that fail before evaluation
  * @param progress sequence snapshot, or null for a single check
  * @param observed complete source value, including a legitimate null; consult hasObservation() for availability
  * @param result status and diagnostics of this attempt

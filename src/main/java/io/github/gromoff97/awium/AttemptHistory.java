@@ -51,14 +51,8 @@ final class AttemptHistory<OBSERVED> {
                 && previous.hasObservation() == next.hasObservation()
                 && previous.result().cause() == next.result().cause()
                 && Objects.equals(previous.progress(), next.progress())
-                && sameCondition(previous.condition(), next.condition())
+                && previous.condition() == next.condition()
                 && sameStatus(previous.result(), next.result());
-    }
-
-    private static boolean sameCondition(Condition previous, Condition next) {
-        if (previous == next) return true;
-        return previous.identity == next.identity
-                && Objects.equals(previous.explanation(), next.explanation());
     }
 
     private static boolean sameStatus(AttemptStatus previous, AttemptStatus next) {

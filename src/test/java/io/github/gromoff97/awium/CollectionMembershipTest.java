@@ -252,7 +252,7 @@ class CollectionMembershipTest {
             for (var failed : List.of(diagnostic(waiting).until(containsAny(List.of())),
                     diagnostic(waiting).until(doesNotContainAll(List.of())))) {
                 assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, failed).failure().reason());
-                assertEquals(List.of(), failed.attempts().getLast().last().condition().reference().value());
+                assertEquals(List.of(), failed.attempts().getLast().last().condition().references().getFirst().value());
             }
             assertEquals(actual.isEmpty() ? Satisfied.class : Unsatisfied.class,
                     evaluate(containsExactly(List.<String>of()), actual).getClass());

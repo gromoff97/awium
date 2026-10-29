@@ -253,7 +253,7 @@ class NestedQuantifierTest {
         var missingResult = tryAwait(() -> List.of(missing)).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1))
                 .until(any(nested));
         var missingFailure = assertInstanceOf(AwaitResult.Failed.class, missingResult).failure();
-        assertTrue(missingFailure.message().contains("Expected: user"), missingFailure.message());
+        assertTrue(missingFailure.message().contains("Key: user"), missingFailure.message());
     }
 
     @Test

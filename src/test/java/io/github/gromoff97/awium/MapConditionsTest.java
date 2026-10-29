@@ -265,7 +265,7 @@ class MapConditionsTest {
             for (var check : unsatisfied) {
                 var result = diagnostic(waiting).until(check);
                 assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
-                assertEquals(List.of(), result.attempts().getLast().last().condition().reference().value());
+                assertEquals(List.of(), result.attempts().getLast().last().condition().references().getFirst().value());
             }
             assertEquals(actual.isEmpty() ? Satisfied.class : Unsatisfied.class,
                     evaluate(containsExactlyEntries(Map.<String, String>of()), actual).getClass());

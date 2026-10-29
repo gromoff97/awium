@@ -305,7 +305,7 @@ class TypedCollectionSelectionTest {
         assertSame(cause, failure.cause());
         assertEquals(1, reads[0]);
         var attempt = result.attempts().getLast().last();
-        assertEquals("target-key", attempt.condition().reference().value());
+        assertEquals("target-key", attempt.condition().references().getFirst().value());
     }
 
     private static <OBSERVED> ValueAwait<OBSERVED> waiting(Callable<OBSERVED> source) {

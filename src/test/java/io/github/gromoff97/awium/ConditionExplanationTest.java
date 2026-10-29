@@ -42,7 +42,7 @@ class ConditionExplanationTest {
             assertEquals("first reason", first.explanation());
             assertEquals("second reason", second.explanation());
             assertEquals(original.description(), second.description());
-            assertEquals(original.reference(), second.reference());
+            assertEquals(original.references(), second.references());
             assertThrows(NullPointerException.class, () -> original.because(null));
             assertThrows(IllegalArgumentException.class, () -> original.because(" \n\t"));
         }

@@ -31,24 +31,24 @@ public final class Attempt<OBSERVED, RESULT> implements Callable<AttemptResult<?
     public AttemptResult<? extends RESULT> call() {
         try {
             if (Thread.currentThread().isInterrupted()) {
-                return interrupted(null, null);
+                return interrupted(null);
             }
             var check = evaluator.call();
             if (Thread.currentThread().isInterrupted()) {
-                return interrupted(null, null);
+                return interrupted(null);
             }
             var result = requireNonNull(check.probe(observed), "condition returned null evaluation");
             if (!(result instanceof AttemptResult.Uncontrolled<?>) && Thread.currentThread().isInterrupted()) {
-                return interrupted(result.status().cause(), result.condition());
+                return interrupted(result.status().cause());
             }
             return result;
         } catch (Throwable failure) {
-            return AttemptResult.uncontrolled(failure, null);
+            return AttemptResult.uncontrolled(failure);
         }
     }
 
-    private AttemptResult<RESULT> interrupted(Throwable cause, Condition diagnostic) {
+    private AttemptResult<RESULT> interrupted(Throwable cause) {
         return AttemptResult.uncontrolled(cause == null
-                ? new InterruptedException("caller thread interrupt flag was set") : cause, diagnostic);
+                ? new InterruptedException("caller thread interrupt flag was set") : cause);
     }
 }

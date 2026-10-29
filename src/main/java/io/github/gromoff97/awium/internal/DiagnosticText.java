@@ -127,8 +127,7 @@ public final class DiagnosticText {
     public void condition(StringBuilder out, Condition condition, String indentation) {
         field(out, indentation, "Condition", condition.description());
         String detailsIndentation = indentation + "    ";
-        var reference = condition.reference();
-        if (reference != null) {
+        for (var reference : condition.references()) {
             field(out, detailsIndentation, reference.label(), value(reference.value()));
         }
         if (condition.explanation() != null) {

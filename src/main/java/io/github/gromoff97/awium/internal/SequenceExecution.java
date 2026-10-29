@@ -12,7 +12,6 @@ public final class SequenceExecution<OBSERVED, RESULT> {
     private final Condition.Captured sequence;
     private final List<AttemptFactory<OBSERVED, RESULT>> stages;
     private final List<RESULT> results = new ArrayList<>();
-    private Condition checkedCondition;
     private HistoryEntry.Progress progressSnapshot;
 
     public SequenceExecution(AttemptFactory<OBSERVED, RESULT> attempt) {
@@ -35,10 +34,6 @@ public final class SequenceExecution<OBSERVED, RESULT> {
 
     Condition condition(int stageNumber) {
         return stages.get(stageNumber - 1).condition;
-    }
-
-    Condition checkedCondition() {
-        return checkedCondition;
     }
 
     HistoryEntry.Progress progress(int stageNumber) {
@@ -66,8 +61,7 @@ public final class SequenceExecution<OBSERVED, RESULT> {
         return stage.create(actual);
     }
 
-    void record(Attempt<OBSERVED, RESULT> attempt, AttemptResult<? extends RESULT> evaluation) {
-        checkedCondition = evaluation.diagnosticCondition(attempt.condition());
+    void record(AttemptResult<? extends RESULT> evaluation) {
         if (evaluation instanceof AttemptResult.Satisfied<? extends RESULT> success) {
             results.add(success.value());
         }

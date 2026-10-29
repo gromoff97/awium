@@ -16,6 +16,7 @@ import java.util.function.Function;
 import java.util.function.IntPredicate;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
+import java.util.stream.Stream;
 
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
@@ -120,7 +121,8 @@ final class ConditionSupport {
             Function<? super INPUT, ? extends Iterable<? extends ELEMENT>> elements) {
         String elementsDescription = subject + " " + items;
         String mismatch = quantifier.mismatch(elementsDescription);
-        return new PreservingCondition<>(new Condition.Typed<>(nested, quantifier.description(elementsDescription), () -> {
+        Condition.required(nested);
+        return new PreservingCondition<>(new Condition.Typed<>(nested, quantifier.description(elementsDescription), nested.references(), () -> {
             AttemptFactory<ELEMENT, ?> evaluator = bind(nested);
             return actual -> actual == null ? AttemptResult.unsatisfied(subject + " was null")
                     : evaluateQuantifier(actual, elements, evaluator, quantifier, mismatch, elementsDescription);
@@ -147,7 +149,7 @@ final class ConditionSupport {
             }
         } catch (Throwable failure) {
             return nestedFailure(elementsDescription + " (checked " + checked + ")",
-                    AttemptResult.uncontrolled(failure, null));
+                    AttemptResult.uncontrolled(failure));
         }
         return quantifiedResult(actual, quantifier.satisfied(false), mismatch, checked, last);
     }
@@ -163,7 +165,7 @@ final class ConditionSupport {
         var failure = evaluated.status() instanceof AttemptStatus.Unsatisfied value
                 ? unsatisfied(value.mismatch() == null ? mismatch : mismatch + ": " + value.mismatch(), value.cause())
                 : unsatisfied(mismatch);
-        return new AttemptResult.Unsatisfied<>(failure, evaluated.condition());
+        return new AttemptResult.Unsatisfied<>(failure);
     }
 
     private static <RESULT> AttemptResult.Uncontrolled<RESULT> nestedFailure(
@@ -171,7 +173,7 @@ final class ConditionSupport {
         var status = failure.status();
         String path = status.location() == null ? location : location + " → " + status.location();
         return new AttemptResult.Uncontrolled<>(
-                new AttemptStatus.Uncontrolled(status.operation(), status.cause(), path), failure.condition());
+                new AttemptStatus.Uncontrolled(status.operation(), status.cause(), path));
     }
 
     static <VALUE> Reference<VALUE> unexpectedReference(VALUE value) {
@@ -193,7 +195,9 @@ final class ConditionSupport {
     private static <INPUT, VALUE, RESULT> Condition.Typed<INPUT, RESULT> compose(String selection, Condition nested,
             Condition.Check extractionCondition,
             Supplier<? extends AttemptFactory<? super VALUE, ? extends RESULT>> evaluatorFactory) {
-        return new Condition.Typed<>(nested, selection, () -> {
+        Condition.required(nested);
+        var references = Stream.concat(extractionCondition.references().stream(), nested.references().stream()).toList();
+        return new Condition.Typed<>(nested, selection, references, () -> {
             // Bare selectors obtain their value type from the enclosing selector factory's source constraints.
             var extraction = ConditionSupport.<INPUT, VALUE>bind(extractionCondition);
             var evaluator = evaluatorFactory.get();
@@ -203,13 +207,11 @@ final class ConditionSupport {
                     if (evaluated instanceof AttemptResult.Uncontrolled<?> failure) {
                         yield nestedFailure(selection, failure);
                     }
-                    yield evaluated instanceof AttemptResult.Unsatisfied<?> && evaluated.condition() != null
+                    yield evaluated instanceof AttemptResult.Unsatisfied<?>
                             ? nestedMismatch(selection, evaluated) : evaluated;
                 }
-                case AttemptResult.Unsatisfied<?> mismatch -> new AttemptResult.Unsatisfied<>(
-                        mismatch.status(), extractionCondition);
-                case AttemptResult.Uncontrolled<?> failure -> new AttemptResult.Uncontrolled<>(
-                        failure.status(), extractionCondition);
+                case AttemptResult.Unsatisfied<?> mismatch -> new AttemptResult.Unsatisfied<>(mismatch.status());
+                case AttemptResult.Uncontrolled<?> failure -> new AttemptResult.Uncontrolled<>(failure.status());
             };
         });
     }
