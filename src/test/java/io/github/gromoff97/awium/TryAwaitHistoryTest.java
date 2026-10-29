@@ -216,6 +216,9 @@ class TryAwaitHistoryTest {
             assertSame(errors.get(i), result.attempts().get(i).first().result().cause());
             assertEquals(1, result.attempts().get(i).count());
         }
+        String report = result.toString();
+        assertEquals(3, report.lines().filter(line -> line.strip().startsWith("Cause:")).count());
+        assertEquals(1, report.lines().filter(line -> line.contains("Condition:")).count());
     }
 
     @Test

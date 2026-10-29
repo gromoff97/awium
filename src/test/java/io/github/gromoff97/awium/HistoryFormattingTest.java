@@ -2,6 +2,7 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.result.AwaitResult;
 import io.github.gromoff97.awium.result.AttemptStatus;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -46,6 +47,31 @@ class HistoryFormattingTest {
                     Result: satisfied
                     Observed (current value): 4""", result.attempts().getLast().toString());
         assertEquals(4, calls[0]);
+        String report = result.toString();
+        assertEquals(1, report.lines().filter(line -> line.contains("Condition:")).count());
+        assertTrue(report.contains("Attempts 1–3 (ACQUISITION)"), report);
+        assertTrue(report.contains("Attempt 4 (ACQUISITION)"), report);
+    }
+
+    @Test
+    void completeReportsRenderSharedOperandsOnceAndStandaloneGroupsRemainSelfContained() {
+        int[] renders = {0};
+        List<String> expected = new ArrayList<>(List.of("ready")) {
+            @Override public String toString() { renders[0]++; return super.toString(); }
+        };
+        var time = new FakeTime(0);
+        var values = List.of(List.<String>of(), List.of("ready")).iterator();
+        var result = tryAwait(values::next).usingTime(time, time).every(ofNanos(1)).until(equalTo(expected));
+
+        assertEquals(0, renders[0]);
+        String report = result.toString();
+        assertEquals(1, renders[0]);
+        assertTrue(report.contains("Result: unsatisfied"), report);
+        assertTrue(report.contains("Result: satisfied"), report);
+        String last = result.attempts().getLast().toString();
+        assertEquals(2, renders[0]);
+        assertTrue(last.contains("Condition: value equals expected"), last);
+        assertTrue(last.contains("Expected: [ready]"), last);
     }
 
     @Test
@@ -67,6 +93,26 @@ class HistoryFormattingTest {
                     Result: unsatisfied
                     Mismatch: value was not equal
                     Observed (current value): pending""", result.attempts().get(1).toString());
+        String report = result.toString();
+        assertEquals(1, report.lines().filter(line -> line.contains("Sequence because:")).count());
+        assertEquals(2, report.lines().filter(line -> line.contains("Condition:")).count());
+        assertTrue(report.contains("Expected: created"), report);
+        assertTrue(report.contains("Expected: paid"), report);
+        assertTrue(report.contains("Stage: 2 of 2 (captured 2)"), report);
+    }
+
+    @Test
+    void returningToAnEarlierConditionRepeatsItsDefinitionInTheReport() {
+        var time = new FakeTime(0);
+        var ready = equalTo("ready");
+        var values = List.of("ready", "retry", "ready").iterator();
+        var result = tryAwait(values::next).usingTime(time, time).every(ofNanos(1))
+                .until(captured(ready, equalTo("retry"), ready));
+
+        String report = result.toString();
+        assertEquals(3, report.lines().filter(line -> line.contains("Condition:")).count());
+        assertEquals(2, report.lines().filter(line -> line.contains("Expected: ready")).count());
+        assertEquals(List.of("ready", "retry", "ready"), result.orThrow());
     }
 
     @Test
@@ -81,6 +127,7 @@ class HistoryFormattingTest {
         assertTrue(returnedNull.attempts().getFirst().toString().contains("Observed (current value): null"));
         String failed = sourceFailed.attempts().getFirst().toString();
         assertFalse(failed.contains("Observed (current value):"), failed);
+        assertTrue(failed.contains("Observed: unavailable"), failed);
         assertTrue(failed.contains("Result: uncontrolled (SOURCE)"), failed);
         assertTrue(failed.contains("Cause: java.lang.IllegalStateException"), failed);
         assertTrue(failed.contains("Message: source unavailable"), failed);

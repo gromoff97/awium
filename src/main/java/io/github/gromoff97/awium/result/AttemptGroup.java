@@ -40,8 +40,6 @@ public record AttemptGroup<OBSERVED>(long firstNumber, long lastNumber,
      */
     @Override
     public String toString() {
-        boolean repeated = count() > 1;
-        String heading = repeated ? "Attempts " + firstNumber + "–" + lastNumber : "Attempt " + firstNumber;
-        return DiagnosticText.history(heading, first, repeated ? last : null);
+        return DiagnosticText.group(this, null);
     }
 }

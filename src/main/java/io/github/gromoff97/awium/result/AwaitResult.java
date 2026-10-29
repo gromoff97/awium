@@ -45,8 +45,10 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
     private static String withHistory(String summary, List<? extends AttemptGroup<?>> attempts) {
         var out = new StringBuilder(summary);
         String separator = "\n\nAttempt history:\n";
+        HistoryEntry<?> previous = null;
         for (var group : attempts) {
-            out.append(separator).append(group);
+            out.append(separator).append(DiagnosticText.group(group, previous));
+            previous = group.last();
             separator = "\n\n";
         }
         return out.toString();

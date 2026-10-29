@@ -40,7 +40,7 @@ public record HistoryEntry<OBSERVED>(Phase phase, Timing timing,
     /** Formats this invocation without an attempt number, rendering retained values on demand. */
     @Override
     public String toString() {
-        return DiagnosticText.history("Attempt", this, null);
+        return DiagnosticText.entry(this);
     }
 
     /**

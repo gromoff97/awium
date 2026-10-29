@@ -819,6 +819,12 @@ status still describe the original check. A failing `toString()` produces a diag
 placeholder instead of preventing the rest of the group from being displayed.
 `System.out.println(result)` prints the outcome followed by all history groups;
 `result.attempts().forEach(System.out::println)` prints the history alone.
+The complete report prints unchanged condition fields and the sequence reason
+once across consecutive groups. Each group still shows its own number range,
+timing, outcome, observations, and cause. Printing a group by itself includes
+its complete condition definition.
+If the source did not produce a value, the group says `Observed: unavailable`;
+a returned `null` is shown as `Observed (current value): null`.
 Individual `first()` and `last()` records use the same guarded formatting, without
 an attempt number: numbering belongs to the group.
 Printing a status safely renders its cause's class and message; printing an

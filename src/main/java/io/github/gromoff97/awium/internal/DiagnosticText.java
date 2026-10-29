@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.internal;
 
 import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.result.AttemptGroup;
 import io.github.gromoff97.awium.result.AttemptStatus;
 import io.github.gromoff97.awium.result.HistoryEntry;
 import java.time.Duration;
@@ -39,8 +40,21 @@ public final class DiagnosticText {
         return cause.getClass().getName() + (message == null ? "" : ": " + message);
     }
 
-    /** Formats retained values on demand; a null last boundary denotes one invocation. */
-    public static String history(String heading, HistoryEntry<?> first, HistoryEntry<?> last) {
+    /** Formats one invocation without an attempt number. */
+    public static String entry(HistoryEntry<?> entry) {
+        return history("Attempt", entry, null, null);
+    }
+
+    /** Formats a group, sharing unchanged definition fields with an optional preceding entry. */
+    public static String group(AttemptGroup<?> group, HistoryEntry<?> previous) {
+        boolean repeated = group.count() > 1;
+        String heading = repeated ? "Attempts " + group.firstNumber() + "–" + group.lastNumber()
+                : "Attempt " + group.firstNumber();
+        return history(heading, group.first(), repeated ? group.last() : null, previous);
+    }
+
+    private static String history(String heading, HistoryEntry<?> first,
+            HistoryEntry<?> last, HistoryEntry<?> previous) {
         boolean repeated = last != null;
         var status = first.result();
         var cause = status.cause();
@@ -55,11 +69,15 @@ public final class DiagnosticText {
             int total = progress.sequence().stages().size();
             field(out, "Stage", progress.stageNumber() + " of " + total
                     + " (captured " + progress.capturedStages() + ")");
-            if (progress.sequence().explanation() != null) {
+            var priorProgress = previous == null ? null : previous.progress();
+            if (progress.sequence().explanation() != null
+                    && (priorProgress == null || priorProgress.sequence() != progress.sequence())) {
                 field(out, "Sequence because", progress.sequence().explanation());
             }
         }
-        text.condition(out, first.condition(), "    ");
+        if (previous == null || previous.condition() != first.condition()) {
+            text.condition(out, first.condition(), "    ");
+        }
         String result = switch (status) {
             case AttemptStatus.Satisfied ignored -> "satisfied";
             case AttemptStatus.Unsatisfied ignored -> "unsatisfied";
@@ -76,6 +94,8 @@ public final class DiagnosticText {
         if (first.hasObservation()) {
             field(out, separateObservations ? "First observed (current value)" : "Observed (current value)",
                     text.value(first.observed()));
+        } else {
+            field(out, "Observed", "unavailable");
         }
         if (separateObservations && last.hasObservation()) {
             field(out, "Last observed (current value)", text.value(last.observed()));
