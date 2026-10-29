@@ -2,7 +2,7 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.internal.ConditionEvaluation.Unsatisfied;
+import io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
@@ -13,6 +13,8 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
@@ -43,7 +45,7 @@ class ObjectAndOptionalAwaitTest {
         var selectedList = await(() -> list).until(in(List.of(List.of("ready"))));
         var selectedMap = await(() -> map).until(in(List.of(Map.of("ready", 1))));
         var selectedOptional = await(() -> optional).until(in(List.of(Optional.of("ready"))));
-        AwaitResult<Map<String, Integer>, Map<String, Integer>> captured = await(() -> map).tryUntil(
+        AwaitResult<Map<String, Integer>, Map<String, Integer>> captured = tryAwait(() -> map).until(
                 notIn(List.of(Map.of("failed", 0))));
 
         assertEquals(5, text.length());
@@ -64,7 +66,7 @@ class ObjectAndOptionalAwaitTest {
             var time = new FakeTime(0);
             var waiting = await(() -> actual).usingTime(time, time);
             var value = waiting.until(in(singletonList(actual.clone())));
-            AwaitResult<String[], String[]> captured = waiting.tryUntil(
+            AwaitResult<String[], String[]> captured = diagnostic(waiting).until(
                     in(singletonList(actual.clone())));
             var values = waiting.until(captured(in(singletonList(actual.clone())),
                     notIn(singletonList(new String[]{"failed"}))));
@@ -91,10 +93,10 @@ class ObjectAndOptionalAwaitTest {
             var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
             String excluded = waiting.until(notIn(List.of()));
             assertSame(actual, excluded);
-            AwaitResult<String, String> captured = waiting.tryUntil(notIn(List.of()));
+            AwaitResult<String, String> captured = diagnostic(waiting).until(notIn(List.of()));
             assertSame(actual, captured.orThrow());
 
-            var failed = waiting.tryUntil(in(List.of()));
+            var failed = diagnostic(waiting).until(in(List.of()));
             assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, failed).failure().reason());
             assertEquals(List.of(), failed.attempts().getLast().condition().reference().value());
             assertFailure(TIMEOUT, () -> waiting.until(in(List.of())));
@@ -106,15 +108,15 @@ class ObjectAndOptionalAwaitTest {
         var time = new FakeTime(0);
         var waiting = await(() -> "ready").usingTime(time, time).upTo(ofNanos(1));
         for (var condition : List.of(equalTo("different"), sameAs("different"), in(List.of("one", "two")))) {
-            AwaitResult<String, String> result = waiting.tryUntil(condition);
+            AwaitResult<String, String> result = diagnostic(waiting).until(condition);
             assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
         }
         String unequal = waiting.until(notEqualTo("different"));
         String different = waiting.until(notSameAs("different"));
         String excluded = waiting.until(notIn(List.of("one", "two")));
-        AwaitResult<String, Integer> narrowed = waiting.tryUntil(instanceOf(Integer.class));
-        AwaitResult<Optional<String>, Integer> nested = await(() -> Optional.of("ready"))
-                .usingTime(time, time).upTo(ofNanos(1)).tryUntil(hasValue(instanceOf(Integer.class)));
+        AwaitResult<String, Integer> narrowed = diagnostic(waiting).until(instanceOf(Integer.class));
+        AwaitResult<Optional<String>, Integer> nested = tryAwait(() -> Optional.of("ready"))
+                .usingTime(time, time).upTo(ofNanos(1)).until(hasValue(instanceOf(Integer.class)));
         Number broadened = await(() -> 1).until(instanceOf(Number.class));
 
         assertEquals(List.of("ready", "ready", "ready"), List.of(unequal, different, excluded));
@@ -133,10 +135,10 @@ class ObjectAndOptionalAwaitTest {
         var waiting = await(() -> observations[calls[0]++]).usingTime(time, time).every(ofNanos(2)).upTo(ofNanos(5));
 
         assertSame(ready, waiting.until(matches(actual -> actual == ready)));
-        var result = waiting.tryUntil(matches(ready::equals));
+        var result = diagnostic(waiting).until(matches(ready::equals));
 
         assertSame(ready, result.orThrow());
-        assertEquals(2, result.totalAttempts());
+        assertEquals(2, result.attempts().size());
         assertEquals(4, calls[0]);
         assertEquals(List.of(2L, 2L), time.parkRequests);
     }
@@ -149,7 +151,7 @@ class ObjectAndOptionalAwaitTest {
         PreservingCondition<Object> condition = Conditions.asserted(ignored -> {});
 
         String value = waiting.until(condition);
-        AwaitResult<String, String> result = waiting.tryUntil(condition);
+        AwaitResult<String, String> result = diagnostic(waiting).until(condition);
 
         assertSame(actual, value);
         assertSame(actual, result.orThrow());
@@ -171,13 +173,13 @@ class ObjectAndOptionalAwaitTest {
         var waiting = await(() -> observations[reads[0]++]).usingTime(time, time).every(ofNanos(1));
 
         List<String> values = waiting.until(captured(isNull, isNotNull));
-        AwaitResult<String, List<String>> captured = waiting.tryUntil(captured(
+        AwaitResult<String, List<String>> captured = diagnostic(waiting).until(captured(
                 isNull, isNotNull));
 
         assertNull(values.getFirst());
         assertEquals("ready", values.getLast());
         assertEquals(values, captured.orThrow());
-        assertEquals(2, captured.totalAttempts());
+        assertEquals(2, captured.attempts().size());
         assertEquals(4, reads[0]);
     }
 
@@ -269,7 +271,7 @@ class ObjectAndOptionalAwaitTest {
             var time = new FakeTime(0);
             var waiting = await(() -> "actual").usingTime(time, time)
                     .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(2));
-            var captured = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(check));
+            var captured = assertInstanceOf(AwaitResult.Failed.class, diagnostic(waiting).until(check));
             assertEquals(AwaitFailure.Reason.TIMEOUT, captured.failure().reason());
             assertThrows(AwaitAssertionError.class, () -> waiting.until(check));
         }

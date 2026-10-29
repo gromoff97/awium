@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
-import io.github.gromoff97.awium.internal.ConditionEvaluation.Unsatisfied;
+import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
+import io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
@@ -39,9 +39,9 @@ class ExpectedInputsTest {
             var actual = List.of(negative ? operand : new int[] {9});
             var condition = negative ? doesNotContain(operand) : contains(operand);
             var time = new FakeTime(0);
-            var outcome = await(() -> actual).usingTime(time, time)
+            var outcome = tryAwait(() -> actual).usingTime(time, time)
                     .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(1))
-                    .tryUntil(condition);
+                    .until(condition);
             var failure = assertInstanceOf(AwaitResult.Failed.class, outcome).failure();
             assertTrue(failure.message().contains((negative ? "Unexpected" : "Expected") + ": [1, 2]"));
         }

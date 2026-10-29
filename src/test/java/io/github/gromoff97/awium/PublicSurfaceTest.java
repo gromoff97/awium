@@ -53,12 +53,36 @@ class PublicSurfaceTest {
 
     @Test
     void terminalsAcceptExactlyOneConditionWithoutVarargs() {
-        for (var stage : List.<Class<?>>of(ValueAwait.class, SelectionAwait.class, MapAwait.class)) {
+        for (var stage : List.<Class<?>>of(ValueAwait.class, SelectionAwait.class, MapAwait.class,
+                DiagnosticAwait.class, DiagnosticSelectionAwait.class, DiagnosticMapAwait.class)) {
             for (var method : stage.getMethods()) {
-                if (method.getName().equals("until") || method.getName().equals("tryUntil")) {
+                assertFalse(method.getName().equals("tryUntil"), method.toGenericString());
+                if (method.getName().equals("until")) {
                     assertFalse(method.isVarArgs(), method.toGenericString());
                     assertEquals(1, method.getParameterCount(), method.toGenericString());
                     assertTrue(Condition.class.isAssignableFrom(method.getParameterTypes()[0]), method.toGenericString());
+                }
+            }
+        }
+    }
+
+    @Test
+    void entryPointDeterminesWhetherHistoryCanBeConfigured() throws NoSuchMethodException {
+        var settings = Set.of("every", "upTo", "persisting", "usingTime", "historyTail");
+        for (var stage : List.<Class<?>>of(ValueAwait.class, SelectionAwait.class, MapAwait.class)) {
+            for (var method : stage.getMethods()) {
+                assertFalse(method.getName().equals("historyTail"), method.toGenericString());
+                if (settings.contains(method.getName())) {
+                    assertTrue(stream(method.getReturnType().getMethods()).noneMatch(next ->
+                            next.getName().equals("historyTail")), method.toGenericString());
+                }
+            }
+        }
+        for (var stage : List.<Class<?>>of(DiagnosticAwait.class, DiagnosticSelectionAwait.class, DiagnosticMapAwait.class)) {
+            assertTrue(DiagnosticAwait.class.isAssignableFrom(stage.getMethod("historyTail", int.class).getReturnType()));
+            for (var method : stage.getMethods()) {
+                if (settings.contains(method.getName())) {
+                    assertTrue(DiagnosticAwait.class.isAssignableFrom(method.getReturnType()), method.toGenericString());
                 }
             }
         }

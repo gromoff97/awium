@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.ConditionAwaitAttempt;
-
+import io.github.gromoff97.awium.internal.Attempt;
+import io.github.gromoff97.awium.internal.AttemptFactory;
 import io.github.gromoff97.awium.internal.AwaitAttempt;
 import io.github.gromoff97.awium.internal.SequenceExecution;
 import io.github.gromoff97.awium.internal.WaitEngine;
@@ -62,17 +62,17 @@ class ArtifactContractIT {
         assertFalse(classes.isEmpty(), dependencies);
         Set<String> facade = Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "Conditions", "CollectionConditions", "MapConditions",
                 "OptionalConditions", "StringConditions", "FailureDiagnostics");
-        for (String execution : Set.of("Condition", "AwaitAttempt", "ConditionAwaitAttempt", "ConditionSupport",
-                "ConditionResult", "ConditionEvaluation", "SequenceExecution", "WaitEngine",
+        for (String execution : Set.of("Condition", "AwaitAttempt", "Attempt", "AttemptFactory", "ConditionSupport",
+                "ConditionResult", "AttemptResult", "SequenceExecution", "AttemptExecution", "WaitEngine",
                 "WaitCompletion", "WaitConfiguration")) {
             Set<String> used = classes.getOrDefault(execution, Set.of());
             assertTrue(used.stream().noneMatch(facade::contains), execution + " -> " + used);
         }
         Set<String> conditionResult = classes.get("ConditionResult");
-        assertTrue(conditionResult.stream().noneMatch(Set.of("AttemptRecord", "AwaitResult")::contains),
+        assertTrue(conditionResult.stream().noneMatch(Set.of("Attempt", "HistoryEntry", "AwaitResult")::contains),
                 "ConditionResult -> " + conditionResult);
         Set<String> definition = classes.get("Condition");
-        assertTrue(definition.stream().noneMatch(Set.of("ConditionAwaitAttempt", "ConditionEvaluation")::contains),
+        assertTrue(definition.stream().noneMatch(Set.of("AttemptFactory", "AttemptResult")::contains),
                 "Condition -> " + definition);
         // Condition construction is independent of source protocols, timing, diagnostics, and value comparison.
         Set<String> support = classes.get("ConditionSupport");
@@ -82,10 +82,13 @@ class ArtifactContractIT {
         assertFalse(AwaitAttempt.class.isAssignableFrom(SequenceExecution.class));
         assertTrue(sequence.stream().noneMatch(Set.of("ConditionSupport", "WaitEngine", "WaitConfiguration")::contains),
                 "SequenceExecution -> " + sequence);
+        Set<String> attempt = classes.get("Attempt");
+        assertTrue(attempt.stream().noneMatch(Set.of("SequenceExecution", "WaitEngine", "AttemptHistory",
+                "HistoryEntry", "WaitConfiguration")::contains), "Attempt -> " + attempt);
         for (String catalog : Set.of("Conditions", "CollectionConditions", "MapConditions",
                 "OptionalConditions", "StringConditions")) {
-            assertTrue(classes.get(catalog).stream().noneMatch(Set.of("AwaitAttempt", "ConditionAwaitAttempt",
-                            "SequenceExecution", "WaitEngine", "WaitCompletion", "WaitConfiguration",
+            assertTrue(classes.get(catalog).stream().noneMatch(Set.of("AwaitAttempt", "Attempt", "AttemptFactory",
+                            "SequenceExecution", "AttemptExecution", "WaitEngine", "WaitCompletion", "WaitConfiguration",
                             "FailureDiagnostics")::contains),
                     catalog + " -> " + classes.get(catalog));
         }
@@ -136,7 +139,8 @@ class ArtifactContractIT {
 
     @Test
     void executionPackageIsHiddenFromModuleConsumers(@TempDir Path directory) throws Exception {
-        assertInaccessible(directory, ConditionAwaitAttempt.class, true, "compiler.err.package.not.visible");
+        assertInaccessible(directory, AttemptFactory.class, true, "compiler.err.package.not.visible");
+        assertInaccessible(directory, Attempt.class, true, "compiler.err.package.not.visible");
         assertInaccessible(directory, WaitEngine.class, true, "compiler.err.package.not.visible");
     }
 

@@ -12,6 +12,8 @@ import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Conditions.captured;
 import static java.time.Duration.ofNanos;
@@ -35,7 +37,7 @@ class TextExpectedValuesTest {
             var matching = value.isBlank() ? StringConditions.blank : StringConditions.nonBlank;
             var mismatching = value.isBlank() ? StringConditions.nonBlank : StringConditions.blank;
             assertSame(text, waiting.until(matching));
-            var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(mismatching)).failure();
+            var failure = assertInstanceOf(AwaitResult.Failed.class, diagnostic(waiting).until(mismatching)).failure();
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
             assertNull(failure.cause());
         }
@@ -54,7 +56,7 @@ class TextExpectedValuesTest {
         var time = new FakeTime(0);
         var waiting = await(() -> parallel).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1));
         assertSame(parallel, waiting.until(StringConditions.blank));
-        var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(StringConditions.nonBlank)).failure();
+        var failure = assertInstanceOf(AwaitResult.Failed.class, diagnostic(waiting).until(StringConditions.nonBlank)).failure();
         assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
     }
 
@@ -81,7 +83,7 @@ class TextExpectedValuesTest {
         for (var check : List.of(StringConditions.matchesRegex("failed.*"),
                 StringConditions.doesNotMatchRegex("Ready \\d+"), StringConditions.containsIgnoringCase("failed"),
                 StringConditions.contentEquals("failed"))) {
-            var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(check)).failure();
+            var failure = assertInstanceOf(AwaitResult.Failed.class, diagnostic(waiting).until(check)).failure();
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
             assertNull(failure.cause());
             assertEquals(List.of(renderingFailure), failure.suppressed());
@@ -117,11 +119,11 @@ class TextExpectedValuesTest {
             var value = waiting.until(condition);
             assertSame(actual, value);
             assertEquals(actual.capacity(), value.capacity());
-            AwaitResult<StringBuilder, StringBuilder> captured = waiting.tryUntil(condition);
+            AwaitResult<StringBuilder, StringBuilder> captured = diagnostic(waiting).until(condition);
             assertSame(actual, captured.orThrow());
 
             actual.replace(0, actual.length(), check.mismatch());
-            var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(condition)).failure();
+            var failure = assertInstanceOf(AwaitResult.Failed.class, diagnostic(waiting).until(condition)).failure();
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
             assertFalse(failure.message().contains("changed"));
         }
@@ -148,8 +150,8 @@ class TextExpectedValuesTest {
         assertTrue(await(() -> new StringBuilder()).until(StringConditions.contentEquals("")).isEmpty());
 
         var time = new FakeTime(0);
-        var absent = await(() -> (StringBuilder) null).usingTime(time, time)
-                .every(ofNanos(1)).upTo(ofNanos(1)).tryUntil(condition);
+        var absent = tryAwait(() -> (StringBuilder) null).usingTime(time, time)
+                .every(ofNanos(1)).upTo(ofNanos(1)).until(condition);
         assertEquals(AwaitFailure.Reason.TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, absent).failure().reason());
     }
 
@@ -187,12 +189,12 @@ class TextExpectedValuesTest {
             assertSame(actual, included);
             assertSame(actual, excluded);
             for (var check : List.of(StringConditions.containsAll(List.of()), StringConditions.doesNotContainAny(List.of()))) {
-                assertSame(actual, waiting.tryUntil(check).orThrow());
-                var absent = await(() -> (StringBuilder) null).usingTime(time, time)
-                        .every(ofNanos(1)).upTo(ofNanos(2)).tryUntil(check);
+                assertSame(actual, diagnostic(waiting).until(check).orThrow());
+                var absent = tryAwait(() -> (StringBuilder) null).usingTime(time, time)
+                        .every(ofNanos(1)).upTo(ofNanos(2)).until(check);
                 assertEquals(AwaitFailure.Reason.TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, absent).failure().reason());
             }
-            var emptyFragment = waiting.tryUntil(StringConditions.doesNotContainAny(List.of("")));
+            var emptyFragment = diagnostic(waiting).until(StringConditions.doesNotContainAny(List.of("")));
             assertEquals(AwaitFailure.Reason.TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, emptyFragment).failure().reason());
         }
     }

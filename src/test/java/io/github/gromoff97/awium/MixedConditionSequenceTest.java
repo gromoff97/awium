@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.result.AttemptResult;
+import io.github.gromoff97.awium.result.AttemptStatus;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.io.IOException;
@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
@@ -41,30 +42,30 @@ class MixedConditionSequenceTest {
 
         var collections = List.of(List.of(CREATED), List.of(PENDING), List.of(READY));
         var collectionSource = collections.iterator();
-        var collection = await(collectionSource::next).usingTime(time, time).every(ofNanos(1)).tryUntil(captured(
+        var collection = tryAwait(collectionSource::next).usingTime(time, time).every(ofNanos(1)).until(captured(
                 CollectionConditions.singleElement(equalTo(CREATED)), CollectionConditions.singleElement(User::ready)));
         assertSame(collections.getFirst(), collection.orThrow().getFirst());
         assertSame(collections.getLast(), collection.orThrow().getLast());
         assertEquals(3, collection.orThrow().getLast().getFirst().stage());
-        assertEquals(3, collection.totalAttempts());
+        assertEquals(3, collection.attempts().size());
         assertSame(collections.get(1), collection.attempts().get(1).observed());
-        assertInstanceOf(AttemptResult.Unsatisfied.class, collection.attempts().get(1).result());
+        assertInstanceOf(AttemptStatus.Unsatisfied.class, collection.attempts().get(1).result());
         assertFalse(collectionSource.hasNext());
 
         var maps = List.of(Map.of("user", CREATED), Map.of("user", PENDING), Map.of("user", READY));
         var mapSource = maps.iterator();
-        var map = await(mapSource::next).usingTime(time, time).every(ofNanos(1)).tryUntil(captured(
+        var map = tryAwait(mapSource::next).usingTime(time, time).every(ofNanos(1)).until(captured(
                 MapConditions.valueFor("user", equalTo(CREATED)).because("created"),
                 MapConditions.valueFor("user", User::ready).because("ready")));
         assertSame(maps.getFirst(), map.orThrow().getFirst());
         assertSame(maps.getLast(), map.orThrow().getLast());
         assertEquals(3, map.orThrow().getLast().get("user").stage());
-        assertEquals(3, map.totalAttempts());
+        assertEquals(3, map.attempts().size());
         var retry = map.attempts().get(1);
         assertSame(maps.get(1), retry.observed());
         assertEquals("ready", retry.condition().explanation());
         assertEquals(1, retry.progress().capturedStages());
-        assertInstanceOf(AttemptResult.Unsatisfied.class, retry.result());
+        assertInstanceOf(AttemptStatus.Unsatisfied.class, retry.result());
         assertFalse(mapSource.hasNext());
     }
 
@@ -82,19 +83,19 @@ class MixedConditionSequenceTest {
         assertFalse(source.hasNext());
 
         var nextSource = observations.iterator();
-        AwaitResult<User, List<User>> captured = await(nextSource::next).usingTime(time, time)
-                .every(ofNanos(1)).upTo(ofNanos(10)).tryUntil(captured(
+        AwaitResult<User, List<User>> captured = tryAwait(nextSource::next).usingTime(time, time)
+                .every(ofNanos(1)).upTo(ofNanos(10)).until(captured(
                         equalTo(CREATED), matches(User::pending),
                         equalTo(READY), matches(User::ready)));
         switch (captured) {
-            case AwaitResult.Satisfied(var attempts, var values) -> {
+            case AwaitResult.Satisfied(var history, var values) -> {
                 assertEquals(users, values);
                 assertEquals(3, values.getLast().stage());
                 assertSame(READY, values.getLast());
             }
-            case AwaitResult.Failed(var attempts, var failure) -> fail(failure.message());
+            case AwaitResult.Failed(var history, var failure) -> fail(failure.message());
         }
-        assertEquals(5, captured.totalAttempts());
+        assertEquals(5, captured.attempts().size());
         assertFalse(nextSource.hasNext());
     }
 
@@ -116,8 +117,8 @@ class MixedConditionSequenceTest {
         assertFalse(source.hasNext());
 
         var nextSource = values.iterator();
-        AwaitResult<User, List<User>> result = await(nextSource::next).usingTime(time, time)
-                .every(ofNanos(1)).upTo(ofNanos(10)).tryUntil(captured(afterRetry, equalTo(PENDING), afterRetry));
+        AwaitResult<User, List<User>> result = tryAwait(nextSource::next).usingTime(time, time)
+                .every(ofNanos(1)).upTo(ofNanos(10)).until(captured(afterRetry, equalTo(PENDING), afterRetry));
         assertEquals(users, result.orThrow());
         assertEquals(4, factories[0]);
         assertFalse(nextSource.hasNext());
@@ -128,10 +129,10 @@ class MixedConditionSequenceTest {
         var time = new FakeTime(0);
         for (boolean comparisonLast : List.of(false, true)) {
             AwaitResult<User, List<User>> result = comparisonLast
-                    ? await(() -> CREATED).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
-                            .tryUntil(captured(matches(user -> user.stage() == 1), equalTo(READY)))
-                    : await(() -> CREATED).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
-                            .tryUntil(captured(equalTo(CREATED), matches(User::ready)));
+                    ? tryAwait(() -> CREATED).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
+                            .until(captured(matches(user -> user.stage() == 1), equalTo(READY)))
+                    : tryAwait(() -> CREATED).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
+                            .until(captured(equalTo(CREATED), matches(User::ready)));
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
             var attempt = result.attempts().getLast();
@@ -141,12 +142,12 @@ class MixedConditionSequenceTest {
         }
 
         var cause = new IOException("callback failed");
-        var failed = await(() -> CREATED).usingTime(time, time).every(ofNanos(1)).tryUntil(captured(
+        var failed = tryAwait(() -> CREATED).usingTime(time, time).every(ofNanos(1)).until(captured(
                 equalTo(CREATED), matches((User user) -> { throw cause; }), equalTo(READY)));
         var failure = assertInstanceOf(AwaitResult.Failed.class, failed).failure();
         assertEquals(AwaitFailure.Reason.CONDITION_FAILED, failure.reason());
         assertSame(cause, failure.cause());
-        assertEquals(2, failed.totalAttempts());
+        assertEquals(2, failed.attempts().size());
     }
 
     @Test

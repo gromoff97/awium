@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitTestAccess.evaluated;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
@@ -91,13 +92,13 @@ class ThreadIntegrationTest {
         var resultThreads = new HashSet<Thread>();
 
         try (var callers = Executors.newVirtualThreadPerTaskExecutor()) {
-            var results = List.of(callers.submit(() -> waiting.tryUntil(check)),
-                    callers.submit(() -> waiting.tryUntil(check)));
+            var results = List.of(callers.submit(() -> diagnostic(waiting).until(check)),
+                    callers.submit(() -> diagnostic(waiting).until(check)));
             for (var future : results) {
                 var result = future.get(5, SECONDS);
                 Thread caller = result.orThrow();
                 assertTrue(caller.isVirtual());
-                assertEquals(2, result.totalAttempts());
+                assertEquals(2, result.attempts().size());
                 for (var attempt : result.attempts()) {
                     assertSame(caller, evaluated(attempt).observed());
                 }

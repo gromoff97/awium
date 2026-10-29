@@ -1,13 +1,13 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.ConditionEvaluation;
+import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.function.CheckedPredicate;
 import java.util.Optional;
 
-import static io.github.gromoff97.awium.internal.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.internal.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.internal.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.internal.AttemptResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
 
 /**
@@ -44,7 +44,7 @@ public final class OptionalConditions {
         return new SelectedCondition<>(ConditionSupport.compose("optional value", nested, present));
     }
 
-    private static <VALUE> ConditionEvaluation<VALUE> present(Optional<? extends VALUE> actual) {
+    private static <VALUE> AttemptResult<VALUE> present(Optional<? extends VALUE> actual) {
         if (actual == null) {
             return unsatisfied("optional was null");
         }

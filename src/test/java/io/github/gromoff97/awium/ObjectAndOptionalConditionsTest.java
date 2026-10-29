@@ -1,9 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.ConditionEvaluation;
-
-
-import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
+import io.github.gromoff97.awium.internal.AttemptResult;
+import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -52,7 +50,7 @@ class ObjectAndOptionalConditionsTest {
         assertSame(equalActual, result(evaluate(notSameAs(expected), equalActual)));
         assertUnsatisfied(evaluate(notSameAs(equalActual), equalActual));
         assertNull(result(evaluate(equalTo(null), null)));
-        ConditionEvaluation<?> arrays = evaluate(equalTo(
+        AttemptResult<?> arrays = evaluate(equalTo(
                 new int[]{1, 2}), new int[]{1, 2});
         assertEquals(Satisfied.class, arrays.getClass());
         assertEquals(int[].class, result(arrays).getClass());

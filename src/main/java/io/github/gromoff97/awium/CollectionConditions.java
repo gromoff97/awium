@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.ConditionEvaluation;
+import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
@@ -16,8 +16,8 @@ import java.util.Objects;
 import java.util.SequencedCollection;
 import java.util.function.IntPredicate;
 
-import static io.github.gromoff97.awium.internal.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.internal.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.internal.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.internal.AttemptResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.quantified;
@@ -369,11 +369,11 @@ public final class CollectionConditions {
         return preserving("collection is sorted", "collection was not sorted", actual -> isSorted(actual, comparator));
     }
 
-    private static <ELEMENT> ConditionEvaluation<ELEMENT> selectLast(SequencedCollection<? extends ELEMENT> actual) {
+    private static <ELEMENT> AttemptResult<ELEMENT> selectLast(SequencedCollection<? extends ELEMENT> actual) {
         return selectElement(actual == null ? null : actual.reversed(), 0);
     }
 
-    private static <ELEMENT> ConditionEvaluation<ELEMENT> selectElement(SequencedCollection<? extends ELEMENT> actual, int index) {
+    private static <ELEMENT> AttemptResult<ELEMENT> selectElement(SequencedCollection<? extends ELEMENT> actual, int index) {
         if (actual == null) return unsatisfied("collection was null");
         int position = 0;
         for (ELEMENT value : actual) {

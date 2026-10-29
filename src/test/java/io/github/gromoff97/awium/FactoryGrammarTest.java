@@ -13,6 +13,7 @@ import java.util.function.LongSupplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
@@ -54,22 +55,22 @@ class FactoryGrammarTest {
         LongConsumer parker = nanos -> { throw unexpected; };
         var waiting = await(source).usingTime(clock, parker);
         assertNullRejected("condition", () -> waiting.until((PreservingCondition<String>) null));
-        assertNullRejected("condition", () -> waiting.tryUntil((PreservingCondition<String>) null));
+        assertNullRejected("condition", () -> diagnostic(waiting).until((PreservingCondition<String>) null));
         assertNullRejected("condition", () -> waiting.until((Condition.Typed<String, String>) null));
-        assertNullRejected("condition", () -> waiting.tryUntil((Condition.Typed<String, String>) null));
+        assertNullRejected("condition", () -> diagnostic(waiting).until((Condition.Typed<String, String>) null));
         assertNullRejected("condition", () -> waiting.until((Condition.ComparisonCondition<String>) null));
-        assertNullRejected("condition", () -> waiting.tryUntil((Condition.ComparisonCondition<String>) null));
+        assertNullRejected("condition", () -> diagnostic(waiting).until((Condition.ComparisonCondition<String>) null));
         assertNullRejected("condition", () -> waiting.until(captured(equalTo("value"), equalTo("value"), (Condition.ComparisonCondition<String>) null)));
-        assertNullRejected("condition", () -> waiting.tryUntil(captured(equalTo("value"), equalTo("value"), (Condition.ComparisonCondition<String>) null)));
+        assertNullRejected("condition", () -> diagnostic(waiting).until(captured(equalTo("value"), equalTo("value"), (Condition.ComparisonCondition<String>) null)));
 
         Await.MapSource<Map<String, String>> mapSource = () -> { throw unexpected; };
         var map = await(mapSource).usingTime(clock, parker);
         SelectedCondition<Map<?, ?>> selected = null;
         Condition.MapValueCondition<Map<?, ?>> mapped = null;
         assertNullRejected("condition", () -> map.until(selected));
-        assertNullRejected("condition", () -> map.tryUntil(selected));
+        assertNullRejected("condition", () -> diagnostic(map).until(selected));
         assertNullRejected("condition", () -> map.until(mapped));
-        assertNullRejected("condition", () -> map.tryUntil(mapped));
+        assertNullRejected("condition", () -> diagnostic(map).until(mapped));
     }
 
     @Test

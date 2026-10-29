@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
+import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;

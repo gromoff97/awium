@@ -6,7 +6,7 @@ import java.util.List;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Structured failure returned by {@code tryUntil} and attached to exceptions from {@code until}.
+ * Structured failure returned by {@code tryAwait(...).until(...)} and attached to exceptions from {@code await(...).until(...)}.
  * The cause is the original throwable, or {@code null} for an ordinary mismatch.
  * Diagnostic failures are retained in {@code suppressed} without replacing the reason or cause.
  */

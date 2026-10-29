@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.ConditionEvaluation;
+import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
-import io.github.gromoff97.awium.internal.ConditionEvaluation.Unsatisfied;
+import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
+import io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -11,6 +11,7 @@ import java.util.Iterator;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
@@ -143,7 +144,7 @@ class CollectionExactContentTest {
         }
         var differentCounts = List.of("a", "b", "b");
         var failed = assertInstanceOf(AwaitResult.Failed.class,
-                waiting.tryUntil(containsExactlyInAnyOrder(differentCounts)));
+                diagnostic(waiting).until(containsExactlyInAnyOrder(differentCounts)));
         assertEquals(TIMEOUT, failed.failure().reason());
         assertSame(actual, waiting.until(doesNotContainExactlyInAnyOrder(differentCounts)));
     }
@@ -167,7 +168,7 @@ class CollectionExactContentTest {
 
     @Test
     void nullActualIsUnsatisfiedAndNullAggregateIsRejected() {
-        ConditionEvaluation<?> evaluation = evaluate(
+        AttemptResult<?> evaluation = evaluate(
                 containsExactly(List.of("a")), null);
         assertEquals(Unsatisfied.class, evaluation.getClass());
         assertFalse(mismatch(evaluation).isBlank());
@@ -193,8 +194,8 @@ class CollectionExactContentTest {
 
     private static void assertPair(Pair pair, List<String> actual,
             boolean positiveSatisfied) {
-        ConditionEvaluation<?> positive = evaluate(pair.positive(), actual);
-        ConditionEvaluation<?> negative = evaluate(pair.negative(), actual);
+        AttemptResult<?> positive = evaluate(pair.positive(), actual);
+        AttemptResult<?> negative = evaluate(pair.negative(), actual);
         assertAll(pair.name(),
                 () -> assertSame(actual, result(positiveSatisfied ? positive : negative)),
                 () -> assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank()));

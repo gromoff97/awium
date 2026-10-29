@@ -45,6 +45,38 @@ public final class Await {
         return new MapAwait<>(requireNonNull(source, "source must not be null").delegate(), WaitConfiguration.DEFAULT);
     }
 
+    /** Configures a diagnostic wait for an observed value. Container lambdas select a specialized overload. */
+    public static <VALUE> DiagnosticAwait<VALUE> tryAwait(Callable<? extends VALUE> source) {
+        return new DiagnosticAwait<>(source, WaitConfiguration.DEFAULT);
+    }
+
+    /** Configures a diagnostic optional wait, retaining the contained value type. */
+    public static <VALUE> DiagnosticSelectionAwait<Optional<VALUE>, VALUE> tryAwait(OptionalSource<VALUE> source) {
+        return new DiagnosticSelectionAwait<>(source, WaitConfiguration.DEFAULT);
+    }
+
+    /** Configures a diagnostic collection wait, retaining its complete type and element type. */
+    public static <ELEMENT, VALUES extends Collection<ELEMENT>> DiagnosticSelectionAwait<VALUES, ELEMENT> tryAwait(CollectionSource<VALUES> source) {
+        return new DiagnosticSelectionAwait<>(source, WaitConfiguration.DEFAULT);
+    }
+
+    /** Configures a diagnostic map wait, retaining its complete type, entry type, and value type. */
+    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> DiagnosticMapAwait<ENTRIES, Map.Entry<KEY, VALUE>, VALUE> tryAwait(MapSource<ENTRIES> source) {
+        return new DiagnosticMapAwait<>(source, WaitConfiguration.DEFAULT);
+    }
+
+    /** Configures a diagnostic wait with explicit bounds for a covariant collection source. */
+    public static <ELEMENT, VALUES extends Collection<? extends ELEMENT>>
+            DiagnosticSelectionAwait<VALUES, ELEMENT> tryAwait(CollectionViewSource<ELEMENT, VALUES> source) {
+        return new DiagnosticSelectionAwait<>(requireNonNull(source, "source must not be null").delegate(), WaitConfiguration.DEFAULT);
+    }
+
+    /** Configures a diagnostic wait with explicit bounds for a covariant map source. */
+    public static <KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>
+            DiagnosticMapAwait<ENTRIES, Map.Entry<? extends KEY, ? extends VALUE>, VALUE> tryAwait(MapViewSource<KEY, VALUE, ENTRIES> source) {
+        return new DiagnosticMapAwait<>(requireNonNull(source, "source must not be null").delegate(), WaitConfiguration.DEFAULT);
+    }
+
     /** A source whose optional value can be selected by a condition. */
     @FunctionalInterface
     public interface OptionalSource<VALUE> extends Callable<Optional<VALUE>> {}

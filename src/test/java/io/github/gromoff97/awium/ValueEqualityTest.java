@@ -1,10 +1,10 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
+import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
 import io.github.gromoff97.awium.result.AwaitResult;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.Conditions.equalTo;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
@@ -78,11 +78,11 @@ class ValueEqualityTest {
         rightFirst[1] = rightSecond;
         rightSecond[0] = "second";
         rightSecond[1] = rightFirst;
-        var result = await(() -> leftFirst).tryUntil(equalTo(rightFirst));
+        var result = tryAwait(() -> leftFirst).until(equalTo(rightFirst));
         var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
         assertEquals(CONDITION_FAILED, failure.reason());
         assertInstanceOf(StackOverflowError.class, failure.cause());
-        assertEquals(1, result.totalAttempts());
+        assertEquals(1, result.attempts().size());
         assertTrue(equal(leftFirst, leftFirst));
 
         rightSecond[0] = "different";

@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.ConditionEvaluation;
+import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.function.CheckedConsumer;
 import io.github.gromoff97.awium.function.CheckedFunction;
@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
@@ -42,7 +43,7 @@ class AssertionAdapterTest {
             var waiting = await(() -> "pending").usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
             var reason = interrupt ? INTERRUPTED : TIMEOUT;
             try {
-                var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(check)).failure();
+                var failure = assertInstanceOf(AwaitResult.Failed.class, diagnostic(waiting).until(check)).failure();
                 assertEquals(interrupt, Thread.interrupted());
                 assertEquals(reason, failure.reason());
                 assertSame(cause, failure.cause());
@@ -66,7 +67,7 @@ class AssertionAdapterTest {
                     return satisfied();
                 });
 
-        ConditionEvaluation<? extends String> evaluation = evaluate(condition, "42");
+        AttemptResult<? extends String> evaluation = evaluate(condition, "42");
 
         assertEquals("42", result(evaluation));
         assertEquals(1, invocations[0]);
@@ -100,7 +101,7 @@ class AssertionAdapterTest {
             invocations[0]++;
         });
 
-        ConditionEvaluation<? extends String> evaluation = evaluate(condition, actual);
+        AttemptResult<? extends String> evaluation = evaluate(condition, actual);
 
         assertSame(actual, result(evaluation));
         assertEquals(1, invocations[0]);

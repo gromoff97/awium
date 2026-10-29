@@ -2,7 +2,6 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.internal.WaitConfiguration;
-import io.github.gromoff97.awium.result.AwaitResult;
 import java.time.Duration;
 import java.util.concurrent.Callable;
 import java.util.function.LongConsumer;
@@ -49,10 +48,4 @@ public sealed class SelectionAwait<OBSERVED, ELEMENT> extends ValueAwait<OBSERVE
     public ELEMENT until(SelectedCondition<? super OBSERVED> condition) {
         return complete(ConditionSupport.bind(required(condition)));
     }
-
-    public AwaitResult<OBSERVED, ELEMENT> tryUntil(
-            SelectedCondition<? super OBSERVED> condition) {
-        return capture(ConditionSupport.bind(required(condition)));
-    }
-
 }

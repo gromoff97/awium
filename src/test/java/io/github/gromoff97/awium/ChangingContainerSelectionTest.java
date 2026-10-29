@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Await.tryAwait;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -22,11 +22,11 @@ class ChangingContainerSelectionTest {
         int[] calls = {0};
         var time = new FakeTime(0);
 
-        var result = await(() -> {
+        var result = tryAwait(() -> {
             if (++calls[0] == 2) values.add("ready");
             return values;
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
-                .tryUntil(CollectionConditions.elementAt(0));
+                .until(CollectionConditions.elementAt(0));
 
         assertEquals("ready", result.orThrow());
         assertEquals(2, calls[0]);
@@ -40,11 +40,11 @@ class ChangingContainerSelectionTest {
             int[] calls = {0};
             var time = new FakeTime(0);
 
-            var result = await(() -> {
+            var result = tryAwait(() -> {
                 if (++calls[0] == 2) values.add("ready");
                 return values;
             }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
-                    .tryUntil(last ? CollectionConditions.lastElement : CollectionConditions.firstElement);
+                    .until(last ? CollectionConditions.lastElement : CollectionConditions.firstElement);
 
             assertEquals("ready", result.orThrow());
             assertEquals(2, calls[0]);
@@ -58,10 +58,10 @@ class ChangingContainerSelectionTest {
         int[] calls = {0};
         var time = new FakeTime(0);
 
-        var result = await(() -> {
+        var result = tryAwait(() -> {
             if (++calls[0] == 2) values.add("ready");
             return values;
-        }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).tryUntil(CollectionConditions.singleElement);
+        }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).until(CollectionConditions.singleElement);
 
         assertEquals("ready", result.orThrow());
         assertEquals(2, calls[0]);
@@ -73,10 +73,10 @@ class ChangingContainerSelectionTest {
         values.put("key", "old");
         int[] calls = {0};
         var time = new FakeTime(0);
-        var result = await(() -> {
+        var result = tryAwait(() -> {
             if (++calls[0] == 2) values.put("key", "ready");
             return values;
-        }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).tryUntil(MapConditions.singleEntry);
+        }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).until(MapConditions.singleEntry);
 
         assertEquals(Map.entry("key", "ready"),
                 result.orThrow());

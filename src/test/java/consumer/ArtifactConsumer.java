@@ -1,14 +1,15 @@
 package consumer;
 
 import io.github.gromoff97.awium.StringConditions;
-import io.github.gromoff97.awium.result.AttemptRecord;
-import io.github.gromoff97.awium.result.AttemptResult;
+import io.github.gromoff97.awium.result.HistoryEntry;
+import io.github.gromoff97.awium.result.AttemptStatus;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
+import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.*;
@@ -30,7 +31,7 @@ public final class ArtifactConsumer {
         boolean preserved = await(() -> values).until(asserted(actual -> {
             if (actual.size() != 1) throw new AssertionError("one value expected");
         })) == values;
-        var result = await(() -> Optional.of("ready")).tryUntil(present);
+        var result = tryAwait(() -> Optional.of("ready")).until(present);
         String captured = result.orThrow();
         Number mapped = await(() -> Map.<String, Number>of("key", 1)).until(valueFor("key"));
         Map.Entry<String, Integer> entry = await(() -> Map.of("key", 1)).until(singleEntry);
@@ -40,11 +41,11 @@ public final class ArtifactConsumer {
                 mapped, entry, text, regex, observed(result.attempts().getFirst())};
     }
 
-    private static String observed(AttemptRecord<Optional<String>> attempt) {
+    private static String observed(HistoryEntry<Optional<String>> attempt) {
         return switch (attempt.result()) {
-            case AttemptResult.Satisfied ignored -> attempt.observed().orElseThrow();
-            case AttemptResult.Unsatisfied ignored -> attempt.observed().orElse(null);
-            case AttemptResult.Uncontrolled ignored -> null;
+            case AttemptStatus.Satisfied ignored -> attempt.observed().orElseThrow();
+            case AttemptStatus.Unsatisfied ignored -> attempt.observed().orElse(null);
+            case AttemptStatus.Uncontrolled ignored -> null;
         };
     }
 

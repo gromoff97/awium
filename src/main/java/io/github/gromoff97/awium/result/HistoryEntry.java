@@ -6,10 +6,12 @@ import java.time.Duration;
 import static java.util.Objects.requireNonNull;
 
 /**
- * One polling attempt with its phase, timing, observation, and condition outcome.
+ * A recorded invocation with its phase, timing, observation, and condition outcome.
+ * The observed value is retained by reference, without copying or freezing it.
+ * Later changes to that value are visible through this record; the satisfaction
+ * status still describes the original check.
  *
  * @param <OBSERVED> complete value returned by the source
- * @param number one-based attempt number
  * @param phase acquisition or persistence phase
  * @param timing checkpoints measured from the start of the terminal call
  * @param condition condition associated with this attempt, including attempts that fail before evaluation
@@ -17,13 +19,10 @@ import static java.util.Objects.requireNonNull;
  * @param observed complete source value, including a legitimate null; consult hasObservation() for availability
  * @param result status and diagnostics of this attempt
  */
-public record AttemptRecord<OBSERVED>(long number, Phase phase, Timing timing,
-        Condition condition, Progress progress, OBSERVED observed, AttemptResult result) {
+public record HistoryEntry<OBSERVED>(Phase phase, Timing timing,
+        Condition condition, Progress progress, OBSERVED observed, AttemptStatus result) {
 
-    public AttemptRecord {
-        if (number <= 0) {
-            throw new IllegalArgumentException("attempt number must be positive");
-        }
+    public HistoryEntry {
         requireNonNull(phase, "phase must not be null");
         requireNonNull(timing, "timing must not be null");
         requireNonNull(condition, "condition must not be null");

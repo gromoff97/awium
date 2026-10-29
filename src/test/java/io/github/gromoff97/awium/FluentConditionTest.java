@@ -14,6 +14,8 @@ import java.util.concurrent.Callable;
 import java.util.function.BiPredicate;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.*;
@@ -34,15 +36,15 @@ class FluentConditionTest {
                 notSameAs(0), in(List.of(1000, 2)), notIn(List.of(0, -1)))) {
             var check = condition.because("numeric identity must be preserved");
             Number value = waiting.until(check);
-            AwaitResult<Number, Number> attempt = waiting.tryUntil(check);
+            AwaitResult<Number, Number> attempt = diagnostic(waiting).until(check);
             List<Number> sequence = waiting.until(captured(check, check, check));
-            AwaitResult<Number, List<Number>> attempts = waiting.tryUntil(captured(check, check, check));
+            AwaitResult<Number, List<Number>> attempts = diagnostic(waiting).until(captured(check, check, check));
 
             assertSame(actual, value);
             assertSame(actual, attempt.orThrow());
             assertEquals(List.of(actual, actual, actual), sequence);
             assertEquals(sequence, attempts.orThrow());
-            assertEquals(3, attempts.totalAttempts());
+            assertEquals(3, attempts.attempts().size());
         }
     }
 
@@ -80,9 +82,9 @@ class FluentConditionTest {
         var check = hasValue(equalTo(1)).because("optional contains the expected number");
 
         Number value = waiting.until(check);
-        AwaitResult<Optional<Number>, Number> attempt = waiting.tryUntil(check);
+        AwaitResult<Optional<Number>, Number> attempt = diagnostic(waiting).until(check);
         List<Optional<Number>> sequence = waiting.until(captured(present, check, check));
-        AwaitResult<Optional<Number>, List<Optional<Number>>> attempts = waiting.tryUntil(captured(check, check, check));
+        AwaitResult<Optional<Number>, List<Optional<Number>>> attempts = diagnostic(waiting).until(captured(check, check, check));
 
         assertSame(actual, value);
         assertSame(actual, attempt.orThrow());
@@ -100,9 +102,9 @@ class FluentConditionTest {
         Number indexed = waiting.until(elementAt(0));
         Number firstMatch = waiting.until(firstElement((Number number) -> true));
         Number lastMatch = waiting.until(lastElement((Number number) -> true));
-        AwaitResult<List<Number>, Number> attempt = waiting.tryUntil(singleElement(equalTo(1)));
+        AwaitResult<List<Number>, Number> attempt = diagnostic(waiting).until(singleElement(equalTo(1)));
         List<List<Number>> sequence = waiting.until(captured(singleElement, singleElement(equalTo(1)), elementAt(0)));
-        AwaitResult<List<Number>, List<List<Number>>> attempts = waiting.tryUntil(captured(
+        AwaitResult<List<Number>, List<List<Number>>> attempts = diagnostic(waiting).until(captured(
                 firstElement, singleElement(equalTo(1)), lastElement));
 
         assertEquals(List.of(actual, actual, actual, actual), List.of(nested, indexed, firstMatch, lastMatch));
@@ -119,9 +121,9 @@ class FluentConditionTest {
         var check = valueFor("key", equalTo(1)).because("key selects the expected number");
 
         Number value = waiting.until(valueFor("key"));
-        AwaitResult<Map<String, Number>, Number> attempt = waiting.tryUntil(check);
+        AwaitResult<Map<String, Number>, Number> attempt = diagnostic(waiting).until(check);
         List<Map<String, Number>> sequence = waiting.until(captured(valueFor("key"), check));
-        AwaitResult<Map<String, Number>, List<Map<String, Number>>> attempts = waiting.tryUntil(captured(check, check));
+        AwaitResult<Map<String, Number>, List<Map<String, Number>>> attempts = diagnostic(waiting).until(captured(check, check));
         Map.Entry<String, Number> entry = waiting.until(singleEntry);
         Map.Entry<String, Number> matching = waiting.until(singleEntry(equalTo(Map.entry("key", 1))));
         Map.Entry<String, Number> byKey = waiting.until(entryFor("key"));
@@ -207,11 +209,11 @@ class FluentConditionTest {
         var mapped = await(() -> Map.of("key", actual)).usingTime(time, time).until(valueFor("key", check));
         var sequence = await(() -> actual).usingTime(time, time)
                 .until(captured(check, condition("second", ignored -> ConditionResult.satisfied())));
-        var diagnostic = await(() -> actual).usingTime(time, time).tryUntil(check);
+        var diagnostic = tryAwait(() -> actual).usingTime(time, time).until(check);
 
         assertEquals(List.of("receipt", "receipt", "receipt", "receipt", "receipt", "receipt"),
                 List.of(payment.id(), created.id(), selected.id(), optional.id(), mapped.id(), sequence.getLast().id()));
-        if (diagnostic instanceof AwaitResult.Satisfied(var attempts, var value)) {
+        if (diagnostic instanceof AwaitResult.Satisfied(var history, var value)) {
             assertEquals("receipt", value.id());
             assertSame(actual, value);
         } else {

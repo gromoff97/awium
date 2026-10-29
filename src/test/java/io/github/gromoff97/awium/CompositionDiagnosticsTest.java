@@ -1,13 +1,15 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.result.ConditionResult;
-import io.github.gromoff97.awium.result.AttemptResult;
+import io.github.gromoff97.awium.result.AttemptStatus;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitTestAccess.evaluated;
 import static io.github.gromoff97.awium.AwaitTestAccess.uncontrolled;
@@ -37,34 +39,34 @@ class CompositionDiagnosticsTest {
         var nested = await(() -> List.of(List.of("pending")))
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
 
-        assertQuantifierFailure(collection.tryUntil(CollectionConditions.all(mismatch)),
+        assertQuantifierFailure(diagnostic(collection).until(CollectionConditions.all(mismatch)),
                 "all collection elements match", "not all collection elements matched");
-        assertQuantifierFailure(collection.tryUntil(CollectionConditions.any(mismatch)),
+        assertQuantifierFailure(diagnostic(collection).until(CollectionConditions.any(mismatch)),
                 "some collection elements match", "no collection elements matched");
-        assertQuantifierFailure(collection.tryUntil(CollectionConditions.none(match)),
+        assertQuantifierFailure(diagnostic(collection).until(CollectionConditions.none(match)),
                 "no collection elements match", "some collection elements matched");
-        assertQuantifierFailure(map.tryUntil(MapConditions.allEntries(mismatch)),
+        assertQuantifierFailure(diagnostic(map).until(MapConditions.allEntries(mismatch)),
                 "all map entries match", "not all map entries matched");
-        assertQuantifierFailure(map.tryUntil(MapConditions.hasEntry(mismatch)),
+        assertQuantifierFailure(diagnostic(map).until(MapConditions.hasEntry(mismatch)),
                 "some map entries match", "no map entries matched");
-        assertQuantifierFailure(map.tryUntil(MapConditions.hasNoEntry(match)),
+        assertQuantifierFailure(diagnostic(map).until(MapConditions.hasNoEntry(match)),
                 "no map entries match", "some map entries matched");
-        assertQuantifierFailure(map.tryUntil(MapConditions.allKeys(mismatch)),
+        assertQuantifierFailure(diagnostic(map).until(MapConditions.allKeys(mismatch)),
                 "all map keys match", "not all map keys matched");
-        assertQuantifierFailure(map.tryUntil(MapConditions.anyKey(mismatch)),
+        assertQuantifierFailure(diagnostic(map).until(MapConditions.anyKey(mismatch)),
                 "some map keys match", "no map keys matched");
-        assertQuantifierFailure(map.tryUntil(MapConditions.noKey(match)),
+        assertQuantifierFailure(diagnostic(map).until(MapConditions.noKey(match)),
                 "no map keys match", "some map keys matched");
-        assertQuantifierFailure(map.tryUntil(MapConditions.allValues(mismatch)),
+        assertQuantifierFailure(diagnostic(map).until(MapConditions.allValues(mismatch)),
                 "all map values match", "not all map values matched");
-        assertQuantifierFailure(map.tryUntil(MapConditions.anyValue(mismatch)),
+        assertQuantifierFailure(diagnostic(map).until(MapConditions.anyValue(mismatch)),
                 "some map values match", "no map values matched");
-        assertQuantifierFailure(map.tryUntil(MapConditions.noValue(match)),
+        assertQuantifierFailure(diagnostic(map).until(MapConditions.noValue(match)),
                 "no map values match", "some map values matched");
-        assertQuantifierFailure(nested.tryUntil(CollectionConditions.all(CollectionConditions.any(mismatch))),
+        assertQuantifierFailure(diagnostic(nested).until(CollectionConditions.all(CollectionConditions.any(mismatch))),
                 "all collection elements match: some collection elements match",
                 "not all collection elements matched: no collection elements matched");
-        assertQuantifierFailure(collection.tryUntil(captured(isNotNull, CollectionConditions.all(mismatch))),
+        assertQuantifierFailure(diagnostic(collection).until(captured(isNotNull, CollectionConditions.all(mismatch))),
                 "all collection elements match", "not all collection elements matched");
     }
 
@@ -78,7 +80,7 @@ class CompositionDiagnosticsTest {
         var condition = last.condition();
         assertEquals(description, condition.description());
         var evaluated = evaluated(last);
-        assertEquals(mismatch, assertInstanceOf(AttemptResult.Unsatisfied.class, evaluated.result()).mismatch());
+        assertEquals(mismatch, assertInstanceOf(AttemptStatus.Unsatisfied.class, evaluated.result()).mismatch());
     }
 
     @Test
@@ -89,8 +91,8 @@ class CompositionDiagnosticsTest {
             var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
             var selected = hasValue(equalTo("Bob"));
             var typed = hasValue(instanceOf(Integer.class));
-            var selectedResult = waiting.tryUntil(selected);
-            var typedResult = waiting.tryUntil(typed);
+            var selectedResult = diagnostic(waiting).until(selected);
+            var typedResult = diagnostic(waiting).until(typed);
 
             for (var result : List.of(selectedResult, typedResult)) {
                 var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
@@ -113,10 +115,10 @@ class CompositionDiagnosticsTest {
         var time = new FakeTime(0);
         var nested = equalTo("Bob");
         var selected = hasValue(nested);
-        var result = await(observations::next).usingTime(time, time).every(ofNanos(1)).tryUntil(selected);
+        var result = tryAwait(observations::next).usingTime(time, time).every(ofNanos(1)).until(selected);
 
         assertEquals("Bob", result.orThrow());
-        assertEquals(3, result.totalAttempts());
+        assertEquals(3, result.attempts().size());
         var missing = result.attempts().getFirst().condition();
         assertEquals(present.description(), missing.description());
         assertNull(missing.reference());
@@ -130,13 +132,12 @@ class CompositionDiagnosticsTest {
     void missingKeyAndNestedMismatchReportTheirOwnExpectedValues() {
         for (Map<String, String> actual : asList(null, Map.<String, String>of(), Map.of("customerId", "Alice"))) {
             var time = new FakeTime(0);
-            var result = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).tryUntil(
+            var result = tryAwait(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).until(
                     valueFor("customerId", equalTo("Bob")));
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
             assertEquals(TIMEOUT, failure.reason());
             assertTrue(failure.message().contains("Expected: " + (actual == null || actual.isEmpty() ? "customerId" : "Bob")), failure.message());
             assertEquals(3, result.attempts().size());
-            assertEquals(3, result.totalAttempts());
         }
     }
 
@@ -145,7 +146,7 @@ class CompositionDiagnosticsTest {
         var observations = List.of(Map.<String, String>of(), Map.of("customerId", "Alice"), Map.of("customerId", "Bob"));
         int[] calls = {0};
         var time = new FakeTime(0);
-        var result = await(() -> observations.get(calls[0]++)).usingTime(time, time).every(ofNanos(1)).tryUntil(
+        var result = tryAwait(() -> observations.get(calls[0]++)).usingTime(time, time).every(ofNanos(1)).until(
                 valueFor("customerId", equalTo("Bob")));
 
         assertEquals("Bob", result.orThrow());
@@ -207,18 +208,18 @@ class CompositionDiagnosticsTest {
             })).because("customer lookup must succeed");
             var waiting = await(() -> actual);
 
-            var result = waiting.tryUntil(selected);
+            var result = diagnostic(waiting).until(selected);
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
             assertEquals(CONDITION_FAILED, failure.reason());
             assertSame(cause, failure.cause());
             assertTrue(failure.message().contains("Expected: customerId"), failure.message());
             assertTrue(failure.message().contains("Because: customer lookup must succeed"), failure.message());
-            uncontrolled(AttemptResult.Operation.CONDITION, result.attempts().getFirst().result());
+            uncontrolled(AttemptStatus.Operation.CONDITION, result.attempts().getFirst().result());
             assertEquals("customerId", result.attempts().getFirst().condition().reference().value());
             assertSame(cause, assertFailure(CONDITION_FAILED, () -> waiting.until(selected)).getCause());
 
-            var captured = waiting.tryUntil(captured(selected, selected));
-            var capturedOutcome = uncontrolled(AttemptResult.Operation.CONDITION, captured.attempts().getFirst().result());
+            var captured = diagnostic(waiting).until(captured(selected, selected));
+            var capturedOutcome = uncontrolled(AttemptStatus.Operation.CONDITION, captured.attempts().getFirst().result());
             assertSame(cause, capturedOutcome.cause());
             var progress = captured.attempts().getFirst().progress();
             assertEquals(0, progress.capturedStages());

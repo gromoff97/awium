@@ -14,6 +14,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
@@ -43,7 +45,7 @@ class ContainerInterruptionTest {
         });
         for (var condition : List.of(all(nested), any(nested), none(nested))) {
             try {
-                var result = await(() -> actual).tryUntil(condition);
+                var result = tryAwait(() -> actual).until(condition);
                 assertEquals(INTERRUPTED, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
                 assertTrue(Thread.currentThread().isInterrupted());
                 assertEquals(0, factories[0]);
@@ -72,7 +74,7 @@ class ContainerInterruptionTest {
                     if (throwing) {
                         assertSame(cause, FailureTaxonomyTest.assertFailure(INTERRUPTED, () -> waiting.until(singleElement)).getCause());
                     } else {
-                        var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(singleElement)).failure();
+                        var failure = assertInstanceOf(AwaitResult.Failed.class, diagnostic(waiting).until(singleElement)).failure();
                         assertEquals(INTERRUPTED, failure.reason());
                         assertSame(cause, failure.cause());
                     }
@@ -94,8 +96,8 @@ class ContainerInterruptionTest {
         var selected = MapConditions.valueFor("key", check).because("value must be readable");
         var narrowed = MapConditions.valueFor("key", Conditions.instanceOf(String.class)).because("value must be readable");
         List<Function<MapAwait<SignallingMap, Map.Entry<String, String>, String>, AwaitResult<?, ?>>> waits = List.of(
-                waiting -> waiting.tryUntil(selected), waiting -> waiting.tryUntil(narrowed),
-                waiting -> waiting.tryUntil(captured(selected, selected)), waiting -> waiting.tryUntil(captured(narrowed, narrowed)));
+                waiting -> diagnostic(waiting).until(selected), waiting -> diagnostic(waiting).until(narrowed),
+                waiting -> diagnostic(waiting).until(captured(selected, selected)), waiting -> diagnostic(waiting).until(captured(narrowed, narrowed)));
         for (var wait : waits) {
             var actual = new SignallingMap("getValue");
             try {
@@ -120,7 +122,7 @@ class ContainerInterruptionTest {
     void interruptionDuringExtractionStillAllowsTheComparator() {
         var actual = new SignallingList("secondNext");
         int[] comparisons = {0};
-        assertInterrupted(() -> await(() -> actual).tryUntil(sorted((left, right) -> {
+        assertInterrupted(() -> tryAwait(() -> actual).until(sorted((left, right) -> {
             comparisons[0]++;
             return 0;
         })), "next", actual.calls);
@@ -130,23 +132,23 @@ class ContainerInterruptionTest {
     @Test
     void interruptionsWithinCollectionTraversalsStopAtTheConditionBoundary() {
         List<Function<SelectionAwait<SignallingList, String>, AwaitResult<?, ?>>> waits = List.of(
-                waiting -> waiting.tryUntil(all(value -> true)),
-                waiting -> waiting.tryUntil(any(value -> true)),
-                waiting -> waiting.tryUntil(none(value -> false)),
-                waiting -> waiting.tryUntil(firstElement(value -> true)),
-                waiting -> waiting.tryUntil(firstElement),
-                waiting -> waiting.tryUntil(lastElement),
-                waiting -> waiting.tryUntil(lastElement(value -> true)),
-                waiting -> waiting.tryUntil(elementAt(0)),
-                waiting -> waiting.tryUntil(singleElement(matches(value -> true))),
-                waiting -> waiting.tryUntil(contains("ready")),
-                waiting -> waiting.tryUntil(doesNotContain("absent")),
-                waiting -> waiting.tryUntil(containsExactly(List.of("ready", "other"))),
-                waiting -> waiting.tryUntil(containsExactlyInAnyOrder(List.of("other", "ready"))),
-                waiting -> waiting.tryUntil(containsOnly(List.of("ready", "other"))),
-                waiting -> waiting.tryUntil(containsSubsequence(List.of("ready"))),
-                waiting -> waiting.tryUntil(hasNoDuplicates),
-                waiting -> waiting.tryUntil(sorted((left, right) -> 0)));
+                waiting -> diagnostic(waiting).until(all(value -> true)),
+                waiting -> diagnostic(waiting).until(any(value -> true)),
+                waiting -> diagnostic(waiting).until(none(value -> false)),
+                waiting -> diagnostic(waiting).until(firstElement(value -> true)),
+                waiting -> diagnostic(waiting).until(firstElement),
+                waiting -> diagnostic(waiting).until(lastElement),
+                waiting -> diagnostic(waiting).until(lastElement(value -> true)),
+                waiting -> diagnostic(waiting).until(elementAt(0)),
+                waiting -> diagnostic(waiting).until(singleElement(matches(value -> true))),
+                waiting -> diagnostic(waiting).until(contains("ready")),
+                waiting -> diagnostic(waiting).until(doesNotContain("absent")),
+                waiting -> diagnostic(waiting).until(containsExactly(List.of("ready", "other"))),
+                waiting -> diagnostic(waiting).until(containsExactlyInAnyOrder(List.of("other", "ready"))),
+                waiting -> diagnostic(waiting).until(containsOnly(List.of("ready", "other"))),
+                waiting -> diagnostic(waiting).until(containsSubsequence(List.of("ready"))),
+                waiting -> diagnostic(waiting).until(hasNoDuplicates),
+                waiting -> diagnostic(waiting).until(sorted((left, right) -> 0)));
         for (String boundary : List.of("iterator", "hasNext", "next")) {
             for (var wait : waits) {
                 var actual = new SignallingList(boundary);
@@ -161,16 +163,16 @@ class ContainerInterruptionTest {
     @Test
     void interruptionsWithinMapTraversalsStopAtTheConditionBoundary() {
         List<Function<MapAwait<SignallingMap, Map.Entry<String, String>, String>, AwaitResult<?, ?>>> waits = List.of(
-                waiting -> waiting.tryUntil(MapConditions.singleEntry),
-                waiting -> waiting.tryUntil(MapConditions.singleEntry(matches(value -> true))),
-                waiting -> waiting.tryUntil(MapConditions.valueFor("key")),
-                waiting -> waiting.tryUntil(MapConditions.entryFor("key")),
-                waiting -> waiting.tryUntil(MapConditions.allEntries((key, value) -> true)),
-                waiting -> waiting.tryUntil(MapConditions.hasEntry((key, value) -> true)),
-                waiting -> waiting.tryUntil(MapConditions.hasNoEntry((key, value) -> false)),
-                waiting -> waiting.tryUntil(MapConditions.hasEntry("key", "ready")),
-                waiting -> waiting.tryUntil(MapConditions.containsAllEntries(Map.of("key", "ready"))),
-                waiting -> waiting.tryUntil(MapConditions.containsExactlyEntries(Map.of("key", "ready"))));
+                waiting -> diagnostic(waiting).until(MapConditions.singleEntry),
+                waiting -> diagnostic(waiting).until(MapConditions.singleEntry(matches(value -> true))),
+                waiting -> diagnostic(waiting).until(MapConditions.valueFor("key")),
+                waiting -> diagnostic(waiting).until(MapConditions.entryFor("key")),
+                waiting -> diagnostic(waiting).until(MapConditions.allEntries((key, value) -> true)),
+                waiting -> diagnostic(waiting).until(MapConditions.hasEntry((key, value) -> true)),
+                waiting -> diagnostic(waiting).until(MapConditions.hasNoEntry((key, value) -> false)),
+                waiting -> diagnostic(waiting).until(MapConditions.hasEntry("key", "ready")),
+                waiting -> diagnostic(waiting).until(MapConditions.containsAllEntries(Map.of("key", "ready"))),
+                waiting -> diagnostic(waiting).until(MapConditions.containsExactlyEntries(Map.of("key", "ready"))));
         for (String boundary : List.of("entrySet", "iterator", "hasNext", "next", "getKey", "getValue")) {
             for (int index = 0; index < waits.size(); index++) {
                 // Selecting an entry does not inspect its key.
@@ -190,14 +192,14 @@ class ContainerInterruptionTest {
     @Test
     void interruptionsDuringMapSizeAndViewsAreDetectedAfterTheCheck() {
         List<BoundaryCase<SignallingMap>> cases = List.of(
-                new BoundaryCase<>("entrySet", actual -> await(() -> actual).tryUntil(MapConditions.singleEntry)),
-                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(MapConditions.containsExactlyEntries(Map.of("key", "ready")))),
-                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(MapConditions.hasSize(1))),
-                new BoundaryCase<>("keySet", actual -> await(() -> actual).tryUntil(MapConditions.allKeys(value -> true))),
-                new BoundaryCase<>("keySet", actual -> await(() -> actual).tryUntil(MapConditions.containsKey("key"))),
-                new BoundaryCase<>("keySet", actual -> await(() -> actual).tryUntil(MapConditions.containsOnlyKeys(java.util.Collections.singletonList("key")))),
-                new BoundaryCase<>("values", actual -> await(() -> actual).tryUntil(MapConditions.allValues(value -> true))),
-                new BoundaryCase<>("values", actual -> await(() -> actual).tryUntil(MapConditions.containsValue("ready"))));
+                new BoundaryCase<>("entrySet", actual -> tryAwait(() -> actual).until(MapConditions.singleEntry)),
+                new BoundaryCase<>("size", actual -> tryAwait(() -> actual).until(MapConditions.containsExactlyEntries(Map.of("key", "ready")))),
+                new BoundaryCase<>("size", actual -> tryAwait(() -> actual).until(MapConditions.hasSize(1))),
+                new BoundaryCase<>("keySet", actual -> tryAwait(() -> actual).until(MapConditions.allKeys(value -> true))),
+                new BoundaryCase<>("keySet", actual -> tryAwait(() -> actual).until(MapConditions.containsKey("key"))),
+                new BoundaryCase<>("keySet", actual -> tryAwait(() -> actual).until(MapConditions.containsOnlyKeys(java.util.Collections.singletonList("key")))),
+                new BoundaryCase<>("values", actual -> tryAwait(() -> actual).until(MapConditions.allValues(value -> true))),
+                new BoundaryCase<>("values", actual -> tryAwait(() -> actual).until(MapConditions.containsValue("ready"))));
         for (var testCase : cases) {
             var actual = new SignallingMap(testCase.boundary());
             assertInterrupted(() -> testCase.check().apply(actual), testCase.boundary(), actual.calls);
@@ -207,14 +209,14 @@ class ContainerInterruptionTest {
     @Test
     void interruptionsDuringSelectionAreDetectedAfterTheCheck() {
         List<BoundaryCase<SignallingList>> cases = List.of(
-                new BoundaryCase<>("iterator", actual -> await(() -> actual).tryUntil(firstElement)),
-                new BoundaryCase<>("reversed", actual -> await(() -> actual).tryUntil(lastElement)),
-                new BoundaryCase<>("reversed", actual -> await(() -> actual).tryUntil(lastElement(value -> true))),
-                new BoundaryCase<>("iterator", actual -> await(() -> actual).tryUntil(elementAt(0))),
-                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(containsSequence(List.of("ready")))),
-                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(startsWith(List.of("ready")))),
-                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(endsWith(List.of("other")))),
-                new BoundaryCase<>("size", actual -> await(() -> actual).tryUntil(hasSize(2))));
+                new BoundaryCase<>("iterator", actual -> tryAwait(() -> actual).until(firstElement)),
+                new BoundaryCase<>("reversed", actual -> tryAwait(() -> actual).until(lastElement)),
+                new BoundaryCase<>("reversed", actual -> tryAwait(() -> actual).until(lastElement(value -> true))),
+                new BoundaryCase<>("iterator", actual -> tryAwait(() -> actual).until(elementAt(0))),
+                new BoundaryCase<>("size", actual -> tryAwait(() -> actual).until(containsSequence(List.of("ready")))),
+                new BoundaryCase<>("size", actual -> tryAwait(() -> actual).until(startsWith(List.of("ready")))),
+                new BoundaryCase<>("size", actual -> tryAwait(() -> actual).until(endsWith(List.of("other")))),
+                new BoundaryCase<>("size", actual -> tryAwait(() -> actual).until(hasSize(2))));
         for (var testCase : cases) {
             var actual = new SignallingList(testCase.boundary());
             assertInterrupted(() -> testCase.check().apply(actual), testCase.boundary(), actual.calls);
@@ -224,7 +226,7 @@ class ContainerInterruptionTest {
     private static void assertInterrupted(Supplier<AwaitResult<?, ?>> wait, String boundary, List<String> calls) {
         try {
             var result = assertInstanceOf(AwaitResult.Failed.class, wait.get());
-            assertEquals(1, result.totalAttempts());
+            assertEquals(1, result.attempts().size());
             var failure = result.failure();
             assertEquals(INTERRUPTED, failure.reason(), calls.toString());
             assertInstanceOf(InterruptedException.class, failure.cause());

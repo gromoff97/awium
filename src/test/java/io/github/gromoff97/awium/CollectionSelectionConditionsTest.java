@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
-import io.github.gromoff97.awium.internal.ConditionEvaluation.Unsatisfied;
+import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
+import io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.AbstractList;
 import java.util.ArrayDeque;
@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.SequencedCollection;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.firstElement;
 import static io.github.gromoff97.awium.CollectionConditions.lastElement;
@@ -89,8 +91,8 @@ class CollectionSelectionConditionsTest {
         assertEquals(List.of(5, 5, 5), List.of(plain.getFirst().length(),
                 selected.getFirst().length(), captured.getLast().getFirst().length()));
 
-        var diagnostic = await(() -> actual).tryUntil(subsetOf(List.of("ready")));
-        if (diagnostic instanceof AwaitResult.Satisfied(var attempts, var value)) {
+        var diagnostic = tryAwait(() -> actual).until(subsetOf(List.of("ready")));
+        if (diagnostic instanceof AwaitResult.Satisfied(var history, var value)) {
             assertSame(actual, value);
             assertEquals(5, value.getFirst().length());
         } else {
@@ -220,10 +222,10 @@ class CollectionSelectionConditionsTest {
             for (var check : positive) {
                 ArrayList<String> selected = waiting.until(check);
                 assertSame(actual, selected);
-                assertSame(actual, waiting.tryUntil(check).orThrow());
+                assertSame(actual, diagnostic(waiting).until(check).orThrow());
             }
             for (var check : negative) {
-                var failed = waiting.tryUntil(check.because("pattern must be absent"));
+                var failed = diagnostic(waiting).until(check.because("pattern must be absent"));
                 var failure = assertInstanceOf(AwaitResult.Failed.class, failed).failure();
                 assertEquals(TIMEOUT, failure.reason());
                 assertTrue(failure.message().contains("Because: pattern must be absent"));
@@ -249,7 +251,7 @@ class CollectionSelectionConditionsTest {
         }
         for (var check : List.of(CollectionConditions.doesNotContainSequence(List.of()),
                 CollectionConditions.doesNotContainSubsequence(List.of()))) {
-            var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(check)).failure();
+            var failure = assertInstanceOf(AwaitResult.Failed.class, diagnostic(waiting).until(check)).failure();
             assertEquals(TIMEOUT, failure.reason());
         }
     }
@@ -278,7 +280,7 @@ class CollectionSelectionConditionsTest {
             assertSame(actual, waiting.until(CollectionConditions.startsWith(asList(null, new int[] {1, 2}))));
             assertSame(actual, waiting.until(CollectionConditions.endsWith(List.of("gap", new int[] {3, 4}))));
             assertSame(actual, waiting.until(CollectionConditions.containsSequence(List.of(new int[] {1, 2}, "gap"))));
-            var captured = waiting.tryUntil(CollectionConditions.containsSubsequence(asList(null, new int[] {3, 4})));
+            var captured = diagnostic(waiting).until(CollectionConditions.containsSubsequence(asList(null, new int[] {3, 4})));
             assertSame(actual, captured.orThrow());
         }
     }
@@ -295,7 +297,7 @@ class CollectionSelectionConditionsTest {
                 CollectionConditions.containsSequence(expected), CollectionConditions.containsSubsequence(expected),
                 CollectionConditions.doesNotContainSequence(unrelated), CollectionConditions.doesNotContainSubsequence(unrelated))) {
             var selected = waiting.until(check);
-            AwaitResult<List<String[]>, List<String[]>> attempt = waiting.tryUntil(check);
+            AwaitResult<List<String[]>, List<String[]>> attempt = diagnostic(waiting).until(check);
 
             assertEquals("a", selected.getFirst()[0]);
             assertSame(actual, selected);

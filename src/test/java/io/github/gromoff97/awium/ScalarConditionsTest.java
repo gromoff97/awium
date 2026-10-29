@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
-import io.github.gromoff97.awium.internal.ConditionEvaluation.Unsatisfied;
+import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
+import io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.nio.CharBuffer;
@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
@@ -42,7 +43,7 @@ class ScalarConditionsTest {
 
         for (var check : checks) {
             var value = waiting.until(check);
-            AwaitResult<Measurement, Measurement> captured = waiting.tryUntil(check);
+            AwaitResult<Measurement, Measurement> captured = diagnostic(waiting).until(check);
             var values = waiting.until(captured(check, check));
             assertSame(measurement, value);
             assertEquals(10, value.number());
@@ -83,7 +84,7 @@ class ScalarConditionsTest {
 
         for (var check : checks) {
             var value = waiting.until(check);
-            AwaitResult<Score, Score> result = waiting.tryUntil(check);
+            AwaitResult<Score, Score> result = diagnostic(waiting).until(check);
             var values = waiting.until(captured(check, check));
             assertSame(score, value);
             assertEquals(10, value.number());
@@ -142,7 +143,7 @@ class ScalarConditionsTest {
 
             assertSame(text, waiting.until(matching));
             assertSame(text, await(() -> Optional.of(text)).usingTime(time, time).until(OptionalConditions.hasValue(matching)));
-            var failure = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(mismatching)).failure();
+            var failure = assertInstanceOf(AwaitResult.Failed.class, diagnostic(waiting).until(mismatching)).failure();
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
         }
     }
@@ -172,13 +173,13 @@ class ScalarConditionsTest {
             var value = waiting.until(check);
             assertSame(text, value);
             assertEquals(text.capacity(), value.capacity());
-            var captured = waiting.tryUntil(check);
+            var captured = diagnostic(waiting).until(check);
             switch (captured) {
-                case AwaitResult.Satisfied(var attempts, var result) -> {
+                case AwaitResult.Satisfied(var history, var result) -> {
                     assertSame(text, result);
                     assertEquals(text.capacity(), result.capacity());
                 }
-                case AwaitResult.Failed(var attempts, var failure) -> throw new AssertionError(failure);
+                case AwaitResult.Failed(var history, var failure) -> throw new AssertionError(failure);
             }
         }
 

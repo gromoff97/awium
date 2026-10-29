@@ -13,6 +13,7 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.in;
@@ -137,14 +138,14 @@ class IterableExpectedValuesTest {
         var expected = new Once<>(mutable);
         var condition = factory.apply(expected);
         var waiting = waiting(() -> actual);
-        var before = waiting.tryUntil(condition);
+        var before = diagnostic(waiting).until(condition);
         mutable.clear();
         mutable.add("changed");
-        var after = waiting.tryUntil(condition);
+        var after = diagnostic(waiting).until(condition);
 
         assertEquals(1, expected.iterations);
         assertEquals(before.getClass(), after.getClass());
-        if (before instanceof AwaitResult.Satisfied(var ignoredAttempts, var observed)) {
+        if (before instanceof AwaitResult.Satisfied(var ignoredHistory, var observed)) {
             ACTUAL value = waiting.until(condition);
             assertSame(actual, value);
             assertSame(actual, observed);

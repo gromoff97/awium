@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.ConditionEvaluation;
+import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
-import io.github.gromoff97.awium.internal.ConditionEvaluation.Unsatisfied;
+import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
+import io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -13,6 +13,8 @@ import java.util.Set;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
@@ -205,7 +207,7 @@ class MapConditionsTest {
 
     @Test
     void nullActualShortCircuitsAndAggregateFactoriesValidateInputs() {
-        ConditionEvaluation<?> evaluation = evaluate(
+        AttemptResult<?> evaluation = evaluate(
                 containsAllEntries(map("a", "1")), null);
         assertEquals(Unsatisfied.class, evaluation.getClass());
         assertFalse(mismatch(evaluation).isBlank());
@@ -233,8 +235,8 @@ class MapConditionsTest {
                 containsAllKeys(List.of()), doesNotContainAnyKeys(List.of()),
                 containsAllValues(List.of()), doesNotContainAnyValues(List.of()));
         for (var condition : satisfied) assertSame(actual, waiting.until(condition));
-        for (var result : List.of(waiting.tryUntil(containsAnyEntries(Map.of())),
-                waiting.tryUntil(doesNotContainAllEntries(Map.of())))) {
+        for (var result : List.of(diagnostic(waiting).until(containsAnyEntries(Map.of())),
+                diagnostic(waiting).until(doesNotContainAllEntries(Map.of())))) {
             assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
         }
     }
@@ -258,10 +260,10 @@ class MapConditionsTest {
             for (var check : satisfied) {
                 LinkedHashMap<String, String> selected = waiting.until(check);
                 assertSame(actual, selected);
-                assertSame(actual, waiting.tryUntil(check).orThrow());
+                assertSame(actual, diagnostic(waiting).until(check).orThrow());
             }
             for (var check : unsatisfied) {
-                var result = waiting.tryUntil(check);
+                var result = diagnostic(waiting).until(check);
                 assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
                 assertEquals(List.of(), result.attempts().getLast().condition().reference().value());
             }
@@ -296,13 +298,13 @@ class MapConditionsTest {
         LinkedHashMap<String, String> checked = waiting.until(hasEntry(matches(entry -> !entry.getValue().equals("0"))));
         LinkedHashMap<String, String> direct = waiting.until(
                 hasEntry(entry -> entry.getKey().startsWith("ready") && entry.getValue().startsWith("1")));
-        AwaitResult<LinkedHashMap<String, String>, LinkedHashMap<String, String>> directResult = waiting.tryUntil(
+        AwaitResult<LinkedHashMap<String, String>, LinkedHashMap<String, String>> directResult = diagnostic(waiting).until(
                 hasEntry((Map.Entry<String, String> entry) -> !entry.getValue().equals("0"))
                         .because("positive entry required"));
-        AwaitResult<LinkedHashMap<String, String>, LinkedHashMap<String, String>> checkedResult = waiting.tryUntil(
+        AwaitResult<LinkedHashMap<String, String>, LinkedHashMap<String, String>> checkedResult = diagnostic(waiting).until(
                 hasEntry(matches((Map.Entry<String, String> entry) -> !entry.getValue().equals("0")))
                         .because("positive entry required"));
-        AwaitResult<LinkedHashMap<String, String>, LinkedHashMap<String, String>> exactResult = waiting.tryUntil(
+        AwaitResult<LinkedHashMap<String, String>, LinkedHashMap<String, String>> exactResult = diagnostic(waiting).until(
                 hasEntry("ready", "1").because("ready entry required"));
         List<LinkedHashMap<String, String>> stages = waiting.until(captured(
                 hasEntry("ready", "1"), hasEntry(entry -> entry.getValue().equals("2"))));
@@ -331,7 +333,7 @@ class MapConditionsTest {
             Await.MapSource<Map<String, String>> source = () -> actual;
             for (var check : checks) {
                 var time = new FakeTime(0);
-                var result = await(source).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1)).tryUntil(check);
+                var result = tryAwait(source).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1)).until(check);
                 var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
 
                 assertEquals(TIMEOUT, failure.reason());
@@ -346,10 +348,10 @@ class MapConditionsTest {
             Await.MapSource<LinkedHashMap<String, String>> source = () -> actual;
             var time = new FakeTime(0);
             var waiting = await(source).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1));
-            AwaitResult<LinkedHashMap<String, String>, LinkedHashMap<String, String>> direct = waiting.tryUntil(
+            AwaitResult<LinkedHashMap<String, String>, LinkedHashMap<String, String>> direct = diagnostic(waiting).until(
                     hasNoEntry(entry -> entry.getKey().startsWith("failed") && entry.getValue().startsWith("1")));
-            var exact = waiting.tryUntil(hasNoEntry("failed", "1"));
-            var explained = waiting.tryUntil(hasNoEntry((Map.Entry<String, String> entry) ->
+            var exact = diagnostic(waiting).until(hasNoEntry("failed", "1"));
+            var explained = diagnostic(waiting).until(hasNoEntry((Map.Entry<String, String> entry) ->
                     entry.getKey().startsWith("failed") && entry.getValue().startsWith("1"))
                     .because("failed entry must be absent"));
 
@@ -373,8 +375,8 @@ class MapConditionsTest {
 
     private static void assertPair(Pair pair,
             LinkedHashMap<String, String> actual, boolean positiveSatisfied) {
-        ConditionEvaluation<?> positive = evaluate(pair.positive(), actual);
-        ConditionEvaluation<?> negative = evaluate(pair.negative(), actual);
+        AttemptResult<?> positive = evaluate(pair.positive(), actual);
+        AttemptResult<?> negative = evaluate(pair.negative(), actual);
         assertAll(pair.name(),
                 () -> assertSame(actual, result(positiveSatisfied ? positive : negative)),
                 () -> assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank()));

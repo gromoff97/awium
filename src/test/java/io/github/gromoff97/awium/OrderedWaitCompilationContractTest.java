@@ -14,24 +14,24 @@ class OrderedWaitCompilationContractTest {
     Path directory;
 
     @ParameterizedTest
-    @ValueSource(strings = {"until", "tryUntil"})
-    void predicatesMustBeExpressedThroughConditions(String terminal) throws IOException {
+    @ValueSource(strings = {"await", "tryAwait"})
+    void predicatesMustBeExpressedThroughConditions(String factory) throws IOException {
         for (String arguments : List.of("value -> true", "String::isBlank", "value -> true, value -> false")) {
-            assertRejected("await(Contract::text).%s(%s);".formatted(terminal, arguments));
+            assertRejected("%s(Contract::text).until(%s);".formatted(factory, arguments));
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"until", "tryUntil"})
-    void rejectsIncompatibleCallbackAndSourceTypes(String terminal) throws IOException {
+    @ValueSource(strings = {"await", "tryAwait"})
+    void rejectsIncompatibleCallbackAndSourceTypes(String factory) throws IOException {
         for (String expression : List.of(
-                "await(Contract::text).%s(matches((Integer value) -> true));",
-                "await(Contract::text).%s(matches(value -> value.length()));",
-                "await(Contract::optional).%s(captured(firstElement, lastElement));",
-                "await(Contract::collection).%s(captured(present, present));",
-                "await(Contract::map).%s(captured(firstElement, lastElement));",
-                "await(Contract::collection).%s(captured(singleEntry, singleEntry));")) {
-            assertRejected(expression.formatted(terminal));
+                "%s(Contract::text).until(matches((Integer value) -> true));",
+                "%s(Contract::text).until(matches(value -> value.length()));",
+                "%s(Contract::optional).until(captured(firstElement, lastElement));",
+                "%s(Contract::collection).until(captured(present, present));",
+                "%s(Contract::map).until(captured(firstElement, lastElement));",
+                "%s(Contract::collection).until(captured(singleEntry, singleEntry));")) {
+            assertRejected(expression.formatted(factory));
         }
     }
 
@@ -39,23 +39,23 @@ class OrderedWaitCompilationContractTest {
     void sequenceResultsCannotBeAssignedToSingleOrUnrelatedValues() throws IOException {
         for (String expression : List.of(
                 "String value = await(Contract::text).until(captured(isNotNull, isNotNull));",
-                "AwaitResult<String, String> value = await(Contract::text).tryUntil(captured(isNotNull, isNotNull));",
+                "AwaitResult<String, String> value = tryAwait(Contract::text).until(captured(isNotNull, isNotNull));",
                 "List<Integer> value = await(Contract::collection).until(captured(firstElement, lastElement));",
                 "Callable<List<String>> source = Contract::collection; List<Integer> wrong = await(source::call).until(captured(firstElement, lastElement));",
-                "Callable<List<String>> source = Contract::collection; AwaitResult<List<String>, List<Integer>> wrong = await(source::call).tryUntil(captured(firstElement, lastElement));",
+                "Callable<List<String>> source = Contract::collection; AwaitResult<List<String>, List<Integer>> wrong = tryAwait(source::call).until(captured(firstElement, lastElement));",
                 "List<Integer> result = await(Contract::text).until(captured(instanceOf(String.class), instanceOf(String.class)));")) {
             assertRejected(expression);
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"until", "tryUntil"})
-    void terminalsRequireOneExplicitCondition(String terminal) throws IOException {
+    @ValueSource(strings = {"await", "tryAwait"})
+    void terminalsRequireOneExplicitCondition(String factory) throws IOException {
         for (String arguments : List.of("", "isNotNull, isNotNull", "present, present",
                 "singleElement, singleElement", "valueFor(\"ready\"), valueFor(\"ready\")",
                 "instanceOf(String.class), instanceOf(String.class)",
                 "new io.github.gromoff97.awium.Condition.PreservingCondition<?>[]{isNotNull}")) {
-            assertRejected("await(Contract::text).%s(%s);".formatted(terminal, arguments));
+            assertRejected("%s(Contract::text).until(%s);".formatted(factory, arguments));
         }
     }
 
@@ -65,6 +65,7 @@ class OrderedWaitCompilationContractTest {
                 import java.util.concurrent.Callable;
                 import io.github.gromoff97.awium.result.AwaitResult;
                 import static io.github.gromoff97.awium.Await.await;
+                import static io.github.gromoff97.awium.Await.tryAwait;
                 import static io.github.gromoff97.awium.Conditions.*;
                 import static io.github.gromoff97.awium.CollectionConditions.*;
                 import static io.github.gromoff97.awium.OptionalConditions.present;

@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.result.ConditionResult;
-import io.github.gromoff97.awium.result.AttemptRecord;
+import io.github.gromoff97.awium.result.HistoryEntry;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Conditions.equalTo;
 import static io.github.gromoff97.awium.Conditions.isNotNull;
@@ -38,7 +40,7 @@ class TimingConfigurationTest {
                     return "ready";
                 }).usingTime(time, time).every(ofNanos(Long.MAX_VALUE))
                         .upTo(ofNanos(Long.MAX_VALUE)).persisting(ofNanos(persistence));
-                var result = waiting.tryUntil(Conditions.condition("ready", (String actual) -> {
+                var result = diagnostic(waiting).until(Conditions.condition("ready", (String actual) -> {
                     if (calls[0] > 1) {
                         if (outcome.equals("condition failure")) throw cause;
                         if (outcome.equals("mismatch")) return ConditionResult.unsatisfied("changed");
@@ -51,7 +53,7 @@ class TimingConfigurationTest {
                 assertEquals(acquiredAfter, result.attempts().getFirst().timing().completionOffset(), outcome);
                 var last = result.attempts().getLast();
                 var elapsed = acquiredAfter.plusNanos(persistence);
-                assertEquals(AttemptRecord.Phase.PERSISTENCE, last.phase(), outcome);
+                assertEquals(HistoryEntry.Phase.PERSISTENCE, last.phase(), outcome);
                 assertEquals(acquiredAfter, last.timing().startOffset(), outcome);
                 assertEquals(elapsed, last.timing().retrievalOffset(), outcome);
                 assertEquals(outcome.equals("source failure") ? null : elapsed,
@@ -83,12 +85,11 @@ class TimingConfigurationTest {
         assertEquals(List.of(), time.parkRequests);
 
         int[] calls = {0};
-        var result = await(() -> ++calls[0]).usingTime(time, time).upTo(timeout).tryUntil(equalTo(2));
+        var result = tryAwait(() -> ++calls[0]).usingTime(time, time).upTo(timeout).until(equalTo(2));
 
         var failure = assertInstanceOf(AwaitResult.Failed.class, result);
         assertEquals(TIMEOUT, failure.failure().reason());
         assertEquals(1, calls[0]);
-        assertEquals(1, result.totalAttempts());
         assertEquals(1, result.attempts().size());
         assertEquals(timeout.toNanos(), time.getAsLong());
         assertEquals(List.of(timeout.toNanos()), time.parkRequests);
@@ -132,10 +133,10 @@ class TimingConfigurationTest {
         assertEquals(1, factories[0]);
 
         time.advanceNanos(1000);
-        var result = waiting.tryUntil(condition);
+        var result = diagnostic(waiting).until(condition);
         assertEquals("ready", result.orThrow());
         assertEquals(2, factories[0]);
-        assertEquals(2, result.totalAttempts());
+        assertEquals(2, result.attempts().size());
         assertEquals(ofNanos(0), result.attempts().getFirst().timing().startOffset());
         assertEquals(ofNanos(2), result.attempts().getLast().timing().completionOffset());
     }

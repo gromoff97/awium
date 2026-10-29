@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,10 +27,10 @@ class MapIterableSourceTest {
         assertEquals(10, waiting.until(MapConditions.valueFor("key")).intValue());
         assertEquals(10, waiting.until(MapConditions.singleEntry((key, value) -> true)).getValue().intValue());
         assertEquals(10, waiting.until(MapConditions.valueFor("key", java.util.Objects::nonNull)).intValue());
-        AwaitResult<MapWithUsers, Map.Entry<String, Integer>> captured = waiting.tryUntil(MapConditions.singleEntry);
+        AwaitResult<MapWithUsers, Map.Entry<String, Integer>> captured = diagnostic(waiting).until(MapConditions.singleEntry);
         switch (captured) {
-            case AwaitResult.Satisfied(var attempts, var entry) -> assertEquals(10, entry.getValue().intValue());
-            case AwaitResult.Failed(var attempts, var failure) -> fail(failure.message());
+            case AwaitResult.Satisfied(var history, var entry) -> assertEquals(10, entry.getValue().intValue());
+            case AwaitResult.Failed(var history, var failure) -> fail(failure.message());
         }
     }
 

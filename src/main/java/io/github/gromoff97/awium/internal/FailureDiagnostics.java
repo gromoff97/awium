@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium.internal;
 
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.result.AttemptRecord;
-import io.github.gromoff97.awium.result.AttemptResult;
+import io.github.gromoff97.awium.result.HistoryEntry;
+import io.github.gromoff97.awium.result.AttemptStatus;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -26,7 +26,7 @@ public final class FailureDiagnostics {
     private final Condition condition;
     private final WaitConfiguration configuration;
     private final Throwable cause;
-    private final AttemptRecord.Progress sequence;
+    private final HistoryEntry.Progress sequence;
 
     private final List<Throwable> diagnosticFailures = new ArrayList<>();
 
@@ -53,14 +53,14 @@ public final class FailureDiagnostics {
         return result.toString();
     }
 
-    public static AwaitFailure failure(WaitCompletion outcome, WaitConfiguration configuration) {
+    public static AwaitFailure failure(WaitCompletion outcome, WaitConfiguration configuration, long attemptNumber) {
         var diagnostics = new FailureDiagnostics(outcome, configuration);
-        return new AwaitFailure(outcome.failureReason(), diagnostics.message(), diagnostics.cause,
+        return new AwaitFailure(outcome.failureReason(), diagnostics.message(attemptNumber), diagnostics.cause,
                 diagnostics.diagnosticFailures);
     }
 
     private String uncontrolledHeading(boolean interrupted) {
-        return switch (((AttemptResult.Uncontrolled) outcome.attempt().result()).operation()) {
+        return switch (((AttemptStatus.Uncontrolled) outcome.attempt().result()).operation()) {
             case WAITING -> interrupted
                     ? "Caller thread was interrupted while waiting" : "Waiting before the next attempt failed";
             case CONDITION -> interrupted
@@ -82,13 +82,13 @@ public final class FailureDiagnostics {
         };
     }
 
-    private String message() {
-        AttemptRecord<?> attempt = outcome.attempt();
+    private String message(long attemptNumber) {
+        HistoryEntry<?> attempt = outcome.attempt();
         StringBuilder out = new StringBuilder(title()).append("\n\n");
         condition(out, condition, "");
         String actual = attempt.hasObservation() ? render(() -> renderValue(attempt.observed())) : null;
-        String mismatch = attempt.result() instanceof AttemptResult.Unsatisfied value ? value.mismatch() : null;
-        attempt(out, attempt, actual, sequence == null ? mismatch : null);
+        String mismatch = attempt.result() instanceof AttemptStatus.Unsatisfied value ? value.mismatch() : null;
+        attempt(out, attemptNumber, attempt, actual, sequence == null ? mismatch : null);
         sequence(out, mismatch);
         timing(out);
         if (cause != null) {
@@ -144,9 +144,9 @@ public final class FailureDiagnostics {
                 duration(Duration.ofNanos(configuration.everyNanos())));
     }
 
-    private static void attempt(StringBuilder out, AttemptRecord<?> attempt, String actual,
+    private static void attempt(StringBuilder out, long number, HistoryEntry<?> attempt, String actual,
             String mismatch) {
-        out.append('\n').append("Attempt: ").append(attempt.number())
+        out.append('\n').append("Attempt: ").append(number)
                 .append(" (").append(attempt.phase()).append(")\n");
         if (actual != null) {
             field(out, "Actual", actual);
@@ -180,7 +180,7 @@ public final class FailureDiagnostics {
         if (mismatch != null) {
             field(out, "        ", "Mismatch", mismatch);
         }
-        if (outcome.attempt().result() instanceof AttemptResult.Satisfied
+        if (outcome.attempt().result() instanceof AttemptStatus.Satisfied
                 && sequence.capturedStages() < sequence.sequence().stages().size()) {
             int next = sequence.capturedStages() + 1;
             field(out, "Next stage", next + " of " + sequence.sequence().stages().size());

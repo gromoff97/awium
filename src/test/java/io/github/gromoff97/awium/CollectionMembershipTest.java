@@ -1,15 +1,16 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.ConditionEvaluation;
+import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.internal.ConditionEvaluation.Satisfied;
-import io.github.gromoff97.awium.internal.ConditionEvaluation.Unsatisfied;
+import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
+import io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
@@ -224,7 +225,7 @@ class CollectionMembershipTest {
 
         assertSame(actual, waiting.until(containsAll(List.of())));
         assertSame(actual, waiting.until(doesNotContainAny(List.of())));
-        for (var result : List.of(waiting.tryUntil(containsAny(List.of())), waiting.tryUntil(doesNotContainAll(List.of())))) {
+        for (var result : List.of(diagnostic(waiting).until(containsAny(List.of())), diagnostic(waiting).until(doesNotContainAll(List.of())))) {
             assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
         }
         assertEquals(0, actual.iteratorCalls);
@@ -246,10 +247,10 @@ class CollectionMembershipTest {
             ArrayList<String> absent = waiting.until(doesNotContainAny(List.of()));
             assertSame(actual, all);
             assertSame(actual, absent);
-            assertSame(actual, waiting.tryUntil(containsAll(List.of())).orThrow());
+            assertSame(actual, diagnostic(waiting).until(containsAll(List.of())).orThrow());
 
-            for (var failed : List.of(waiting.tryUntil(containsAny(List.of())),
-                    waiting.tryUntil(doesNotContainAll(List.of())))) {
+            for (var failed : List.of(diagnostic(waiting).until(containsAny(List.of())),
+                    diagnostic(waiting).until(doesNotContainAll(List.of())))) {
                 assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, failed).failure().reason());
                 assertEquals(List.of(), failed.attempts().getLast().condition().reference().value());
             }
@@ -273,8 +274,8 @@ class CollectionMembershipTest {
     private static void assertPair(Pair pair, List<String> values,
             boolean positiveSatisfied) {
         Collection<String> actual = new ArrayList<>(values);
-        ConditionEvaluation<?> positive = evaluate(pair.positive(), actual);
-        ConditionEvaluation<?> negative = evaluate(pair.negative(), actual);
+        AttemptResult<?> positive = evaluate(pair.positive(), actual);
+        AttemptResult<?> negative = evaluate(pair.negative(), actual);
 
         assertAll(pair.name(),
                 () -> assertSame(actual, result(positiveSatisfied ? positive : negative)),

@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.result.ConditionResult;
-import io.github.gromoff97.awium.internal.ConditionEvaluation;
+import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.Condition.CapturedSource;
 import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
@@ -134,16 +134,16 @@ public final class Conditions {
         requireNonNull(type, "type must not be null");
         return ConditionSupport.condition("value is an instance of " + type.getTypeName(), null, actual ->
                 type.isInstance(actual)
-                        ? ConditionEvaluation.satisfied(type.cast(actual))
-                        : ConditionEvaluation.unsatisfied("value was not an instance of " + type.getTypeName()));
+                        ? AttemptResult.satisfied(type.cast(actual))
+                        : AttemptResult.unsatisfied("value was not an instance of " + type.getTypeName()));
     }
 
     public static <RESULT> Condition.Typed<Object, RESULT> exactlyInstanceOf(Class<RESULT> type) {
         requireNonNull(type, "type must not be null");
         return ConditionSupport.condition("value is exactly an instance of " + type.getTypeName(), null, actual ->
                 actual != null && actual.getClass() == type
-                        ? ConditionEvaluation.satisfied(type.cast(actual))
-                        : ConditionEvaluation.unsatisfied("value was not exactly an instance of " + type.getTypeName()));
+                        ? AttemptResult.satisfied(type.cast(actual))
+                        : AttemptResult.unsatisfied("value was not exactly an instance of " + type.getTypeName()));
     }
 
     public static <EXPECTED> ComparisonCondition<EXPECTED> in(Iterable<? extends EXPECTED> expected) {
@@ -202,7 +202,7 @@ public final class Conditions {
     private static <EXPECTED> ComparisonCondition<EXPECTED> comparison(String description, String mismatch,
             Reference<?> reference, CheckedPredicate<Object> matches) {
         return new ComparisonCondition<>(ConditionSupport.condition(description, reference,
-                actual -> matches.test(actual) ? ConditionEvaluation.satisfied(actual) : ConditionEvaluation.unsatisfied(mismatch)));
+                actual -> matches.test(actual) ? AttemptResult.satisfied(actual) : AttemptResult.unsatisfied(mismatch)));
     }
 
     private static <BOUND, INPUT extends Comparable<? super BOUND>>

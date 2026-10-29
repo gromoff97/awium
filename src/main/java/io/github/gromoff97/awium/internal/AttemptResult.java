@@ -1,24 +1,24 @@
 package io.github.gromoff97.awium.internal;
 
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.result.AttemptResult;
+import io.github.gromoff97.awium.result.AttemptStatus;
 import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
 /** A typed value or failure from one check, with the condition responsible for diagnostics. */
-public sealed interface ConditionEvaluation<RESULT> {
+public sealed interface AttemptResult<RESULT> {
 
     Condition condition();
 
-    AttemptResult status();
+    AttemptStatus status();
 
-    static <RESULT> ConditionEvaluation<RESULT> of(ConditionResult status, RESULT actual) {
+    static <RESULT> AttemptResult<RESULT> of(ConditionResult status, RESULT actual) {
         requireNonNull(status, "condition returned null ConditionResult");
         return switch (status) {
-            case AttemptResult.Satisfied ignored -> satisfied(actual);
-            case AttemptResult.Unsatisfied mismatch -> new Unsatisfied<>(mismatch, null);
+            case AttemptStatus.Satisfied ignored -> satisfied(actual);
+            case AttemptStatus.Unsatisfied mismatch -> new Unsatisfied<>(mismatch, null);
         };
     }
 
@@ -35,10 +35,10 @@ public sealed interface ConditionEvaluation<RESULT> {
     }
 
     static <RESULT> Uncontrolled<RESULT> uncontrolled(Throwable cause, Condition condition) {
-        return new Uncontrolled<>(new AttemptResult.Uncontrolled(AttemptResult.Operation.CONDITION, cause), condition);
+        return new Uncontrolled<>(new AttemptStatus.Uncontrolled(AttemptStatus.Operation.CONDITION, cause), condition);
     }
 
-    default <NEXT> ConditionEvaluation<NEXT> mapSatisfied(Function<? super RESULT, ? extends NEXT> mapping) {
+    default <NEXT> AttemptResult<NEXT> mapSatisfied(Function<? super RESULT, ? extends NEXT> mapping) {
         requireNonNull(mapping, "mapping must not be null");
         return switch (this) {
             case Satisfied<RESULT> success -> new Satisfied<>(mapping.apply(success.value()), condition());
@@ -53,20 +53,20 @@ public sealed interface ConditionEvaluation<RESULT> {
         return outer.explanation() == null ? condition : condition.because(outer.explanation());
     }
 
-    record Satisfied<RESULT>(RESULT value, Condition condition) implements ConditionEvaluation<RESULT> {
+    record Satisfied<RESULT>(RESULT value, Condition condition) implements AttemptResult<RESULT> {
         @Override
-        public AttemptResult.Satisfied status() {
+        public AttemptStatus.Satisfied status() {
             return ConditionResult.satisfied();
         }
     }
 
-    record Unsatisfied<RESULT>(AttemptResult.Unsatisfied status, Condition condition) implements ConditionEvaluation<RESULT> {
+    record Unsatisfied<RESULT>(AttemptStatus.Unsatisfied status, Condition condition) implements AttemptResult<RESULT> {
         public Unsatisfied {
             requireNonNull(status, "status must not be null");
         }
     }
 
-    record Uncontrolled<RESULT>(AttemptResult.Uncontrolled status, Condition condition) implements ConditionEvaluation<RESULT> {
+    record Uncontrolled<RESULT>(AttemptStatus.Uncontrolled status, Condition condition) implements AttemptResult<RESULT> {
         public Uncontrolled {
             requireNonNull(status, "status must not be null");
         }

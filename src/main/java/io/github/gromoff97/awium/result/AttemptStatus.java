@@ -3,7 +3,7 @@ package io.github.gromoff97.awium.result;
 import static java.util.Objects.requireNonNull;
 
 /** Status and diagnostics of one polling attempt, independent of any extracted value. */
-public sealed interface AttemptResult permits ConditionResult, AttemptResult.Uncontrolled {
+public sealed interface AttemptStatus permits ConditionResult, AttemptStatus.Uncontrolled {
 
     default Throwable cause() {
         return null;
@@ -16,7 +16,7 @@ public sealed interface AttemptResult permits ConditionResult, AttemptResult.Unc
     record Unsatisfied(String mismatch, Throwable cause) implements ConditionResult {}
 
     /** The attempt could not complete normally. */
-    record Uncontrolled(Operation operation, Throwable cause) implements AttemptResult {
+    record Uncontrolled(Operation operation, Throwable cause) implements AttemptStatus {
         public Uncontrolled {
             requireNonNull(operation, "operation must not be null");
             requireNonNull(cause, "cause must not be null");

@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.ConditionEvaluation;
+import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
@@ -16,8 +16,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.IntPredicate;
 
-import static io.github.gromoff97.awium.internal.ConditionEvaluation.satisfied;
-import static io.github.gromoff97.awium.internal.ConditionEvaluation.unsatisfied;
+import static io.github.gromoff97.awium.internal.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.internal.AttemptResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
@@ -399,15 +399,15 @@ public final class MapConditions {
         return Conditions.matches(entry -> predicate.test(entry.getKey(), entry.getValue()));
     }
 
-    private static <KEY, VALUE> ConditionEvaluation<Entry<KEY, VALUE>> selectSingleEntry(Map<KEY, VALUE> actual) {
+    private static <KEY, VALUE> AttemptResult<Entry<KEY, VALUE>> selectSingleEntry(Map<KEY, VALUE> actual) {
         return ConditionSupport.single("map", actual == null ? null : actual.entrySet());
     }
 
-    private static <VALUE> ConditionEvaluation<VALUE> value(Map<?, ? extends VALUE> actual, Object key) {
+    private static <VALUE> AttemptResult<VALUE> value(Map<?, ? extends VALUE> actual, Object key) {
         return findEntry(actual, key).mapSatisfied(Entry::getValue);
     }
 
-    private static <KEY, VALUE> ConditionEvaluation<Entry<KEY, VALUE>> findEntry(Map<KEY, VALUE> actual, Object key) {
+    private static <KEY, VALUE> AttemptResult<Entry<KEY, VALUE>> findEntry(Map<KEY, VALUE> actual, Object key) {
         if (actual == null) return unsatisfied("map was null");
         for (Entry<KEY, VALUE> entry : actual.entrySet()) {
             if (deepEquals(entry.getKey(), key)) {

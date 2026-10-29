@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.MapConditions.allEntries;
@@ -32,9 +34,9 @@ class EntryConditionInputTest {
         LinkedHashMap<String, User> explained = waiting.until(allEntries(
                 (Map.Entry<String, User> entry) -> entry.getValue().active()).because("all users must be active"));
         AwaitResult<LinkedHashMap<String, User>, LinkedHashMap<String, User>> allResult =
-                waiting.tryUntil(allEntries(entry -> !entry.getKey().isBlank() && entry.getValue().active()));
+                diagnostic(waiting).until(allEntries(entry -> !entry.getKey().isBlank() && entry.getValue().active()));
         AwaitResult<LinkedHashMap<String, User>, Map.Entry<String, User>> singleResult =
-                waiting.tryUntil(singleEntry(entry -> !entry.getKey().isBlank() && entry.getValue().active()));
+                diagnostic(waiting).until(singleEntry(entry -> !entry.getKey().isBlank() && entry.getValue().active()));
         List<LinkedHashMap<String, User>> maps = waiting.until(captured(
                 allEntries(entry -> entry.getValue().active()), allEntries(entry -> entry.getValue().active())));
         List<LinkedHashMap<String, User>> entries = waiting.until(captured(
@@ -64,14 +66,14 @@ class EntryConditionInputTest {
         assertSame(seen.getFirst(), selected);
         assertSame(user, source.get("user"));
         assertTrue(selected.getValue().active());
-        AwaitResult<LinkedHashMap<String, User>, Map.Entry<String, User>> result = await(() -> source).tryUntil(check);
+        AwaitResult<LinkedHashMap<String, User>, Map.Entry<String, User>> result = tryAwait(() -> source).until(check);
         switch (result) {
-            case AwaitResult.Satisfied(var attempts, var entry) -> {
+            case AwaitResult.Satisfied(var history, var entry) -> {
                 assertSame(seen.getLast(), entry);
                 assertSame(user, entry.getValue());
                 assertTrue(entry.getValue().active());
             }
-            case AwaitResult.Failed(var attempts, var failure) -> fail(failure.message());
+            case AwaitResult.Failed(var history, var failure) -> fail(failure.message());
         }
     }
 
@@ -98,8 +100,8 @@ class EntryConditionInputTest {
             throw cause;
         };
         List<Supplier<AwaitResult<?, ?>>> waits = List.of(
-                () -> await(() -> source).tryUntil(singleEntry(check).because("entry must be readable")),
-                () -> await(() -> source).tryUntil(allEntries(check).because("entry must be readable")));
+                () -> tryAwait(() -> source).until(singleEntry(check).because("entry must be readable")),
+                () -> tryAwait(() -> source).until(allEntries(check).because("entry must be readable")));
         for (var wait : waits) {
             calls[0] = 0;
             var result = wait.get();
@@ -107,7 +109,7 @@ class EntryConditionInputTest {
             assertSame(cause, failure.cause());
             assertTrue(failure.message().contains("Because: entry must be readable"));
             assertEquals(1, calls[0]);
-            assertEquals(1, result.totalAttempts());
+            assertEquals(1, result.attempts().size());
         }
     }
 }

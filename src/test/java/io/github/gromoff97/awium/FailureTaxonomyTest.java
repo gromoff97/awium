@@ -2,8 +2,8 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.internal.FailureDiagnostics;
 import io.github.gromoff97.awium.internal.WaitCompletion;
-import io.github.gromoff97.awium.result.AttemptRecord;
-import io.github.gromoff97.awium.result.AttemptResult;
+import io.github.gromoff97.awium.result.HistoryEntry;
+import io.github.gromoff97.awium.result.AttemptStatus;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
@@ -14,6 +14,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
 import static io.github.gromoff97.awium.Conditions.asserted;
@@ -44,7 +45,7 @@ class FailureTaxonomyTest {
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
         var check = asserted(value -> { throw original; });
 
-        var captured = assertInstanceOf(AwaitResult.Failed.class, waiting.tryUntil(check)).failure();
+        var captured = assertInstanceOf(AwaitResult.Failed.class, diagnostic(waiting).until(check)).failure();
         assertEquals(AwaitFailure.Reason.TIMEOUT, captured.reason());
         assertSame(original, captured.cause());
         assertSame(rendering, captured.suppressed().getFirst());
@@ -71,19 +72,19 @@ class FailureTaxonomyTest {
                 case INTERRUPTED -> new InterruptedException("interrupted");
                 default -> new IllegalStateException("operation failed");
             };
-            var timing = new AttemptRecord.Timing(Duration.ZERO,
+            var timing = new HistoryEntry.Timing(Duration.ZERO,
                     reason == AwaitFailure.Reason.WAIT_FAILED ? null : Duration.ZERO,
                     reason == AwaitFailure.Reason.WAIT_FAILED || reason == AwaitFailure.Reason.SOURCE_FAILED
                             ? null : Duration.ZERO, ofNanos(2));
             var metadata = diagnosticCondition("ready", new Condition.Reference<>("Expected", expected));
-            AttemptResult observation = switch (reason) {
-                case WAIT_FAILED -> new AttemptResult.Uncontrolled(AttemptResult.Operation.WAITING, original);
-                case SOURCE_FAILED -> new AttemptResult.Uncontrolled(AttemptResult.Operation.SOURCE, original);
-                case TIMEOUT, PERSISTENCE_FAILED -> new AttemptResult.Unsatisfied("not ready", original);
-                default -> new AttemptResult.Uncontrolled(AttemptResult.Operation.CONDITION, original);
+            AttemptStatus observation = switch (reason) {
+                case WAIT_FAILED -> new AttemptStatus.Uncontrolled(AttemptStatus.Operation.WAITING, original);
+                case SOURCE_FAILED -> new AttemptStatus.Uncontrolled(AttemptStatus.Operation.SOURCE, original);
+                case TIMEOUT, PERSISTENCE_FAILED -> new AttemptStatus.Unsatisfied("not ready", original);
+                default -> new AttemptStatus.Uncontrolled(AttemptStatus.Operation.CONDITION, original);
             };
-            var attempt = new AttemptRecord<>(1, reason == AwaitFailure.Reason.PERSISTENCE_FAILED
-                    ? AttemptRecord.Phase.PERSISTENCE : AttemptRecord.Phase.ACQUISITION, timing, metadata, null, (Object) "actual", observation);
+            var attempt = new HistoryEntry<>(reason == AwaitFailure.Reason.PERSISTENCE_FAILED
+                    ? HistoryEntry.Phase.PERSISTENCE : HistoryEntry.Phase.ACQUISITION, timing, metadata, null, (Object) "actual", observation);
             WaitCompletion outcome = switch (reason) {
                 case TIMEOUT -> new WaitCompletion.Timeout(attempt);
                 case PERSISTENCE_FAILED -> new WaitCompletion.PersistenceFailure(Duration.ZERO, attempt);
@@ -91,7 +92,7 @@ class FailureTaxonomyTest {
             };
             var configuration = AwaitTestAccess.config(1, 2, 0);
             try {
-                var captured = FailureDiagnostics.failure(outcome, configuration);
+                var captured = FailureDiagnostics.failure(outcome, configuration, 1);
                 assertEquals(reason, captured.reason());
                 assertSame(original, captured.cause());
                 assertEquals(List.of(rendering), captured.suppressed());
@@ -102,7 +103,7 @@ class FailureTaxonomyTest {
                 assertSame(original, reported.getCause());
                 assertArrayEquals(new Throwable[]{rendering}, reported.getSuppressed());
                 assertNotSame(reported, assertFailure(reason, report::orThrow));
-                var thrown = assertFailure(reason, () -> ValueAwait.complete(outcome, configuration));
+                var thrown = assertFailure(reason, () -> AwaitSupport.complete(outcome, configuration, 1));
                 assertSame(original, thrown.getCause());
                 assertArrayEquals(new Throwable[]{rendering}, thrown.getSuppressed());
                 assertEquals(0, original.getSuppressed().length);

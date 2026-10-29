@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.AttemptResult.Satisfied;
-import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied;
+import io.github.gromoff97.awium.result.AttemptStatus.Satisfied;
+import io.github.gromoff97.awium.result.AttemptStatus.Unsatisfied;
 import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.function.CheckedFunction;
 import io.github.gromoff97.awium.result.AwaitFailure;
@@ -12,6 +12,8 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.result.ConditionResult.*;
 import static io.github.gromoff97.awium.Conditions.captured;
@@ -42,7 +44,7 @@ class ConditionResultContractTest {
             var value = waiting.until(check);
             assertEquals(42, value.id());
             assertSame(actual, value);
-            AwaitResult<User, User> result = waiting.tryUntil(check);
+            AwaitResult<User, User> result = diagnostic(waiting).until(check);
             assertSame(actual, result.orThrow());
         }
         List<User> values = waiting.until(captured(direct, lazy));
@@ -52,7 +54,7 @@ class ConditionResultContractTest {
         assertEquals(42, await(() -> Map.of("user", actual)).until(MapConditions.valueFor("user", direct)).id());
 
         for (var check : List.of(direct, lazy)) {
-            var failed = await(() -> new User(0)).usingTime(time, time).upTo(ofNanos(1)).tryUntil(check);
+            var failed = tryAwait(() -> new User(0)).usingTime(time, time).upTo(ofNanos(1)).until(check);
             var failure = assertInstanceOf(AwaitResult.Failed.class, failed).failure();
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
             assertTrue(failure.message().contains("id must be positive"), failure.message());
@@ -70,10 +72,10 @@ class ConditionResultContractTest {
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
 
         assertEquals(42, waiting.until(Conditions.condition("ready", ignored -> satisfied())).id());
-        AwaitResult<User, User> result = waiting.tryUntil(Conditions.condition("ready", ignored -> satisfied()));
+        AwaitResult<User, User> result = diagnostic(waiting).until(Conditions.condition("ready", ignored -> satisfied()));
         switch (result) {
-            case AwaitResult.Satisfied(var attempts, var user) -> assertSame(actual, user);
-            case AwaitResult.Failed(var attempts, var failure) -> org.junit.jupiter.api.Assertions.fail(failure.message());
+            case AwaitResult.Satisfied(var history, var user) -> assertSame(actual, user);
+            case AwaitResult.Failed(var history, var failure) -> org.junit.jupiter.api.Assertions.fail(failure.message());
         }
         assertSame(actual, await(() -> java.util.Optional.of(actual)).usingTime(time, time)
                 .until(OptionalConditions.hasValue(Conditions.condition("present", ignored -> satisfied()))));
@@ -90,9 +92,9 @@ class ConditionResultContractTest {
     @Test
     void conditionsCanFailWithoutDuplicatingTheirDescription() {
         var time = new FakeTime(0);
-        AwaitResult<String, String> result = await(() -> "pending")
+        AwaitResult<String, String> result = tryAwait(() -> "pending")
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
-                .tryUntil(Conditions.condition("status is ready", value -> unsatisfied()));
+                .until(Conditions.condition("status is ready", value -> unsatisfied()));
         var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
         assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
         assertTrue(failure.message().contains("Condition: status is ready"));

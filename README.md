@@ -106,18 +106,19 @@ keeps the method reference's input type and also accepts checks that throw check
 
 Pass `captured(...)` to `until(...)` to wait for compatible conditions in order.
 Each successful stage captures the complete source observation; the result is a list
-in stage order. Both terminals accept exactly one condition.
-`tryUntil(...)` returns the same list inside `AwaitResult`:
+in stage order. The terminal accepts exactly one condition in both wait modes.
+`tryAwait(...).until(...)` returns the same list inside `AwaitResult`:
 
 ```java
 import static io.github.gromoff97.awium.Conditions.captured;
+import static io.github.gromoff97.awium.Await.tryAwait;
 
 List<Payment> payments = await(paymentRepository::load).until(captured(
         matches(Payment::created),
         matches(Payment::pending),
         equalTo(expectedPayment)));
 
-var statuses = await(paymentRepository::status).tryUntil(captured(
+var statuses = tryAwait(paymentRepository::status).until(captured(
         equalTo("created"),
         equalTo("paid")));
 List<String> capturedStatuses = statuses.orThrow();
@@ -125,7 +126,7 @@ List<String> capturedStatuses = statuses.orThrow();
 
 With `persisting(...)`, only the final stage is re-evaluated. Earlier captured
 values remain unchanged. Each factory-backed stage invokes its factory separately
-for every terminal call. `until(condition)` returns that condition's result;
+for every terminal call. `await(...).until(condition)` returns that condition's result;
 `until(captured(condition))` returns a one-element list.
 `captured(...)` describes a terminal sequence; its stages are individual checks,
 not other capture sequences.
@@ -200,8 +201,8 @@ observation waits only for the remaining acquisition time before timing out.
 For example, `upTo(Duration.ofMillis(50))` works with the default interval.
 
 `usingTime(clock, parker)` replaces the monotonic nanosecond clock and the
-wait operation for one fluent configuration. It works with both `until` and
-`tryUntil`, preserves source/result types, and leaves earlier configurations
+wait operation for one fluent configuration. It works with both `await` and
+`tryAwait`, preserves source/result types, and leaves earlier configurations
 independent:
 
 ```java
@@ -408,7 +409,7 @@ diagnostics. A condition returns only `Satisfied` or `Unsatisfied`; any thrown
 `ConditionResult` has no type parameters or value payload. The callback input
 constrains the observed value, and the terminal returns that original value.
 The same satisfaction or mismatch status is available in each attempt record;
-`AttemptResult` additionally permits an `Uncontrolled` failure.
+`AttemptStatus` additionally permits an `Uncontrolled` failure.
 
 `condition(description, callback)` reuses the supplied callback.
 `conditionPerWait(description, factory)` accepts a JDK `Callable` supplying a
@@ -650,9 +651,9 @@ Payment onlyPayment = await(paymentRepository::findAll).upTo(TIMEOUT).every(POLL
 Map.Entry<String, Payment> entry = await(paymentRepository::index).until(singleEntry);
 ```
 
-The compiler chooses an `await` overload from the lambda or method reference.
-Sources may throw checked exceptions and are invoked only when `until` or
-`tryUntil` starts the wait. Direct observed values are not accepted.
+The compiler chooses an `await` or `tryAwait` overload from the lambda or method reference.
+Both entry points accept the same source types. Sources may throw checked exceptions
+and are invoked only when `until` starts the wait. Direct observed values are not accepted.
 
 A plain JDK `Callable` uses the general value overload. For container selections,
 pass its `call` method reference or wrap the call in a lambda:
@@ -717,7 +718,7 @@ Use typed views when collecting mutable covariant values across observations,
 too: they keep the observations' wildcard types independent despite
 [Java's lambda capture limitation](https://bugs.openjdk.org/browse/JDK-8170887).
 
-`until(...)` or `tryUntil(...)` starts the wait. Success never invokes the source again merely to
+`until(...)` starts the wait in both modes. Success never invokes the source again merely to
 obtain the return value. A retained stage may be reused sequentially; every
 wait gets fresh timing and built-in evaluation state. Callback factories are
 invoked again; state captured outside them or passed directly to `condition(...)`
@@ -725,24 +726,28 @@ remains owned by the caller.
 
 ## Diagnostic waits
 
-Finish the same source configuration with `tryUntil(...)` to return an
-`AwaitResult<OBSERVED, RESULT>` for both success and failure.
+Use `tryAwait` to handle a wait's outcome without catching its failure and to
+inspect the retained attempts, their outcomes, timing, and sequence progress.
+
+Start with `tryAwait(source)` and finish with `until(condition)` to return an
+`AwaitResult<OBSERVED, RESULT>` for both success and failure. Timing settings
+work just as they do with `await(source)`; only `tryAwait` offers `historyTail`.
 `OBSERVED` is the complete source value and `RESULT` is the final result.
 For example, selecting `present` from an optional gives
 `AwaitResult<Optional<Payment>, Payment>`. Capturing those selections in order
 gives `AwaitResult<Optional<Payment>, List<Optional<Payment>>>`:
 
 ```java
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Await.tryAwait;
 
-var result = await(paymentRepository::find).upTo(TIMEOUT).tryUntil(present);
+var result = tryAwait(paymentRepository::find).upTo(TIMEOUT).until(present);
 ```
 
 `AwaitResult.Satisfied` contains the terminal result. `AwaitResult.Failed`
 contains an `AwaitFailure` with `reason()`, `message()`, the original `cause()`
 and immutable `suppressed()` causes. It does not construct a wrapper exception.
 When failure should stop the calling code, `Payment payment = result.orThrow()`
-returns the typed value or throws the same failure as `until`. It keeps the
+returns the typed value or throws the same failure as `await(...).until(...)`. It keeps the
 existing attempt history and does not run the source or conditions again.
 For a captured result, `orThrow()` returns the list of source observations.
 A successful `null` remains `null`.
@@ -763,8 +768,10 @@ switch (result) {
 }
 ```
 
-Both results expose `attempts()`, an immutable list of `AttemptRecord` values.
-Each record has a one-based `number()`, an acquisition or persistence `phase()`,
+Both results expose `attempts()`, an immutable `List<HistoryEntry<OBSERVED>>` in
+chronological order. For example, `result.attempts().getLast()` returns the
+latest attempt, and `result.attempts().size()` is the number of retained attempts.
+Each record has an acquisition or persistence `phase()`,
 the associated `condition()`, sequence `progress()`, `observed()`, and `result()`.
 For a capture sequence, progress holds its immutable `sequence()` definition,
 the attempt's one-based `stageNumber()`, and `capturedStages()` after the attempt.
@@ -773,9 +780,9 @@ An attempt records the condition it checked, even when success advances the
 sequence. If waiting or source retrieval fails before evaluation, the condition
 and stage identify the intended check and the captured count stays unchanged.
 
-`AttemptRecord<OBSERVED>` keeps the source observation and a non-generic
-`AttemptResult`: `AttemptResult.Satisfied`, `AttemptResult.Unsatisfied`, or
-`AttemptResult.Uncontrolled`. The first two also implement `ConditionResult`,
+`HistoryEntry<OBSERVED>` keeps the source observation and a non-generic
+`AttemptStatus`: `AttemptStatus.Satisfied`, `AttemptStatus.Unsatisfied`, or
+`AttemptStatus.Uncontrolled`. The first two also implement `ConditionResult`,
 which is the restricted return type of a custom check. A mismatch
 retains its explanation and optional cause; an uncontrolled result retains
 its cause and `operation()` (`WAITING`, `SOURCE`, or `CONDITION`).
@@ -797,22 +804,32 @@ observations and statuses. Sequence failure messages show the attempted
 stage as `Stage: 2 of 3`. A timeout after an intermediate success also identifies
 the next stage separately. Persistence rechecks only the final stage.
 
-Each attempt exposes `timing()`, an `AttemptRecord.Timing` with offsets from the start of the
+Each entry exposes `timing()`, a `HistoryEntry.Timing` with offsets from the start of the
 terminal call. `startOffset()` marks the attempt's start before waiting;
 `retrievalOffset()` marks the start of the source call, `observationOffset()`
 its successful return, and `completionOffset()` the end of the attempt. A
 retrieval or observation offset is `null` if that checkpoint was not reached.
 
-History retains at most 256 entries: the first attempt and the latest 255,
-including the terminal attempt. Repeated observations remain separate records.
-`attempts().size()` is the retained count; `totalAttempts()` is the complete
-count, obtained from the last record's number. Captured stage lists and the
-history list are immutable; observed objects keep their original identity.
+History defaults to the latest 256 records, including the terminal attempt.
+Use `tryAwait(source).historyTail(1000).until(condition)` to retain the latest
+1000 records, or `.historyTail(-1)` to retain every record without truncation.
+Zero and values below -1 are rejected. For example, after five attempts,
+`.historyTail(2)` keeps attempts 4 and 5. Timing and history settings may appear
+in any order. The tail size does not stop polling or truncate captured stage observations.
+Repeated observations remain separate records.
+The history counts attempts separately from the records, so failure messages
+keep the absolute attempt number even when older records are discarded.
+Captured stage lists and the attempt list are immutable. Observed objects retain
+their original references; Awium does not copy or freeze them. If a source returns
+the same mutable object repeatedly, changing it is visible through earlier
+attempts too. Their recorded satisfaction statuses remain those of the original
+checks. This also applies to `matches(predicate)`: history records each predicate
+outcome, but does not capture the fields read by the predicate.
 
 ## Threading and interruption
 
 Polling, source retrieval, and condition evaluation run on the exact platform
-or virtual thread that calls `until(...)` or `tryUntil(...)`. Awium creates no worker, executor,
+or virtual thread that calls `until(...)`. Awium creates no worker, executor,
 scheduler, or virtual thread, so caller `ThreadLocal` values remain visible.
 
 Definitions and configurations are immutable, and each terminal call owns its
@@ -823,8 +840,8 @@ An interrupt flag set before or during the wait stops polling. Awium preserves
 the flag when reading the clock and formatting diagnostics. A cause already
 returned by the condition is retained, including an assertion mismatch;
 a service interruption cause is created only when no cause is available.
-`until(...)` throws `AwaitExecutionException` with
-`failure().reason() == INTERRUPTED`; `tryUntil(...)` returns that reason in
+`await(...).until(...)` throws `AwaitExecutionException` with
+`failure().reason() == INTERRUPTED`; `tryAwait(...).until(...)` returns that reason in
 `AwaitResult.Failed`. A callback that throws `InterruptedException` after
 clearing the flag is treated like any other thrown failure; Awium does not
 restore the flag based on the exception type. Because callbacks run in the
@@ -832,8 +849,8 @@ caller, Awium cannot preempt a source or condition that blocks indefinitely.
 
 ## Failures
 
-`until(...)` throws one of two final types. Both expose `failure()` with the
-same structured data returned by `tryUntil(...)`:
+`await(...).until(...)` throws one of two final types. Both expose `failure()` with the
+same structured data returned by `tryAwait(...).until(...)`:
 
 | Exception | Failure reasons |
 | --- | --- |
@@ -858,7 +875,10 @@ adapter treats an `AssertionError` as an unsatisfied condition.
 Run `./gradlew check` for behavior, fluent compilation, and packaged-module
 checks; `./gradlew pitest` runs mutation testing.
 
-`Condition` owns the immutable definition and diagnostic reference.
+`Condition` owns the immutable definition and diagnostic reference. The base type
+has no type parameters; input and result constraints belong to its typed families.
+Keeping a check in a variable declared as `Condition` loses those constraints,
+so that variable cannot be passed directly to `until`.
 `Condition.Check` describes one check; `Condition.Captured` holds ordered checks.
 Its typed families let terminal overloads preserve or select the source's type.
 Preserving checks and comparisons share one terminal overload through the sealed,
@@ -874,19 +894,28 @@ constraints when combining checks or adding `because`; mixed input shapes can
 also be inferred from the terminal call. Input-only checks share
 `InputCondition<INPUT>`, allowing reusable capture definitions without widening
 the observations returned by a particular source.
-Each terminal call creates fresh `ConditionAwaitAttempt` instances, which
-initialize callbacks lazily and convert thrown failures into internal
-uncontrolled evaluations. `SequenceExecution` owns ordered stage progress and
-captured values. The non-generic `ConditionResult` supplies satisfaction and mismatch
-statuses; `AttemptResult` also permits an uncontrolled failure. The internal
-`ConditionEvaluation<RESULT>` carries a selected value and diagnostic condition.
-Sequence execution passes its status directly to history.
+Each terminal call creates fresh `AttemptFactory` instances, which lazily initialize
+one evaluator per check. A factory binds an observation to an immutable `Attempt`.
+Each `Attempt.call()` runs that check and returns a separate `AttemptResult<RESULT>`
+with the selected value or failure and diagnostic condition. The attempt retains no
+previous result, timing, attempt number, or sequence progress. Its observation and
+callback may themselves be mutable; neither is copied.
+`SequenceExecution` selects the next attempt and accepts its result, retaining stage
+progress and captured values without executing checks itself. The non-generic
+`ConditionResult` supplies satisfaction and mismatch statuses; `AttemptStatus` also
+permits an uncontrolled failure. Public `HistoryEntry<OBSERVED>` records retain the
+observation, status, timing, and sequence progress, without exposing an executable callback.
 
 `Await` supplies the source factories. `ValueAwait<OBSERVED>` and
 `SelectionAwait<OBSERVED, ELEMENT>` retain immutable fluent configuration;
-`MapAwait<OBSERVED, ENTRY, VALUE>` also supports map-value selection. `WaitEngine`
-owns polling, source retrieval, and attempt timing; `ValueAwait` bounds the
-history for `tryUntil`. `FailureDiagnostics` formats the terminal failure
+`MapAwait<OBSERVED, ENTRY, VALUE>` also supports map-value selection. The corresponding
+`DiagnosticAwait`, `DiagnosticSelectionAwait`, and `DiagnosticMapAwait` classes
+return diagnostic results. `AwaitSupport` shares execution and result handling.
+`AttemptHistory` counts attempts and retains the configured history tail.
+`WaitEngine` schedules polling and persistence. Each wait creates an internal
+`AttemptExecution` that retrieves source values, calls the selected attempt,
+and records a `HistoryEntry` with its timing and diagnostics. Selected values and stage
+transitions remain in `SequenceExecution`. `FailureDiagnostics` formats the terminal failure
 without replacing its category or cause. A successful check can still finish
 too late.
 

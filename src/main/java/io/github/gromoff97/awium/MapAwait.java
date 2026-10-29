@@ -2,7 +2,6 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.Condition.MapValueCondition;
 import io.github.gromoff97.awium.internal.WaitConfiguration;
-import io.github.gromoff97.awium.result.AwaitResult;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -52,10 +51,4 @@ public final class MapAwait<OBSERVED extends Map<?, ?>, ENTRY extends Map.Entry<
     public VALUE until(MapValueCondition<? super OBSERVED> condition) {
         return complete(ConditionSupport.bind(required(condition)));
     }
-
-    public AwaitResult<OBSERVED, VALUE> tryUntil(
-            MapValueCondition<? super OBSERVED> condition) {
-        return capture(ConditionSupport.bind(required(condition)));
-    }
-
 }

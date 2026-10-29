@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.all;
 import static io.github.gromoff97.awium.CollectionConditions.singleElement;
@@ -87,8 +89,8 @@ class ConditionExplanationTest {
                 waiting.until(MapConditions.hasNoEntry(opposite)));
         checked.forEach(value -> assertSame(actual, value));
 
-        for (var result : List.of(waiting.tryUntil(MapConditions.allEntries(opposite)),
-                waiting.tryUntil(MapConditions.hasEntry(opposite)), waiting.tryUntil(MapConditions.hasNoEntry(check)))) {
+        for (var result : List.of(diagnostic(waiting).until(MapConditions.allEntries(opposite)),
+                diagnostic(waiting).until(MapConditions.hasEntry(opposite)), diagnostic(waiting).until(MapConditions.hasNoEntry(check)))) {
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
             assertTrue(failure.message().contains("Because: entry requirement"), failure.message());
@@ -104,7 +106,7 @@ class ConditionExplanationTest {
         var second = equalTo("paid").because("payment must be completed");
 
         var sequence = captured(first, second).because("checkout lifecycle");
-        var result = waiting.tryUntil(sequence);
+        var result = diagnostic(waiting).until(sequence);
         var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
         var thrown = assertThrows(AwaitAssertionError.class, () -> waiting.until(sequence));
 
@@ -139,10 +141,10 @@ class ConditionExplanationTest {
                 List<String> values = present ? List.of("pending") : List.of();
                 var time = new FakeTime(0);
                 var results = List.of(
-                        await(() -> value).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).tryUntil(optional),
-                        await(() -> entries).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).tryUntil(mapped),
-                        await(() -> values).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).tryUntil(selected),
-                        await(() -> List.of("pending")).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).tryUntil(quantified));
+                        tryAwait(() -> value).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(optional),
+                        tryAwait(() -> entries).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(mapped),
+                        tryAwait(() -> values).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(selected),
+                        tryAwait(() -> List.of("pending")).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(quantified));
                 for (var result : results) {
                     var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
                     assertTrue(failure.message().contains("Because: " + expected), failure.message());

@@ -20,6 +20,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.*;
@@ -101,7 +103,7 @@ class PositiveFluentMatrixTest {
         var element = await(() -> values).until(singleElement);
         var entry = await(() -> index).until(MapConditions.singleEntry);
         var original = await(() -> values).until(nonEmpty);
-        var result = await(() -> values).tryUntil(singleElement);
+        var result = tryAwait(() -> values).until(singleElement);
 
         assertEquals(1000, element.intValue());
         assertEquals(1000, entry.getKey().intValue());
@@ -112,8 +114,8 @@ class PositiveFluentMatrixTest {
         assertSame(text, entry.getValue());
         assertSame(values, original);
         assertEquals(1000, switch (result) {
-            case AwaitResult.Satisfied(var attempts, var selected) -> selected.intValue();
-            case AwaitResult.Failed(var attempts, var failure) -> throw new AssertionError(failure);
+            case AwaitResult.Satisfied(var history, var selected) -> selected.intValue();
+            case AwaitResult.Failed(var history, var failure) -> throw new AssertionError(failure);
         });
     }
 
@@ -145,7 +147,7 @@ class PositiveFluentMatrixTest {
         var selected = await(collectionSource).usingTime(time, time).until(singleElement);
         assertEquals(1000, selected.intValue());
         assertSame(element, selected);
-        assertSame(element, await(collectionSource).usingTime(time, time).tryUntil(singleElement).orThrow());
+        assertSame(element, tryAwait(collectionSource).usingTime(time, time).until(singleElement).orThrow());
         assertSame(map, await(mapSource).usingTime(time, time).until(MapConditions.nonEmpty));
         Map<? extends Number, ? extends CharSequence> comparedMap = await(mapSource).usingTime(time, time)
                 .until(equalTo(map));
@@ -154,7 +156,7 @@ class PositiveFluentMatrixTest {
         assertEquals(1000, selectedEntry.getKey().intValue());
         assertEquals(5, selectedEntry.getValue().length());
         assertSame(entry, selectedEntry);
-        assertSame(entry, await(mapSource).usingTime(time, time).tryUntil(MapConditions.singleEntry).orThrow());
+        assertSame(entry, tryAwait(mapSource).usingTime(time, time).until(MapConditions.singleEntry).orThrow());
         assertEquals(4, collectionCalls[0]);
         assertEquals(4, mapCalls[0]);
     }
@@ -175,7 +177,7 @@ class PositiveFluentMatrixTest {
         assertEquals(42, selected.intValue());
         assertSame(actual, selected);
         assertEquals(2, calls[0]);
-        var result = waiting.tryUntil(check);
+        var result = diagnostic(waiting).until(check);
         assertEquals(42, result.orThrow().intValue());
         assertSame(actual, result.orThrow());
         assertSame(values, result.attempts().getFirst().observed());
@@ -199,13 +201,13 @@ class PositiveFluentMatrixTest {
         var selected = waiting.until(check);
         assertEquals(42, selected.intValue());
         assertSame(actual, selected);
-        var result = waiting.tryUntil(check);
+        var result = diagnostic(waiting).until(check);
         assertEquals(42, result.orThrow().intValue());
         assertSame(actual, result.orThrow());
         assertSame(values, result.attempts().getFirst().observed());
         var time = new FakeTime(0);
-        var observations = waiting.usingTime(time, time).every(ofNanos(1))
-                .tryUntil(captured(MapConditions.nonEmpty, check)).orThrow();
+        var observations = diagnostic(waiting.usingTime(time, time).every(ofNanos(1)))
+                .until(captured(MapConditions.nonEmpty, check)).orThrow();
         assertEquals(42, observations.getLast().get("answer").intValue());
         assertSame(values, observations.getFirst());
         assertSame(values, observations.getLast());
@@ -220,7 +222,7 @@ class PositiveFluentMatrixTest {
         String optionalValue = await(optional::call).until(present);
         String element = await(collection::call).until(singleElement);
         Map.Entry<String, Integer> entry = await(map::call).until(MapConditions.singleEntry);
-        AwaitResult<Optional<String>, String> attempt = await(optional::call).tryUntil(present);
+        AwaitResult<Optional<String>, String> attempt = tryAwait(optional::call).until(present);
 
         assertEquals("ready", optionalValue);
         assertEquals("ready", element);
@@ -248,7 +250,7 @@ class PositiveFluentMatrixTest {
         var selected = await(optional::call).until(present);
         var element = await(collection::call).until(singleElement);
         var entry = await(map::call).until(MapConditions.singleEntry);
-        AwaitResult<Optional<String>, String> result = await(optional::call).tryUntil(present);
+        AwaitResult<Optional<String>, String> result = tryAwait(optional::call).until(present);
 
         assertEquals(5, actual.length());
         assertSame(text, actual);
@@ -283,11 +285,11 @@ class PositiveFluentMatrixTest {
         java.util.concurrent.Callable<List<String>> collection = () -> List.of("ready");
         java.util.concurrent.Callable<Map<String, Integer>> map = () -> Map.of("ready", 1);
 
-        AwaitResult<Optional<String>, String> optionalResult = await(optional::call).tryUntil(present);
-        AwaitResult<List<String>, String> collectionResult = await(collection::call).tryUntil(singleElement);
-        AwaitResult<List<String>, String> firstResult = await(collection::call).tryUntil(firstElement);
-        AwaitResult<List<String>, String> lastResult = await(collection::call).tryUntil(lastElement);
-        AwaitResult<Map<String, Integer>, Map.Entry<String, Integer>> mapResult = await(map::call).tryUntil(MapConditions.singleEntry);
+        AwaitResult<Optional<String>, String> optionalResult = tryAwait(optional::call).until(present);
+        AwaitResult<List<String>, String> collectionResult = tryAwait(collection::call).until(singleElement);
+        AwaitResult<List<String>, String> firstResult = tryAwait(collection::call).until(firstElement);
+        AwaitResult<List<String>, String> lastResult = tryAwait(collection::call).until(lastElement);
+        AwaitResult<Map<String, Integer>, Map.Entry<String, Integer>> mapResult = tryAwait(map::call).until(MapConditions.singleEntry);
 
         for (var result : List.of(optionalResult, collectionResult, firstResult, lastResult)) {
             assertEquals("ready", result.orThrow());
