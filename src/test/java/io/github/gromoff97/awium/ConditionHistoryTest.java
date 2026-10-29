@@ -15,7 +15,49 @@ import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-class QuantifierHistoryTest {
+class ConditionHistoryTest {
+
+    @Test
+    void typeChecksRetainActualTypesEvenWhenValuesHaveTheSameText() {
+        for (var condition : List.of(Conditions.instanceOf(String.class), Conditions.exactlyInstanceOf(String.class))) {
+            var time = new FakeTime(0);
+            var values = java.util.Arrays.asList(null, null,
+                    new StringBuilder("pending"), new StringBuilder("pending"),
+                    new StringBuffer("pending"), "ready").iterator();
+            var result = tryAwait(values::next).usingTime(time, time).every(ofNanos(1)).until(condition);
+
+            String value = result.orThrow();
+            assertEquals("ready", value);
+            assertEquals(List.of(2L, 2L, 1L, 1L), result.attempts().stream().map(group -> group.count()).toList());
+            assertEquals(List.of("value was null", "value type was java.lang.StringBuilder",
+                    "value type was java.lang.StringBuffer"), mismatches(result));
+        }
+    }
+
+    @Test
+    void sortingRetainsTheFirstOutOfOrderPairWithoutRepeatingComparisons() {
+        var time = new FakeTime(0);
+        var values = new ArrayList<>(List.of(3, 1, 2));
+        int[] calls = {0};
+        int[] comparisons = {0};
+        var result = tryAwait(() -> {
+            switch (++calls[0]) {
+                case 2 -> { values.set(0, 1); values.set(1, 3); }
+                case 3 -> { values.set(1, 2); values.set(2, 3); }
+                default -> {}
+            }
+            return values;
+        }).usingTime(time, time).every(ofNanos(1)).until(CollectionConditions.sorted((left, right) -> {
+            comparisons[0]++;
+            return Integer.compare(left, right);
+        }));
+
+        assertSame(values, result.orThrow());
+        assertEquals(3, calls[0]);
+        assertEquals(5, comparisons[0]);
+        assertEquals(List.of("collection was not sorted at indices 0 and 1",
+                "collection was not sorted at indices 1 and 2"), mismatches(result));
+    }
 
     @Test
     void allRetainsProgressThroughAMutableCollectionWithoutRecheckingItsElements() {

@@ -135,7 +135,7 @@ public final class Conditions {
         return ConditionSupport.condition("value is an instance of " + type.getTypeName(), null, actual ->
                 type.isInstance(actual)
                         ? AttemptResult.satisfied(type.cast(actual))
-                        : AttemptResult.unsatisfied("value was not an instance of " + type.getTypeName()));
+                        : AttemptResult.unsatisfied(typeMismatch(actual)));
     }
 
     public static <RESULT> Condition.Typed<Object, RESULT> exactlyInstanceOf(Class<RESULT> type) {
@@ -143,7 +143,11 @@ public final class Conditions {
         return ConditionSupport.condition("value is exactly an instance of " + type.getTypeName(), null, actual ->
                 actual != null && actual.getClass() == type
                         ? AttemptResult.satisfied(type.cast(actual))
-                        : AttemptResult.unsatisfied("value was not exactly an instance of " + type.getTypeName()));
+                        : AttemptResult.unsatisfied(typeMismatch(actual)));
+    }
+
+    private static String typeMismatch(Object actual) {
+        return actual == null ? "value was null" : "value type was " + actual.getClass().getTypeName();
     }
 
     public static <EXPECTED> ComparisonCondition<EXPECTED> in(Iterable<? extends EXPECTED> expected) {

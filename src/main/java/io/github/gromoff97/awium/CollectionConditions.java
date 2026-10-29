@@ -6,6 +6,7 @@ import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.ConditionSupport.Quantifier;
 import io.github.gromoff97.awium.function.CheckedPredicate;
+import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -366,7 +367,7 @@ public final class CollectionConditions {
 
     public static <ELEMENT> PreservingCondition<SequencedCollection<? extends ELEMENT>> sorted(Comparator<? super ELEMENT> comparator) {
         requireNonNull(comparator, "comparator must not be null");
-        return preserving("collection is sorted", "collection was not sorted", actual -> isSorted(actual, comparator));
+        return ConditionSupport.preserving("collection is sorted", actual -> checkOrder(actual, comparator));
     }
 
     private static <ELEMENT> AttemptResult<ELEMENT> selectLast(SequencedCollection<? extends ELEMENT> actual) {
@@ -457,20 +458,24 @@ public final class CollectionConditions {
         return true;
     }
 
-    private static <ELEMENT> boolean isSorted(SequencedCollection<ELEMENT> actual, Comparator<? super ELEMENT> comparator) {
+    private static <ELEMENT> ConditionResult checkOrder(SequencedCollection<ELEMENT> actual,
+            Comparator<? super ELEMENT> comparator) {
+        if (actual == null) return ConditionResult.unsatisfied("collection was null");
         Iterator<ELEMENT> values = actual.iterator();
         if (!values.hasNext()) {
-            return true;
+            return ConditionResult.satisfied();
         }
         ELEMENT previous = values.next();
+        long index = 1;
         while (values.hasNext()) {
             ELEMENT next = values.next();
             if (comparator.compare(previous, next) > 0) {
-                return false;
+                return ConditionResult.unsatisfied("collection was not sorted at indices " + (index - 1) + " and " + index);
             }
             previous = next;
+            index++;
         }
-        return true;
+        return ConditionResult.satisfied();
     }
 
 }

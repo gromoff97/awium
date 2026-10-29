@@ -258,7 +258,7 @@ class TypedCollectionSelectionTest {
             var result = diagnostic(waiting(() -> values)).until(check);
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
-            assertTrue(failure.message().contains("value was not an instance of " + User.class.getTypeName()));
+            assertTrue(failure.message().contains("value type was java.lang.String"));
         }
         var missing = diagnostic(waiting(() -> values)).until(elementAt(3, instanceOf(User.class)));
         var failure = assertInstanceOf(AwaitResult.Failed.class, missing).failure();

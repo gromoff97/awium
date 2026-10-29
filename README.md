@@ -781,6 +781,11 @@ another group in its chronological position.
 Nested selection failures retain the completed selection steps in their mismatch.
 For example, `collection size was 0` and `single element: collection size was 0`
 identify an empty outer collection and an empty selected collection as separate transitions.
+Built-in checks retain the facts they already measured: size and length mismatches
+report the actual size, type checks report the actual class or null, and `sorted`
+reports the first out-of-order pair's zero-based indices. Quantifier failures retain
+their checked-candidate count. These facts stay unchanged when an observed object
+is later modified; no extra predicate or comparator calls are made to collect them.
 
 Each group exposes `firstNumber()` and `lastNumber()` (one-based, inclusive),
 `count()`, and its `first()` and `last()` invocations as `HistoryEntry<OBSERVED>`.
