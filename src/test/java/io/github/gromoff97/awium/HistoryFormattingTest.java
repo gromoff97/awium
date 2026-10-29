@@ -183,6 +183,7 @@ class HistoryFormattingTest {
 
     @Test
     void statusRenderingKeepsItsCategoryWhenTheCauseMessageFails() {
+        assertTrue(unsatisfied("pending").toString().contains("pending"));
         var cause = new IllegalStateException() {
             @Override public String getMessage() { throw new AssertionError("message unavailable"); }
         };
