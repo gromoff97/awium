@@ -147,7 +147,10 @@ final class ConditionSupport {
 
     private static <INPUT> AttemptResult<INPUT> quantifiedResult(INPUT actual, boolean successful,
             String mismatch, AttemptResult<?> evaluated) {
-        if (successful) return AttemptResult.satisfied(actual);
+        return successful ? AttemptResult.satisfied(actual) : nestedMismatch(mismatch, evaluated);
+    }
+
+    private static <RESULT> AttemptResult.Unsatisfied<RESULT> nestedMismatch(String mismatch, AttemptResult<?> evaluated) {
         if (evaluated == null) return AttemptResult.unsatisfied(mismatch);
         var failure = evaluated.status() instanceof AttemptStatus.Unsatisfied value
                 ? unsatisfied(value.mismatch() == null ? mismatch : mismatch + ": " + value.mismatch(), value.cause())
@@ -179,7 +182,11 @@ final class ConditionSupport {
             var extraction = ConditionSupport.<INPUT, VALUE>bind(extractionCondition);
             var evaluator = evaluatorFactory.get();
             return actual -> switch (extraction.create(actual).call()) {
-                case AttemptResult.Satisfied<? extends VALUE> success -> evaluator.create(success.value()).call();
+                case AttemptResult.Satisfied<? extends VALUE> success -> {
+                    var evaluated = evaluator.create(success.value()).call();
+                    yield evaluated instanceof AttemptResult.Unsatisfied<?> && evaluated.condition() != null
+                            ? nestedMismatch(selection, evaluated) : evaluated;
+                }
                 case AttemptResult.Unsatisfied<?> mismatch -> new AttemptResult.Unsatisfied<>(
                         mismatch.status(), extractionCondition);
                 case AttemptResult.Uncontrolled<?> failure -> new AttemptResult.Uncontrolled<>(

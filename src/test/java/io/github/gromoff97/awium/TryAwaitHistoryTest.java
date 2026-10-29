@@ -233,6 +233,45 @@ class TryAwaitHistoryTest {
         assertSame(error, result.attempts().getFirst().last().result().cause());
     }
 
+    @Test
+    void repeatedSelectorsKeepTheirNestingLevelWithoutSplittingSameLevelRepetitions() {
+        var time = new FakeTime(0);
+        var emptyOuter = List.<List<String>>of();
+        var emptyInner = List.of(List.<String>of());
+        var ready = List.of(List.of("ready"));
+        var observations = List.of(emptyOuter, emptyOuter, emptyInner, emptyInner, ready).iterator();
+        var result = tryAwait(observations::next).usingTime(time, time).every(ofNanos(1))
+                .until(CollectionConditions.singleElement(
+                        CollectionConditions.singleElement(Conditions.instanceOf(String.class))));
+
+        String selected = result.orThrow();
+        assertEquals("ready", selected);
+        assertEquals(List.of(2L, 2L, 1L), result.attempts().stream().map(AttemptGroup::count).toList());
+        assertEquals(List.of("collection size was 0", "single element: collection size was 0"),
+                result.attempts().subList(0, 2).stream().map(group ->
+                        assertInstanceOf(AttemptStatus.Unsatisfied.class, group.first().result()).mismatch()).toList());
+        assertSame(CollectionConditions.singleElement, result.attempts().get(0).first().condition());
+        assertSame(CollectionConditions.singleElement, result.attempts().get(1).first().condition());
+    }
+
+    @Test
+    void nestedSelectionScopeAccumulatesAcrossDifferentContainerKinds() {
+        var time = new FakeTime(0);
+        var observations = List.of(Optional.<List<List<String>>>empty(),
+                Optional.of(List.<List<String>>of()), Optional.of(List.of(List.<String>of())),
+                Optional.of(List.of(List.of("ready")))).iterator();
+        var result = tryAwait(observations::next).usingTime(time, time).every(ofNanos(1))
+                .until(OptionalConditions.hasValue(CollectionConditions.singleElement(
+                        CollectionConditions.singleElement(Conditions.instanceOf(String.class)))));
+
+        assertEquals("ready", result.orThrow());
+        assertEquals(4, result.attempts().size());
+        assertEquals(List.of("optional was empty", "optional value: collection size was 0",
+                        "optional value: single element: collection size was 0"),
+                result.attempts().subList(0, 3).stream().map(group ->
+                        assertInstanceOf(AttemptStatus.Unsatisfied.class, group.first().result()).mismatch()).toList());
+    }
+
     private static final class ThrowingProbe {
         @Override public boolean equals(Object other) { throw new AssertionError("equals must not be called"); }
         @Override public int hashCode() { throw new AssertionError("hashCode must not be called"); }

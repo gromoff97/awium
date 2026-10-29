@@ -773,6 +773,9 @@ chronological order. A group represents consecutive attempts with the same check
 phase, sequence progress, status, mismatch message, and exception instance.
 Every change starts a new group. If an earlier outcome returns later, it starts
 another group in its chronological position.
+Nested selection failures retain the completed selection steps in their mismatch.
+For example, `collection size was 0` and `single element: collection size was 0`
+identify an empty outer collection and an empty selected collection as separate transitions.
 
 Each group exposes `firstNumber()` and `lastNumber()` (one-based, inclusive),
 `count()`, and its `first()` and `last()` invocations as `HistoryEntry<OBSERVED>`.
