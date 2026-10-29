@@ -61,7 +61,7 @@ class ArtifactContractIT {
         Map<String, Set<String>> classes = classDependencies(dependencies);
         assertFalse(classes.isEmpty(), dependencies);
         Set<String> facade = Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "Conditions", "CollectionConditions", "MapConditions",
-                "OptionalConditions", "StringConditions", "FailureDiagnostics");
+                "OptionalConditions", "StringConditions", "FailureDiagnostics", "DiagnosticText");
         for (String execution : Set.of("Condition", "AwaitAttempt", "Attempt", "AttemptFactory", "ConditionSupport",
                 "ConditionResult", "AttemptResult", "SequenceExecution", "AttemptExecution", "WaitEngine",
                 "WaitCompletion", "WaitConfiguration")) {

@@ -782,12 +782,18 @@ A group with one invocation uses the same record at both ends. For example,
 
 ```java
 for (var group : result.attempts()) {
-    System.out.printf("Attempts %d–%d: %s%n",
-            group.firstNumber(), group.lastNumber(), group.last().result());
+    System.out.println(group);
     var firstObservation = group.first().observed();
     var lastObservation = group.last().observed();
 }
 ```
+
+Printing a group shows its number range, completion offsets, condition and reason,
+outcome, and boundary observations. Shared fields appear once; exception stack
+traces remain available through the structured records. Values are formatted only
+when the group is printed, so this is a view of the retained references, not a
+snapshot of their earlier state. A failing `toString()` produces a diagnostic
+placeholder instead of preventing the rest of the group from being displayed.
 
 Each record has an acquisition or persistence `phase()`,
 the associated `condition()`, sequence `progress()`, `observed()`, and `result()`.
@@ -943,8 +949,9 @@ Ordinary waits use its counting-only mode without retaining or comparing records
 `AttemptExecution` that retrieves source values, calls the selected attempt,
 and records a `HistoryEntry` with its timing and diagnostics. Selected values and stage
 transitions remain in `SequenceExecution`. `FailureDiagnostics` formats the terminal failure
-without replacing its category or cause. A successful check can still finish
-too late.
+without replacing its category or cause. It shares guarded value and field rendering
+with history groups through `DiagnosticText`; formatting runs outside polling.
+A successful check can still finish too late.
 
 `ConditionSupport` shares condition construction, checks, extraction, and
 composition; catalogues supply nested conditions without creating execution

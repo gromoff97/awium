@@ -5,22 +5,12 @@ import io.github.gromoff97.awium.result.HistoryEntry;
 import io.github.gromoff97.awium.result.AttemptStatus;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.StringJoiner;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
-import static java.lang.Thread.currentThread;
-import static java.util.Arrays.deepToString;
 import static java.util.Objects.requireNonNull;
+import static io.github.gromoff97.awium.internal.DiagnosticText.duration;
+import static io.github.gromoff97.awium.internal.DiagnosticText.field;
 
 public final class FailureDiagnostics {
-
-    private static final List<TimeUnit> DURATION_UNITS = List.of(
-            TimeUnit.DAYS, TimeUnit.HOURS, TimeUnit.MINUTES, TimeUnit.SECONDS,
-            TimeUnit.MILLISECONDS, TimeUnit.MICROSECONDS, TimeUnit.NANOSECONDS);
 
     private final WaitCompletion outcome;
     private final Condition condition;
@@ -28,35 +18,22 @@ public final class FailureDiagnostics {
     private final Throwable cause;
     private final HistoryEntry.Progress sequence;
 
-    private final List<Throwable> diagnosticFailures = new ArrayList<>();
+    private final DiagnosticText text;
 
     private FailureDiagnostics(WaitCompletion outcome, WaitConfiguration configuration) {
         this.outcome = requireNonNull(outcome, "outcome must not be null");
         this.configuration = requireNonNull(configuration, "configuration must not be null");
         var attempt = outcome.attempt();
         cause = attempt.result().cause();
+        text = new DiagnosticText(cause);
         sequence = attempt.progress();
         condition = sequence == null ? attempt.condition() : sequence.sequence();
-    }
-
-    static String duration(Duration remaining) {
-        StringJoiner result = new StringJoiner(" ").setEmptyValue("0 nanoseconds");
-        for (TimeUnit unit : DURATION_UNITS) {
-            var unitDuration = Duration.ofNanos(unit.toNanos(1));
-            long count = remaining.dividedBy(unitDuration);
-            remaining = remaining.minus(unitDuration.multipliedBy(count));
-            if (count != 0) {
-                String name = unit.name().toLowerCase(Locale.ROOT);
-                result.add(count + " " + (count == 1 ? name.substring(0, name.length() - 1) : name));
-            }
-        }
-        return result.toString();
     }
 
     public static AwaitFailure failure(WaitCompletion outcome, WaitConfiguration configuration, long attemptNumber) {
         var diagnostics = new FailureDiagnostics(outcome, configuration);
         return new AwaitFailure(outcome.failureReason(), diagnostics.message(attemptNumber), diagnostics.cause,
-                diagnostics.diagnosticFailures);
+                diagnostics.text.failures());
     }
 
     private String uncontrolledHeading(boolean interrupted) {
@@ -85,8 +62,8 @@ public final class FailureDiagnostics {
     private String message(long attemptNumber) {
         HistoryEntry<?> attempt = outcome.attempt();
         StringBuilder out = new StringBuilder(title()).append("\n\n");
-        condition(out, condition, "");
-        String actual = attempt.hasObservation() ? render(() -> renderValue(attempt.observed())) : null;
+        text.condition(out, condition, "");
+        String actual = attempt.hasObservation() ? text.value(attempt.observed()) : null;
         String mismatch = attempt.result() instanceof AttemptStatus.Unsatisfied value ? value.mismatch() : null;
         attempt(out, attemptNumber, attempt, actual, sequence == null ? mismatch : null);
         sequence(out, mismatch);
@@ -94,33 +71,14 @@ public final class FailureDiagnostics {
         if (cause != null) {
             out.append('\n');
             field(out, "", "Cause", cause.getClass().getName());
-            String message = render(cause::getMessage);
+            String message = text.render(cause::getMessage);
             if (message != null && !message.isBlank()) field(out, "Message", message);
         }
-        for (Throwable failure : diagnosticFailures) {
+        for (Throwable failure : text.failures()) {
             out.append('\n');
             field(out, "", "Diagnostics failure", failure.getClass().getName());
         }
         return out.deleteCharAt(out.length() - 1).toString();
-    }
-
-    private String render(Supplier<String> rendering) {
-        boolean interrupted = currentThread().isInterrupted();
-        try {
-            return rendering.get();
-        } catch (Throwable failure) {
-            if (failure != cause && diagnosticFailures.stream().noneMatch(previous -> previous == failure)) {
-                diagnosticFailures.add(failure);
-            }
-            return "<value unavailable: diagnostics failed>";
-        } finally {
-            if (interrupted) currentThread().interrupt();
-        }
-    }
-
-    private static String renderValue(Object value) {
-        String rendered = deepToString(new Object[] {value});
-        return rendered.substring(1, rendered.length() - 1);
     }
 
     private void timing(StringBuilder out) {
@@ -156,18 +114,6 @@ public final class FailureDiagnostics {
         }
     }
 
-    private void condition(StringBuilder out, Condition condition, String indentation) {
-        field(out, indentation, "Condition", condition.description());
-        String detailsIndentation = indentation + "    ";
-        var reference = condition.reference();
-        if (reference != null) {
-            field(out, detailsIndentation, reference.label(), render(() -> renderValue(reference.value())));
-        }
-        if (condition.explanation() != null) {
-            field(out, detailsIndentation, "Because", condition.explanation());
-        }
-    }
-
     private void sequence(StringBuilder out, String mismatch) {
         if (sequence == null) {
             return;
@@ -176,7 +122,7 @@ public final class FailureDiagnostics {
                 .append(" of ").append(sequence.sequence().stages().size()).append("):\n");
         int stage = sequence.stageNumber();
         field(out, "Stage", stage + " of " + sequence.sequence().stages().size());
-        condition(out, outcome.attempt().condition(), "    ");
+        text.condition(out, outcome.attempt().condition(), "    ");
         if (mismatch != null) {
             field(out, "        ", "Mismatch", mismatch);
         }
@@ -184,29 +130,9 @@ public final class FailureDiagnostics {
                 && sequence.capturedStages() < sequence.sequence().stages().size()) {
             int next = sequence.capturedStages() + 1;
             field(out, "Next stage", next + " of " + sequence.sequence().stages().size());
-            condition(out, sequence.sequence().stages().get(next - 1), "    ");
+            text.condition(out, sequence.sequence().stages().get(next - 1), "    ");
         }
     }
 
-    private static void field(StringBuilder out, String label, String value) {
-        field(out, "    ", label, value);
-    }
-
-    private static void field(StringBuilder out, String indentation,
-            String label, String value) {
-        String normalized = value.replace("\r\n", "\n").replace('\r', '\n');
-        if (!normalized.contains("\n")) {
-            out.append(indentation).append(label).append(": ")
-                    .append(normalized).append('\n');
-            return;
-        }
-        out.append(indentation).append(label).append(":\n");
-        for (String line : normalized.split("\n", -1)) {
-            if (!line.isEmpty()) {
-                out.append(indentation).append("    ").append(line);
-            }
-            out.append('\n');
-        }
-    }
 
 }
