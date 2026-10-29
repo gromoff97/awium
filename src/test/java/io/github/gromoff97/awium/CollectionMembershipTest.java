@@ -300,6 +300,8 @@ class CollectionMembershipTest {
                 new Pair("contains", contains("b"), doesNotContain("b")),
                 new Pair("containsAll", containsAll(List.of("a", "b")),
                         doesNotContainAll(List.of("a", "b"))),
+                new Pair("containsAny first", containsAny(List.of("b", "x")),
+                        doesNotContainAny(List.of("b", "x"))),
                 new Pair("containsAny", containsAny(List.of("x", "b")),
                         doesNotContainAny(List.of("x", "b"))));
     }
