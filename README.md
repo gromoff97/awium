@@ -795,6 +795,8 @@ when the group is printed, so this is a view of the retained references, not a
 snapshot of their earlier state. Observation labels explicitly say `current value`;
 the mismatch and status still describe the original check. A failing `toString()` produces a diagnostic
 placeholder instead of preventing the rest of the group from being displayed.
+`System.out.println(result)` prints the outcome followed by all history groups;
+`result.attempts().forEach(System.out::println)` prints the history alone.
 
 Each record has an acquisition or persistence `phase()`,
 the associated `condition()`, sequence `progress()`, `observed()`, and `result()`.

@@ -136,9 +136,9 @@ class HistoryFormattingTest {
 
         String successText = successful.toString();
         String failureText = failed.toString();
-        assertTrue(successText.startsWith("Satisfied[result=<value unavailable: diagnostics failed>"), successText);
+        assertTrue(successText.startsWith("Wait satisfied\n    Result: <value unavailable: diagnostics failed>"), successText);
         assertTrue(successText.contains("Attempt 1 (ACQUISITION)"), successText);
-        assertTrue(failureText.startsWith("Failed[reason=SOURCE_FAILED"), failureText);
+        assertTrue(failureText.startsWith("Source retrieval failed"), failureText);
         assertTrue(failureText.contains("original cause"), failureText);
         assertTrue(failureText.contains("Attempt 1 (ACQUISITION)"), failureText);
         assertSame(observed, successful.orThrow());

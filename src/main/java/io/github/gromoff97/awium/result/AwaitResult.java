@@ -3,6 +3,7 @@ package io.github.gromoff97.awium.result;
 import io.github.gromoff97.awium.internal.DiagnosticText;
 import java.util.List;
 
+import static io.github.gromoff97.awium.internal.DiagnosticText.field;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -41,6 +42,16 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
         };
     }
 
+    private static String withHistory(String summary, List<? extends AttemptGroup<?>> attempts) {
+        var out = new StringBuilder(summary);
+        String separator = "\n\nAttempt history:\n";
+        for (var group : attempts) {
+            out.append(separator).append(group);
+            separator = "\n\n";
+        }
+        return out.toString();
+    }
+
     record Satisfied<OBSERVED, RESULT>(List<AttemptGroup<OBSERVED>> attempts,
             RESULT result) implements AwaitResult<OBSERVED, RESULT> {
 
@@ -50,7 +61,9 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
 
         @Override
         public String toString() {
-            return "Satisfied[result=" + new DiagnosticText(null).value(result) + ", attempts=" + attempts + "]";
+            var summary = new StringBuilder("Wait satisfied\n");
+            field(summary, "Result", new DiagnosticText(null).value(result));
+            return withHistory(summary.substring(0, summary.length() - 1), attempts);
         }
     }
 
@@ -64,8 +77,7 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
 
         @Override
         public String toString() {
-            return "Failed[reason=" + failure.reason() + ", message=" + failure.message()
-                    + ", attempts=" + attempts + "]";
+            return withHistory(failure.message(), attempts);
         }
     }
 }
