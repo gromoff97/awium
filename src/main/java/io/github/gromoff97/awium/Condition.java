@@ -18,7 +18,8 @@ public abstract sealed class Condition
     private final String description;
     private final String explanation;
     private final Reference<?> reference;
-    final Condition identity;
+    // Reason copies share identity without retaining an earlier condition object.
+    final Object identity;
 
     Condition(Condition original) {
         this(required(original).description, original.reference, original.explanation, original.identity);
@@ -33,11 +34,11 @@ public abstract sealed class Condition
         this(description, reference, explanation, null);
     }
 
-    private Condition(String description, Reference<?> reference, String explanation, Condition identity) {
+    private Condition(String description, Reference<?> reference, String explanation, Object identity) {
         this.description = nonBlank(description, "description");
         this.explanation = explanation;
         this.reference = reference;
-        this.identity = identity == null ? this : identity;
+        this.identity = identity == null ? new Object() : identity;
     }
 
     public final String description() {
