@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium.result;
 
+import io.github.gromoff97.awium.internal.DiagnosticText;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
@@ -46,6 +47,11 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
         public Satisfied {
             attempts = List.copyOf(attempts);
         }
+
+        @Override
+        public String toString() {
+            return "Satisfied[result=" + new DiagnosticText(null).value(result) + ", attempts=" + attempts + "]";
+        }
     }
 
     record Failed<OBSERVED, RESULT>(List<AttemptGroup<OBSERVED>> attempts,
@@ -54,6 +60,12 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
         public Failed {
             attempts = List.copyOf(attempts);
             requireNonNull(failure, "failure must not be null");
+        }
+
+        @Override
+        public String toString() {
+            return "Failed[reason=" + failure.reason() + ", message=" + failure.message()
+                    + ", attempts=" + attempts + "]";
         }
     }
 }

@@ -119,4 +119,29 @@ class HistoryFormattingTest {
         assertTrue(rendered.contains("Because:\n            first line\n            second line"), rendered);
         assertTrue(rendered.contains("Observed: [1, 2]"), rendered);
     }
+
+    @Test
+    void printingTheWholeResultDoesNotDelegateToUncheckedValueOrThrowableRenderers() {
+        var time = new FakeTime(0);
+        Object observed = new Object() {
+            @Override public String toString() { throw new IllegalStateException("value renderer failed"); }
+        };
+        var successful = tryAwait(() -> observed).usingTime(time, time)
+                .until(condition("ready", actual -> satisfied()));
+        var cause = new IllegalArgumentException("original cause") {
+            @Override public String toString() { throw new IllegalStateException("cause renderer failed"); }
+        };
+        var failed = tryAwait((java.util.concurrent.Callable<String>) () -> { throw cause; })
+                .usingTime(time, time).until(Conditions.isNotNull);
+
+        String successText = successful.toString();
+        String failureText = failed.toString();
+        assertTrue(successText.startsWith("Satisfied[result=<value unavailable: diagnostics failed>"), successText);
+        assertTrue(successText.contains("Attempt 1 (ACQUISITION)"), successText);
+        assertTrue(failureText.startsWith("Failed[reason=SOURCE_FAILED"), failureText);
+        assertTrue(failureText.contains("original cause"), failureText);
+        assertTrue(failureText.contains("Attempt 1 (ACQUISITION)"), failureText);
+        assertSame(observed, successful.orThrow());
+        assertSame(cause, assertInstanceOf(AwaitResult.Failed.class, failed).failure().cause());
+    }
 }
