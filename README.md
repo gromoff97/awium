@@ -814,8 +814,12 @@ for (var group : result.attempts()) {
 Printing a group shows its number range, completion offsets, condition and reason,
 outcome, and boundary observations. Shared fields appear once. If both boundaries
 refer to the same observed object, its current value is printed once; this does not
-mean the object was unchanged during the group. Exception stack
-traces remain available through the structured records. Values are formatted only
+mean the object was unchanged during the group. Distinct boundary objects with the
+same rendered text share a `First and last observed` line; both references remain
+available in the group, and their `equals` methods are not called. Exceptions also
+remain original references: history printing reads their current messages, and
+stack traces remain available through the structured records. The terminal failure
+message is saved when the wait ends. Values are formatted only
 when the group is printed, so this is a view of the retained references, not a
 snapshot of their earlier state. Observation labels explicitly say `current value`;
 condition reference values are also rendered at printing time. The mismatch and

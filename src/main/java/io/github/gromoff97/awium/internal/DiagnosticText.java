@@ -91,14 +91,17 @@ public final class DiagnosticText {
             field(out, "Within", failure.location());
         }
         boolean separateObservations = repeated && first.observed() != last.observed();
+        String firstValue = first.hasObservation() ? text.value(first.observed()) : null;
+        String lastValue = separateObservations && last.hasObservation() ? text.value(last.observed()) : null;
+        boolean sameText = firstValue != null && firstValue.equals(lastValue);
         if (first.hasObservation()) {
-            field(out, separateObservations ? "First observed (current value)" : "Observed (current value)",
-                    text.value(first.observed()));
+            String label = sameText ? "First and last observed" : separateObservations ? "First observed" : "Observed";
+            field(out, label + " (current value)", firstValue);
         } else {
             field(out, "Observed", "unavailable");
         }
-        if (separateObservations && last.hasObservation()) {
-            field(out, "Last observed (current value)", text.value(last.observed()));
+        if (lastValue != null && !sameText) {
+            field(out, "Last observed (current value)", lastValue);
         }
         if (cause != null) {
             field(out, "Cause", cause.getClass().getName());

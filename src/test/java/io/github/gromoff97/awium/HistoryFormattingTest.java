@@ -197,6 +197,34 @@ class HistoryFormattingTest {
     }
 
     @Test
+    void equalBoundaryTextIsPrintedOnceWithoutComparingTheObservedObjects() {
+        class Observation {
+            int renders;
+            @Override public String toString() { renders++; return "pending"; }
+            @Override public boolean equals(Object other) { throw new AssertionError("unexpected equals"); }
+            @Override public int hashCode() { throw new AssertionError("unexpected hashCode"); }
+        }
+        var first = new Observation();
+        var last = new Observation();
+        var values = List.of(first, last, last).iterator();
+        var time = new FakeTime(0);
+        int[] calls = {0};
+        var result = tryAwait(values::next).usingTime(time, time).every(ofNanos(1))
+                .until(condition("ready", actual -> ++calls[0] == 3 ? satisfied() : unsatisfied()));
+
+        assertEquals(0, first.renders + last.renders);
+        var group = result.attempts().getFirst();
+        String rendered = group.toString();
+        assertTrue(rendered.contains("First and last observed (current value): pending"), rendered);
+        assertEquals(1, rendered.lines().filter(line -> line.contains("observed (current value)")).count());
+        assertEquals(1, first.renders);
+        assertEquals(1, last.renders);
+        assertEquals(2, group.count());
+        assertSame(first, group.first().observed());
+        assertSame(last, group.last().observed());
+    }
+
+    @Test
     void diagnosticResultsDoNotDelegateToUncheckedValueOrThrowableRenderers() {
         var time = new FakeTime(0);
         Object observed = new Object() {
