@@ -11,6 +11,7 @@ import static java.util.Objects.requireNonNull;
  * The observed value is retained by reference, without copying or freezing it.
  * Later changes to that value are visible through this record; the satisfaction
  * status still describes the original check.
+ * The condition's operands and any exception also remain original references.
  *
  * @param <OBSERVED> complete value returned by the source
  * @param phase acquisition or persistence phase

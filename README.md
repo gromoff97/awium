@@ -819,7 +819,7 @@ same rendered text share a `First and last observed` line; both references remai
 available in the group, and their `equals` methods are not called. Exceptions also
 remain original references: history printing reads their current messages, and
 stack traces remain available through the structured records. The terminal failure
-message is saved when the wait ends. Values are formatted only
+message is saved when the wait ends. History values are formatted
 when the group is printed, so this is a view of the retained references, not a
 snapshot of their earlier state. Observation labels explicitly say `current value`;
 condition reference values are also rendered at printing time. The mismatch and
