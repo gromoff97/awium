@@ -132,22 +132,25 @@ final class ConditionSupport {
             AttemptFactory<? super ELEMENT, ?> evaluator,
             Quantifier quantifier, String mismatch) {
         AttemptResult<?> last = null;
+        long checked = 0;
         for (ELEMENT value : values) {
+            checked++;
             var evaluated = evaluator.create(value).call();
             if (evaluated instanceof AttemptResult.Uncontrolled<?> failure) {
                 return new AttemptResult.Uncontrolled<>(failure.status(), failure.condition());
             }
             last = evaluated;
             if (quantifier.stops(evaluated instanceof AttemptResult.Satisfied<?>)) {
-                return quantifiedResult(actual, quantifier.satisfied(true), mismatch, evaluated);
+                return quantifiedResult(actual, quantifier.satisfied(true), mismatch, checked, evaluated);
             }
         }
-        return quantifiedResult(actual, quantifier.satisfied(false), mismatch, last);
+        return quantifiedResult(actual, quantifier.satisfied(false), mismatch, checked, last);
     }
 
     private static <INPUT> AttemptResult<INPUT> quantifiedResult(INPUT actual, boolean successful,
-            String mismatch, AttemptResult<?> evaluated) {
-        return successful ? AttemptResult.satisfied(actual) : nestedMismatch(mismatch, evaluated);
+            String mismatch, long checked, AttemptResult<?> evaluated) {
+        return successful ? AttemptResult.satisfied(actual)
+                : nestedMismatch(mismatch + " (checked " + checked + ")", evaluated);
     }
 
     private static <RESULT> AttemptResult.Unsatisfied<RESULT> nestedMismatch(String mismatch, AttemptResult<?> evaluated) {

@@ -325,6 +325,11 @@ Each candidate is evaluated as a nested condition. An interrupt flag left set
 by its callback stops the wait before another candidate is checked.
 Composite descriptions retain the nested check's name, including custom names
 from `condition(...)` whose callback returns `unsatisfied()` without a message.
+An unsatisfied quantifier reports `(checked N)`: the number of candidates evaluated
+in iteration order. `all` and `none` stop at the first decisive candidate; a failed
+`any` has exhausted its candidates. This count is not a polling count or necessarily
+the container's size. It preserves traversal progress in history without repeating
+the predicate or retaining intermediate elements.
 
 Every condition family exposes `description()` and `reference()` through the
 common immutable `Condition` model.

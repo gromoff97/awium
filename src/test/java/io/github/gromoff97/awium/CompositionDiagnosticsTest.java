@@ -40,34 +40,34 @@ class CompositionDiagnosticsTest {
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
 
         assertQuantifierFailure(diagnostic(collection).until(CollectionConditions.all(mismatch)),
-                "all collection elements match", "not all collection elements matched");
+                "all collection elements match", "not all collection elements matched (checked 1)");
         assertQuantifierFailure(diagnostic(collection).until(CollectionConditions.any(mismatch)),
-                "some collection elements match", "no collection elements matched");
+                "some collection elements match", "no collection elements matched (checked 1)");
         assertQuantifierFailure(diagnostic(collection).until(CollectionConditions.none(match)),
-                "no collection elements match", "some collection elements matched");
+                "no collection elements match", "some collection elements matched (checked 1)");
         assertQuantifierFailure(diagnostic(map).until(MapConditions.allEntries(mismatch)),
-                "all map entries match", "not all map entries matched");
+                "all map entries match", "not all map entries matched (checked 1)");
         assertQuantifierFailure(diagnostic(map).until(MapConditions.hasEntry(mismatch)),
-                "some map entries match", "no map entries matched");
+                "some map entries match", "no map entries matched (checked 1)");
         assertQuantifierFailure(diagnostic(map).until(MapConditions.hasNoEntry(match)),
-                "no map entries match", "some map entries matched");
+                "no map entries match", "some map entries matched (checked 1)");
         assertQuantifierFailure(diagnostic(map).until(MapConditions.allKeys(mismatch)),
-                "all map keys match", "not all map keys matched");
+                "all map keys match", "not all map keys matched (checked 1)");
         assertQuantifierFailure(diagnostic(map).until(MapConditions.anyKey(mismatch)),
-                "some map keys match", "no map keys matched");
+                "some map keys match", "no map keys matched (checked 1)");
         assertQuantifierFailure(diagnostic(map).until(MapConditions.noKey(match)),
-                "no map keys match", "some map keys matched");
+                "no map keys match", "some map keys matched (checked 1)");
         assertQuantifierFailure(diagnostic(map).until(MapConditions.allValues(mismatch)),
-                "all map values match", "not all map values matched");
+                "all map values match", "not all map values matched (checked 1)");
         assertQuantifierFailure(diagnostic(map).until(MapConditions.anyValue(mismatch)),
-                "some map values match", "no map values matched");
+                "some map values match", "no map values matched (checked 1)");
         assertQuantifierFailure(diagnostic(map).until(MapConditions.noValue(match)),
-                "no map values match", "some map values matched");
+                "no map values match", "some map values matched (checked 1)");
         assertQuantifierFailure(diagnostic(nested).until(CollectionConditions.all(CollectionConditions.any(mismatch))),
                 "all collection elements match: some collection elements match",
-                "not all collection elements matched: no collection elements matched");
+                "not all collection elements matched (checked 1): no collection elements matched (checked 1)");
         assertQuantifierFailure(diagnostic(collection).until(captured(isNotNull, CollectionConditions.all(mismatch))),
-                "all collection elements match", "not all collection elements matched");
+                "all collection elements match", "not all collection elements matched (checked 1)");
     }
 
     private static void assertQuantifierFailure(AwaitResult<?, ?> result, String scope, String mismatch) {
