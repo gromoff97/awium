@@ -61,6 +61,39 @@ class ConditionHistoryTest {
     }
 
     @Test
+    void duplicatePositionSurvivesMutationWithoutRepeatingEqualityChecks() {
+        int[] comparisons = {0};
+        class Element {
+            final int number;
+            Element(int number) { this.number = number; }
+            @Override public boolean equals(Object other) {
+                comparisons[0]++;
+                return other instanceof Element element && number == element.number;
+            }
+            @Override public int hashCode() { return number; }
+        }
+        var time = new FakeTime(0);
+        var values = new ArrayList<>(List.of(new Element(1), new Element(1), new Element(2)));
+        int[] calls = {0};
+        var result = tryAwait(() -> {
+            switch (++calls[0]) {
+                case 1 -> { return null; }
+                case 3 -> values.set(1, new Element(2));
+                case 4 -> values.set(2, new Element(3));
+                default -> {}
+            }
+            return values;
+        }).usingTime(time, time).every(ofNanos(1)).until(CollectionConditions.hasNoDuplicates);
+
+        assertSame(values, result.orThrow());
+        assertEquals(4, calls[0]);
+        assertEquals(7, comparisons[0]);
+        assertEquals(List.of("collection was null",
+                "collection contained a duplicate at iteration index 1",
+                "collection contained a duplicate at iteration index 2"), mismatches(result));
+    }
+
+    @Test
     void allRetainsProgressThroughAMutableCollectionWithoutRecheckingItsElements() {
         var time = new FakeTime(0);
         var values = new ArrayList<>(List.of(false, false, false));

@@ -783,8 +783,9 @@ For example, `collection size was 0` and `single element: collection size was 0`
 identify an empty outer collection and an empty selected collection as separate transitions.
 Built-in checks retain the facts they already measured: size and length mismatches
 report the actual size, type checks report the actual class or null, and `sorted`
-reports the first out-of-order pair's zero-based indices. Quantifier failures retain
-their checked-candidate count. These facts stay unchanged when an observed object
+reports the first out-of-order pair's zero-based indices. `hasNoDuplicates` reports
+the first duplicate's zero-based iteration index. Quantifier failures retain their
+checked-candidate count. These facts stay unchanged when an observed object
 is later modified; no extra predicate or comparator calls are made to collect them.
 
 Each group exposes `firstNumber()` and `lastNumber()` (one-based, inclusive),

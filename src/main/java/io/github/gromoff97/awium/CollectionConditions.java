@@ -55,8 +55,8 @@ public final class CollectionConditions {
     public static final PreservingCondition<Collection<?>> containsOnlyNulls = preserving("collection contains only nulls",
             "collection did not contain only nulls",
             actual -> !actual.isEmpty() && matchesAll(actual, value -> value == null));
-    public static final PreservingCondition<Collection<?>> hasNoDuplicates = preserving("collection has no duplicates",
-            "collection contained duplicates", CollectionConditions::hasUniqueElements);
+    public static final PreservingCondition<Collection<?>> hasNoDuplicates = ConditionSupport.preserving(
+            "collection has no duplicates", CollectionConditions::checkUniqueness);
 
     private CollectionConditions() {}
 
@@ -447,15 +447,16 @@ public final class CollectionConditions {
         return true;
     }
 
-    private static boolean hasUniqueElements(Collection<?> actual) throws Throwable {
+    private static ConditionResult checkUniqueness(Collection<?> actual) throws Throwable {
+        if (actual == null) return ConditionResult.unsatisfied("collection was null");
         List<Object> seen = new ArrayList<>();
         for (Object value : actual) {
             if (matchesAny(seen, previous -> deepEquals(previous, value))) {
-                return false;
+                return ConditionResult.unsatisfied("collection contained a duplicate at iteration index " + seen.size());
             }
             seen.add(value);
         }
-        return true;
+        return ConditionResult.satisfied();
     }
 
     private static <ELEMENT> ConditionResult checkOrder(SequencedCollection<ELEMENT> actual,
