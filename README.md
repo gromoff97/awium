@@ -778,6 +778,10 @@ chronological order. A group represents consecutive attempts with the same check
 phase, sequence progress, status, mismatch message, and exception instance.
 Every change starts a new group. If an earlier outcome returns later, it starts
 another group in its chronological position.
+History records complete polling attempts. Individual candidates inside `all`,
+`any`, or `none` do not create extra history entries.
+For example, `none(asserted(check))` succeeds when every candidate produces an
+assertion mismatch. History records that aggregate success, not each nested mismatch.
 Nested selection failures retain the completed selection steps in their mismatch.
 For example, `collection size was 0` and `single element: collection size was 0`
 identify an empty outer collection and an empty selected collection as separate transitions.
@@ -872,7 +876,8 @@ Grouping describes repeated diagnostics, not equality of source values. Actual
 objects may change between the boundaries without creating a new group. Awium
 does not call their `equals`, `hashCode`, or `toString` to group them. It also does
 not inspect exception messages or stack traces: every new exception instance
-starts a separate group, even if its message matches an earlier exception.
+attached to an attempt's outcome starts a separate group, even if its message
+matches an earlier exception.
 Repeated invocations with the same exception instance can share a group.
 
 Storage grows with diagnostic transitions and distinct errors, rather than with
