@@ -33,8 +33,8 @@ class HistoryFormattingTest {
                         Because: worker must finish
                     Result: unsatisfied
                     Mismatch: value was not equal
-                    First observed: 1
-                    Last observed: 3""", result.attempts().getFirst().toString());
+                    First observed (current value): 1
+                    Last observed (current value): 3""", result.attempts().getFirst().toString());
         assertEquals("""
                 Attempt 4 (ACQUISITION)
                     Completed after: 3 nanoseconds
@@ -42,7 +42,7 @@ class HistoryFormattingTest {
                         Expected: 4
                         Because: worker must finish
                     Result: satisfied
-                    Observed: 4""", result.attempts().getLast().toString());
+                    Observed (current value): 4""", result.attempts().getLast().toString());
         assertEquals(4, calls[0]);
     }
 
@@ -64,8 +64,8 @@ class HistoryFormattingTest {
                         Because: payment accepted
                     Result: unsatisfied
                     Mismatch: value was not equal
-                    First observed: pending
-                    Last observed: pending""", result.attempts().get(1).toString());
+                    First observed (current value): pending
+                    Last observed (current value): pending""", result.attempts().get(1).toString());
     }
 
     @Test
@@ -77,9 +77,9 @@ class HistoryFormattingTest {
         var sourceFailed = tryAwait((java.util.concurrent.Callable<String>) () -> { throw cause; })
                 .usingTime(time, time).until(Conditions.isNull);
 
-        assertTrue(returnedNull.attempts().getFirst().toString().contains("Observed: null"));
+        assertTrue(returnedNull.attempts().getFirst().toString().contains("Observed (current value): null"));
         String failed = sourceFailed.attempts().getFirst().toString();
-        assertFalse(failed.contains("Observed:"), failed);
+        assertFalse(failed.contains("Observed (current value):"), failed);
         assertTrue(failed.contains("Result: uncontrolled (SOURCE)"), failed);
         assertTrue(failed.contains("Cause: java.lang.IllegalStateException"), failed);
         assertTrue(failed.contains("Message: source unavailable"), failed);
@@ -103,7 +103,7 @@ class HistoryFormattingTest {
         assertSame(observed, result.orThrow());
         String rendered = result.attempts().getFirst().toString();
         assertEquals(1, renders[0]);
-        assertTrue(rendered.contains("Observed: <value unavailable: diagnostics failed>"), rendered);
+        assertTrue(rendered.contains("Observed (current value): <value unavailable: diagnostics failed>"), rendered);
         assertTrue(rendered.contains("Diagnostics failure: java.lang.IllegalArgumentException"), rendered);
         assertSame(observed, result.orThrow());
     }
@@ -117,7 +117,7 @@ class HistoryFormattingTest {
         String rendered = result.attempts().getFirst().toString();
         assertTrue(rendered.contains("Expected: [1, 2]"), rendered);
         assertTrue(rendered.contains("Because:\n            first line\n            second line"), rendered);
-        assertTrue(rendered.contains("Observed: [1, 2]"), rendered);
+        assertTrue(rendered.contains("Observed (current value): [1, 2]"), rendered);
     }
 
     @Test
@@ -143,5 +143,30 @@ class HistoryFormattingTest {
         assertTrue(failureText.contains("Attempt 1 (ACQUISITION)"), failureText);
         assertSame(observed, successful.orThrow());
         assertSame(cause, assertInstanceOf(AwaitResult.Failed.class, failed).failure().cause());
+    }
+
+    @Test
+    void liveObservationLabelsCannotBeMistakenForSnapshotsOfEarlierSizes() {
+        var time = new FakeTime(0);
+        var values = new java.util.ArrayList<Integer>();
+        int[] calls = {0};
+        var result = tryAwait(() -> {
+            if ((++calls[0] & 1) == 1) values.add(calls[0]);
+            return values;
+        }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
+                .until(CollectionConditions.hasSize(4));
+        values.add(99);
+
+        assertEquals(3, result.attempts().size());
+        for (int i = 0; i < result.attempts().size(); i++) {
+            var group = result.attempts().get(i);
+            String rendered = group.toString();
+            assertTrue(rendered.contains("Mismatch: collection size was " + (i + 1)), rendered);
+            assertTrue(rendered.contains("(current value): [1, 3, 5, 99]"), rendered);
+            assertSame(values, group.first().observed());
+            assertSame(values, group.last().observed());
+        }
+        String failure = assertInstanceOf(AwaitResult.Failed.class, result).failure().message();
+        assertTrue(failure.contains("Actual: [1, 3, 5]"), failure);
     }
 }

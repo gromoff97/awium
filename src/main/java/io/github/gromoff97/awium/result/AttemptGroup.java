@@ -71,8 +71,10 @@ public record AttemptGroup<OBSERVED>(long firstNumber, long lastNumber,
         if (status instanceof AttemptStatus.Unsatisfied mismatch && mismatch.mismatch() != null) {
             field(out, "Mismatch", mismatch.mismatch());
         }
-        if (first.hasObservation()) field(out, repeated ? "First observed" : "Observed", text.value(first.observed()));
-        if (repeated && last.hasObservation()) field(out, "Last observed", text.value(last.observed()));
+        if (first.hasObservation()) {
+            field(out, repeated ? "First observed (current value)" : "Observed (current value)", text.value(first.observed()));
+        }
+        if (repeated && last.hasObservation()) field(out, "Last observed (current value)", text.value(last.observed()));
         if (cause != null) {
             field(out, "Cause", cause.getClass().getName());
             String message = text.render(cause::getMessage);

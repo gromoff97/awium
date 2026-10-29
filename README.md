@@ -792,7 +792,8 @@ Printing a group shows its number range, completion offsets, condition and reaso
 outcome, and boundary observations. Shared fields appear once; exception stack
 traces remain available through the structured records. Values are formatted only
 when the group is printed, so this is a view of the retained references, not a
-snapshot of their earlier state. A failing `toString()` produces a diagnostic
+snapshot of their earlier state. Observation labels explicitly say `current value`;
+the mismatch and status still describe the original check. A failing `toString()` produces a diagnostic
 placeholder instead of preventing the rest of the group from being displayed.
 
 Each record has an acquisition or persistence `phase()`,
