@@ -26,6 +26,7 @@ import static io.github.gromoff97.awium.ConditionSupport.selected;
 import static io.github.gromoff97.awium.ConditionSupport.snapshot;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
+import static io.github.gromoff97.awium.ValueMatching.containingAll;
 import static io.github.gromoff97.awium.ValueMatching.exactly;
 import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
@@ -155,8 +156,7 @@ public final class CollectionConditions {
     /** Matches every expected element; an empty expected iterable matches any non-null collection. */
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsAll(Iterable<? extends ELEMENT> expected) {
         var values = snapshot(expected, "expected elements");
-        return preserving("collection contains all expected elements", "collection did not contain all expected elements", expectedReference(values),
-                actual -> ValueMatching.containsAll(actual, values, Objects::deepEquals));
+        return containingAll("collection", "elements", values, actual -> actual, Objects::deepEquals);
     }
 
     /** Rejects one element, including a collection or array as that single element. */
@@ -175,7 +175,7 @@ public final class CollectionConditions {
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainAll(Iterable<? extends ELEMENT> unexpected) {
         var values = snapshot(unexpected, "unexpected elements");
         return preserving("collection does not contain all unexpected elements", "collection contained all unexpected elements", unexpectedReference(values),
-                actual -> !ValueMatching.containsAll(actual, values, Objects::deepEquals));
+                actual -> ValueMatching.firstMissing(actual, values, Objects::deepEquals) >= 0);
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsAny(Iterable<? extends ELEMENT> expected) {

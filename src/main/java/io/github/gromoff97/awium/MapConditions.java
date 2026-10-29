@@ -26,9 +26,10 @@ import static io.github.gromoff97.awium.ConditionSupport.selected;
 import static io.github.gromoff97.awium.ConditionSupport.snapshot;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
-import static io.github.gromoff97.awium.ValueMatching.containsAll;
+import static io.github.gromoff97.awium.ValueMatching.containingAll;
 import static io.github.gromoff97.awium.ValueMatching.containsAny;
 import static io.github.gromoff97.awium.ValueMatching.exactly;
+import static io.github.gromoff97.awium.ValueMatching.firstMissing;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
 import static java.util.Objects.deepEquals;
@@ -327,8 +328,7 @@ public final class MapConditions {
 
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsAllKeys(Iterable<? extends KEY> expected) {
         var keys = snapshot(expected, "expected keys");
-        return preserving("map contains all expected keys", "map did not contain all expected keys", expectedReference(keys),
-                actual -> containsAll(actual.keySet(), keys, Objects::deepEquals));
+        return containingAll("map", "keys", keys, Map::keySet, Objects::deepEquals);
     }
 
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> doesNotContainAnyKeys(Iterable<? extends KEY> unexpected) {
@@ -345,8 +345,7 @@ public final class MapConditions {
 
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> containsAllValues(Iterable<? extends VALUE> expected) {
         var values = snapshot(expected, "expected values");
-        return preserving("map contains all expected values", "map did not contain all expected values", expectedReference(values),
-                actual -> containsAll(actual.values(), values, Objects::deepEquals));
+        return containingAll("map", "values", values, Map::values, Objects::deepEquals);
     }
 
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> doesNotContainAnyValues(Iterable<? extends VALUE> unexpected) {
@@ -357,16 +356,13 @@ public final class MapConditions {
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsAllEntries(Map<? extends KEY, ? extends VALUE> expected) {
         var entries = snapshotEntries(expected, "expected entries");
-        return preserving("map contains all expected entries", "map did not contain all expected entries", expectedReference(entries),
-                actual -> containsAll(actual.entrySet(), entries,
-                        MapConditions::entryMatches));
+        return containingAll("map", "entries", entries, Map::entrySet, MapConditions::entryMatches);
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainAllEntries(Map<? extends KEY, ? extends VALUE> unexpected) {
         var entries = snapshotEntries(unexpected, "unexpected entries");
         return preserving("map does not contain all unexpected entries", "map contained all unexpected entries", unexpectedReference(entries),
-                actual -> !containsAll(actual.entrySet(), entries,
-                        MapConditions::entryMatches));
+                actual -> firstMissing(actual.entrySet(), entries, MapConditions::entryMatches) >= 0);
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsAnyEntries(Map<? extends KEY, ? extends VALUE> expected) {
