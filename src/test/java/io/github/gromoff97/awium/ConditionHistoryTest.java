@@ -42,8 +42,9 @@ class ConditionHistoryTest {
         int[] comparisons = {0};
         var result = tryAwait(() -> {
             switch (++calls[0]) {
-                case 2 -> { values.set(0, 1); values.set(1, 3); }
-                case 3 -> { values.set(1, 2); values.set(2, 3); }
+                case 1 -> { return null; }
+                case 3 -> { values.set(0, 1); values.set(1, 3); }
+                case 4 -> { values.set(1, 2); values.set(2, 3); }
                 default -> {}
             }
             return values;
@@ -53,9 +54,9 @@ class ConditionHistoryTest {
         }));
 
         assertSame(values, result.orThrow());
-        assertEquals(3, calls[0]);
+        assertEquals(4, calls[0]);
         assertEquals(5, comparisons[0]);
-        assertEquals(List.of("collection was not sorted at indices 0 and 1",
+        assertEquals(List.of("collection was null", "collection was not sorted at indices 0 and 1",
                 "collection was not sorted at indices 1 and 2"), mismatches(result));
     }
 

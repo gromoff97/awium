@@ -808,7 +808,8 @@ mean the object was unchanged during the group. Exception stack
 traces remain available through the structured records. Values are formatted only
 when the group is printed, so this is a view of the retained references, not a
 snapshot of their earlier state. Observation labels explicitly say `current value`;
-the mismatch and status still describe the original check. A failing `toString()` produces a diagnostic
+condition reference values are also rendered at printing time. The mismatch and
+status still describe the original check. A failing `toString()` produces a diagnostic
 placeholder instead of preventing the rest of the group from being displayed.
 `System.out.println(result)` prints the outcome followed by all history groups;
 `result.attempts().forEach(System.out::println)` prints the history alone.
