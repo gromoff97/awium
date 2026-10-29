@@ -797,7 +797,9 @@ for (var group : result.attempts()) {
 ```
 
 Printing a group shows its number range, completion offsets, condition and reason,
-outcome, and boundary observations. Shared fields appear once; exception stack
+outcome, and boundary observations. Shared fields appear once. If both boundaries
+refer to the same observed object, its current value is printed once; this does not
+mean the object was unchanged during the group. Exception stack
 traces remain available through the structured records. Values are formatted only
 when the group is printed, so this is a view of the retained references, not a
 snapshot of their earlier state. Observation labels explicitly say `current value`;

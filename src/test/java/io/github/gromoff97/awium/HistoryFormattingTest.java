@@ -9,6 +9,7 @@ import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.Conditions.equalTo;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -64,8 +65,7 @@ class HistoryFormattingTest {
                         Because: payment accepted
                     Result: unsatisfied
                     Mismatch: value was not equal
-                    First observed (current value): pending
-                    Last observed (current value): pending""", result.attempts().get(1).toString());
+                    Observed (current value): pending""", result.attempts().get(1).toString());
     }
 
     @Test
@@ -118,6 +118,29 @@ class HistoryFormattingTest {
         assertTrue(rendered.contains("Expected: [1, 2]"), rendered);
         assertTrue(rendered.contains("Because:\n            first line\n            second line"), rendered);
         assertTrue(rendered.contains("Observed (current value): [1, 2]"), rendered);
+    }
+
+    @Test
+    void repeatedObservationIsRenderedOnceWithoutComparingUserValues() {
+        var time = new FakeTime(0);
+        int[] renders = {0};
+        Object observed = new Object() {
+            @Override public String toString() { return "render " + ++renders[0]; }
+            @Override public boolean equals(Object other) { throw new AssertionError("unexpected equals"); }
+            @Override public int hashCode() { throw new AssertionError("unexpected hashCode"); }
+        };
+        int[] calls = {0};
+        var result = tryAwait(() -> observed).usingTime(time, time).every(ofNanos(1))
+                .until(condition("ready", actual -> ++calls[0] == 3 ? satisfied() : unsatisfied()));
+
+        assertEquals(0, renders[0]);
+        var group = result.attempts().getFirst();
+        assertEquals(2, group.count());
+        String rendered = group.toString();
+        assertEquals(1, renders[0]);
+        assertTrue(rendered.contains("Observed (current value): render 1"), rendered);
+        assertSame(observed, group.first().observed());
+        assertSame(observed, group.last().observed());
     }
 
     @Test
