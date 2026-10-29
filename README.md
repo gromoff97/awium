@@ -815,6 +815,8 @@ placeholder instead of preventing the rest of the group from being displayed.
 `result.attempts().forEach(System.out::println)` prints the history alone.
 Individual `first()` and `last()` records use the same guarded formatting, without
 an attempt number: numbering belongs to the group.
+Printing a status safely renders its cause's class and message; printing an
+`AwaitFailure` returns its saved diagnostic message without inspecting the cause again.
 
 Each record has an acquisition or persistence `phase()`,
 the associated `condition()`, sequence `progress()`, `observed()`, and `result()`.

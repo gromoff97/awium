@@ -18,6 +18,12 @@ public record AwaitFailure(Reason reason, String message, Throwable cause, List<
         suppressed = List.copyOf(suppressed);
     }
 
+    /** Returns the saved diagnostic message without inspecting the original throwables again. */
+    @Override
+    public String toString() {
+        return message;
+    }
+
     public enum Reason {
         TIMEOUT, PERSISTENCE_FAILED, SOURCE_FAILED, CONDITION_FAILED,
         INTERRUPTED, WAIT_FAILED

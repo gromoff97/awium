@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.result.AwaitResult;
+import io.github.gromoff97.awium.result.AttemptStatus;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -149,7 +150,7 @@ class HistoryFormattingTest {
     }
 
     @Test
-    void printingTheWholeResultDoesNotDelegateToUncheckedValueOrThrowableRenderers() {
+    void diagnosticResultsDoNotDelegateToUncheckedValueOrThrowableRenderers() {
         var time = new FakeTime(0);
         Object observed = new Object() {
             @Override public String toString() { throw new IllegalStateException("value renderer failed"); }
@@ -172,8 +173,27 @@ class HistoryFormattingTest {
         String individual = failed.attempts().getFirst().first().toString();
         assertTrue(individual.contains("Result: uncontrolled (SOURCE)"), individual);
         assertTrue(individual.contains("Message: original cause"), individual);
+        assertTrue(failed.attempts().getFirst().first().result().toString().contains("original cause"));
+        assertTrue(unsatisfied("pending", cause).toString().contains("original cause"));
+        var failure = assertInstanceOf(AwaitResult.Failed.class, failed).failure();
+        assertEquals(failure.message(), failure.toString());
         assertSame(observed, successful.orThrow());
         assertSame(cause, assertInstanceOf(AwaitResult.Failed.class, failed).failure().cause());
+    }
+
+    @Test
+    void statusRenderingKeepsItsCategoryWhenTheCauseMessageFails() {
+        var cause = new IllegalStateException() {
+            @Override public String getMessage() { throw new AssertionError("message unavailable"); }
+        };
+        for (AttemptStatus status : List.of(unsatisfied("pending", cause),
+                new AttemptStatus.Uncontrolled(AttemptStatus.Operation.CONDITION, cause))) {
+            String rendered = status.toString();
+            assertTrue(rendered.startsWith(status.getClass().getSimpleName() + "["), rendered);
+            assertTrue(rendered.contains(cause.getClass().getName()), rendered);
+            assertTrue(rendered.contains("<value unavailable: diagnostics failed>"), rendered);
+            assertSame(cause, status.cause());
+        }
     }
 
     @Test

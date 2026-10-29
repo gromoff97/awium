@@ -32,6 +32,13 @@ public final class DiagnosticText {
         return List.copyOf(diagnosticFailures);
     }
 
+    /** Formats a cause without invoking an overridden Throwable.toString(). */
+    public static String cause(Throwable cause) {
+        if (cause == null) return "null";
+        String message = new DiagnosticText(cause).render(cause::getMessage);
+        return cause.getClass().getName() + (message == null ? "" : ": " + message);
+    }
+
     /** Formats retained values on demand; a null last boundary denotes one invocation. */
     public static String history(String heading, HistoryEntry<?> first, HistoryEntry<?> last) {
         boolean repeated = last != null;
