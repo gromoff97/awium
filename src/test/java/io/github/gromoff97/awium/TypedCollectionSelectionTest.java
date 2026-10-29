@@ -304,7 +304,7 @@ class TypedCollectionSelectionTest {
         assertEquals(AwaitFailure.Reason.CONDITION_FAILED, failure.reason());
         assertSame(cause, failure.cause());
         assertEquals(1, reads[0]);
-        var attempt = result.attempts().getLast();
+        var attempt = result.attempts().getLast().last();
         assertEquals("target-key", attempt.condition().reference().value());
     }
 

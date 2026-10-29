@@ -30,7 +30,7 @@ final class AwaitTestAccess {
     }
 
     static WaitConfiguration config(long every, long upTo, long persistence) {
-        return new WaitConfiguration(every, upTo, persistence, WaitConfiguration.DEFAULT.historyTail(),
+        return new WaitConfiguration(every, upTo, persistence,
                 WaitConfiguration.DEFAULT.clock(), WaitConfiguration.DEFAULT.parker());
     }
 

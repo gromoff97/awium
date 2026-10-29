@@ -46,15 +46,6 @@ public sealed class DiagnosticAwait<OBSERVED> extends AwaitSupport<OBSERVED> per
     }
 
     /**
-     * Returns a new configuration retaining the latest {@code count} attempt records.
-     * The default is 256; -1 retains every record. Other values must be positive.
-     * This does not limit polling attempts or the observations collected by {@code captured}.
-     */
-    public DiagnosticAwait<OBSERVED> historyTail(int count) {
-        return reconfigured(configuration.withHistoryTail(count));
-    }
-
-    /**
      * Returns a new configuration using the supplied monotonic nanosecond clock and wait operation.
      * Both operations must share the same time base. Neither is invoked during configuration.
      * The wait receives a duration in nanoseconds and may return early.

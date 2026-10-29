@@ -76,7 +76,7 @@ class CompositionDiagnosticsTest {
         String description = scope + ": account is active";
         assertTrue(failure.message().contains(description), failure.message());
         assertTrue(failure.message().contains(mismatch), failure.message());
-        var last = result.attempts().getLast();
+        var last = result.attempts().getLast().last();
         var condition = last.condition();
         assertEquals(description, condition.description());
         var evaluated = evaluated(last);
@@ -96,7 +96,7 @@ class CompositionDiagnosticsTest {
 
             for (var result : List.of(selectedResult, typedResult)) {
                 var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
-                var condition = result.attempts().getLast().condition();
+                var condition = result.attempts().getLast().last().condition();
                 assertEquals(TIMEOUT, failure.reason());
                 assertEquals(present.description(), condition.description());
                 assertNull(condition.reference());
@@ -119,12 +119,12 @@ class CompositionDiagnosticsTest {
 
         assertEquals("Bob", result.orThrow());
         assertEquals(3, result.attempts().size());
-        var missing = result.attempts().getFirst().condition();
+        var missing = result.attempts().getFirst().last().condition();
         assertEquals(present.description(), missing.description());
         assertNull(missing.reference());
         for (var attempt : result.attempts().subList(1, 3)) {
-            assertEquals(selected.description(), attempt.condition().description());
-            assertEquals(nested.reference(), attempt.condition().reference());
+            assertEquals(selected.description(), attempt.last().condition().description());
+            assertEquals(nested.reference(), attempt.last().condition().reference());
         }
     }
 
@@ -137,7 +137,8 @@ class CompositionDiagnosticsTest {
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
             assertEquals(TIMEOUT, failure.reason());
             assertTrue(failure.message().contains("Expected: " + (actual == null || actual.isEmpty() ? "customerId" : "Bob")), failure.message());
-            assertEquals(3, result.attempts().size());
+            assertEquals(1, result.attempts().size());
+            assertEquals(3, result.attempts().getFirst().count());
         }
     }
 
@@ -151,9 +152,9 @@ class CompositionDiagnosticsTest {
 
         assertEquals("Bob", result.orThrow());
         assertEquals(3, result.attempts().size());
-        var lookup = result.attempts().get(0);
-        var nested = result.attempts().get(1);
-        var success = result.attempts().get(2);
+        var lookup = result.attempts().get(0).last();
+        var nested = result.attempts().get(1).last();
+        var success = result.attempts().get(2).last();
         assertEquals("map contains the expected key", lookup.condition().description());
         assertEquals("customerId", lookup.condition().reference().value());
         assertEquals("Bob", nested.condition().reference().value());
@@ -214,17 +215,17 @@ class CompositionDiagnosticsTest {
             assertSame(cause, failure.cause());
             assertTrue(failure.message().contains("Expected: customerId"), failure.message());
             assertTrue(failure.message().contains("Because: customer lookup must succeed"), failure.message());
-            uncontrolled(AttemptStatus.Operation.CONDITION, result.attempts().getFirst().result());
-            assertEquals("customerId", result.attempts().getFirst().condition().reference().value());
+            uncontrolled(AttemptStatus.Operation.CONDITION, result.attempts().getFirst().last().result());
+            assertEquals("customerId", result.attempts().getFirst().last().condition().reference().value());
             assertSame(cause, assertFailure(CONDITION_FAILED, () -> waiting.until(selected)).getCause());
 
             var captured = diagnostic(waiting).until(captured(selected, selected));
-            var capturedOutcome = uncontrolled(AttemptStatus.Operation.CONDITION, captured.attempts().getFirst().result());
+            var capturedOutcome = uncontrolled(AttemptStatus.Operation.CONDITION, captured.attempts().getFirst().last().result());
             assertSame(cause, capturedOutcome.cause());
-            var progress = captured.attempts().getFirst().progress();
+            var progress = captured.attempts().getFirst().last().progress();
             assertEquals(0, progress.capturedStages());
-            assertEquals("customerId", captured.attempts().getFirst().condition().reference().value());
-            assertEquals("customer lookup must succeed", captured.attempts().getFirst().condition().explanation());
+            assertEquals("customerId", captured.attempts().getFirst().last().condition().reference().value());
+            assertEquals("customer lookup must succeed", captured.attempts().getFirst().last().condition().explanation());
         }
     }
 }

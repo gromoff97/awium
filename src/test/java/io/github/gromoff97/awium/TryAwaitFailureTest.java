@@ -77,9 +77,9 @@ class TryAwaitFailureTest {
                 TryAwaitFailureTest::unstableCondition);
 
         assertInstanceOf(AttemptStatus.Unsatisfied.class,
-                evaluated(timeout.attempts().getLast()).result());
+                evaluated(timeout.attempts().getLast().last()).result());
         assertInstanceOf(AttemptStatus.Unsatisfied.class,
-                evaluated(persistence.attempts().getLast()).result());
+                evaluated(persistence.attempts().getLast().last()).result());
     }
 
     @Test
@@ -103,10 +103,10 @@ class TryAwaitFailureTest {
                     throw new AssertionError("condition assertion");
                 }));
 
-        uncontrolled(AttemptStatus.Operation.SOURCE, source.attempts().getLast().result());
-        uncontrolled(AttemptStatus.Operation.SOURCE, sourceAssertion.attempts().getLast().result());
-        uncontrolled(AttemptStatus.Operation.CONDITION, condition.attempts().getLast().result());
-        uncontrolled(AttemptStatus.Operation.CONDITION, conditionAssertion.attempts().getLast().result());
+        uncontrolled(AttemptStatus.Operation.SOURCE, source.attempts().getLast().last().result());
+        uncontrolled(AttemptStatus.Operation.SOURCE, sourceAssertion.attempts().getLast().last().result());
+        uncontrolled(AttemptStatus.Operation.CONDITION, condition.attempts().getLast().last().result());
+        uncontrolled(AttemptStatus.Operation.CONDITION, conditionAssertion.attempts().getLast().last().result());
     }
 
     @Test
@@ -121,7 +121,7 @@ class TryAwaitFailureTest {
                 () -> conditionPerWait("condition succeeds", () -> null));
 
         assertEquals(1, failure.attempts().size());
-        uncontrolled(AttemptStatus.Operation.CONDITION, failure.attempts().getFirst().result());
+        uncontrolled(AttemptStatus.Operation.CONDITION, failure.attempts().getFirst().last().result());
         assertEquals("evaluator must not be null", nullEvaluator.failure().cause().getMessage());
     }
 
@@ -135,9 +135,9 @@ class TryAwaitFailureTest {
                 TryAwaitFailureTest::unstableAssertion);
 
         assertInstanceOf(AttemptStatus.Unsatisfied.class,
-                evaluated(timeout.attempts().getLast()).result());
+                evaluated(timeout.attempts().getLast().last()).result());
         assertInstanceOf(AttemptStatus.Unsatisfied.class,
-                evaluated(persistence.attempts().getLast()).result());
+                evaluated(persistence.attempts().getLast().last()).result());
     }
 
     @Test
@@ -151,8 +151,8 @@ class TryAwaitFailureTest {
 
         assertEquals(2, acquisitionParking.attempts().size());
         assertEquals(2, persistenceParking.attempts().size());
-        uncontrolled(AttemptStatus.Operation.WAITING, acquisitionParking.attempts().getLast().result());
-        uncontrolled(AttemptStatus.Operation.WAITING, persistenceParking.attempts().getLast().result());
+        uncontrolled(AttemptStatus.Operation.WAITING, acquisitionParking.attempts().getLast().last().result());
+        uncontrolled(AttemptStatus.Operation.WAITING, persistenceParking.attempts().getLast().last().result());
         var beforeSource = assertParity(time -> {
                     currentThread().interrupt();
                     return timedAwait(() -> "actual", config(1, 2, 0), time, time);
@@ -177,7 +177,7 @@ class TryAwaitFailureTest {
                     return true;
                 }));
 
-        uncontrolled(AttemptStatus.Operation.CONDITION, condition.attempts().getLast().result());
+        uncontrolled(AttemptStatus.Operation.CONDITION, condition.attempts().getLast().last().result());
         assertTrue(condition.failure().message().startsWith("Caller thread was interrupted during condition evaluation"));
         var interruptTime = new FakeTime(0);
         failed(timedTryAwait(() -> "actual", config(1, 2, 0),
@@ -198,7 +198,7 @@ class TryAwaitFailureTest {
                         config(1, 2, 0), time, time),
                 TryAwaitFailureTest::brokenDiagnostics);
 
-        uncontrolled(AttemptStatus.Operation.CONDITION, nullEvaluation.attempts().getLast().result());
+        uncontrolled(AttemptStatus.Operation.CONDITION, nullEvaluation.attempts().getLast().last().result());
         assertEquals(1, diagnostics.failure().suppressed().size());
         assertInstanceOf(AssertionError.class, diagnostics.failure().cause());
         assertInstanceOf(IllegalStateException.class, diagnostics.failure().suppressed().getFirst());
@@ -242,14 +242,14 @@ class TryAwaitFailureTest {
                     return null;
                 }),
                 condition("second stage", actual -> satisfied()))));
-        var observation = uncontrolled(AttemptStatus.Operation.CONDITION, result.attempts().getFirst().result());
-        var progress = result.attempts().getFirst().progress();
+        var observation = uncontrolled(AttemptStatus.Operation.CONDITION, result.attempts().getFirst().last().result());
+        var progress = result.attempts().getFirst().last().progress();
 
         assertEquals(INTERRUPTED, result.failure().reason());
         assertEquals(NullPointerException.class, observation.cause().getClass());
         assertEquals("condition returned null ConditionResult", observation.cause().getMessage());
         assertEquals(1, progress.stageNumber());
-        assertEquals("first stage", result.attempts().getLast().condition().description());
+        assertEquals("first stage", result.attempts().getLast().last().condition().description());
     }
 
     @Test
@@ -261,13 +261,13 @@ class TryAwaitFailureTest {
                     return satisfied();
                 }),
                 condition("second stage", actual -> satisfied()))));
-        uncontrolled(AttemptStatus.Operation.CONDITION, result.attempts().getFirst().result());
-        var progress = result.attempts().getFirst().progress();
+        uncontrolled(AttemptStatus.Operation.CONDITION, result.attempts().getFirst().last().result());
+        var progress = result.attempts().getFirst().last().progress();
 
         assertEquals(INTERRUPTED, result.failure().reason());
         assertEquals(0, progress.capturedStages());
         assertEquals(1, progress.stageNumber());
-        assertEquals("first stage", result.attempts().getLast().condition().description());
+        assertEquals("first stage", result.attempts().getLast().last().condition().description());
         assertTrue(currentThread().isInterrupted());
     }
 

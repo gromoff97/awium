@@ -103,7 +103,7 @@ class ContainerInterruptionTest {
             try {
                 var result = wait.apply(await(() -> actual));
                 var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
-                var attempt = result.attempts().getFirst();
+                var attempt = result.attempts().getFirst().last();
                 var condition = attempt.condition();
 
                 assertEquals(INTERRUPTED, failure.reason());

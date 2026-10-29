@@ -30,7 +30,7 @@ abstract sealed class AwaitSupport<OBSERVED> permits ValueAwait, DiagnosticAwait
     }
 
     final <VALUE> List<VALUE> complete(SequenceExecution<OBSERVED, VALUE> execution) {
-        var history = new AttemptHistory<OBSERVED>(0);
+        var history = new AttemptHistory<OBSERVED>(false);
         var outcome = new WaitEngine<>(configuration, source, execution).waitFor(history::add);
         complete(outcome, configuration, history.count());
         return execution.values();
@@ -55,7 +55,7 @@ abstract sealed class AwaitSupport<OBSERVED> permits ValueAwait, DiagnosticAwait
 
     private <VALUE, RESULT> AwaitResult<OBSERVED, RESULT> capture(
             SequenceExecution<OBSERVED, VALUE> execution, Function<List<VALUE>, RESULT> result) {
-        var history = new AttemptHistory<OBSERVED>(configuration.historyTail());
+        var history = new AttemptHistory<OBSERVED>(true);
         var outcome = new WaitEngine<>(configuration, source, execution).waitFor(history::add);
         var attempts = history.snapshot();
         if (outcome instanceof WaitCompletion.Satisfied) {

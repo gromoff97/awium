@@ -180,7 +180,7 @@ class PositiveFluentMatrixTest {
         var result = diagnostic(waiting).until(check);
         assertEquals(42, result.orThrow().intValue());
         assertSame(actual, result.orThrow());
-        assertSame(values, result.attempts().getFirst().observed());
+        assertSame(values, result.attempts().getFirst().last().observed());
         assertEquals(3, calls[0]);
         var observations = waiting.until(captured(nonEmpty, check));
         assertEquals(42, observations.getLast().getFirst().intValue());
@@ -204,7 +204,7 @@ class PositiveFluentMatrixTest {
         var result = diagnostic(waiting).until(check);
         assertEquals(42, result.orThrow().intValue());
         assertSame(actual, result.orThrow());
-        assertSame(values, result.attempts().getFirst().observed());
+        assertSame(values, result.attempts().getFirst().last().observed());
         var time = new FakeTime(0);
         var observations = diagnostic(waiting.usingTime(time, time).every(ofNanos(1)))
                 .until(captured(MapConditions.nonEmpty, check)).orThrow();

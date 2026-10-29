@@ -41,11 +41,6 @@ public final class DiagnosticMapAwait<OBSERVED extends Map<?, ?>, ENTRY extends 
     }
 
     @Override
-    public DiagnosticMapAwait<OBSERVED, ENTRY, VALUE> historyTail(int limit) {
-        return reconfigured(configuration.withHistoryTail(limit));
-    }
-
-    @Override
     public DiagnosticMapAwait<OBSERVED, ENTRY, VALUE> usingTime(LongSupplier clock, LongConsumer parker) {
         return reconfigured(configuration.withTime(clock, parker));
     }

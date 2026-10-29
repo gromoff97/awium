@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.result.HistoryEntry;
+import io.github.gromoff97.awium.result.AttemptGroup;
 import io.github.gromoff97.awium.result.AttemptStatus;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
@@ -25,7 +26,8 @@ class AwaitResultTest {
                 new HistoryEntry.Timing(Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ZERO),
                 diagnosticCondition("ready", null), null,
                 null, new AttemptStatus.Satisfied());
-        var mutable = new ArrayList<>(List.of(attempt));
+        var group = new AttemptGroup<>(1, 1, attempt, attempt);
+        var mutable = new ArrayList<>(List.of(group));
 
         var result = new AwaitResult.Satisfied<>(mutable, null);
         var failed = new AwaitResult.Failed<>(mutable,
@@ -33,8 +35,8 @@ class AwaitResultTest {
         mutable.clear();
 
         for (var outcome : List.of(result, failed)) {
-            assertEquals(List.of(attempt), outcome.attempts());
-            assertSame(attempt, outcome.attempts().getFirst());
+            assertEquals(List.of(group), outcome.attempts());
+            assertSame(group, outcome.attempts().getFirst());
             assertThrows(UnsupportedOperationException.class, () -> outcome.attempts().clear());
         }
         assertNull(result.result());

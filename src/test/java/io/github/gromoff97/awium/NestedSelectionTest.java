@@ -65,9 +65,9 @@ class NestedSelectionTest {
         var result = tryAwait(() -> List.of(pending)).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).until(captured(
                 singleElement(matches((Payment value) -> !value.paid())),
                 singleElement(matches(Payment::paid))));
-        var observation = evaluated(result.attempts().getLast());
+        var observation = evaluated(result.attempts().getLast().last());
         assertInstanceOf(AttemptStatus.Unsatisfied.class, observation.result());
-        var progress = result.attempts().getLast().progress();
+        var progress = result.attempts().getLast().last().progress();
         assertEquals(1, progress.capturedStages());
     }
 

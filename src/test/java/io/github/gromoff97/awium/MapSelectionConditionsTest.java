@@ -113,10 +113,13 @@ class MapSelectionConditionsTest {
                 .until(MapConditions.valueFor("key", check).because("the selected value must be ready"));
 
         assertEquals(2, result.orThrow());
-        assertEquals(5, result.attempts().size());
+        assertEquals(4, result.attempts().size());
         assertEquals(1, factories[0]);
         assertEquals(List.of(1, 2), checked);
-        var missing = result.attempts().get(2);
+        var missingGroup = result.attempts().get(1);
+        assertEquals(2, missingGroup.firstNumber());
+        assertEquals(3, missingGroup.lastNumber());
+        var missing = missingGroup.last();
         assertEquals(MapConditions.valueFor("key").description(), missing.condition().description());
         assertEquals("key", missing.condition().reference().value());
         assertEquals("the selected value must be ready", missing.condition().explanation());
@@ -147,7 +150,7 @@ class MapSelectionConditionsTest {
         assertEquals(5, result.attempts().size());
         assertEquals(1, factories[0]);
         assertEquals(List.of(1, 2), checked);
-        var structural = result.attempts().get(2);
+        var structural = result.attempts().get(2).last();
         assertEquals(MapConditions.singleEntry.description(), structural.condition().description());
         assertEquals("one ready entry required", structural.condition().explanation());
     }

@@ -41,7 +41,7 @@ class TryAwaitTest {
         BigDecimal selected = result.orThrow();
         assertSame(actual, selected);
         assertSame(selected, result.orThrow());
-        assertSame(actual, evaluated(result.attempts().getFirst()).observed());
+        assertSame(actual, evaluated(result.attempts().getFirst().last()).observed());
         assertEquals(1, reads[0]);
     }
 
@@ -56,9 +56,12 @@ class TryAwaitTest {
 
         assertEquals("boundary", result.orThrow());
         assertEquals(List.of(HistoryEntry.Phase.ACQUISITION,
-                        HistoryEntry.Phase.PERSISTENCE,
                         HistoryEntry.Phase.PERSISTENCE),
-                result.attempts().stream().map(HistoryEntry::phase).toList());
+                result.attempts().stream().map(group -> group.last()).map(HistoryEntry::phase).toList());
+        var persistence = result.attempts().getLast();
+        assertEquals(2, persistence.count());
+        assertEquals("persisting", persistence.first().observed());
+        assertEquals("boundary", persistence.last().observed());
     }
 
     @Test
@@ -71,7 +74,7 @@ class TryAwaitTest {
 
         assertNull(nullSource.orThrow());
         assertNull(nullPredicate.orThrow());
-        var observation = evaluated(nullSource.attempts().getFirst());
+        var observation = evaluated(nullSource.attempts().getFirst().last());
         assertInstanceOf(AttemptStatus.Satisfied.class, observation.result());
         assertNull(observation.observed());
         assertEquals("payment", selected.orThrow());

@@ -19,7 +19,6 @@ class WaitConfigTest {
         assertEquals(ofMillis(100).toNanos(), config.everyNanos());
         assertEquals(ofSeconds(10).toNanos(), config.upToNanos());
         assertEquals(0L, config.persistenceNanos());
-        assertEquals(256, config.historyTail());
     }
 
     @Test
@@ -68,13 +67,13 @@ class WaitConfigTest {
     void rawConfigurationCannotBypassDurationValidation() {
         assertEquals("polling interval must be positive",
                 assertThrows(IllegalArgumentException.class,
-                        () -> new WaitConfiguration(0, 1, 0, 256, DEFAULT.clock(), DEFAULT.parker())).getMessage());
+                        () -> new WaitConfiguration(0, 1, 0, DEFAULT.clock(), DEFAULT.parker())).getMessage());
         assertEquals("acquisition timeout must be positive",
                 assertThrows(IllegalArgumentException.class,
-                        () -> new WaitConfiguration(1, 0, 0, 256, DEFAULT.clock(), DEFAULT.parker())).getMessage());
+                        () -> new WaitConfiguration(1, 0, 0, DEFAULT.clock(), DEFAULT.parker())).getMessage());
         assertEquals("persistence duration must be non-negative",
                 assertThrows(IllegalArgumentException.class,
-                        () -> new WaitConfiguration(1, 2, -1, 256, DEFAULT.clock(), DEFAULT.parker())).getMessage());
+                        () -> new WaitConfiguration(1, 2, -1, DEFAULT.clock(), DEFAULT.parker())).getMessage());
     }
 
     @Test

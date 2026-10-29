@@ -38,7 +38,7 @@ public final class ArtifactConsumer {
         String text = await(ArtifactConsumer::text).until(StringConditions.contains("read"));
         String regex = await(ArtifactConsumer::text).until(matchesRegex("ready"));
         return new Object[]{optional, selected, length, narrowed, stages, preserved, captured,
-                mapped, entry, text, regex, observed(result.attempts().getFirst())};
+                mapped, entry, text, regex, observed(result.attempts().getFirst().last())};
     }
 
     private static String observed(HistoryEntry<Optional<String>> attempt) {

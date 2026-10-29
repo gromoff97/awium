@@ -47,8 +47,8 @@ class NestedQuantifierTest {
                 .until(all(OptionalConditions.present).because("each user is available"));
         assertEquals(AwaitFailure.Reason.TIMEOUT,
                 assertInstanceOf(AwaitResult.Failed.class, failed).failure().reason());
-        assertSame(mixed, failed.attempts().getFirst().observed());
-        assertEquals("each user is available", failed.attempts().getFirst().condition().explanation());
+        assertSame(mixed, failed.attempts().getFirst().last().observed());
+        assertEquals("each user is available", failed.attempts().getFirst().last().condition().explanation());
     }
 
     @Test

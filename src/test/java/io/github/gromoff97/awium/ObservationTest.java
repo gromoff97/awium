@@ -89,7 +89,7 @@ class ObservationTest {
                         return persistence == 0 ? unsatisfied("waiting") : satisfied();
                     }));
                     AwaitResult.Failed<?, ?> failure = assertInstanceOf(AwaitResult.Failed.class, result);
-                    var attempt = failure.attempts().getLast();
+                    var attempt = failure.attempts().getLast().last();
                     var outcome = uncontrolled(AttemptStatus.Operation.WAITING, attempt.result());
                     assertNull(attempt.timing().retrievalOffset());
                     assertNull(attempt.timing().observationOffset());
@@ -190,11 +190,11 @@ class ObservationTest {
         assertSame(failure, assertThrows(AwaitExecutionException.class, () -> waiting.until(check)).getCause());
         assertFalse(currentThread().isInterrupted());
 
-        var outcome = uncontrolled(AttemptStatus.Operation.SOURCE, result.attempts().getFirst().result());
+        var outcome = uncontrolled(AttemptStatus.Operation.SOURCE, result.attempts().getFirst().last().result());
         assertSame(failure, outcome.cause());
-        assertSame(check, result.attempts().getFirst().condition());
-        assertNull(result.attempts().getFirst().progress());
-        var timing = result.attempts().getFirst().timing();
+        assertSame(check, result.attempts().getFirst().last().condition());
+        assertNull(result.attempts().getFirst().last().progress());
+        var timing = result.attempts().getFirst().last().timing();
         assertEquals(Duration.ZERO, timing.startOffset());
         assertEquals(Duration.ZERO, timing.retrievalOffset());
         assertNull(timing.observationOffset());
@@ -233,7 +233,7 @@ class ObservationTest {
                 AwaitResult.Failed<?, ?> result = assertInstanceOf(AwaitResult.Failed.class, wait.get());
                 assertEquals(AwaitFailure.Reason.CONDITION_FAILED, result.failure().reason());
                 assertSame(cause, result.failure().cause());
-                var attempt = uncontrolled(AttemptStatus.Operation.CONDITION, result.attempts().getLast().result());
+                var attempt = uncontrolled(AttemptStatus.Operation.CONDITION, result.attempts().getLast().last().result());
                 assertSame(cause, attempt.cause());
             }
         }
@@ -398,7 +398,7 @@ class ObservationTest {
                             var result = diagnostic(waiting).until(check);
                             failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
                             assertEquals(interruptedAttempt, result.attempts().size());
-                            uncontrolled(AttemptStatus.Operation.CONDITION, result.attempts().getLast().result());
+                            uncontrolled(AttemptStatus.Operation.CONDITION, result.attempts().getLast().last().result());
                         } else {
                             failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(check)).failure();
                         }

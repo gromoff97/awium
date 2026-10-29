@@ -162,8 +162,8 @@ class CheckedCallbackTest {
             assertSame(cause, failure.failure().cause());
             assertTrue(failure.failure().message().contains("checked receipt"));
         }
-        uncontrolled(AttemptStatus.Operation.CONDITION, sequence.attempts().getLast().result());
-        var progress = sequence.attempts().getLast().progress();
+        uncontrolled(AttemptStatus.Operation.CONDITION, sequence.attempts().getLast().last().result());
+        var progress = sequence.attempts().getLast().last().progress();
         assertEquals(1, progress.capturedStages());
         assertEquals(2, progress.stageNumber());
     }

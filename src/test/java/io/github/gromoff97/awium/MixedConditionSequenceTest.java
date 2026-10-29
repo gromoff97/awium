@@ -48,8 +48,8 @@ class MixedConditionSequenceTest {
         assertSame(collections.getLast(), collection.orThrow().getLast());
         assertEquals(3, collection.orThrow().getLast().getFirst().stage());
         assertEquals(3, collection.attempts().size());
-        assertSame(collections.get(1), collection.attempts().get(1).observed());
-        assertInstanceOf(AttemptStatus.Unsatisfied.class, collection.attempts().get(1).result());
+        assertSame(collections.get(1), collection.attempts().get(1).last().observed());
+        assertInstanceOf(AttemptStatus.Unsatisfied.class, collection.attempts().get(1).last().result());
         assertFalse(collectionSource.hasNext());
 
         var maps = List.of(Map.of("user", CREATED), Map.of("user", PENDING), Map.of("user", READY));
@@ -61,7 +61,7 @@ class MixedConditionSequenceTest {
         assertSame(maps.getLast(), map.orThrow().getLast());
         assertEquals(3, map.orThrow().getLast().get("user").stage());
         assertEquals(3, map.attempts().size());
-        var retry = map.attempts().get(1);
+        var retry = map.attempts().get(1).last();
         assertSame(maps.get(1), retry.observed());
         assertEquals("ready", retry.condition().explanation());
         assertEquals(1, retry.progress().capturedStages());
@@ -135,7 +135,7 @@ class MixedConditionSequenceTest {
                             .until(captured(equalTo(CREATED), matches(User::ready)));
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
-            var attempt = result.attempts().getLast();
+            var attempt = result.attempts().getLast().last();
             assertEquals(1, attempt.progress().capturedStages());
             assertEquals(2, attempt.progress().stageNumber());
             if (comparisonLast) assertSame(READY, attempt.condition().reference().value());

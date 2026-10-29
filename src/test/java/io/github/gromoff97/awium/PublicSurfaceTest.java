@@ -67,22 +67,14 @@ class PublicSurfaceTest {
     }
 
     @Test
-    void entryPointDeterminesWhetherHistoryCanBeConfigured() throws NoSuchMethodException {
-        var settings = Set.of("every", "upTo", "persisting", "usingTime", "historyTail");
-        for (var stage : List.<Class<?>>of(ValueAwait.class, SelectionAwait.class, MapAwait.class)) {
+    void bothEntryPointsExposeOnlySharedTimingSettings() {
+        var settings = Set.of("every", "upTo", "persisting", "usingTime");
+        for (var stage : List.<Class<?>>of(ValueAwait.class, SelectionAwait.class, MapAwait.class,
+                DiagnosticAwait.class, DiagnosticSelectionAwait.class, DiagnosticMapAwait.class)) {
             for (var method : stage.getMethods()) {
                 assertFalse(method.getName().equals("historyTail"), method.toGenericString());
-                if (settings.contains(method.getName())) {
-                    assertTrue(stream(method.getReturnType().getMethods()).noneMatch(next ->
-                            next.getName().equals("historyTail")), method.toGenericString());
-                }
-            }
-        }
-        for (var stage : List.<Class<?>>of(DiagnosticAwait.class, DiagnosticSelectionAwait.class, DiagnosticMapAwait.class)) {
-            assertTrue(DiagnosticAwait.class.isAssignableFrom(stage.getMethod("historyTail", int.class).getReturnType()));
-            for (var method : stage.getMethods()) {
-                if (settings.contains(method.getName())) {
-                    assertTrue(DiagnosticAwait.class.isAssignableFrom(method.getReturnType()), method.toGenericString());
+                if (settings.contains(method.getName()) && !method.isBridge()) {
+                    assertTrue(stage.isAssignableFrom(method.getReturnType()), method.toGenericString());
                 }
             }
         }

@@ -18,20 +18,26 @@ public abstract sealed class Condition
     private final String description;
     private final String explanation;
     private final Reference<?> reference;
+    final Condition identity;
 
     Condition(Condition original) {
-        this(required(original).description, original.reference, original.explanation);
+        this(required(original).description, original.reference, original.explanation, original.identity);
     }
 
     Condition(Condition original, String explanation) {
         this(required(original).description, original.reference,
-                nonBlank(explanation, "explanation"));
+                nonBlank(explanation, "explanation"), original.identity);
     }
 
     private Condition(String description, Reference<?> reference, String explanation) {
+        this(description, reference, explanation, null);
+    }
+
+    private Condition(String description, Reference<?> reference, String explanation, Condition identity) {
         this.description = nonBlank(description, "description");
         this.explanation = explanation;
         this.reference = reference;
+        this.identity = identity == null ? this : identity;
     }
 
     public final String description() {

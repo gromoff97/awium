@@ -98,7 +98,7 @@ class ObjectAndOptionalAwaitTest {
 
             var failed = diagnostic(waiting).until(in(List.of()));
             assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, failed).failure().reason());
-            assertEquals(List.of(), failed.attempts().getLast().condition().reference().value());
+            assertEquals(List.of(), failed.attempts().getLast().last().condition().reference().value());
             assertFailure(TIMEOUT, () -> waiting.until(in(List.of())));
         }
     }

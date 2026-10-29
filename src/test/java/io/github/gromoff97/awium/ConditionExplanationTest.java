@@ -94,7 +94,7 @@ class ConditionExplanationTest {
             var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
             assertTrue(failure.message().contains("Because: entry requirement"), failure.message());
-            assertEquals("entry requirement", result.attempts().getLast().condition().explanation());
+            assertEquals("entry requirement", result.attempts().getLast().last().condition().explanation());
         }
     }
 
@@ -117,7 +117,7 @@ class ConditionExplanationTest {
         assertTrue(failure.message().contains("Because: checkout lifecycle"), failure.message());
         assertTrue(failure.message().contains("Mismatch: value was not equal"), failure.message());
         assertFalse(failure.message().contains("payment must be created"), failure.message());
-        assertEquals(second.explanation(), result.attempts().getLast().condition().explanation());
+        assertEquals(second.explanation(), result.attempts().getLast().last().condition().explanation());
     }
 
     @Test
@@ -148,7 +148,7 @@ class ConditionExplanationTest {
                 for (var result : results) {
                     var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
                     assertTrue(failure.message().contains("Because: " + expected), failure.message());
-                    assertEquals(expected, result.attempts().getLast().condition().explanation());
+                    assertEquals(expected, result.attempts().getLast().last().condition().explanation());
                     if (override) assertFalse(failure.message().contains("inner reason"), failure.message());
                 }
             }

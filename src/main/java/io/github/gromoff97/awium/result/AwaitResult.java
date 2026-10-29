@@ -13,11 +13,11 @@ import static java.util.Objects.requireNonNull;
 public sealed interface AwaitResult<OBSERVED, RESULT> {
 
     /**
-     * Returns the retained attempts as an immutable list in chronological order.
-     * The default retains the latest 256 attempts; -1 retains all attempts.
+     * Returns an immutable chronological list of consecutive diagnostic groups.
+     * No groups are discarded. Repetitions retain their first and last invocations.
      * Observed values are retained by reference and may change after a check.
      */
-    List<HistoryEntry<OBSERVED>> attempts();
+    List<AttemptGroup<OBSERVED>> attempts();
 
     /**
      * Returns the successful value, including {@code null}, or throws the same kind of failure
@@ -40,7 +40,7 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
         };
     }
 
-    record Satisfied<OBSERVED, RESULT>(List<HistoryEntry<OBSERVED>> attempts,
+    record Satisfied<OBSERVED, RESULT>(List<AttemptGroup<OBSERVED>> attempts,
             RESULT result) implements AwaitResult<OBSERVED, RESULT> {
 
         public Satisfied {
@@ -48,7 +48,7 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
         }
     }
 
-    record Failed<OBSERVED, RESULT>(List<HistoryEntry<OBSERVED>> attempts,
+    record Failed<OBSERVED, RESULT>(List<AttemptGroup<OBSERVED>> attempts,
             AwaitFailure failure) implements AwaitResult<OBSERVED, RESULT> {
 
         public Failed {

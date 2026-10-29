@@ -1,36 +1,73 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.AttemptGroup;
+import io.github.gromoff97.awium.result.AttemptStatus;
 import io.github.gromoff97.awium.result.HistoryEntry;
-import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
-/** Counts attempts and retains the latest ones; zero counts only, and -1 retains all. */
+import static java.util.Objects.requireNonNull;
+
+/** Assigns attempt numbers and optionally groups consecutive diagnostic repetitions. */
 final class AttemptHistory<OBSERVED> {
 
-    private final int limit;
-    private final ArrayDeque<HistoryEntry<OBSERVED>> attempts = new ArrayDeque<>();
+    private final List<AttemptGroup<OBSERVED>> completed;
     private long count;
+    private long firstNumber;
+    private HistoryEntry<OBSERVED> first;
+    private HistoryEntry<OBSERVED> last;
 
-    AttemptHistory(int limit) {
-        if (limit < -1) {
-            throw new IllegalArgumentException("history limit must be non-negative or -1");
-        }
-        this.limit = limit;
+    AttemptHistory(boolean recording) {
+        completed = recording ? new ArrayList<>() : null;
     }
 
     void add(HistoryEntry<OBSERVED> attempt) {
-        attempts.addLast(attempt);
+        requireNonNull(attempt, "attempt must not be null");
         count++;
-        if (limit != -1 && attempts.size() > limit) {
-            attempts.removeFirst();
+        if (completed == null) return;
+        if (last == null || !sameDiagnostic(last, attempt)) {
+            if (last != null) completed.add(new AttemptGroup<>(firstNumber, count - 1, first, last));
+            firstNumber = count;
+            first = attempt;
         }
+        last = attempt;
     }
 
     long count() {
         return count;
     }
 
-    List<HistoryEntry<OBSERVED>> snapshot() {
-        return List.copyOf(attempts);
+    List<AttemptGroup<OBSERVED>> snapshot() {
+        if (last == null) return List.of();
+        var groups = new ArrayList<>(completed);
+        groups.add(new AttemptGroup<>(firstNumber, count, first, last));
+        return List.copyOf(groups);
     }
+
+    private static boolean sameDiagnostic(HistoryEntry<?> previous, HistoryEntry<?> next) {
+        return previous.phase() == next.phase()
+                && previous.hasObservation() == next.hasObservation()
+                && previous.result().cause() == next.result().cause()
+                && Objects.equals(previous.progress(), next.progress())
+                && sameCondition(previous.condition(), next.condition())
+                && sameStatus(previous.result(), next.result());
+    }
+
+    private static boolean sameCondition(Condition previous, Condition next) {
+        if (previous == next) return true;
+        return previous.identity == next.identity
+                && Objects.equals(previous.explanation(), next.explanation());
+    }
+
+    private static boolean sameStatus(AttemptStatus previous, AttemptStatus next) {
+        return switch (previous) {
+            case AttemptStatus.Satisfied ignored -> next instanceof AttemptStatus.Satisfied;
+            case AttemptStatus.Unsatisfied first -> next instanceof AttemptStatus.Unsatisfied last
+                    && Objects.equals(first.mismatch(), last.mismatch());
+            case AttemptStatus.Uncontrolled first -> next instanceof AttemptStatus.Uncontrolled last
+                    && first.operation() == last.operation();
+        };
+    }
+
 }

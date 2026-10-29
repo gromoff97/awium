@@ -50,8 +50,8 @@ class TimingConfigurationTest {
 
                 assertEquals(2, calls[0], outcome);
                 assertEquals(2, result.attempts().size(), outcome);
-                assertEquals(acquiredAfter, result.attempts().getFirst().timing().completionOffset(), outcome);
-                var last = result.attempts().getLast();
+                assertEquals(acquiredAfter, result.attempts().getFirst().last().timing().completionOffset(), outcome);
+                var last = result.attempts().getLast().last();
                 var elapsed = acquiredAfter.plusNanos(persistence);
                 assertEquals(HistoryEntry.Phase.PERSISTENCE, last.phase(), outcome);
                 assertEquals(acquiredAfter, last.timing().startOffset(), outcome);
@@ -137,8 +137,8 @@ class TimingConfigurationTest {
         assertEquals("ready", result.orThrow());
         assertEquals(2, factories[0]);
         assertEquals(2, result.attempts().size());
-        assertEquals(ofNanos(0), result.attempts().getFirst().timing().startOffset());
-        assertEquals(ofNanos(2), result.attempts().getLast().timing().completionOffset());
+        assertEquals(ofNanos(0), result.attempts().getFirst().last().timing().startOffset());
+        assertEquals(ofNanos(2), result.attempts().getLast().last().timing().completionOffset());
     }
 
     @Test

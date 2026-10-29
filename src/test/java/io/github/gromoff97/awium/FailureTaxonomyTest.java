@@ -96,7 +96,8 @@ class FailureTaxonomyTest {
                 assertEquals(reason, captured.reason());
                 assertSame(original, captured.cause());
                 assertEquals(List.of(rendering), captured.suppressed());
-                var report = new AwaitResult.Failed<Object, String>(List.of(attempt), captured);
+                var report = new AwaitResult.Failed<Object, String>(
+                        List.of(new io.github.gromoff97.awium.result.AttemptGroup<>(1, 1, attempt, attempt)), captured);
                 var reported = assertFailure(reason, report::orThrow);
                 assertSame(captured, reported instanceof AwaitAssertionError assertion
                         ? assertion.failure() : ((AwaitExecutionException) reported).failure());

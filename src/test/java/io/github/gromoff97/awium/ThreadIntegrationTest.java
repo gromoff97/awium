@@ -100,7 +100,7 @@ class ThreadIntegrationTest {
                 assertTrue(caller.isVirtual());
                 assertEquals(2, result.attempts().size());
                 for (var attempt : result.attempts()) {
-                    assertSame(caller, evaluated(attempt).observed());
+                    assertSame(caller, evaluated(attempt.last()).observed());
                 }
                 resultThreads.add(caller);
             }

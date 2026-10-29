@@ -731,7 +731,7 @@ inspect the retained attempts, their outcomes, timing, and sequence progress.
 
 Start with `tryAwait(source)` and finish with `until(condition)` to return an
 `AwaitResult<OBSERVED, RESULT>` for both success and failure. Timing settings
-work just as they do with `await(source)`; only `tryAwait` offers `historyTail`.
+work just as they do with `await(source)`. History is grouped automatically, with no tail limit to configure.
 `OBSERVED` is the complete source value and `RESULT` is the final result.
 For example, selecting `present` from an optional gives
 `AwaitResult<Optional<Payment>, Payment>`. Capturing those selections in order
@@ -768,9 +768,27 @@ switch (result) {
 }
 ```
 
-Both results expose `attempts()`, an immutable `List<HistoryEntry<OBSERVED>>` in
-chronological order. For example, `result.attempts().getLast()` returns the
-latest attempt, and `result.attempts().size()` is the number of retained attempts.
+Both results expose `attempts()`, an immutable `List<AttemptGroup<OBSERVED>>` in
+chronological order. A group represents consecutive attempts with the same check,
+phase, sequence progress, status, mismatch message, and exception instance.
+Every change starts a new group. If an earlier outcome returns later, it starts
+another group in its chronological position.
+
+Each group exposes `firstNumber()` and `lastNumber()` (one-based, inclusive),
+`count()`, and its `first()` and `last()` invocations as `HistoryEntry<OBSERVED>`.
+A group with one invocation uses the same record at both ends. For example,
+`result.attempts().getLast().last()` returns the final invocation;
+`result.attempts().size()` counts diagnostic groups, not polling invocations.
+
+```java
+for (var group : result.attempts()) {
+    System.out.printf("Attempts %d–%d: %s%n",
+            group.firstNumber(), group.lastNumber(), group.last().result());
+    var firstObservation = group.first().observed();
+    var lastObservation = group.last().observed();
+}
+```
+
 Each record has an acquisition or persistence `phase()`,
 the associated `condition()`, sequence `progress()`, `observed()`, and `result()`.
 For a capture sequence, progress holds its immutable `sequence()` definition,
@@ -810,21 +828,28 @@ terminal call. `startOffset()` marks the attempt's start before waiting;
 its successful return, and `completionOffset()` the end of the attempt. A
 retrieval or observation offset is `null` if that checkpoint was not reached.
 
-History defaults to the latest 256 records, including the terminal attempt.
-Use `tryAwait(source).historyTail(1000).until(condition)` to retain the latest
-1000 records, or `.historyTail(-1)` to retain every record without truncation.
-Zero and values below -1 are rejected. For example, after five attempts,
-`.historyTail(2)` keeps attempts 4 and 5. Timing and history settings may appear
-in any order. The tail size does not stop polling or truncate captured stage observations.
-Repeated observations remain separate records.
-The history counts attempts separately from the records, so failure messages
-keep the absolute attempt number even when older records are discarded.
+History never discards earlier groups. For example, 999 consecutive `matches`
+failures followed by success produce two groups: attempts 1–999 and attempt 1000.
+Only the first and last observations of the repeated failures are retained.
+The predicate still runs 1000 times; grouping does not change polling or the
+observations returned by `captured`.
+
+Grouping describes repeated diagnostics, not equality of source values. Actual
+objects may change between the boundaries without creating a new group. Awium
+does not call their `equals`, `hashCode`, or `toString` to group them. It also does
+not inspect exception messages or stack traces: every new exception instance
+starts a separate group, even if its message matches an earlier exception.
+Repeated invocations with the same exception instance can share a group.
+
+Storage grows with diagnostic transitions and distinct errors, rather than with
+every repeated outcome. If every attempt has a different mismatch or a new error,
+each is retained. Grouping therefore has no fixed memory bound. Failure messages
+still identify the absolute attempt number.
 Captured stage lists and the attempt list are immutable. Observed objects retain
 their original references; Awium does not copy or freeze them. If a source returns
 the same mutable object repeatedly, changing it is visible through earlier
 attempts too. Their recorded satisfaction statuses remain those of the original
-checks. This also applies to `matches(predicate)`: history records each predicate
-outcome, but does not capture the fields read by the predicate.
+checks. This also applies to `matches(predicate)`: history groups its outcomes, but does not capture the fields read by the predicate.
 
 ## Threading and interruption
 
@@ -911,7 +936,9 @@ observation, status, timing, and sequence progress, without exposing an executab
 `MapAwait<OBSERVED, ENTRY, VALUE>` also supports map-value selection. The corresponding
 `DiagnosticAwait`, `DiagnosticSelectionAwait`, and `DiagnosticMapAwait` classes
 return diagnostic results. `AwaitSupport` shares execution and result handling.
-`AttemptHistory` counts attempts and retains the configured history tail.
+`AttemptHistory` numbers invocations and groups consecutive diagnostic repetitions,
+retaining their first and last records as immutable `AttemptGroup` values.
+Ordinary waits use its counting-only mode without retaining or comparing records.
 `WaitEngine` schedules polling and persistence. Each wait creates an internal
 `AttemptExecution` that retrieves source values, calls the selected attempt,
 and records a `HistoryEntry` with its timing and diagnostics. Selected values and stage

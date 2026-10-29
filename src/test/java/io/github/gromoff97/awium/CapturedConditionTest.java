@@ -66,8 +66,8 @@ class CapturedConditionTest {
         List<List<Payment>> captured = result.orThrow();
         assertEquals(values, captured);
         assertSame(captured, result.orThrow());
-        assertEquals(observations, result.attempts().stream().map(HistoryEntry::observed).toList());
-        assertTrue(result.attempts().stream().allMatch(attempt -> attempt.result() instanceof AttemptStatus.Satisfied));
+        assertEquals(observations, result.attempts().stream().map(group -> group.last()).map(HistoryEntry::observed).toList());
+        assertTrue(result.attempts().stream().map(group -> group.last()).allMatch(attempt -> attempt.result() instanceof AttemptStatus.Satisfied));
         assertEquals(6, reads[0]);
     }
 
@@ -143,7 +143,7 @@ class CapturedConditionTest {
             try {
                 if (interrupted) Thread.currentThread().interrupt();
                 var result = tryAwait(source).until(sequence);
-                var attempt = result.attempts().getFirst();
+                var attempt = result.attempts().getFirst().last();
                 var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
 
                 assertEquals(1, result.attempts().size());
@@ -190,14 +190,14 @@ class CapturedConditionTest {
                     if (capture) {
                         var result = diagnostic(waiting).until(captured(first, second));
                         failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
-                        var attempt = result.attempts().getLast();
+                        var attempt = result.attempts().getLast().last();
                         var progress = attempt.progress();
                         assertEquals(phase, attempt.phase());
                         assertEquals(completedStages, progress.capturedStages());
                         assertEquals(2, progress.stageNumber());
                         assertSame(second, attempt.condition());
-                        assertSame(result.attempts().getFirst().progress().sequence(), progress.sequence());
-                        assertSame(first, result.attempts().getFirst().condition());
+                        assertSame(result.attempts().getFirst().last().progress().sequence(), progress.sequence());
+                        assertSame(first, result.attempts().getFirst().last().condition());
                     } else {
                         failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(captured(first, second))).failure();
                     }
@@ -230,16 +230,16 @@ class CapturedConditionTest {
                     var second = Conditions.equalTo("done");
                     var result = diagnostic(waiting).until(captured(first, second));
                     var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
-                    var attempt = result.attempts().getLast();
+                    var attempt = result.attempts().getLast().last();
                     assertEquals(INTERRUPTED, failure.reason());
                     assertEquals(phase, attempt.phase());
                     assertEquals(completedStages, attempt.progress().capturedStages());
                     assertEquals(2, attempt.progress().stageNumber());
                     assertSame(second, attempt.condition());
-                    assertSame(result.attempts().getFirst().progress().sequence(), attempt.progress().sequence());
+                    assertSame(result.attempts().getFirst().last().progress().sequence(), attempt.progress().sequence());
                     assertTrue(failure.message().contains("Sequence (captured " + completedStages + " of 2)"));
                     assertTrue(failure.message().contains("Stage: 2 of 2"), failure.message());
-                    assertEquals(1, result.attempts().getFirst().progress().capturedStages());
+                    assertEquals(1, result.attempts().getFirst().last().progress().capturedStages());
                     assertTrue(Thread.currentThread().isInterrupted());
                 } finally {
                     Thread.interrupted();
@@ -267,8 +267,8 @@ class CapturedConditionTest {
         assertSame(second, values.getLast());
         assertEquals(values, attempt.orThrow());
         assertEquals(4, attempt.attempts().size());
-        assertInstanceOf(AttemptStatus.Satisfied.class, attempt.attempts().get(1).result());
-        assertSame(first, attempt.attempts().get(1).observed());
+        assertInstanceOf(AttemptStatus.Satisfied.class, attempt.attempts().get(1).last().result());
+        assertSame(first, attempt.attempts().get(1).last().observed());
         assertEquals(8, reads[0]);
         assertThrows(UnsupportedOperationException.class, values::clear);
     }
@@ -320,10 +320,10 @@ class CapturedConditionTest {
         assertEquals(values, attempt.orThrow());
         assertEquals(3, attempt.attempts().size());
         assertEquals(6, reads[0]);
-        var acquisition = evaluated(attempt.attempts().get(1));
+        var acquisition = evaluated(attempt.attempts().get(1).last());
         assertInstanceOf(AttemptStatus.Satisfied.class, acquisition.result());
         assertSame(acquired, acquisition.observed().get("last"));
-        var firstAttempt = evaluated(attempt.attempts().getFirst());
+        var firstAttempt = evaluated(attempt.attempts().getFirst().last());
         assertInstanceOf(AttemptStatus.Satisfied.class, firstAttempt.result());
         assertSame(first, firstAttempt.observed());
         assertThrows(UnsupportedOperationException.class, values::clear);
@@ -373,16 +373,16 @@ class CapturedConditionTest {
         var values = result.orThrow();
         assertSame(observations.getFirst(), values.get(0));
         assertSame(observations.getLast(), values.get(1));
-        var earlier = evaluated(result.attempts().get(1));
+        var earlier = evaluated(result.attempts().get(1).last());
         assertInstanceOf(AttemptStatus.Satisfied.class, earlier.result());
         assertSame(acquired, earlier.observed().getLast());
-        var firstAttempt = evaluated(result.attempts().getFirst());
+        var firstAttempt = evaluated(result.attempts().getFirst().last());
         assertInstanceOf(AttemptStatus.Satisfied.class, firstAttempt.result());
         assertSame(first, firstAttempt.observed().getFirst());
         assertThrows(UnsupportedOperationException.class, values::clear);
         assertEquals(3, reads[0]);
         assertEquals(List.of(HistoryEntry.Phase.ACQUISITION, HistoryEntry.Phase.ACQUISITION, HistoryEntry.Phase.PERSISTENCE),
-                result.attempts().stream().map(HistoryEntry::phase).toList());
+                result.attempts().stream().map(group -> group.last()).map(HistoryEntry::phase).toList());
     }
 
     @Test
@@ -395,7 +395,7 @@ class CapturedConditionTest {
         var sequence = captured(first, second, third).because("lifecycle");
         var result = tryAwait(source::next).usingTime(time, time).every(ofNanos(1)).until(sequence);
 
-        List<HistoryEntry<String>> attempts = result.attempts();
+        var attempts = result.attempts().stream().map(group -> group.last()).toList();
         assertEquals(4, result.attempts().size());
         assertEquals(List.of(1, 2, 2, 3), attempts.stream().map(attempt -> attempt.progress().stageNumber()).toList());
         assertEquals(List.of(1, 1, 2, 3), attempts.stream().map(attempt -> attempt.progress().capturedStages()).toList());
@@ -444,8 +444,8 @@ class CapturedConditionTest {
                         if (capture) {
                             var result = diagnostic(waiting).until(captured(first, second));
                             failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
-                            uncontrolled(AttemptStatus.Operation.CONDITION, result.attempts().getLast().result());
-                            var progress = result.attempts().getLast().progress();
+                            uncontrolled(AttemptStatus.Operation.CONDITION, result.attempts().getLast().last().result());
+                            var progress = result.attempts().getLast().last().progress();
                             assertEquals(stage - 1, progress.capturedStages());
                             assertEquals(stage, progress.stageNumber());
                         } else {
@@ -511,10 +511,10 @@ class CapturedConditionTest {
             return "observed";
         }, config(1, 2, 0), time, time).until(captured(matches(value -> true), matches(value -> true)));
         var outcome = assertInstanceOf(AttemptStatus.Satisfied.class,
-                evaluated(result.attempts().getFirst()).result());
+                evaluated(result.attempts().getFirst().last()).result());
 
-        assertEquals("observed", result.attempts().getFirst().observed());
-        assertEquals(1, result.attempts().getFirst().progress().stageNumber());
+        assertEquals("observed", result.attempts().getFirst().last().observed());
+        assertEquals(1, result.attempts().getFirst().last().progress().stageNumber());
         var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
         assertEquals(TIMEOUT, failure.reason());
         assertTrue(failure.message().contains("Next stage: 2 of 2"), failure.message());

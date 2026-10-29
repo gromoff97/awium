@@ -38,11 +38,6 @@ public sealed class DiagnosticSelectionAwait<OBSERVED, ELEMENT> extends Diagnost
     }
 
     @Override
-    public DiagnosticSelectionAwait<OBSERVED, ELEMENT> historyTail(int limit) {
-        return reconfigured(configuration.withHistoryTail(limit));
-    }
-
-    @Override
     public DiagnosticSelectionAwait<OBSERVED, ELEMENT> usingTime(LongSupplier clock, LongConsumer parker) {
         return reconfigured(configuration.withTime(clock, parker));
     }
