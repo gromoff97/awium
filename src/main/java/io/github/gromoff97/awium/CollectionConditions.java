@@ -27,6 +27,7 @@ import static io.github.gromoff97.awium.ConditionSupport.snapshot;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
 import static io.github.gromoff97.awium.ValueMatching.containingAll;
+import static io.github.gromoff97.awium.ValueMatching.containingNone;
 import static io.github.gromoff97.awium.ValueMatching.exactly;
 import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
@@ -168,8 +169,7 @@ public final class CollectionConditions {
     /** Rejects every unexpected element; an empty unexpected iterable matches any non-null collection. */
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainAny(Iterable<? extends ELEMENT> unexpected) {
         var values = snapshot(unexpected, "unexpected elements");
-        return preserving("collection does not contain any unexpected elements", "collection contained an unexpected element", unexpectedReference(values),
-                actual -> !ValueMatching.containsAny(actual, values, Objects::deepEquals));
+        return containingNone("collection", "elements", values, actual -> actual, Objects::deepEquals);
     }
 
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> doesNotContainAll(Iterable<? extends ELEMENT> unexpected) {
@@ -181,7 +181,7 @@ public final class CollectionConditions {
     public static <ELEMENT> PreservingCondition<Collection<? super ELEMENT>> containsAny(Iterable<? extends ELEMENT> expected) {
         var values = snapshot(expected, "expected elements");
         return preserving("collection contains an expected element", "collection did not contain an expected element", expectedReference(values),
-                actual -> ValueMatching.containsAny(actual, values, Objects::deepEquals));
+                actual -> ValueMatching.firstPresent(actual, values, Objects::deepEquals) >= 0);
     }
 
     public static <ELEMENT> PreservingCondition<SequencedCollection<? super ELEMENT>> containsExactly(Iterable<? extends ELEMENT> expected) {

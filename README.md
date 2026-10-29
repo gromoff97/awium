@@ -791,7 +791,9 @@ report the actual size, type checks report the actual class or null, and `sorted
 reports the first out-of-order pair's zero-based indices. `hasNoDuplicates` reports
 the first duplicate's zero-based iteration index. `containsAll`, `containsAllKeys`,
 `containsAllValues`, and `containsAllEntries` report the first missing operand's
-zero-based index in the expected iteration order. Quantifier failures retain their
+zero-based index in the expected iteration order. `doesNotContainAny` and its map
+key, value, and entry counterparts report the first forbidden operand still present,
+using its zero-based index in the unexpected iteration order. Quantifier failures retain their
 checked-candidate count. These facts stay unchanged when an observed object
 is later modified; no extra predicate, equality, or comparator calls are made to collect them.
 

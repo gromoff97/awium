@@ -69,7 +69,7 @@ class BuiltInConditionGrammarTest {
         assertEquals("map does not contain all unexpected entries",
                 doesNotContainAllEntries(Map.of("key", "value")).description());
         assertEquals("map contains an expected entry", containsAnyEntries(Map.of("key", "value")).description());
-        assertEquals("map does not contain an unexpected entry",
+        assertEquals("map does not contain any unexpected entries",
                 doesNotContainAnyEntries(Map.of("key", "value")).description());
         assertEquals("map contains exactly the expected entries",
                 containsExactlyEntries(Map.of("key", "value")).description());

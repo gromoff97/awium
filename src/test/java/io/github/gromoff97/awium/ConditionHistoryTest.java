@@ -224,6 +224,60 @@ class ConditionHistoryTest {
         }
     }
 
+    @Test
+    void absenceRetainsTheFirstRemainingForbiddenPositionWithoutExtraTraversal() {
+        var forbidden = List.of(1, 2, 3);
+        var values = new ArrayList<>(forbidden);
+        var actual = new ProbeContainers.MembershipCollection<>(values);
+        var time = new FakeTime(0);
+        int[] calls = {0};
+        var result = tryAwait(() -> {
+            switch (++calls[0]) {
+                case 1 -> { return null; }
+                case 3, 5, 6 -> values.removeFirst();
+                default -> {}
+            }
+            return actual;
+        }).usingTime(time, time).every(ofNanos(1)).until(CollectionConditions.doesNotContainAny(forbidden));
+
+        assertSame(actual, result.orThrow());
+        assertEquals(6, calls[0]);
+        assertEquals(11, actual.iteratorCalls);
+        assertEquals(List.of(1L, 1L, 2L, 1L, 1L), result.attempts().stream().map(group -> group.count()).toList());
+        assertEquals(List.of("collection was null",
+                "collection contained unexpected elements; first at unexpected index 0",
+                "collection contained unexpected elements; first at unexpected index 1",
+                "collection contained unexpected elements; first at unexpected index 2"), mismatches(result));
+    }
+
+    @Test
+    void mapAbsenceRetainsRemainingKeyValueAndEntryPositions() {
+        var forbidden = new LinkedHashMap<String, String>();
+        forbidden.put("first", "one");
+        forbidden.put("second", "two");
+        var keys = new ArrayList<>(forbidden.keySet());
+        for (String elements : List.of("keys", "values", "entries")) {
+            Condition.PreservingCondition<? super Map<String, String>> condition = switch (elements) {
+                case "keys" -> MapConditions.doesNotContainAnyKeys(forbidden.keySet());
+                case "values" -> MapConditions.doesNotContainAnyValues(forbidden.values());
+                default -> MapConditions.doesNotContainAnyEntries(forbidden);
+            };
+            var time = new FakeTime(0);
+            var values = new LinkedHashMap<>(forbidden);
+            int[] calls = {0};
+            var result = tryAwait(() -> {
+                if (calls[0] > 0) values.remove(keys.get(calls[0] - 1));
+                calls[0]++;
+                return values;
+            }).usingTime(time, time).every(ofNanos(1)).until(condition);
+
+            assertSame(values, result.orThrow());
+            assertEquals(3, calls[0]);
+            assertEquals(List.of("map contained unexpected " + elements + "; first at unexpected index 0",
+                    "map contained unexpected " + elements + "; first at unexpected index 1"), mismatches(result));
+        }
+    }
+
     private static List<String> mismatches(AwaitResult<?, ?> result) {
         var mismatches = new ArrayList<String>();
         for (var group : result.attempts()) {
