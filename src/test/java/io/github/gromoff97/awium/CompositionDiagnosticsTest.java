@@ -3,9 +3,14 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.result.AttemptStatus;
 import io.github.gromoff97.awium.result.AwaitResult;
+import java.util.AbstractCollection;
+import java.util.AbstractMap;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.tryAwait;
@@ -25,6 +30,115 @@ import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CompositionDiagnosticsTest {
+
+    @Test
+    void nestedExtractionFailuresIdentifyTheCompletedOuterSelections() {
+        var time = new FakeTime(0);
+        var cause = new IllegalStateException("iterator failed");
+        Collection<Collection<String>> brokenOuter = brokenCollection(cause);
+        Collection<String> brokenInner = brokenCollection(cause);
+        var check = CollectionConditions.singleElement(CollectionConditions.singleElement(instanceOf(String.class)));
+        var outer = tryAwait(() -> brokenOuter).usingTime(time, time).until(check);
+        var inner = tryAwait(() -> List.of(brokenInner)).usingTime(time, time).until(check);
+
+        var outerFailure = assertInstanceOf(AwaitResult.Failed.class, outer).failure();
+        var innerFailure = assertInstanceOf(AwaitResult.Failed.class, inner).failure();
+        assertSame(cause, outerFailure.cause());
+        assertSame(cause, innerFailure.cause());
+        assertFalse(outerFailure.message().contains("Within:"), outerFailure.message());
+        assertTrue(innerFailure.message().contains("Within: single element"), innerFailure.message());
+        assertTrue(inner.attempts().getFirst().first().toString().contains("Within: single element"));
+    }
+
+    @Test
+    void nestedQuantifierErrorsKeepTheirPositionsAlongsideCapturedProgress() {
+        var time = new FakeTime(0);
+        var cause = new IllegalArgumentException("probe failed");
+        int[] calls = {0};
+        var probe = condition("value is ready", (String value) -> {
+            calls[0]++;
+            if (value.equals("bad")) throw cause;
+            return ConditionResult.satisfied();
+        });
+        var observed = Optional.of(List.of(List.of("ready"), List.of("bad", "unused")));
+        var check = hasValue(CollectionConditions.all(CollectionConditions.all(probe)));
+        var result = tryAwait(() -> observed).usingTime(time, time).every(ofNanos(1))
+                .until(captured(isNotNull, check));
+        var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+        var last = result.attempts().getLast().last();
+        String location = "optional value → collection elements at iteration index 1"
+                + " → collection elements at iteration index 0";
+
+        assertSame(cause, failure.cause());
+        assertEquals(2, calls[0]);
+        assertEquals(2, last.progress().stageNumber());
+        assertEquals(1, last.progress().capturedStages());
+        assertEquals(location, uncontrolled(AttemptStatus.Operation.CONDITION, last.result()).location());
+        assertTrue(last.result().toString().contains("location=" + location));
+        assertTrue(failure.message().contains("Within: " + location), failure.message());
+        assertTrue(last.toString().contains("Within: " + location), last.toString());
+    }
+
+    @Test
+    void traversalFailuresRetainHowManyCandidatesWereChecked() {
+        for (int completed : new int[]{0, 1}) {
+            var cause = new AssertionError("iterator failed");
+            var observed = new AbstractCollection<String>() {
+                @Override public int size() { return completed + 1; }
+                @Override public Iterator<String> iterator() {
+                    if (completed == 0) throw cause;
+                    return new Iterator<>() {
+                        int read;
+                        @Override public boolean hasNext() {
+                            if (read == completed) throw cause;
+                            return true;
+                        }
+                        @Override public String next() { read++; return "ready"; }
+                    };
+                }
+                @Override public String toString() { return "unavailable collection"; }
+            };
+            int[] calls = {0};
+            var time = new FakeTime(0);
+            var result = tryAwait(() -> observed).usingTime(time, time).until(CollectionConditions.all(
+                    condition("ready", value -> { calls[0]++; return ConditionResult.satisfied(); })));
+            var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+
+            assertEquals(completed, calls[0]);
+            assertSame(cause, failure.cause());
+            assertEquals(CONDITION_FAILED, failure.reason());
+            assertTrue(failure.message().contains("Within: collection elements (checked " + completed + ")"), failure.message());
+        }
+    }
+
+    private static <ELEMENT> Collection<ELEMENT> brokenCollection(RuntimeException cause) {
+        return new AbstractCollection<>() {
+            @Override public int size() { return 1; }
+            @Override public Iterator<ELEMENT> iterator() { throw cause; }
+            @Override public String toString() { return "unavailable collection"; }
+        };
+    }
+
+    @Test
+    void failedMapViewReportsItsScopeWithoutInitializingTheNestedCheck() {
+        var cause = new IllegalStateException("entries unavailable");
+        var observed = new AbstractMap<String, String>() {
+            @Override public Set<Entry<String, String>> entrySet() { throw cause; }
+            @Override public String toString() { return "unavailable map"; }
+        };
+        var time = new FakeTime(0);
+        var result = tryAwait(() -> observed).usingTime(time, time).until(MapConditions.allEntries(
+                conditionPerWait("ready", () -> {
+                    fail("nested check must not initialize before obtaining an entry");
+                    return ignored -> ConditionResult.satisfied();
+                })));
+        var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+        var status = uncontrolled(AttemptStatus.Operation.CONDITION, result.attempts().getFirst().first().result());
+
+        assertSame(cause, failure.cause());
+        assertEquals("map entries (checked 0)", status.location());
+        assertTrue(failure.message().contains("Within: " + status.location()), failure.message());
+    }
 
     @Test
     void quantifiersReportTheirScopeAndNamedCheckOnFailure() {

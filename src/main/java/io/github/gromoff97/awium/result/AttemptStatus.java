@@ -22,8 +22,18 @@ public sealed interface AttemptStatus permits ConditionResult, AttemptStatus.Unc
         }
     }
 
-    /** The attempt could not complete normally. */
-    record Uncontrolled(Operation operation, Throwable cause) implements AttemptStatus {
+    /**
+     * The attempt could not complete normally.
+     *
+     * @param operation failed execution operation
+     * @param cause original throwable
+     * @param location enclosing selections and iteration positions, or null for a direct failure
+     */
+    record Uncontrolled(Operation operation, Throwable cause, String location) implements AttemptStatus {
+        public Uncontrolled(Operation operation, Throwable cause) {
+            this(operation, cause, null);
+        }
+
         public Uncontrolled {
             requireNonNull(operation, "operation must not be null");
             requireNonNull(cause, "cause must not be null");
@@ -31,7 +41,8 @@ public sealed interface AttemptStatus permits ConditionResult, AttemptStatus.Unc
 
         @Override
         public String toString() {
-            return "Uncontrolled[operation=" + operation + ", cause=" + DiagnosticText.cause(cause) + "]";
+            return "Uncontrolled[operation=" + operation + ", cause=" + DiagnosticText.cause(cause)
+                    + (location == null ? "" : ", location=" + location) + "]";
         }
     }
 

@@ -67,6 +67,9 @@ public final class FailureDiagnostics {
         String mismatch = attempt.result() instanceof AttemptStatus.Unsatisfied value ? value.mismatch() : null;
         attempt(out, attemptNumber, attempt, actual, sequence == null ? mismatch : null);
         sequence(out, mismatch);
+        if (attempt.result() instanceof AttemptStatus.Uncontrolled failure && failure.location() != null) {
+            field(out, "Within", failure.location());
+        }
         timing(out);
         if (cause != null) {
             out.append('\n');

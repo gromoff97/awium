@@ -123,26 +123,31 @@ final class ConditionSupport {
         return new PreservingCondition<>(new Condition.Typed<>(nested, quantifier.description(elementsDescription), () -> {
             AttemptFactory<ELEMENT, ?> evaluator = bind(nested);
             return actual -> actual == null ? AttemptResult.unsatisfied(subject + " was null")
-                    : evaluateQuantifier(actual, elements.apply(actual), evaluator, quantifier, mismatch);
+                    : evaluateQuantifier(actual, elements, evaluator, quantifier, mismatch, elementsDescription);
         }));
     }
 
     private static <INPUT, ELEMENT> AttemptResult<INPUT> evaluateQuantifier(
-            INPUT actual, Iterable<? extends ELEMENT> values,
+            INPUT actual, Function<? super INPUT, ? extends Iterable<? extends ELEMENT>> elements,
             AttemptFactory<? super ELEMENT, ?> evaluator,
-            Quantifier quantifier, String mismatch) {
+            Quantifier quantifier, String mismatch, String elementsDescription) {
         AttemptResult<?> last = null;
         long checked = 0;
-        for (ELEMENT value : values) {
-            checked++;
-            var evaluated = evaluator.create(value).call();
-            if (evaluated instanceof AttemptResult.Uncontrolled<?> failure) {
-                return new AttemptResult.Uncontrolled<>(failure.status(), failure.condition());
+        try {
+            for (ELEMENT value : elements.apply(actual)) {
+                checked++;
+                var evaluated = evaluator.create(value).call();
+                if (evaluated instanceof AttemptResult.Uncontrolled<?> failure) {
+                    return nestedFailure(elementsDescription + " at iteration index " + (checked - 1), failure);
+                }
+                last = evaluated;
+                if (quantifier.stops(evaluated instanceof AttemptResult.Satisfied<?>)) {
+                    return quantifiedResult(actual, quantifier.satisfied(true), mismatch, checked, evaluated);
+                }
             }
-            last = evaluated;
-            if (quantifier.stops(evaluated instanceof AttemptResult.Satisfied<?>)) {
-                return quantifiedResult(actual, quantifier.satisfied(true), mismatch, checked, evaluated);
-            }
+        } catch (Throwable failure) {
+            return nestedFailure(elementsDescription + " (checked " + checked + ")",
+                    AttemptResult.uncontrolled(failure, null));
         }
         return quantifiedResult(actual, quantifier.satisfied(false), mismatch, checked, last);
     }
@@ -159,6 +164,14 @@ final class ConditionSupport {
                 ? unsatisfied(value.mismatch() == null ? mismatch : mismatch + ": " + value.mismatch(), value.cause())
                 : unsatisfied(mismatch);
         return new AttemptResult.Unsatisfied<>(failure, evaluated.condition());
+    }
+
+    private static <RESULT> AttemptResult.Uncontrolled<RESULT> nestedFailure(
+            String location, AttemptResult.Uncontrolled<?> failure) {
+        var status = failure.status();
+        String path = status.location() == null ? location : location + " → " + status.location();
+        return new AttemptResult.Uncontrolled<>(
+                new AttemptStatus.Uncontrolled(status.operation(), status.cause(), path), failure.condition());
     }
 
     static <VALUE> Reference<VALUE> unexpectedReference(VALUE value) {
@@ -187,6 +200,9 @@ final class ConditionSupport {
             return actual -> switch (extraction.create(actual).call()) {
                 case AttemptResult.Satisfied<? extends VALUE> success -> {
                     var evaluated = evaluator.create(success.value()).call();
+                    if (evaluated instanceof AttemptResult.Uncontrolled<?> failure) {
+                        yield nestedFailure(selection, failure);
+                    }
                     yield evaluated instanceof AttemptResult.Unsatisfied<?> && evaluated.condition() != null
                             ? nestedMismatch(selection, evaluated) : evaluated;
                 }

@@ -69,6 +69,9 @@ public final class DiagnosticText {
         if (status instanceof AttemptStatus.Unsatisfied mismatch && mismatch.mismatch() != null) {
             field(out, "Mismatch", mismatch.mismatch());
         }
+        if (status instanceof AttemptStatus.Uncontrolled failure && failure.location() != null) {
+            field(out, "Within", failure.location());
+        }
         boolean separateObservations = repeated && first.observed() != last.observed();
         if (first.hasObservation()) {
             field(out, separateObservations ? "First observed (current value)" : "Observed (current value)",

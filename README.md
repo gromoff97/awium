@@ -834,6 +834,10 @@ and stage identify the intended check and the captured count stays unchanged.
 which is the restricted return type of a custom check. A mismatch
 retains its explanation and optional cause; an uncontrolled result retains
 its cause and `operation()` (`WAITING`, `SOURCE`, or `CONDITION`).
+For nested failures, its optional `location()` records enclosing selections and
+zero-based iteration indices, shown as `Within` in diagnostics. A traversal failure
+records how many candidates were checked before the iterator or container view failed.
+These locations are collected without formatting values or inspecting the exception.
 The extracted value belongs to the final result, not to the diagnostic status.
 Use `hasObservation()` to distinguish a legitimate `null` returned by the source
 from a failure before a value was obtained. All attempt results expose `cause()`.
