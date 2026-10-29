@@ -813,6 +813,8 @@ status still describe the original check. A failing `toString()` produces a diag
 placeholder instead of preventing the rest of the group from being displayed.
 `System.out.println(result)` prints the outcome followed by all history groups;
 `result.attempts().forEach(System.out::println)` prints the history alone.
+Individual `first()` and `last()` records use the same guarded formatting, without
+an attempt number: numbering belongs to the group.
 
 Each record has an acquisition or persistence `phase()`,
 the associated `condition()`, sequence `progress()`, `observed()`, and `result()`.

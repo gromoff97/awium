@@ -1,6 +1,8 @@
 package io.github.gromoff97.awium.internal;
 
 import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.result.AttemptStatus;
+import io.github.gromoff97.awium.result.HistoryEntry;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +30,53 @@ public final class DiagnosticText {
 
     public List<Throwable> failures() {
         return List.copyOf(diagnosticFailures);
+    }
+
+    /** Formats retained values on demand; a null last boundary denotes one invocation. */
+    public static String history(String heading, HistoryEntry<?> first, HistoryEntry<?> last) {
+        boolean repeated = last != null;
+        var status = first.result();
+        var cause = status.cause();
+        var text = new DiagnosticText(cause);
+        var out = new StringBuilder(heading);
+        out.append(" (").append(first.phase()).append(")\n");
+        String completed = duration(first.timing().completionOffset());
+        if (repeated) completed += " → " + duration(last.timing().completionOffset());
+        field(out, "Completed after", completed);
+        var progress = first.progress();
+        if (progress != null) {
+            int total = progress.sequence().stages().size();
+            field(out, "Stage", progress.stageNumber() + " of " + total
+                    + " (captured " + progress.capturedStages() + ")");
+            if (progress.sequence().explanation() != null) {
+                field(out, "Sequence because", progress.sequence().explanation());
+            }
+        }
+        text.condition(out, first.condition(), "    ");
+        String result = switch (status) {
+            case AttemptStatus.Satisfied ignored -> "satisfied";
+            case AttemptStatus.Unsatisfied ignored -> "unsatisfied";
+            case AttemptStatus.Uncontrolled failure -> "uncontrolled (" + failure.operation() + ")";
+        };
+        field(out, "Result", result);
+        if (status instanceof AttemptStatus.Unsatisfied mismatch && mismatch.mismatch() != null) {
+            field(out, "Mismatch", mismatch.mismatch());
+        }
+        boolean separateObservations = repeated && first.observed() != last.observed();
+        if (first.hasObservation()) {
+            field(out, separateObservations ? "First observed (current value)" : "Observed (current value)",
+                    text.value(first.observed()));
+        }
+        if (separateObservations && last.hasObservation()) {
+            field(out, "Last observed (current value)", text.value(last.observed()));
+        }
+        if (cause != null) {
+            field(out, "Cause", cause.getClass().getName());
+            String message = text.render(cause::getMessage);
+            if (message != null && !message.isBlank()) field(out, "Message", message);
+        }
+        for (Throwable failure : text.failures()) field(out, "Diagnostics failure", failure.getClass().getName());
+        return out.substring(0, out.length() - 1);
     }
 
     public static String duration(Duration remaining) {

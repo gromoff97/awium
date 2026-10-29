@@ -105,6 +105,11 @@ class HistoryFormattingTest {
         assertEquals(1, renders[0]);
         assertTrue(rendered.contains("Observed (current value): <value unavailable: diagnostics failed>"), rendered);
         assertTrue(rendered.contains("Diagnostics failure: java.lang.IllegalArgumentException"), rendered);
+        String individual = result.attempts().getFirst().first().toString();
+        assertEquals(2, renders[0]);
+        assertTrue(individual.startsWith("Attempt (ACQUISITION)\n"), individual);
+        assertTrue(individual.contains("Result: satisfied"), individual);
+        assertTrue(individual.contains("Observed (current value): <value unavailable: diagnostics failed>"), individual);
         assertSame(observed, result.orThrow());
     }
 
@@ -164,6 +169,9 @@ class HistoryFormattingTest {
         assertTrue(failureText.startsWith("Source retrieval failed"), failureText);
         assertTrue(failureText.contains("original cause"), failureText);
         assertTrue(failureText.contains("Attempt 1 (ACQUISITION)"), failureText);
+        String individual = failed.attempts().getFirst().first().toString();
+        assertTrue(individual.contains("Result: uncontrolled (SOURCE)"), individual);
+        assertTrue(individual.contains("Message: original cause"), individual);
         assertSame(observed, successful.orThrow());
         assertSame(cause, assertInstanceOf(AwaitResult.Failed.class, failed).failure().cause());
     }

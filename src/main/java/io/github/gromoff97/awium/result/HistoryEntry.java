@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.result;
 
 import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.internal.DiagnosticText;
 import java.time.Duration;
 
 import static java.util.Objects.requireNonNull;
@@ -34,6 +35,12 @@ public record HistoryEntry<OBSERVED>(Phase phase, Timing timing,
     /** Distinguishes a returned null from a failure before the source produced a value. */
     public boolean hasObservation() {
         return timing.observationOffset() != null;
+    }
+
+    /** Formats this invocation without an attempt number, rendering retained values on demand. */
+    @Override
+    public String toString() {
+        return DiagnosticText.history("Attempt", this, null);
     }
 
     /**
