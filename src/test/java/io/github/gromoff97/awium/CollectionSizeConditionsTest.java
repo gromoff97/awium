@@ -7,6 +7,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.empty;
@@ -26,55 +29,57 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class CollectionSizeConditionsTest {
 
+    private final FakeTime time = new FakeTime(0);
+
     @Test
     void hasSingleElementReturnsTheTypedElement() {
-        var pollingTime = new FakeTime(0);
         String element = new String("element");
         java.util.concurrent.Callable<ArrayList<String>> source = () -> new ArrayList<>(List.of(element));
 
-        String selected = await(source::call).usingTime(pollingTime, pollingTime).until(singleElement);
+        String selected = await(source::call).usingTime(time, time).until(singleElement);
         String nullElement = await((Await.CollectionSource<List<String>>)
-                () -> Collections.singletonList(null)).usingTime(pollingTime, pollingTime).until(singleElement);
+                () -> Collections.singletonList(null)).usingTime(time, time).until(singleElement);
 
         assertSame(element, selected);
         assertNull(nullElement);
-        assertTrue(assertFailure(TIMEOUT, () -> await(() -> List.of())
-                .usingTime(pollingTime, pollingTime).upTo(ofNanos(1)).until(singleElement))
-                .getMessage().contains("collection size was 0"));
-        assertTrue(assertFailure(TIMEOUT, () -> await(() -> List.of("first", "second"))
-                .usingTime(pollingTime, pollingTime).upTo(ofNanos(1)).until(singleElement))
-                .getMessage().contains("collection size was greater than 1"));
+        assertThat(assertFailure(TIMEOUT, () -> await(() -> List.of())
+                .usingTime(time, time).upTo(ofNanos(1)).until(singleElement)))
+                .hasMessageContaining("collection size was 0");
+        assertThat(assertFailure(TIMEOUT, () -> await(() -> List.of("first", "second"))
+                .usingTime(time, time).upTo(ofNanos(1)).until(singleElement)))
+                .hasMessageContaining("collection size was greater than 1");
     }
 
-    @Test
-    void conditionsEvaluateEverySizeRelation() {
-        for (Case testCase : cases()) {
-            var matching = new ProbeContainers.ProbeCollection<Object>(testCase.matchingSize());
-            var mismatching = new ProbeContainers.ProbeCollection<Object>(testCase.mismatchingSize());
+    @ParameterizedTest(name = "{0}: matches size {1}, rejects size {2}")
+    @MethodSource("cases")
+    void conditionsEvaluateEverySizeRelation(PreservingCondition<Collection<?>> condition,
+            int matchingSize, int mismatchingSize) {
+        var matching = ProbeContainers.sizeOnlyCollection(matchingSize);
+        var mismatching = ProbeContainers.sizeOnlyCollection(mismatchingSize);
 
-            assertSame(matching, result(evaluate(testCase.condition(), matching)));
-            assertUnsatisfied(evaluate(testCase.condition(), mismatching));
-            assertEquals("collection was null", mismatch(evaluate(testCase.condition(), null)));
-            assertEquals(1, matching.sizeCalls);
-            assertEquals(1, mismatching.sizeCalls);
-        }
-        assertEquals("collection size was 1",
-                mismatch(evaluate(hasSize(2), List.of("value"))));
+        assertSame(matching, result(evaluate(condition, matching)));
+        assertUnsatisfied(evaluate(condition, mismatching));
+        assertEquals("collection was null", mismatch(evaluate(condition, null)));
+        verify(matching).size();
+        verify(mismatching).size();
     }
 
     @Test
     void nullCollectionRemainsUnsatisfied() {
-        FakeTime time = new FakeTime(0);
         Collection<Object> actual = null;
 
         assertFailure(TIMEOUT,
@@ -84,8 +89,8 @@ class CollectionSizeConditionsTest {
 
     @Test
     void diagnosticsUseCollectionVocabularyAndCapturedSize() {
-        var actual = new ProbeContainers.ProbeCollection<Object>(1);
-        FakeTime time = new FakeTime(0);
+        assertEquals("collection size was 1", mismatch(evaluate(hasSize(2), List.of("value"))));
+        var actual = ProbeContainers.sizeOnlyCollection(1);
 
         var failure = assertFailure(TIMEOUT,
                 () -> await(() -> {
@@ -93,20 +98,19 @@ class CollectionSizeConditionsTest {
                     return actual;
                 }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(empty));
 
-        assertTrue(failure.getMessage().contains("collection"));
-        assertFalse(failure.getMessage().contains("map"));
-        assertEquals(1, actual.sizeCalls);
+        assertThat(failure.getMessage()).contains("collection").doesNotContain("map");
+        verify(actual).size();
     }
 
     @Test
     void throwingSizeIsTheExactFailFastConditionCause() {
-        var pollingTime = new FakeTime(0);
         var cause = new IllegalStateException("collection size failed");
-        var collection = new ProbeContainers.ProbeCollection<Object>(cause);
+        var collection = ProbeContainers.sizeOnlyCollection(0);
+        when(collection.size()).thenThrow(cause);
 
         assertSame(cause, assertFailure(CONDITION_FAILED,
-                () -> await(() -> collection).usingTime(pollingTime, pollingTime).until(nonEmpty)).getCause());
-        assertEquals(1, collection.sizeCalls);
+                () -> await(() -> collection).usingTime(time, time).until(nonEmpty)).getCause());
+        verify(collection).size();
     }
 
     @Test
@@ -121,23 +125,21 @@ class CollectionSizeConditionsTest {
 
     @Test
     void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() {
-        assertEquals(Satisfied.class, evaluate(hasSizeBetween(2, 4), List.of(1, 2)).getClass());
-        assertEquals(Satisfied.class,
-                evaluate(hasSizeBetween(2, 4), List.of(1, 2, 3, 4)).getClass());
+        assertInstanceOf(Satisfied.class, evaluate(hasSizeBetween(2, 4), List.of(1, 2)));
+        assertInstanceOf(Satisfied.class,
+                evaluate(hasSizeBetween(2, 4), List.of(1, 2, 3, 4)));
         assertUnsatisfied(evaluate(hasSizeBetween(2, 4), List.of(1)));
         assertUnsatisfied(evaluate(hasSizeBetween(2, 4), List.of(1, 2, 3, 4, 5)));
     }
 
-    private static List<Case> cases() {
-        return List.of(new Case(empty, 0, 1), new Case(nonEmpty, 1, 0),
-                new Case(hasSize(2), 2, 1),
-                new Case(hasSizeNotEqualTo(2), 1, 2),
-                new Case(hasSizeGreaterThan(2), 3, 2),
-                new Case(hasSizeAtLeast(2), 2, 1),
-                new Case(hasSizeLessThan(2), 1, 2),
-                new Case(hasSizeAtMost(2), 2, 3));
+    private static List<Arguments> cases() {
+        return List.of(arguments(empty, 0, 1), arguments(nonEmpty, 1, 0),
+                arguments(hasSize(2), 2, 1),
+                arguments(hasSizeNotEqualTo(2), 1, 2),
+                arguments(hasSizeGreaterThan(2), 3, 2),
+                arguments(hasSizeAtLeast(2), 2, 1),
+                arguments(hasSizeLessThan(2), 1, 2),
+                arguments(hasSizeAtMost(2), 2, 3));
     }
 
-    private record Case(PreservingCondition<Collection<?>> condition, int matchingSize,
-            int mismatchingSize) {}
 }

@@ -12,20 +12,31 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
-import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
 import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.INTERRUPTED;
 import static java.time.Duration.ofNanos;
+import static org.apache.commons.lang3.exception.ExceptionUtils.rethrow;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ContainerInterruptionTest {
+
+    @AfterEach
+    void clearInterruptFlag() {
+        Thread.interrupted();
+    }
 
     @Test
     void interruptionBeforeTheFirstNestedCheckSkipsItsFactory() {
@@ -46,7 +57,7 @@ class ContainerInterruptionTest {
         for (var condition : List.of(all(nested), any(nested), none(nested))) {
             try {
                 var result = tryAwait(() -> actual).until(condition);
-                assertEquals(INTERRUPTED, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
+                assertEquals(INTERRUPTED, failure(result).reason());
                 assertTrue(Thread.currentThread().isInterrupted());
                 assertEquals(0, factories[0]);
             } finally {
@@ -55,39 +66,34 @@ class ContainerInterruptionTest {
         }
     }
 
-    @Test
-    void getterFailuresKeepTheirOriginalCauseWhenTheyAlsoInterrupt() {
-        for (Throwable cause : List.of(new IllegalStateException("getter failed"), new InternalError("fatal getter"))) {
-            for (boolean throwing : List.of(false, true)) {
-                var actual = new ArrayList<>(List.of("ready")) {
-                    @Override
-                    public Iterator<String> iterator() {
-                        Thread.currentThread().interrupt();
-                        return throwUnchecked(cause);
-                    }
-
-                    @Override
-                    public String toString() { return "failing collection"; }
-                };
-                try {
-                    var waiting = await(() -> actual);
-                    if (throwing) {
-                        assertSame(cause, FailureTaxonomyTest.assertFailure(INTERRUPTED, () -> waiting.until(singleElement)).getCause());
-                    } else {
-                        var failure = assertInstanceOf(AwaitResult.Failed.class, diagnostic(waiting).until(singleElement)).failure();
-                        assertEquals(INTERRUPTED, failure.reason());
-                        assertSame(cause, failure.cause());
-                    }
-                    assertTrue(Thread.currentThread().isInterrupted());
-                } finally {
-                    Thread.interrupted();
-                }
+    @ParameterizedTest(name = "fatal={0}, throwing={1}")
+    @CsvSource({"false,false", "false,true", "true,false", "true,true"})
+    void getterFailuresKeepTheirOriginalCauseWhenTheyAlsoInterrupt(boolean fatal, boolean throwing) {
+        Throwable cause = fatal ? new InternalError("fatal getter") : new IllegalStateException("getter failed");
+        var actual = new ArrayList<>(List.of("ready")) {
+            @Override
+            public Iterator<String> iterator() {
+                Thread.currentThread().interrupt();
+                return rethrow(cause);
             }
+
+            @Override
+            public String toString() { return "failing collection"; }
+        };
+        var waiting = await(() -> actual);
+        if (throwing) {
+            assertSame(cause, FailureTaxonomyTest.assertFailure(INTERRUPTED, () -> waiting.until(singleElement)).getCause());
+        } else {
+            var failure = failure(diagnostic(waiting).until(singleElement));
+            assertEquals(INTERRUPTED, failure.reason());
+            assertSame(cause, failure.cause());
         }
+        assertTrue(Thread.currentThread().isInterrupted());
     }
 
-    @Test
-    void interruptedExtractionKeepsTheDefinitionWithoutStartingTheNestedCheck() {
+    @ParameterizedTest(name = "{0}")
+    @CsvSource({"selected,false", "narrowed,true", "captured selected,false", "captured narrowed,true"})
+    void interruptedExtractionKeepsTheDefinitionWithoutStartingTheNestedCheck(String form, boolean useNarrowed) {
         int[] factories = {0};
         var check = Conditions.conditionPerWait("nested check", () -> {
             factories[0]++;
@@ -95,27 +101,25 @@ class ContainerInterruptionTest {
         });
         var selected = MapConditions.valueFor("key", check).because("value must be readable");
         var narrowed = MapConditions.valueFor("key", Conditions.instanceOf(String.class)).because("value must be readable");
-        List<Function<MapAwait<SignallingMap, Map.Entry<String, String>, String>, AwaitResult<?, ?>>> waits = List.of(
-                waiting -> diagnostic(waiting).until(selected), waiting -> diagnostic(waiting).until(narrowed),
-                waiting -> diagnostic(waiting).until(captured(selected, selected)), waiting -> diagnostic(waiting).until(captured(narrowed, narrowed)));
-        for (int i = 0; i < waits.size(); i++) {
-            var actual = new SignallingMap("getValue");
-            try {
-                var result = waits.get(i).apply(await(() -> actual));
-                var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
-                var attempt = result.attempts().getFirst().last();
-                var condition = attempt.condition();
+        var actual = new SignallingMap("getValue");
+        var waiting = await(() -> actual);
+        var result = switch (form) {
+            case "selected" -> diagnostic(waiting).until(selected);
+            case "narrowed" -> diagnostic(waiting).until(narrowed);
+            case "captured selected" -> diagnostic(waiting).until(captured(selected, selected));
+            case "captured narrowed" -> diagnostic(waiting).until(captured(narrowed, narrowed));
+            default -> throw new AssertionError(form);
+        };
+        var failure = failure(result);
+        assertThat(attempts(result)).isNotEmpty();
+        var condition = result.conditions().getFirst().condition();
 
-                assertEquals(INTERRUPTED, failure.reason());
-                assertEquals(0, factories[0]);
-                assertSame(i % 2 == 0 ? selected : narrowed, condition);
-                assertEquals("key", condition.references().getFirst().value());
-                assertEquals("value must be readable", condition.explanation());
-                assertTrue(Thread.currentThread().isInterrupted());
-            } finally {
-                Thread.interrupted();
-            }
-        }
+        assertEquals(INTERRUPTED, failure.reason());
+        assertEquals(0, factories[0]);
+        assertSame(useNarrowed ? narrowed : selected, condition);
+        assertEquals("key", condition.references().getFirst().value());
+        assertEquals("value must be readable", condition.explanation());
+        assertTrue(Thread.currentThread().isInterrupted());
     }
 
     @Test
@@ -155,7 +159,7 @@ class ContainerInterruptionTest {
                 var time = new FakeTime(0);
                 var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
                 assertInterrupted(() -> wait.apply(waiting), boundary, actual.calls);
-                assertTrue(time.parkRequests.isEmpty());
+                assertThat(time.parkRequests).isEmpty();
             }
         }
     }
@@ -184,7 +188,7 @@ class ContainerInterruptionTest {
                 var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
                 var wait = waits.get(index);
                 assertInterrupted(() -> wait.apply(waiting), boundary, actual.calls);
-                assertTrue(time.parkRequests.isEmpty());
+                assertThat(time.parkRequests).isEmpty();
             }
         }
     }
@@ -225,12 +229,12 @@ class ContainerInterruptionTest {
 
     private static void assertInterrupted(Supplier<AwaitResult<?, ?>> wait, String boundary, List<String> calls) {
         try {
-            var result = assertInstanceOf(AwaitResult.Failed.class, wait.get());
-            assertEquals(1, result.attempts().size());
-            var failure = result.failure();
+            var outcome = wait.get();
+            var failure = failure(outcome);
+            assertEquals(1, attempts(outcome).size());
             assertEquals(INTERRUPTED, failure.reason(), calls.toString());
             assertInstanceOf(InterruptedException.class, failure.cause());
-            assertTrue(calls.contains(boundary), calls.toString());
+            assertThat(calls).contains(boundary);
             assertTrue(Thread.currentThread().isInterrupted());
         } finally {
             Thread.interrupted();

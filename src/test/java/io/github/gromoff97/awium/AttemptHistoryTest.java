@@ -1,49 +1,48 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.AttemptStatus;
-import io.github.gromoff97.awium.result.HistoryEntry;
-import java.time.Duration;
+import io.github.gromoff97.awium.internal.ExecutionStep;
+import io.github.gromoff97.awium.result.Attempt;
+import io.github.gromoff97.awium.result.ConditionResult;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.observation;
 import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
-import static io.github.gromoff97.awium.result.HistoryEntry.Phase.ACQUISITION;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static io.github.gromoff97.awium.internal.ExecutionStep.Phase.ACQUISITION;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 class AttemptHistoryTest {
 
     @Test
-    void snapshotsRemainUnchangedAsAGroupGrowsAndAnotherBegins() {
+    void snapshotsRemainUnchangedAsTheLastNumberMovesAndAnotherStateBegins() {
         var history = new AttemptHistory<String>(true);
-        var empty = history.snapshot();
         var condition = diagnosticCondition("ready", null);
-        var first = entry(condition, "first", unsatisfied("pending"));
-        var second = entry(condition, "second", unsatisfied("pending"));
+        var definitions = List.<Condition>of(condition);
+        var empty = history.conditions(definitions).getFirst().attempts();
+        var first = entry(condition, new String("pending"), unsatisfied("pending"));
+        var second = entry(condition, new String("pending"), unsatisfied("pending"));
         var third = entry(condition, "third", satisfied());
         history.add(first);
-        var before = history.snapshot();
+        var before = history.conditions(definitions).getFirst().attempts();
         history.add(second);
-        var repeated = history.snapshot();
-
+        var repeated = history.conditions(definitions).getFirst().attempts();
         assertThrows(NullPointerException.class, () -> history.add(null));
         assertEquals(2, history.count());
         history.add(third);
 
-        assertEquals(List.of(), empty);
-        assertEquals(1, before.getFirst().count());
-        assertSame(first, before.getFirst().last());
-        assertEquals(2, repeated.getFirst().count());
-        assertSame(first, repeated.getFirst().first());
-        assertSame(second, repeated.getFirst().last());
-        assertEquals(2, history.snapshot().size());
-        assertEquals(3, history.snapshot().getLast().firstNumber());
-        assertSame(third, history.snapshot().getLast().first());
+        assertTrue(empty.isEmpty());
+        assertEquals(Map.of(1L, first.attempt()), before);
+        assertEquals(Map.of(2L, second.attempt()), repeated);
+        assertSame(second.attempt(), repeated.lastEntry().getValue());
+        assertEquals(Map.of(2L, second.attempt(), 3L, third.attempt()),
+                history.conditions(definitions).getFirst().attempts());
         assertEquals(3, history.count());
-        assertThrows(UnsupportedOperationException.class, repeated::clear);
+        assertThrows(UnsupportedOperationException.class, repeated::pollLastEntry);
     }
 
     @Test
@@ -52,25 +51,12 @@ class AttemptHistoryTest {
         var cause = new AssertionError("unreadable") {
             @Override public String getMessage() { throw new AssertionError("must not be read"); }
         };
-        var attempt = entry(diagnosticCondition("ready", null), "pending", unsatisfied("waiting", cause));
-
+        var condition = diagnosticCondition("ready", null);
+        var attempt = entry(condition, "pending", unsatisfied("waiting", cause));
         assertEquals(0, history.count());
         for (int i = 0; i < 300; i++) history.add(attempt);
-
         assertEquals(300, history.count());
-        assertEquals(List.of(), history.snapshot());
-    }
-
-    @Test
-    void repeatedDefinitionsGroupWhileIndependentCopiesRemainSeparate() {
-        var history = new AttemptHistory<String>(true);
-        var condition = diagnosticCondition("ready", null).because("reason");
-        history.add(entry(condition, "one", unsatisfied()));
-        history.add(entry(condition, "two", unsatisfied()));
-        history.add(entry(condition.because("reason"), "three", unsatisfied()));
-        history.add(entry(diagnosticCondition("ready", null).because("reason"), "four", unsatisfied()));
-
-        assertEquals(List.of(2L, 1L, 1L), history.snapshot().stream().map(group -> group.count()).toList());
+        assertTrue(history.conditions(List.of(condition)).getFirst().attempts().isEmpty());
     }
 
     @Test
@@ -80,15 +66,32 @@ class AttemptHistoryTest {
         for (String mismatch : List.of("queued", "queued", "running", "queued", "queued")) {
             history.add(entry(condition, "observation", unsatisfied(mismatch)));
         }
-
-        assertEquals(List.of(2L, 1L, 2L), history.snapshot().stream().map(group -> group.count()).toList());
-        assertEquals(List.of(1L, 3L, 4L), history.snapshot().stream().map(group -> group.firstNumber()).toList());
-        assertEquals(List.of(2L, 3L, 5L), history.snapshot().stream().map(group -> group.lastNumber()).toList());
+        var attempts = history.conditions(List.of(condition)).getFirst().attempts();
+        assertThat(attempts.keySet()).containsExactly(2L, 3L, 5L);
+        assertThat(attempts.values())
+                .extracting(attempt -> assertInstanceOf(Attempt.Unsatisfied.class, attempt).mismatch())
+                .containsExactly("queued", "running", "queued");
     }
 
-    private static HistoryEntry<String> entry(Condition condition, String observed, AttemptStatus status) {
-        return new HistoryEntry<>(ACQUISITION,
-                new HistoryEntry.Timing(Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ZERO),
-                condition, null, observed, status);
+    @Test
+    void observationEqualityHandlesNullArraysAndReturningToAnEarlierValue() {
+        var history = new AttemptHistory<Object>(true);
+        var condition = diagnosticCondition("ready", null);
+        var observations = Arrays.asList(null, null,
+                new int[]{1}, new int[]{1}, new int[]{2}, new int[]{2}, new int[]{1});
+        for (Object observation : observations) history.add(entry(condition, observation, unsatisfied()));
+        var attempts = history.conditions(List.of(condition)).getFirst().attempts();
+        assertThat(attempts.keySet()).containsExactly(2L, 4L, 6L, 7L);
+        attempts.forEach((through, attempt) -> {
+            assertInstanceOf(Attempt.Unsatisfied.class, attempt);
+            assertSame(observations.get(through.intValue() - 1), observation(attempt));
+        });
+    }
+
+    private static <OBSERVED> ExecutionStep<OBSERVED> entry(Condition condition, OBSERVED observed, ConditionResult status) {
+        return new ExecutionStep<>(condition, 1, 0, ACQUISITION, 0, switch (status) {
+            case ConditionResult.Satisfied ignored -> new Attempt.Satisfied<>(observed);
+            case ConditionResult.Unsatisfied mismatch -> new Attempt.Unsatisfied<>(observed, mismatch.mismatch(), mismatch.cause());
+        });
     }
 }

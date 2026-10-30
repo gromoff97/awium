@@ -1,64 +1,69 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.AttemptGroup;
-import io.github.gromoff97.awium.result.AttemptStatus;
-import io.github.gromoff97.awium.result.HistoryEntry;
+import io.github.gromoff97.awium.internal.ExecutionStep;
+import io.github.gromoff97.awium.result.Attempt;
+import io.github.gromoff97.awium.result.ConditionHistory;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NavigableMap;
 import java.util.Objects;
+import java.util.TreeMap;
 
+import static java.util.Collections.emptyNavigableMap;
 import static java.util.Objects.requireNonNull;
 
-/** Assigns attempt numbers and optionally groups consecutive diagnostic repetitions. */
+/** Assigns global attempt numbers and compacts repeated observations for each condition occurrence. */
 final class AttemptHistory<OBSERVED> {
 
-    private final List<AttemptGroup<OBSERVED>> completed;
+    private final List<NavigableMap<Long, Attempt<OBSERVED>>> histories;
     private long count;
-    private long firstNumber;
-    private HistoryEntry<OBSERVED> first;
-    private HistoryEntry<OBSERVED> last;
 
     AttemptHistory(boolean recording) {
-        completed = recording ? new ArrayList<>() : null;
+        histories = recording ? new ArrayList<>() : null;
     }
 
-    void add(HistoryEntry<OBSERVED> attempt) {
-        requireNonNull(attempt, "attempt must not be null");
+    void add(ExecutionStep<OBSERVED> step) {
+        requireNonNull(step, "step must not be null");
         count++;
-        if (completed == null) return;
-        if (last == null || !sameDiagnostic(last, attempt)) {
-            if (last != null) completed.add(new AttemptGroup<>(firstNumber, count - 1, first, last));
-            firstNumber = count;
-            first = attempt;
-        }
-        last = attempt;
+        if (histories == null) return;
+        while (histories.size() < step.stageNumber()) histories.add(new TreeMap<>());
+        var attempts = histories.get(step.stageNumber() - 1);
+        var previous = attempts.lastEntry();
+        if (previous != null && sameGroup(previous.getValue(), step.attempt())) attempts.pollLastEntry();
+        attempts.put(count, step.attempt());
     }
 
     long count() {
         return count;
     }
 
-    List<AttemptGroup<OBSERVED>> snapshot() {
-        if (last == null) return List.of();
-        var groups = new ArrayList<AttemptGroup<OBSERVED>>(completed.size() + 1);
-        groups.addAll(completed);
-        groups.add(new AttemptGroup<>(firstNumber, count, first, last));
-        return List.copyOf(groups);
+    List<ConditionHistory<OBSERVED>> conditions(List<Condition> definitions) {
+        var result = new ArrayList<ConditionHistory<OBSERVED>>(definitions.size());
+        for (int i = 0; i < definitions.size(); i++) {
+            NavigableMap<Long, Attempt<OBSERVED>> attempts = histories != null && i < histories.size()
+                    ? histories.get(i) : emptyNavigableMap();
+            result.add(new ConditionHistory<>(definitions.get(i), attempts));
+        }
+        return List.copyOf(result);
     }
 
-    private static boolean sameDiagnostic(HistoryEntry<?> previous, HistoryEntry<?> next) {
-        return previous.phase() == next.phase()
-                && previous.hasObservation() == next.hasObservation()
-                && previous.result().cause() == next.result().cause()
-                && Objects.equals(previous.progress(), next.progress())
-                && previous.condition() == next.condition()
-                && sameStatus(previous.result(), next.result());
+    private static boolean sameGroup(Attempt<?> previous, Attempt<?> next) {
+        return switch (previous) {
+            case Attempt.Satisfied<?> first -> next instanceof Attempt.Satisfied<?> last
+                    && sameObservation(first.observed(), last.observed());
+            case Attempt.Unsatisfied<?> first -> next instanceof Attempt.Unsatisfied<?> last
+                    && first.cause() == last.cause() && Objects.equals(first.mismatch(), last.mismatch())
+                    && sameObservation(first.observed(), last.observed());
+            default -> false;
+        };
     }
 
-    private static boolean sameStatus(AttemptStatus previous, AttemptStatus next) {
-        // Only controlled outcomes repeat; an uncontrolled outcome ends the wait.
-        return previous instanceof AttemptStatus.Satisfied && next instanceof AttemptStatus.Satisfied
-                || previous instanceof AttemptStatus.Unsatisfied first && next instanceof AttemptStatus.Unsatisfied last
-                        && Objects.equals(first.mismatch(), last.mismatch());
+    private static boolean sameObservation(Object previous, Object next) {
+        try {
+            return Objects.deepEquals(previous, next);
+        } catch (Throwable failure) {
+            // A failed diagnostic comparison must not merge values or replace the wait's outcome.
+            return false;
+        }
     }
 }

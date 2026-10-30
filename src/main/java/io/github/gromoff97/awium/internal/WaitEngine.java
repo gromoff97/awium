@@ -1,12 +1,11 @@
 package io.github.gromoff97.awium.internal;
 
-import io.github.gromoff97.awium.result.HistoryEntry;
-import io.github.gromoff97.awium.result.AttemptStatus;
+import io.github.gromoff97.awium.result.Attempt;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 
-import static io.github.gromoff97.awium.result.HistoryEntry.Phase.ACQUISITION;
-import static io.github.gromoff97.awium.result.HistoryEntry.Phase.PERSISTENCE;
+import static io.github.gromoff97.awium.internal.ExecutionStep.Phase.ACQUISITION;
+import static io.github.gromoff97.awium.internal.ExecutionStep.Phase.PERSISTENCE;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Thread.currentThread;
@@ -24,7 +23,7 @@ public record WaitEngine<OBSERVED>(WaitConfiguration configuration, Callable<? e
         return waitFor(ignored -> {});
     }
 
-    public WaitCompletion waitFor(Consumer<HistoryEntry<OBSERVED>> recorder) {
+    public WaitCompletion waitFor(Consumer<ExecutionStep<OBSERVED>> recorder) {
         var runner = new AttemptExecution<>(source, execution, () -> now(configuration), started);
         WaitCompletion acquisition = acquire(recorder, runner);
         if (!(acquisition instanceof WaitCompletion.Satisfied acquired)
@@ -34,100 +33,93 @@ public record WaitEngine<OBSERVED>(WaitConfiguration configuration, Callable<? e
         return persist(recorder, acquired, runner);
     }
 
-    private WaitCompletion acquire(Consumer<HistoryEntry<OBSERVED>> recorder, AttemptExecution<OBSERVED, ?> runner) {
+    private WaitCompletion acquire(Consumer<ExecutionStep<OBSERVED>> recorder, AttemptExecution<OBSERVED, ?> runner) {
         long deadline = started + configuration.upToNanos();
-        HistoryEntry<OBSERVED> lastAttempt = null;
+        ExecutionStep<OBSERVED> lastStep = null;
         long completed = started;
 
         while (true) {
-            long attemptStarted = completed;
-            int stageNumber = execution.stageNumber();
-            HistoryEntry<OBSERVED> preparationFailure = lastAttempt == null
-                    ? runner.interruptedBefore(ACQUISITION, attemptStarted, stageNumber)
+            ExecutionStep<OBSERVED> preparationFailure = lastStep == null
+                    ? runner.interruptedBefore(ACQUISITION)
                     : waitBeforeAttempt(runner, min(configuration.everyNanos(), remaining(completed, deadline)),
-                            ACQUISITION, attemptStarted, stageNumber);
+                            ACQUISITION, completed);
             if (preparationFailure != null) {
                 recorder.accept(preparationFailure);
                 return new WaitCompletion.Uncontrolled(preparationFailure);
             }
 
             long retrievalStarted = now(configuration);
-            if (lastAttempt != null && reached(retrievalStarted, deadline) && !currentThread().isInterrupted()) {
-                return new WaitCompletion.Timeout(runner.offset(retrievalStarted), lastAttempt);
+            if (lastStep != null && reached(retrievalStarted, deadline) && !currentThread().isInterrupted()) {
+                return new WaitCompletion.Timeout(retrievalStarted - started, lastStep);
             }
 
-            HistoryEntry<OBSERVED> attempt = runner.call(ACQUISITION,
-                    attemptStarted, retrievalStarted, stageNumber);
-            completed = runner.completedNanos(attempt);
-            recorder.accept(attempt);
-            if (attempt.result() instanceof AttemptStatus.Uncontrolled) {
-                return new WaitCompletion.Uncontrolled(attempt);
+            ExecutionStep<OBSERVED> step = runner.call(ACQUISITION);
+            completed = started + step.completedAfterNanos();
+            recorder.accept(step);
+            if (step.attempt() instanceof Attempt.Failure<?>) {
+                return new WaitCompletion.Uncontrolled(step);
             }
             if (reached(completed, deadline)) {
-                return new WaitCompletion.Timeout(attempt);
+                return new WaitCompletion.Timeout(step);
             }
             if (execution.complete()) {
-                return new WaitCompletion.Satisfied(attempt);
+                return new WaitCompletion.Satisfied(step);
             }
-            lastAttempt = attempt;
+            lastStep = step;
         }
     }
 
-    private WaitCompletion persist(Consumer<HistoryEntry<OBSERVED>> recorder,
+    private WaitCompletion persist(Consumer<ExecutionStep<OBSERVED>> recorder,
             WaitCompletion.Satisfied acquired, AttemptExecution<OBSERVED, ?> runner) {
-        long acquiredAt = runner.completedNanos(acquired.attempt());
+        long acquiredAt = started + acquired.step().completedAfterNanos();
         long deadline = acquiredAt + configuration.persistenceNanos();
         long completed = acquiredAt;
 
         while (true) {
-            int stageNumber = execution.stageNumber();
-            long attemptStarted = completed;
-            long delay = min(configuration.everyNanos(), remaining(completed, deadline));
-            HistoryEntry<OBSERVED> preparationFailure = waitBeforeAttempt(runner, delay,
-                    PERSISTENCE, attemptStarted, stageNumber);
+            ExecutionStep<OBSERVED> preparationFailure = waitBeforeAttempt(runner,
+                    min(configuration.everyNanos(), remaining(completed, deadline)), PERSISTENCE, completed);
             if (preparationFailure != null) {
                 recorder.accept(preparationFailure);
                 return new WaitCompletion.Uncontrolled(preparationFailure);
             }
 
-            long retrievalStarted = now(configuration);
-            HistoryEntry<OBSERVED> attempt = runner.call(PERSISTENCE,
-                    attemptStarted, retrievalStarted, stageNumber);
-            completed = runner.completedNanos(attempt);
-            recorder.accept(attempt);
-            if (attempt.result() instanceof AttemptStatus.Uncontrolled) {
-                return new WaitCompletion.Uncontrolled(attempt);
+            // Keep the clock/cancellation boundary before source retrieval, as in acquisition.
+            now(configuration);
+            ExecutionStep<OBSERVED> step = runner.call(PERSISTENCE);
+            completed = started + step.completedAfterNanos();
+            recorder.accept(step);
+            if (step.attempt() instanceof Attempt.Failure<?>) {
+                return new WaitCompletion.Uncontrolled(step);
             }
             if (!execution.complete()) {
-                return new WaitCompletion.PersistenceFailure(acquired.attempt().timing().completionOffset(), attempt);
+                return new WaitCompletion.PersistenceFailure(acquired.step().completedAfterNanos(), step);
             }
             if (reached(completed, deadline)) {
-                return new WaitCompletion.Satisfied(attempt);
+                return new WaitCompletion.Satisfied(step);
             }
         }
     }
 
-    private HistoryEntry<OBSERVED> waitBeforeAttempt(AttemptExecution<OBSERVED, ?> runner, long delay,
-            HistoryEntry.Phase phase,
-            long attemptStarted, int stageNumber) {
-        long deadline = attemptStarted + delay;
+    private ExecutionStep<OBSERVED> waitBeforeAttempt(AttemptExecution<OBSERVED, ?> runner, long delay,
+            ExecutionStep.Phase phase, long completed) {
+        long deadline = completed + delay;
         long remaining;
         while ((remaining = remaining(now(configuration), deadline)) > 0) {
-            HistoryEntry<OBSERVED> interrupted = runner.interruptedBefore(phase, attemptStarted, stageNumber);
+            ExecutionStep<OBSERVED> interrupted = runner.interruptedBefore(phase);
             if (interrupted != null) {
                 return interrupted;
             }
             try {
                 configuration.parker().accept(remaining);
             } catch (Throwable failure) {
-                return runner.waitingFailure(phase, attemptStarted, stageNumber, failure);
+                return runner.waitingFailure(phase, failure);
             }
-            interrupted = runner.interruptedBefore(phase, attemptStarted, stageNumber);
+            interrupted = runner.interruptedBefore(phase);
             if (interrupted != null) {
                 return interrupted;
             }
         }
-        return runner.interruptedBefore(phase, attemptStarted, stageNumber);
+        return runner.interruptedBefore(phase);
     }
 
     private static long now(WaitConfiguration configuration) {

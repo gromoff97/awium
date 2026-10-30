@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.Await.CollectionViewSource;
 import io.github.gromoff97.awium.Await.MapViewSource;
 import io.github.gromoff97.awium.result.AwaitResult;
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -14,6 +15,7 @@ import java.util.concurrent.Callable;
 import java.util.function.BiPredicate;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
@@ -26,10 +28,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class FluentConditionTest {
 
+    private final FakeTime time = new FakeTime(0);
+
     @Test
     void typedComparisonsPreserveTheObservedTypeInBothTerminalsAndSequences() {
         Number actual = Integer.valueOf(1000);
-        var time = new FakeTime(0);
         var waiting = await(() -> actual).usingTime(time, time);
 
         for (var condition : List.of(equalTo(1000), notEqualTo(0), sameAs(actual),
@@ -44,13 +47,12 @@ class FluentConditionTest {
             assertSame(actual, attempt.orThrow());
             assertEquals(List.of(actual, actual, actual), sequence);
             assertEquals(sequence, attempts.orThrow());
-            assertEquals(3, attempts.attempts().size());
+            assertEquals(3, attempts(attempts).size());
         }
     }
 
     @Test
     void inferredResultsStayTypedAcrossSeparateSequenceFamilies() {
-        var time = new FakeTime(0);
         var value = await(() -> "ready").until(equalTo("ready"));
         var comparisons = await(() -> "ready").usingTime(time, time)
                 .until(captured(equalTo("ready"), notIn(List.of("failed"))));
@@ -63,7 +65,6 @@ class FluentConditionTest {
 
     @Test
     void typedNullableOperandsKeepTheirTypes() {
-        var time = new FakeTime(0);
         String missing = null;
         var value = await(() -> missing).usingTime(time, time).until(equalTo(missing));
         var actual = java.util.Collections.singletonMap(missing, "ready");
@@ -77,7 +78,6 @@ class FluentConditionTest {
     @Test
     void typedOptionalSelectionsReturnContainedNumbers() {
         Number actual = 1;
-        var time = new FakeTime(0);
         var waiting = await(() -> Optional.of(actual)).usingTime(time, time);
         var check = hasValue(equalTo(1)).because("optional contains the expected number");
 
@@ -95,7 +95,6 @@ class FluentConditionTest {
     @Test
     void typedCollectionSelectionsReturnElementsAndCapturesKeepTheirContainers() {
         Number actual = 1;
-        var time = new FakeTime(0);
         var waiting = await(() -> List.of(actual)).usingTime(time, time);
 
         Number nested = waiting.until(singleElement(equalTo(1)));
@@ -116,7 +115,6 @@ class FluentConditionTest {
     @Test
     void typedMapSelectionsKeepValuesAndEntriesDistinct() {
         Number actual = 1;
-        var time = new FakeTime(0);
         var waiting = await(() -> Map.of("key", actual)).usingTime(time, time);
         var check = valueFor("key", equalTo(1)).because("key selects the expected number");
 
@@ -139,7 +137,6 @@ class FluentConditionTest {
 
     @Test
     void typedConditionsNarrowNestedValues() {
-        var time = new FakeTime(0);
         Number actual = 1;
         Integer direct = await(() -> actual).usingTime(time, time).until(instanceOf(Integer.class));
         Integer optional = await(() -> Optional.of(actual)).usingTime(time, time).until(hasValue(instanceOf(Integer.class)));
@@ -151,7 +148,6 @@ class FluentConditionTest {
 
     @Test
     void typedMapQuantifiersPreserveBothTypeArgumentsAndTheConcreteMap() {
-        var time = new FakeTime(0);
         var actual = new LinkedHashMap<>(Map.of(" ", "\t"));
         var waiting = await(() -> actual).usingTime(time, time);
 
@@ -168,7 +164,6 @@ class FluentConditionTest {
 
     @Test
     void typedEntryQuantifiersAcceptPredicatesForSupertypes() {
-        var time = new FakeTime(0);
         var actual = new LinkedHashMap<>(Map.of("key", 1));
         var waiting = await(() -> actual).usingTime(time, time);
         BiPredicate<CharSequence, Number> valid = (key, value) -> !key.isEmpty() && value.intValue() > 0;
@@ -183,7 +178,6 @@ class FluentConditionTest {
 
     @Test
     void typedCollectionQuantifiersAcceptPredicatesForSupertypes() {
-        var time = new FakeTime(0);
         var actual = new ArrayList<>(List.of(""));
         var waiting = await(() -> actual).usingTime(time, time);
 
@@ -200,7 +194,6 @@ class FluentConditionTest {
         record Payment(String id) {}
         var actual = new Payment("receipt");
         var check = condition("identity", ignored -> ConditionResult.satisfied());
-        var time = new FakeTime(0);
 
         var payment = await(() -> actual).usingTime(time, time).until(condition("inline", value -> ConditionResult.satisfied()));
         var created = await(() -> actual).usingTime(time, time).until(conditionPerWait("factory", () -> ignored -> ConditionResult.satisfied()));
@@ -238,11 +231,8 @@ class FluentConditionTest {
 
     @Test
     void standaloneSortingAndEntryConditionsDoNotNeedSourceTypeHints() {
-        var time = new FakeTime(0);
-        record Receipt(String key, Integer value) implements Map.Entry<String, Integer> {
-            @Override public String getKey() { return key; }
-            @Override public Integer getValue() { return value; }
-            @Override public Integer setValue(Integer value) { throw new UnsupportedOperationException(); }
+        final class Receipt extends SimpleImmutableEntry<String, Integer> {
+            Receipt(String key, Integer value) { super(key, value); }
         }
         var entry = new Receipt("key", 1);
         var actual = new ProbeContainers.EntryMap<String, Integer>(List.of(entry));
@@ -262,7 +252,6 @@ class FluentConditionTest {
 
     @Test
     void typedSelectionsAcceptCovariantViewsAndTypedEntryCallbacks() {
-        var time = new FakeTime(0);
         Callable<List<? extends Number>> values = () -> List.of(1);
         Callable<Map<CharSequence, ? extends Number>> entries = () -> Map.of("key", 1);
         var collection = new CollectionViewSource<Number, List<? extends Number>>(values);

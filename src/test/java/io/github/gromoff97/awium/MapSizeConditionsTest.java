@@ -6,6 +6,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
@@ -25,53 +28,55 @@ import static io.github.gromoff97.awium.MapConditions.nonEmpty;
 import static io.github.gromoff97.awium.MapConditions.singleEntry;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class MapSizeConditionsTest {
 
+    private final FakeTime time = new FakeTime(0);
+
     @Test
     void hasSingleEntryReturnsTheTypedEntry() {
-        var pollingTime = new FakeTime(0);
         java.util.concurrent.Callable<LinkedHashMap<String, Integer>> source = () -> {
             var map = new LinkedHashMap<String, Integer>();
             map.put("key", 42);
             return map;
         };
 
-        Map.Entry<String, Integer> selected = await(source::call).usingTime(pollingTime, pollingTime).until(singleEntry);
+        Map.Entry<String, Integer> selected = await(source::call).usingTime(time, time).until(singleEntry);
 
         assertEquals("key", selected.getKey());
         assertEquals(42, selected.getValue());
-        assertTrue(assertFailure(TIMEOUT, () -> await(() -> Map.of())
-                .usingTime(pollingTime, pollingTime).upTo(ofNanos(1)).until(singleEntry))
-                .getMessage().contains("map size was 0"));
-        assertTrue(assertFailure(TIMEOUT, () -> await(() -> Map.of("first", 1, "second", 2))
-                .usingTime(pollingTime, pollingTime).upTo(ofNanos(1)).until(singleEntry))
-                .getMessage().contains("map size was greater than 1"));
+        assertThat(assertFailure(TIMEOUT, () -> await(() -> Map.of())
+                .usingTime(time, time).upTo(ofNanos(1)).until(singleEntry)))
+                .hasMessageContaining("map size was 0");
+        assertThat(assertFailure(TIMEOUT, () -> await(() -> Map.of("first", 1, "second", 2))
+                .usingTime(time, time).upTo(ofNanos(1)).until(singleEntry)))
+                .hasMessageContaining("map size was greater than 1");
     }
 
-    @Test
-    void conditionsEvaluateEverySizeRelation() {
-        for (Case testCase : cases()) {
-            Map<Integer, Integer> matching = mapWithSize(testCase.matchingSize());
-            Map<Integer, Integer> mismatching = mapWithSize(testCase.mismatchingSize());
+    @ParameterizedTest(name = "{0}: matches size {1}, rejects size {2}")
+    @MethodSource("cases")
+    void conditionsEvaluateEverySizeRelation(PreservingCondition<Map<?, ?>> condition,
+            int matchingSize, int mismatchingSize) {
+        Map<Integer, Integer> matching = mapWithSize(matchingSize);
+        Map<Integer, Integer> mismatching = mapWithSize(mismatchingSize);
 
-            assertSame(matching, result(evaluate(testCase.condition(), matching)));
-            assertUnsatisfied(evaluate(testCase.condition(), mismatching));
-            assertEquals("map was null", mismatch(evaluate(testCase.condition(), null)));
-        }
-        assertEquals("map size was 1",
-                mismatch(evaluate(hasSize(2), Map.of("key", "value"))));
+        assertSame(matching, result(evaluate(condition, matching)));
+        assertUnsatisfied(evaluate(condition, mismatching));
+        assertEquals("map was null", mismatch(evaluate(condition, null)));
     }
 
     @Test
     void nullMapRemainsUnsatisfied() {
-        FakeTime time = new FakeTime(0);
         Map<Object, Object> actual = null;
 
         assertFailure(TIMEOUT,
@@ -81,8 +86,8 @@ class MapSizeConditionsTest {
 
     @Test
     void diagnosticsUseMapVocabularyAndCapturedSize() {
-        var actual = new ProbeContainers.ProbeMap<Object, Object>();
-        FakeTime time = new FakeTime(0);
+        assertEquals("map size was 1", mismatch(evaluate(hasSize(2), Map.of("key", "value"))));
+        var actual = ProbeContainers.sizeOnlyMap();
 
         var failure = assertFailure(TIMEOUT,
                 () -> await(() -> {
@@ -90,20 +95,19 @@ class MapSizeConditionsTest {
                     return actual;
                 }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(empty));
 
-        assertTrue(failure.getMessage().contains("map"));
-        assertFalse(failure.getMessage().contains("collection"));
-        assertEquals(1, actual.sizeCalls);
+        assertThat(failure.getMessage()).contains("map").doesNotContain("collection");
+        verify(actual).size();
     }
 
     @Test
     void throwingSizeIsTheExactFailFastConditionCause() {
-        var pollingTime = new FakeTime(0);
         var cause = new IllegalStateException("map size failed");
-        var map = new ProbeContainers.ProbeMap<Object, Object>(cause);
+        var map = ProbeContainers.sizeOnlyMap();
+        when(map.size()).thenThrow(cause);
 
         assertSame(cause, assertFailure(CONDITION_FAILED,
-                () -> await(() -> map).usingTime(pollingTime, pollingTime).until(nonEmpty)).getCause());
-        assertEquals(1, map.sizeCalls);
+                () -> await(() -> map).usingTime(time, time).until(nonEmpty)).getCause());
+        verify(map).size();
     }
 
     @Test
@@ -117,8 +121,8 @@ class MapSizeConditionsTest {
 
     @Test
     void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() {
-        assertEquals(Satisfied.class, evaluate(hasSizeBetween(2, 4), mapWithSize(2)).getClass());
-        assertEquals(Satisfied.class, evaluate(hasSizeBetween(2, 4), mapWithSize(4)).getClass());
+        assertInstanceOf(Satisfied.class, evaluate(hasSizeBetween(2, 4), mapWithSize(2)));
+        assertInstanceOf(Satisfied.class, evaluate(hasSizeBetween(2, 4), mapWithSize(4)));
         assertUnsatisfied(evaluate(hasSizeBetween(2, 4), mapWithSize(1)));
         assertUnsatisfied(evaluate(hasSizeBetween(2, 4), mapWithSize(5)));
     }
@@ -131,16 +135,14 @@ class MapSizeConditionsTest {
         return map;
     }
 
-    private static List<Case> cases() {
-        return List.of(new Case(empty, 0, 1), new Case(nonEmpty, 1, 0),
-                new Case(hasSize(2), 2, 1),
-                new Case(hasSizeNotEqualTo(2), 1, 2),
-                new Case(hasSizeGreaterThan(2), 3, 2),
-                new Case(hasSizeAtLeast(2), 2, 1),
-                new Case(hasSizeLessThan(2), 1, 2),
-                new Case(hasSizeAtMost(2), 2, 3));
+    private static List<Arguments> cases() {
+        return List.of(arguments(empty, 0, 1), arguments(nonEmpty, 1, 0),
+                arguments(hasSize(2), 2, 1),
+                arguments(hasSizeNotEqualTo(2), 1, 2),
+                arguments(hasSizeGreaterThan(2), 3, 2),
+                arguments(hasSizeAtLeast(2), 2, 1),
+                arguments(hasSizeLessThan(2), 1, 2),
+                arguments(hasSizeAtMost(2), 2, 3));
     }
 
-    private record Case(PreservingCondition<Map<?, ?>> condition, int matchingSize,
-            int mismatchingSize) {}
 }

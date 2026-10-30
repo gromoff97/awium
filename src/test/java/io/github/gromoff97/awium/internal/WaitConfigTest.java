@@ -6,9 +6,10 @@ import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.internal.WaitConfiguration.DEFAULT;
 import static java.time.Duration.*;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WaitConfigTest {
 
@@ -31,26 +32,21 @@ class WaitConfigTest {
 
     @Test
     void eachDurationRejectsNullBeforeOtherValidation() {
-        assertEquals("polling interval must not be null",
-                assertThrows(NullPointerException.class,
-                        () -> DEFAULT.withEvery(null)).getMessage());
-        assertEquals("acquisition timeout must not be null",
-                assertThrows(NullPointerException.class,
-                        () -> DEFAULT.withUpTo(null)).getMessage());
-        assertEquals("persistence duration must not be null",
-                assertThrows(NullPointerException.class,
-                        () -> DEFAULT.withPersistence(null)).getMessage());
+        assertThatNullPointerException().isThrownBy(() -> DEFAULT.withEvery(null))
+                .withMessage("polling interval must not be null");
+        assertThatNullPointerException().isThrownBy(() -> DEFAULT.withUpTo(null))
+                .withMessage("acquisition timeout must not be null");
+        assertThatNullPointerException().isThrownBy(() -> DEFAULT.withPersistence(null))
+                .withMessage("persistence duration must not be null");
     }
 
     @Test
     void intervalAndTimeoutMustBePositive() {
         for (Duration invalid : List.of(ZERO, ofNanos(-1))) {
-            assertTrue(assertThrows(IllegalArgumentException.class,
-                    () -> DEFAULT.withEvery(invalid)).getMessage()
-                    .contains("polling interval"));
-            assertTrue(assertThrows(IllegalArgumentException.class,
-                    () -> DEFAULT.withEvery(ofSeconds(20)).withUpTo(invalid))
-                    .getMessage().contains("acquisition timeout"));
+            assertThatIllegalArgumentException().isThrownBy(() -> DEFAULT.withEvery(invalid))
+                    .withMessageContaining("polling interval");
+            assertThatIllegalArgumentException().isThrownBy(() -> DEFAULT.withEvery(ofSeconds(20)).withUpTo(invalid))
+                    .withMessageContaining("acquisition timeout");
         }
     }
 
@@ -58,22 +54,21 @@ class WaitConfigTest {
     void persistenceMayBeZeroButNotNegative() {
         assertEquals(0L, DEFAULT.withPersistence(ZERO).persistenceNanos());
 
-        assertTrue(assertThrows(IllegalArgumentException.class,
-                () -> DEFAULT.withPersistence(ofNanos(-1))).getMessage()
-                .contains("persistence"));
+        assertThatIllegalArgumentException().isThrownBy(() -> DEFAULT.withPersistence(ofNanos(-1)))
+                .withMessageContaining("persistence");
     }
 
     @Test
     void rawConfigurationCannotBypassDurationValidation() {
-        assertEquals("polling interval must be positive",
-                assertThrows(IllegalArgumentException.class,
-                        () -> new WaitConfiguration(0, 1, 0, DEFAULT.clock(), DEFAULT.parker())).getMessage());
-        assertEquals("acquisition timeout must be positive",
-                assertThrows(IllegalArgumentException.class,
-                        () -> new WaitConfiguration(1, 0, 0, DEFAULT.clock(), DEFAULT.parker())).getMessage());
-        assertEquals("persistence duration must be non-negative",
-                assertThrows(IllegalArgumentException.class,
-                        () -> new WaitConfiguration(1, 2, -1, DEFAULT.clock(), DEFAULT.parker())).getMessage());
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new WaitConfiguration(0, 1, 0, DEFAULT.clock(), DEFAULT.parker()))
+                .withMessage("polling interval must be positive");
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new WaitConfiguration(1, 0, 0, DEFAULT.clock(), DEFAULT.parker()))
+                .withMessage("acquisition timeout must be positive");
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new WaitConfiguration(1, 2, -1, DEFAULT.clock(), DEFAULT.parker()))
+                .withMessage("persistence duration must be non-negative");
     }
 
     @Test
@@ -93,10 +88,12 @@ class WaitConfigTest {
 
     @Test
     void durationFormattingUsesReadableExactUnits() {
-        assertEquals("106751 days 23 hours 47 minutes 16 seconds 854 milliseconds 775 microseconds 808 nanoseconds",
-                DiagnosticText.duration(ofNanos(Long.MAX_VALUE).plusNanos(1)));
-        assertEquals("1 nanosecond", DiagnosticText.duration(ofNanos(1)));
-        assertEquals("1 minute 30 seconds", DiagnosticText.duration(ofSeconds(90)));
-        assertEquals("1 second 1 millisecond 1 microsecond 1 nanosecond", DiagnosticText.duration(ofNanos(1_001_001_001)));
+        assertEquals("106751 d 23 h 47 min 16 s 854 ms 775 µs 808 ns",
+                DiagnosticText.duration(Long.MIN_VALUE));
+        assertEquals("0 ns", DiagnosticText.duration(0));
+        assertEquals("213503 d 23 h 34 min 33 s 709 ms 551 µs 615 ns", DiagnosticText.duration(-1));
+        assertEquals("1 ns", DiagnosticText.duration(1));
+        assertEquals("1 min 30 s", DiagnosticText.duration(90_000_000_000L));
+        assertEquals("1 s 1 ms 1 µs 1 ns", DiagnosticText.duration(1_001_001_001));
     }
 }

@@ -1,21 +1,15 @@
 package io.github.gromoff97.awium;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class OrderedWaitCompilationContractTest {
 
-    @TempDir
-    Path directory;
-
     @ParameterizedTest
     @ValueSource(strings = {"await", "tryAwait"})
-    void predicatesMustBeExpressedThroughConditions(String factory) throws IOException {
+    void predicatesMustBeExpressedThroughConditions(String factory) {
         for (String arguments : List.of("value -> true", "String::isBlank", "value -> true, value -> false")) {
             assertRejected("%s(Contract::text).until(%s);".formatted(factory, arguments));
         }
@@ -23,7 +17,7 @@ class OrderedWaitCompilationContractTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"await", "tryAwait"})
-    void rejectsIncompatibleCallbackAndSourceTypes(String factory) throws IOException {
+    void rejectsIncompatibleCallbackAndSourceTypes(String factory) {
         for (String expression : List.of(
                 "%s(Contract::text).until(matches((Integer value) -> true));",
                 "%s(Contract::text).until(matches(value -> value.length()));",
@@ -36,7 +30,7 @@ class OrderedWaitCompilationContractTest {
     }
 
     @Test
-    void sequenceResultsCannotBeAssignedToSingleOrUnrelatedValues() throws IOException {
+    void sequenceResultsCannotBeAssignedToSingleOrUnrelatedValues() {
         for (String expression : List.of(
                 "String value = await(Contract::text).until(captured(isNotNull, isNotNull));",
                 "AwaitResult<String, String> value = tryAwait(Contract::text).until(captured(isNotNull, isNotNull));",
@@ -50,7 +44,7 @@ class OrderedWaitCompilationContractTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"await", "tryAwait"})
-    void terminalsRequireOneExplicitCondition(String factory) throws IOException {
+    void terminalsRequireOneExplicitCondition(String factory) {
         for (String arguments : List.of("", "isNotNull, isNotNull", "present, present",
                 "singleElement, singleElement", "valueFor(\"ready\"), valueFor(\"ready\")",
                 "instanceOf(String.class), instanceOf(String.class)",
@@ -59,8 +53,8 @@ class OrderedWaitCompilationContractTest {
         }
     }
 
-    private void assertRejected(String body) throws IOException {
-        CompilationSupport.assertRejected(directory, """
+    private void assertRejected(String body) {
+        CompilationSupport.assertRejected("""
                 import java.util.*;
                 import java.util.concurrent.Callable;
                 import io.github.gromoff97.awium.result.AwaitResult;

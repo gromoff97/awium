@@ -1,108 +1,67 @@
 package io.github.gromoff97.awium.internal;
 
-import io.github.gromoff97.awium.result.HistoryEntry;
-import io.github.gromoff97.awium.result.AttemptStatus;
-import java.time.Duration;
+import io.github.gromoff97.awium.result.Attempt;
 import java.util.concurrent.Callable;
 import java.util.function.LongSupplier;
 
 import static java.lang.Thread.currentThread;
 
 /** Retrieves observations, invokes their bound attempts, and records execution diagnostics. */
-final class AttemptExecution<OBSERVED, RESULT> {
+record AttemptExecution<OBSERVED, RESULT>(Callable<? extends OBSERVED> source,
+        SequenceExecution<OBSERVED, RESULT> execution, LongSupplier clock, long started) {
 
-    private static final long NANOS_PER_SECOND = 1_000_000_000L;
-
-    private final Callable<? extends OBSERVED> source;
-    private final SequenceExecution<OBSERVED, RESULT> execution;
-    private final LongSupplier clock;
-    private final long started;
-
-    AttemptExecution(Callable<? extends OBSERVED> source, SequenceExecution<OBSERVED, RESULT> execution,
-            LongSupplier clock, long started) {
-        this.source = source;
-        this.execution = execution;
-        this.clock = clock;
-        this.started = started;
-    }
-
-    HistoryEntry<OBSERVED> call(HistoryEntry.Phase phase,
-            long attemptStarted, long retrievalStarted, int stageNumber) {
-        HistoryEntry<OBSERVED> interrupted = interruptedBefore(phase, attemptStarted, stageNumber);
-        if (interrupted != null) {
-            return interrupted;
-        }
+    ExecutionStep<OBSERVED> call(ExecutionStep.Phase phase) {
+        var interrupted = interruptedBefore(phase);
+        if (interrupted != null) return interrupted;
+        int stageNumber = execution.stageNumber();
         OBSERVED actual;
         try {
             actual = source.call();
         } catch (Throwable failure) {
-            long completed = clock.getAsLong();
-            var timing = new HistoryEntry.Timing(offset(attemptStarted),
-                    offset(retrievalStarted), null, offset(completed));
-            return new HistoryEntry<>(phase, timing, execution.condition(stageNumber), execution.progress(stageNumber),
-                    null, new AttemptStatus.Uncontrolled(AttemptStatus.Operation.SOURCE, failure));
+            return step(phase, stageNumber,
+                    new Attempt.FailedBeforeObservation<>(Attempt.Operation.SOURCE, failure), clock.getAsLong());
         }
 
-        long observed = clock.getAsLong();
+        // Keep the clock/cancellation boundary before invoking user condition code.
+        clock.getAsLong();
         if (currentThread().isInterrupted()) {
-            var interruption = new InterruptedException("caller thread interrupt flag was set");
-            long completed = clock.getAsLong();
-            var timing = afterObservation(attemptStarted, retrievalStarted, observed, completed);
-            return new HistoryEntry<>(phase, timing, execution.condition(stageNumber), execution.progress(stageNumber),
-                    actual, new AttemptStatus.Uncontrolled(AttemptStatus.Operation.SOURCE, interruption));
+            return step(phase, stageNumber, new Attempt.FailedAfterObservation<>(actual, Attempt.Operation.SOURCE,
+                    new InterruptedException("caller thread interrupt flag was set"), null), clock.getAsLong());
         }
 
-        var attempt = execution.attempt(actual);
-        var evaluation = attempt.call();
+        var evaluation = execution.attempt(actual).call();
         execution.record(evaluation);
-        var result = evaluation.status();
         long completed = clock.getAsLong();
-
-        if (!(result instanceof AttemptStatus.Uncontrolled) && currentThread().isInterrupted()) {
-            var cause = result.cause();
-            result = new AttemptStatus.Uncontrolled(AttemptStatus.Operation.CONDITION,
-                    cause == null ? new InterruptedException("caller thread interrupt flag was set") : cause);
+        if (!(evaluation instanceof AttemptResult.Uncontrolled<?>) && currentThread().isInterrupted()) {
+            var cause = evaluation.cause();
+            evaluation = AttemptResult.uncontrolled(cause == null
+                    ? new InterruptedException("caller thread interrupt flag was set") : cause);
         }
-        var timing = afterObservation(attemptStarted, retrievalStarted, observed, completed);
-        return new HistoryEntry<>(phase, timing, attempt.condition(),
-                execution.progress(stageNumber), actual, result);
+        Attempt<OBSERVED> attempt = switch (evaluation) {
+            case AttemptResult.Satisfied<?> ignored -> new Attempt.Satisfied<>(actual);
+            case AttemptResult.Unsatisfied<?> mismatch ->
+                    new Attempt.Unsatisfied<>(actual, mismatch.mismatch(), mismatch.cause());
+            case AttemptResult.Uncontrolled<?> failure -> new Attempt.FailedAfterObservation<>(actual,
+                    Attempt.Operation.CONDITION, failure.cause(), failure.location());
+        };
+        return step(phase, stageNumber, attempt, completed);
     }
 
-    private HistoryEntry.Timing afterObservation(long attemptStarted, long retrievalStarted,
-            long observed, long completed) {
-        return new HistoryEntry.Timing(offset(attemptStarted),
-                offset(retrievalStarted),
-                offset(observed),
-                offset(completed));
+    private ExecutionStep<OBSERVED> step(ExecutionStep.Phase phase, int stageNumber,
+            Attempt<OBSERVED> attempt, long completed) {
+        return new ExecutionStep<>(execution.definition(), stageNumber, execution.capturedStages(),
+                phase, completed - started, attempt);
     }
 
-    HistoryEntry<OBSERVED> interruptedBefore(HistoryEntry.Phase phase,
-            long attemptStarted, int stageNumber) {
-        if (!currentThread().isInterrupted()) {
-            return null;
-        }
-        return waitingFailure(phase, attemptStarted, stageNumber,
-                new InterruptedException("caller thread interrupt flag was set"));
+    ExecutionStep<OBSERVED> interruptedBefore(ExecutionStep.Phase phase) {
+        return currentThread().isInterrupted()
+                ? waitingFailure(phase, new InterruptedException("caller thread interrupt flag was set"))
+                : null;
     }
 
-    HistoryEntry<OBSERVED> waitingFailure(HistoryEntry.Phase phase,
-            long attemptStarted, int stageNumber, Throwable failure) {
-        long completed = clock.getAsLong();
-        var timing = new HistoryEntry.Timing(offset(attemptStarted), null, null, offset(completed));
-        return new HistoryEntry<>(phase, timing, execution.condition(stageNumber), execution.progress(stageNumber),
-                null, new AttemptStatus.Uncontrolled(AttemptStatus.Operation.WAITING, failure));
+    ExecutionStep<OBSERVED> waitingFailure(ExecutionStep.Phase phase, Throwable failure) {
+        return step(phase, execution.stageNumber(),
+                new Attempt.FailedBeforeObservation<>(Attempt.Operation.WAITING, failure), clock.getAsLong());
     }
 
-    long completedNanos(HistoryEntry<?> attempt) {
-        var elapsed = attempt.timing().completionOffset();
-        // Reconstruct the clock reading with the same wrapping arithmetic as nanoTime.
-        return started + elapsed.getSeconds() * NANOS_PER_SECOND + elapsed.getNano();
-    }
-
-    Duration offset(long stage) {
-        // Acquisition and persistence each fit in signed nanos; their sum need not.
-        long elapsed = stage - started;
-        return Duration.ofSeconds(Long.divideUnsigned(elapsed, NANOS_PER_SECOND),
-                Long.remainderUnsigned(elapsed, NANOS_PER_SECOND));
-    }
 }

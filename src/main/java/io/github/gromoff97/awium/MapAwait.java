@@ -26,26 +26,22 @@ public final class MapAwait<OBSERVED extends Map<?, ?>, ENTRY extends Map.Entry<
 
     @Override
     public MapAwait<OBSERVED, ENTRY, VALUE> every(Duration interval) {
-        return reconfigured(configuration.withEvery(interval));
+        return new MapAwait<>(source, configuration.withEvery(interval));
     }
 
     @Override
     public MapAwait<OBSERVED, ENTRY, VALUE> upTo(Duration timeout) {
-        return reconfigured(configuration.withUpTo(timeout));
+        return new MapAwait<>(source, configuration.withUpTo(timeout));
     }
 
     @Override
     public MapAwait<OBSERVED, ENTRY, VALUE> persisting(Duration persistence) {
-        return reconfigured(configuration.withPersistence(persistence));
+        return new MapAwait<>(source, configuration.withPersistence(persistence));
     }
 
     @Override
     public MapAwait<OBSERVED, ENTRY, VALUE> usingTime(LongSupplier clock, LongConsumer parker) {
-        return reconfigured(configuration.withTime(clock, parker));
-    }
-
-    private MapAwait<OBSERVED, ENTRY, VALUE> reconfigured(WaitConfiguration configuration) {
-        return new MapAwait<>(source, configuration);
+        return new MapAwait<>(source, configuration.withTime(clock, parker));
     }
 
     public VALUE until(MapValueCondition<? super OBSERVED> condition) {

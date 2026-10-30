@@ -34,9 +34,7 @@ class MapIterableSourceTest {
         }
     }
 
-    private record User(int id, boolean active) {
-        boolean inactive() { return !active; }
-    }
+    private record User(int id, boolean active) {}
 
     private static final class MapWithUsers extends AbstractMap<String, Integer> implements Iterable<User> {
         @Override public Set<Map.Entry<String, Integer>> entrySet() { return Set.of(Map.entry("key", 10)); }

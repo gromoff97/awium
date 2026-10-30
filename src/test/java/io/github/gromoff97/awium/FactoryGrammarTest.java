@@ -27,6 +27,8 @@ class FactoryGrammarTest {
 
     @Test
     void everyTypedNullSourceUsesTheExactValidationMessage() {
+        assertNullRejected("delegate", () -> new Await.CollectionViewSource<>(null));
+        assertNullRejected("delegate", () -> new Await.MapViewSource<>(null));
         assertNullRejected("source", () -> await((Callable<Object>) null));
         assertNullRejected("source", () -> await((Await.OptionalSource<Object>) null));
         assertNullRejected("source", () -> await((Await.CollectionSource<Collection<Object>>) null));

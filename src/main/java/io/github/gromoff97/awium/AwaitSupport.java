@@ -57,11 +57,11 @@ abstract sealed class AwaitSupport<OBSERVED> permits ValueAwait, DiagnosticAwait
             SequenceExecution<OBSERVED, VALUE> execution, Function<List<VALUE>, RESULT> result) {
         var history = new AttemptHistory<OBSERVED>(true);
         var outcome = new WaitEngine<>(configuration, source, execution).waitFor(history::add);
-        var attempts = history.snapshot();
+        var conditions = history.conditions(execution.conditions());
         if (outcome instanceof WaitCompletion.Satisfied) {
-            return new AwaitResult.Satisfied<>(attempts, result.apply(execution.values()));
+            return new AwaitResult.Satisfied<>(conditions, result.apply(execution.values()));
         }
-        return new AwaitResult.Failed<>(attempts,
+        return new AwaitResult.Failed<>(conditions,
                 FailureDiagnostics.failure(outcome, configuration, history.count()));
     }
 }

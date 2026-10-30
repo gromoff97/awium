@@ -1,14 +1,19 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.AttemptGroup;
-import io.github.gromoff97.awium.result.AttemptStatus;
+import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitResult;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
+import static io.github.gromoff97.awium.AwaitTestAccess.observation;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedTryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
@@ -18,9 +23,8 @@ import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.Conditions.equalTo;
 import static io.github.gromoff97.awium.Conditions.isNotNull;
-import static io.github.gromoff97.awium.result.HistoryEntry.Phase.ACQUISITION;
-import static io.github.gromoff97.awium.result.HistoryEntry.Phase.PERSISTENCE;
 import static java.time.Duration.ofNanos;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -29,113 +33,114 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TryAwaitHistoryTest {
 
+    private final FakeTime time = new FakeTime(0);
+
     @Test
-    void groupsRepeatedOutcomesWithoutCallingUserObjectMethods() {
-        var time = new FakeTime(0);
+    void capturedRetainsEveryObservationTransitionWithinAnUnsuccessfulStage() {
+        var observations = List.of(
+                Collections.nCopies(4, 0),
+                Collections.nCopies(2, 10),
+                Collections.nCopies(6, 20),
+                Collections.nCopies(12, 30),
+                Collections.nCopies(6, 40)).stream().flatMap(List::stream).toList();
+        var source = observations.iterator();
+        var result = tryAwait(source::next).usingTime(time, time)
+                .every(ofNanos(1)).upTo(ofNanos(30))
+                .until(captured(equalTo(100), equalTo(200)));
+
+        assertInstanceOf(AwaitResult.Failed.class, result);
+        assertThat(result.conditions().getFirst().attempts().keySet()).containsExactly(4L, 6L, 12L, 24L, 30L);
+        assertThat(attempts(result)).hasOnlyElementsOfType(Attempt.Unsatisfied.class)
+                .extracting(AwaitTestAccess::observation).containsExactly(0, 10, 20, 30, 40);
+        assertTrue(result.conditions().getLast().attempts().isEmpty());
+    }
+
+    @Test
+    void groupsRepeatedReferencesWithoutCallingTheirObjectMethods() {
         var probe = new ThrowingProbe();
         var execution = timedTryAwait(() -> probe,
                 config(1, 10, 3), time, time).until(condition("ready", actual -> satisfied()));
 
-        assertEquals(2, execution.attempts().size());
-        assertEquals(List.of(ACQUISITION, PERSISTENCE),
-                execution.attempts().stream().map(group -> group.first().phase()).toList());
-        var persistence = execution.attempts().getLast();
-        assertEquals(2, persistence.firstNumber());
-        assertEquals(4, persistence.lastNumber());
-        assertEquals(3, persistence.count());
-        assertSame(probe, persistence.first().observed());
-        assertSame(probe, persistence.last().observed());
-        assertEquals(ofNanos(1), persistence.first().timing().completionOffset());
-        assertEquals(ofNanos(3), persistence.last().timing().completionOffset());
-        assertThrows(UnsupportedOperationException.class, execution.attempts()::clear);
+        assertEquals(1, attempts(execution).size());
+        assertEquals(4L, execution.conditions().getFirst().attempts().lastKey());
+        assertSame(probe, observation(attempts(execution).getFirst()));
+        assertEquals(3, time.getAsLong());
+        assertThrows(UnsupportedOperationException.class, attempts(execution)::clear);
     }
 
-    @Test
-    void repeatedDiagnosticsKeepBothBoundariesWithoutATailLimit() {
-        for (int count : new int[]{255, 256, 257, 10_000}) {
-            var time = new FakeTime(0);
-            int[] calls = {0};
-            var result = timedTryAwait(() -> ++calls[0], config(1, count, 0), time, time).until(
-                    condition("never ready", value -> unsatisfied("not ready")));
+    @ParameterizedTest(name = "count={0}")
+    @ValueSource(ints = {255, 256, 257, 10_000})
+    void repeatedObservationsAndDiagnosticsKeepTheLastNumberWithoutATailLimit(int count) {
+        int[] calls = {0};
+        var result = timedTryAwait(() -> {
+            calls[0]++;
+            return 1;
+        }, config(1, count, 0), time, time).until(
+                condition("never ready", value -> unsatisfied("not ready")));
 
-            assertEquals(count, calls[0]);
-            assertEquals(1, result.attempts().size());
-            var group = result.attempts().getFirst();
-            assertEquals(count, group.count());
-            assertEquals(1, group.firstNumber());
-            assertEquals(count, group.lastNumber());
-            assertEquals(1, group.first().observed());
-            assertEquals(count, group.last().observed());
-            var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
-            assertTrue(failure.message().contains("Attempt: " + count + " (ACQUISITION)"), failure.message());
-            assertThrows(UnsupportedOperationException.class, result.attempts()::clear);
-        }
+        assertEquals(count, calls[0]);
+        assertEquals(1, attempts(result).size());
+        var attempt = attempts(result).getFirst();
+        assertEquals((long) count, result.conditions().getFirst().attempts().lastKey());
+        assertEquals(1, observation(attempt));
+        assertThat(failure(result).message()).contains("Attempt: " + count + " (ACQUISITION)");
+        assertThrows(UnsupportedOperationException.class, attempts(result)::clear);
     }
 
     @Test
     void everyDiagnosticTransitionSurvivesBeyondTheFormerTailLimit() {
-        var time = new FakeTime(0);
         int[] calls = {0};
         var result = tryAwait(() -> ++calls[0]).usingTime(time, time)
                 .every(ofNanos(1)).upTo(ofNanos(1_000))
                 .until(condition("changing", value -> unsatisfied("value " + value)));
 
-        assertEquals(1_000, result.attempts().size());
-        for (int i = 0; i < result.attempts().size(); i++) {
-            var group = result.attempts().get(i);
-            assertEquals(i + 1, group.firstNumber());
-            assertEquals(1, group.count());
-            assertSame(group.first(), group.last());
-            assertEquals(i + 1, group.first().observed());
+        assertEquals(1_000, attempts(result).size());
+        for (int i = 0; i < attempts(result).size(); i++) {
+            var attempt = attempts(result).get(i);
+            assertSame(attempt, result.conditions().getFirst().attempts().get((long) i + 1));
+            assertEquals(i + 1, observation(attempt));
         }
     }
 
-    @Test
-    void successAndTimeoutKeepAllGroupsWithoutChangingTheTerminalValue() {
-        for (int expected : new int[]{300, 301}) {
-            var time = new FakeTime(0);
-            int[] calls = {0};
-            var result = tryAwait(() -> ++calls[0])
-                    .every(ofNanos(1)).upTo(ofNanos(300)).usingTime(time, time)
-                    .until(equalTo(expected));
+    @ParameterizedTest(name = "expected={0}")
+    @ValueSource(ints = {300, 301})
+    void successAndTimeoutKeepAllGroupsWithoutChangingTheTerminalValue(int expected) {
+        int[] calls = {0};
+        var result = tryAwait(() -> ++calls[0])
+                .every(ofNanos(1)).upTo(ofNanos(300)).usingTime(time, time)
+                .until(equalTo(expected));
 
-            assertEquals(300, calls[0]);
-            assertEquals(300, result.attempts().stream().mapToLong(AttemptGroup::count).sum());
-            assertEquals(1, result.attempts().getFirst().first().observed());
-            assertEquals(300, result.attempts().getLast().last().observed());
-            if (expected == 300) {
-                assertEquals(2, result.attempts().size());
-                assertEquals(300, result.orThrow());
-            } else {
-                assertEquals(1, result.attempts().size());
-                assertThrows(AwaitAssertionError.class, result::orThrow);
-            }
+        assertEquals(300, calls[0]);
+        assertEquals(300, result.conditions().getFirst().attempts().lastKey());
+        assertEquals(1, observation(attempts(result).getFirst()));
+        assertEquals(300, observation(attempts(result).getLast()));
+        assertEquals(300, attempts(result).size());
+        if (expected == 300) {
+            assertEquals(300, result.orThrow());
+        } else {
+            assertThrows(AwaitAssertionError.class, result::orThrow);
         }
     }
 
     @Test
     void immutableConfigurationsAndRepeatedWaitsOwnIndependentHistories() {
-        var time = new FakeTime(0);
         var original = tryAwait(() -> "ready").usingTime(time, time)
                 .every(ofNanos(1)).upTo(ofNanos(10)).persisting(ofNanos(3));
         var otherTime = new FakeTime(0);
         var changed = original.every(ofNanos(2)).upTo(ofNanos(20))
                 .persisting(ofNanos(6)).usingTime(otherTime, otherTime);
 
-        var longer = changed.until(isNotNull);
-        assertEquals(ofNanos(6), longer.attempts().getLast().last().timing().completionOffset());
+        changed.until(isNotNull);
         assertEquals(6, otherTime.getAsLong());
         assertEquals(0, time.getAsLong());
         var shorter = original.until(isNotNull);
-        assertEquals(ofNanos(3), shorter.attempts().getLast().last().timing().completionOffset());
         assertEquals(3, time.getAsLong());
-        assertEquals(1, original.until(isNotNull).attempts().getFirst().firstNumber());
-        assertEquals(4, shorter.attempts().getLast().lastNumber());
+        assertEquals(4L, original.until(isNotNull).conditions().getFirst().attempts().lastKey());
+        assertEquals(4, shorter.conditions().getFirst().attempts().lastKey());
     }
 
     @Test
     void capturedKeepsEverySuccessfulObservationAndTheIdentityOfEachStage() {
-        var time = new FakeTime(0);
         int[] calls = {0};
         var stage = condition("same description", actual -> satisfied());
         var result = tryAwait(() -> ++calls[0])
@@ -143,15 +148,13 @@ class TryAwaitHistoryTest {
                 .until(captured(stage, stage, stage));
 
         assertEquals(List.of(1, 2, 3), result.orThrow());
-        assertEquals(3, result.attempts().size());
-        assertEquals(List.of(1, 2, 3), result.attempts().stream()
-                .map(group -> group.first().progress().stageNumber()).toList());
-        assertEquals(3, result.attempts().getLast().last().progress().capturedStages());
+        assertEquals(3, attempts(result).size());
+        assertThat(result.conditions()).extracting(history -> history.attempts().lastKey()).containsExactly(1L, 2L, 3L);
+        result.conditions().forEach(history -> assertSame(stage, history.condition()));
     }
 
     @Test
     void historyRetainsSourceTypesAlongsideEveryContainerSelection() {
-        var time = new FakeTime(0);
         var optional = tryAwait(() -> Optional.of("ready"))
                 .every(ofNanos(1)).upTo(ofNanos(10)).usingTime(time, time)
                 .until(OptionalConditions.present);
@@ -164,11 +167,11 @@ class TryAwaitHistoryTest {
         var entry = map.until(MapConditions.singleEntry);
 
         String selectedOptional = optional.orThrow();
-        Optional<String> observedOptional = optional.attempts().getFirst().first().observed();
+        Optional<String> observedOptional = observation(attempts(optional).getFirst());
         String selectedElement = collection.orThrow();
-        List<String> observedCollection = collection.attempts().getFirst().first().observed();
+        List<String> observedCollection = observation(attempts(collection).getFirst());
         String selectedValue = value.orThrow();
-        Map<String, String> observedMap = value.attempts().getFirst().first().observed();
+        Map<String, String> observedMap = observation(attempts(value).getFirst());
         Map.Entry<String, String> selectedEntry = entry.orThrow();
         assertEquals("ready", selectedOptional);
         assertEquals(Optional.of("ready"), observedOptional);
@@ -181,25 +184,23 @@ class TryAwaitHistoryTest {
 
     @Test
     void nestedReasonCopiesDoNotSplitRepeatedStructuralFailures() {
-        var time = new FakeTime(0);
         var result = tryAwait(() -> List.<String>of()).usingTime(time, time)
                 .every(ofNanos(1)).upTo(ofNanos(300))
                 .until(CollectionConditions.singleElement(equalTo("ready")).because("one ready element"));
 
-        assertEquals(1, result.attempts().size());
-        assertEquals(300, result.attempts().getFirst().count());
-        assertEquals("one ready element", result.attempts().getFirst().last().condition().explanation());
-        assertInstanceOf(AttemptStatus.Unsatisfied.class, result.attempts().getFirst().first().result());
+        assertEquals(1, attempts(result).size());
+        assertEquals(300, result.conditions().getFirst().attempts().firstKey());
+        assertEquals("one ready element", result.conditions().getFirst().condition().explanation());
+        assertInstanceOf(Attempt.Unsatisfied.class, attempts(result).getFirst());
     }
 
     @Test
     void retainsEveryNewErrorWithoutReadingItsMessageOrComparingIt() {
-        var time = new FakeTime(0);
         var errors = new java.util.ArrayList<Throwable>();
         int[] calls = {0};
-        var result = tryAwait(() -> ++calls[0]).usingTime(time, time).every(ofNanos(1))
+        var result = tryAwait(() -> 1).usingTime(time, time).every(ofNanos(1))
                 .until(condition("ready", value -> {
-                    if (value == 4) return satisfied();
+                    if (++calls[0] == 4) return satisfied();
                     var error = new AssertionError("same message") {
                         @Override public String getMessage() { throw new AssertionError("message must not be read"); }
                         @Override public boolean equals(Object other) { throw new AssertionError("equals must not be called"); }
@@ -210,35 +211,42 @@ class TryAwaitHistoryTest {
                     return unsatisfied("pending", error);
                 }));
 
-        assertEquals(4, result.orThrow());
-        assertEquals(4, result.attempts().size());
+        assertEquals(1, result.orThrow());
+        assertEquals(4, attempts(result).size());
         for (int i = 0; i < errors.size(); i++) {
-            assertSame(errors.get(i), result.attempts().get(i).first().result().cause());
-            assertEquals(1, result.attempts().get(i).count());
+            assertSame(errors.get(i), attempts(result).get(i).cause());
+            assertSame(attempts(result).get(i), result.conditions().getFirst().attempts().get((long) i + 1));
         }
         String report = result.toString();
         assertEquals(3, report.lines().filter(line -> line.strip().startsWith("Cause:")).count());
-        assertEquals(1, report.lines().filter(line -> line.contains("Condition:")).count());
+        assertEquals(1, report.lines().filter(line -> line.startsWith("Condition ")).count());
     }
 
     @Test
     void repetitionsOfTheSameErrorCanStillBeGrouped() {
-        var time = new FakeTime(0);
         var error = new AssertionError("same error");
         int[] calls = {0};
-        var result = tryAwait(() -> ++calls[0]).usingTime(time, time).every(ofNanos(1))
+        var result = tryAwait(() -> ++calls[0] < 4 ? 1 : 4).usingTime(time, time).every(ofNanos(1))
                 .until(condition("ready", value -> value == 4 ? satisfied() : unsatisfied("pending", error)));
 
         assertEquals(4, result.orThrow());
-        assertEquals(2, result.attempts().size());
-        assertEquals(3, result.attempts().getFirst().count());
-        assertSame(error, result.attempts().getFirst().first().result().cause());
-        assertSame(error, result.attempts().getFirst().last().result().cause());
+        assertEquals(2, attempts(result).size());
+        assertEquals(3, result.conditions().getFirst().attempts().firstKey());
+        assertSame(error, attempts(result).getFirst().cause());
+    }
+
+    @Test
+    void failedObservationComparisonsKeepSeparateAttemptsWithoutFailingTheWait() {
+        var result = timedTryAwait(ThrowingProbe::new,
+                config(1, 10, 3), time, time).until(condition("ready", actual -> satisfied()));
+
+        assertInstanceOf(AwaitResult.Satisfied.class, result);
+        assertThat(attempts(result)).hasSize(4).hasOnlyElementsOfType(Attempt.Satisfied.class);
+        assertSame(observation(attempts(result).getLast()), result.orThrow());
     }
 
     @Test
     void repeatedSelectorsKeepTheirNestingLevelWithoutSplittingSameLevelRepetitions() {
-        var time = new FakeTime(0);
         var emptyOuter = List.<List<String>>of();
         var emptyInner = List.of(List.<String>of());
         var ready = List.of(List.of("ready"));
@@ -249,17 +257,15 @@ class TryAwaitHistoryTest {
 
         String selected = result.orThrow();
         assertEquals("ready", selected);
-        assertEquals(List.of(2L, 2L, 1L), result.attempts().stream().map(AttemptGroup::count).toList());
-        assertEquals(List.of("collection size was 0", "single element: collection size was 0"),
-                result.attempts().subList(0, 2).stream().map(group ->
-                        assertInstanceOf(AttemptStatus.Unsatisfied.class, group.first().result()).mismatch()).toList());
-        assertSame(check, result.attempts().get(0).first().condition());
-        assertSame(check, result.attempts().get(1).first().condition());
+        assertThat(result.conditions().getFirst().attempts().keySet()).containsExactly(2L, 4L, 5L);
+        assertThat(attempts(result).subList(0, 2))
+                .extracting(attempt -> assertInstanceOf(Attempt.Unsatisfied.class, attempt).mismatch())
+                .containsExactly("collection size was 0", "single element: collection size was 0");
+        assertSame(check, result.conditions().getFirst().condition());
     }
 
     @Test
     void nestedSelectionScopeAccumulatesAcrossDifferentContainerKinds() {
-        var time = new FakeTime(0);
         var observations = List.of(Optional.<List<List<String>>>empty(),
                 Optional.of(List.<List<String>>of()), Optional.of(List.of(List.<String>of())),
                 Optional.of(List.of(List.of("ready")))).iterator();
@@ -268,11 +274,11 @@ class TryAwaitHistoryTest {
                         CollectionConditions.singleElement(Conditions.instanceOf(String.class)))));
 
         assertEquals("ready", result.orThrow());
-        assertEquals(4, result.attempts().size());
-        assertEquals(List.of("optional was empty", "optional value: collection size was 0",
-                        "optional value: single element: collection size was 0"),
-                result.attempts().subList(0, 3).stream().map(group ->
-                        assertInstanceOf(AttemptStatus.Unsatisfied.class, group.first().result()).mismatch()).toList());
+        assertEquals(4, attempts(result).size());
+        assertThat(attempts(result).subList(0, 3))
+                .extracting(attempt -> assertInstanceOf(Attempt.Unsatisfied.class, attempt).mismatch())
+                .containsExactly("optional was empty", "optional value: collection size was 0",
+                        "optional value: single element: collection size was 0");
     }
 
     private static final class ThrowingProbe {

@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.AttemptStatus;
 import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.Condition.ApplicableCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
@@ -140,7 +139,7 @@ final class ConditionSupport {
                 checked++;
                 var evaluated = evaluator.create(value).call();
                 if (evaluated instanceof AttemptResult.Uncontrolled<?> failure) {
-                    return nestedFailure(elementsDescription + " at iteration index " + (checked - 1), failure);
+                    return nestedFailure(elementsDescription + "[" + (checked - 1) + "]", failure);
                 }
                 last = evaluated;
                 if (quantifier.stops(evaluated instanceof AttemptResult.Satisfied<?>)) {
@@ -161,19 +160,14 @@ final class ConditionSupport {
     }
 
     private static <RESULT> AttemptResult.Unsatisfied<RESULT> nestedMismatch(String mismatch, AttemptResult<?> evaluated) {
-        if (evaluated == null) return AttemptResult.unsatisfied(mismatch);
-        var failure = evaluated.status() instanceof AttemptStatus.Unsatisfied value
-                ? unsatisfied(value.mismatch() == null ? mismatch : mismatch + ": " + value.mismatch(), value.cause())
-                : unsatisfied(mismatch);
-        return new AttemptResult.Unsatisfied<>(failure);
+        if (!(evaluated instanceof AttemptResult.Unsatisfied<?> failure)) return AttemptResult.unsatisfied(mismatch);
+        return AttemptResult.unsatisfied(failure.mismatch() == null ? mismatch : mismatch + ": " + failure.mismatch(), failure.cause());
     }
 
     private static <RESULT> AttemptResult.Uncontrolled<RESULT> nestedFailure(
             String location, AttemptResult.Uncontrolled<?> failure) {
-        var status = failure.status();
-        String path = status.location() == null ? location : location + " → " + status.location();
-        return new AttemptResult.Uncontrolled<>(
-                new AttemptStatus.Uncontrolled(status.operation(), status.cause(), path));
+        String path = failure.location() == null ? location : location + " → " + failure.location();
+        return new AttemptResult.Uncontrolled<>(failure.cause(), path);
     }
 
     static <VALUE> Reference<VALUE> unexpectedReference(VALUE value) {
@@ -210,8 +204,8 @@ final class ConditionSupport {
                     yield evaluated instanceof AttemptResult.Unsatisfied<?>
                             ? nestedMismatch(selection, evaluated) : evaluated;
                 }
-                case AttemptResult.Unsatisfied<?> mismatch -> new AttemptResult.Unsatisfied<>(mismatch.status());
-                case AttemptResult.Uncontrolled<?> failure -> new AttemptResult.Uncontrolled<>(failure.status());
+                case AttemptResult.Unsatisfied<?> mismatch -> AttemptResult.unsatisfied(mismatch.mismatch(), mismatch.cause());
+                case AttemptResult.Uncontrolled<?> failure -> new AttemptResult.Uncontrolled<>(failure.cause(), failure.location());
             };
         });
     }

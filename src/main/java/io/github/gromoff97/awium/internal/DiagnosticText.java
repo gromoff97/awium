@@ -1,13 +1,11 @@
 package io.github.gromoff97.awium.internal;
 
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.result.AttemptGroup;
-import io.github.gromoff97.awium.result.AttemptStatus;
-import io.github.gromoff97.awium.result.HistoryEntry;
-import java.time.Duration;
+import io.github.gromoff97.awium.result.Attempt;
+import io.github.gromoff97.awium.result.ConditionHistory;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
-import java.util.Locale;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -33,94 +31,80 @@ public final class DiagnosticText {
         return List.copyOf(diagnosticFailures);
     }
 
+    public void appendFailures(StringBuilder out, String indentation) {
+        for (Throwable failure : diagnosticFailures) field(out, indentation, "Rendering failure", failure.getClass().getName());
+    }
+
     /** Formats a cause without invoking an overridden Throwable.toString(). */
-    public static String cause(Throwable cause) {
+    public String cause(Throwable cause) {
         if (cause == null) return "null";
-        String message = new DiagnosticText(cause).render(cause::getMessage);
-        return cause.getClass().getName() + (message == null ? "" : ": " + message);
+        String message = render(cause::getMessage);
+        return cause.getClass().getName() + (message == null || message.isBlank() ? "" : ": " + message);
     }
 
-    /** Formats one invocation without an attempt number. */
-    public static String entry(HistoryEntry<?> entry) {
-        return history("Attempt", entry, null, null);
-    }
-
-    /** Formats a group, sharing unchanged definition fields with an optional preceding entry. */
-    public static String group(AttemptGroup<?> group, HistoryEntry<?> previous) {
-        boolean repeated = group.count() > 1;
-        String heading = repeated ? "Attempts " + group.firstNumber() + "–" + group.lastNumber()
-                : "Attempt " + group.firstNumber();
-        return history(heading, group.first(), repeated ? group.last() : null, previous);
-    }
-
-    private static String history(String heading, HistoryEntry<?> first,
-            HistoryEntry<?> last, HistoryEntry<?> previous) {
-        boolean repeated = last != null;
-        var status = first.result();
-        var cause = status.cause();
-        var text = new DiagnosticText(cause);
-        var out = new StringBuilder(heading);
-        out.append(" (").append(first.phase()).append(")\n");
-        String completed = duration(first.timing().completionOffset());
-        if (repeated) completed += " → " + duration(last.timing().completionOffset());
-        field(out, "Completed after", completed);
-        var progress = first.progress();
-        if (progress != null) {
-            int total = progress.sequence().stages().size();
-            field(out, "Stage", progress.stageNumber() + " of " + total
-                    + " (captured " + progress.capturedStages() + ")");
-            var priorProgress = previous == null ? null : previous.progress();
-            if (progress.sequence().explanation() != null
-                    && (priorProgress == null || priorProgress.sequence() != progress.sequence())) {
-                field(out, "Sequence because", progress.sequence().explanation());
-            }
-        }
-        if (previous == null || previous.condition() != first.condition()) {
-            text.condition(out, first.condition(), "    ");
-        }
-        String result = switch (status) {
-            case AttemptStatus.Satisfied ignored -> "satisfied";
-            case AttemptStatus.Unsatisfied ignored -> "unsatisfied";
-            case AttemptStatus.Uncontrolled failure -> "uncontrolled (" + failure.operation() + ")";
-        };
-        field(out, "Result", result);
-        if (status instanceof AttemptStatus.Unsatisfied mismatch && mismatch.mismatch() != null) {
-            field(out, "Mismatch", mismatch.mismatch());
-        }
-        if (status instanceof AttemptStatus.Uncontrolled failure && failure.location() != null) {
-            field(out, "Within", failure.location());
-        }
-        boolean separateObservations = repeated && first.observed() != last.observed();
-        String firstValue = first.hasObservation() ? text.value(first.observed()) : null;
-        String lastValue = separateObservations && last.hasObservation() ? text.value(last.observed()) : null;
-        boolean sameText = firstValue != null && firstValue.equals(lastValue);
-        if (first.hasObservation()) {
-            String label = sameText ? "First and last observed" : separateObservations ? "First observed" : "Observed";
-            field(out, label + " (current value)", firstValue);
-        } else {
-            field(out, "Observed", "unavailable");
-        }
-        if (lastValue != null && !sameText) {
-            field(out, "Last observed (current value)", lastValue);
-        }
-        if (cause != null) {
-            field(out, "Cause", cause.getClass().getName());
-            String message = text.render(cause::getMessage);
-            if (message != null && !message.isBlank()) field(out, "Message", message);
-        }
-        for (Throwable failure : text.failures()) field(out, "Diagnostics failure", failure.getClass().getName());
+    /** Formats a retained state without its condition or attempt number. */
+    public static String attempt(Attempt<?> attempt) {
+        var out = new StringBuilder();
+        appendAttempt(out, "Result", attempt);
         return out.substring(0, out.length() - 1);
     }
 
-    public static String duration(Duration remaining) {
-        StringJoiner result = new StringJoiner(" ").setEmptyValue("0 nanoseconds");
+    /** Formats one condition occurrence followed by its observation changes. */
+    public static String conditionHistory(String label, ConditionHistory<?> history) {
+        var out = new StringBuilder();
+        var text = new DiagnosticText(null);
+        text.condition(out, label, history.condition(), "");
+        text.appendFailures(out, "    ");
+        if (history.attempts().isEmpty()) field(out, "Result", "not attempted");
+        history.attempts().forEach((through, attempt) -> {
+            out.append('\n');
+            appendAttempt(out, "Through #" + through, attempt);
+        });
+        return out.substring(0, out.length() - 1);
+    }
+
+    private static void appendAttempt(StringBuilder out, String label, Attempt<?> attempt) {
+        var cause = attempt.cause();
+        var text = new DiagnosticText(cause);
+        switch (attempt) {
+            case Attempt.Satisfied<?> ignored -> field(out, "", label, "satisfied");
+            case Attempt.Unsatisfied<?> mismatch -> {
+                field(out, "", label, "unsatisfied");
+                if (mismatch.mismatch() != null) field(out, "Mismatch", mismatch.mismatch());
+            }
+            case Attempt.Failure<?> failure -> {
+                field(out, "", label, "failed (" + failure.operation() + ")");
+                if (failure.location() != null) field(out, "Within", failure.location());
+            }
+        }
+        String observation = text.observation(attempt);
+        if (observation != null) {
+            field(out, "Observed now", observation);
+        } else {
+            field(out, "Observed", "unavailable");
+        }
+        if (cause != null) field(out, "Cause", text.cause(cause));
+        text.appendFailures(out, "    ");
+    }
+
+    /** Formats unsigned elapsed nanoseconds, including acquisition plus persistence beyond Long.MAX_VALUE. */
+    public static String duration(long remaining) {
+        StringJoiner result = new StringJoiner(" ").setEmptyValue("0 ns");
         for (TimeUnit unit : DURATION_UNITS) {
-            var unitDuration = Duration.ofNanos(unit.toNanos(1));
-            long count = remaining.dividedBy(unitDuration);
-            remaining = remaining.minus(unitDuration.multipliedBy(count));
+            long unitNanos = unit.toNanos(1);
+            long count = Long.divideUnsigned(remaining, unitNanos);
+            remaining = Long.remainderUnsigned(remaining, unitNanos);
             if (count != 0) {
-                String name = unit.name().toLowerCase(Locale.ROOT);
-                result.add(count + " " + (count == 1 ? name.substring(0, name.length() - 1) : name));
+                String suffix = switch (unit) {
+                    case DAYS -> "d";
+                    case HOURS -> "h";
+                    case MINUTES -> "min";
+                    case SECONDS -> "s";
+                    case MILLISECONDS -> "ms";
+                    case MICROSECONDS -> "µs";
+                    case NANOSECONDS -> "ns";
+                };
+                result.add(count + " " + suffix);
             }
         }
         return result.toString();
@@ -134,21 +118,53 @@ public final class DiagnosticText {
             if (failure != primaryCause && diagnosticFailures.stream().noneMatch(previous -> previous == failure)) {
                 diagnosticFailures.add(failure);
             }
-            return "<value unavailable: diagnostics failed>";
+            return "<unprintable>";
         } finally {
             if (interrupted) currentThread().interrupt();
         }
     }
 
+    /** Formats the returned value, or returns null when execution obtained no observation. */
+    public String observation(Attempt<?> attempt) {
+        return switch (attempt) {
+            case Attempt.Satisfied<?> evaluated -> value(evaluated.observed());
+            case Attempt.Unsatisfied<?> evaluated -> value(evaluated.observed());
+            case Attempt.FailedAfterObservation<?> failed -> value(failed.observed());
+            case Attempt.FailedBeforeObservation<?> ignored -> null;
+        };
+    }
+
     public String value(Object value) {
         return render(() -> {
+            if (value instanceof CharSequence) return quoted(value.toString(), '"');
+            if (value instanceof Character) return quoted(value.toString(), '\'');
             String rendered = deepToString(new Object[] {value});
             return rendered.substring(1, rendered.length() - 1);
         });
     }
 
-    public void condition(StringBuilder out, Condition condition, String indentation) {
-        field(out, indentation, "Condition", condition.description());
+    private static String quoted(String value, char quote) {
+        var out = new StringBuilder().append(quote);
+        for (int index = 0; index < value.length(); index++) {
+            char character = value.charAt(index);
+            if (character == quote || character == '\\') out.append('\\');
+            switch (character) {
+                case '\b' -> out.append("\\b");
+                case '\f' -> out.append("\\f");
+                case '\n' -> out.append("\\n");
+                case '\r' -> out.append("\\r");
+                case '\t' -> out.append("\\t");
+                default -> {
+                    if (Character.isISOControl(character)) out.append("\\u").append(HexFormat.of().toHexDigits(character));
+                    else out.append(character);
+                }
+            }
+        }
+        return out.append(quote).toString();
+    }
+
+    public void condition(StringBuilder out, String label, Condition condition, String indentation) {
+        field(out, indentation, label, condition.description());
         String detailsIndentation = indentation + "    ";
         for (var reference : condition.references()) {
             field(out, detailsIndentation, reference.label(), value(reference.value()));

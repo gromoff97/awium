@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
@@ -37,7 +38,6 @@ class AttemptFactoryTest {
         var second = factory.create("second");
 
         assertEquals(0, factories[0]);
-        assertSame(condition, first.condition());
         assertEquals("first", first.observed());
         var firstResult = first.call();
         var secondResult = second.call();
@@ -67,8 +67,8 @@ class AttemptFactoryTest {
         var second = attempt.call();
         var third = attempt.call();
 
-        assertSame(failure, assertInstanceOf(AttemptResult.Uncontrolled.class, first).status().cause());
-        var invalid = assertInstanceOf(AttemptResult.Uncontrolled.class, second).status().cause();
+        assertSame(failure, assertInstanceOf(AttemptResult.Uncontrolled.class, first).cause());
+        var invalid = assertInstanceOf(AttemptResult.Uncontrolled.class, second).cause();
         assertInstanceOf(NullPointerException.class, invalid);
         assertEquals("condition returned null evaluation", invalid.getMessage());
         assertEquals(5, result(third));
@@ -96,7 +96,7 @@ class AttemptFactoryTest {
         Thread.currentThread().interrupt();
         try {
             var interrupted = assertInstanceOf(AttemptResult.Uncontrolled.class, attempt.call());
-            assertInstanceOf(InterruptedException.class, interrupted.status().cause());
+            assertInstanceOf(InterruptedException.class, interrupted.cause());
             assertEquals(0, factories[0]);
         } finally {
             Thread.interrupted();
@@ -110,7 +110,6 @@ class AttemptFactoryTest {
     void preservingFactoryIsLazyIndependentAndReturnsTheOriginalObservation() {
         int[] factories = {0};
         var actual = new Object();
-        var replacement = new Object();
         var condition = Conditions.conditionPerWait("two observations", () -> {
             factories[0]++;
             int[] calls = {0};
@@ -125,7 +124,7 @@ class AttemptFactoryTest {
 
         var result = diagnostic(waiting).until(condition);
         assertSame(actual, result.orThrow());
-        assertEquals(2, result.attempts().size());
+        assertEquals(2, attempts(result).size());
         assertEquals(2, factories[0]);
     }
 
@@ -157,13 +156,13 @@ class AttemptFactoryTest {
             assertSame(actual, element);
             assertSame(actual, mapValue);
             assertSame(actual, mapResult.orThrow());
-            assertEquals(2, mapResult.attempts().size());
+            assertEquals(2, attempts(mapResult).size());
         }
         assertEquals(8, factories[0]);
     }
 
     @Test
-    void ordinaryConditionKeepsMetadataAndCreatesIndependentEvaluators() throws Throwable {
+    void ordinaryConditionKeepsMetadataAndCreatesIndependentEvaluators() {
         Condition.Typed<Integer, Integer> ordinary = new Condition.Typed<>(
                 "counted", null, () -> {
                     int[] calls = {0};

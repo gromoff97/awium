@@ -3,7 +3,6 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
 import io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
-import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.IdentityHashMap;
@@ -16,15 +15,121 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
+import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ExpectedInputsTest {
+
+    private final FakeTime time = new FakeTime(0);
+
+    @ParameterizedTest(name = "negative={0}")
+    @ValueSource(booleans = {false, true})
+    void collectionFailuresRetainTheirExpectedAndUnexpectedElements(boolean negative) {
+        var operands = List.of("a", "b");
+        List<PreservingCondition<? super List<String>>> checks = negative
+                ? List.of(doesNotContainExactly(operands), doesNotContainExactlyInAnyOrder(operands))
+                : List.of(containsExactlyInAnyOrder(operands), containsOnly(operands), subsetOf(operands));
+        var actual = negative ? operands : List.of("other");
+        for (var check : checks) {
+            var time = new FakeTime(0);
+            var result = tryAwait(() -> actual).usingTime(time, time)
+                    .every(ofNanos(1)).upTo(ofNanos(1)).until(check);
+            String operand = (negative ? "Unexpected" : "Expected") + ": [a, b]";
+            assertThat(failure(result).message()).contains(operand);
+            assertThat(result.conditions().getFirst().toString()).contains(operand);
+        }
+    }
+
+    @ParameterizedTest(name = "negative={0}")
+    @ValueSource(booleans = {false, true})
+    void mapEntryFailuresRetainBothOperands(boolean negative) {
+        var check = negative ? MapConditions.hasNoEntry("key", "value") : MapConditions.hasEntry("key", "value");
+        var actual = negative ? Map.of("key", "value") : Map.of("other", "value");
+        var result = tryAwait(() -> actual).usingTime(time, time)
+                .every(ofNanos(1)).upTo(ofNanos(1)).until(check);
+        String operand = (negative ? "Unexpected" : "Expected") + ": key=value";
+        assertThat(failure(result).message()).contains(operand);
+        assertThat(result.conditions().getFirst().toString()).contains(operand);
+    }
+
+    @Test
+    void mapKeyFailuresIdentifyTheMissingKey() {
+        var waiting = tryAwait(() -> Map.of("other", "value")).usingTime(time, time)
+                .every(ofNanos(1)).upTo(ofNanos(1));
+        var keys = waiting.until(MapConditions.containsOnlyKeys(List.of("key")));
+        var entry = waiting.until(MapConditions.entryFor("key"));
+
+        assertThat(failure(keys).message()).contains("Expected: [key]");
+        assertThat(keys.conditions().getFirst().toString()).contains("Expected: [key]");
+        assertThat(failure(entry).message()).contains("Key: \"key\"");
+        assertThat(entry.conditions().getFirst().toString()).contains("Key: \"key\"");
+    }
+
+    @ParameterizedTest(name = "negative={0}")
+    @ValueSource(booleans = {false, true})
+    void stringFailuresRetainTheExpectedText(boolean negative) {
+        var checks = negative
+                ? List.of(StringConditions.doesNotContain("needle"), StringConditions.doesNotStartWith("needle"),
+                        StringConditions.doesNotEndWith("needle"), StringConditions.notEqualToIgnoringCase("needle"))
+                : List.of(StringConditions.contains("needle"), StringConditions.containsIgnoringCase("needle"),
+                        StringConditions.startsWith("needle"), StringConditions.endsWith("needle"),
+                        StringConditions.contentEquals("needle"), StringConditions.equalToIgnoringCase("needle"));
+        for (var check : checks) {
+            var time = new FakeTime(0);
+            var result = tryAwait(() -> negative ? "needle" : "other").usingTime(time, time)
+                    .every(ofNanos(1)).upTo(ofNanos(1)).until(check);
+            String operand = (negative ? "Unexpected" : "Expected") + ": \"needle\"";
+            assertThat(failure(result).message()).contains(operand);
+            assertThat(result.conditions().getFirst().toString()).contains(operand);
+        }
+    }
+
+    @ParameterizedTest(name = "negative={0}")
+    @ValueSource(booleans = {false, true})
+    void regexFailuresRetainThePattern(boolean negative) {
+        var check = negative ? StringConditions.doesNotMatchRegex("a.*z") : StringConditions.matchesRegex("a.*z");
+        var result = tryAwait(() -> negative ? "abz" : "other").usingTime(time, time)
+                .every(ofNanos(1)).upTo(ofNanos(1)).until(check);
+        String operand = (negative ? "Unexpected" : "Expected") + ": a.*z";
+        assertThat(failure(result).message()).contains(operand);
+        assertThat(result.conditions().getFirst().toString()).contains(operand);
+    }
+
+    @Test
+    void comparisonFailuresRetainTheirOperandsAndBounds() {
+        for (boolean negative : List.of(false, true)) {
+            var operand = new String("needle");
+            var checks = negative ? List.of(Conditions.notEqualTo(operand), Conditions.notSameAs(operand))
+                    : List.of(Conditions.equalTo(operand), Conditions.sameAs(operand));
+            for (var check : checks) {
+                var time = new FakeTime(0);
+                var result = tryAwait(() -> negative ? operand : "other").usingTime(time, time)
+                        .every(ofNanos(1)).upTo(ofNanos(1)).until(check);
+                assertThat(failure(result).message()).contains((negative ? "Unexpected" : "Expected") + ": \"needle\"");
+            }
+        }
+        List<PreservingCondition<Integer>> ranges = List.of(Conditions.between(1, 5), Conditions.strictlyBetween(1, 5));
+        for (var check : ranges) {
+            var time = new FakeTime(0);
+            var result = tryAwait(() -> 10).usingTime(time, time)
+                    .every(ofNanos(1)).upTo(ofNanos(1)).until(check);
+            assertThat(failure(result).message()).contains("Expected: [1, 5]");
+        }
+        var time = new FakeTime(0);
+        var result = tryAwait(() -> 0).usingTime(time, time)
+                .every(ofNanos(1)).upTo(ofNanos(1)).until(Conditions.greaterThan(5));
+        assertThat(failure(result).message()).contains("Expected: 5");
+    }
 
     @Test
     void singleOperandsRemainWholeValuesInDiagnostics() {
@@ -40,10 +145,9 @@ class ExpectedInputsTest {
             var condition = negative ? doesNotContain(operand) : contains(operand);
             var time = new FakeTime(0);
             var outcome = tryAwait(() -> actual).usingTime(time, time)
-                    .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(1))
+                    .every(ofNanos(1)).upTo(ofNanos(1))
                     .until(condition);
-            var failure = assertInstanceOf(AwaitResult.Failed.class, outcome).failure();
-            assertTrue(failure.message().contains((negative ? "Unexpected" : "Expected") + ": [1, 2]"));
+            assertThat(failure(outcome).message()).contains((negative ? "Unexpected" : "Expected") + ": [1, 2]");
         }
     }
 

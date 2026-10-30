@@ -15,9 +15,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.observation;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitTestAccess.evaluated;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.condition;
@@ -28,6 +29,7 @@ import static java.time.Duration.*;
 import static java.util.Collections.nCopies;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.concurrent.locks.LockSupport.parkNanos;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -98,10 +100,8 @@ class ThreadIntegrationTest {
                 var result = future.get(5, SECONDS);
                 Thread caller = result.orThrow();
                 assertTrue(caller.isVirtual());
-                assertEquals(2, result.attempts().size());
-                for (var attempt : result.attempts()) {
-                    assertSame(caller, evaluated(attempt.last()).observed());
-                }
+                assertThat(attempts(result)).hasSize(2)
+                        .allSatisfy(attempt -> assertSame(caller, observation(attempt)));
                 resultThreads.add(caller);
             }
         }
@@ -137,8 +137,7 @@ class ThreadIntegrationTest {
                 AwaitExecutionException.class, terminal[0]);
         assertEquals(AwaitFailure.Reason.INTERRUPTED, failure.failure().reason());
         assertInstanceOf(InterruptedException.class, failure.getCause());
-        assertTrue(failure.getMessage().startsWith(
-                "Caller thread was interrupted while waiting"));
+        assertThat(failure).hasMessageStartingWith("Waiting interrupted");
         assertTrue(interrupted[0]);
     }
 

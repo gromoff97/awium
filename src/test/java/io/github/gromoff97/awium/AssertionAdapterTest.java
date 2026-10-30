@@ -4,11 +4,11 @@ import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.function.CheckedConsumer;
 import io.github.gromoff97.awium.function.CheckedFunction;
-import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
@@ -20,13 +20,12 @@ import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.internal.WaitConfiguration.DEFAULT;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AssertionAdapterTest {
 
@@ -43,7 +42,7 @@ class AssertionAdapterTest {
             var waiting = await(() -> "pending").usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
             var reason = interrupt ? INTERRUPTED : TIMEOUT;
             try {
-                var failure = assertInstanceOf(AwaitResult.Failed.class, diagnostic(waiting).until(check)).failure();
+                var failure = failure(diagnostic(waiting).until(check));
                 assertEquals(interrupt, Thread.interrupted());
                 assertEquals(reason, failure.reason());
                 assertSame(cause, failure.cause());
@@ -76,21 +75,17 @@ class AssertionAdapterTest {
 
     @Test
     void namedConditionValidatesItsArguments() {
-        assertTrue(assertThrows(NullPointerException.class,
-                () -> condition(null, payment -> satisfied()))
-                .getMessage().contains("description"));
-        assertTrue(assertThrows(NullPointerException.class,
-                () -> condition(null, (CheckedFunction<Object, ConditionResult>) null))
-                .getMessage().contains("description"));
-        assertTrue(assertThrows(IllegalArgumentException.class,
-                () -> condition(" \n ", payment -> satisfied()))
-                .getMessage().contains("description"));
-        assertTrue(assertThrows(NullPointerException.class,
-                () -> condition("payment", (CheckedFunction<Object, ConditionResult>) null))
-                .getMessage().contains("evaluation"));
-        assertTrue(assertThrows(NullPointerException.class,
-                () -> conditionPerWait("payment", (Callable<CheckedFunction<Object, ConditionResult>>) null))
-                .getMessage().contains("evaluator factory"));
+        assertThatNullPointerException().isThrownBy(() -> condition(null, payment -> satisfied()))
+                .withMessageContaining("description");
+        assertThatNullPointerException().isThrownBy(() -> condition(null, (CheckedFunction<Object, ConditionResult>) null))
+                .withMessageContaining("description");
+        assertThatIllegalArgumentException().isThrownBy(() -> condition(" \n ", payment -> satisfied()))
+                .withMessageContaining("description");
+        assertThatNullPointerException().isThrownBy(() -> condition("payment", (CheckedFunction<Object, ConditionResult>) null))
+                .withMessageContaining("evaluation");
+        assertThatNullPointerException()
+                .isThrownBy(() -> conditionPerWait("payment", (Callable<CheckedFunction<Object, ConditionResult>>) null))
+                .withMessageContaining("evaluator factory");
     }
 
     @Test
@@ -105,7 +100,7 @@ class AssertionAdapterTest {
 
         assertSame(actual, result(evaluation));
         assertEquals(1, invocations[0]);
-        assertFalse(condition.description().isBlank());
+        assertThat(condition.description()).isNotBlank();
     }
 
     @Test
@@ -132,8 +127,7 @@ class AssertionAdapterTest {
 
     @Test
     void callbackFactoriesRejectNullCallbacks() {
-        assertTrue(assertThrows(NullPointerException.class,
-                () -> asserted((CheckedConsumer<String>) null))
-                .getMessage().contains("assertion"));
+        assertThatNullPointerException().isThrownBy(() -> asserted((CheckedConsumer<String>) null))
+                .withMessageContaining("assertion");
     }
 }

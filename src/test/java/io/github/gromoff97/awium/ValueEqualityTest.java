@@ -1,9 +1,10 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
-import io.github.gromoff97.awium.result.AwaitResult;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.Conditions.equalTo;
@@ -65,24 +66,18 @@ class ValueEqualityTest {
 
     @Test
     void reportsJdkComparisonFailureForDistinctCyclicArrays() {
-        Object[] leftFirst = new Object[2];
-        Object[] leftSecond = new Object[2];
-        leftFirst[0] = "first";
+        Object[] leftFirst = {"first", null};
+        Object[] leftSecond = {"second", leftFirst};
         leftFirst[1] = leftSecond;
-        leftSecond[0] = "second";
-        leftSecond[1] = leftFirst;
 
-        Object[] rightFirst = new Object[2];
-        Object[] rightSecond = new Object[2];
-        rightFirst[0] = "first";
+        Object[] rightFirst = {"first", null};
+        Object[] rightSecond = {"second", rightFirst};
         rightFirst[1] = rightSecond;
-        rightSecond[0] = "second";
-        rightSecond[1] = rightFirst;
         var result = tryAwait(() -> leftFirst).until(equalTo(rightFirst));
-        var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+        var failure = failure(result);
         assertEquals(CONDITION_FAILED, failure.reason());
         assertInstanceOf(StackOverflowError.class, failure.cause());
-        assertEquals(1, result.attempts().size());
+        assertEquals(1, attempts(result).size());
         assertTrue(equal(leftFirst, leftFirst));
 
         rightSecond[0] = "different";

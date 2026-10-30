@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.internal;
 
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.result.HistoryEntry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -9,17 +8,16 @@ import java.util.function.Function;
 /** Owns stage transitions and captured values for one wait, including a single-check wait. */
 public final class SequenceExecution<OBSERVED, RESULT> {
 
-    private final Condition.Captured sequence;
+    private final Condition definition;
     private final List<AttemptFactory<OBSERVED, RESULT>> stages;
     private final List<RESULT> results = new ArrayList<>();
-    private HistoryEntry.Progress progressSnapshot;
 
     public SequenceExecution(AttemptFactory<OBSERVED, RESULT> attempt) {
-        this(null, List.of(attempt));
+        this(attempt.condition, List.of(attempt));
     }
 
-    private SequenceExecution(Condition.Captured sequence, List<AttemptFactory<OBSERVED, RESULT>> stages) {
-        this.sequence = sequence;
+    private SequenceExecution(Condition definition, List<AttemptFactory<OBSERVED, RESULT>> stages) {
+        this.definition = definition;
         this.stages = stages;
     }
 
@@ -32,17 +30,12 @@ public final class SequenceExecution<OBSERVED, RESULT> {
         return Math.min(results.size() + 1, stages.size());
     }
 
-    Condition condition(int stageNumber) {
-        return stages.get(stageNumber - 1).condition;
+    Condition definition() {
+        return definition;
     }
 
-    HistoryEntry.Progress progress(int stageNumber) {
-        if (sequence == null) return null;
-        if (progressSnapshot == null || progressSnapshot.stageNumber() != stageNumber
-                || progressSnapshot.capturedStages() != results.size()) {
-            progressSnapshot = new HistoryEntry.Progress(sequence, stageNumber, results.size());
-        }
-        return progressSnapshot;
+    int capturedStages() {
+        return results.size();
     }
 
     boolean complete() {
@@ -54,7 +47,11 @@ public final class SequenceExecution<OBSERVED, RESULT> {
         return results.stream().toList();
     }
 
-    Attempt<OBSERVED, RESULT> attempt(OBSERVED actual) {
+    public List<Condition> conditions() {
+        return stages.stream().<Condition>map(stage -> stage.condition).toList();
+    }
+
+    BoundAttempt<OBSERVED, RESULT> attempt(OBSERVED actual) {
         var stage = stages.get(stageNumber() - 1);
         // Persistence rechecks the final stage, retaining all earlier values.
         if (complete()) results.removeLast();

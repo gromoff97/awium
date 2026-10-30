@@ -15,12 +15,12 @@ import static io.github.gromoff97.awium.OptionalConditions.*;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
 import static java.time.Duration.ofNanos;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ObjectAndOptionalConditionsTest {
 
@@ -52,7 +52,7 @@ class ObjectAndOptionalConditionsTest {
         assertNull(result(evaluate(equalTo(null), null)));
         AttemptResult<?> arrays = evaluate(equalTo(
                 new int[]{1, 2}), new int[]{1, 2});
-        assertEquals(Satisfied.class, arrays.getClass());
+        assertInstanceOf(Satisfied.class, arrays);
         assertEquals(int[].class, result(arrays).getClass());
     }
 
@@ -65,7 +65,7 @@ class ObjectAndOptionalConditionsTest {
         var emptySource = await(() -> empty).usingTime(time, time).upTo(ofNanos(1));
         var presentSource = await(() -> presentValue).usingTime(time, time).upTo(ofNanos(1));
 
-        assertFalse(present.description().isBlank());
+        assertThat(present.description()).isNotBlank();
         assertFailure(TIMEOUT, () -> missing.until(present));
         assertFailure(TIMEOUT, () -> missing.until(absent));
         assertFailure(TIMEOUT, () -> emptySource.until(present));
@@ -114,9 +114,9 @@ class ObjectAndOptionalConditionsTest {
 
     @Test
     void optionalValueFactoriesRejectNullConditionsImmediately() {
-        assertTrue(assertThrows(NullPointerException.class,
-                () -> hasValue((Condition.Typed<Object, Object>) null)).getMessage().contains("condition"));
-        assertTrue(assertThrows(NullPointerException.class,
-                () -> hasValue((Condition.PreservingCondition<Object>) null)).getMessage().contains("condition"));
+        assertThatNullPointerException().isThrownBy(() -> hasValue((Condition.Typed<Object, Object>) null))
+                .withMessageContaining("condition");
+        assertThatNullPointerException().isThrownBy(() -> hasValue((Condition.PreservingCondition<Object>) null))
+                .withMessageContaining("condition");
     }
 }

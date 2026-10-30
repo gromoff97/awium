@@ -36,8 +36,8 @@ public final class AttemptFactory<OBSERVED, RESULT> {
         return (AwaitAttempt<? super OBSERVED, ? extends RESULT>) evaluatorFactory.call();
     }
 
-    public Attempt<OBSERVED, RESULT> create(OBSERVED actual) {
-        return new Attempt<>(condition, actual, this::evaluator);
+    public BoundAttempt<OBSERVED, RESULT> create(OBSERVED actual) {
+        return new BoundAttempt<>(actual, this::evaluator);
     }
 
     private AwaitAttempt<? super OBSERVED, ? extends RESULT> evaluator() throws Exception {

@@ -1,8 +1,7 @@
 package consumer;
 
 import io.github.gromoff97.awium.StringConditions;
-import io.github.gromoff97.awium.result.HistoryEntry;
-import io.github.gromoff97.awium.result.AttemptStatus;
+import io.github.gromoff97.awium.result.Attempt;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -38,14 +37,15 @@ public final class ArtifactConsumer {
         String text = await(ArtifactConsumer::text).until(StringConditions.contains("read"));
         String regex = await(ArtifactConsumer::text).until(matchesRegex("ready"));
         return new Object[]{optional, selected, length, narrowed, stages, preserved, captured,
-                mapped, entry, text, regex, observed(result.attempts().getFirst().last())};
+                mapped, entry, text, regex, observed(result.conditions().getFirst().attempts().firstEntry().getValue())};
     }
 
-    private static String observed(HistoryEntry<Optional<String>> attempt) {
-        return switch (attempt.result()) {
-            case AttemptStatus.Satisfied ignored -> attempt.observed().orElseThrow();
-            case AttemptStatus.Unsatisfied ignored -> attempt.observed().orElse(null);
-            case AttemptStatus.Uncontrolled ignored -> null;
+    private static String observed(Attempt<Optional<String>> attempt) {
+        return switch (attempt) {
+            case Attempt.Satisfied(var optional) -> optional.orElse(null);
+            case Attempt.Unsatisfied(var optional, var mismatch, var cause) -> optional.orElse(null);
+            case Attempt.FailedAfterObservation(var optional, var operation, var cause, var location) -> optional.orElse(null);
+            case Attempt.FailedBeforeObservation(var operation, var cause) -> null;
         };
     }
 

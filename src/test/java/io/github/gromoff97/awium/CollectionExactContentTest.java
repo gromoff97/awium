@@ -5,11 +5,14 @@ import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
 import io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import io.github.gromoff97.awium.result.AwaitResult;
-import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
@@ -24,15 +27,28 @@ import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.params.provider.Arguments.argumentSet;
+
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class CollectionExactContentTest {
 
-    @Test
-    void positiveAndNegativeExactConditionsAreComplements() {
-        for (Pair pair : pairs()) {
-            assertPair(pair, pair.matchingActual(), true);
-            assertPair(pair, pair.mismatchingActual(), false);
-        }
+    private final FakeTime time = new FakeTime(0);
+
+    @ParameterizedTest
+    @MethodSource("pairs")
+    void positiveAndNegativeExactConditionsAreComplements(
+            PreservingCondition<? super List<String>> positive,
+            PreservingCondition<? super List<String>> negative,
+            List<String> matching, List<String> mismatching) {
+        assertSame(matching, result(evaluate(positive, matching)));
+        assertThat(mismatch(evaluate(negative, matching))).isNotBlank();
+        assertSame(mismatching, result(evaluate(negative, mismatching)));
+        assertThat(mismatch(evaluate(positive, mismatching))).isNotBlank();
     }
 
     @Test
@@ -46,25 +62,22 @@ class CollectionExactContentTest {
                 Satisfied.class);
     }
 
-    @Test
-    void exactContentRequiresEqualSizesWithoutStartingTraversal() {
+    @ParameterizedTest(name = "negative={0}, anyOrder={1}")
+    @CsvSource({"false, false", "false, true", "true, false", "true, true"})
+    void exactContentRequiresEqualSizesWithoutStartingTraversal(boolean negative, boolean anyOrder) {
         for (var elements : List.of(List.<String>of(), List.of("a"), List.of("a", "b", "c"))) {
-            for (boolean negative : List.of(false, true)) {
-                for (boolean anyOrder : List.of(false, true)) {
-                    var actual = new ArrayList<>(elements) {
-                        @Override
-                        public Iterator<String> iterator() {
-                            throw new AssertionError("different sizes must not start traversal");
-                        }
-                    };
-                    PreservingCondition<? super ArrayList<String>> condition = anyOrder
-                            ? negative ? doesNotContainExactlyInAnyOrder(List.of("a", "b")) : containsExactlyInAnyOrder(List.of("a", "b"))
-                            : negative ? doesNotContainExactly(List.of("a", "b")) : containsExactly(List.of("a", "b"));
-                    var evaluation = evaluate(condition, actual);
-                    assertEquals(negative ? Satisfied.class : Unsatisfied.class, evaluation.getClass());
-                    if (negative) assertSame(actual, result(evaluation));
+            var actual = new ArrayList<>(elements) {
+                @Override
+                public Iterator<String> iterator() {
+                    throw new AssertionError("different sizes must not start traversal");
                 }
-            }
+            };
+            PreservingCondition<? super ArrayList<String>> condition = anyOrder
+                    ? negative ? doesNotContainExactlyInAnyOrder(List.of("a", "b")) : containsExactlyInAnyOrder(List.of("a", "b"))
+                    : negative ? doesNotContainExactly(List.of("a", "b")) : containsExactly(List.of("a", "b"));
+            var evaluation = evaluate(condition, actual);
+            assertThat(evaluation).isInstanceOf(negative ? Satisfied.class : Unsatisfied.class);
+            if (negative) assertSame(actual, result(evaluation));
         }
     }
 
@@ -80,36 +93,29 @@ class CollectionExactContentTest {
         assertStatus(containsOnly(List.of()), List.of("a"), Unsatisfied.class);
     }
 
-    @Test
-    void exactComparisonRejectsChangesBetweenSizeAndTraversal() {
+    @ParameterizedTest(name = "negative={0}, anyOrder={1}")
+    @CsvSource({"false, false", "false, true", "true, false", "true, true"})
+    void exactComparisonRejectsChangesBetweenSizeAndTraversal(boolean negative, boolean anyOrder) {
         for (boolean shrink : List.of(false, true)) {
-            for (boolean negative : List.of(false, true)) {
-                for (boolean anyOrder : List.of(false, true)) {
-                    var actual = new ArrayList<>(List.of("a", "b")) {
-                        private boolean changed;
+            var actual = new ArrayList<>(List.of("a", "b")) {
+                private boolean changed;
 
-                        @Override
-                        public Iterator<String> iterator() {
-                            if (!changed) {
-                                changed = true;
-                                if (shrink) removeLast();
-                                else add("c");
-                            }
-                            return super.iterator();
-                        }
-                    };
-                    PreservingCondition<? super ArrayList<String>> condition = anyOrder
-                            ? negative ? doesNotContainExactlyInAnyOrder(List.of("a", "b")) : containsExactlyInAnyOrder(List.of("a", "b"))
-                            : negative ? doesNotContainExactly(List.of("a", "b")) : containsExactly(List.of("a", "b"));
-                    var evaluation = evaluate(condition, actual);
-                    if (negative) {
-                        assertEquals(Satisfied.class, evaluation.getClass());
-                        assertSame(actual, result(evaluation));
-                    } else {
-                        assertEquals(Unsatisfied.class, evaluation.getClass());
+                @Override
+                public Iterator<String> iterator() {
+                    if (!changed) {
+                        changed = true;
+                        if (shrink) removeLast();
+                        else add("c");
                     }
+                    return super.iterator();
                 }
-            }
+            };
+            PreservingCondition<? super ArrayList<String>> condition = anyOrder
+                    ? negative ? doesNotContainExactlyInAnyOrder(List.of("a", "b")) : containsExactlyInAnyOrder(List.of("a", "b"))
+                    : negative ? doesNotContainExactly(List.of("a", "b")) : containsExactly(List.of("a", "b"));
+            var evaluation = evaluate(condition, actual);
+            assertThat(evaluation).isInstanceOf(negative ? Satisfied.class : Unsatisfied.class);
+            if (negative) assertSame(actual, result(evaluation));
         }
     }
 
@@ -136,7 +142,6 @@ class CollectionExactContentTest {
     @Test
     void anyOrderMatchingIgnoresPermutationButRetainsMultiplicity() {
         var actual = new ArrayList<>(List.of("a", "b", "a"));
-        var time = new FakeTime(0);
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1));
 
         for (var expected : List.of(List.of("a", "b", "a"), List.of("b", "a", "a"), List.of("a", "a", "b"))) {
@@ -151,35 +156,33 @@ class CollectionExactContentTest {
 
     @Test
     void negativeExactConditionsDoNotHideTraversalOrEqualityFailures() {
-        var pollingTime = new FakeTime(0);
         var iteratorCause = new IllegalStateException("iterator failed");
         var equalityCause = new IllegalStateException("equals failed");
-        var brokenIterator = new ProbeList<>(List.of("a"), iteratorCause);
-        var brokenEquality = new ProbeList<>(
-                List.of(new ThrowingEquals(equalityCause)), null);
-        java.util.concurrent.Callable<ProbeList<String>> iteratorSource = () -> brokenIterator;
-        java.util.concurrent.Callable<ProbeList<ThrowingEquals>> equalitySource = () -> brokenEquality;
+        var brokenIterator = probeList(List.of("a"));
+        when(brokenIterator.iterator()).thenThrow(iteratorCause);
+        var brokenEquality = probeList(List.of(new ThrowingEquals(equalityCause)));
+        java.util.concurrent.Callable<List<String>> iteratorSource = () -> brokenIterator;
+        java.util.concurrent.Callable<List<ThrowingEquals>> equalitySource = () -> brokenEquality;
 
         assertSame(iteratorCause, assertFailure(CONDITION_FAILED,
-                () -> await(iteratorSource::call).usingTime(pollingTime, pollingTime).until(doesNotContainExactly(List.of("a")))).getCause());
+                () -> await(iteratorSource::call).usingTime(time, time).until(doesNotContainExactly(List.of("a")))).getCause());
         assertSame(equalityCause, assertFailure(CONDITION_FAILED,
-                () -> await(equalitySource::call).usingTime(pollingTime, pollingTime).until(doesNotContainExactly(asList(new ThrowingEquals(null))))).getCause());
+                () -> await(equalitySource::call).usingTime(time, time).until(doesNotContainExactly(asList(new ThrowingEquals(null))))).getCause());
     }
 
     @Test
     void nullActualIsUnsatisfiedAndNullAggregateIsRejected() {
         AttemptResult<?> evaluation = evaluate(
                 containsExactly(List.of("a")), null);
-        assertEquals(Unsatisfied.class, evaluation.getClass());
-        assertFalse(mismatch(evaluation).isBlank());
+        assertInstanceOf(Unsatisfied.class, evaluation);
+        assertThat(mismatch(evaluation)).isNotBlank();
         assertFalse(assertThrows(NullPointerException.class,
                 () -> containsExactly(null)).getMessage().isBlank());
     }
 
     @Test
     void terminalDiagnosticsDoNotTraverseTheActualAgain() {
-        var actual = new ProbeList<>(List.of("a"), null);
-        FakeTime time = new FakeTime(0);
+        var actual = probeList(List.of("a"));
 
         var failure = assertFailure(TIMEOUT,
                 () -> await(() -> {
@@ -188,17 +191,8 @@ class CollectionExactContentTest {
                 }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
                         .until(containsExactly(List.of("b"))));
 
-        assertEquals(1, actual.iteratorCalls);
-        assertTrue(failure.getMessage().contains("Expected: [b]"));
-    }
-
-    private static void assertPair(Pair pair, List<String> actual,
-            boolean positiveSatisfied) {
-        AttemptResult<?> positive = evaluate(pair.positive(), actual);
-        AttemptResult<?> negative = evaluate(pair.negative(), actual);
-        assertAll(pair.name(),
-                () -> assertSame(actual, result(positiveSatisfied ? positive : negative)),
-                () -> assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank()));
+        verify(actual).iterator();
+        assertThat(failure.getMessage()).contains("Expected: [b]");
     }
 
     private static <E> void assertStatus(
@@ -208,57 +202,26 @@ class CollectionExactContentTest {
         assertEquals(status, evaluate(condition, actual).getClass());
     }
 
-    private static List<Pair> pairs() {
+    private static List<Arguments> pairs() {
         return List.of(
-                new Pair("ordered collection",
+                argumentSet("ordered collection",
                         containsExactly(List.of("a", "a")),
                         doesNotContainExactly(List.of("a", "a")),
                         List.of("a", "a"), List.of("a", "b")),
-                new Pair("any-order collection",
+                argumentSet("any-order collection",
                         containsExactlyInAnyOrder(List.of("a", "b")),
                         doesNotContainExactlyInAnyOrder(
                                 List.of("a", "b")),
                         List.of("b", "a"), List.of("a", "a")));
     }
 
-    private record Pair(String name,
-            PreservingCondition<? super List<String>> positive,
-            PreservingCondition<? super List<String>> negative,
-            List<String> matchingActual, List<String> mismatchingActual) {}
-
-    private static final class ProbeList<E> extends AbstractList<E> {
-        private final List<E> elements;
-        private final RuntimeException iteratorFailure;
-        private int iteratorCalls;
-
-        private ProbeList(List<E> elements,
-                RuntimeException iteratorFailure) {
-            this.elements = elements;
-            this.iteratorFailure = iteratorFailure;
-        }
-
-        @Override
-        public int size() {
-            return elements.size();
-        }
-
-        @Override
-        public E get(int index) {
-            throw new AssertionError("get must not be called");
-        }
-
-        @Override
-        public Iterator<E> iterator() {
-            iteratorCalls++;
-            if (iteratorFailure != null) {
-                throw iteratorFailure;
-            }
-            return elements.iterator();
-        }
-
-        @Override
-        public String toString() {
-            return "probe list";
-        }
+    private static <ELEMENT> List<ELEMENT> probeList(List<ELEMENT> elements) {
+        List<ELEMENT> list = mock();
+        when(list.size()).thenAnswer(ignored -> elements.size());
+        when(list.isEmpty()).thenAnswer(ignored -> list.size() == 0);
+        when(list.get(anyInt())).thenThrow(new AssertionError("get must not be called"));
+        when(list.iterator()).thenAnswer(ignored -> elements.iterator());
+        when(list.toString()).thenReturn("probe list");
+        return list;
     }
 }

@@ -7,7 +7,7 @@ import static io.github.gromoff97.awium.internal.DiagnosticText.field;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Public {@code tryAwait(...).until(...)} result containing the terminal value or failure and its attempt history.
+ * Public {@code tryAwait(...).until(...)} result containing the terminal value or failure and each condition's history.
  *
  * @param <OBSERVED> complete value returned by the source
  * @param <RESULT> final value returned by the wait
@@ -15,11 +15,11 @@ import static java.util.Objects.requireNonNull;
 public sealed interface AwaitResult<OBSERVED, RESULT> {
 
     /**
-     * Returns an immutable chronological list of consecutive diagnostic groups.
-     * No groups are discarded. Repetitions retain their first and last invocations.
-     * Observed values are retained by reference and may change after a check.
+     * Returns an immutable list of condition histories in declaration order.
+     * A single-condition wait has one history; captured waits have one per stage,
+     * including empty histories for stages execution did not reach.
      */
-    List<AttemptGroup<OBSERVED>> attempts();
+    List<ConditionHistory<OBSERVED>> conditions();
 
     /**
      * Returns the successful value, including {@code null}, or throws the same kind of failure
@@ -42,44 +42,43 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
         };
     }
 
-    private static String withHistory(String summary, List<? extends AttemptGroup<?>> attempts) {
+    private static String withHistory(String summary, List<? extends ConditionHistory<?>> conditions) {
         var out = new StringBuilder(summary);
-        String separator = "\n\nAttempt history:\n";
-        HistoryEntry<?> previous = null;
-        for (var group : attempts) {
-            out.append(separator).append(DiagnosticText.group(group, previous));
-            previous = group.last();
-            separator = "\n\n";
+        for (int i = 0; i < conditions.size(); i++) {
+            var history = conditions.get(i);
+            out.append("\n\n").append(DiagnosticText.conditionHistory("Condition " + (i + 1), history));
         }
         return out.toString();
     }
 
-    record Satisfied<OBSERVED, RESULT>(List<AttemptGroup<OBSERVED>> attempts,
+    record Satisfied<OBSERVED, RESULT>(List<ConditionHistory<OBSERVED>> conditions,
             RESULT result) implements AwaitResult<OBSERVED, RESULT> {
 
         public Satisfied {
-            attempts = List.copyOf(attempts);
+            conditions = List.copyOf(conditions);
         }
 
         @Override
         public String toString() {
             var summary = new StringBuilder("Wait satisfied\n");
-            field(summary, "Result", new DiagnosticText(null).value(result));
-            return withHistory(summary.substring(0, summary.length() - 1), attempts);
+            var text = new DiagnosticText(null);
+            field(summary, "Result", text.value(result));
+            text.appendFailures(summary, "    ");
+            return withHistory(summary.substring(0, summary.length() - 1), conditions);
         }
     }
 
-    record Failed<OBSERVED, RESULT>(List<AttemptGroup<OBSERVED>> attempts,
+    record Failed<OBSERVED, RESULT>(List<ConditionHistory<OBSERVED>> conditions,
             AwaitFailure failure) implements AwaitResult<OBSERVED, RESULT> {
 
         public Failed {
-            attempts = List.copyOf(attempts);
+            conditions = List.copyOf(conditions);
             requireNonNull(failure, "failure must not be null");
         }
 
         @Override
         public String toString() {
-            return withHistory(failure.message(), attempts);
+            return withHistory(failure.message(), conditions);
         }
     }
 }

@@ -1,18 +1,18 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.HistoryEntry;
-import io.github.gromoff97.awium.result.AttemptGroup;
-import io.github.gromoff97.awium.result.AttemptStatus;
+import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
-import java.time.Duration;
+import io.github.gromoff97.awium.result.ConditionHistory;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
-import static io.github.gromoff97.awium.result.HistoryEntry.Phase.ACQUISITION;
 import static java.util.Collections.singletonList;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -21,24 +21,24 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class AwaitResultTest {
 
     @Test
-    void resultsCopyAttemptsAndSuccessRetainsLegitimateNull() {
-        var attempt = new HistoryEntry<String>(ACQUISITION,
-                new HistoryEntry.Timing(Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ZERO),
-                diagnosticCondition("ready", null), null,
-                null, new AttemptStatus.Satisfied());
-        var group = new AttemptGroup<>(1, 1, attempt, attempt);
-        var mutable = new ArrayList<>(List.of(group));
+    void resultsCopyConditionHistoriesAndSuccessRetainsLegitimateNull() {
+        Attempt<String> attempt = new Attempt.Satisfied<>(null);
+        var mutableAttempts = new TreeMap<>(Map.of(1L, attempt));
+        var history = new ConditionHistory<>(diagnosticCondition("ready", null), mutableAttempts);
+        var mutable = new ArrayList<>(List.of(history));
 
         var result = new AwaitResult.Satisfied<>(mutable, null);
         var failed = new AwaitResult.Failed<>(mutable,
                 new AwaitFailure(AwaitFailure.Reason.TIMEOUT, "timeout", null, List.of()));
         mutable.clear();
+        mutableAttempts.clear();
 
         for (var outcome : List.of(result, failed)) {
-            assertEquals(List.of(group), outcome.attempts());
-            assertSame(group, outcome.attempts().getFirst());
-            assertThrows(UnsupportedOperationException.class, () -> outcome.attempts().clear());
+            assertThat(outcome.conditions()).singleElement().isSameAs(history);
+            assertThrows(UnsupportedOperationException.class, () -> outcome.conditions().clear());
         }
+        assertThat(history.attempts()).containsOnlyKeys(1L).extractingByKey(1L).isSameAs(attempt);
+        assertThrows(UnsupportedOperationException.class, () -> history.attempts().clear());
         assertNull(result.result());
         assertNull(result.orThrow());
     }
@@ -50,28 +50,50 @@ class AwaitResultTest {
         var result = new AwaitResult.Failed<String, String>(List.of(), failure);
 
         assertSame(failure, result.failure());
-        assertEquals(0, result.attempts().size());
+        assertEquals(0, result.conditions().size());
         assertThrows(NullPointerException.class,
-                () -> new AwaitResult.Failed<String, String>(result.attempts(), null));
+                () -> new AwaitResult.Failed<String, String>(result.conditions(), null));
     }
 
     @Test
-    void resultsRequireAttemptsAndRejectNullEntries() {
+    void resultsRequireConditionHistoriesAndRejectNullEntries() {
         var failure = new AwaitFailure(AwaitFailure.Reason.TIMEOUT, "timeout", null, List.of());
         assertThrows(NullPointerException.class, () -> new AwaitResult.Satisfied<>(null, "ready"));
         assertThrows(NullPointerException.class, () -> new AwaitResult.Failed<>(null, failure));
         assertThrows(NullPointerException.class, () -> new AwaitResult.Satisfied<>(singletonList(null), "ready"));
         assertThrows(NullPointerException.class, () -> new AwaitResult.Failed<>(singletonList(null), failure));
+        var condition = diagnosticCondition("ready", null);
+        assertThrows(NullPointerException.class, () -> new ConditionHistory<>(null, new TreeMap<>()));
+        assertThrows(NullPointerException.class, () -> new ConditionHistory<>(condition, null));
+        assertThrows(NullPointerException.class, () -> new ConditionHistory<>(condition, new TreeMap<>(java.util.Collections.singletonMap(1L, null))));
     }
 
     @Test
-    void sequenceProgressRequiresAnExistingStageAndValidCaptureCount() {
-        var condition = diagnosticCondition("first stage", null);
-        var sequence = Conditions.captured(condition, condition);
-        assertThrows(IllegalArgumentException.class, () -> new HistoryEntry.Progress(sequence, 0, 0));
-        assertThrows(IllegalArgumentException.class, () -> new HistoryEntry.Progress(sequence, 3, 1));
-        assertThrows(IllegalArgumentException.class, () -> new HistoryEntry.Progress(sequence, 1, -1));
-        assertThrows(IllegalArgumentException.class, () -> new HistoryEntry.Progress(sequence, 1, 3));
-        assertThrows(NullPointerException.class, () -> new HistoryEntry.Progress(null, 1, 0));
+    void failuresRequireAnOperationAndACause() {
+        var cause = new IllegalStateException("failed");
+        assertThrows(NullPointerException.class, () -> new Attempt.FailedAfterObservation<>(null, null, cause, null));
+        assertThrows(NullPointerException.class, () -> new Attempt.FailedBeforeObservation<>(null, cause));
+        assertThrows(NullPointerException.class, () -> new Attempt.FailedAfterObservation<>(null, Attempt.Operation.CONDITION, null, null));
+        assertThrows(NullPointerException.class, () -> new Attempt.FailedBeforeObservation<>(Attempt.Operation.SOURCE, null));
+    }
+
+    @Test
+    void historyOrdersNumbersNaturallyAndPreventsMutationThroughViews() {
+        var condition = diagnosticCondition("ready", null);
+        var attempt = new Attempt.Satisfied<>("ready");
+        var supplied = new TreeMap<Long, Attempt<String>>(java.util.Comparator.reverseOrder());
+        supplied.put(2L, attempt);
+        supplied.put(1L, attempt);
+        var history = new ConditionHistory<>(condition, supplied);
+        var attempts = history.attempts();
+        assertThat(attempts.keySet()).containsExactly(1L, 2L);
+        assertThrows(UnsupportedOperationException.class, () -> attempts.firstEntry().setValue(attempt));
+        assertThrows(UnsupportedOperationException.class, () -> attempts.descendingMap().clear());
+        assertThrows(UnsupportedOperationException.class, () -> attempts.subMap(1L, 2L).clear());
+        supplied.put(0L, attempt);
+        assertThrows(IllegalArgumentException.class, () -> new ConditionHistory<>(condition, supplied));
+        var nullableNumbers = new TreeMap<Long, Attempt<String>>(java.util.Comparator.nullsFirst(Long::compare));
+        nullableNumbers.put(null, attempt);
+        assertThrows(IllegalArgumentException.class, () -> new ConditionHistory<>(condition, nullableNumbers));
     }
 }

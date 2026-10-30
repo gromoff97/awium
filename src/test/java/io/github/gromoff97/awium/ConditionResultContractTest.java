@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.AttemptStatus.Satisfied;
-import io.github.gromoff97.awium.result.AttemptStatus.Unsatisfied;
+import io.github.gromoff97.awium.result.ConditionResult.Satisfied;
+import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
 import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.function.CheckedFunction;
 import io.github.gromoff97.awium.result.AwaitFailure;
@@ -12,20 +12,22 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.result.ConditionResult.*;
 import static io.github.gromoff97.awium.Conditions.captured;
 import static java.time.Duration.ofNanos;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConditionResultContractTest {
+
+    private final FakeTime time = new FakeTime(0);
 
     private record User(int id) {}
 
@@ -37,7 +39,6 @@ class ConditionResultContractTest {
         var direct = Conditions.condition("positive id", status).because("user must be saved");
         var lazy = Conditions.conditionPerWait("positive id", factory).because("user must be saved");
         var actual = new User(42);
-        var time = new FakeTime(0);
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10));
 
         for (var check : List.of(direct, lazy)) {
@@ -55,10 +56,9 @@ class ConditionResultContractTest {
 
         for (var check : List.of(direct, lazy)) {
             var failed = tryAwait(() -> new User(0)).usingTime(time, time).upTo(ofNanos(1)).until(check);
-            var failure = assertInstanceOf(AwaitResult.Failed.class, failed).failure();
+            var failure = failure(failed);
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
-            assertTrue(failure.message().contains("id must be positive"), failure.message());
-            assertTrue(failure.message().contains("Because: user must be saved"), failure.message());
+            assertThat(failure.message()).contains("id must be positive", "Because: user must be saved");
         }
     }
 
@@ -68,7 +68,6 @@ class ConditionResultContractTest {
         assertInstanceOf(Satisfied.class, signal);
         assertNull(signal.cause());
         var actual = new User(42);
-        var time = new FakeTime(0);
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
 
         assertEquals(42, waiting.until(Conditions.condition("ready", ignored -> satisfied())).id());
@@ -91,15 +90,12 @@ class ConditionResultContractTest {
 
     @Test
     void conditionsCanFailWithoutDuplicatingTheirDescription() {
-        var time = new FakeTime(0);
         AwaitResult<String, String> result = tryAwait(() -> "pending")
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
                 .until(Conditions.condition("status is ready", value -> unsatisfied()));
-        var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+        var failure = failure(result);
         assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
-        assertTrue(failure.message().contains("Condition: status is ready"));
-        assertTrue(failure.message().contains("Actual: pending"));
-        assertFalse(failure.message().contains("Mismatch:"));
+        assertThat(failure.message()).contains("Condition: status is ready", "Actual: \"pending\"").doesNotContain("Mismatch:");
     }
 
     @Test

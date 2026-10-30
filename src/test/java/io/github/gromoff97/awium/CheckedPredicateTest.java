@@ -15,6 +15,8 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
@@ -25,6 +27,8 @@ import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CheckedPredicateTest {
+
+    private final FakeTime time = new FakeTime(0);
 
     private record User(int id, boolean ready) {
         boolean checkReady() throws IOException { return ready; }
@@ -37,7 +41,6 @@ class CheckedPredicateTest {
     @Test
     void negatedCheckedReferencesKeepInputTypesAcrossRetriesAndSelections() {
         var observations = new ArrayDeque<>(List.of(FIRST, PENDING));
-        var time = new FakeTime(0);
         var user = await(observations::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
                 .until(matches(not(User::checkReady)));
         assertSame(PENDING, user);
@@ -68,11 +71,11 @@ class CheckedPredicateTest {
             CheckedBiPredicate<String, User> pair = CheckedBiPredicate.not((key, user) -> { throw cause; });
             var time = new FakeTime(0);
             var result = tryAwait(() -> FIRST).usingTime(time, time).until(matches(unary));
-            assertSame(cause, assertInstanceOf(AwaitResult.Failed.class, result).failure().cause());
+            assertSame(cause, failure(result).cause());
             var mapResult = tryAwait(() -> Map.of("ready", FIRST)).usingTime(time, time).until(MapConditions.hasNoEntry(pair));
-            assertSame(cause, assertInstanceOf(AwaitResult.Failed.class, mapResult).failure().cause());
-            assertEquals(1, result.attempts().size());
-            assertEquals(1, mapResult.attempts().size());
+            assertSame(cause, failure(mapResult).cause());
+            assertEquals(1, attempts(result).size());
+            assertEquals(1, attempts(mapResult).size());
             assertFalse(Thread.currentThread().isInterrupted());
         }
     }
@@ -80,7 +83,6 @@ class CheckedPredicateTest {
     @Test
     void checkedMethodReferencesRetryAndKeepTypesAcrossBothTerminals() {
         var observations = new ArrayDeque<>(List.of(PENDING, FIRST));
-        var time = new FakeTime(0);
         var waiting = await(observations::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
 
         assertEquals(1, waiting.until(matches(User::checkReady)).id());
@@ -90,7 +92,7 @@ class CheckedPredicateTest {
         switch (captured) {
             case AwaitResult.Satisfied(var history, var user) -> {
                 assertEquals(2, user.id());
-                assertEquals(2, history.size());
+                assertEquals(2, history.getFirst().attempts().size());
             }
             case AwaitResult.Failed(var history, var failure) -> fail(failure.message());
         }
@@ -100,7 +102,6 @@ class CheckedPredicateTest {
 
     @Test
     void checkedCollectionPredicatesKeepElementAndContainerTypes() {
-        var time = new FakeTime(0);
         List<User> values = List.of(FIRST, PENDING, LAST);
         var waiting = await(() -> values).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
 
@@ -121,7 +122,6 @@ class CheckedPredicateTest {
     @Test
     void checkedMapPredicatesKeepTheCompleteMapType() {
         var actual = new LinkedHashMap<>(Map.of("first", FIRST, "last", LAST));
-        var time = new FakeTime(0);
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
 
         List<LinkedHashMap<String, User>> observed = List.of(
@@ -158,7 +158,6 @@ class CheckedPredicateTest {
         ArrayDeque<Map<String, User>> maps = new ArrayDeque<>(List.of(Map.of(), Map.of("user", PENDING), Map.of("user", FIRST)));
         int[] calls = {0};
         CheckedPredicate<User> ready = user -> { calls[0]++; return user.checkReady(); };
-        var time = new FakeTime(0);
 
         assertEquals(1, await(optionals::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(4))
                 .until(OptionalConditions.hasValue(ready)).id());
@@ -170,7 +169,7 @@ class CheckedPredicateTest {
         switch (result) {
             case AwaitResult.Satisfied(var history, var user) -> {
                 assertEquals(1, user.id());
-                assertEquals(3, history.size());
+                assertEquals(3, history.getFirst().attempts().size());
             }
             case AwaitResult.Failed(var history, var failure) -> fail(failure.message());
         }
@@ -225,11 +224,11 @@ class CheckedPredicateTest {
             for (var wait : waits) {
                 calls[0] = 0;
                 var result = wait.get();
-                var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+                var failure = failure(result);
                 assertEquals(AwaitFailure.Reason.CONDITION_FAILED, failure.reason());
                 assertSame(cause, failure.cause());
                 assertEquals(1, calls[0]);
-                assertEquals(1, result.attempts().size());
+                assertEquals(1, attempts(result).size());
                 assertFalse(Thread.currentThread().isInterrupted());
             }
             calls[0] = 0;

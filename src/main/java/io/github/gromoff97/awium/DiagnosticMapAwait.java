@@ -27,26 +27,22 @@ public final class DiagnosticMapAwait<OBSERVED extends Map<?, ?>, ENTRY extends 
 
     @Override
     public DiagnosticMapAwait<OBSERVED, ENTRY, VALUE> every(Duration interval) {
-        return reconfigured(configuration.withEvery(interval));
+        return new DiagnosticMapAwait<>(source, configuration.withEvery(interval));
     }
 
     @Override
     public DiagnosticMapAwait<OBSERVED, ENTRY, VALUE> upTo(Duration timeout) {
-        return reconfigured(configuration.withUpTo(timeout));
+        return new DiagnosticMapAwait<>(source, configuration.withUpTo(timeout));
     }
 
     @Override
     public DiagnosticMapAwait<OBSERVED, ENTRY, VALUE> persisting(Duration persistence) {
-        return reconfigured(configuration.withPersistence(persistence));
+        return new DiagnosticMapAwait<>(source, configuration.withPersistence(persistence));
     }
 
     @Override
     public DiagnosticMapAwait<OBSERVED, ENTRY, VALUE> usingTime(LongSupplier clock, LongConsumer parker) {
-        return reconfigured(configuration.withTime(clock, parker));
-    }
-
-    private DiagnosticMapAwait<OBSERVED, ENTRY, VALUE> reconfigured(WaitConfiguration configuration) {
-        return new DiagnosticMapAwait<>(source, configuration);
+        return new DiagnosticMapAwait<>(source, configuration.withTime(clock, parker));
     }
 
     public AwaitResult<OBSERVED, VALUE> until(

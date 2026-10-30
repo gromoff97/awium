@@ -2,8 +2,8 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.result.HistoryEntry;
-import io.github.gromoff97.awium.result.AttemptStatus;
+import io.github.gromoff97.awium.internal.ExecutionStep.Phase;
+import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
@@ -13,14 +13,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.junitpioneer.jupiter.cartesian.CartesianTest;
+import org.junitpioneer.jupiter.cartesian.CartesianTest.Values;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
+import static io.github.gromoff97.awium.AwaitTestAccess.observation;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedTryAwait;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
-import static io.github.gromoff97.awium.AwaitTestAccess.evaluated;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.uncontrolled;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
@@ -31,6 +38,7 @@ import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.OptionalConditions.present;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -40,6 +48,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CapturedConditionTest {
 
+    private final FakeTime time = new FakeTime(0);
+
+    @AfterEach
+    void clearInterruptFlag() {
+        Thread.interrupted();
+    }
+
     @Test
     void mixedChecksAndSelectionsCaptureEachCompleteObservation() {
         var first = List.of(new Payment(Status.CREATED, "first"));
@@ -47,7 +62,6 @@ class CapturedConditionTest {
         var third = List.of(new Payment(Status.FINISHED, "third"));
         var observations = List.of(first, second, third);
         int[] reads = {0};
-        var time = new FakeTime(0);
         var waiting = await(() -> observations.get(reads[0]++ % observations.size()))
                 .usingTime(time, time).every(ofNanos(1));
 
@@ -66,8 +80,8 @@ class CapturedConditionTest {
         List<List<Payment>> captured = result.orThrow();
         assertEquals(values, captured);
         assertSame(captured, result.orThrow());
-        assertEquals(observations, result.attempts().stream().map(group -> group.last()).map(HistoryEntry::observed).toList());
-        assertTrue(result.attempts().stream().map(group -> group.last()).allMatch(attempt -> attempt.result() instanceof AttemptStatus.Satisfied));
+        assertThat(attempts(result)).hasOnlyElementsOfType(Attempt.Satisfied.class)
+                .extracting(AwaitTestAccess::observation).containsExactlyElementsOf(observations);
         assertEquals(6, reads[0]);
     }
 
@@ -77,7 +91,6 @@ class CapturedConditionTest {
         Object number = Integer.valueOf(1234);
         Object[] observations = {false, text, false, number};
         int[] reads = {0};
-        var time = new FakeTime(0);
         var waiting = await(() -> observations[reads[0]++ % observations.length])
                 .usingTime(time, time).every(ofNanos(1));
 
@@ -89,7 +102,7 @@ class CapturedConditionTest {
         assertSame(text, values.getFirst());
         assertSame(number, values.getLast());
         assertEquals(values, result.orThrow());
-        assertEquals(4, result.attempts().size());
+        assertEquals(4, attempts(result).size());
         assertEquals(8, reads[0]);
     }
 
@@ -97,7 +110,6 @@ class CapturedConditionTest {
     void reusableCaptureKeepsTheCompleteSourceTypeWithoutExplicitArguments() {
         var payment = new Payment(Status.FINISHED, "paid");
         var payments = new java.util.ArrayList<>(List.of(payment));
-        var time = new FakeTime(0);
         var checks = captured(Conditions.isNotNull, Conditions.isNotNull).because("observations");
         var selections = captured(CollectionConditions.singleElement, CollectionConditions.singleElement).because("elements");
 
@@ -129,123 +141,94 @@ class CapturedConditionTest {
         assertSame(payment, single.getFirst().orElseThrow());
     }
 
-    @Test
-    void failureBeforeTheFirstCheckIdentifiesItsStageWithoutInventingAnEvaluation() {
-        for (boolean interrupted : List.of(false, true)) {
-            var first = Conditions.equalTo("ready");
-            var sequence = captured(first, Conditions.equalTo("done")).because("lifecycle");
-            var cause = new IllegalStateException("source unavailable");
-            int[] reads = {0};
-            Callable<String> source = () -> {
-                reads[0]++;
-                throw cause;
-            };
-            try {
-                if (interrupted) Thread.currentThread().interrupt();
-                var result = tryAwait(source).until(sequence);
-                var attempt = result.attempts().getFirst().last();
-                var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+    @ParameterizedTest(name = "interrupted={0}")
+    @ValueSource(booleans = {false, true})
+    void failureBeforeTheFirstCheckIdentifiesItsStageWithoutInventingAnEvaluation(boolean interrupted) {
+        var first = Conditions.equalTo("ready");
+        var sequence = captured(first, Conditions.equalTo("done")).because("lifecycle");
+        var cause = new IllegalStateException("source unavailable");
+        int[] reads = {0};
+        Callable<String> source = () -> {
+            reads[0]++;
+            throw cause;
+        };
+        if (interrupted) Thread.currentThread().interrupt();
+        var result = tryAwait(source).until(sequence);
+        var attempt = attempts(result).getFirst();
+        var failure = failure(result);
 
-                assertEquals(1, result.attempts().size());
-                assertSame(first, attempt.condition());
-                assertSame(sequence, attempt.progress().sequence());
-                assertEquals(1, attempt.progress().stageNumber());
-                assertEquals(0, attempt.progress().capturedStages());
-                assertEquals(interrupted ? 0 : 1, reads[0]);
-                if (interrupted) {
-                    uncontrolled(AttemptStatus.Operation.WAITING, attempt.result());
-                    assertEquals(INTERRUPTED, failure.reason());
-                } else {
-                    uncontrolled(AttemptStatus.Operation.SOURCE, attempt.result());
-                    assertEquals(SOURCE_FAILED, failure.reason());
-                    assertSame(cause, failure.cause());
-                }
-                assertTrue(failure.message().contains("Because: lifecycle"), failure.message());
-                assertTrue(failure.message().contains("Stage: 1 of 2"), failure.message());
-            } finally {
-                Thread.interrupted();
-            }
+        assertEquals(1, attempts(result).size());
+        assertSame(first, result.conditions().getFirst().condition());
+        assertTrue(result.conditions().getLast().attempts().isEmpty());
+        assertEquals(interrupted ? 0 : 1, reads[0]);
+        if (interrupted) {
+            uncontrolled(Attempt.Operation.WAITING, attempt);
+            assertEquals(INTERRUPTED, failure.reason());
+        } else {
+            uncontrolled(Attempt.Operation.SOURCE, attempt);
+            assertEquals(SOURCE_FAILED, failure.reason());
+            assertSame(cause, failure.cause());
         }
+        assertThat(failure.message()).contains("Because: lifecycle", "stage 1/2");
     }
 
-    @Test
-    void sourceAndWaitingFailuresRetainProgressInBothPhasesAndTerminals() {
-        for (boolean capture : List.of(false, true)) {
-            for (var phase : HistoryEntry.Phase.values()) {
-                int completedStages = phase == HistoryEntry.Phase.ACQUISITION ? 1 : 2;
-                for (var reason : List.of(SOURCE_FAILED, WAIT_FAILED)) {
-                    var time = new FakeTime(0);
-                    var cause = new IllegalStateException("after a completed stage");
-                    int[] reads = {0};
-                    var waiting = await(() -> {
-                        if (++reads[0] > completedStages && reason == SOURCE_FAILED) throw cause;
-                        return reads[0] == 1 ? "ready" : "done";
-                    }).usingTime(time, nanos -> {
-                        if (reads[0] == completedStages && reason == WAIT_FAILED) throw cause;
-                        time.accept(nanos);
-                    }).every(ofNanos(1)).persisting(ofNanos(2));
-                    var first = Conditions.equalTo("ready");
-                    var second = Conditions.equalTo("done");
-                    AwaitFailure failure;
-                    if (capture) {
-                        var result = diagnostic(waiting).until(captured(first, second));
-                        failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
-                        var attempt = result.attempts().getLast().last();
-                        var progress = attempt.progress();
-                        assertEquals(phase, attempt.phase());
-                        assertEquals(completedStages, progress.capturedStages());
-                        assertEquals(2, progress.stageNumber());
-                        assertSame(second, attempt.condition());
-                        assertSame(result.attempts().getFirst().last().progress().sequence(), progress.sequence());
-                        assertSame(first, result.attempts().getFirst().last().condition());
-                    } else {
-                        failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(captured(first, second))).failure();
-                    }
-
-                    assertEquals(reason, failure.reason());
-                    assertSame(cause, failure.cause());
-                    assertTrue(failure.message().contains("Sequence (captured " + completedStages + " of 2)"), failure.message());
-                    assertTrue(failure.message().contains("Stage: 2 of 2"), failure.message());
-                }
-            }
+    @CartesianTest(name = "tryAwait={0}, phase={1}, reason={2}")
+    void sourceAndWaitingFailuresRetainProgressInBothPhasesAndTerminals(
+            @Values(booleans = {false, true}) boolean capture,
+            @CartesianTest.Enum Phase phase,
+            @CartesianTest.Enum(names = {"SOURCE_FAILED", "WAIT_FAILED"}) AwaitFailure.Reason reason) {
+        int completedStages = phase == Phase.ACQUISITION ? 1 : 2;
+        var cause = new IllegalStateException("after a completed stage");
+        int[] reads = {0};
+        var waiting = await(() -> {
+            if (++reads[0] > completedStages && reason == SOURCE_FAILED) throw cause;
+            return reads[0] == 1 ? "ready" : "done";
+        }).usingTime(time, nanos -> {
+            if (reads[0] == completedStages && reason == WAIT_FAILED) throw cause;
+            time.accept(nanos);
+        }).every(ofNanos(1)).persisting(ofNanos(2));
+        var first = Conditions.equalTo("ready");
+        var second = Conditions.equalTo("done");
+        AwaitFailure failure;
+        if (capture) {
+            var result = diagnostic(waiting).until(captured(first, second));
+            failure = failure(result);
+            var attempt = attempts(result).getLast();
+            assertInstanceOf(Attempt.FailedBeforeObservation.class, attempt);
+            assertSame(second, result.conditions().getLast().condition());
+            assertSame(first, result.conditions().getFirst().condition());
+        } else {
+            failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(captured(first, second))).failure();
         }
+
+        assertEquals(reason, failure.reason());
+        assertSame(cause, failure.cause());
+        assertThat(failure.message()).contains("Sequence: captured " + completedStages + "/2", "stage 2/2");
     }
 
-    @Test
-    void sourceAndWaitingInterruptionsRetainProgressInBothPhases() {
-        for (var phase : HistoryEntry.Phase.values()) {
-            int completedStages = phase == HistoryEntry.Phase.ACQUISITION ? 1 : 2;
-            for (boolean interruptInSource : List.of(false, true)) {
-                var time = new FakeTime(0);
-                int[] reads = {0};
-                var waiting = await(() -> {
-                    if (++reads[0] > completedStages && interruptInSource) Thread.currentThread().interrupt();
-                    return reads[0] == 1 ? "ready" : "done";
-                }).usingTime(time, nanos -> {
-                    if (reads[0] == completedStages && !interruptInSource) Thread.currentThread().interrupt();
-                    time.accept(nanos);
-                }).every(ofNanos(1)).persisting(ofNanos(2));
-                try {
-                    var first = Conditions.equalTo("ready");
-                    var second = Conditions.equalTo("done");
-                    var result = diagnostic(waiting).until(captured(first, second));
-                    var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
-                    var attempt = result.attempts().getLast().last();
-                    assertEquals(INTERRUPTED, failure.reason());
-                    assertEquals(phase, attempt.phase());
-                    assertEquals(completedStages, attempt.progress().capturedStages());
-                    assertEquals(2, attempt.progress().stageNumber());
-                    assertSame(second, attempt.condition());
-                    assertSame(result.attempts().getFirst().last().progress().sequence(), attempt.progress().sequence());
-                    assertTrue(failure.message().contains("Sequence (captured " + completedStages + " of 2)"));
-                    assertTrue(failure.message().contains("Stage: 2 of 2"), failure.message());
-                    assertEquals(1, result.attempts().getFirst().last().progress().capturedStages());
-                    assertTrue(Thread.currentThread().isInterrupted());
-                } finally {
-                    Thread.interrupted();
-                }
-            }
-        }
+    @CartesianTest(name = "phase={0}, interruptInSource={1}")
+    void sourceAndWaitingInterruptionsRetainProgressInBothPhases(
+            @CartesianTest.Enum Phase phase, @Values(booleans = {false, true}) boolean interruptInSource) {
+        int completedStages = phase == Phase.ACQUISITION ? 1 : 2;
+        int[] reads = {0};
+        var waiting = await(() -> {
+            if (++reads[0] > completedStages && interruptInSource) Thread.currentThread().interrupt();
+            return reads[0] == 1 ? "ready" : "done";
+        }).usingTime(time, nanos -> {
+            if (reads[0] == completedStages && !interruptInSource) Thread.currentThread().interrupt();
+            time.accept(nanos);
+        }).every(ofNanos(1)).persisting(ofNanos(2));
+        var first = Conditions.equalTo("ready");
+        var second = Conditions.equalTo("done");
+        var result = diagnostic(waiting).until(captured(first, second));
+        var failure = failure(result);
+        var attempt = attempts(result).getLast();
+        assertEquals(INTERRUPTED, failure.reason());
+        assertEquals(interruptInSource ? Attempt.FailedAfterObservation.class
+                : Attempt.FailedBeforeObservation.class, attempt.getClass());
+        assertSame(second, result.conditions().getLast().condition());
+        assertThat(failure.message()).contains("Sequence: captured " + completedStages + "/2", "stage 2/2");
+        assertTrue(Thread.currentThread().isInterrupted());
     }
 
     @Test
@@ -254,7 +237,6 @@ class CapturedConditionTest {
         var second = new String("second");
         Object[] observations = {42, first, 43L, second};
         int[] reads = {0};
-        var time = new FakeTime(0);
         var waiting = await(() -> observations[reads[0]++ % observations.length])
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10));
         var start = Conditions.instanceOf(String.class);
@@ -266,9 +248,9 @@ class CapturedConditionTest {
         assertSame(first, values.getFirst());
         assertSame(second, values.getLast());
         assertEquals(values, attempt.orThrow());
-        assertEquals(4, attempt.attempts().size());
-        assertInstanceOf(AttemptStatus.Satisfied.class, attempt.attempts().get(1).last().result());
-        assertSame(first, attempt.attempts().get(1).last().observed());
+        assertEquals(4, attempts(attempt).size());
+        assertInstanceOf(Attempt.Satisfied.class, attempts(attempt).get(1));
+        assertSame(first, observation(attempts(attempt).get(1)));
         assertEquals(8, reads[0]);
         assertThrows(UnsupportedOperationException.class, values::clear);
     }
@@ -279,7 +261,6 @@ class CapturedConditionTest {
         Integer second = 2000;
         List<List<Number>> observations = List.of(List.of(first), List.of(second));
         int[] reads = {0};
-        var time = new FakeTime(0);
         var waiting = await(() -> observations.get(reads[0]++ % observations.size()))
                 .usingTime(time, time).every(ofNanos(1));
 
@@ -293,7 +274,7 @@ class CapturedConditionTest {
         assertSame(observations.getFirst(), values.getFirst());
         assertSame(observations.getLast(), values.getLast());
         assertEquals(values, attempt.orThrow());
-        assertEquals(2, attempt.attempts().size());
+        assertEquals(2, attempts(attempt).size());
         assertEquals(4, reads[0]);
     }
 
@@ -304,7 +285,6 @@ class CapturedConditionTest {
         Number persisted = new BigDecimal("3.00");
         var observations = List.of(first, Map.of("last", acquired), Map.of("last", persisted));
         int[] reads = {0};
-        var time = new FakeTime(0);
         var waiting = await(() -> observations.get(reads[0]++ % observations.size()))
                 .usingTime(time, time).every(java.time.Duration.ofNanos(1))
                 .persisting(java.time.Duration.ofNanos(1));
@@ -318,14 +298,14 @@ class CapturedConditionTest {
         assertNull(values.getFirst().get("first"));
         assertSame(persisted, values.getLast().get("last"));
         assertEquals(values, attempt.orThrow());
-        assertEquals(3, attempt.attempts().size());
+        assertEquals(3, attempts(attempt).size());
         assertEquals(6, reads[0]);
-        var acquisition = evaluated(attempt.attempts().get(1).last());
-        assertInstanceOf(AttemptStatus.Satisfied.class, acquisition.result());
-        assertSame(acquired, acquisition.observed().get("last"));
-        var firstAttempt = evaluated(attempt.attempts().getFirst().last());
-        assertInstanceOf(AttemptStatus.Satisfied.class, firstAttempt.result());
-        assertSame(first, firstAttempt.observed());
+        var acquisition = attempts(attempt).get(1);
+        assertInstanceOf(Attempt.Satisfied.class, acquisition);
+        assertSame(acquired, observation(acquisition).get("last"));
+        var firstAttempt = attempts(attempt).getFirst();
+        assertInstanceOf(Attempt.Satisfied.class, firstAttempt);
+        assertSame(first, observation(firstAttempt));
         assertThrows(UnsupportedOperationException.class, values::clear);
     }
 
@@ -336,7 +316,6 @@ class CapturedConditionTest {
         Number third = 1024L;
         Number[] observations = {first, second, third, first, second, third};
         int[] reads = {0};
-        var time = new FakeTime(0);
         var waiting = timedAwait(() -> observations[reads[0]++], config(1, 5, 0), time, time);
         var firstStage = Conditions.equalTo(new BigDecimal("1.00"));
         var secondStage = Conditions.equalTo(new BigInteger("2"));
@@ -353,7 +332,7 @@ class CapturedConditionTest {
         assertSame(first, results.get(0));
         assertSame(second, results.get(1));
         assertSame(third, results.get(2));
-        assertEquals(3, captured.attempts().size());
+        assertEquals(3, attempts(captured).size());
         assertEquals(6, reads[0]);
     }
 
@@ -364,7 +343,6 @@ class CapturedConditionTest {
         var persisted = new String("persisted");
         var observations = List.of(List.of(first, "ignored"), List.of("ignored", acquired), List.of("ignored", persisted));
         int[] reads = {0};
-        var time = new FakeTime(0);
 
         AwaitResult<List<String>, List<List<String>>> result = tryAwait(() -> observations.get(reads[0]++))
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).persisting(ofNanos(1))
@@ -373,21 +351,19 @@ class CapturedConditionTest {
         var values = result.orThrow();
         assertSame(observations.getFirst(), values.get(0));
         assertSame(observations.getLast(), values.get(1));
-        var earlier = evaluated(result.attempts().get(1).last());
-        assertInstanceOf(AttemptStatus.Satisfied.class, earlier.result());
-        assertSame(acquired, earlier.observed().getLast());
-        var firstAttempt = evaluated(result.attempts().getFirst().last());
-        assertInstanceOf(AttemptStatus.Satisfied.class, firstAttempt.result());
-        assertSame(first, firstAttempt.observed().getFirst());
+        var earlier = attempts(result).get(1);
+        assertInstanceOf(Attempt.Satisfied.class, earlier);
+        assertSame(acquired, observation(earlier).getLast());
+        var firstAttempt = attempts(result).getFirst();
+        assertInstanceOf(Attempt.Satisfied.class, firstAttempt);
+        assertSame(first, observation(firstAttempt).getFirst());
         assertThrows(UnsupportedOperationException.class, values::clear);
         assertEquals(3, reads[0]);
-        assertEquals(List.of(HistoryEntry.Phase.ACQUISITION, HistoryEntry.Phase.ACQUISITION, HistoryEntry.Phase.PERSISTENCE),
-                result.attempts().stream().map(group -> group.last()).map(HistoryEntry::phase).toList());
+        assertThat(result.conditions()).extracting(history -> history.attempts().size()).containsExactly(1, 2);
     }
 
     @Test
     void historyRecordsTheCheckedStageAndItsActualResult() {
-        var time = new FakeTime(0);
         var source = List.of("created", "created", "processing", "completed").iterator();
         var first = Conditions.equalTo("created");
         var second = Conditions.equalTo("processing");
@@ -395,91 +371,65 @@ class CapturedConditionTest {
         var sequence = captured(first, second, third).because("lifecycle");
         var result = tryAwait(source::next).usingTime(time, time).every(ofNanos(1)).until(sequence);
 
-        var attempts = result.attempts().stream().map(group -> group.last()).toList();
-        assertEquals(4, result.attempts().size());
-        assertEquals(List.of(1, 2, 2, 3), attempts.stream().map(attempt -> attempt.progress().stageNumber()).toList());
-        assertEquals(List.of(1, 1, 2, 3), attempts.stream().map(attempt -> attempt.progress().capturedStages()).toList());
-        assertEquals(List.of(first, second, second, third), attempts.stream().map(HistoryEntry::condition).toList());
-        for (int index = 0; index < attempts.size(); index++) {
-            var attempt = attempts.get(index);
-            assertSame(sequence, attempt.progress().sequence());
-            assertEquals(3, attempt.progress().sequence().stages().size());
-            assertTrue(attempt.hasObservation());
-            assertTrue(attempt.observed().length() > 0);
-            if (index == 1) {
-                assertInstanceOf(AttemptStatus.Unsatisfied.class, attempt.result());
-            } else {
-                assertInstanceOf(AttemptStatus.Satisfied.class, attempt.result());
-            }
-        }
+        assertThat(result.conditions()).extracting(history -> history.condition())
+                .containsExactly(first, second, third);
+        assertThat(result.conditions()).extracting(history -> List.copyOf(history.attempts().keySet()))
+                .containsExactly(List.of(1L), List.of(2L, 3L), List.of(4L));
+        assertThat(attempts(result)).hasExactlyElementsOfTypes(Attempt.Satisfied.class, Attempt.Unsatisfied.class,
+                        Attempt.Satisfied.class, Attempt.Satisfied.class)
+                .allSatisfy(attempt -> assertThat(observation(attempt)).isNotEmpty());
 
         assertEquals(List.of("created", "processing", "completed"),
                 result.orThrow());
     }
 
-    @Test
-    void interruptedStageIsNotCapturedAfterANormalCallbackReturn() {
-        for (boolean capture : List.of(false, true)) {
-            for (int stage : new int[] {1, 2}) {
-                for (boolean matching : List.of(false, true)) {
-                    var time = new FakeTime(0);
-                    int[] sources = {0};
-                    var waiting = timedAwait(() -> {
-                        sources[0]++;
-                        return "ready";
-                    }, config(1, 3, 0), time, time);
-                    var first = Conditions.<String>matches(value -> {
-                        if (stage == 1) {
-                            Thread.currentThread().interrupt();
-                            return matching;
-                        }
-                        return true;
-                    });
-                    var second = Conditions.<String>matches(value -> {
-                        Thread.currentThread().interrupt();
-                        return matching;
-                    });
-                    try {
-                        AwaitFailure failure;
-                        if (capture) {
-                            var result = diagnostic(waiting).until(captured(first, second));
-                            failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
-                            uncontrolled(AttemptStatus.Operation.CONDITION, result.attempts().getLast().last().result());
-                            var progress = result.attempts().getLast().last().progress();
-                            assertEquals(stage - 1, progress.capturedStages());
-                            assertEquals(stage, progress.stageNumber());
-                        } else {
-                            failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(captured(first, second))).failure();
-                        }
-                        assertEquals(INTERRUPTED, failure.reason());
-                        assertInstanceOf(InterruptedException.class, failure.cause());
-                        assertTrue(failure.message().contains("Sequence (captured " + (stage - 1) + " of 2)"));
-                        assertTrue(failure.message().contains("Stage: " + stage + " of 2"), failure.message());
-                        assertEquals(stage, sources[0]);
-                        assertTrue(Thread.currentThread().isInterrupted());
-                    } finally {
-                        Thread.interrupted();
-                    }
-                }
+    @CartesianTest(name = "tryAwait={0}, stage={1}, matching={2}")
+    void interruptedStageIsNotCapturedAfterANormalCallbackReturn(
+            @Values(booleans = {false, true}) boolean capture,
+            @Values(ints = {1, 2}) int stage, @Values(booleans = {false, true}) boolean matching) {
+        int[] sources = {0};
+        var waiting = timedAwait(() -> {
+            sources[0]++;
+            return "ready";
+        }, config(1, 3, 0), time, time);
+        var first = Conditions.<String>matches(value -> {
+            if (stage == 1) {
+                Thread.currentThread().interrupt();
+                return matching;
             }
+            return true;
+        });
+        var second = Conditions.<String>matches(value -> {
+            Thread.currentThread().interrupt();
+            return matching;
+        });
+        AwaitFailure failure;
+        if (capture) {
+            var result = diagnostic(waiting).until(captured(first, second));
+            failure = failure(result);
+            uncontrolled(Attempt.Operation.CONDITION, attempts(result).getLast());
+            assertThat(result.conditions()).filteredOn(history -> !history.attempts().isEmpty()).hasSize(stage);
+        } else {
+            failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(captured(first, second))).failure();
         }
+        assertEquals(INTERRUPTED, failure.reason());
+        assertInstanceOf(InterruptedException.class, failure.cause());
+        assertThat(failure.message()).contains("Sequence: captured " + (stage - 1) + "/2", "stage " + stage + "/2");
+        assertEquals(stage, sources[0]);
+        assertTrue(Thread.currentThread().isInterrupted());
     }
 
-    @Test
-    void lateSuccessfulSequenceKeepsTheFinalStageDiagnostics() {
-        for (long delay : new long[]{4, 5}) {
-            var time = new FakeTime(0);
-            var sequence = captured(condition("first stage", (String value) -> satisfied()),
-                    condition("final stage", (String value) -> {
-                        time.advanceNanos(delay);
-                        return satisfied();
-                    }));
-            var failure = assertFailure(TIMEOUT,
-                    () -> timedAwait(() -> "ready", config(1, 5, 0), time, time).until(sequence));
-            assertTrue(failure.getMessage().contains("Sequence (captured 2 of 2)"), failure.getMessage());
-            assertTrue(failure.getMessage().contains("Stage: 2 of 2"), failure.getMessage());
-            assertTrue(failure.getMessage().contains("final stage"), failure.getMessage());
-        }
+    @ParameterizedTest(name = "delay={0}")
+    @ValueSource(longs = {4, 5})
+    void lateSuccessfulSequenceKeepsTheFinalStageDiagnostics(long delay) {
+        var sequence = captured(condition("first stage", (String value) -> satisfied()),
+                condition("final stage", (String value) -> {
+                    time.advanceNanos(delay);
+                    return satisfied();
+                }));
+        var failure = assertFailure(TIMEOUT,
+                () -> timedAwait(() -> "ready", config(1, 5, 0), time, time).until(sequence));
+        assertThat(failure).hasMessageContainingAll("Sequence: captured 2/2", "stage 2/2", "final stage");
     }
 
     private record Payment(Status status, String detail) {}
@@ -488,7 +438,6 @@ class CapturedConditionTest {
 
     @Test
     void capturesExactlyOnePredicateStagePerPollingAttempt() {
-        var time = new FakeTime(0);
         int[] calls = {0};
 
         List<Integer> result = timedAwait(() -> {
@@ -499,30 +448,27 @@ class CapturedConditionTest {
 
         assertEquals(List.of(1, 1, 1), result);
         assertEquals(3, calls[0]);
-        assertEquals(List.of(1L, 1L), time.parkRequests);
+        assertThat(time.parkRequests).containsExactly(1L, 1L);
     }
 
     @Test
     void reportsTheNextStageWhenAcquisitionExpiresAfterCapture() {
-        var time = new FakeTime(0);
-
         var result = timedTryAwait(() -> {
             time.advanceNanos(2);
             return "observed";
         }, config(1, 2, 0), time, time).until(captured(matches(value -> true), matches(value -> true)));
-        var outcome = assertInstanceOf(AttemptStatus.Satisfied.class,
-                evaluated(result.attempts().getFirst().last()).result());
+        var outcome = assertInstanceOf(Attempt.Satisfied.class,
+                attempts(result).getFirst());
 
-        assertEquals("observed", result.attempts().getFirst().last().observed());
-        assertEquals(1, result.attempts().getFirst().last().progress().stageNumber());
-        var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+        assertEquals("observed", observation(attempts(result).getFirst()));
+        assertTrue(result.conditions().getLast().attempts().isEmpty());
+        var failure = failure(result);
         assertEquals(TIMEOUT, failure.reason());
-        assertTrue(failure.message().contains("Next stage: 2 of 2"), failure.message());
+        assertThat(failure.message()).contains("Next stage 2/2:");
     }
 
     @Test
     void capturesAChangingSourceInStrictOrder() {
-        var time = new FakeTime(0);
         var created = new Payment(Status.CREATED, "accepted");
         var pending = new Payment(Status.PENDING, "settling");
         var finished = new Payment(Status.FINISHED, "paid");
@@ -539,7 +485,6 @@ class CapturedConditionTest {
 
     @Test
     void persistenceReevaluatesAndRefreshesOnlyTheFinalStage() {
-        var time = new FakeTime(0);
         String early = new String("early");
         String acquiredFinal = new String("acquired final");
         String firstPersistedFinal = new String("first persisted final");
@@ -563,12 +508,11 @@ class CapturedConditionTest {
         assertEquals(4, sourceCalls[0]);
         assertEquals(1, earlyStageCalls[0]);
         assertEquals(3, finalStageCalls[0]);
-        assertEquals(List.of(1L, 1L, 1L), time.parkRequests);
+        assertThat(time.parkRequests).containsExactly(1L, 1L, 1L);
     }
 
     @Test
     void finalStageMismatchDuringPersistenceFailsImmediately() {
-        var time = new FakeTime(0);
         String early = new String("early");
         String acquiredFinal = new String("acquired final");
         String rejectedFinal = new String("rejected final");
@@ -580,12 +524,11 @@ class CapturedConditionTest {
                         matches(value -> value != rejectedFinal))));
 
         assertEquals(3, sourceCalls[0]);
-        assertEquals(List.of(1L, 1L), time.parkRequests);
+        assertThat(time.parkRequests).containsExactly(1L, 1L);
     }
 
     @Test
     void doesNotSkipAMissedIntermediateStage() {
-        var time = new FakeTime(0);
         var created = new Payment(Status.CREATED, "accepted");
         var finished = new Payment(Status.FINISHED, "paid");
         int[] calls = {0};
@@ -601,7 +544,6 @@ class CapturedConditionTest {
 
     @Test
     void capturesProjectedObservations() {
-        var time = new FakeTime(0);
         String[] observations = {"a", "bb"};
         int[] next = {0};
 
@@ -613,7 +555,6 @@ class CapturedConditionTest {
 
     @Test
     void preservingSequenceCapturesEveryStage() {
-        var time = new FakeTime(0);
         String[] observations = {"alpha", "omega"};
         int[] next = {0};
 
@@ -640,8 +581,6 @@ class CapturedConditionTest {
 
     @Test
     void returnsAnImmutableCapturedCopyThatAllowsNull() {
-        var time = new FakeTime(0);
-
         List<String> result = timedAwait((Callable<String>) () -> null, config(1, 10, 0),
                 time, time).until(captured(condition("first null", ignored -> ConditionResult.satisfied()),
                 condition("second null", ignored -> ConditionResult.satisfied())));
@@ -654,7 +593,6 @@ class CapturedConditionTest {
 
     @Test
     void captureSnapshotsTheArrayBeforePollingAndKeepsTheResultType() {
-        var time = new FakeTime(0);
         @SuppressWarnings("unchecked")
         PreservingCondition<Integer>[] stages = (PreservingCondition<Integer>[]) new PreservingCondition<?>[]{
                 matches((Integer value) -> value == 1),
@@ -674,7 +612,7 @@ class CapturedConditionTest {
         calls[0] = 0;
         AwaitResult<Integer, List<Integer>> captured = diagnostic(waiting).until(sequence);
         assertEquals(values, captured.orThrow());
-        assertEquals(2, captured.attempts().size());
+        assertEquals(2, attempts(captured).size());
         assertThrows(IllegalArgumentException.class, () -> captured(java.util.Arrays.copyOf(stages, 0)));
         assertEquals(2, calls[0]);
 
@@ -687,7 +625,6 @@ class CapturedConditionTest {
 
     @Test
     void selectedSequenceCapturesOriginalObservations() {
-        var time = new FakeTime(0);
         List<Optional<String>> observations = List.of(Optional.of("first"),
                 Optional.of("second"));
         int[] next = {0};

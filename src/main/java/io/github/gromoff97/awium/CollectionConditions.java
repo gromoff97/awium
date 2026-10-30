@@ -452,7 +452,7 @@ public final class CollectionConditions {
         List<Object> seen = new ArrayList<>();
         for (Object value : actual) {
             if (matchesAny(seen, previous -> deepEquals(previous, value))) {
-                return ConditionResult.unsatisfied("collection contained a duplicate at iteration index " + seen.size());
+                return ConditionResult.unsatisfied("duplicate collection element at index " + seen.size());
             }
             seen.add(value);
         }

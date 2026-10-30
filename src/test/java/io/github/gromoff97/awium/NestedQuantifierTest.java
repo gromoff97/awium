@@ -10,6 +10,9 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
+import static io.github.gromoff97.awium.AwaitTestAccess.observation;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
@@ -17,9 +20,12 @@ import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.*;
 import static java.time.Duration.ofNanos;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NestedQuantifierTest {
+
+    private final FakeTime time = new FakeTime(0);
 
     private record User(int id, boolean active) {}
 
@@ -42,13 +48,12 @@ class NestedQuantifierTest {
         assertSame(ready, allReady);
         assertSame(mixed, someReady);
         assertSame(empty, noneReady);
-        var time = new FakeTime(0);
         var failed = tryAwait(() -> mixed).usingTime(time, time).upTo(ofNanos(1))
                 .until(all(OptionalConditions.present).because("each user is available"));
         assertEquals(AwaitFailure.Reason.TIMEOUT,
-                assertInstanceOf(AwaitResult.Failed.class, failed).failure().reason());
-        assertSame(mixed, failed.attempts().getFirst().last().observed());
-        assertEquals("each user is available", failed.attempts().getFirst().last().condition().explanation());
+                failure(failed).reason());
+        assertSame(mixed, observation(attempts(failed).getFirst()));
+        assertEquals("each user is available", failed.conditions().getFirst().condition().explanation());
     }
 
     @Test
@@ -130,10 +135,10 @@ class NestedQuantifierTest {
             for (var actual : java.util.Arrays.asList(source, null)) {
                 var time = new FakeTime(0);
                 var result = tryAwait(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1)).until(check);
-                var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+                var failure = failure(result);
                 assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
                 assertNull(failure.cause());
-                if (actual == null) assertTrue(failure.message().contains("collection was null"), failure.message());
+                if (actual == null) assertThat(failure.message()).contains("collection was null");
             }
         }
     }
@@ -169,10 +174,10 @@ class NestedQuantifierTest {
                 if (source == successful) {
                     assertSame(source, result.orThrow());
                 } else {
-                    var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+                    var failure = failure(result);
                     assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
                     assertNull(failure.cause());
-                    if (source == null) assertTrue(failure.message().contains("map was null"), failure.message());
+                    if (source == null) assertThat(failure.message()).contains("map was null");
                 }
             }
         }
@@ -198,7 +203,6 @@ class NestedQuantifierTest {
     void shortCircuitingStopsBeforeAnotherCallbackAndEmptyInputsStayLazy() {
         int[] calls = {0};
         var check = matches((User user) -> { calls[0]++; return user.active(); });
-        var time = new FakeTime(0);
         var source = List.of(ACTIVE, PENDING);
         assertSame(source, await(() -> source).until(any(check)));
         assertEquals(1, calls[0]);
@@ -216,7 +220,7 @@ class NestedQuantifierTest {
         assertSame(empty, await(() -> empty).until(all(forbidden)));
         assertSame(empty, await(() -> empty).until(none(forbidden)));
         var emptyResult = tryAwait(() -> empty).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1)).until(any(forbidden));
-        assertEquals(AwaitFailure.Reason.TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, emptyResult).failure().reason());
+        assertEquals(AwaitFailure.Reason.TIMEOUT, failure(emptyResult).reason());
     }
 
     @Test
@@ -228,7 +232,6 @@ class NestedQuantifierTest {
             return (User user) -> ++calls[0] >= 2 ? satisfied() : unsatisfied();
         });
         var source = List.of(ACTIVE, ACTIVE);
-        var time = new FakeTime(0);
         var waiting = await(() -> source).usingTime(time, time).every(ofNanos(1));
         assertSame(source, waiting.until(any(check)));
         assertSame(source, waiting.until(any(check)));
@@ -241,19 +244,17 @@ class NestedQuantifierTest {
     void nestedMismatchKeepsCauseAndReference() {
         var cause = new IOException("not ready");
         var check = condition("ready", (User user) -> unsatisfied("pending state", cause));
-        var time = new FakeTime(0);
         var result = tryAwait(() -> List.of(PENDING)).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1))
                 .until(all(check));
-        var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+        var failure = failure(result);
         assertSame(cause, failure.cause());
-        assertTrue(failure.message().contains("pending state"), failure.message());
+        assertThat(failure.message()).contains("pending state");
 
         Map<String, Object> missing = Map.of();
         var nested = MapConditions.valueFor("user", instanceOf(User.class));
         var missingResult = tryAwait(() -> List.of(missing)).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1))
                 .until(any(nested));
-        var missingFailure = assertInstanceOf(AwaitResult.Failed.class, missingResult).failure();
-        assertTrue(missingFailure.message().contains("Key: user"), missingFailure.message());
+        assertThat(failure(missingResult).message()).contains("Key: \"user\"");
     }
 
     @Test
@@ -262,14 +263,14 @@ class NestedQuantifierTest {
             int[] calls = {0};
             var check = matches((User user) -> { calls[0]++; throw cause; });
             var result = tryAwait(() -> List.of(ACTIVE, PENDING)).until(any(check));
-            assertSame(cause, assertInstanceOf(AwaitResult.Failed.class, result).failure().cause());
+            assertSame(cause, failure(result).cause());
             assertEquals(1, calls[0]);
         }
         int[] calls = {0};
         try {
             var check = matches((User user) -> { calls[0]++; Thread.currentThread().interrupt(); return false; });
             var result = tryAwait(() -> List.of(ACTIVE, PENDING)).until(any(check));
-            assertEquals(AwaitFailure.Reason.INTERRUPTED, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
+            assertEquals(AwaitFailure.Reason.INTERRUPTED, failure(result).reason());
             assertEquals(1, calls[0]);
             assertTrue(Thread.currentThread().isInterrupted());
         } finally {

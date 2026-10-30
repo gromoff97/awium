@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
@@ -20,11 +21,12 @@ import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.Conditions.captured;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ScalarConditionsTest {
+
+    private final FakeTime time = new FakeTime(0);
 
     @Test
     void singleBoundChecksDoNotRequireTheBoundToBeComparable() {
@@ -34,7 +36,6 @@ class ScalarConditionsTest {
             public int compareTo(Limit limit) { return Integer.compare(number, limit.number()); }
         }
         var measurement = new Measurement(10);
-        var time = new FakeTime(0);
         var waiting = await(() -> measurement).usingTime(time, time);
         var checks = List.of(Conditions.greaterThan(new Limit(5)),
                 Conditions.atLeast(new Limit(10)),
@@ -73,7 +74,6 @@ class ScalarConditionsTest {
             Bound(int number) { super(number); }
         }
         var score = new Score(10);
-        var time = new FakeTime(0);
         var waiting = await(() -> score).usingTime(time, time);
         var checks = List.of(Conditions.greaterThan(new Bound(5)),
                 Conditions.atLeast(new Bound(10)),
@@ -143,7 +143,7 @@ class ScalarConditionsTest {
 
             assertSame(text, waiting.until(matching));
             assertSame(text, await(() -> Optional.of(text)).usingTime(time, time).until(OptionalConditions.hasValue(matching)));
-            var failure = assertInstanceOf(AwaitResult.Failed.class, diagnostic(waiting).until(mismatching)).failure();
+            var failure = failure(diagnostic(waiting).until(mismatching));
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
         }
     }
@@ -152,7 +152,6 @@ class ScalarConditionsTest {
     void textChecksPreserveSourceTypesInBothTerminalsAndSequences() {
         var text = new StringBuilder("Ready 42");
         String immutable = text.toString();
-        var time = new FakeTime(0);
         var waiting = await(() -> text).usingTime(time, time);
         var immutableWaiting = await(() -> immutable).usingTime(time, time);
         var checks = List.of(StringConditions.nonEmpty, StringConditions.nonBlank,
@@ -219,8 +218,7 @@ class ScalarConditionsTest {
 
     @Test
     void comparableConditionsCoverInclusiveAndExclusiveRelations() {
-        var pollingTime = new FakeTime(0);
-        var waiting = await(() -> 5).usingTime(pollingTime, pollingTime);
+        var waiting = await(() -> 5).usingTime(time, time);
         assertEquals(5, waiting.until(Conditions.greaterThan(4)));
         assertEquals(5, waiting.until(Conditions.atLeast(5)));
         assertEquals(5, waiting.until(Conditions.lessThan(6)));

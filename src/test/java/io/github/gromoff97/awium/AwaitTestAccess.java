@@ -1,30 +1,43 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.internal.WaitConfiguration;
-import io.github.gromoff97.awium.result.HistoryEntry;
-import io.github.gromoff97.awium.result.AttemptStatus;
+import io.github.gromoff97.awium.result.Attempt;
+import io.github.gromoff97.awium.result.AwaitFailure;
+import io.github.gromoff97.awium.result.AwaitResult;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.Map;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 final class AwaitTestAccess {
 
     private AwaitTestAccess() {}
 
-    static <OBSERVED> HistoryEntry<OBSERVED> evaluated(HistoryEntry<OBSERVED> attempt) {
-        assertTrue(attempt.hasObservation());
-        assertFalse(attempt.result() instanceof AttemptStatus.Uncontrolled);
-        return attempt;
+    static AwaitFailure failure(AwaitResult<?, ?> result) {
+        return assertInstanceOf(AwaitResult.Failed.class, result).failure();
     }
 
-    static AttemptStatus.Uncontrolled uncontrolled(AttemptStatus.Operation operation, AttemptStatus result) {
-        var failure = assertInstanceOf(AttemptStatus.Uncontrolled.class, result);
+    /** Flattens condition histories for tests of the complete execution timeline. */
+    static <OBSERVED> List<Attempt<OBSERVED>> attempts(AwaitResult<OBSERVED, ?> result) {
+        return result.conditions().stream().flatMap(history -> history.attempts().values().stream()).toList();
+    }
+
+    static <OBSERVED> OBSERVED observation(Attempt<OBSERVED> attempt) {
+        return switch (attempt) {
+            case Attempt.Satisfied<OBSERVED> satisfied -> satisfied.observed();
+            case Attempt.Unsatisfied<OBSERVED> unsatisfied -> unsatisfied.observed();
+            case Attempt.FailedAfterObservation<OBSERVED> failed -> failed.observed();
+            case Attempt.FailedBeforeObservation<OBSERVED> ignored -> fail("expected an observation");
+        };
+    }
+
+    static Attempt.Failure<?> uncontrolled(Attempt.Operation operation, Attempt<?> result) {
+        var failure = assertInstanceOf(Attempt.Failure.class, result);
         assertEquals(operation, failure.operation());
         return failure;
     }

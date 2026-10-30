@@ -9,15 +9,20 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.FieldSource;
 
 import static io.github.gromoff97.awium.Await.await;
-import static java.util.Arrays.stream;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PublicSurfaceTest {
+
+    private static final List<Class<?>> STAGES = List.of(ValueAwait.class, SelectionAwait.class, MapAwait.class,
+            DiagnosticAwait.class, DiagnosticSelectionAwait.class, DiagnosticMapAwait.class);
 
     @Test
     void acceptsJdkCallableOnTheEnteringThreadWithItsConcreteReturnType() {
@@ -40,42 +45,34 @@ class PublicSurfaceTest {
                 Condition.InputCondition.class, Condition.Typed.class, PreservingCondition.class, ComparisonCondition.class,
                 SelectedCondition.class, MapValueCondition.class, ApplicableCondition.class,
                 Condition.CapturedSource.class)) {
-            stream(stage.getMethods()).forEach(method ->
-                    assertFalse(excludedMethods.contains(method.getName()), method.toGenericString()));
+            assertThat(stage.getMethods()).noneMatch(method -> excludedMethods.contains(method.getName()));
         }
-        assertTrue(Condition.class.isAssignableFrom(ComparisonCondition.class));
-        assertTrue(Condition.class.isAssignableFrom(SelectedCondition.class));
-        assertTrue(Condition.class.isAssignableFrom(PreservingCondition.class));
-        assertTrue(Condition.class.isAssignableFrom(MapValueCondition.class));
+        assertThat(Condition.class).isSealed().isAssignableFrom(ComparisonCondition.class, SelectedCondition.class,
+                PreservingCondition.class, MapValueCondition.class);
         assertFalse(SelectedCondition.class.isAssignableFrom(MapValueCondition.class));
-        assertTrue(Condition.class.isSealed());
     }
 
-    @Test
-    void terminalsAcceptExactlyOneConditionWithoutVarargs() {
-        for (var stage : List.<Class<?>>of(ValueAwait.class, SelectionAwait.class, MapAwait.class,
-                DiagnosticAwait.class, DiagnosticSelectionAwait.class, DiagnosticMapAwait.class)) {
-            for (var method : stage.getMethods()) {
-                assertFalse(method.getName().equals("tryUntil"), method.toGenericString());
-                if (method.getName().equals("until")) {
-                    assertFalse(method.isVarArgs(), method.toGenericString());
-                    assertEquals(1, method.getParameterCount(), method.toGenericString());
-                    assertTrue(Condition.class.isAssignableFrom(method.getParameterTypes()[0]), method.toGenericString());
-                }
+    @ParameterizedTest
+    @FieldSource("STAGES")
+    void terminalsAcceptExactlyOneConditionWithoutVarargs(Class<?> stage) {
+        for (var method : stage.getMethods()) {
+            assertFalse(method.getName().equals("tryUntil"), method.toGenericString());
+            if (method.getName().equals("until")) {
+                assertFalse(method.isVarArgs(), method.toGenericString());
+                assertEquals(1, method.getParameterCount(), method.toGenericString());
+                assertTrue(Condition.class.isAssignableFrom(method.getParameterTypes()[0]), method.toGenericString());
             }
         }
     }
 
-    @Test
-    void bothEntryPointsExposeOnlySharedTimingSettings() {
+    @ParameterizedTest
+    @FieldSource("STAGES")
+    void bothEntryPointsExposeOnlySharedTimingSettings(Class<?> stage) {
         var settings = Set.of("every", "upTo", "persisting", "usingTime");
-        for (var stage : List.<Class<?>>of(ValueAwait.class, SelectionAwait.class, MapAwait.class,
-                DiagnosticAwait.class, DiagnosticSelectionAwait.class, DiagnosticMapAwait.class)) {
-            for (var method : stage.getMethods()) {
-                assertFalse(method.getName().equals("historyTail"), method.toGenericString());
-                if (settings.contains(method.getName()) && !method.isBridge()) {
-                    assertTrue(stage.isAssignableFrom(method.getReturnType()), method.toGenericString());
-                }
+        for (var method : stage.getMethods()) {
+            assertFalse(method.getName().equals("historyTail"), method.toGenericString());
+            if (settings.contains(method.getName()) && !method.isBridge()) {
+                assertTrue(stage.isAssignableFrom(method.getReturnType()), method.toGenericString());
             }
         }
     }
@@ -85,9 +82,8 @@ class PublicSurfaceTest {
         for (var catalog : List.of(Conditions.class, OptionalConditions.class, CollectionConditions.class,
                 MapConditions.class, StringConditions.class)) {
             for (var field : catalog.getFields()) {
-                assertTrue(stream(catalog.getDeclaredMethods()).noneMatch(method ->
-                        method.getName().equals(field.getName()) && method.getParameterCount() == 0),
-                        field.toGenericString());
+                assertThat(catalog.getDeclaredMethods()).as(field.toGenericString()).noneMatch(method ->
+                        method.getName().equals(field.getName()) && method.getParameterCount() == 0);
             }
         }
     }

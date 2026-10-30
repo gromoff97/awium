@@ -1,32 +1,34 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.result.AttemptStatus;
-import io.github.gromoff97.awium.result.AwaitResult;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitTestAccess.evaluated;
 import static io.github.gromoff97.awium.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.*;
 import static java.time.Duration.ofNanos;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NestedSelectionTest {
+
+    private final FakeTime time = new FakeTime(0);
 
     record Payment(int id, boolean paid) {}
 
     @Test
     void nestedConditionsCheckAndNarrowTheSoleValue() {
         var paid = new Payment(2, true);
-        var time = new FakeTime(0);
         var waiting = await(() -> List.of(paid)).usingTime(time, time);
         assertSame(paid, waiting.until(singleElement(matches(Payment::paid))));
         assertSame(paid, waiting.until(singleElement(asserted(payment -> { assertTrue(payment.paid()); }))));
@@ -38,7 +40,6 @@ class NestedSelectionTest {
 
     @Test
     void retriesWrongCardinalityAndThenChecksTheSoleValue() {
-        var time = new FakeTime(0);
         List<List<Integer>> observations = List.of(List.of(), List.of(42, 42), List.of(1, 42), List.of(1), List.of(42));
         var source = observations.iterator();
         int result = await(source::next).usingTime(time, time).every(ofNanos(1))
@@ -46,8 +47,7 @@ class NestedSelectionTest {
         assertEquals(42, result);
         assertFalse(source.hasNext());
         var failed = tryAwait(() -> List.of(1)).usingTime(time, time).upTo(ofNanos(1)).until(singleElement(equalTo(42)));
-        var failure = assertInstanceOf(AwaitResult.Failed.class, failed);
-        assertTrue(failure.failure().message().contains("42"));
+        assertThat(failure(failed).message()).contains("42");
     }
 
     @Test
@@ -55,7 +55,6 @@ class NestedSelectionTest {
         var pending = new Payment(1, false);
         var paid = new Payment(1, true);
         var observations = List.of(pending, paid).iterator();
-        var time = new FakeTime(0);
         List<List<Payment>> values = await(() -> List.of(observations.next())).usingTime(time, time).every(ofNanos(1)).until(captured(
                 singleElement(matches((Payment value) -> !value.paid())),
                 singleElement(matches(Payment::paid))));
@@ -65,10 +64,10 @@ class NestedSelectionTest {
         var result = tryAwait(() -> List.of(pending)).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).until(captured(
                 singleElement(matches((Payment value) -> !value.paid())),
                 singleElement(matches(Payment::paid))));
-        var observation = evaluated(result.attempts().getLast().last());
-        assertInstanceOf(AttemptStatus.Unsatisfied.class, observation.result());
-        var progress = result.attempts().getLast().last().progress();
-        assertEquals(1, progress.capturedStages());
+        var observation = attempts(result).getLast();
+        assertInstanceOf(Attempt.Unsatisfied.class, observation);
+        assertEquals(1L, result.conditions().getFirst().attempts().lastKey());
+        assertEquals(3L, result.conditions().getLast().attempts().lastKey());
     }
 
     @Test
@@ -79,7 +78,6 @@ class NestedSelectionTest {
             int[] calls = {0};
             return value -> ++calls[0] == 2 ? satisfied() : unsatisfied("retry");
         });
-        var time = new FakeTime(0);
         for (List<String> invalid : java.util.Arrays.asList(null, List.<String>of(), List.of("ready", "other"))) {
             tryAwait(() -> invalid).usingTime(time, time).upTo(ofNanos(1)).until(singleElement(ready));
         }
@@ -101,11 +99,11 @@ class NestedSelectionTest {
                     ++checks[0];
                     throw cause;
                 })));
-                var failure = assertInstanceOf(AwaitResult.Failed.class, result);
-                assertSame(cause, failure.failure().cause());
-                assertTrue(failure.failure().message().contains("broken"));
+                var failure = failure(result);
+                assertSame(cause, failure.cause());
+                assertThat(failure.message()).contains("broken");
                 assertEquals(1, checks[0]);
-                assertTrue(time.parkRequests.isEmpty());
+                assertThat(time.parkRequests).isEmpty();
                 assertFalse(Thread.currentThread().isInterrupted());
             } finally {
                 Thread.interrupted();
@@ -117,12 +115,11 @@ class NestedSelectionTest {
     void invalidCallbacksAreValidatedAndErrorsBecomeUncontrolled() {
         assertEquals("condition must not be null",
                 assertThrows(NullPointerException.class, () -> singleElement((PreservingCondition<String>) null)).getMessage());
-        var time = new FakeTime(0);
         var invalid = tryAwait(() -> List.of("ready")).usingTime(time, time).until(singleElement(condition("invalid", (String value) -> null)));
-        assertInstanceOf(NullPointerException.class, assertInstanceOf(AwaitResult.Failed.class, invalid).failure().cause());
+        assertInstanceOf(NullPointerException.class, failure(invalid).cause());
         var fatal = new OutOfMemoryError("fatal");
         var failed = tryAwait(() -> List.of("ready")).usingTime(time, time)
                 .until(singleElement(condition("fatal", value -> { throw fatal; })));
-        assertSame(fatal, assertInstanceOf(AwaitResult.Failed.class, failed).failure().cause());
+        assertSame(fatal, failure(failed).cause());
     }
 }

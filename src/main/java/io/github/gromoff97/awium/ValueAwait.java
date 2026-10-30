@@ -28,12 +28,12 @@ public sealed class ValueAwait<OBSERVED> extends AwaitSupport<OBSERVED> permits 
 
     /** Returns a new configuration with a positive delay between attempts. */
     public ValueAwait<OBSERVED> every(Duration interval) {
-        return reconfigured(configuration.withEvery(interval));
+        return new ValueAwait<>(source, configuration.withEvery(interval));
     }
 
     /** Returns a new configuration with a positive acquisition timeout. */
     public ValueAwait<OBSERVED> upTo(Duration timeout) {
-        return reconfigured(configuration.withUpTo(timeout));
+        return new ValueAwait<>(source, configuration.withUpTo(timeout));
     }
 
     /**
@@ -41,7 +41,7 @@ public sealed class ValueAwait<OBSERVED> extends AwaitSupport<OBSERVED> permits 
      * Zero disables persistence; negative durations are rejected.
      */
     public ValueAwait<OBSERVED> persisting(Duration persistence) {
-        return reconfigured(configuration.withPersistence(persistence));
+        return new ValueAwait<>(source, configuration.withPersistence(persistence));
     }
 
     /**
@@ -58,11 +58,7 @@ public sealed class ValueAwait<OBSERVED> extends AwaitSupport<OBSERVED> permits 
      * @throws NullPointerException if either operation is null
      */
     public ValueAwait<OBSERVED> usingTime(LongSupplier clock, LongConsumer parker) {
-        return reconfigured(configuration.withTime(clock, parker));
-    }
-
-    private ValueAwait<OBSERVED> reconfigured(WaitConfiguration configuration) {
-        return new ValueAwait<>(source, configuration);
+        return new ValueAwait<>(source, configuration.withTime(clock, parker));
     }
 
     public <CHECK extends ApplicableCondition<? super OBSERVED, ? super Reference<? super OBSERVED>> & PreservesObservation>

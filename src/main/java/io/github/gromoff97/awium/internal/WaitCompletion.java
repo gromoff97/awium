@@ -1,22 +1,20 @@
 package io.github.gromoff97.awium.internal;
 
-import io.github.gromoff97.awium.result.HistoryEntry;
-import io.github.gromoff97.awium.result.AttemptStatus;
+import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitFailure;
-import java.time.Duration;
 
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 
 /** Terminal outcome and diagnostics of a complete acquisition and optional persistence execution. */
 public sealed interface WaitCompletion {
 
-    HistoryEntry<?> attempt();
+    ExecutionStep<?> step();
 
     default AwaitFailure.Reason failureReason() {
         return switch (this) {
             case PersistenceFailure ignored -> PERSISTENCE_FAILED;
             case Uncontrolled failure -> failure.interrupted()
-                    ? INTERRUPTED : switch (((AttemptStatus.Uncontrolled) attempt().result()).operation()) {
+                    ? INTERRUPTED : switch (((Attempt.Failure<?>) step().attempt()).operation()) {
                         case WAITING -> WAIT_FAILED;
                         case SOURCE -> SOURCE_FAILED;
                         case CONDITION -> CONDITION_FAILED;
@@ -26,24 +24,24 @@ public sealed interface WaitCompletion {
         };
     }
 
-    record Satisfied(HistoryEntry<?> attempt) implements WaitCompletion {}
+    record Satisfied(ExecutionStep<?> step) implements WaitCompletion {}
 
-    record Uncontrolled(HistoryEntry<?> attempt,
+    record Uncontrolled(ExecutionStep<?> step,
             boolean interrupted) implements WaitCompletion {
 
-        public Uncontrolled(HistoryEntry<?> attempt) {
-            this(attempt, Thread.currentThread().isInterrupted());
+        public Uncontrolled(ExecutionStep<?> step) {
+            this(step, Thread.currentThread().isInterrupted());
         }
     }
 
-    record Timeout(Duration elapsed,
-            HistoryEntry<?> attempt) implements WaitCompletion {
+    record Timeout(long elapsedNanos,
+            ExecutionStep<?> step) implements WaitCompletion {
 
-        public Timeout(HistoryEntry<?> attempt) {
-            this(attempt.timing().completionOffset(), attempt);
+        public Timeout(ExecutionStep<?> step) {
+            this(step.completedAfterNanos(), step);
         }
     }
 
-    record PersistenceFailure(Duration acquiredAfter,
-            HistoryEntry<?> attempt) implements WaitCompletion {}
+    record PersistenceFailure(long acquiredAfterNanos,
+            ExecutionStep<?> step) implements WaitCompletion {}
 }

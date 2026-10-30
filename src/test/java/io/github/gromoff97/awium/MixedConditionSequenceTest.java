@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.result.AttemptStatus;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.io.IOException;
@@ -10,6 +10,9 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
+import static io.github.gromoff97.awium.AwaitTestAccess.observation;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
@@ -19,6 +22,8 @@ import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MixedConditionSequenceTest {
+
+    private final FakeTime time = new FakeTime(0);
 
     private record User(int stage, boolean ready) {
         boolean pending() { return stage == 2; }
@@ -30,7 +35,6 @@ class MixedConditionSequenceTest {
 
     @Test
     void nestedComparisonsAndMethodReferencesCaptureOriginalContainersWithoutTypeHints() {
-        var time = new FakeTime(0);
         var optionalValues = List.of(Optional.of(CREATED), Optional.of(PENDING), Optional.of(READY));
         var optionalSource = optionalValues.iterator();
         var optional = await(optionalSource::next).usingTime(time, time).every(ofNanos(1)).until(captured(
@@ -47,9 +51,9 @@ class MixedConditionSequenceTest {
         assertSame(collections.getFirst(), collection.orThrow().getFirst());
         assertSame(collections.getLast(), collection.orThrow().getLast());
         assertEquals(3, collection.orThrow().getLast().getFirst().stage());
-        assertEquals(3, collection.attempts().size());
-        assertSame(collections.get(1), collection.attempts().get(1).last().observed());
-        assertInstanceOf(AttemptStatus.Unsatisfied.class, collection.attempts().get(1).last().result());
+        assertEquals(3, attempts(collection).size());
+        assertSame(collections.get(1), observation(attempts(collection).get(1)));
+        assertInstanceOf(Attempt.Unsatisfied.class, attempts(collection).get(1));
         assertFalse(collectionSource.hasNext());
 
         var maps = List.of(Map.of("user", CREATED), Map.of("user", PENDING), Map.of("user", READY));
@@ -60,12 +64,12 @@ class MixedConditionSequenceTest {
         assertSame(maps.getFirst(), map.orThrow().getFirst());
         assertSame(maps.getLast(), map.orThrow().getLast());
         assertEquals(3, map.orThrow().getLast().get("user").stage());
-        assertEquals(3, map.attempts().size());
-        var retry = map.attempts().get(1).last();
-        assertSame(maps.get(1), retry.observed());
-        assertEquals("ready", retry.condition().explanation());
-        assertEquals(1, retry.progress().capturedStages());
-        assertInstanceOf(AttemptStatus.Unsatisfied.class, retry.result());
+        assertEquals(3, attempts(map).size());
+        var retry = attempts(map).get(1);
+        assertSame(maps.get(1), observation(retry));
+        assertEquals("ready", map.conditions().getLast().condition().explanation());
+        assertEquals(2L, map.conditions().getLast().attempts().firstKey());
+        assertInstanceOf(Attempt.Unsatisfied.class, retry);
         assertFalse(mapSource.hasNext());
     }
 
@@ -73,7 +77,6 @@ class MixedConditionSequenceTest {
     void alternatingChecksCaptureDistinctObservationsAndKeepInferredAndExplicitTypes() {
         var observations = List.of(CREATED, CREATED, PENDING, READY, READY);
         var source = observations.iterator();
-        var time = new FakeTime(0);
         var users = await(source::next).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10)).until(captured(
                 equalTo(CREATED), matches(User::pending),
                 equalTo(READY), matches(User::ready)));
@@ -95,7 +98,7 @@ class MixedConditionSequenceTest {
             }
             case AwaitResult.Failed(var history, var failure) -> fail(failure.message());
         }
-        assertEquals(5, captured.attempts().size());
+        assertEquals(5, attempts(captured).size());
         assertFalse(nextSource.hasNext());
     }
 
@@ -107,7 +110,6 @@ class MixedConditionSequenceTest {
             int[] checks = {0};
             return user -> ++checks[0] == 2 ? satisfied() : unsatisfied("retry");
         });
-        var time = new FakeTime(0);
         var values = List.of(CREATED, CREATED, PENDING, CREATED, CREATED);
         var source = values.iterator();
         List<User> users = await(source::next).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10)).until(captured(
@@ -126,28 +128,25 @@ class MixedConditionSequenceTest {
 
     @Test
     void diagnosticsRetainTheCurrentMixedStageAndOriginalCause() {
-        var time = new FakeTime(0);
         for (boolean comparisonLast : List.of(false, true)) {
             AwaitResult<User, List<User>> result = comparisonLast
                     ? tryAwait(() -> CREATED).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
                             .until(captured(matches(user -> user.stage() == 1), equalTo(READY)))
                     : tryAwait(() -> CREATED).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
                             .until(captured(equalTo(CREATED), matches(User::ready)));
-            var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
-            assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
-            var attempt = result.attempts().getLast().last();
-            assertEquals(1, attempt.progress().capturedStages());
-            assertEquals(2, attempt.progress().stageNumber());
-            if (comparisonLast) assertSame(READY, attempt.condition().references().getFirst().value());
+            assertEquals(AwaitFailure.Reason.TIMEOUT, failure(result).reason());
+            assertEquals(2, result.conditions().size());
+            assertEquals(1L, result.conditions().getFirst().attempts().lastKey());
+            if (comparisonLast) assertSame(READY, result.conditions().getLast().condition().references().getFirst().value());
         }
 
         var cause = new IOException("callback failed");
         var failed = tryAwait(() -> CREATED).usingTime(time, time).every(ofNanos(1)).until(captured(
                 equalTo(CREATED), matches((User user) -> { throw cause; }), equalTo(READY)));
-        var failure = assertInstanceOf(AwaitResult.Failed.class, failed).failure();
+        var failure = failure(failed);
         assertEquals(AwaitFailure.Reason.CONDITION_FAILED, failure.reason());
         assertSame(cause, failure.cause());
-        assertEquals(2, failed.attempts().size());
+        assertEquals(2, attempts(failed).size());
     }
 
     @Test
@@ -156,7 +155,6 @@ class MixedConditionSequenceTest {
         var middle = new User(3, true);
         var latest = new User(3, true);
         var source = List.of(CREATED, PENDING, acquired, middle, latest).iterator();
-        var time = new FakeTime(0);
         List<User> users = await(source::next).usingTime(time, time).every(ofNanos(1))
                 .upTo(ofNanos(3)).persisting(ofNanos(2)).until(captured(
                         equalTo(CREATED), matches(User::pending), equalTo(READY)));

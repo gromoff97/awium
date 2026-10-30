@@ -16,20 +16,25 @@ import java.util.concurrent.Callable;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
-import static io.github.gromoff97.awium.ConditionTestRuntime.throwUnchecked;
 import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.Conditions.equalTo;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
 import static io.github.gromoff97.awium.Conditions.isNotNull;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static java.time.Duration.ofNanos;
+import static org.apache.commons.lang3.exception.ExceptionUtils.rethrow;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TypedCollectionSelectionTest {
+
+    private final FakeTime time = new FakeTime(0);
 
     private record User(int id) {
         boolean positive() { return id > 0; }
@@ -39,7 +44,6 @@ class TypedCollectionSelectionTest {
 
     @Test
     void indexedSelectionsAndCapturesAcceptEveryOrderedCollectionKind() {
-        var time = new FakeTime(0);
         var queue = new ArrayDeque<>(List.of(FIRST, LAST));
         var waiting = await(() -> queue).usingTime(time, time).every(ofNanos(1));
 
@@ -51,28 +55,24 @@ class TypedCollectionSelectionTest {
 
         var sequence = captured(firstElement, elementAt(1), lastElement).because("all positions must exist");
         var queues = diagnostic(waiting).until(sequence).orThrow();
-        assertEquals(3, queues.size());
+        assertThat(queues).hasSize(3).allSatisfy(observed -> assertSame(queue, observed));
         assertEquals(2, queues.getLast().peekLast().id());
-        assertTrue(queues.stream().allMatch(observed -> observed == queue));
 
         var orderedSet = new LinkedHashSet<>(List.of(FIRST, LAST));
         var sets = await(() -> orderedSet).usingTime(time, time).every(ofNanos(1)).until(sequence);
-        assertEquals(3, sets.size());
+        assertThat(sets).hasSize(3).allSatisfy(observed -> assertSame(orderedSet, observed));
         assertEquals(2, sets.getLast().getLast().id());
-        assertTrue(sets.stream().allMatch(observed -> observed == orderedSet));
         assertSame(FIRST, await(queue::reversed).until(elementAt(1)));
 
         var missing = diagnostic(waiting.upTo(ofNanos(2))).until(elementAt(2));
-        var failure = assertInstanceOf(AwaitResult.Failed.class, missing).failure();
+        var failure = failure(missing);
         assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
-        assertTrue(failure.message().contains("index 2"));
-        assertTrue(failure.message().contains("collection size was 2"));
+        assertThat(failure.message()).contains("index 2", "collection size was 2");
     }
 
     @Test
     void firstLastAndIndexedConditionsReturnTheirDeclaredValues() {
         List<Object> values = List.of(FIRST, 99, LAST);
-        var time = new FakeTime(0);
         var waiting = await(() -> values).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
 
         assertEquals(1, waiting.until(firstElement(instanceOf(User.class))).id());
@@ -88,7 +88,6 @@ class TypedCollectionSelectionTest {
     @Test
     void checksAndComparisonsRetainTheSourceElementType() {
         List<User> values = List.of(FIRST, new User(-1), LAST);
-        var time = new FakeTime(0);
         var waiting = await(() -> values).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
 
         assertEquals(1, waiting.until(firstElement(matches(User::positive))).id());
@@ -123,7 +122,6 @@ class TypedCollectionSelectionTest {
         });
         List<Condition.SelectedCondition<? super List<User>>> selectors = List.of(
                 firstElement(secondObservation), lastElement(secondObservation), elementAt(0, secondObservation));
-        var time = new FakeTime(0);
         int[] reads = {0};
         var waiting = await(() -> { reads[0]++; return List.of(FIRST); })
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
@@ -141,7 +139,7 @@ class TypedCollectionSelectionTest {
             case AwaitResult.Satisfied(var history, var user) -> assertEquals(-1, user.id());
             case AwaitResult.Failed(var history, var failure) -> fail(failure.message());
         }
-        assertEquals(2, retried.attempts().size());
+        assertEquals(2, attempts(retried).size());
         assertEquals(7, factories[0]);
     }
 
@@ -158,12 +156,12 @@ class TypedCollectionSelectionTest {
             var time = new FakeTime(0);
             try {
                 var result = tryAwait(() -> List.of(FIRST, LAST)).usingTime(time, time).until(selection);
-                var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+                var failure = failure(result);
                 assertEquals(AwaitFailure.Reason.INTERRUPTED, failure.reason());
                 assertInstanceOf(InterruptedException.class, failure.cause());
                 assertEquals(1, calls[0]);
                 assertTrue(Thread.currentThread().isInterrupted());
-                assertEquals(1, result.attempts().size());
+                assertEquals(1, attempts(result).size());
             } finally {
                 Thread.interrupted();
             }
@@ -256,14 +254,13 @@ class TypedCollectionSelectionTest {
                 firstElement(instanceOf(User.class)), lastElement(instanceOf(User.class)), elementAt(0, instanceOf(User.class)));
         for (var check : checks) {
             var result = diagnostic(waiting(() -> values)).until(check);
-            var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+            var failure = failure(result);
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
-            assertTrue(failure.message().contains("value type was java.lang.String"));
+            assertThat(failure.message()).contains("value type was java.lang.String");
         }
         var missing = diagnostic(waiting(() -> values)).until(elementAt(3, instanceOf(User.class)));
-        var failure = assertInstanceOf(AwaitResult.Failed.class, missing).failure();
-        assertTrue(failure.message().contains("index 3"));
-        assertTrue(failure.message().contains("collection size was 3"));
+        var failure = failure(missing);
+        assertThat(failure.message()).contains("index 3", "collection size was 3");
         assertThrows(IllegalArgumentException.class, () -> elementAt(-1, instanceOf(User.class)));
 
         Condition.Typed<Object, User> absent = null;
@@ -271,10 +268,8 @@ class TypedCollectionSelectionTest {
         assertEquals("condition must not be null", assertThrows(NullPointerException.class, () -> lastElement(absent)).getMessage());
         assertEquals("condition must not be null", assertThrows(NullPointerException.class, () -> elementAt(0, absent)).getMessage());
         List<Object> noValues = null;
-        assertEquals(AwaitFailure.Reason.TIMEOUT, assertInstanceOf(AwaitResult.Failed.class,
-                diagnostic(waiting(() -> noValues)).until(firstElement(instanceOf(User.class)))).failure().reason());
-        assertEquals(AwaitFailure.Reason.TIMEOUT, assertInstanceOf(AwaitResult.Failed.class,
-                diagnostic(waiting(List::of)).until(lastElement(instanceOf(User.class)))).failure().reason());
+        assertEquals(AwaitFailure.Reason.TIMEOUT, failure(diagnostic(waiting(() -> noValues)).until(firstElement(instanceOf(User.class)))).reason());
+        assertEquals(AwaitFailure.Reason.TIMEOUT, failure(diagnostic(waiting(List::of)).until(lastElement(instanceOf(User.class)))).reason());
     }
 
     @Test
@@ -283,7 +278,7 @@ class TypedCollectionSelectionTest {
             Map<String, Object> broken = new AbstractMap<>() {
                 @Override public Set<Map.Entry<String, Object>> entrySet() {
                     return Set.of(new SimpleEntry<>("target-key", FIRST) {
-                        @Override public Object getValue() { return throwUnchecked(cause); }
+                        @Override public Object getValue() { return rethrow(cause); }
                     });
                 }
                 @Override public String toString() { return "broken map"; }
@@ -300,12 +295,11 @@ class TypedCollectionSelectionTest {
             List<Map<String, Object>> values, Throwable cause) {
         int[] reads = {0};
         var result = diagnostic(waiting(() -> { reads[0]++; return values; })).until(condition);
-        var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+        var failure = failure(result);
         assertEquals(AwaitFailure.Reason.CONDITION_FAILED, failure.reason());
         assertSame(cause, failure.cause());
         assertEquals(1, reads[0]);
-        var attempt = result.attempts().getLast().last();
-        assertEquals("target-key", attempt.condition().references().getFirst().value());
+        assertEquals("target-key", result.conditions().getFirst().condition().references().getFirst().value());
     }
 
     private static <OBSERVED> ValueAwait<OBSERVED> waiting(Callable<OBSERVED> source) {

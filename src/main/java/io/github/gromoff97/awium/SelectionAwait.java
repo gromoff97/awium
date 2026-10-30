@@ -23,26 +23,22 @@ public sealed class SelectionAwait<OBSERVED, ELEMENT> extends ValueAwait<OBSERVE
 
     @Override
     public SelectionAwait<OBSERVED, ELEMENT> every(Duration interval) {
-        return reconfigured(configuration.withEvery(interval));
+        return new SelectionAwait<>(source, configuration.withEvery(interval));
     }
 
     @Override
     public SelectionAwait<OBSERVED, ELEMENT> upTo(Duration timeout) {
-        return reconfigured(configuration.withUpTo(timeout));
+        return new SelectionAwait<>(source, configuration.withUpTo(timeout));
     }
 
     @Override
     public SelectionAwait<OBSERVED, ELEMENT> persisting(Duration persistence) {
-        return reconfigured(configuration.withPersistence(persistence));
+        return new SelectionAwait<>(source, configuration.withPersistence(persistence));
     }
 
     @Override
     public SelectionAwait<OBSERVED, ELEMENT> usingTime(LongSupplier clock, LongConsumer parker) {
-        return reconfigured(configuration.withTime(clock, parker));
-    }
-
-    private SelectionAwait<OBSERVED, ELEMENT> reconfigured(WaitConfiguration configuration) {
-        return new SelectionAwait<>(source, configuration);
+        return new SelectionAwait<>(source, configuration.withTime(clock, parker));
     }
 
     public ELEMENT until(SelectedCondition<? super OBSERVED> condition) {

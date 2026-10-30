@@ -1,26 +1,29 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.Attempt;
+import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
+import io.github.gromoff97.awium.internal.BoundAttempt;
 import io.github.gromoff97.awium.internal.AttemptFactory;
 import io.github.gromoff97.awium.internal.AwaitAttempt;
 import io.github.gromoff97.awium.internal.SequenceExecution;
 import io.github.gromoff97.awium.internal.WaitEngine;
-import java.io.ByteArrayOutputStream;
-import java.io.PrintWriter;
 import java.lang.module.ModuleFinder;
 import java.lang.module.ModuleReference;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.spi.ToolProvider;
+import java.util.jar.JarFile;
+import javax.tools.Diagnostic;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.google.testing.compile.Compiler.javac;
+import static com.google.testing.compile.JavaFileObjects.forSourceString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static java.nio.file.Files.isRegularFile;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -50,56 +53,35 @@ class ArtifactContractIT {
     }
 
     @Test
-    void executionDoesNotDependOnFluentCatalogOrFormattingCode() {
-        var output = new ByteArrayOutputStream();
-        var writer = new PrintWriter(output, true, UTF_8);
-        int exit = ToolProvider.findFirst("jdeps").orElseThrow().run(writer, writer,
-                "--multi-release", "21", "-verbose:class", "-filter:none", JAR.toString());
-        String dependencies = output.toString(UTF_8);
-
-        assertEquals(0, exit, dependencies);
-        Map<String, Set<String>> classes = classDependencies(dependencies);
-        assertFalse(classes.isEmpty(), dependencies);
-        Set<String> facade = Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "Conditions", "CollectionConditions", "MapConditions",
-                "OptionalConditions", "StringConditions", "FailureDiagnostics", "DiagnosticText");
-        for (String execution : Set.of("Condition", "AwaitAttempt", "Attempt", "AttemptFactory", "ConditionSupport",
-                "ConditionResult", "AttemptResult", "SequenceExecution", "AttemptExecution", "WaitEngine",
-                "WaitCompletion", "WaitConfiguration")) {
-            Set<String> used = classes.getOrDefault(execution, Set.of());
-            assertTrue(used.stream().noneMatch(facade::contains), execution + " -> " + used);
+    void executionDoesNotDependOnFluentCatalogOrFormattingCode() throws Exception {
+        try (var jar = new JarFile(JAR.toFile())) {
+            var classes = new ClassFileImporter().importJar(jar);
+            assertIndependent(classes,
+                    Set.of("Condition", "AwaitAttempt", "BoundAttempt", "AttemptFactory", "ConditionSupport",
+                            "ConditionResult", "AttemptResult", "SequenceExecution", "ExecutionStep", "AttemptExecution",
+                            "WaitEngine", "WaitCompletion", "WaitConfiguration"),
+                    Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "Conditions", "CollectionConditions",
+                            "MapConditions", "OptionalConditions", "StringConditions", "FailureDiagnostics", "DiagnosticText"));
+            assertIndependent(classes, Set.of("ConditionResult"), Set.of("BoundAttempt", "Attempt", "AwaitResult"));
+            assertIndependent(classes, Set.of("Condition"), Set.of("AttemptFactory", "AttemptResult"));
+            assertIndependent(classes, Set.of("Reference", "ConditionResult.Unsatisfied"),
+                    Set.of("AwaitAttempt", "BoundAttempt", "AttemptFactory", "SequenceExecution", "AttemptExecution",
+                            "WaitEngine", "WaitCompletion"));
+            assertIndependent(classes, Set.of("ConditionSupport"),
+                    Set.of("WaitEngine", "WaitCompletion", "FailureDiagnostics", "ValueMatching"));
+            assertFalse(AwaitAttempt.class.isAssignableFrom(SequenceExecution.class));
+            assertIndependent(classes, Set.of("SequenceExecution"),
+                    Set.of("ConditionSupport", "WaitEngine", "WaitConfiguration"));
+            assertIndependent(classes, Set.of("BoundAttempt"),
+                    Set.of("SequenceExecution", "WaitEngine", "AttemptHistory", "Attempt", "WaitConfiguration"));
+            assertIndependent(classes,
+                    Set.of("Conditions", "CollectionConditions", "MapConditions", "OptionalConditions", "StringConditions"),
+                    Set.of("AwaitAttempt", "BoundAttempt", "AttemptFactory", "SequenceExecution", "AttemptExecution",
+                            "WaitEngine", "WaitCompletion", "WaitConfiguration", "FailureDiagnostics"));
+            assertIndependent(classes, Set.of("FailureDiagnostics"),
+                    Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "AwaitResult", "AwaitAssertionError",
+                            "AwaitExecutionException"));
         }
-        Set<String> conditionResult = classes.get("ConditionResult");
-        assertTrue(conditionResult.stream().noneMatch(Set.of("Attempt", "HistoryEntry", "AwaitResult")::contains),
-                "ConditionResult -> " + conditionResult);
-        Set<String> definition = classes.get("Condition");
-        assertTrue(definition.stream().noneMatch(Set.of("AttemptFactory", "AttemptResult")::contains),
-                "Condition -> " + definition);
-        Set<String> reference = classes.get("Reference");
-        assertTrue(reference.stream().noneMatch(Set.of("AwaitAttempt", "Attempt", "AttemptFactory",
-                        "SequenceExecution", "AttemptExecution", "WaitEngine", "WaitCompletion")::contains),
-                "Reference -> " + reference);
-        // Condition construction is independent of source protocols, timing, diagnostics, and value comparison.
-        Set<String> support = classes.get("ConditionSupport");
-        assertTrue(support.stream().noneMatch(Set.of("WaitEngine", "WaitCompletion", "FailureDiagnostics", "ValueMatching")::contains),
-                "ConditionSupport -> " + support);
-        Set<String> sequence = classes.get("SequenceExecution");
-        assertFalse(AwaitAttempt.class.isAssignableFrom(SequenceExecution.class));
-        assertTrue(sequence.stream().noneMatch(Set.of("ConditionSupport", "WaitEngine", "WaitConfiguration")::contains),
-                "SequenceExecution -> " + sequence);
-        Set<String> attempt = classes.get("Attempt");
-        assertTrue(attempt.stream().noneMatch(Set.of("SequenceExecution", "WaitEngine", "AttemptHistory",
-                "HistoryEntry", "WaitConfiguration")::contains), "Attempt -> " + attempt);
-        for (String catalog : Set.of("Conditions", "CollectionConditions", "MapConditions",
-                "OptionalConditions", "StringConditions")) {
-            assertTrue(classes.get(catalog).stream().noneMatch(Set.of("AwaitAttempt", "Attempt", "AttemptFactory",
-                            "SequenceExecution", "AttemptExecution", "WaitEngine", "WaitCompletion", "WaitConfiguration",
-                            "FailureDiagnostics")::contains),
-                    catalog + " -> " + classes.get(catalog));
-        }
-        // Diagnostics describe failures; only the fluent facade chooses a terminal result or throws.
-        Set<String> terminals = Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "AwaitResult", "AwaitAssertionError", "AwaitExecutionException");
-        Set<String> diagnostics = classes.get("FailureDiagnostics");
-        assertTrue(diagnostics.stream().noneMatch(terminals::contains), "FailureDiagnostics -> " + diagnostics);
     }
 
     @Test
@@ -132,58 +114,50 @@ class ArtifactContractIT {
     }
 
     @Test
-    void definitionBindingsStayPackagePrivate(@TempDir Path directory) throws Exception {
+    void definitionBindingsStayPackagePrivate() {
         for (Class<?> internal : List.of(ConditionSupport.class, ValueMatching.class)) {
             assertFalse(java.lang.reflect.Modifier.isPublic(internal.getModifiers()), internal.getName());
         }
         for (boolean modulePath : List.of(false, true)) {
-            assertInaccessible(directory, ConditionSupport.class, modulePath, "compiler.err.not.def.public.cant.access");
+            assertInaccessible(ConditionSupport.class, modulePath, "compiler.err.not.def.public.cant.access");
         }
     }
 
     @Test
-    void executionPackageIsHiddenFromModuleConsumers(@TempDir Path directory) throws Exception {
-        assertInaccessible(directory, AttemptFactory.class, true, "compiler.err.package.not.visible");
-        assertInaccessible(directory, Attempt.class, true, "compiler.err.package.not.visible");
-        assertInaccessible(directory, WaitEngine.class, true, "compiler.err.package.not.visible");
+    void executionPackageIsHiddenFromModuleConsumers() {
+        assertInaccessible(AttemptFactory.class, true, "compiler.err.package.not.visible");
+        assertInaccessible(BoundAttempt.class, true, "compiler.err.package.not.visible");
+        assertInaccessible(WaitEngine.class, true, "compiler.err.package.not.visible");
     }
 
-    private static void assertInaccessible(Path directory, Class<?> type, boolean modulePath,
-            String diagnostic) throws Exception {
-        Path consumer = java.nio.file.Files.createDirectory(directory.resolve(
-                (modulePath ? "module-" : "classpath-") + type.getSimpleName()));
-        Path source = consumer.resolve("Contract.java");
-        java.nio.file.Files.writeString(source, """
+    private static void assertInaccessible(Class<?> type, boolean modulePath, String diagnostic) {
+        var source = forSourceString("consumer.Contract", """
                 package consumer;
                 import %s;
                 final class Contract {}
                 """.formatted(type.getName()));
-        var arguments = new java.util.ArrayList<>(List.of("--release", "21", "-proc:none", "-XDrawDiagnostics",
-                modulePath ? "--module-path" : "-classpath", JAR.toString(), "-d", consumer.toString(), source.toString()));
-        if (modulePath) {
-            Path descriptor = consumer.resolve("module-info.java");
-            java.nio.file.Files.writeString(descriptor, "module consumer { requires io.github.gromoff97.awium; }");
-            arguments.add(descriptor.toString());
-        }
-        var output = new ByteArrayOutputStream();
-        int exit = javax.tools.ToolProvider.getSystemJavaCompiler().run(null, output, output, arguments.toArray(String[]::new));
-        assertEquals(1, exit, output.toString(UTF_8));
-        assertTrue(output.toString(UTF_8).contains(diagnostic), output.toString(UTF_8));
+        var sources = modulePath
+                ? List.of(source, forSourceString("module-info", "module consumer { requires io.github.gromoff97.awium; }"))
+                : List.of(source);
+        var compilation = javac().withOptions("--release", "21", "-proc:none",
+                        modulePath ? "--module-path" : "-classpath", JAR.toString()).compile(sources);
+        assertThat(compilation.errors()).extracting(Diagnostic::getCode).contains(diagnostic);
     }
 
-    private static Map<String, Set<String>> classDependencies(String output) {
-        var dependencies = new HashMap<String, Set<String>>();
-        output.lines().map(String::strip).map(line -> line.split("\\s+"))
-                .filter(parts -> parts.length >= 3 && parts[1].equals("->")
-                        && parts[0].startsWith("io.github.gromoff97.awium.")
-                        && parts[2].startsWith("io.github.gromoff97.awium.")
-                        && !parts[0].equals(parts[2]))
-                .forEach(parts -> dependencies.computeIfAbsent(owner(parts[0]), ignored -> new HashSet<>()).add(owner(parts[2])));
-        return dependencies;
+    private static void assertIndependent(JavaClasses classes, Set<String> origins, Set<String> targets) {
+        noClasses().that(inFamilies(origins)).should().dependOnClassesThat(inFamilies(targets)).check(classes);
     }
+
+    private static DescribedPredicate<JavaClass> inFamilies(Set<String> families) {
+        return DescribedPredicate.describe("belong to " + families, type -> families.contains(owner(type.getName())));
+    }
+
     private static String owner(String className) {
-        // Diagnostic operands are value records, independently of the executable condition family.
+        // Value records may format themselves without coupling condition execution to formatting.
         if (className.equals(Condition.Reference.class.getName())) return "Reference";
+        if (className.equals(io.github.gromoff97.awium.result.ConditionResult.Unsatisfied.class.getName())) {
+            return "ConditionResult.Unsatisfied";
+        }
         return className.substring(className.lastIndexOf('.') + 1).split("\\$", 2)[0];
     }
 

@@ -1,15 +1,17 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
 import io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
-import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
@@ -25,15 +27,28 @@ import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.params.provider.Arguments.argumentSet;
+
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class CollectionMembershipTest {
 
-    @Test
-    void positiveAndNegativeMembershipConditionsAreComplements() {
-        for (Pair pair : pairs()) {
-            assertPair(pair, List.of("a", "b", "c"), true);
-            assertPair(pair, List.of("a", "c"), false);
-        }
+    private final FakeTime time = new FakeTime(0);
+
+    @ParameterizedTest
+    @MethodSource("pairs")
+    void positiveAndNegativeMembershipConditionsAreComplements(
+            PreservingCondition<Collection<? super String>> positive,
+            PreservingCondition<Collection<? super String>> negative) {
+        Collection<String> matching = new ArrayList<>(List.of("a", "b", "c"));
+        Collection<String> mismatching = new ArrayList<>(List.of("a", "c"));
+        assertSame(matching, result(evaluate(positive, matching)));
+        assertThat(mismatch(evaluate(negative, matching))).isNotBlank();
+        assertSame(mismatching, result(evaluate(negative, mismatching)));
+        assertThat(mismatch(evaluate(positive, mismatching))).isNotBlank();
     }
 
     @Test
@@ -83,8 +98,9 @@ class CollectionMembershipTest {
     @Test
     void nullAndRepeatedExpectedValuesKeepMembershipSemantics() {
         assertUnsatisfied(evaluate(contains("b"), null));
-        assertPair(new Pair("repeated", containsAll(List.of("a", "a")),
-                doesNotContainAll(List.of("a", "a"))), List.of("a"), true);
+        var oneValue = new ArrayList<>(List.of("a"));
+        assertSame(oneValue, result(evaluate(containsAll(List.of("a", "a")), oneValue)));
+        assertThat(mismatch(evaluate(doesNotContainAll(List.of("a", "a")), oneValue))).isNotBlank();
 
         String nil = null;
         Collection<String> actual = asList((String) null);
@@ -115,7 +131,6 @@ class CollectionMembershipTest {
 
     @Test
     void listsAndReferenceArraysAreSingleElementsInFluentCalls() {
-        var time = new FakeTime(0);
         var element = List.of("a", "b");
         var lists = List.of(element);
         List<List<String>> selectedList = await(() -> lists).usingTime(time, time)
@@ -143,7 +158,6 @@ class CollectionMembershipTest {
 
     @Test
     void singleContainerOperandsCanBeEmptyOrNullAndRemainCallerOwned() {
-        var time = new FakeTime(0);
         var expected = new ArrayList<String>();
         var actual = singletonList(new ArrayList<String>());
         var condition = contains(expected);
@@ -168,8 +182,8 @@ class CollectionMembershipTest {
         expected.clear();
 
         for (Collection<String> actual : List.of(List.<String>of(), List.of("actual"))) {
-            assertEquals(Unsatisfied.class, evaluate(positive, actual).getClass());
-            assertEquals(Satisfied.class, evaluate(negative, actual).getClass());
+            assertInstanceOf(Unsatisfied.class, evaluate(positive, actual));
+            assertInstanceOf(Satisfied.class, evaluate(negative, actual));
         }
     }
 
@@ -177,9 +191,9 @@ class CollectionMembershipTest {
     void traversalAndEqualityFailuresRemainFailFastForNegativeConditions() {
         var iteratorCause = new IllegalStateException("iterator failed");
         var equalityCause = new IllegalStateException("equals failed");
-        var brokenIterator = new ProbeContainers.MembershipCollection<String>(
-                iteratorCause);
-        var brokenEquality = new ProbeContainers.MembershipCollection<>(
+        Collection<String> brokenIterator = ProbeContainers.membershipCollection(List.of());
+        when(brokenIterator.iterator()).thenThrow(iteratorCause);
+        var brokenEquality = ProbeContainers.membershipCollection(
                 List.of(new ThrowingEquals(equalityCause)));
 
         assertSame(iteratorCause, assertFailure(CONDITION_FAILED,
@@ -191,9 +205,8 @@ class CollectionMembershipTest {
 
     @Test
     void terminalDiagnosticsDoNotTraverseTheActualAgain() {
-        var actual = new ProbeContainers.MembershipCollection<>(
+        var actual = ProbeContainers.membershipCollection(
                 List.of("a", "b"));
-        FakeTime time = new FakeTime(0);
 
         assertFailure(TIMEOUT,
                 () -> await(() -> {
@@ -202,33 +215,29 @@ class CollectionMembershipTest {
                 }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
                         .until(doesNotContain("a")));
 
-        assertEquals(1, actual.iteratorCalls);
+        verify(actual).iterator();
     }
 
     @Test
     void aggregateFactoriesRejectNullInputs() {
-        assertValidation(NullPointerException.class,
-                () -> doesNotContainAny(null));
-        assertValidation(NullPointerException.class,
-                () -> containsAll(null));
-        assertValidation(NullPointerException.class,
-                () -> containsAny(null));
-        assertValidation(NullPointerException.class,
-                () -> doesNotContainAll(null));
+        assertThat(assertThrows(NullPointerException.class, () -> doesNotContainAny(null)).getMessage()).isNotBlank();
+        assertThat(assertThrows(NullPointerException.class, () -> containsAll(null)).getMessage()).isNotBlank();
+        assertThat(assertThrows(NullPointerException.class, () -> containsAny(null)).getMessage()).isNotBlank();
+        assertThat(assertThrows(NullPointerException.class, () -> doesNotContainAll(null)).getMessage()).isNotBlank();
     }
 
     @Test
     void emptyExpectedMembershipDoesNotTraverseTheObservedCollection() {
-        var actual = new ProbeContainers.MembershipCollection<String>(new IllegalStateException("unnecessary traversal"));
-        var time = new FakeTime(0);
+        Collection<String> actual = ProbeContainers.membershipCollection(List.of());
+        when(actual.iterator()).thenThrow(new IllegalStateException("unnecessary traversal"));
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
 
         assertSame(actual, waiting.until(containsAll(List.of())));
         assertSame(actual, waiting.until(doesNotContainAny(List.of())));
         for (var result : List.of(diagnostic(waiting).until(containsAny(List.of())), diagnostic(waiting).until(doesNotContainAll(List.of())))) {
-            assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, result).failure().reason());
+            assertEquals(TIMEOUT, failure(result).reason());
         }
-        assertEquals(0, actual.iteratorCalls);
+        verify(actual, never()).iterator();
     }
 
     @Test
@@ -251,8 +260,8 @@ class CollectionMembershipTest {
 
             for (var failed : List.of(diagnostic(waiting).until(containsAny(List.of())),
                     diagnostic(waiting).until(doesNotContainAll(List.of())))) {
-                assertEquals(TIMEOUT, assertInstanceOf(AwaitResult.Failed.class, failed).failure().reason());
-                assertEquals(List.of(), failed.attempts().getLast().last().condition().references().getFirst().value());
+                assertEquals(TIMEOUT, failure(failed).reason());
+                assertEquals(List.of(), failed.conditions().getLast().condition().references().getFirst().value());
             }
             assertEquals(actual.isEmpty() ? Satisfied.class : Unsatisfied.class,
                     evaluate(containsExactly(List.<String>of()), actual).getClass());
@@ -271,42 +280,23 @@ class CollectionMembershipTest {
         assertSame(actual, result);
     }
 
-    private static void assertPair(Pair pair, List<String> values,
-            boolean positiveSatisfied) {
-        Collection<String> actual = new ArrayList<>(values);
-        AttemptResult<?> positive = evaluate(pair.positive(), actual);
-        AttemptResult<?> negative = evaluate(pair.negative(), actual);
-
-        assertAll(pair.name(),
-                () -> assertSame(actual, result(positiveSatisfied ? positive : negative)),
-                () -> assertFalse(mismatch(positiveSatisfied ? negative : positive).isBlank()));
-    }
-
-    private static void assertValidation(Class<? extends Throwable> type,
-            org.junit.jupiter.api.function.Executable action) {
-        assertFalse(assertThrows(type, action).getMessage().isBlank());
-    }
-
-    private static <E> ProbeContainers.MembershipCollection<E> checkMembership(
-            ProbeContainers.MembershipCollection<E> actual,
-            PreservingCondition<? super ProbeContainers.MembershipCollection<E>>
+    private static <E> Collection<E> checkMembership(
+            Collection<E> actual,
+            PreservingCondition<? super Collection<E>>
                     condition) {
         var time = new FakeTime(0);
         return await(() -> actual).usingTime(time, time).until(condition);
     }
 
-    private static List<Pair> pairs() {
+    private static List<Arguments> pairs() {
         return List.of(
-                new Pair("contains", contains("b"), doesNotContain("b")),
-                new Pair("containsAll", containsAll(List.of("a", "b")),
+                argumentSet("contains", contains("b"), doesNotContain("b")),
+                argumentSet("containsAll", containsAll(List.of("a", "b")),
                         doesNotContainAll(List.of("a", "b"))),
-                new Pair("containsAny first", containsAny(List.of("b", "x")),
+                argumentSet("containsAny first", containsAny(List.of("b", "x")),
                         doesNotContainAny(List.of("b", "x"))),
-                new Pair("containsAny", containsAny(List.of("x", "b")),
+                argumentSet("containsAny", containsAny(List.of("x", "b")),
                         doesNotContainAny(List.of("x", "b"))));
     }
 
-    private record Pair(String name,
-            PreservingCondition<Collection<? super String>> positive,
-            PreservingCondition<Collection<? super String>> negative) {}
 }

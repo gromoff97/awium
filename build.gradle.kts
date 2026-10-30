@@ -17,6 +17,12 @@ java.toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 
 dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.2")
+    testImplementation("org.junit-pioneer:junit-pioneer:2.3.0")
+    testImplementation("org.assertj:assertj-core:3.27.7")
+    testImplementation("com.google.testing.compile:compile-testing:0.23.0")
+    testImplementation("com.tngtech.archunit:archunit:1.5.1")
+    testImplementation("org.mockito:mockito-core:5.24.0")
+    testImplementation("org.apache.commons:commons-lang3:3.21.0")
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -40,6 +46,7 @@ tasks.check {
     }
 }
 
+// Run mutation testing only on explicit user request; keep it separate from build/check/test.
 pitest {
     targetClasses = setOf("io.github.gromoff97.awium.*")
     targetTests = setOf("io.github.gromoff97.awium.*Test")
@@ -51,6 +58,7 @@ pitest {
     pitestVersion = "1.25.9"
     junit5PluginVersion = "1.2.3"
     threads = 4
+    mutators = setOf("ALL")
     mutationThreshold = 90
     coverageThreshold = 90
     testStrengthThreshold = 90

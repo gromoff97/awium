@@ -15,12 +15,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ChangingContainerSelectionTest {
 
+    private final FakeTime time = new FakeTime(0);
+
     @Test
     void indexedSelectionRetriesWhenTheListIsEmptiedBeforeSelection() {
         var values = new ChangingList();
         values.add("old");
         int[] calls = {0};
-        var time = new FakeTime(0);
 
         var result = tryAwait(() -> {
             if (++calls[0] == 2) values.add("ready");
@@ -56,7 +57,6 @@ class ChangingContainerSelectionTest {
         var values = new ChangingQueue();
         values.add("old");
         int[] calls = {0};
-        var time = new FakeTime(0);
 
         var result = tryAwait(() -> {
             if (++calls[0] == 2) values.add("ready");
@@ -72,7 +72,6 @@ class ChangingContainerSelectionTest {
         var values = new ChangingMap();
         values.put("key", "old");
         int[] calls = {0};
-        var time = new FakeTime(0);
         var result = tryAwait(() -> {
             if (++calls[0] == 2) values.put("key", "ready");
             return values;

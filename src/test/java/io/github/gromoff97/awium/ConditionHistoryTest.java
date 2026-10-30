@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.AttemptStatus;
+import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -8,15 +8,22 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.CollectionConditions.all;
 import static io.github.gromoff97.awium.CollectionConditions.any;
 import static io.github.gromoff97.awium.MapConditions.noValue;
 import static java.time.Duration.ofNanos;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 class ConditionHistoryTest {
+
+    private final FakeTime time = new FakeTime(0);
 
     @Test
     void typeChecksRetainActualTypesEvenWhenValuesHaveTheSameText() {
@@ -29,15 +36,14 @@ class ConditionHistoryTest {
 
             String value = result.orThrow();
             assertEquals("ready", value);
-            assertEquals(List.of(2L, 2L, 1L, 1L), result.attempts().stream().map(group -> group.count()).toList());
+            assertThat(result.conditions().getFirst().attempts().keySet()).containsExactly(2L, 3L, 4L, 5L, 6L);
             assertEquals(List.of("value was null", "value type was java.lang.StringBuilder",
-                    "value type was java.lang.StringBuffer"), mismatches(result));
+                    "value type was java.lang.StringBuilder", "value type was java.lang.StringBuffer"), mismatches(result));
         }
     }
 
     @Test
     void sortingRetainsTheFirstOutOfOrderPairWithoutRepeatingComparisons() {
-        var time = new FakeTime(0);
         var values = new ArrayList<>(List.of(3, 1, 2));
         int[] calls = {0};
         int[] comparisons = {0};
@@ -73,7 +79,6 @@ class ConditionHistoryTest {
             }
             @Override public int hashCode() { return number; }
         }
-        var time = new FakeTime(0);
         var values = new ArrayList<>(List.of(new Element(1), new Element(1), new Element(2)));
         int[] calls = {0};
         var result = tryAwait(() -> {
@@ -90,13 +95,12 @@ class ConditionHistoryTest {
         assertEquals(4, calls[0]);
         assertEquals(7, comparisons[0]);
         assertEquals(List.of("collection was null",
-                "collection contained a duplicate at iteration index 1",
-                "collection contained a duplicate at iteration index 2"), mismatches(result));
+                "duplicate collection element at index 1",
+                "duplicate collection element at index 2"), mismatches(result));
     }
 
     @Test
     void allRetainsProgressThroughAMutableCollectionWithoutRecheckingItsElements() {
-        var time = new FakeTime(0);
         var values = new ArrayList<>(List.of(false, false, false));
         var check = new CountedCheck();
         int[] calls = {0};
@@ -117,7 +121,6 @@ class ConditionHistoryTest {
 
     @Test
     void anyRecordsHowManyElementsWereAvailableIncludingAnEmptyObservation() {
-        var time = new FakeTime(0);
         var values = new ArrayList<Boolean>();
         var check = new CountedCheck();
         int[] calls = {0};
@@ -137,7 +140,6 @@ class ConditionHistoryTest {
 
     @Test
     void mapAbsenceChecksKeepTheirFirstMatchPositionInIterationOrder() {
-        var time = new FakeTime(0);
         var keys = List.of("first", "second", "third");
         var values = new LinkedHashMap<String, Boolean>();
         keys.forEach(key -> values.put(key, true));
@@ -168,7 +170,6 @@ class ConditionHistoryTest {
             }
             @Override public int hashCode() { return number; }
         }
-        var time = new FakeTime(0);
         var values = new ArrayList<Element>();
         int[] calls = {0};
         var result = tryAwait(() -> {
@@ -186,7 +187,7 @@ class ConditionHistoryTest {
         assertSame(values, result.orThrow());
         assertEquals(6, calls[0]);
         assertEquals(15, comparisons[0]);
-        assertEquals(List.of(1L, 1L, 2L, 1L, 1L), result.attempts().stream().map(group -> group.count()).toList());
+        assertThat(result.conditions().getFirst().attempts().keySet()).containsExactly(1L, 2L, 4L, 5L, 6L);
         assertEquals(List.of("collection was null",
                 "collection did not contain all expected elements; first missing at expected index 0",
                 "collection did not contain all expected elements; first missing at expected index 1",
@@ -228,8 +229,7 @@ class ConditionHistoryTest {
     void absenceRetainsTheFirstRemainingForbiddenPositionWithoutExtraTraversal() {
         var forbidden = List.of(1, 2, 3);
         var values = new ArrayList<>(forbidden);
-        var actual = new ProbeContainers.MembershipCollection<>(values);
-        var time = new FakeTime(0);
+        var actual = ProbeContainers.membershipCollection(values);
         int[] calls = {0};
         var result = tryAwait(() -> {
             switch (++calls[0]) {
@@ -242,8 +242,8 @@ class ConditionHistoryTest {
 
         assertSame(actual, result.orThrow());
         assertEquals(6, calls[0]);
-        assertEquals(11, actual.iteratorCalls);
-        assertEquals(List.of(1L, 1L, 2L, 1L, 1L), result.attempts().stream().map(group -> group.count()).toList());
+        verify(actual, times(11)).iterator();
+        assertThat(result.conditions().getFirst().attempts().keySet()).containsExactly(1L, 2L, 4L, 5L, 6L);
         assertEquals(List.of("collection was null",
                 "collection contained unexpected elements; first at unexpected index 0",
                 "collection contained unexpected elements; first at unexpected index 1",
@@ -280,8 +280,8 @@ class ConditionHistoryTest {
 
     private static List<String> mismatches(AwaitResult<?, ?> result) {
         var mismatches = new ArrayList<String>();
-        for (var group : result.attempts()) {
-            if (group.first().result() instanceof AttemptStatus.Unsatisfied status) {
+        for (var group : attempts(result)) {
+            if (group instanceof Attempt.Unsatisfied<?> status) {
                 mismatches.add(status.mismatch());
             }
         }

@@ -24,26 +24,22 @@ public sealed class DiagnosticSelectionAwait<OBSERVED, ELEMENT> extends Diagnost
 
     @Override
     public DiagnosticSelectionAwait<OBSERVED, ELEMENT> every(Duration interval) {
-        return reconfigured(configuration.withEvery(interval));
+        return new DiagnosticSelectionAwait<>(source, configuration.withEvery(interval));
     }
 
     @Override
     public DiagnosticSelectionAwait<OBSERVED, ELEMENT> upTo(Duration timeout) {
-        return reconfigured(configuration.withUpTo(timeout));
+        return new DiagnosticSelectionAwait<>(source, configuration.withUpTo(timeout));
     }
 
     @Override
     public DiagnosticSelectionAwait<OBSERVED, ELEMENT> persisting(Duration persistence) {
-        return reconfigured(configuration.withPersistence(persistence));
+        return new DiagnosticSelectionAwait<>(source, configuration.withPersistence(persistence));
     }
 
     @Override
     public DiagnosticSelectionAwait<OBSERVED, ELEMENT> usingTime(LongSupplier clock, LongConsumer parker) {
-        return reconfigured(configuration.withTime(clock, parker));
-    }
-
-    private DiagnosticSelectionAwait<OBSERVED, ELEMENT> reconfigured(WaitConfiguration configuration) {
-        return new DiagnosticSelectionAwait<>(source, configuration);
+        return new DiagnosticSelectionAwait<>(source, configuration.withTime(clock, parker));
     }
 
     public AwaitResult<OBSERVED, ELEMENT> until(

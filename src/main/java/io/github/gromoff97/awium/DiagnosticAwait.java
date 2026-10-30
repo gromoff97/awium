@@ -29,12 +29,12 @@ public sealed class DiagnosticAwait<OBSERVED> extends AwaitSupport<OBSERVED> per
 
     /** Returns a new configuration with a positive delay between attempts. */
     public DiagnosticAwait<OBSERVED> every(Duration interval) {
-        return reconfigured(configuration.withEvery(interval));
+        return new DiagnosticAwait<>(source, configuration.withEvery(interval));
     }
 
     /** Returns a new configuration with a positive acquisition timeout. */
     public DiagnosticAwait<OBSERVED> upTo(Duration timeout) {
-        return reconfigured(configuration.withUpTo(timeout));
+        return new DiagnosticAwait<>(source, configuration.withUpTo(timeout));
     }
 
     /**
@@ -42,7 +42,7 @@ public sealed class DiagnosticAwait<OBSERVED> extends AwaitSupport<OBSERVED> per
      * Zero disables persistence; negative durations are rejected.
      */
     public DiagnosticAwait<OBSERVED> persisting(Duration persistence) {
-        return reconfigured(configuration.withPersistence(persistence));
+        return new DiagnosticAwait<>(source, configuration.withPersistence(persistence));
     }
 
     /**
@@ -59,11 +59,7 @@ public sealed class DiagnosticAwait<OBSERVED> extends AwaitSupport<OBSERVED> per
      * @throws NullPointerException if either operation is null
      */
     public DiagnosticAwait<OBSERVED> usingTime(LongSupplier clock, LongConsumer parker) {
-        return reconfigured(configuration.withTime(clock, parker));
-    }
-
-    private DiagnosticAwait<OBSERVED> reconfigured(WaitConfiguration configuration) {
-        return new DiagnosticAwait<>(source, configuration);
+        return new DiagnosticAwait<>(source, configuration.withTime(clock, parker));
     }
 
     public <CHECK extends ApplicableCondition<? super OBSERVED, ? super Reference<? super OBSERVED>> & PreservesObservation>

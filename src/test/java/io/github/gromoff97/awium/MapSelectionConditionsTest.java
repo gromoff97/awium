@@ -6,11 +6,13 @@ import io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import io.github.gromoff97.awium.function.CheckedBiPredicate;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.math.BigDecimal;
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
@@ -19,6 +21,8 @@ import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
 import static java.time.Duration.ofNanos;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -27,17 +31,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MapSelectionConditionsTest {
 
+    private final FakeTime time = new FakeTime(0);
+
     @Test
     void expectedAndNarrowingConditionsReturnTheOriginalEntryAndValue() {
-        record ReceiptEntry(String key, Number value) implements Map.Entry<String, Number> {
-            @Override
-            public String getKey() { return key; }
-
-            @Override
-            public Number getValue() { return value; }
-
-            @Override
-            public Number setValue(Number replacement) { throw new UnsupportedOperationException(); }
+        final class ReceiptEntry extends SimpleImmutableEntry<String, Number> {
+            ReceiptEntry(String key, Number value) { super(key, value); }
         }
 
         var value = new BigDecimal("42.00");
@@ -49,7 +48,6 @@ class MapSelectionConditionsTest {
             reads[0]++;
             return actual;
         };
-        var time = new FakeTime(0);
         var waiting = await(source::call).usingTime(time, time);
 
         Map.Entry<String, Number> matching = waiting.until(MapConditions.singleEntry(Conditions.equalTo(equalEntry)));
@@ -81,12 +79,11 @@ class MapSelectionConditionsTest {
             checked.add(Map.entry(key, value));
             return value == 2;
         };
-        var time = new FakeTime(0);
         var waiting = await(observations::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
         var result = diagnostic(waiting).until(MapConditions.singleEntry(predicate));
 
         assertEquals(Map.entry("key", 2), result.orThrow());
-        assertEquals(2, result.attempts().size());
+        assertEquals(2, attempts(result).size());
         assertEquals(List.of(Map.entry("key", 1), Map.entry("key", 2)), checked);
         assertTrue(observations.isEmpty());
     }
@@ -105,7 +102,6 @@ class MapSelectionConditionsTest {
                 return value == 2 ? ConditionResult.satisfied() : ConditionResult.unsatisfied("not ready");
             };
         });
-        var time = new FakeTime(0);
         var result = tryAwait(() -> {
             if (reads[0] <= 3) assertEquals(0, factories[0]);
             return observations.get(reads[0]++);
@@ -113,16 +109,14 @@ class MapSelectionConditionsTest {
                 .until(MapConditions.valueFor("key", check).because("the selected value must be ready"));
 
         assertEquals(2, result.orThrow());
-        assertEquals(4, result.attempts().size());
+        assertThat(attempts(result)).extracting(AwaitTestAccess::observation).containsExactlyElementsOf(observations);
         assertEquals(1, factories[0]);
         assertEquals(List.of(1, 2), checked);
-        var missingGroup = result.attempts().get(1);
-        assertEquals(2, missingGroup.firstNumber());
-        assertEquals(3, missingGroup.lastNumber());
-        var missing = missingGroup.last();
-        assertEquals("map value: value is ready", missing.condition().description());
-        assertEquals("key", missing.condition().references().getFirst().value());
-        assertEquals("the selected value must be ready", missing.condition().explanation());
+        var missingGroup = attempts(result).get(1);
+        assertSame(missingGroup, result.conditions().getFirst().attempts().get(2L));
+        assertEquals("map value: value is ready", result.conditions().getFirst().condition().description());
+        assertEquals("key", result.conditions().getFirst().condition().references().getFirst().value());
+        assertEquals("the selected value must be ready", result.conditions().getFirst().condition().explanation());
     }
 
     @Test
@@ -139,7 +133,6 @@ class MapSelectionConditionsTest {
                 return entry.getValue() == 2 ? ConditionResult.satisfied() : ConditionResult.unsatisfied("not ready");
             };
         });
-        var time = new FakeTime(0);
         var result = tryAwait(() -> {
             if (reads[0] <= 3) assertEquals(0, factories[0]);
             return observations.get(reads[0]++);
@@ -147,24 +140,22 @@ class MapSelectionConditionsTest {
                 .until(MapConditions.singleEntry(check).because("one ready entry required"));
 
         assertEquals(Map.entry("key", 2), result.orThrow());
-        assertEquals(5, result.attempts().size());
+        assertEquals(5, attempts(result).size());
         assertEquals(1, factories[0]);
         assertEquals(List.of(1, 2), checked);
-        var structural = result.attempts().get(2).last();
-        assertEquals("single entry: entry is ready", structural.condition().description());
-        assertEquals("one ready entry required", structural.condition().explanation());
+        assertEquals("single entry: entry is ready", result.conditions().getFirst().condition().description());
+        assertEquals("one ready entry required", result.conditions().getFirst().condition().explanation());
     }
 
     @Test
     void selectorsReturnEntriesKeysAndValuesWithConcreteTypes() {
-        var pollingTime = new FakeTime(0);
         var actual = new LinkedHashMap<String, Integer>();
         actual.put("first", 1);
         actual.put("second", 2);
         java.util.concurrent.Callable<LinkedHashMap<String, Integer>> source = () -> actual;
-        var waiting = await(source::call).usingTime(pollingTime, pollingTime);
+        var waiting = await(source::call).usingTime(time, time);
 
-        var sole = await(() -> Map.of("second", 2)).usingTime(pollingTime, pollingTime);
+        var sole = await(() -> Map.of("second", 2)).usingTime(time, time);
         Map.Entry<String, Integer> selected = sole.until(MapConditions.singleEntry(matches((Map.Entry<String, Integer> entry) -> entry.getValue() == 2)));
         Map.Entry<String, Integer> byKey = waiting.until(MapConditions.entryFor("first"));
         Integer value = waiting.until(MapConditions.valueFor("second"));
@@ -182,28 +173,26 @@ class MapSelectionConditionsTest {
 
     @Test
     void nullValuesAreDistinguishedFromMissingKeys() {
-        var pollingTime = new FakeTime(0);
         var actual = new LinkedHashMap<String[], String>();
         actual.put(new String[] {"nullable"}, null);
-        var waiting = await(() -> actual).usingTime(pollingTime, pollingTime).upTo(ofNanos(1));
+        var waiting = await(() -> actual).usingTime(time, time).upTo(ofNanos(1));
 
         String selected = waiting.until(MapConditions.valueFor(new String[] {"nullable"}));
         assertNull(selected);
         assertNull(diagnostic(waiting).until(MapConditions.valueFor(new String[] {"nullable"})).orThrow());
-        assertTrue(assertFailure(TIMEOUT, () -> waiting.until(MapConditions.valueFor(new String[] {"missing"})))
-                .getMessage().contains("map did not contain the expected key"));
-        assertTrue(assertFailure(TIMEOUT, () -> await(() -> (Map<String[], String>) null)
-                .usingTime(pollingTime, pollingTime).upTo(ofNanos(1))
-                .until(MapConditions.valueFor(new String[] {"missing"})))
-                .getMessage().contains("map was null"));
+        assertThat(assertFailure(TIMEOUT, () -> waiting.until(MapConditions.valueFor(new String[] {"missing"}))))
+                .hasMessageContaining("map did not contain the expected key");
+        assertThat(assertFailure(TIMEOUT, () -> await(() -> (Map<String[], String>) null)
+                .usingTime(time, time).upTo(ofNanos(1))
+                .until(MapConditions.valueFor(new String[] {"missing"}))))
+                .hasMessageContaining("map was null");
     }
 
     @Test
     void quantifiersAndBulkConditionsPreserveTheConcreteMap() {
-        var pollingTime = new FakeTime(0);
         var actual = new LinkedHashMap<>(Map.of("a", 1, "b", 2));
         java.util.concurrent.Callable<LinkedHashMap<String, Integer>> source = () -> actual;
-        var waiting = await(source::call).usingTime(pollingTime, pollingTime);
+        var waiting = await(source::call).usingTime(time, time);
 
         assertSame(actual, waiting.until(MapConditions.allEntries((key, value) -> value > 0)));
         assertSame(actual, waiting.until(MapConditions.hasEntry((key, value) -> key.equals("b"))));
@@ -217,54 +206,53 @@ class MapSelectionConditionsTest {
         assertSame(actual, waiting.until(MapConditions.containsAllValues(List.of(1, 2))));
         assertSame(actual, waiting.until(MapConditions.hasSizeBetween(1, 3)));
 
-        assertEquals(Unsatisfied.class,
-                evaluate(MapConditions.doesNotContainKey("a"), actual).getClass());
-        assertEquals(Unsatisfied.class,
-                evaluate(MapConditions.doesNotContainValue(2), actual).getClass());
+        assertInstanceOf(Unsatisfied.class,
+                evaluate(MapConditions.doesNotContainKey("a"), actual));
+        assertInstanceOf(Unsatisfied.class,
+                evaluate(MapConditions.doesNotContainValue(2), actual));
     }
 
     @Test
     void quantifiersAndBulkConditionsCoverTheirUnsatisfiedBranches() {
         var actual = new LinkedHashMap<>(Map.of("a", 1, "b", 2));
 
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.allEntries(
-                (String key, Integer value) -> value < 2), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.hasEntry(
-                (String key, Integer value) -> value > 2), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.hasNoEntry(
-                (String key, Integer value) -> value == 2), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.allKeys(
-                key -> key.equals("a")), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.anyKey(
-                key -> key.equals("missing")), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.noKey(
-                key -> key.equals("a")), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.allValues(
-                value -> value < 2), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.anyValue(
-                value -> value > 2), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(MapConditions.noValue(
-                value -> value == 2), actual).getClass());
-        assertEquals(Unsatisfied.class,
-                evaluate(MapConditions.containsAllKeys(List.of("a", "missing")), actual).getClass());
-        assertEquals(Satisfied.class,
-                evaluate(MapConditions.doesNotContainKey("missing"), actual).getClass());
-        assertEquals(Unsatisfied.class, evaluate(
-                MapConditions.doesNotContainAnyKeys(List.of("a", "missing")), actual).getClass());
-        assertEquals(Unsatisfied.class,
-                evaluate(MapConditions.containsOnlyKeys(java.util.Collections.singletonList("a")), actual).getClass());
-        assertEquals(Unsatisfied.class,
-                evaluate(MapConditions.containsAllValues(List.of(1, 3)), actual).getClass());
-        assertEquals(Satisfied.class,
-                evaluate(MapConditions.doesNotContainValue(3), actual).getClass());
-        assertEquals(Unsatisfied.class,
-                evaluate(MapConditions.doesNotContainAnyValues(List.of(2, 3)), actual).getClass());
+        assertInstanceOf(Unsatisfied.class, evaluate(MapConditions.allEntries(
+                (String key, Integer value) -> value < 2), actual));
+        assertInstanceOf(Unsatisfied.class, evaluate(MapConditions.hasEntry(
+                (String key, Integer value) -> value > 2), actual));
+        assertInstanceOf(Unsatisfied.class, evaluate(MapConditions.hasNoEntry(
+                (String key, Integer value) -> value == 2), actual));
+        assertInstanceOf(Unsatisfied.class, evaluate(MapConditions.allKeys(
+                key -> key.equals("a")), actual));
+        assertInstanceOf(Unsatisfied.class, evaluate(MapConditions.anyKey(
+                key -> key.equals("missing")), actual));
+        assertInstanceOf(Unsatisfied.class, evaluate(MapConditions.noKey(
+                key -> key.equals("a")), actual));
+        assertInstanceOf(Unsatisfied.class, evaluate(MapConditions.allValues(
+                value -> value < 2), actual));
+        assertInstanceOf(Unsatisfied.class, evaluate(MapConditions.anyValue(
+                value -> value > 2), actual));
+        assertInstanceOf(Unsatisfied.class, evaluate(MapConditions.noValue(
+                value -> value == 2), actual));
+        assertInstanceOf(Unsatisfied.class,
+                evaluate(MapConditions.containsAllKeys(List.of("a", "missing")), actual));
+        assertInstanceOf(Satisfied.class,
+                evaluate(MapConditions.doesNotContainKey("missing"), actual));
+        assertInstanceOf(Unsatisfied.class, evaluate(
+                MapConditions.doesNotContainAnyKeys(List.of("a", "missing")), actual));
+        assertInstanceOf(Unsatisfied.class,
+                evaluate(MapConditions.containsOnlyKeys(java.util.Collections.singletonList("a")), actual));
+        assertInstanceOf(Unsatisfied.class,
+                evaluate(MapConditions.containsAllValues(List.of(1, 3)), actual));
+        assertInstanceOf(Satisfied.class,
+                evaluate(MapConditions.doesNotContainValue(3), actual));
+        assertInstanceOf(Unsatisfied.class,
+                evaluate(MapConditions.doesNotContainAnyValues(List.of(2, 3)), actual));
     }
 
     @Test
     void selectorsCoverMissingMultipleAndWrongEntries() {
         var actual = new LinkedHashMap<>(Map.of("first", 1, "second", 2));
-        var time = new FakeTime(0);
         var waiting = await(() -> actual).usingTime(time, time).upTo(ofNanos(1));
 
         var none = assertFailure(TIMEOUT,
@@ -272,8 +260,8 @@ class MapSelectionConditionsTest {
                         .until(MapConditions.singleEntry(matches(entry -> entry.getValue() > 2))));
         var many = assertFailure(TIMEOUT,
                 () -> waiting.until(MapConditions.singleEntry((key, value) -> value == 2)));
-        assertTrue(none.getMessage().contains("value did not match"));
-        assertTrue(many.getMessage().contains("map size was greater than 1"));
+        assertThat(none.getMessage()).contains("value did not match");
+        assertThat(many.getMessage()).contains("map size was greater than 1");
         assertFailure(TIMEOUT, () -> waiting.until(MapConditions.valueFor("missing")));
         assertFailure(TIMEOUT, () -> waiting.until(MapConditions.valueFor("first", Conditions.greaterThan(1))));
         assertThrows(NullPointerException.class, () -> MapConditions.singleEntry(

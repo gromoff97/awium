@@ -2,18 +2,18 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.internal.FailureDiagnostics;
 import io.github.gromoff97.awium.internal.WaitCompletion;
-import io.github.gromoff97.awium.result.HistoryEntry;
-import io.github.gromoff97.awium.result.AttemptStatus;
+import io.github.gromoff97.awium.result.Attempt;
+import io.github.gromoff97.awium.internal.ExecutionStep;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
@@ -45,7 +45,7 @@ class FailureTaxonomyTest {
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
         var check = asserted(value -> { throw original; });
 
-        var captured = assertInstanceOf(AwaitResult.Failed.class, diagnostic(waiting).until(check)).failure();
+        var captured = failure(diagnostic(waiting).until(check));
         assertEquals(AwaitFailure.Reason.TIMEOUT, captured.reason());
         assertSame(original, captured.cause());
         assertSame(rendering, captured.suppressed().getFirst());
@@ -72,22 +72,19 @@ class FailureTaxonomyTest {
                 case INTERRUPTED -> new InterruptedException("interrupted");
                 default -> new IllegalStateException("operation failed");
             };
-            var timing = new HistoryEntry.Timing(Duration.ZERO,
-                    reason == AwaitFailure.Reason.WAIT_FAILED ? null : Duration.ZERO,
-                    reason == AwaitFailure.Reason.WAIT_FAILED || reason == AwaitFailure.Reason.SOURCE_FAILED
-                            ? null : Duration.ZERO, ofNanos(2));
             var metadata = diagnosticCondition("ready", new Condition.Reference<>("Expected", expected));
-            AttemptStatus observation = switch (reason) {
-                case WAIT_FAILED -> new AttemptStatus.Uncontrolled(AttemptStatus.Operation.WAITING, original);
-                case SOURCE_FAILED -> new AttemptStatus.Uncontrolled(AttemptStatus.Operation.SOURCE, original);
-                case TIMEOUT, PERSISTENCE_FAILED -> new AttemptStatus.Unsatisfied("not ready", original);
-                default -> new AttemptStatus.Uncontrolled(AttemptStatus.Operation.CONDITION, original);
+            Attempt<Object> retained = switch (reason) {
+                case WAIT_FAILED -> new Attempt.FailedBeforeObservation<>(Attempt.Operation.WAITING, original);
+                case SOURCE_FAILED -> new Attempt.FailedBeforeObservation<>(Attempt.Operation.SOURCE, original);
+                case TIMEOUT, PERSISTENCE_FAILED -> new Attempt.Unsatisfied<>("actual", "not ready", original);
+                default -> new Attempt.FailedAfterObservation<>("actual", Attempt.Operation.CONDITION, original, null);
             };
-            var attempt = new HistoryEntry<>(reason == AwaitFailure.Reason.PERSISTENCE_FAILED
-                    ? HistoryEntry.Phase.PERSISTENCE : HistoryEntry.Phase.ACQUISITION, timing, metadata, null, (Object) "actual", observation);
+            var attempt = new ExecutionStep<>(metadata, 1, 0, reason == AwaitFailure.Reason.PERSISTENCE_FAILED
+                    ? ExecutionStep.Phase.PERSISTENCE : ExecutionStep.Phase.ACQUISITION, 2,
+                    retained);
             WaitCompletion outcome = switch (reason) {
                 case TIMEOUT -> new WaitCompletion.Timeout(attempt);
-                case PERSISTENCE_FAILED -> new WaitCompletion.PersistenceFailure(Duration.ZERO, attempt);
+                case PERSISTENCE_FAILED -> new WaitCompletion.PersistenceFailure(0, attempt);
                 default -> new WaitCompletion.Uncontrolled(attempt, reason == AwaitFailure.Reason.INTERRUPTED);
             };
             var configuration = AwaitTestAccess.config(1, 2, 0);
@@ -97,7 +94,8 @@ class FailureTaxonomyTest {
                 assertSame(original, captured.cause());
                 assertEquals(List.of(rendering), captured.suppressed());
                 var report = new AwaitResult.Failed<Object, String>(
-                        List.of(new io.github.gromoff97.awium.result.AttemptGroup<>(1, 1, attempt, attempt)), captured);
+                        List.of(new io.github.gromoff97.awium.result.ConditionHistory<>(metadata,
+                                new java.util.TreeMap<>(java.util.Map.of(1L, attempt.attempt())))), captured);
                 var reported = assertFailure(reason, report::orThrow);
                 assertSame(captured, reported instanceof AwaitAssertionError assertion
                         ? assertion.failure() : ((AwaitExecutionException) reported).failure());

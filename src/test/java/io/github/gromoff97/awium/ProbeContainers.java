@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import java.util.AbstractCollection;
+import java.util.Collection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.Iterator;
@@ -8,118 +8,38 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 final class ProbeContainers {
 
     private ProbeContainers() {}
 
-    static final class ProbeCollection<E> extends AbstractCollection<E> {
-        private final int reportedSize;
-        private final RuntimeException sizeFailure;
-        int sizeCalls;
-
-        ProbeCollection(int reportedSize) {
-            this(reportedSize, null);
-        }
-
-        ProbeCollection(RuntimeException sizeFailure) {
-            this(0, sizeFailure);
-        }
-
-        private ProbeCollection(int reportedSize,
-                RuntimeException sizeFailure) {
-            this.reportedSize = reportedSize;
-            this.sizeFailure = sizeFailure;
-        }
-
-        @Override
-        public int size() {
-            sizeCalls++;
-            if (sizeFailure != null) {
-                throw sizeFailure;
-            }
-            return reportedSize;
-        }
-
-        @Override
-        public Iterator<E> iterator() {
-            throw new AssertionError("iterator must not be called");
-        }
-
-        @Override
-        public String toString() {
-            return "probe collection";
-        }
+    static <ELEMENT> Collection<ELEMENT> sizeOnlyCollection(int size) {
+        Collection<ELEMENT> collection = mock();
+        when(collection.size()).thenReturn(size);
+        when(collection.isEmpty()).thenAnswer(ignored -> collection.size() == 0);
+        when(collection.iterator()).thenThrow(new AssertionError("iterator must not be called"));
+        when(collection.toString()).thenReturn("probe collection");
+        return collection;
     }
 
-    static final class ProbeMap<K, V> extends AbstractMap<K, V> {
-        private final RuntimeException sizeFailure;
-        int sizeCalls;
-
-        ProbeMap() {
-            this(null);
-        }
-
-        ProbeMap(RuntimeException sizeFailure) {
-            this.sizeFailure = sizeFailure;
-        }
-
-        @Override
-        public int size() {
-            sizeCalls++;
-            if (sizeFailure != null) {
-                throw sizeFailure;
-            }
-            return 1;
-        }
-
-        @Override
-        public Set<Entry<K, V>> entrySet() {
-            throw new AssertionError("entrySet must not be called");
-        }
-
-        @Override
-        public String toString() {
-            return "probe map";
-        }
+    static <KEY, VALUE> Map<KEY, VALUE> sizeOnlyMap() {
+        Map<KEY, VALUE> map = mock();
+        when(map.size()).thenReturn(1);
+        when(map.isEmpty()).thenAnswer(ignored -> map.size() == 0);
+        when(map.entrySet()).thenThrow(new AssertionError("entrySet must not be called"));
+        when(map.toString()).thenReturn("probe map");
+        return map;
     }
 
-    static final class MembershipCollection<E> extends AbstractCollection<E> {
-        private final List<E> elements;
-        private final RuntimeException iteratorFailure;
-        int iteratorCalls;
-
-        MembershipCollection(List<E> elements) {
-            this(elements, null);
-        }
-
-        MembershipCollection(RuntimeException iteratorFailure) {
-            this(List.of(), iteratorFailure);
-        }
-
-        private MembershipCollection(List<E> elements,
-                RuntimeException iteratorFailure) {
-            this.elements = elements;
-            this.iteratorFailure = iteratorFailure;
-        }
-
-        @Override
-        public int size() {
-            throw new AssertionError("size must not be called");
-        }
-
-        @Override
-        public Iterator<E> iterator() {
-            iteratorCalls++;
-            if (iteratorFailure != null) {
-                throw iteratorFailure;
-            }
-            return elements.iterator();
-        }
-
-        @Override
-        public String toString() {
-            return "membership collection";
-        }
+    static <ELEMENT> Collection<ELEMENT> membershipCollection(List<ELEMENT> elements) {
+        Collection<ELEMENT> collection = mock();
+        when(collection.size()).thenThrow(new AssertionError("size must not be called"));
+        when(collection.isEmpty()).thenAnswer(ignored -> collection.size() == 0);
+        when(collection.iterator()).thenAnswer(ignored -> elements.iterator());
+        when(collection.toString()).thenReturn("membership collection");
+        return collection;
     }
 
     static final class EntryMap<K, V> extends AbstractMap<K, V> {
@@ -163,21 +83,9 @@ final class ProbeContainers {
         }
     }
 
-    record ProbeEntry<K, V>(K key, V value) implements Map.Entry<K, V> {
-
-        @Override
-        public K getKey() {
-            return key;
-        }
-
-        @Override
-        public V getValue() {
-            return value;
-        }
-
-        @Override
-        public V setValue(V value) {
-            throw new UnsupportedOperationException();
+    static final class ProbeEntry<K, V> extends AbstractMap.SimpleImmutableEntry<K, V> {
+        ProbeEntry(K key, V value) {
+            super(key, value);
         }
 
         @Override

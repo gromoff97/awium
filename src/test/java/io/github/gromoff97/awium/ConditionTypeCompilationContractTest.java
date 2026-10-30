@@ -1,27 +1,21 @@
 package io.github.gromoff97.awium;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 class ConditionTypeCompilationContractTest {
 
-    @TempDir
-    Path directory;
-
     @Test
-    void customChecksCannotReturnAnAttemptFailure() throws IOException {
+    void customChecksCannotReturnAnAttemptFailure() {
         for (String expression : List.of(
                 "Conditions.condition(\"failed\", value -> failure);",
                 "Conditions.conditionPerWait(\"failed\", () -> value -> failure);")) {
-            CompilationSupport.assertRejected(directory, """
+            CompilationSupport.assertRejected("""
                     package io.github.gromoff97.awium;
-                    import io.github.gromoff97.awium.result.AttemptStatus;
+                    import io.github.gromoff97.awium.result.Attempt;
                     final class Contract {
                         void check() {
-                            var failure = new AttemptStatus.Uncontrolled(AttemptStatus.Operation.CONDITION, new IllegalStateException());
+                            var failure = new Attempt.FailedAfterObservation<>("actual", Attempt.Operation.CONDITION, new IllegalStateException(), null);
                             %s
                         }
                     }
@@ -30,7 +24,7 @@ class ConditionTypeCompilationContractTest {
     }
 
     @Test
-    void customChecksCannotTransformTheObservedType() throws IOException {
+    void customChecksCannotTransformTheObservedType() {
         for (String expression : List.of(
                 "String wrong = await(numbers).until(condition(\"identity\", ignored -> ConditionResult.satisfied()));",
                 "AwaitResult<Number, String> wrong = tryAwait(numbers).until(condition(\"identity\", ignored -> ConditionResult.satisfied()));",
@@ -41,7 +35,7 @@ class ConditionTypeCompilationContractTest {
     }
 
     @Test
-    void explanationsCannotWeakenInputOrResultTypes() throws IOException {
+    void explanationsCannotWeakenInputOrResultTypes() {
         for (String expression : List.of(
                 "await(() -> \"ready\").until(equalTo(123).because(\"reason\"));",
                 "await(collection::call).until(singleElement(matches(String::isBlank)).because(\"reason\"));",
@@ -59,7 +53,7 @@ class ConditionTypeCompilationContractTest {
     }
 
     @Test
-    void comparisonsRejectIncompatibleExpectedTypes() throws IOException {
+    void comparisonsRejectIncompatibleExpectedTypes() {
         for (String factory : List.of("await", "tryAwait")) {
             for (String condition : List.of("equalTo(123)",
                 "notEqualTo(123)",
@@ -67,27 +61,25 @@ class ConditionTypeCompilationContractTest {
                 "notSameAs(123)",
                 "in(List.of(123, 456))",
                 "notIn(List.of(123, 456))")) {
-                String expression = "%s(() -> \"ready\").until(%s);".formatted(factory, condition);
-                assertRejected(expression);
+                assertRejected("%s(() -> \"ready\").until(%s);".formatted(factory, condition));
             }
         }
     }
 
     @Test
-    void subsetRejectsIncompatibleElementTypes() throws IOException {
+    void subsetRejectsIncompatibleElementTypes() {
         for (String factory : List.of("await", "tryAwait")) {
             for (String expression : List.of(
                     "%s(() -> List.of(\"ready\")).until(CollectionConditions.subsetOf(List.of(123)));",
                     "%s(() -> List.of(\"ready\")).until(captured(CollectionConditions.subsetOf(List.of(123)), isNotNull));",
                     "%s(() -> List.of(List.of(\"ready\"))).until(singleElement(CollectionConditions.subsetOf(List.of(123))));")) {
-                String call = expression.formatted(factory);
-                assertRejected(call);
+                assertRejected(expression.formatted(factory));
             }
         }
     }
 
     @Test
-    void nestedComparisonsRejectIncompatibleExpectedTypes() throws IOException {
+    void nestedComparisonsRejectIncompatibleExpectedTypes() {
         for (String factory : List.of("await", "tryAwait")) {
             for (String expression : List.of(
                     "%s(optional::call).until(hasValue(equalTo(\"wrong\")));",
@@ -95,14 +87,13 @@ class ConditionTypeCompilationContractTest {
                     "%s(map::call).until(valueFor(\"key\", equalTo(\"wrong\")));",
                     "%s(map::call).until(singleEntry(equalTo(Map.entry(123, 1))));",
                     "%s(map::call).until(singleEntry(equalTo(Map.entry(\"key\", \"wrong\"))));")) {
-                String call = expression.formatted(factory);
-                assertRejected(call);
+                assertRejected(expression.formatted(factory));
             }
         }
     }
 
     @Test
-    void selectorConstraintsAlsoApplyToViewsAndMixedCaptureSequences() throws IOException {
+    void selectorConstraintsAlsoApplyToViewsAndMixedCaptureSequences() {
         for (String factory : List.of("await", "tryAwait")) {
             for (String expression : List.of(
                     "%s(new CollectionViewSource<Number, List<? extends Number>>(() -> List.of(1))).until(singleElement(equalTo(\"wrong\")).because(\"reason\"));",
@@ -123,7 +114,7 @@ class ConditionTypeCompilationContractTest {
     }
 
     @Test
-    void mixedValueStagesRetainBothInputConstraints() throws IOException {
+    void mixedValueStagesRetainBothInputConstraints() {
         for (String factory : List.of("await", "tryAwait")) {
             for (String arguments : List.of(
                     "equalTo(123), isNotNull",
@@ -139,24 +130,23 @@ class ConditionTypeCompilationContractTest {
     }
 
     @Test
-    void preservingChecksCannotBeAssignedArbitraryResultTypes() throws IOException {
+    void preservingChecksCannotBeAssignedArbitraryResultTypes() {
         assertRejected("Condition.Typed<Object, Object> erased = isNotNull;");
         assertRejected("Condition.Typed<String, String> erased = equalTo(\"ready\");");
     }
 
     @Test
-    void mapLookupsRejectIncompatibleKeyTypes() throws IOException {
+    void mapLookupsRejectIncompatibleKeyTypes() {
         for (String factory : List.of("await", "tryAwait")) {
             for (String condition : List.of("valueFor(123)", "entryFor(123)",
                     "valueFor(123, equalTo(1))", "valueFor(123, instanceOf(String.class))")) {
-                String expression = "%s(map::call).until(%s);".formatted(factory, condition);
-                assertRejected(expression);
+                assertRejected("%s(map::call).until(%s);".formatted(factory, condition));
             }
         }
     }
 
     @Test
-    void matchesRejectsExistingConditions() throws IOException {
+    void matchesRejectsExistingConditions() {
         for (String expression : List.of(
                 "matches(equalTo(1));",
                 "matches(instanceOf(String.class));",
@@ -168,7 +158,7 @@ class ConditionTypeCompilationContractTest {
     }
 
     @Test
-    void conditionsCannotInventInputOrResultTypes() throws IOException {
+    void conditionsCannotInventInputOrResultTypes() {
         for (String expression : List.of(
                 "String wrong = await(numbers).until(equalTo(1));",
                 "String wrong = await(collection::call).until(singleElement(equalTo(1)));",
@@ -191,7 +181,7 @@ class ConditionTypeCompilationContractTest {
     }
 
     @Test
-    void typedQuantifiersRejectIncompatibleCallbacks() throws IOException {
+    void typedQuantifiersRejectIncompatibleCallbacks() {
         for (String factory : List.of("await", "tryAwait")) {
             for (String expression : List.of(
                     "%s(map::call).until(allKeys((Integer key) -> key > 0));",
@@ -212,14 +202,13 @@ class ConditionTypeCompilationContractTest {
                     "%s(collection::call).until(CollectionConditions.all(String::isBlank));",
                     "%s(collection::call).until(CollectionConditions.any(String::isBlank));",
                     "%s(collection::call).until(CollectionConditions.none(String::isBlank));")) {
-                String call = expression.formatted(factory);
-                assertRejected(call);
+                assertRejected(expression.formatted(factory));
             }
         }
     }
 
     @Test
-    void selectorsCannotMasqueradeAsTypedTransformations() throws IOException {
+    void selectorsCannotMasqueradeAsTypedTransformations() {
         for (String expression : List.of("Condition.Typed<Optional<?>, Object> erased = present;",
                 "Condition.Typed<Map<?, ?>, Object> erased = valueFor(\"key\");",
                 "Object value = await(() -> List.of(Optional.of(1))).until(singleElement(present));",
@@ -231,8 +220,8 @@ class ConditionTypeCompilationContractTest {
         }
     }
 
-    private void assertRejected(String body) throws IOException {
-        CompilationSupport.assertRejected(directory, """
+    private void assertRejected(String body) {
+        CompilationSupport.assertRejected("""
                 import java.util.*;
                 import java.util.concurrent.Callable;
                 import io.github.gromoff97.awium.*;
@@ -246,8 +235,8 @@ class ConditionTypeCompilationContractTest {
                 import static io.github.gromoff97.awium.CollectionConditions.singleElement;
                 import static io.github.gromoff97.awium.MapConditions.*;
                 final class Contract {
-                    void check(Callable<Number> numbers, java.util.concurrent.Callable<java.util.Optional<Number>> optional,
-                            java.util.concurrent.Callable<List<Number>> collection, java.util.concurrent.Callable<Map<String, Number>> map) {
+                    void check(Callable<Number> numbers, Callable<Optional<Number>> optional,
+                            Callable<List<Number>> collection, Callable<Map<String, Number>> map) {
                         %s
                     }
                 }

@@ -13,6 +13,7 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
@@ -20,7 +21,12 @@ import static io.github.gromoff97.awium.Conditions.in;
 import static io.github.gromoff97.awium.Conditions.notIn;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class IterableExpectedValuesTest {
 
@@ -91,13 +97,13 @@ class IterableExpectedValuesTest {
     @Test
     void candidateSnapshotsRetainNullsAndArraysAsWholeValues() {
         var values = new ArrayList<>(asList(null, "ready"));
-        var expected = new Once<>(values);
+        var expected = once(values);
         var allowed = in(expected);
         values.clear();
         assertEquals(5, waiting(() -> "ready").until(allowed).length());
         String missing = null;
         assertNull(waiting(() -> missing).until(allowed));
-        assertEquals(1, expected.iterations);
+        verify(expected).iterator();
 
         int[] element = {1, 2};
         Iterable<int[]> arrays = List.of(element);
@@ -135,7 +141,7 @@ class IterableExpectedValuesTest {
             Function<Iterable<String>, PreservingCondition<? super ACTUAL>> factory,
             List<String> expectedValues, ACTUAL actual) {
         var mutable = new ArrayList<>(expectedValues);
-        var expected = new Once<>(mutable);
+        var expected = once(mutable);
         var condition = factory.apply(expected);
         var waiting = waiting(() -> actual);
         var before = diagnostic(waiting).until(condition);
@@ -143,20 +149,20 @@ class IterableExpectedValuesTest {
         mutable.add("changed");
         var after = diagnostic(waiting).until(condition);
 
-        assertEquals(1, expected.iterations);
+        verify(expected).iterator();
         assertEquals(before.getClass(), after.getClass());
         if (before instanceof AwaitResult.Satisfied(var ignoredHistory, var observed)) {
             ACTUAL value = waiting.until(condition);
             assertSame(actual, value);
             assertSame(actual, observed);
         } else {
-            var original = assertInstanceOf(AwaitResult.Failed.class, before).failure();
-            var current = assertInstanceOf(AwaitResult.Failed.class, after).failure();
+            var original = failure(before);
+            var current = failure(after);
             assertEquals(original.message(), current.message());
-            assertFalse(current.message().contains("changed"));
+            assertThat(current.message()).doesNotContain("changed");
             assertThrows(AwaitAssertionError.class, () -> waiting.until(condition));
         }
-        assertEquals(1, expected.iterations);
+        verify(expected).iterator();
     }
 
     private static <OBSERVED> ValueAwait<OBSERVED> waiting(Callable<OBSERVED> source) {
@@ -164,16 +170,10 @@ class IterableExpectedValuesTest {
         return await(source).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1));
     }
 
-    private static final class Once<ELEMENT> implements Iterable<ELEMENT> {
-        private final List<ELEMENT> values;
-        private int iterations;
-
-        private Once(List<ELEMENT> values) { this.values = values; }
-
-        @Override
-        public Iterator<ELEMENT> iterator() {
-            if (++iterations != 1) throw new AssertionError("expected values were traversed again");
-            return values.iterator();
-        }
+    private static <ELEMENT> Iterable<ELEMENT> once(List<ELEMENT> values) {
+        Iterable<ELEMENT> expected = mock(CALLS_REAL_METHODS);
+        when(expected.iterator()).thenAnswer(ignored -> values.iterator())
+                .thenAnswer(ignored -> { throw new AssertionError("expected values were traversed again"); });
+        return expected;
     }
 }

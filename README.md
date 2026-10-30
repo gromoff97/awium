@@ -27,8 +27,8 @@ dependencies {
 }
 ```
 
-Awium has no compile or runtime dependencies. JUnit is used only to test the
-library itself. Fluent entry points and conditions are in `io.github.gromoff97.awium`.
+Awium has no compile or runtime dependencies. Its development libraries are
+test-only. Fluent entry points and conditions are in `io.github.gromoff97.awium`.
 Results, attempts, and failures are in `io.github.gromoff97.awium.result`;
 checked callback interfaces are in `io.github.gromoff97.awium.function`.
 
@@ -182,8 +182,8 @@ Payment payment = await(source::call).every(POLL_INTERVAL).upTo(TIMEOUT).persist
 
 Defaults are:
 
-- `every`: 100 milliseconds
-- `upTo`: 10 seconds
+- `every`: 100 ms
+- `upTo`: 10 s
 - `persisting`: zero, which disables persistence checking
 
 Unless the caller is already interrupted, the first observation is invoked
@@ -414,8 +414,9 @@ diagnostics. A condition returns only `Satisfied` or `Unsatisfied`; any thrown
 `Throwable` becomes an uncontrolled attempt and stops the wait.
 `ConditionResult` has no type parameters or value payload. The callback input
 constrains the observed value, and the terminal returns that original value.
-The same satisfaction or mismatch status is available in each attempt record;
-`AttemptStatus` additionally permits an `Uncontrolled` failure.
+History exposes these outcomes as `Attempt.Satisfied` and `Attempt.Unsatisfied`,
+alongside failures before or after observation. Each attempt carries its diagnostics
+directly, without a separate status object.
 
 `condition(description, callback)` reuses the supplied callback.
 `conditionPerWait(description, factory)` accepts a JDK `Callable` supplying a
@@ -732,8 +733,8 @@ remains owned by the caller.
 
 ## Diagnostic waits
 
-Use `tryAwait` to handle a wait's outcome without catching its failure and to
-inspect the retained attempts, their outcomes, timing, and sequence progress.
+Use `tryAwait` to inspect the outcome and each condition's history without
+catching a wait failure.
 
 Start with `tryAwait(source)` and finish with `until(condition)` to return an
 `AwaitResult<OBSERVED, RESULT>` for both success and failure. Timing settings
@@ -763,9 +764,9 @@ without casts or repeated generic arguments.
 
 ```java
 switch (result) {
-    case AwaitResult.Satisfied(var attempts, var payment) ->
+    case AwaitResult.Satisfied(var conditions, var payment) ->
             System.out.println(payment.receipt());
-    case AwaitResult.Failed(var attempts, var failure) -> {
+    case AwaitResult.Failed(var conditions, var failure) -> {
         switch (failure.reason()) {
             case TIMEOUT -> reportTimeout(failure.message());
             default -> reportFailure(failure);
@@ -774,140 +775,154 @@ switch (result) {
 }
 ```
 
-Both results expose `attempts()`, an immutable `List<AttemptGroup<OBSERVED>>` in
-chronological order. A group represents consecutive attempts with the same check,
-phase, sequence progress, status, mismatch message, and exception instance.
-Every change starts a new group. If an earlier outcome returns later, it starts
-another group in its chronological position.
-History records complete polling attempts. Individual candidates inside `all`,
-`any`, or `none` do not create extra history entries.
-For example, `none(asserted(check))` succeeds when every candidate produces an
-assertion mismatch. History records that aggregate success, not each nested mismatch.
-Nested selection failures retain the completed selection steps in their mismatch.
-For example, `collection size was 0` and `single element: collection size was 0`
-identify an empty outer collection and an empty selected collection as separate transitions.
-Built-in checks retain the facts they already measured: size and length mismatches
-report the actual size, type checks report the actual class or null, and `sorted`
-reports the first out-of-order pair's zero-based indices. `hasNoDuplicates` reports
-the first duplicate's zero-based iteration index. `containsAll`, `containsAllKeys`,
-`containsAllValues`, and `containsAllEntries` report the first missing operand's
-zero-based index in the expected iteration order. `doesNotContainAny` and its map
-key, value, and entry counterparts report the first forbidden operand still present,
-using its zero-based index in the unexpected iteration order. Quantifier failures retain their
-checked-candidate count. These facts stay unchanged when an observed object
-is later modified; no extra predicate, equality, or comparator calls are made to collect them.
+Both results expose `conditions()`, an immutable `List<ConditionHistory<OBSERVED>>`
+in declaration order. An ordinary `until(condition)` has one history;
+`until(captured(first, second, third))` has three. Each history has just two fields:
 
-Each group exposes `firstNumber()` and `lastNumber()` (one-based, inclusive),
-`count()`, and its `first()` and `last()` invocations as `HistoryEntry<OBSERVED>`.
-A group with one invocation uses the same record at both ends. For example,
-`result.attempts().getLast().last()` returns the final invocation;
-`result.attempts().size()` counts diagnostic groups, not polling invocations.
+- `condition()`: the original check for that position.
+- `attempts()`: an immutable `NavigableMap<Long, Attempt<OBSERVED>>`, ordered by attempt number.
+
+Conditions that execution did not reach have empty maps. Reusing the same condition
+in different captured positions produces separate histories.
+
+The map key is the **inclusive last attempt number**, numbered across the whole wait.
+Consecutive attempts with equal observations and unchanged status, mismatch, and
+exception instance share one entry, retaining the latest observation. For example,
+a condition checking 30 times can have this history:
+
+```text
+last attempt → observed
+           4 → 0       // attempts 1–4
+           6 → 10      // attempts 5–6
+          12 → 20      // attempts 7–12
+          24 → 30      // attempts 13–24
+          30 → 40      // attempts 25–30
+```
+
+No separate range or group objects are needed. A condition's first range starts
+after the preceding condition's last attempt, or at 1 for the first condition.
+Within a history, each range starts after the preceding map key.
+`history.attempts().size()` counts retained states, not polling invocations.
+For a nonempty history, `history.attempts().lastEntry().getValue()` is the last state.
 
 ```java
-for (var group : result.attempts()) {
-    System.out.println(group);
-    var firstObservation = group.first().observed();
-    var lastObservation = group.last().observed();
+for (var history : result.conditions()) {
+    System.out.println(history.condition().description());
+    history.attempts().forEach((through, attempt) -> {
+        System.out.println("Through #" + through);
+        switch (attempt) {
+            case Attempt.Satisfied(var observed) ->
+                    System.out.println(observed);
+            case Attempt.Unsatisfied(var observed, var mismatch, var cause) -> {
+                System.out.println(observed);
+                System.out.println(mismatch);
+            }
+            case Attempt.FailedAfterObservation(var observed, var operation, var cause, var location) -> {
+                System.out.println(observed);
+                System.out.println(cause);
+            }
+            case Attempt.FailedBeforeObservation(var operation, var cause) ->
+                    System.out.println(cause);
+        }
+    });
 }
 ```
 
-Printing a group shows its number range, completion offsets, condition and reason,
-outcome, and boundary observations. Shared fields appear once. If both boundaries
-refer to the same observed object, its current value is printed once; this does not
-mean the object was unchanged during the group. Distinct boundary objects with the
-same rendered text share a `First and last observed` line; both references remain
-available in the group, and their `equals` methods are not called. Exceptions also
-remain original references: history printing reads their current messages, and
-stack traces remain available through the structured records. The terminal failure
-message is saved when the wait ends. History values are formatted
-when the group is printed, so this is a view of the retained references, not a
-snapshot of their earlier state. Observation labels explicitly say `current value`;
-condition reference values are also rendered at printing time. The mismatch and
-status still describe the original check. A failing `toString()` produces a diagnostic
-placeholder instead of preventing the rest of the group from being displayed.
-`System.out.println(result)` prints the outcome followed by all history groups;
-`result.attempts().forEach(System.out::println)` prints the history alone.
-The complete report prints unchanged condition fields and the sequence reason
-once across consecutive groups. Each group still shows its own number range,
-timing, outcome, observations, and cause. Printing a group by itself includes
-its complete condition definition.
-If the source did not produce a value, the group says `Observed: unavailable`;
-a returned `null` is shown as `Observed (current value): null`.
-Individual `first()` and `last()` records use the same guarded formatting, without
-an attempt number: numbering belongs to the group.
-Printing a status safely renders its cause's class and message; printing an
-`AwaitFailure` returns its saved diagnostic message without inspecting the cause again.
-Printing `condition.references()` also guards each operand's value formatting.
+`Attempt<OBSERVED>` is sealed and has four immutable variants:
 
-Each record has an acquisition or persistence `phase()`,
-the associated `condition()`, sequence `progress()`, `observed()`, and `result()`.
-The condition is the original complete check passed to `until`, or the current
-captured stage. It stays associated with the source observation even when an
-inner selection or check fails; it is never replaced with a check on a different input type.
-For a capture sequence, progress holds its immutable `sequence()` definition,
-the attempt's one-based `stageNumber()`, and `capturedStages()` after the attempt.
-The total is `sequence().stages().size()`. Progress is `null` for a single check.
-An attempt records the condition it checked, even when success advances the
-sequence. If waiting or source retrieval fails before evaluation, the condition
-and stage identify the intended check and the captured count stays unchanged.
+| Variant | Fields | Meaning |
+| --- | --- | --- |
+| `Satisfied` | `observed` | The check accepted the observed value. |
+| `Unsatisfied` | `observed`, `mismatch`, `cause` | The check rejected the value; polling may continue. |
+| `FailedAfterObservation` | `observed`, `operation`, `cause`, `location` | A value was obtained, then execution failed. |
+| `FailedBeforeObservation` | `operation`, `cause` | Execution failed before an observation was available. |
 
-`HistoryEntry<OBSERVED>` keeps the source observation and a non-generic
-`AttemptStatus`: `AttemptStatus.Satisfied`, `AttemptStatus.Unsatisfied`, or
-`AttemptStatus.Uncontrolled`. The first two also implement `ConditionResult`,
-which is the restricted return type of a custom check. A mismatch
-retains its explanation and optional cause; an uncontrolled result retains
-its cause and `operation()` (`WAITING`, `SOURCE`, or `CONDITION`).
-For nested failures, its optional `location()` records enclosing selections and
-zero-based iteration indices, shown as `Within` in diagnostics. A traversal failure
-records how many candidates were checked before the iterator or container view failed.
-These locations are collected without formatting values or inspecting the exception.
-The extracted value belongs to the final result, not to the diagnostic status.
-Use `hasObservation()` to distinguish a legitimate `null` returned by the source
-from a failure before a value was obtained. All attempt results expose `cause()`.
+The three variants with `observed()` can retain a legitimate `null`. The last variant has
+no observation field or accessor. Availability is represented by the variant, with
+no boolean flag. Record patterns infer the observation's source type without casts.
+Every variant exposes `cause()`, retaining the original throwable when present and
+returning `null` otherwise. There is no nested status object.
 
-A successful intermediate stage remains `Satisfied` in history while the
-overall sequence continues. For `captured(equalTo("created"), equalTo("paid"))`:
+`ConditionResult` is the restricted return type of a custom check. A returned mismatch
+can carry an explanation and a cause while remaining `Unsatisfied`; polling can continue.
+A throwable that escapes the source or check becomes a failure and ends the wait
+after the failed attempt is recorded. If the source returned null and the check then
+threw, that is `FailedAfterObservation(null, ...)`, not a missing source value.
+An interrupt after the source returns is also a failure with an observation, even if
+the condition has not run yet.
 
-| Attempt | Observation | Stage | Evaluation | Captured stages |
-| --- | --- | --- | --- | --- |
-| 1 | `"created"` | 1 | `Satisfied` | 1 |
-| 2 | `"pending"` | 2 | `Unsatisfied` | 1 |
-| 3 | `"paid"` | 2 | `Satisfied` | 2 |
+Both failure variants implement `Attempt.Failure<OBSERVED>`, exposing `operation()`
+(`WAITING`, `SOURCE`, or `CONDITION`), the non-null `cause()`, and optional `location()`
+for nested selections and iteration indices. This shared interface adds no wrapper
+object. The extracted value belongs to the final result, not to the attempt.
 
-The final result is `["created", "paid"]`; individual attempts retain their
-observations and statuses. Sequence failure messages show the attempted
-stage as `Stage: 2 of 3`. A timeout after an intermediate success also identifies
-the next stage separately. Persistence rechecks only the final stage.
+A successful intermediate stage remains `Satisfied` while the overall sequence
+continues. For `captured(equalTo("created"), equalTo("paid"))`, observations
+`"created"`, `"pending"`, `"pending"`, `"paid"` produce:
 
-Each entry exposes `timing()`, a `HistoryEntry.Timing` with offsets from the start of the
-terminal call. `startOffset()` marks the attempt's start before waiting;
-`retrievalOffset()` marks the start of the source call, `observationOffset()`
-its successful return, and `completionOffset()` the end of the attempt. A
-retrieval or observation offset is `null` if that checkpoint was not reached.
+```text
+conditions[0]: equalTo("created")
+    1 → Satisfied(observed="created")
+conditions[1]: equalTo("paid")
+    3 → Unsatisfied(observed="pending", ...)
+    4 → Satisfied(observed="paid")
+orThrow(): ["created", "paid"]
+```
 
-History never discards earlier groups. For example, 999 consecutive `matches`
-failures followed by success produce two groups: attempts 1–999 and attempt 1000.
-Only the first and last observations of the repeated failures are retained.
-The predicate still runs 1000 times; grouping does not change polling or the
-observations returned by `captured`.
+Persistence rechecks the final condition and extends its history. Phase changes
+alone do not create a new entry. History contains no timing or progress objects.
+Terminal failure messages still show elapsed time, phase, the attempted captured
+stage, and the sequence reason. A timeout after an intermediate success identifies
+the next stage separately.
 
-Grouping describes repeated diagnostics, not equality of source values. Actual
-objects may change between the boundaries without creating a new group. Awium
-does not call their `equals`, `hashCode`, or `toString` to group them. It also does
-not inspect exception messages or stack traces: every new exception instance
-attached to an attempt's outcome starts a separate group, even if its message
-matches an earlier exception.
-Repeated invocations with the same exception instance can share a group.
+History records complete polling attempts. Candidates inside `all`, `any`, or `none`
+do not create extra entries. Nested selection failures retain the completed selection
+steps in their mismatch: `collection size was 0` and `single element: collection
+size was 0` distinguish an empty outer collection from an empty selected collection.
+Built-in checks retain facts they already measured: actual size or length, actual
+class, the first out-of-order pair's indices, a duplicate's iteration index, or the
+first missing or forbidden operand's index. Quantifiers report checked-candidate
+counts. These facts remain unchanged if the observed object is later modified.
+Nested errors show their path, for example `Within: optional value → collection elements[1]`.
+Element and entry indices are zero-based positions in iteration order, distinct from attempt numbers.
 
-Storage grows with diagnostic transitions and distinct errors, rather than with
-every repeated outcome. If every attempt has a different mismatch or a new error,
-each is retained. Grouping therefore has no fixed memory bound. Failure messages
-still identify the absolute attempt number.
-Captured stage lists and the attempt list are immutable. Observed objects retain
-their original references; Awium does not copy or freeze them. If a source returns
-the same mutable object repeatedly, changing it is visible through earlier
-attempts too. Their recorded satisfaction statuses remain those of the original
-checks. This also applies to `matches(predicate)`: history groups its outcomes, but does not capture the fields read by the predicate.
+`System.out.println(result)` prints the outcome followed by each condition's history;
+`result.conditions().forEach(System.out::println)` prints just the histories.
+Within each history, the condition's definition, operands, and reason appear once.
+A state starts with `Through #N: satisfied`, `unsatisfied`, or `failed (...)`;
+N is the inclusive last attempt number. Unreached conditions show `Result: not attempted`.
+Printing an individual `Attempt` shows only the observation and status details.
+An unavailable observation is labelled `Observed: unavailable`; a returned null is
+`Observed now: null`. Standalone text values are quoted and control characters escaped: `"null"`, `"ready\r\n"`, `""`
+remain distinguishable from null, other line endings, and spaces. Objects and containers keep their own
+text representation. Exception types and messages share one `Cause` field. Times use exact units such as
+`1 s 20 ms`; timeout, elapsed time, and polling interval share one line. Formatting
+guards failing value renderers and exception messages, using a placeholder without
+hiding the remaining information. A failed renderer produces `<unprintable>` and
+a `Rendering failure` line, including when the final selected value cannot be printed.
+Original exceptions and their stack traces remain accessible through `attempt.cause()`.
+The terminal failure message is saved when the wait ends; history values and condition
+operands are formatted on demand, using their current contents.
+
+History never discards earlier states. For example, 999 equal observations with
+unchanged diagnostics followed by success produce two entries, keyed by 999 and 1000.
+The predicate still runs 1000 times. Grouping does not change polling or captured results.
+Consecutive observations are compared using `Objects.deepEquals`, just like `equalTo`:
+ordinary objects use their equality contract, and arrays are compared by content.
+A changed value starts a new entry even if its status and mismatch stay the same.
+Returning to an earlier value also starts a new entry in its chronological position.
+Equality should be side-effect free. History comparison does not call `hashCode`,
+`toString`, or exception messages; if comparison throws, observations remain separate
+without replacing the wait's outcome. Every new exception instance starts a separate
+entry, even if its text matches an earlier error. The same exception instance can repeat.
+
+Storage grows with observation changes, diagnostic transitions, and distinct errors;
+there is no fixed memory bound. Lists and maps in the result are immutable, but observed
+objects retain their original references. Awium does not copy or freeze them. If a source
+returns the same mutable object repeatedly, equality cannot recover its earlier state,
+and later mutations are visible through earlier entries. Recorded statuses and mismatch
+strings still describe the original checks. This also applies to `matches(predicate)`:
+history does not capture the fields read by the predicate.
 
 ## Threading and interruption
 
@@ -956,7 +971,14 @@ adapter treats an `AssertionError` as an unsatisfied condition.
 ## Development
 
 Run `./gradlew check` for behavior, fluent compilation, and packaged-module
-checks; `./gradlew pitest` runs mutation testing.
+checks. Mutation testing uses PIT's `ALL` set and runs separately with
+`./gradlew pitest`, only on explicit user request. Do not run it as a routine
+verification step or attach it to `build`, `check`, or `test`.
+
+Tests use JUnit 6, JUnit Pioneer for parameter combinations, AssertJ, Mockito,
+compile-testing, ArchUnit, and Commons Lang.
+Gradle declares these as `testImplementation` dependencies. Mockito uses JDK
+proxies configured in test resources and requires no Java agent.
 
 `Condition` owns the immutable definition and diagnostic reference. The base type
 has no type parameters; input and result constraints belong to its typed families.
@@ -978,31 +1000,33 @@ also be inferred from the terminal call. Input-only checks share
 `InputCondition<INPUT>`, allowing reusable capture definitions without widening
 the observations returned by a particular source.
 Each terminal call creates fresh `AttemptFactory` instances, which lazily initialize
-one evaluator per check. A factory binds an observation to an immutable `Attempt`.
-Each `Attempt.call()` runs that check and returns a separate `AttemptResult<RESULT>`
-with the selected value or failure. The condition stays on the bound attempt. The attempt retains no
+one evaluator per check. A factory binds an observation to an immutable `BoundAttempt`.
+Each `BoundAttempt.call()` runs that check and returns a separate `AttemptResult<RESULT>`
+with the selected value or failure. The condition stays in its factory and history. The attempt retains no
 previous result, timing, attempt number, or sequence progress. Its observation and
 callback may themselves be mutable; neither is copied.
 `SequenceExecution` selects the next attempt and accepts its result, retaining stage
 progress and captured values without executing checks itself. The non-generic
-`ConditionResult` supplies satisfaction and mismatch statuses; `AttemptStatus` also
-permits an uncontrolled failure. Public `HistoryEntry<OBSERVED>` records retain the
-observation, status, timing, and sequence progress, without exposing an executable callback.
+`ConditionResult` supplies satisfaction and mismatch outcomes; internal `AttemptResult`
+also permits an uncontrolled failure. Public `Attempt<OBSERVED>` variants distinguish completed checks from execution
+failures before or after observation, without exposing an executable callback.
 
 `Await` supplies the source factories. `ValueAwait<OBSERVED>` and
 `SelectionAwait<OBSERVED, ELEMENT>` retain immutable fluent configuration;
 `MapAwait<OBSERVED, ENTRY, VALUE>` also supports map-value selection. The corresponding
 `DiagnosticAwait`, `DiagnosticSelectionAwait`, and `DiagnosticMapAwait` classes
 return diagnostic results. `AwaitSupport` shares execution and result handling.
-`AttemptHistory` numbers invocations and groups consecutive diagnostic repetitions,
-retaining their first and last records as immutable `AttemptGroup` values.
+`AttemptHistory` numbers invocations and groups equal observations with repeated diagnostics
+directly in one ordered map per condition. It returns immutable `ConditionHistory`
+objects for every declared condition, including unreached conditions. `AwaitResult.conditions()` exposes these histories in declaration order.
 Ordinary waits use its counting-only mode without retaining or comparing records.
 `WaitEngine` schedules polling and persistence. Each wait creates an internal
 `AttemptExecution` that retrieves source values, calls the selected attempt,
-and records a `HistoryEntry` with its timing and diagnostics. Selected values and stage
+and produces a transient `ExecutionStep` with completion time and execution context.
+Only its public `Attempt` is retained in history. Selected values and stage
 transitions remain in `SequenceExecution`. `FailureDiagnostics` formats the terminal failure
 without replacing its category or cause. It shares guarded value and field rendering
-with history groups through `DiagnosticText`; formatting runs outside polling.
+with condition histories through `DiagnosticText`; formatting runs outside polling.
 A successful check can still finish too late.
 
 `ConditionSupport` shares condition construction, checks, extraction, and

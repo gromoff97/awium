@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
@@ -17,6 +19,7 @@ import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.MapConditions.allEntries;
 import static io.github.gromoff97.awium.MapConditions.singleEntry;
 import static java.time.Duration.ofNanos;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 class EntryConditionInputTest {
@@ -105,11 +108,11 @@ class EntryConditionInputTest {
         for (var wait : waits) {
             calls[0] = 0;
             var result = wait.get();
-            var failure = assertInstanceOf(AwaitResult.Failed.class, result).failure();
+            var failure = failure(result);
             assertSame(cause, failure.cause());
-            assertTrue(failure.message().contains("Because: entry must be readable"));
+            assertThat(failure.message()).contains("Because: entry must be readable");
             assertEquals(1, calls[0]);
-            assertEquals(1, result.attempts().size());
+            assertEquals(1, attempts(result).size());
         }
     }
 }

@@ -29,7 +29,7 @@ final class ConditionTestRuntime {
 
     static <RESULT> AttemptResult<? extends RESULT> evaluated(AttemptResult<? extends RESULT> attempt) {
         if (attempt instanceof AttemptResult.Uncontrolled<?> failure) {
-            throw new AssertionError("condition failed", failure.status().cause());
+            throw new AssertionError("condition failed", failure.cause());
         }
         return attempt;
     }
@@ -44,12 +44,7 @@ final class ConditionTestRuntime {
     }
 
     static String mismatch(AttemptResult<?> evaluation) {
-        return assertInstanceOf(AttemptResult.Unsatisfied.class, evaluation).status().mismatch();
-    }
-
-    @SuppressWarnings("unchecked")
-    static <VALUE, FAILURE extends Throwable> VALUE throwUnchecked(Throwable failure) throws FAILURE {
-        throw (FAILURE) failure;
+        return assertInstanceOf(AttemptResult.Unsatisfied.class, evaluation).mismatch();
     }
 
     private ConditionTestRuntime() {}

@@ -1,22 +1,40 @@
 package io.github.gromoff97.awium.result;
 
-/** The two outcomes a condition can return; thrown failures are handled by the wait. */
-public sealed interface ConditionResult extends AttemptStatus
-        permits AttemptStatus.Satisfied, AttemptStatus.Unsatisfied {
+import io.github.gromoff97.awium.internal.DiagnosticText;
 
-    static AttemptStatus.Satisfied satisfied() {
-        return new AttemptStatus.Satisfied();
+/**
+ * The two outcomes a condition may return. Thrown failures are handled by the wait engine;
+ * they are not condition results.
+ */
+public sealed interface ConditionResult {
+
+    /** The diagnostic cause, or {@code null} when none was supplied. */
+    default Throwable cause() {
+        return null;
     }
 
-    static AttemptStatus.Unsatisfied unsatisfied() {
+    static Satisfied satisfied() {
+        return new Satisfied();
+    }
+
+    static Unsatisfied unsatisfied() {
         return unsatisfied(null, null);
     }
 
-    static AttemptStatus.Unsatisfied unsatisfied(String mismatch) {
+    static Unsatisfied unsatisfied(String mismatch) {
         return unsatisfied(mismatch, null);
     }
 
-    static AttemptStatus.Unsatisfied unsatisfied(String mismatch, Throwable cause) {
-        return new AttemptStatus.Unsatisfied(mismatch, cause);
+    static Unsatisfied unsatisfied(String mismatch, Throwable cause) {
+        return new Unsatisfied(mismatch, cause);
+    }
+
+    record Satisfied() implements ConditionResult {}
+
+    record Unsatisfied(String mismatch, Throwable cause) implements ConditionResult {
+        @Override
+        public String toString() {
+            return "Unsatisfied[mismatch=" + mismatch + ", cause=" + new DiagnosticText(cause).cause(cause) + "]";
+        }
     }
 }
