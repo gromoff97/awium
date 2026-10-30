@@ -2,7 +2,6 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.result.ConditionResult;
-import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.function.CheckedFunction;
 import io.github.gromoff97.awium.internal.SequenceExecution;
 import io.github.gromoff97.awium.internal.WaitCompletion;
@@ -24,6 +23,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.observation;
 import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
@@ -49,6 +49,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.ConditionSupport.bind;
+import static io.github.gromoff97.awium.ConditionSupport.preserving;
+import static io.github.gromoff97.awium.OptionalConditions.hasValue;
 
 @SuppressWarnings("removal")
 class ObservationTest {
@@ -107,7 +111,7 @@ class ObservationTest {
         var actual = new Object();
         var result = new Object();
 
-        var execution = new SequenceExecution<>(ConditionSupport.bind(ConditionSupport.condition("test condition", null, (Object value) -> {
+        var execution = new SequenceExecution<>(bind(ConditionSupport.condition("test condition", null, (Object value) -> {
             time.advanceNanos(3);
             return AttemptResult.satisfied(result);
         })));
@@ -148,7 +152,7 @@ class ObservationTest {
         var actual = new Object();
         var assertion = new AssertionError("failed");
 
-        var ordinary = attempt(() -> actual, value -> ConditionResult.unsatisfied("not ready"));
+        var ordinary = attempt(() -> actual, value -> unsatisfied("not ready"));
         var asserted = attempt(() -> actual, value -> unsatisfied("assertion did not pass", assertion));
 
         var ordinaryOutcome = assertInstanceOf(Attempt.Unsatisfied.class, ordinary);
@@ -205,9 +209,9 @@ class ObservationTest {
             List<Supplier<AwaitResult<?, ?>>> waits = List.of(
                     () -> diagnostic(waiting).until(check),
                     () -> tryAwait(() -> Optional.of("actual")).usingTime(time, time)
-                            .until(OptionalConditions.hasValue(check)),
+                            .until(hasValue(check)),
                     () -> tryAwait(() -> List.of("actual")).usingTime(time, time)
-                            .until(CollectionConditions.singleElement(check)),
+                            .until(singleElement(check)),
                     () -> diagnostic(waiting).until(captured(Conditions.isNotNull, check)));
             for (var wait : waits) {
                 AwaitResult.Failed<?, ?> result = assertInstanceOf(AwaitResult.Failed.class, wait.get());
@@ -261,7 +265,7 @@ class ObservationTest {
             sourceCalls[0]++;
             currentThread().interrupt();
             return actual;
-        }, new SequenceExecution<>(ConditionSupport.bind(Conditions.condition("ready", value -> {
+        }, new SequenceExecution<>(bind(Conditions.condition("ready", value -> {
             conditionCalls[0]++;
             return satisfied();
         })))).waitFor();
@@ -329,12 +333,12 @@ class ObservationTest {
                         currentThread().interrupt();
                     }
                     return new Object();
-                }, new SequenceExecution<>(ConditionSupport.bind(Conditions.condition("ready", value -> {
+                }, new SequenceExecution<>(bind(Conditions.condition("ready", value -> {
                     if (phase.equals("condition")) {
                         armed[0] = true;
                         currentThread().interrupt();
                     }
-                    return ConditionResult.unsatisfied("not yet");
+                    return unsatisfied("not yet");
                 })))).waitFor()));
         assertTrue(currentThread().isInterrupted(), phase);
     }
@@ -358,7 +362,7 @@ class ObservationTest {
             if (++evaluations[0] < interruptedAttempt) return satisfied();
             return switch (form) {
                 case "satisfied" -> satisfied();
-                case "unsatisfied" -> ConditionResult.unsatisfied("not ready");
+                case "unsatisfied" -> unsatisfied("not ready");
                 default -> null;
             };
         });
@@ -483,7 +487,7 @@ class ObservationTest {
 
     private static Attempt<?> attempt(Callable<Object> source, CheckedFunction<Object, ConditionResult> condition) {
         var time = new FakeTime(0);
-        return new WaitEngine<Object>(config(1, 2, 0).withTime(time, time), source, new SequenceExecution<>(ConditionSupport.bind(ConditionSupport.preserving("test condition", actual -> {
+        return new WaitEngine<Object>(config(1, 2, 0).withTime(time, time), source, new SequenceExecution<>(bind(preserving("test condition", actual -> {
             ConditionResult evaluation = condition.apply(actual);
             time.advanceNanos(2);
             return evaluation;

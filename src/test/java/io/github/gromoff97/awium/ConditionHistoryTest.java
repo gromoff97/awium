@@ -20,6 +20,19 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static io.github.gromoff97.awium.CollectionConditions.containsAll;
+import static io.github.gromoff97.awium.CollectionConditions.doesNotContainAny;
+import static io.github.gromoff97.awium.CollectionConditions.sorted;
+import static io.github.gromoff97.awium.Conditions.exactlyInstanceOf;
+import static io.github.gromoff97.awium.Conditions.instanceOf;
+import static io.github.gromoff97.awium.MapConditions.containsAllEntries;
+import static io.github.gromoff97.awium.MapConditions.containsAllKeys;
+import static io.github.gromoff97.awium.MapConditions.containsAllValues;
+import static io.github.gromoff97.awium.MapConditions.doesNotContainAnyEntries;
+import static io.github.gromoff97.awium.MapConditions.doesNotContainAnyKeys;
+import static io.github.gromoff97.awium.MapConditions.doesNotContainAnyValues;
+import static io.github.gromoff97.awium.ProbeContainers.membershipCollection;
+import static java.lang.Integer.compare;
 
 class ConditionHistoryTest {
 
@@ -28,7 +41,7 @@ class ConditionHistoryTest {
 
     @Test
     void typeChecksRetainActualTypesEvenWhenValuesHaveTheSameText() {
-        for (var condition : List.of(Conditions.instanceOf(String.class), Conditions.exactlyInstanceOf(String.class))) {
+        for (var condition : List.of(instanceOf(String.class), exactlyInstanceOf(String.class))) {
             var time = new FakeTime(0);
             var values = java.util.Arrays.asList(null, null,
                     new StringBuilder("pending"), new StringBuilder("pending"),
@@ -56,9 +69,9 @@ class ConditionHistoryTest {
                 default -> {}
             }
             return values;
-        }).usingTime(time, time).every(ofNanos(1)).until(CollectionConditions.sorted((left, right) -> {
+        }).usingTime(time, time).every(ofNanos(1)).until(sorted((left, right) -> {
             comparisons[0]++;
-            return Integer.compare(left, right);
+            return compare(left, right);
         }));
 
         assertSame(values, result.orThrow());
@@ -162,7 +175,7 @@ class ConditionHistoryTest {
                 default -> {}
             }
             return values;
-        }).usingTime(time, time).every(ofNanos(1)).until(CollectionConditions.containsAll(
+        }).usingTime(time, time).every(ofNanos(1)).until(containsAll(
                 List.of(new Element(1), new Element(2), new Element(3))));
 
         assertSame(values, result.orThrow());
@@ -183,9 +196,9 @@ class ConditionHistoryTest {
         var entries = new ArrayList<>(expected.entrySet());
         for (String elements : List.of("keys", "values", "entries")) {
             Condition.PreservingCondition<? super Map<String, String>> condition = switch (elements) {
-                case "keys" -> MapConditions.containsAllKeys(expected.keySet());
-                case "values" -> MapConditions.containsAllValues(expected.values());
-                default -> MapConditions.containsAllEntries(expected);
+                case "keys" -> containsAllKeys(expected.keySet());
+                case "values" -> containsAllValues(expected.values());
+                default -> containsAllEntries(expected);
             };
             var time = new FakeTime(0);
             var values = new LinkedHashMap<String, String>();
@@ -210,7 +223,7 @@ class ConditionHistoryTest {
     void absenceRetainsTheFirstRemainingForbiddenPositionWithoutExtraTraversal() {
         var forbidden = List.of(1, 2, 3);
         var values = new ArrayList<>(forbidden);
-        var actual = ProbeContainers.membershipCollection(values);
+        var actual = membershipCollection(values);
         int[] calls = {0};
         var result = tryAwait(() -> {
             switch (++calls[0]) {
@@ -219,7 +232,7 @@ class ConditionHistoryTest {
                 default -> {}
             }
             return actual;
-        }).usingTime(time, time).every(ofNanos(1)).until(CollectionConditions.doesNotContainAny(forbidden));
+        }).usingTime(time, time).every(ofNanos(1)).until(doesNotContainAny(forbidden));
 
         assertSame(actual, result.orThrow());
         assertEquals(6, calls[0]);
@@ -239,9 +252,9 @@ class ConditionHistoryTest {
         var keys = new ArrayList<>(forbidden.keySet());
         for (String elements : List.of("keys", "values", "entries")) {
             Condition.PreservingCondition<? super Map<String, String>> condition = switch (elements) {
-                case "keys" -> MapConditions.doesNotContainAnyKeys(forbidden.keySet());
-                case "values" -> MapConditions.doesNotContainAnyValues(forbidden.values());
-                default -> MapConditions.doesNotContainAnyEntries(forbidden);
+                case "keys" -> doesNotContainAnyKeys(forbidden.keySet());
+                case "values" -> doesNotContainAnyValues(forbidden.values());
+                default -> doesNotContainAnyEntries(forbidden);
             };
             var time = new FakeTime(0);
             var values = new LinkedHashMap<>(forbidden);

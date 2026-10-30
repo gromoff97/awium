@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.result.Attempt;
-import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.io.IOException;
@@ -10,6 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.observation;
 import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
@@ -20,6 +20,9 @@ import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Conditions.*;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.OptionalConditions.hasValue;
 
 class MixedConditionSequenceTest {
 
@@ -38,7 +41,7 @@ class MixedConditionSequenceTest {
         var optionalValues = List.of(Optional.of(CREATED), Optional.of(PENDING), Optional.of(READY));
         var optionalSource = optionalValues.iterator();
         var optional = await(optionalSource::next).usingTime(time, time).every(ofNanos(1)).until(captured(
-                OptionalConditions.hasValue(equalTo(CREATED)), OptionalConditions.hasValue(User::ready)));
+                hasValue(equalTo(CREATED)), hasValue(User::ready)));
         assertSame(optionalValues.getFirst(), optional.getFirst());
         assertSame(optionalValues.getLast(), optional.getLast());
         assertEquals(3, optional.getLast().orElseThrow().stage());
@@ -47,7 +50,7 @@ class MixedConditionSequenceTest {
         var collections = List.of(List.of(CREATED), List.of(PENDING), List.of(READY));
         var collectionSource = collections.iterator();
         var collection = tryAwait(collectionSource::next).usingTime(time, time).every(ofNanos(1)).until(captured(
-                CollectionConditions.singleElement(equalTo(CREATED)), CollectionConditions.singleElement(User::ready)));
+                singleElement(equalTo(CREATED)), singleElement(User::ready)));
         assertSame(collections.getFirst(), collection.orThrow().getFirst());
         assertSame(collections.getLast(), collection.orThrow().getLast());
         assertEquals(3, collection.orThrow().getLast().getFirst().stage());
@@ -59,8 +62,8 @@ class MixedConditionSequenceTest {
         var maps = List.of(Map.of("user", CREATED), Map.of("user", PENDING), Map.of("user", READY));
         var mapSource = maps.iterator();
         var map = tryAwait(mapSource::next).usingTime(time, time).every(ofNanos(1)).until(captured(
-                MapConditions.valueFor("user", equalTo(CREATED)).because("created"),
-                MapConditions.valueFor("user", User::ready).because("ready")));
+                valueFor("user", equalTo(CREATED)).because("created"),
+                valueFor("user", User::ready).because("ready")));
         assertSame(maps.getFirst(), map.orThrow().getFirst());
         assertSame(maps.getLast(), map.orThrow().getLast());
         assertEquals(3, map.orThrow().getLast().get("user").stage());

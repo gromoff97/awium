@@ -1,10 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.ApplicableCondition;
-import io.github.gromoff97.awium.Condition.ComparisonCondition;
-import io.github.gromoff97.awium.Condition.MapValueCondition;
-import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.Condition.SelectedCondition;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -12,12 +7,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.FieldSource;
 
+import static io.github.gromoff97.awium.Condition.ApplicableCondition;
+import static io.github.gromoff97.awium.Condition.ComparisonCondition;
+import static io.github.gromoff97.awium.Condition.MapValueCondition;
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
+import static io.github.gromoff97.awium.Condition.SelectedCondition;
 import static io.github.gromoff97.awium.Await.await;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static java.lang.Thread.currentThread;
 
 class PublicSurfaceTest {
 
@@ -26,9 +27,9 @@ class PublicSurfaceTest {
 
     @Test
     void acceptsJdkCallableOnTheEnteringThreadWithItsConcreteReturnType() {
-        Thread caller = Thread.currentThread();
+        Thread caller = currentThread();
         Callable<String> source = () -> {
-            assertSame(caller, Thread.currentThread());
+            assertSame(caller, currentThread());
             return "ready";
         };
 

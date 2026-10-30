@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.AbstractList;
@@ -31,6 +30,13 @@ import static java.time.Duration.ofNanos;
 import static org.apache.commons.lang3.exception.ExceptionUtils.rethrow;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static io.github.gromoff97.awium.Conditions.conditionPerWait;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.OptionalConditions.hasValue;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
 
 class TypedCollectionSelectionTest {
 
@@ -115,10 +121,10 @@ class TypedCollectionSelectionTest {
     @Test
     void nestedCheckStateIsRetainedAcrossRetriesAndResetForEachWait() {
         int[] factories = {0};
-        Condition.PreservingCondition<User> secondObservation = Conditions.conditionPerWait("second observation", () -> {
+        Condition.PreservingCondition<User> secondObservation = conditionPerWait("second observation", () -> {
             factories[0]++;
             int[] calls = {0};
-            return value -> ++calls[0] == 2 ? ConditionResult.satisfied() : ConditionResult.unsatisfied("one more");
+            return value -> ++calls[0] == 2 ? satisfied() : unsatisfied("one more");
         });
         List<Condition.SelectedCondition<? super List<User>>> selectors = List.of(
                 firstElement(secondObservation), lastElement(secondObservation), elementAt(0, secondObservation));
@@ -149,7 +155,7 @@ class TypedCollectionSelectionTest {
             int[] calls = {0};
             Predicate<User> predicate = value -> {
                 calls[0]++;
-                Thread.currentThread().interrupt();
+                currentThread().interrupt();
                 return false;
             };
             var selection = reverse ? lastElement(predicate::test) : firstElement(predicate::test);
@@ -160,10 +166,10 @@ class TypedCollectionSelectionTest {
                 assertEquals(AwaitFailure.Reason.INTERRUPTED, failure.reason());
                 assertInstanceOf(InterruptedException.class, failure.cause());
                 assertEquals(1, calls[0]);
-                assertTrue(Thread.currentThread().isInterrupted());
+                assertTrue(currentThread().isInterrupted());
                 assertEquals(1, attempts(result).size());
             } finally {
-                Thread.interrupted();
+                interrupted();
             }
         }
     }
@@ -175,9 +181,9 @@ class TypedCollectionSelectionTest {
         assertEquals(1, user.id());
         assertEquals(2, waiting(() -> nested).until(lastElement(lastElement(instanceOf(User.class)))).id());
         assertEquals(1, waiting(() -> Optional.of(nested.getFirst())).until(
-                OptionalConditions.hasValue(firstElement(instanceOf(User.class)))).id());
+                hasValue(firstElement(instanceOf(User.class)))).id());
         assertEquals(2, waiting(() -> Map.of("users", nested.get(2))).until(
-                MapConditions.valueFor("users", elementAt(0, instanceOf(User.class)))).id());
+                valueFor("users", elementAt(0, instanceOf(User.class)))).id());
         assertEquals(1, waiting(() -> nested.subList(0, 1)).until(singleElement(firstElement(instanceOf(User.class)))).id());
     }
 
@@ -284,7 +290,7 @@ class TypedCollectionSelectionTest {
                 @Override public String toString() { return "broken map"; }
             };
             Map<String, Object> valid = Map.of("target-key", LAST);
-            var lookup = MapConditions.valueFor("target-key", instanceOf(User.class));
+            var lookup = valueFor("target-key", instanceOf(User.class));
             assertNestedFailure(firstElement(lookup), List.of(broken, valid), cause);
             assertNestedFailure(lastElement(lookup), List.of(valid, broken), cause);
             assertNestedFailure(elementAt(0, lookup), List.of(broken, valid), cause);

@@ -18,6 +18,7 @@ import static java.time.Duration.ofNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static io.github.gromoff97.awium.CollectionConditions.hasSize;
 
 class HistoryFormattingTest {
 
@@ -293,7 +294,7 @@ class HistoryFormattingTest {
             if ((++calls[0] & 1) == 1) values.add(calls[0]);
             return values;
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
-                .until(CollectionConditions.hasSize(4));
+                .until(hasSize(4));
         values.add(99);
 
         assertEquals(3, attempts(result).size());

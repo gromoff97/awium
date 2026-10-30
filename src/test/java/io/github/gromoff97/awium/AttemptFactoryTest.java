@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
@@ -19,6 +18,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.ConditionSupport.bind;
+import static io.github.gromoff97.awium.ConditionTestRuntime.evaluated;
+import static io.github.gromoff97.awium.Conditions.conditionPerWait;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.OptionalConditions.hasValue;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static java.lang.Thread.currentThread;
 
 class AttemptFactoryTest {
 
@@ -33,7 +40,7 @@ class AttemptFactoryTest {
                 return AttemptResult.satisfied(observations.size());
             };
         });
-        var factory = ConditionSupport.bind(condition);
+        var factory = bind(condition);
         var first = factory.create("first");
         var second = factory.create("second");
 
@@ -61,7 +68,7 @@ class AttemptFactoryTest {
                     case 2 -> null;
                     default -> AttemptResult.satisfied(actual.length());
                 });
-        var attempt = ConditionSupport.bind(condition).create("ready");
+        var attempt = bind(condition).create("ready");
 
         var first = attempt.call();
         var second = attempt.call();
@@ -78,7 +85,7 @@ class AttemptFactoryTest {
     void nullIsAValidBoundObservation() {
         Condition.Typed<String, String> condition = new Condition.Typed<>("preserve null", null,
                 () -> AttemptResult::satisfied);
-        var attempt = ConditionSupport.bind(condition).create(null);
+        var attempt = bind(condition).create(null);
 
         assertNull(attempt.observed());
         assertNull(result(attempt.call()));
@@ -91,9 +98,9 @@ class AttemptFactoryTest {
             factories[0]++;
             return AttemptResult::satisfied;
         });
-        var attempt = ConditionSupport.bind(condition).create("ready");
+        var attempt = bind(condition).create("ready");
 
-        Thread.currentThread().interrupt();
+        currentThread().interrupt();
         try {
             var interrupted = assertInstanceOf(AttemptResult.Uncontrolled.class, attempt.call());
             assertInstanceOf(InterruptedException.class, interrupted.cause());
@@ -110,10 +117,10 @@ class AttemptFactoryTest {
     void preservingFactoryIsLazyIndependentAndReturnsTheOriginalObservation() {
         int[] factories = {0};
         var actual = new Object();
-        var condition = Conditions.conditionPerWait("two observations", () -> {
+        var condition = conditionPerWait("two observations", () -> {
             factories[0]++;
             int[] calls = {0};
-            return ignored -> ++calls[0] == 2 ? satisfied() : ConditionResult.unsatisfied("first observation");
+            return ignored -> ++calls[0] == 2 ? satisfied() : unsatisfied("first observation");
         }).because("second observation is required");
         var time = new FakeTime(0);
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
@@ -135,12 +142,12 @@ class AttemptFactoryTest {
         var nested = Conditions.<Number>conditionPerWait("second observation", () -> {
             factories[0]++;
             int[] calls = {0};
-            return ignored -> ++calls[0] == 2 ? satisfied() : ConditionResult.unsatisfied("first observation");
+            return ignored -> ++calls[0] == 2 ? satisfied() : unsatisfied("first observation");
         });
-        var optional = OptionalConditions.hasValue(nested);
-        var collection = CollectionConditions.singleElement(nested);
+        var optional = hasValue(nested);
+        var collection = singleElement(nested);
         Condition.MapValueCondition<Map<? super String, ? extends Number>> map =
-                MapConditions.valueFor("key", nested);
+                valueFor("key", nested);
         assertEquals(0, factories[0]);
 
         for (int run = 0; run < 2; run++) {
@@ -169,11 +176,11 @@ class AttemptFactoryTest {
                     return ignored -> AttemptResult.satisfied(++calls[0]);
                 });
         assertEquals("counted", ordinary.description());
-        var first = ConditionSupport.bind(ordinary).create(0);
-        var second = ConditionSupport.bind(ordinary).create(0);
+        var first = bind(ordinary).create(0);
+        var second = bind(ordinary).create(0);
 
-        assertEquals(1, result(ConditionTestRuntime.evaluated(first.call())));
-        assertEquals(2, result(ConditionTestRuntime.evaluated(first.call())));
-        assertEquals(1, result(ConditionTestRuntime.evaluated(second.call())));
+        assertEquals(1, result(evaluated(first.call())));
+        assertEquals(2, result(evaluated(first.call())));
+        assertEquals(1, result(evaluated(second.call())));
     }
 }

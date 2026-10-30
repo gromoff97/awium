@@ -35,6 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static io.github.gromoff97.awium.ConditionSupport.bind;
+import static java.lang.Math.min;
 
 class WaitEngineTest {
 
@@ -58,7 +60,7 @@ class WaitEngineTest {
             time.advanceNanos(nanos);
             parked[0] = true;
         }), () -> { sourceCalls[0]++; return "actual"; },
-                new SequenceExecution<>(ConditionSupport.bind(Conditions.<String>condition(
+                new SequenceExecution<>(bind(Conditions.<String>condition(
                         "ready", actual -> ConditionResult.satisfied()))), 0).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
@@ -172,7 +174,7 @@ class WaitEngineTest {
                 ignored -> {}), () -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, new SequenceExecution<>(ConditionSupport.bind(Conditions.<String>condition("test condition", actual -> ConditionResult.satisfied())))).waitFor();
+                }, new SequenceExecution<>(bind(Conditions.<String>condition("test condition", actual -> ConditionResult.satisfied())))).waitFor();
 
         assertInstanceOf(Timeout.class, outcome);
         assertEquals(1, sourceCalls[0]);
@@ -339,7 +341,7 @@ class WaitEngineTest {
         var outcome = new WaitEngine<String>(config(5, 20, 0).withTime(clock,
                 nanos -> { throw new AssertionError("parker must not be called"); }),
                 () -> { sourceCalls[0]++; return "actual"; },
-                new SequenceExecution<>(ConditionSupport.bind(Conditions.<String>condition("ready", actual -> ConditionResult.satisfied()))), 0).waitFor();
+                new SequenceExecution<>(bind(Conditions.<String>condition("ready", actual -> ConditionResult.satisfied()))), 0).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(Attempt.Operation.WAITING, failure.step().attempt());
@@ -356,12 +358,12 @@ class WaitEngineTest {
         LongSupplier clock = () -> {
             int index = clocks[0]++;
             if (index == ticks.length - 1) currentThread().interrupt();
-            return ticks[Math.min(index, ticks.length - 1)];
+            return ticks[min(index, ticks.length - 1)];
         };
         var outcome = new WaitEngine<String>(config(1, 2, 0).withTime(clock, nanos -> {}), () -> {
             sourceCalls[0]++;
             return "actual";
-        }, new SequenceExecution<>(ConditionSupport.bind(Conditions.<String>condition("not ready", value -> ConditionResult.unsatisfied("not yet"))))).waitFor();
+        }, new SequenceExecution<>(bind(Conditions.<String>condition("not ready", value -> ConditionResult.unsatisfied("not yet"))))).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(Attempt.Operation.WAITING, failure.step().attempt());
@@ -386,7 +388,7 @@ class WaitEngineTest {
         };
         var outcome = new WaitEngine<String>(config(5, 20, persistence).withTime(clock,
                 nanos -> parkCalls[0]++), () -> { sourceCalls[0]++; return "actual"; },
-                new SequenceExecution<>(ConditionSupport.bind(Conditions.<String>condition("ready", actual -> {
+                new SequenceExecution<>(bind(Conditions.<String>condition("ready", actual -> {
                     evaluated[0] = true;
                     return persistence == 0 ? ConditionResult.unsatisfied("not yet") : ConditionResult.satisfied();
                 }))), 0).waitFor();
@@ -585,7 +587,7 @@ class WaitEngineTest {
             Callable<S> source,
             CheckedFunction<S, AttemptResult<R>> condition) {
         return new WaitEngine<S>(config.withTime(time, parker), source,
-                new SequenceExecution<>(ConditionSupport.bind(ConditionSupport.condition("test condition", null, condition)))).waitFor();
+                new SequenceExecution<>(bind(ConditionSupport.condition("test condition", null, condition)))).waitFor();
     }
 
     private static long completed(ExecutionStep<?> attempt) {

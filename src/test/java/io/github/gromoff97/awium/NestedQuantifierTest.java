@@ -22,6 +22,18 @@ import static io.github.gromoff97.awium.Conditions.*;
 import static java.time.Duration.ofNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static io.github.gromoff97.awium.MapConditions.allEntries;
+import static io.github.gromoff97.awium.MapConditions.allKeys;
+import static io.github.gromoff97.awium.MapConditions.allValues;
+import static io.github.gromoff97.awium.MapConditions.anyKey;
+import static io.github.gromoff97.awium.MapConditions.anyValue;
+import static io.github.gromoff97.awium.MapConditions.hasEntry;
+import static io.github.gromoff97.awium.MapConditions.hasNoEntry;
+import static io.github.gromoff97.awium.MapConditions.noKey;
+import static io.github.gromoff97.awium.MapConditions.noValue;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
 
 class NestedQuantifierTest {
 
@@ -62,18 +74,18 @@ class NestedQuantifierTest {
         values.put(Optional.of(ACTIVE), List.of(ACTIVE));
 
         LinkedHashMap<Optional<User>, List<User>> checkedKeys = await(() -> values)
-                .until(MapConditions.allKeys(OptionalConditions.present).because("keys are available"));
+                .until(allKeys(OptionalConditions.present).because("keys are available"));
         LinkedHashMap<Optional<User>, List<User>> checkedValues = tryAwait(() -> values)
-                .until(MapConditions.allValues(singleElement).because("one user per key")).orThrow();
+                .until(allValues(singleElement).because("one user per key")).orThrow();
         assertSame(values, checkedKeys);
         assertSame(values, checkedValues);
-        assertSame(values, await(() -> values).until(MapConditions.anyKey(OptionalConditions.present)));
-        assertSame(values, await(() -> values).until(MapConditions.anyValue(singleElement)));
-        assertSame(values, await(() -> values).until(MapConditions.noKey(OptionalConditions.absent)));
-        assertSame(values, await(() -> values).until(MapConditions.noValue(firstElement(instanceOf(String.class)))));
+        assertSame(values, await(() -> values).until(anyKey(OptionalConditions.present)));
+        assertSame(values, await(() -> values).until(anyValue(singleElement)));
+        assertSame(values, await(() -> values).until(noKey(OptionalConditions.absent)));
+        assertSame(values, await(() -> values).until(noValue(firstElement(instanceOf(String.class)))));
 
         var indexed = Map.of("group", Map.of("user", ACTIVE));
-        assertSame(indexed, await(() -> indexed).until(MapConditions.allValues(MapConditions.valueFor("user"))));
+        assertSame(indexed, await(() -> indexed).until(allValues(valueFor("user"))));
     }
 
     @Test
@@ -108,20 +120,20 @@ class NestedQuantifierTest {
         var value = matches(User::active);
         var entry = matches((Map.Entry<String, User> actual) -> actual.getValue().active());
 
-        LinkedHashMap<String, User> observed = await(() -> source).until(MapConditions.allValues(value));
+        LinkedHashMap<String, User> observed = await(() -> source).until(allValues(value));
         assertSame(source, observed);
-        assertSame(source, await(() -> source).until(MapConditions.anyValue(value)));
-        assertSame(source, await(() -> source).until(MapConditions.noValue(equalTo(PENDING))));
-        assertSame(source, await(() -> source).until(MapConditions.allKeys(equalTo("user"))));
-        assertSame(source, await(() -> source).until(MapConditions.anyKey(instanceOf(String.class))));
-        assertSame(source, await(() -> source).until(MapConditions.noKey(key)));
-        assertSame(source, await(() -> source).until(MapConditions.allEntries(entry)));
-        assertSame(source, await(() -> source).until(MapConditions.hasEntry(equalTo(Map.entry("user", ACTIVE)))));
-        assertSame(source, await(() -> source).until(MapConditions.hasNoEntry(instanceOf(String.class))));
+        assertSame(source, await(() -> source).until(anyValue(value)));
+        assertSame(source, await(() -> source).until(noValue(equalTo(PENDING))));
+        assertSame(source, await(() -> source).until(allKeys(equalTo("user"))));
+        assertSame(source, await(() -> source).until(anyKey(instanceOf(String.class))));
+        assertSame(source, await(() -> source).until(noKey(key)));
+        assertSame(source, await(() -> source).until(allEntries(entry)));
+        assertSame(source, await(() -> source).until(hasEntry(equalTo(Map.entry("user", ACTIVE)))));
+        assertSame(source, await(() -> source).until(hasNoEntry(instanceOf(String.class))));
 
         Map<String, Number> numbers = Map.of("count", 1);
-        assertSame(numbers, await(() -> numbers).until(MapConditions.allEntries(equalTo(Map.entry("count", 1)))));
-        assertSame(numbers, await(() -> numbers).until(MapConditions.allValues(equalTo(1))));
+        assertSame(numbers, await(() -> numbers).until(allEntries(equalTo(Map.entry("count", 1)))));
+        assertSame(numbers, await(() -> numbers).until(allValues(equalTo(1))));
     }
 
     @Test
@@ -153,16 +165,16 @@ class NestedQuantifierTest {
         var expectedEntry = equalTo(Map.entry("user", ACTIVE));
 
         assertMapChecks(ready, pending, List.of(
-                MapConditions.allKeys(key), MapConditions.allKeys(equalTo("user")), MapConditions.allKeys(instanceOf(String.class)),
-                MapConditions.anyKey(key), MapConditions.anyKey(equalTo("user")), MapConditions.anyKey(instanceOf(String.class)),
-                MapConditions.allValues(value), MapConditions.allValues(equalTo(ACTIVE)), MapConditions.allValues(instanceOf(User.class)),
-                MapConditions.anyValue(value), MapConditions.anyValue(equalTo(ACTIVE)), MapConditions.anyValue(instanceOf(User.class)),
-                MapConditions.allEntries(entry), MapConditions.allEntries(expectedEntry), MapConditions.allEntries(instanceOf(UserEntry.class)),
-                MapConditions.hasEntry(entry), MapConditions.hasEntry(expectedEntry), MapConditions.hasEntry(instanceOf(UserEntry.class))));
+                allKeys(key), allKeys(equalTo("user")), allKeys(instanceOf(String.class)),
+                anyKey(key), anyKey(equalTo("user")), anyKey(instanceOf(String.class)),
+                allValues(value), allValues(equalTo(ACTIVE)), allValues(instanceOf(User.class)),
+                anyValue(value), anyValue(equalTo(ACTIVE)), anyValue(instanceOf(User.class)),
+                allEntries(entry), allEntries(expectedEntry), allEntries(instanceOf(UserEntry.class)),
+                hasEntry(entry), hasEntry(expectedEntry), hasEntry(instanceOf(UserEntry.class))));
         assertMapChecks(pending, ready, List.of(
-                MapConditions.noKey(key), MapConditions.noKey(equalTo("user")), MapConditions.noKey(instanceOf(String.class)),
-                MapConditions.noValue(value), MapConditions.noValue(equalTo(ACTIVE)), MapConditions.noValue(instanceOf(User.class)),
-                MapConditions.hasNoEntry(entry), MapConditions.hasNoEntry(expectedEntry), MapConditions.hasNoEntry(instanceOf(UserEntry.class))));
+                noKey(key), noKey(equalTo("user")), noKey(instanceOf(String.class)),
+                noValue(value), noValue(equalTo(ACTIVE)), noValue(instanceOf(User.class)),
+                hasNoEntry(entry), hasNoEntry(expectedEntry), hasNoEntry(instanceOf(UserEntry.class))));
     }
 
     private static void assertMapChecks(Map<String, User> successful, Map<String, User> unsuccessful,
@@ -251,7 +263,7 @@ class NestedQuantifierTest {
         assertThat(failure.message()).contains("pending state");
 
         Map<String, Object> missing = Map.of();
-        var nested = MapConditions.valueFor("user", instanceOf(User.class));
+        var nested = valueFor("user", instanceOf(User.class));
         var missingResult = tryAwait(() -> List.of(missing)).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1))
                 .until(any(nested));
         assertThat(failure(missingResult).message()).contains("Key: \"user\"");
@@ -268,13 +280,13 @@ class NestedQuantifierTest {
         }
         int[] calls = {0};
         try {
-            var check = matches((User user) -> { calls[0]++; Thread.currentThread().interrupt(); return false; });
+            var check = matches((User user) -> { calls[0]++; currentThread().interrupt(); return false; });
             var result = tryAwait(() -> List.of(ACTIVE, PENDING)).until(any(check));
             assertEquals(AwaitFailure.Reason.INTERRUPTED, failure(result).reason());
             assertEquals(1, calls[0]);
-            assertTrue(Thread.currentThread().isInterrupted());
+            assertTrue(currentThread().isInterrupted());
         } finally {
-            Thread.interrupted();
+            interrupted();
         }
     }
 }

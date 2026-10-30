@@ -26,6 +26,8 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
 
 class AssertionAdapterTest {
 
@@ -35,7 +37,7 @@ class AssertionAdapterTest {
         for (boolean interrupt : List.of(false, true)) {
             var cause = new AssertionError("payment is not ready");
             var check = asserted((String value) -> {
-                if (interrupt) Thread.currentThread().interrupt();
+                if (interrupt) currentThread().interrupt();
                 throw cause;
             });
             var time = new FakeTime(0);
@@ -43,16 +45,16 @@ class AssertionAdapterTest {
             var reason = interrupt ? INTERRUPTED : TIMEOUT;
             try {
                 var failure = failure(diagnostic(waiting).until(check));
-                assertEquals(interrupt, Thread.interrupted());
+                assertEquals(interrupt, interrupted());
                 assertEquals(reason, failure.reason());
                 assertSame(cause, failure.cause());
 
                 var thrown = assertFailure(reason, () -> waiting.until(check));
-                assertEquals(interrupt, Thread.interrupted());
+                assertEquals(interrupt, interrupted());
                 assertSame(cause, thrown.getCause());
                 assertEquals(failure.message(), thrown.getMessage());
             } finally {
-                Thread.interrupted();
+                interrupted();
             }
         }
     }

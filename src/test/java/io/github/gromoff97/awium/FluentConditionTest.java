@@ -1,12 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.ConditionResult;
-import io.github.gromoff97.awium.Await.CollectionViewSource;
-import io.github.gromoff97.awium.Await.MapViewSource;
 import io.github.gromoff97.awium.result.AwaitResult;
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +10,9 @@ import java.util.concurrent.Callable;
 import java.util.function.BiPredicate;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.CollectionViewSource;
+import static io.github.gromoff97.awium.Await.MapViewSource;
+import static java.util.AbstractMap.SimpleImmutableEntry;
 import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
@@ -25,6 +23,8 @@ import static io.github.gromoff97.awium.MapConditions.*;
 import static io.github.gromoff97.awium.OptionalConditions.*;
 import static java.util.function.Predicate.not;
 import static org.junit.jupiter.api.Assertions.*;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static java.util.Comparator.comparingInt;
 
 class FluentConditionTest {
 
@@ -193,15 +193,15 @@ class FluentConditionTest {
     void customChecksKeepInferredTypesThroughComposition() {
         record Payment(String id) {}
         var actual = new Payment("receipt");
-        var check = condition("identity", ignored -> ConditionResult.satisfied());
+        var check = condition("identity", ignored -> satisfied());
 
-        var payment = await(() -> actual).usingTime(time, time).until(condition("inline", value -> ConditionResult.satisfied()));
-        var created = await(() -> actual).usingTime(time, time).until(conditionPerWait("factory", () -> ignored -> ConditionResult.satisfied()));
+        var payment = await(() -> actual).usingTime(time, time).until(condition("inline", value -> satisfied()));
+        var created = await(() -> actual).usingTime(time, time).until(conditionPerWait("factory", () -> ignored -> satisfied()));
         var selected = await(() -> List.of(actual)).usingTime(time, time).until(singleElement(check));
         var optional = await(() -> Optional.of(actual)).usingTime(time, time).until(hasValue(check));
         var mapped = await(() -> Map.of("key", actual)).usingTime(time, time).until(valueFor("key", check));
         var sequence = await(() -> actual).usingTime(time, time)
-                .until(captured(check, condition("second", ignored -> ConditionResult.satisfied())));
+                .until(captured(check, condition("second", ignored -> satisfied())));
         var diagnostic = tryAwait(() -> actual).usingTime(time, time).until(check);
 
         assertEquals(List.of("receipt", "receipt", "receipt", "receipt", "receipt", "receipt"),
@@ -237,7 +237,7 @@ class FluentConditionTest {
         var entry = new Receipt("key", 1);
         var actual = new ProbeContainers.EntryMap<String, Integer>(List.of(entry));
         var receipt = singleEntry(instanceOf(Receipt.class));
-        var ordered = sorted(Comparator.comparingInt(Number::intValue));
+        var ordered = sorted(comparingInt(Number::intValue));
         var numbers = new ArrayList<>(List.of(1, 2));
         var words = new ArrayList<>(List.of("a", "b"));
 

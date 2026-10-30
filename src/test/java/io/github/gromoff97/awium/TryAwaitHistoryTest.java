@@ -3,7 +3,6 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitResult;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,6 +29,11 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.Conditions.instanceOf;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.OptionalConditions.hasValue;
+import static java.util.Collections.nCopies;
 
 class TryAwaitHistoryTest {
 
@@ -38,11 +42,11 @@ class TryAwaitHistoryTest {
     @Test
     void capturedRetainsEveryObservationTransitionWithinAnUnsuccessfulStage() {
         var observations = List.of(
-                Collections.nCopies(4, 0),
-                Collections.nCopies(2, 10),
-                Collections.nCopies(6, 20),
-                Collections.nCopies(12, 30),
-                Collections.nCopies(6, 40)).stream().flatMap(List::stream).toList();
+                nCopies(4, 0),
+                nCopies(2, 10),
+                nCopies(6, 20),
+                nCopies(12, 30),
+                nCopies(6, 40)).stream().flatMap(List::stream).toList();
         var source = observations.iterator();
         var result = tryAwait(source::next).usingTime(time, time)
                 .every(ofNanos(1)).upTo(ofNanos(30))
@@ -163,7 +167,7 @@ class TryAwaitHistoryTest {
                 .until(CollectionConditions.singleElement);
         var map = tryAwait(() -> Map.of("user", "ready"))
                 .every(ofNanos(1)).upTo(ofNanos(10)).persisting(ofNanos(0)).usingTime(time, time);
-        var value = map.until(MapConditions.valueFor("user"));
+        var value = map.until(valueFor("user"));
         var entry = map.until(MapConditions.singleEntry);
 
         String selectedOptional = optional.orThrow();
@@ -186,7 +190,7 @@ class TryAwaitHistoryTest {
     void nestedReasonCopiesDoNotSplitRepeatedStructuralFailures() {
         var result = tryAwait(() -> List.<String>of()).usingTime(time, time)
                 .every(ofNanos(1)).upTo(ofNanos(300))
-                .until(CollectionConditions.singleElement(equalTo("ready")).because("one ready element"));
+                .until(singleElement(equalTo("ready")).because("one ready element"));
 
         assertEquals(1, attempts(result).size());
         assertEquals(300, result.conditions().getFirst().attempts().firstKey());
@@ -251,8 +255,8 @@ class TryAwaitHistoryTest {
         var emptyInner = List.of(List.<String>of());
         var ready = List.of(List.of("ready"));
         var observations = List.of(emptyOuter, emptyOuter, emptyInner, emptyInner, ready).iterator();
-        var check = CollectionConditions.singleElement(
-                CollectionConditions.singleElement(Conditions.instanceOf(String.class)));
+        var check = singleElement(
+                singleElement(instanceOf(String.class)));
         var result = tryAwait(observations::next).usingTime(time, time).every(ofNanos(1)).until(check);
 
         String selected = result.orThrow();
@@ -270,8 +274,8 @@ class TryAwaitHistoryTest {
                 Optional.of(List.<List<String>>of()), Optional.of(List.of(List.<String>of())),
                 Optional.of(List.of(List.of("ready")))).iterator();
         var result = tryAwait(observations::next).usingTime(time, time).every(ofNanos(1))
-                .until(OptionalConditions.hasValue(CollectionConditions.singleElement(
-                        CollectionConditions.singleElement(Conditions.instanceOf(String.class)))));
+                .until(hasValue(singleElement(
+                        singleElement(instanceOf(String.class)))));
 
         assertEquals("ready", result.orThrow());
         assertEquals(4, attempts(result).size());

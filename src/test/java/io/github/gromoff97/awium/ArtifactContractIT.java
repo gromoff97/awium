@@ -30,10 +30,14 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.tngtech.archunit.base.DescribedPredicate.describe;
+import static java.lang.ClassLoader.getPlatformClassLoader;
+import static java.lang.ModuleLayer.boot;
+import static java.lang.System.getProperty;
 
 class ArtifactContractIT {
 
-    static final Path JAR = Path.of(requireNonNull(System.getProperty("awium.test.jar"),
+    static final Path JAR = Path.of(requireNonNull(getProperty("awium.test.jar"),
             "awium.test.jar must be configured"));
 
     @Test
@@ -87,7 +91,7 @@ class ArtifactContractIT {
     void packagedJarExecutesConsumerCodeInAnIndependentClassLoader() throws Exception {
         var testClasses = consumer.ArtifactConsumer.class.getProtectionDomain().getCodeSource().getLocation();
         try (var loader = new URLClassLoader(new java.net.URL[]{testClasses, JAR.toUri().toURL()},
-                ClassLoader.getPlatformClassLoader())) {
+                getPlatformClassLoader())) {
             assertConsumerResult(loader);
         }
     }
@@ -95,9 +99,9 @@ class ArtifactContractIT {
     @Test
     void packagedJarExecutesAsANamedModule() throws Exception {
         var finder = ModuleFinder.of(JAR);
-        var configuration = ModuleLayer.boot().configuration().resolve(
+        var configuration = boot().configuration().resolve(
                 finder, ModuleFinder.of(), Set.of("io.github.gromoff97.awium"));
-        var layer = ModuleLayer.boot().defineModulesWithOneLoader(configuration, ClassLoader.getPlatformClassLoader());
+        var layer = boot().defineModulesWithOneLoader(configuration, getPlatformClassLoader());
         var moduleLoader = layer.findLoader("io.github.gromoff97.awium");
         assertEquals("io.github.gromoff97.awium", moduleLoader.loadClass(Await.class.getName()).getModule().getName());
         var testClasses = consumer.ArtifactConsumer.class.getProtectionDomain().getCodeSource().getLocation();
@@ -148,7 +152,7 @@ class ArtifactContractIT {
     }
 
     private static DescribedPredicate<JavaClass> inFamilies(Set<String> families) {
-        return DescribedPredicate.describe("belong to " + families, type -> families.contains(owner(type.getName())));
+        return describe("belong to " + families, type -> families.contains(owner(type.getName())));
     }
 
     private static String owner(String className) {

@@ -1,28 +1,75 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
-import io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
-import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.nio.CharBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Pattern;
+import org.junit.jupiter.api.DynamicContainer;
+import org.junit.jupiter.api.DynamicNode;
+import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.failure;
-import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.Conditions.atLeast;
+import static io.github.gromoff97.awium.Conditions.atMost;
+import static io.github.gromoff97.awium.Conditions.between;
 import static io.github.gromoff97.awium.Conditions.captured;
+import static io.github.gromoff97.awium.Conditions.greaterThan;
+import static io.github.gromoff97.awium.Conditions.lessThan;
+import static io.github.gromoff97.awium.Conditions.strictlyBetween;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.OptionalConditions.hasValue;
+import static io.github.gromoff97.awium.StringConditions.blank;
+import static io.github.gromoff97.awium.StringConditions.containsAll;
+import static io.github.gromoff97.awium.StringConditions.containsIgnoringCase;
+import static io.github.gromoff97.awium.StringConditions.doesNotContain;
+import static io.github.gromoff97.awium.StringConditions.doesNotContainAny;
+import static io.github.gromoff97.awium.StringConditions.doesNotEndWith;
+import static io.github.gromoff97.awium.StringConditions.doesNotMatchRegex;
+import static io.github.gromoff97.awium.StringConditions.doesNotStartWith;
+import static io.github.gromoff97.awium.StringConditions.empty;
+import static io.github.gromoff97.awium.StringConditions.endsWith;
+import static io.github.gromoff97.awium.StringConditions.equalToIgnoringCase;
+import static io.github.gromoff97.awium.StringConditions.hasLength;
+import static io.github.gromoff97.awium.StringConditions.hasLengthAtLeast;
+import static io.github.gromoff97.awium.StringConditions.hasLengthAtMost;
+import static io.github.gromoff97.awium.StringConditions.hasLengthBetween;
+import static io.github.gromoff97.awium.StringConditions.hasLengthGreaterThan;
+import static io.github.gromoff97.awium.StringConditions.hasLengthLessThan;
+import static io.github.gromoff97.awium.StringConditions.hasLengthNotEqualTo;
+import static io.github.gromoff97.awium.StringConditions.matchesRegex;
+import static io.github.gromoff97.awium.StringConditions.nonBlank;
+import static io.github.gromoff97.awium.StringConditions.nonEmpty;
+import static io.github.gromoff97.awium.StringConditions.notEqualToIgnoringCase;
+import static io.github.gromoff97.awium.StringConditions.startsWith;
+import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
+import static io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
+import static java.lang.Integer.compare;
 import static java.time.Duration.ofNanos;
+import static java.util.Arrays.asList;
+import static java.util.regex.Pattern.compile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.DynamicContainer.dynamicContainer;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
+import static org.junit.jupiter.api.Named.named;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 class ScalarConditionsTest {
 
@@ -33,14 +80,14 @@ class ScalarConditionsTest {
         record Limit(int number) {}
         record Measurement(int number) implements Comparable<Limit> {
             @Override
-            public int compareTo(Limit limit) { return Integer.compare(number, limit.number()); }
+            public int compareTo(Limit limit) { return compare(number, limit.number()); }
         }
         var measurement = new Measurement(10);
         var waiting = await(() -> measurement).usingTime(time, time);
-        var checks = List.of(Conditions.greaterThan(new Limit(5)),
-                Conditions.atLeast(new Limit(10)),
-                Conditions.lessThan(new Limit(15)),
-                Conditions.atMost(new Limit(10)));
+        var checks = List.of(greaterThan(new Limit(5)),
+                atLeast(new Limit(10)),
+                lessThan(new Limit(15)),
+                atMost(new Limit(10)));
 
         for (var check : checks) {
             var value = waiting.until(check);
@@ -51,10 +98,10 @@ class ScalarConditionsTest {
             assertSame(measurement, captured.orThrow());
             assertEquals(10, values.getLast().number());
         }
-        var selected = await(() -> Optional.of(measurement)).until(OptionalConditions.hasValue(
-                Conditions.atLeast(new Limit(5))));
-        var mapped = await(() -> Map.of("measurement", measurement)).until(MapConditions.valueFor("measurement",
-                Conditions.lessThan(new Limit(15))));
+        var selected = await(() -> Optional.of(measurement)).until(hasValue(
+                atLeast(new Limit(5))));
+        var mapped = await(() -> Map.of("measurement", measurement)).until(valueFor("measurement",
+                lessThan(new Limit(15))));
         assertSame(measurement, selected);
         assertEquals(10, selected.number());
         assertSame(measurement, mapped);
@@ -68,19 +115,19 @@ class ScalarConditionsTest {
             Score(int number) { this.number = number; }
             int number() { return number; }
             @Override
-            public int compareTo(Score other) { return Integer.compare(number, other.number); }
+            public int compareTo(Score other) { return compare(number, other.number); }
         }
         class Bound extends Score {
             Bound(int number) { super(number); }
         }
         var score = new Score(10);
         var waiting = await(() -> score).usingTime(time, time);
-        var checks = List.of(Conditions.greaterThan(new Bound(5)),
-                Conditions.atLeast(new Bound(10)),
-                Conditions.lessThan(new Bound(15)),
-                Conditions.atMost(new Bound(10)),
-                Conditions.between(new Bound(5), new Bound(15)),
-                Conditions.strictlyBetween(new Bound(5), new Bound(15)));
+        var checks = List.of(greaterThan(new Bound(5)),
+                atLeast(new Bound(10)),
+                lessThan(new Bound(15)),
+                atMost(new Bound(10)),
+                between(new Bound(5), new Bound(15)),
+                strictlyBetween(new Bound(5), new Bound(15)));
 
         for (var check : checks) {
             var value = waiting.until(check);
@@ -98,54 +145,49 @@ class ScalarConditionsTest {
     void comparableChecksAcceptObjectsComparableWithAnotherBoundType() {
         record Threshold(int number) implements Comparable<Threshold> {
             @Override
-            public int compareTo(Threshold other) { return Integer.compare(number, other.number); }
+            public int compareTo(Threshold other) { return compare(number, other.number); }
         }
         record Reading(int number) implements Comparable<Threshold> {
             @Override
-            public int compareTo(Threshold threshold) { return Integer.compare(number, threshold.number()); }
+            public int compareTo(Threshold threshold) { return compare(number, threshold.number()); }
         }
         var reading = new Reading(10);
-        var checks = List.of(Conditions.greaterThan(new Threshold(5)),
-                Conditions.atLeast(new Threshold(10)),
-                Conditions.lessThan(new Threshold(15)),
-                Conditions.atMost(new Threshold(10)),
-                Conditions.between(new Threshold(5), new Threshold(15)),
-                Conditions.strictlyBetween(new Threshold(5), new Threshold(15)));
+        var checks = List.of(greaterThan(new Threshold(5)),
+                atLeast(new Threshold(10)),
+                lessThan(new Threshold(15)),
+                atMost(new Threshold(10)),
+                between(new Threshold(5), new Threshold(15)),
+                strictlyBetween(new Threshold(5), new Threshold(15)));
 
         for (var check : checks) {
             var value = await(() -> reading).until(check);
             assertSame(reading, value);
             assertEquals(10, value.number());
         }
-        var selected = await(() -> List.of(reading)).until(CollectionConditions.singleElement(
-                Conditions.greaterThan(new Threshold(5))));
+        var selected = await(() -> List.of(reading)).until(singleElement(
+                greaterThan(new Threshold(5))));
         assertSame(reading, selected);
         assertEquals(10, selected.number());
 
-        PreservingCondition<Integer> positive = Conditions.greaterThan(0);
+        PreservingCondition<Integer> positive = greaterThan(0);
         assertEquals(1, await(() -> 1).until(positive));
     }
 
-    @Test
-    void textEmptinessChecksDoNotRenderTheObservedCharacters() {
-        record Text(int length) implements CharSequence {
-            @Override public char charAt(int index) { throw new AssertionError("characters are not needed"); }
-            @Override public CharSequence subSequence(int start, int end) { throw new AssertionError("slice is not needed"); }
-            @Override public String toString() { throw new AssertionError("rendering is not needed for emptiness"); }
-        }
-        for (int length : List.of(0, 3)) {
-            var text = new Text(length);
-            var time = new FakeTime(0);
-            var waiting = await(() -> text).usingTime(time, time)
-                    .every(ofNanos(1)).upTo(ofNanos(2));
-            var matching = length == 0 ? StringConditions.empty : StringConditions.nonEmpty;
-            var mismatching = length == 0 ? StringConditions.nonEmpty : StringConditions.empty;
+    @ParameterizedTest
+    @MethodSource("matchingTextLengths")
+    void textEmptinessChecksDoNotRenderTheObservedCharacters(int length, PreservingCondition<CharSequence> check) {
+        var text = new Text(length);
+        var waiting = await(() -> text).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+        assertSame(text, waiting.until(check));
+        assertSame(text, await(() -> Optional.of(text)).usingTime(time, time).until(hasValue(check)));
+    }
 
-            assertSame(text, waiting.until(matching));
-            assertSame(text, await(() -> Optional.of(text)).usingTime(time, time).until(OptionalConditions.hasValue(matching)));
-            var failure = failure(diagnostic(waiting).until(mismatching));
-            assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
-        }
+    @ParameterizedTest
+    @MethodSource("mismatchingTextLengths")
+    void textEmptinessMismatchesRemainTimeoutsWhenRenderingFails(int length, PreservingCondition<CharSequence> check) {
+        var text = new Text(length);
+        var waiting = await(() -> text).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+        assertEquals(TIMEOUT, failure(diagnostic(waiting).until(check)).reason());
     }
 
     @Test
@@ -154,16 +196,16 @@ class ScalarConditionsTest {
         String immutable = text.toString();
         var waiting = await(() -> text).usingTime(time, time);
         var immutableWaiting = await(() -> immutable).usingTime(time, time);
-        var checks = List.of(StringConditions.nonEmpty, StringConditions.nonBlank,
-                StringConditions.containsAll(List.of("Ready", "42")), StringConditions.doesNotContain("failed"),
-                StringConditions.containsIgnoringCase("READY"), StringConditions.startsWith("Ready"),
-                StringConditions.doesNotStartWith("failed"), StringConditions.endsWith("42"),
-                StringConditions.doesNotEndWith("failed"), StringConditions.matchesRegex("Ready \\d+"),
-                StringConditions.doesNotMatchRegex("failed"), StringConditions.equalToIgnoringCase("ready 42"),
-                StringConditions.notEqualToIgnoringCase("failed"), StringConditions.hasLength(8),
-                StringConditions.hasLengthNotEqualTo(0), StringConditions.hasLengthGreaterThan(0),
-                StringConditions.hasLengthAtLeast(8), StringConditions.hasLengthLessThan(9),
-                StringConditions.hasLengthAtMost(8), StringConditions.hasLengthBetween(1, 10));
+        var checks = List.of(nonEmpty, nonBlank,
+                containsAll(List.of("Ready", "42")), doesNotContain("failed"),
+                containsIgnoringCase("READY"), startsWith("Ready"),
+                doesNotStartWith("failed"), endsWith("42"),
+                doesNotEndWith("failed"), matchesRegex("Ready \\d+"),
+                doesNotMatchRegex("failed"), equalToIgnoringCase("ready 42"),
+                notEqualToIgnoringCase("failed"), hasLength(8),
+                hasLengthNotEqualTo(0), hasLengthGreaterThan(0),
+                hasLengthAtLeast(8), hasLengthLessThan(9),
+                hasLengthAtMost(8), hasLengthBetween(1, 10));
 
         for (var check : checks) {
             var retained = immutableWaiting.until(check);
@@ -182,14 +224,14 @@ class ScalarConditionsTest {
             }
         }
 
-        var values = waiting.until(captured(StringConditions.nonEmpty,
-                StringConditions.equalToIgnoringCase("ready 42")));
+        var values = waiting.until(captured(nonEmpty,
+                equalToIgnoringCase("ready 42")));
         assertSame(text, values.getFirst());
         assertEquals(text.capacity(), values.getLast().capacity());
         text.setLength(0);
-        assertSame(text, waiting.until(StringConditions.empty));
+        assertSame(text, waiting.until(empty));
         text.append(" \t");
-        assertSame(text, waiting.until(StringConditions.blank));
+        assertSame(text, waiting.until(blank));
     }
 
     @Test
@@ -199,11 +241,11 @@ class ScalarConditionsTest {
         buffer.position(1);
 
         var optional = await(() -> Optional.of(text)).until(
-                OptionalConditions.hasValue(StringConditions.startsWith("rea")));
+                hasValue(startsWith("rea")));
         var selected = await(() -> List.of(buffer)).until(
-                CollectionConditions.singleElement(StringConditions.matchesRegex("ready")));
+                singleElement(matchesRegex("ready")));
         var mapped = await(() -> Map.of("text", text)).until(
-                MapConditions.valueFor("text", StringConditions.hasLength(5)));
+                valueFor("text", hasLength(5)));
 
         assertSame(text, optional);
         assertSame(buffer, selected);
@@ -213,101 +255,117 @@ class ScalarConditionsTest {
         assertEquals(text.capacity(), mapped.capacity());
 
         text.replace(0, text.length(), "finished");
-        assertSame(text, await(() -> text).until(StringConditions.endsWith("ed")));
+        assertSame(text, await(() -> text).until(endsWith("ed")));
     }
 
-    @Test
-    void comparableConditionsCoverInclusiveAndExclusiveRelations() {
-        var waiting = await(() -> 5).usingTime(time, time);
-        assertEquals(5, waiting.until(Conditions.greaterThan(4)));
-        assertEquals(5, waiting.until(Conditions.atLeast(5)));
-        assertEquals(5, waiting.until(Conditions.lessThan(6)));
-        assertEquals(5, waiting.until(Conditions.atMost(5)));
-        assertEquals(5, waiting.until(Conditions.between(5, 6)));
-        assertEquals(5, waiting.until(Conditions.strictlyBetween(4, 6)));
+    @ParameterizedTest
+    @MethodSource("comparableChecks")
+    void comparableRelationsPreserveTheValue(PreservingCondition<Integer> check) {
+        assertEquals(5, await(() -> 5).usingTime(time, time).until(check));
     }
 
-    @Test
-    void comparableConditionsCoverBoundariesAndInvalidRanges() {
-        assertPreserving(Conditions.greaterThan(5), 6, 5);
-        assertPreserving(Conditions.atLeast(5), 5, 4);
-        assertPreserving(Conditions.lessThan(5), 4, 5);
-        assertPreserving(Conditions.atMost(5), 5, 6);
-        assertStatus(Conditions.between(5, 7), 5, Satisfied.class);
-        assertStatus(Conditions.between(5, 7), 7, Satisfied.class);
-        assertStatus(Conditions.between(5, 7), 4, Unsatisfied.class);
-        assertStatus(Conditions.between(5, 7), 8, Unsatisfied.class);
-        assertStatus(Conditions.strictlyBetween(5, 7), 6, Satisfied.class);
-        assertStatus(Conditions.strictlyBetween(5, 7), 5, Unsatisfied.class);
-        assertStatus(Conditions.strictlyBetween(5, 7), 7, Unsatisfied.class);
-        assertStatus(Conditions.between(5, 5), 5, Satisfied.class);
-        assertStatus(Conditions.strictlyBetween(5, 5), 5, Unsatisfied.class);
-        assertStatus(Conditions.greaterThan(5), null, Unsatisfied.class);
-
-        assertThrows(NullPointerException.class, () -> Conditions.greaterThan(null));
-        assertThrows(NullPointerException.class, () -> Conditions.between(null, 1));
-        assertThrows(NullPointerException.class, () -> Conditions.between(1, null));
-        assertThrows(IllegalArgumentException.class, () -> Conditions.between(2, 1));
-        assertThrows(IllegalArgumentException.class, () -> Conditions.strictlyBetween(2, 1));
+    @TestFactory
+    List<DynamicNode> comparableBoundariesAndInvalidRanges() {
+        return List.of(
+                preserving(greaterThan(5), 6, 5),
+                preserving(atLeast(5), 5, 4),
+                preserving(lessThan(5), 4, 5),
+                preserving(atMost(5), 5, 6),
+                status(between(5, 7), 5, Satisfied.class),
+                status(between(5, 7), 7, Satisfied.class),
+                status(between(5, 7), 4, Unsatisfied.class),
+                status(between(5, 7), 8, Unsatisfied.class),
+                status(strictlyBetween(5, 7), 6, Satisfied.class),
+                status(strictlyBetween(5, 7), 5, Unsatisfied.class),
+                status(strictlyBetween(5, 7), 7, Unsatisfied.class),
+                status(between(5, 5), 5, Satisfied.class),
+                status(strictlyBetween(5, 5), 5, Unsatisfied.class),
+                status(greaterThan(5), null, Unsatisfied.class),
+                dynamicTest("reject null single bound", () -> assertThrows(NullPointerException.class, () -> greaterThan(null))),
+                dynamicTest("reject null lower bound", () -> assertThrows(NullPointerException.class, () -> between(null, 1))),
+                dynamicTest("reject null upper bound", () -> assertThrows(NullPointerException.class, () -> between(1, null))),
+                dynamicTest("reject reversed inclusive range", () -> assertThrows(IllegalArgumentException.class, () -> between(2, 1))),
+                dynamicTest("reject reversed exclusive range", () -> assertThrows(IllegalArgumentException.class, () -> strictlyBetween(2, 1))));
     }
 
-    @Test
-    void stringConditionsCoverBothTruthValuesAndBoundaries() {
-        assertPreserving(StringConditions.empty, "", "x");
-        assertPreserving(StringConditions.nonEmpty, "x", "");
-        assertPreserving(StringConditions.blank, " \n", "x");
-        assertPreserving(StringConditions.nonBlank, "x", " \n");
-        assertPreserving(StringConditions.containsAll(List.of("a", "b")), "abc", "ac");
-        assertPreserving(StringConditions.doesNotContainAny(List.of("x", "y")), "abc", "ayc");
-        assertPreserving(StringConditions.containsIgnoringCase("READY"), "ready", "failed");
-        assertStatus(StringConditions.containsIgnoringCase("ς"), "Σ", Satisfied.class);
-        assertPreserving(StringConditions.containsIgnoringCase("a+b[.]"), "xA+B[.]y", "aaabxy");
-        assertStatus(StringConditions.containsIgnoringCase("\uD800"), "\uD800\uDC00", Unsatisfied.class);
-        assertStatus(StringConditions.containsIgnoringCase("\uD800"), "\uD800", Satisfied.class);
-        assertPreserving(StringConditions.startsWith("re"), "ready", "already");
-        assertPreserving(StringConditions.doesNotStartWith("fail"), "ready", "failed");
-        assertPreserving(StringConditions.endsWith("dy"), "ready", "read");
-        assertPreserving(StringConditions.doesNotEndWith("ed"), "ready", "failed");
-        assertPreserving(StringConditions.matchesRegex(Pattern.compile("r.*y")), "ready", "failed");
-        assertPreserving(StringConditions.doesNotMatchRegex("f.*d"), "ready", "failed");
-        assertPreserving(StringConditions.equalToIgnoringCase("READY"), "ready", "failed");
-        assertPreserving(StringConditions.notEqualToIgnoringCase("FAILED"), "ready", "failed");
-        assertPreserving(StringConditions.hasLength(5), "ready", "read");
-        assertPreserving(StringConditions.hasLengthNotEqualTo(4), "ready", "read");
-        assertPreserving(StringConditions.hasLengthGreaterThan(4), "ready", "read");
-        assertPreserving(StringConditions.hasLengthAtLeast(5), "ready", "read");
-        assertPreserving(StringConditions.hasLengthLessThan(6), "ready", "failed");
-        assertPreserving(StringConditions.hasLengthAtMost(5), "ready", "failed");
-        assertStatus(StringConditions.hasLength(0), "", Satisfied.class);
-        assertStatus(StringConditions.hasLength(0), null, Unsatisfied.class);
-        assertStatus(StringConditions.hasLengthAtMost(0), "", Satisfied.class);
-        assertStatus(StringConditions.hasLengthBetween(4, 6), "read", Satisfied.class);
-        assertStatus(StringConditions.hasLengthBetween(4, 6), "failed", Satisfied.class);
-        assertStatus(StringConditions.hasLengthBetween(4, 6), "hey", Unsatisfied.class);
-        assertStatus(StringConditions.hasLengthBetween(4, 6), "failure", Unsatisfied.class);
-        assertStatus(StringConditions.nonBlank, null, Unsatisfied.class);
-        assertEquals("string length is 5", StringConditions.hasLength(5).description());
-        assertEquals("string length was 4",
-                mismatch(evaluate(StringConditions.hasLength(5), "read")));
-
-        assertEquals("length must be non-negative",
-                assertThrows(IllegalArgumentException.class, () -> StringConditions.hasLength(-1)).getMessage());
-        assertEquals("length range must be non-negative and ordered",
-                assertThrows(IllegalArgumentException.class,
-                        () -> StringConditions.hasLengthBetween(-1, 1)).getMessage());
-        assertThrows(IllegalArgumentException.class, () -> StringConditions.hasLengthBetween(2, 1));
-        assertThrows(NullPointerException.class, () -> StringConditions.containsAll(null));
-        assertThrows(NullPointerException.class, () -> StringConditions.containsAll(java.util.Arrays.asList("ready", null)));
+    @TestFactory
+    List<DynamicNode> textTruthValuesAndBoundaries() {
+        return List.of(
+                preserving(empty, "", "x"),
+                preserving(nonEmpty, "x", ""),
+                preserving(blank, " \n", "x"),
+                preserving(nonBlank, "x", " \n"),
+                preserving(containsAll(List.of("a", "b")), "abc", "ac"),
+                preserving(doesNotContainAny(List.of("x", "y")), "abc", "ayc"),
+                preserving(containsIgnoringCase("READY"), "ready", "failed"),
+                status(containsIgnoringCase("ς"), "Σ", Satisfied.class),
+                preserving(containsIgnoringCase("a+b[.]"), "xA+B[.]y", "aaabxy"),
+                status(containsIgnoringCase("\uD800"), "\uD800\uDC00", Unsatisfied.class),
+                status(containsIgnoringCase("\uD800"), "\uD800", Satisfied.class),
+                preserving(startsWith("re"), "ready", "already"),
+                preserving(doesNotStartWith("fail"), "ready", "failed"),
+                preserving(endsWith("dy"), "ready", "read"),
+                preserving(doesNotEndWith("ed"), "ready", "failed"),
+                preserving(matchesRegex(compile("r.*y")), "ready", "failed"),
+                preserving(doesNotMatchRegex("f.*d"), "ready", "failed"),
+                preserving(equalToIgnoringCase("READY"), "ready", "failed"),
+                preserving(notEqualToIgnoringCase("FAILED"), "ready", "failed"),
+                preserving(hasLength(5), "ready", "read"),
+                preserving(hasLengthNotEqualTo(4), "ready", "read"),
+                preserving(hasLengthGreaterThan(4), "ready", "read"),
+                preserving(hasLengthAtLeast(5), "ready", "read"),
+                preserving(hasLengthLessThan(6), "ready", "failed"),
+                preserving(hasLengthAtMost(5), "ready", "failed"),
+                status(hasLength(0), "", Satisfied.class),
+                status(hasLength(0), null, Unsatisfied.class),
+                status(hasLengthAtMost(0), "", Satisfied.class),
+                status(hasLengthBetween(4, 6), "read", Satisfied.class),
+                status(hasLengthBetween(4, 6), "failed", Satisfied.class),
+                status(hasLengthBetween(4, 6), "hey", Unsatisfied.class),
+                status(hasLengthBetween(4, 6), "failure", Unsatisfied.class),
+                status(nonBlank, null, Unsatisfied.class),
+                dynamicTest("length description identifies its bound",
+                        () -> assertEquals("string length is 5", hasLength(5).description())),
+                dynamicTest("length mismatch identifies the actual length",
+                        () -> assertEquals("string length was 4", mismatch(evaluate(hasLength(5), "read")))),
+                dynamicTest("reject negative length", () -> assertEquals("length must be non-negative",
+                        assertThrows(IllegalArgumentException.class, () -> hasLength(-1)).getMessage())),
+                dynamicTest("reject negative length range", () -> assertEquals("length range must be non-negative and ordered",
+                        assertThrows(IllegalArgumentException.class, () -> hasLengthBetween(-1, 1)).getMessage())),
+                dynamicTest("reject reversed length range", () -> assertThrows(IllegalArgumentException.class, () -> hasLengthBetween(2, 1))),
+                dynamicTest("reject null expected collection", () -> assertThrows(NullPointerException.class, () -> containsAll(null))),
+                dynamicTest("reject null expected text", () -> assertThrows(NullPointerException.class, () -> containsAll(asList("ready", null)))));
     }
 
-    private static <S> void assertPreserving(PreservingCondition<? super S> condition, S matching, S mismatching) {
-        assertSame(matching, result(evaluate(condition, matching)));
-        assertStatus(condition, mismatching, Unsatisfied.class);
+    private static List<Arguments> matchingTextLengths() {
+        return List.of(arguments(0, named("empty", empty)), arguments(3, named("nonEmpty", nonEmpty)));
     }
 
-    private static <S> void assertStatus(PreservingCondition<? super S> condition, S actual, Class<?> expected) {
-        assertEquals(expected, evaluate(condition, actual).getClass());
+    private static List<Arguments> mismatchingTextLengths() {
+        return List.of(arguments(0, named("nonEmpty", nonEmpty)), arguments(3, named("empty", empty)));
     }
 
+    private record Text(int length) implements CharSequence {
+        @Override public char charAt(int index) { throw new AssertionError("characters are not needed"); }
+        @Override public CharSequence subSequence(int start, int end) { throw new AssertionError("slice is not needed"); }
+        @Override public String toString() { throw new AssertionError("rendering is not needed for emptiness"); }
+    }
 
+    private static List<Named<PreservingCondition<Integer>>> comparableChecks() {
+        return List.of(named("greaterThan(4)", greaterThan(4)), named("atLeast(5)", atLeast(5)),
+                named("lessThan(6)", lessThan(6)), named("atMost(5)", atMost(5)),
+                named("between(5, 6)", between(5, 6)), named("strictlyBetween(4, 6)", strictlyBetween(4, 6)));
+    }
+
+    private static <VALUE> DynamicContainer preserving(PreservingCondition<? super VALUE> condition, VALUE matching, VALUE mismatching) {
+        var label = condition.description() + " " + condition.references();
+        return dynamicContainer(label, List.of(
+                dynamicTest(label + " / preserves: " + matching, () -> assertSame(matching, result(evaluate(condition, matching)))),
+                dynamicTest(label + " / rejects: " + mismatching, () -> assertInstanceOf(Unsatisfied.class, evaluate(condition, mismatching)))));
+    }
+
+    private static <VALUE> DynamicTest status(PreservingCondition<? super VALUE> condition, VALUE actual, Class<?> expected) {
+        return dynamicTest(condition.description() + " " + condition.references() + " / actual: " + actual + " / " + expected.getSimpleName(),
+                () -> assertEquals(expected, evaluate(condition, actual).getClass()));
+    }
 }

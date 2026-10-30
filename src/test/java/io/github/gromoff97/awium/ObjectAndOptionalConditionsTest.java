@@ -1,10 +1,10 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.internal.AttemptResult;
-import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;

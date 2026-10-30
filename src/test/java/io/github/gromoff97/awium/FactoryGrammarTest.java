@@ -1,7 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.function.CheckedBiPredicate;
 import io.github.gromoff97.awium.function.CheckedPredicate;
 import java.util.Collection;
@@ -13,6 +11,8 @@ import java.util.function.LongSupplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
+import static io.github.gromoff97.awium.Condition.SelectedCondition;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Conditions.*;
@@ -22,6 +22,16 @@ import static java.time.Duration.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static io.github.gromoff97.awium.CollectionConditions.all;
+import static io.github.gromoff97.awium.CollectionConditions.any;
+import static io.github.gromoff97.awium.CollectionConditions.none;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.MapConditions.allEntries;
+import static io.github.gromoff97.awium.MapConditions.hasEntry;
+import static io.github.gromoff97.awium.MapConditions.hasNoEntry;
+import static io.github.gromoff97.awium.MapConditions.singleEntry;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.OptionalConditions.hasValue;
 
 class FactoryGrammarTest {
 
@@ -96,23 +106,23 @@ class FactoryGrammarTest {
     @Test
     void conditionFactoriesRejectMissingChecks() {
         assertNullRejected("predicate", () -> matches((CheckedPredicate<String>) null));
-        assertNullRejected("predicate", () -> CollectionConditions.singleElement((CheckedPredicate<String>) null));
-        assertNullRejected("predicate", () -> OptionalConditions.hasValue((CheckedPredicate<String>) null));
-        assertNullRejected("predicate", () -> MapConditions.valueFor("key", (CheckedPredicate<String>) null));
-        assertNullRejected("predicate", () -> MapConditions.singleEntry((CheckedBiPredicate<String, String>) null));
-        assertNullRejected("predicate", () -> MapConditions.singleEntry((CheckedPredicate<Map.Entry<String, String>>) null));
-        assertNullRejected("predicate", () -> MapConditions.allEntries((CheckedPredicate<Map.Entry<String, String>>) null));
-        assertNullRejected("predicate", () -> MapConditions.hasEntry((CheckedPredicate<Map.Entry<String, String>>) null));
-        assertNullRejected("predicate", () -> MapConditions.hasNoEntry((CheckedPredicate<Map.Entry<String, String>>) null));
-        assertNullRejected("condition", () -> CollectionConditions.all((PreservingCondition<String>) null));
-        assertNullRejected("condition", () -> CollectionConditions.any((Condition.ComparisonCondition<String>) null));
-        assertNullRejected("condition", () -> CollectionConditions.none((Condition.Typed<Object, String>) null));
-        assertNullRejected("condition", () -> MapConditions.valueFor("key", (PreservingCondition<String>) null));
-        assertNullRejected("condition", () -> MapConditions.valueFor("key", (Condition.Typed<Object, String>) null));
-        assertNullRejected("condition", () -> OptionalConditions.hasValue((Condition.ComparisonCondition<String>) null));
-        assertNullRejected("condition", () -> CollectionConditions.singleElement((Condition.ComparisonCondition<String>) null));
-        assertNullRejected("condition", () -> MapConditions.valueFor("key", (Condition.ComparisonCondition<String>) null));
-        assertNullRejected("condition", () -> MapConditions.singleEntry((Condition.ComparisonCondition<Map.Entry<String, String>>) null));
+        assertNullRejected("predicate", () -> singleElement((CheckedPredicate<String>) null));
+        assertNullRejected("predicate", () -> hasValue((CheckedPredicate<String>) null));
+        assertNullRejected("predicate", () -> valueFor("key", (CheckedPredicate<String>) null));
+        assertNullRejected("predicate", () -> singleEntry((CheckedBiPredicate<String, String>) null));
+        assertNullRejected("predicate", () -> singleEntry((CheckedPredicate<Map.Entry<String, String>>) null));
+        assertNullRejected("predicate", () -> allEntries((CheckedPredicate<Map.Entry<String, String>>) null));
+        assertNullRejected("predicate", () -> hasEntry((CheckedPredicate<Map.Entry<String, String>>) null));
+        assertNullRejected("predicate", () -> hasNoEntry((CheckedPredicate<Map.Entry<String, String>>) null));
+        assertNullRejected("condition", () -> all((PreservingCondition<String>) null));
+        assertNullRejected("condition", () -> any((Condition.ComparisonCondition<String>) null));
+        assertNullRejected("condition", () -> none((Condition.Typed<Object, String>) null));
+        assertNullRejected("condition", () -> valueFor("key", (PreservingCondition<String>) null));
+        assertNullRejected("condition", () -> valueFor("key", (Condition.Typed<Object, String>) null));
+        assertNullRejected("condition", () -> hasValue((Condition.ComparisonCondition<String>) null));
+        assertNullRejected("condition", () -> singleElement((Condition.ComparisonCondition<String>) null));
+        assertNullRejected("condition", () -> valueFor("key", (Condition.ComparisonCondition<String>) null));
+        assertNullRejected("condition", () -> singleEntry((Condition.ComparisonCondition<Map.Entry<String, String>>) null));
     }
 
     private static void assertNullRejected(String argument, Executable action) {

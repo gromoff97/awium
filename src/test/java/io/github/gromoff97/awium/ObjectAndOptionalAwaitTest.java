@@ -1,18 +1,16 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.ConditionResult;
-import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
+import static io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
@@ -36,6 +34,10 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.StringConditions.startsWith;
+import static java.util.Arrays.asList;
 
 class ObjectAndOptionalAwaitTest {
 
@@ -93,7 +95,7 @@ class ObjectAndOptionalAwaitTest {
     void candidateCollectionsMayBeEmptyButNotNull() {
         assertThrows(NullPointerException.class, () -> in(null));
         assertThrows(NullPointerException.class, () -> notIn(null));
-        for (String actual : Arrays.asList(null, "", "ready")) {
+        for (String actual : asList(null, "", "ready")) {
             var time = new FakeTime(0);
             var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
             String excluded = waiting.until(notIn(List.of()));
@@ -150,7 +152,7 @@ class ObjectAndOptionalAwaitTest {
     void broadPreservingConditionsRetainTheConcreteObservationInBothTerminals() {
         var actual = new String("observed");
         var waiting = await(() -> actual).usingTime(time, time);
-        PreservingCondition<Object> condition = Conditions.asserted(ignored -> {});
+        PreservingCondition<Object> condition = asserted(ignored -> {});
 
         String value = waiting.until(condition);
         AwaitResult<String, String> result = diagnostic(waiting).until(condition);
@@ -163,7 +165,7 @@ class ObjectAndOptionalAwaitTest {
     void nullablePreservingTerminalsReturnNullOnSuccess() {
         assertNull(await((Callable<Object>) () -> null).usingTime(time, time).until(isNull));
         assertNull(await((Callable<String>) () -> null).usingTime(time, time).until(matches(actual -> actual == null)));
-        assertNull(await((Callable<String>) () -> null).usingTime(time, time).until(condition("nullable property", ignored -> ConditionResult.satisfied())));
+        assertNull(await((Callable<String>) () -> null).usingTime(time, time).until(condition("nullable property", ignored -> satisfied())));
     }
 
     @Test
@@ -189,11 +191,11 @@ class ObjectAndOptionalAwaitTest {
         Optional<String> empty = Optional.empty();
 
         String missing = await(() -> items).usingTime(time, time).upTo(ofNanos(1))
-                .until(CollectionConditions.singleElement(isNull));
+                .until(singleElement(isNull));
         Optional<String> nested = await(() -> Optional.of(empty)).usingTime(time, time).upTo(ofNanos(1))
                 .until(hasValue(absent));
         Optional<String> mapped = await(() -> Map.of("key", empty)).usingTime(time, time).upTo(ofNanos(1))
-                .until(MapConditions.valueFor("key", absent));
+                .until(valueFor("key", absent));
 
         assertNull(missing);
         assertSame(empty, nested);
@@ -242,13 +244,13 @@ class ObjectAndOptionalAwaitTest {
                 () -> stage.until(broken)).getCause());
 
         assertEquals("value", stage.until(condition(
-                "ready", ignored -> ConditionResult.satisfied())));
+                "ready", ignored -> satisfied())));
         assertEquals(5, sourceCalls[0]);
     }
 
     @Test
     void narrowingWaitsForANullSourceToProduceAValue() {
-        for (var check : List.of(Conditions.instanceOf(String.class), Conditions.exactlyInstanceOf(String.class))) {
+        for (var check : List.of(instanceOf(String.class), exactlyInstanceOf(String.class))) {
             var observations = java.util.Arrays.asList(null, "ready").iterator();
             var time = new FakeTime(0);
 
@@ -263,7 +265,7 @@ class ObjectAndOptionalAwaitTest {
 
     @Test
     void unrelatedTypeChecksRemainOrdinaryMismatches() {
-        for (var check : List.<Condition.Typed<? super String, ?>>of(Conditions.instanceOf(Integer.class), Conditions.exactlyInstanceOf(Integer.class))) {
+        for (var check : List.<Condition.Typed<? super String, ?>>of(instanceOf(Integer.class), exactlyInstanceOf(Integer.class))) {
             var time = new FakeTime(0);
             var waiting = await(() -> "actual").usingTime(time, time)
                     .every(java.time.Duration.ofNanos(1)).upTo(java.time.Duration.ofNanos(2));
@@ -272,9 +274,9 @@ class ObjectAndOptionalAwaitTest {
             assertThrows(AwaitAssertionError.class, () -> waiting.until(check));
         }
         String actual = "actual";
-        assertSame(actual, await(() -> actual).until(Conditions.notEqualTo("different")));
-        assertSame(actual, await(() -> actual).until(Conditions.notSameAs("different")));
-        assertSame(actual, await(() -> actual).until(Conditions.notIn(List.of("one", "two"))));
+        assertSame(actual, await(() -> actual).until(notEqualTo("different")));
+        assertSame(actual, await(() -> actual).until(notSameAs("different")));
+        assertSame(actual, await(() -> actual).until(notIn(List.of("one", "two"))));
     }
 
     @Test
@@ -283,19 +285,19 @@ class ObjectAndOptionalAwaitTest {
         Callable<Parent> source = () -> actual;
         var waiting = await(source).usingTime(time, time);
 
-        assertSame(actual, waiting.until(Conditions.sameAs(actual)));
-        assertSame(actual, waiting.until(Conditions.notSameAs(new Child())));
-        assertSame(actual, waiting.until(Conditions.in(List.of(actual, new Parent()))));
-        assertSame(actual, waiting.until(Conditions.notIn(List.of(new Parent()))));
-        assertSame(actual, waiting.until(Conditions.matches(value -> value instanceof Child)));
+        assertSame(actual, waiting.until(sameAs(actual)));
+        assertSame(actual, waiting.until(notSameAs(new Child())));
+        assertSame(actual, waiting.until(in(List.of(actual, new Parent()))));
+        assertSame(actual, waiting.until(notIn(List.of(new Parent()))));
+        assertSame(actual, waiting.until(matches(value -> value instanceof Child)));
 
-        Child child = waiting.until(Conditions.instanceOf(Child.class));
-        Child exact = waiting.until(Conditions.exactlyInstanceOf(Child.class));
+        Child child = waiting.until(instanceOf(Child.class));
+        Child exact = waiting.until(exactlyInstanceOf(Child.class));
 
         assertSame(actual, child);
         assertSame(actual, exact);
         assertInstanceOf(Unsatisfied.class, evaluate(
-                Conditions.exactlyInstanceOf(Parent.class), actual));
+                exactlyInstanceOf(Parent.class), actual));
     }
 
     @Test
@@ -303,10 +305,10 @@ class ObjectAndOptionalAwaitTest {
         java.util.concurrent.Callable<java.util.Optional<Object>> source = () -> Optional.of("ready");
         var waiting = await(source::call).usingTime(time, time);
 
-        Object expected = waiting.until(OptionalConditions.hasValue(Conditions.equalTo((Object) "ready")));
-        Object selected = waiting.until(OptionalConditions.hasValue(Conditions.matches(value -> value.toString().startsWith("r"))));
-        String narrowed = waiting.until(OptionalConditions.hasValue(instanceOf(String.class)));
-        String nested = await(() -> Optional.of("ready")).usingTime(time, time).until(OptionalConditions.hasValue(StringConditions.startsWith("rea")));
+        Object expected = waiting.until(hasValue(equalTo((Object) "ready")));
+        Object selected = waiting.until(hasValue(matches(value -> value.toString().startsWith("r"))));
+        String narrowed = waiting.until(hasValue(instanceOf(String.class)));
+        String nested = await(() -> Optional.of("ready")).usingTime(time, time).until(hasValue(startsWith("rea")));
         Integer transformed = await(() -> Optional.of("ready").map(String::length)).usingTime(time, time).until(OptionalConditions.present);
 
         assertEquals("ready", expected);

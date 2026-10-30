@@ -1,7 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +8,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
+import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.ConditionTestRuntime.assertUnsatisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
@@ -34,10 +34,10 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static io.github.gromoff97.awium.ProbeContainers.sizeOnlyMap;
 
 class MapSizeConditionsTest {
 
@@ -86,7 +86,7 @@ class MapSizeConditionsTest {
     @Test
     void diagnosticsUseMapVocabularyAndCapturedSize() {
         assertEquals("map size was 1", mismatch(evaluate(hasSize(2), Map.of("key", "value"))));
-        var actual = ProbeContainers.sizeOnlyMap();
+        var actual = sizeOnlyMap();
 
         var failure = assertFailure(TIMEOUT,
                 () -> await(() -> {
@@ -101,7 +101,7 @@ class MapSizeConditionsTest {
     @Test
     void throwingSizeIsTheExactFailFastConditionCause() {
         var cause = new IllegalStateException("map size failed");
-        var map = ProbeContainers.sizeOnlyMap();
+        var map = sizeOnlyMap();
         when(map.size()).thenThrow(cause);
 
         assertSame(cause, assertFailure(CONDITION_FAILED,

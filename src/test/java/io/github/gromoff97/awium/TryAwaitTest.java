@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static io.github.gromoff97.awium.Conditions.instanceOf;
 
 class TryAwaitTest {
 
@@ -38,7 +39,7 @@ class TryAwaitTest {
             return actual;
         };
 
-        AwaitResult<Number, BigDecimal> result = tryAwait(source).usingTime(time, time).until(Conditions.instanceOf(BigDecimal.class));
+        AwaitResult<Number, BigDecimal> result = tryAwait(source).usingTime(time, time).until(instanceOf(BigDecimal.class));
 
         BigDecimal selected = result.orThrow();
         assertSame(actual, selected);

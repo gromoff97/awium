@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -36,6 +35,10 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Named.named;
+import static java.lang.Thread.ofPlatform;
+import static java.lang.Thread.ofVirtual;
+import static java.lang.ThreadLocal.withInitial;
+import static java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor;
 
 class ThreadIntegrationTest {
 
@@ -71,7 +74,7 @@ class ThreadIntegrationTest {
     void concurrentCallersReuseDefinitionsWithIndependentLazyState() throws Exception {
         var rendezvous = new CyclicBarrier(2);
         var sourceCalls = new AtomicInteger();
-        var timers = ThreadLocal.withInitial(() -> new FakeTime(0));
+        var timers = withInitial(() -> new FakeTime(0));
         var waiting = await(() -> {
             sourceCalls.incrementAndGet();
             return currentThread();
@@ -93,7 +96,7 @@ class ThreadIntegrationTest {
         });
         var resultThreads = new HashSet<Thread>();
 
-        try (var callers = Executors.newVirtualThreadPerTaskExecutor()) {
+        try (var callers = newVirtualThreadPerTaskExecutor()) {
             var results = List.of(callers.submit(() -> diagnostic(waiting).until(check)),
                     callers.submit(() -> diagnostic(waiting).until(check)));
             for (var future : results) {
@@ -152,7 +155,7 @@ class ThreadIntegrationTest {
 
     private static Stream<Named<ThreadFactory>> callers() {
         return Stream.of(
-                named("platform", Thread.ofPlatform().name("awium-platform-", 0).factory()),
-                named("virtual", Thread.ofVirtual().name("awium-virtual-", 0).factory()));
+                named("platform", ofPlatform().name("awium-platform-", 0).factory()),
+                named("virtual", ofVirtual().name("awium-virtual-", 0).factory()));
     }
 }

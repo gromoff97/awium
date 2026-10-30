@@ -3,7 +3,6 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.internal.ExecutionStep;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.ConditionResult;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -15,6 +14,7 @@ import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.internal.ExecutionStep.Phase.ACQUISITION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static java.util.Arrays.asList;
 
 class AttemptHistoryTest {
 
@@ -77,7 +77,7 @@ class AttemptHistoryTest {
     void observationEqualityHandlesNullArraysAndReturningToAnEarlierValue() {
         var history = new AttemptHistory<Object>(true);
         var condition = diagnosticCondition("ready", null);
-        var observations = Arrays.asList(null, null,
+        var observations = asList(null, null,
                 new int[]{1}, new int[]{1}, new int[]{2}, new int[]{2}, new int[]{1});
         for (Object observation : observations) history.add(entry(condition, observation, unsatisfied()));
         var attempts = history.conditions(List.of(condition)).getFirst().attempts();

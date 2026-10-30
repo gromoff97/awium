@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.result.Attempt;
-import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
@@ -29,6 +28,21 @@ import static java.util.Arrays.asList;
 import static org.apache.commons.lang3.exception.ExceptionUtils.rethrow;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static io.github.gromoff97.awium.CollectionConditions.all;
+import static io.github.gromoff97.awium.CollectionConditions.any;
+import static io.github.gromoff97.awium.CollectionConditions.none;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.MapConditions.allEntries;
+import static io.github.gromoff97.awium.MapConditions.allKeys;
+import static io.github.gromoff97.awium.MapConditions.allValues;
+import static io.github.gromoff97.awium.MapConditions.anyKey;
+import static io.github.gromoff97.awium.MapConditions.anyValue;
+import static io.github.gromoff97.awium.MapConditions.hasEntry;
+import static io.github.gromoff97.awium.MapConditions.hasNoEntry;
+import static io.github.gromoff97.awium.MapConditions.noKey;
+import static io.github.gromoff97.awium.MapConditions.noValue;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 
 class CompositionDiagnosticsTest {
 
@@ -97,7 +111,7 @@ class CompositionDiagnosticsTest {
         var cause = new IllegalStateException("iterator failed");
         Collection<Collection<String>> brokenOuter = brokenCollection(cause);
         Collection<String> brokenInner = brokenCollection(cause);
-        var check = CollectionConditions.singleElement(CollectionConditions.singleElement(instanceOf(String.class)));
+        var check = singleElement(singleElement(instanceOf(String.class)));
         var outer = tryAwait(() -> brokenOuter).usingTime(time, time).until(check);
         var inner = tryAwait(() -> List.of(brokenInner)).usingTime(time, time).until(check);
 
@@ -117,10 +131,10 @@ class CompositionDiagnosticsTest {
         var probe = condition("value is ready", (String value) -> {
             calls[0]++;
             if (value.equals("bad")) throw cause;
-            return ConditionResult.satisfied();
+            return satisfied();
         });
         var observed = Optional.of(List.of(List.of("ready"), List.of("bad", "unused")));
-        var check = hasValue(CollectionConditions.all(CollectionConditions.all(probe)));
+        var check = hasValue(all(all(probe)));
         var result = tryAwait(() -> observed).usingTime(time, time).every(ofNanos(1))
                 .until(captured(isNotNull, check));
         var failure = failure(result);
@@ -157,8 +171,8 @@ class CompositionDiagnosticsTest {
             };
             int[] calls = {0};
             var time = new FakeTime(0);
-            var result = tryAwait(() -> observed).usingTime(time, time).until(CollectionConditions.all(
-                    condition("ready", value -> { calls[0]++; return ConditionResult.satisfied(); })));
+            var result = tryAwait(() -> observed).usingTime(time, time).until(all(
+                    condition("ready", value -> { calls[0]++; return satisfied(); })));
             var failure = failure(result);
 
             assertEquals(completed, calls[0]);
@@ -183,10 +197,10 @@ class CompositionDiagnosticsTest {
             @Override public Set<Entry<String, String>> entrySet() { throw cause; }
             @Override public String toString() { return "unavailable map"; }
         };
-        var result = tryAwait(() -> observed).usingTime(time, time).until(MapConditions.allEntries(
+        var result = tryAwait(() -> observed).usingTime(time, time).until(allEntries(
                 conditionPerWait("ready", () -> {
                     fail("nested check must not initialize before obtaining an entry");
-                    return ignored -> ConditionResult.satisfied();
+                    return ignored -> satisfied();
                 })));
         var failure = failure(result);
         var status = uncontrolled(Attempt.Operation.CONDITION, attempts(result).getFirst());
@@ -199,8 +213,8 @@ class CompositionDiagnosticsTest {
     @Test
     void quantifiersReportTheirScopeAndNamedCheckOnFailure() {
         String description = "account is active";
-        var mismatch = condition(description, ignored -> ConditionResult.unsatisfied());
-        var match = condition(description, ignored -> ConditionResult.satisfied());
+        var mismatch = condition(description, ignored -> unsatisfied());
+        var match = condition(description, ignored -> satisfied());
         var collection = await(() -> List.of("pending"))
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
         var map = await(() -> Map.of("account", "pending"))
@@ -208,34 +222,34 @@ class CompositionDiagnosticsTest {
         var nested = await(() -> List.of(List.of("pending")))
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
 
-        assertQuantifierFailure(diagnostic(collection).until(CollectionConditions.all(mismatch)),
+        assertQuantifierFailure(diagnostic(collection).until(all(mismatch)),
                 "all collection elements match", "not all collection elements matched (checked 1)");
-        assertQuantifierFailure(diagnostic(collection).until(CollectionConditions.any(mismatch)),
+        assertQuantifierFailure(diagnostic(collection).until(any(mismatch)),
                 "some collection elements match", "no collection elements matched (checked 1)");
-        assertQuantifierFailure(diagnostic(collection).until(CollectionConditions.none(match)),
+        assertQuantifierFailure(diagnostic(collection).until(none(match)),
                 "no collection elements match", "some collection elements matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(MapConditions.allEntries(mismatch)),
+        assertQuantifierFailure(diagnostic(map).until(allEntries(mismatch)),
                 "all map entries match", "not all map entries matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(MapConditions.hasEntry(mismatch)),
+        assertQuantifierFailure(diagnostic(map).until(hasEntry(mismatch)),
                 "some map entries match", "no map entries matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(MapConditions.hasNoEntry(match)),
+        assertQuantifierFailure(diagnostic(map).until(hasNoEntry(match)),
                 "no map entries match", "some map entries matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(MapConditions.allKeys(mismatch)),
+        assertQuantifierFailure(diagnostic(map).until(allKeys(mismatch)),
                 "all map keys match", "not all map keys matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(MapConditions.anyKey(mismatch)),
+        assertQuantifierFailure(diagnostic(map).until(anyKey(mismatch)),
                 "some map keys match", "no map keys matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(MapConditions.noKey(match)),
+        assertQuantifierFailure(diagnostic(map).until(noKey(match)),
                 "no map keys match", "some map keys matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(MapConditions.allValues(mismatch)),
+        assertQuantifierFailure(diagnostic(map).until(allValues(mismatch)),
                 "all map values match", "not all map values matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(MapConditions.anyValue(mismatch)),
+        assertQuantifierFailure(diagnostic(map).until(anyValue(mismatch)),
                 "some map values match", "no map values matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(MapConditions.noValue(match)),
+        assertQuantifierFailure(diagnostic(map).until(noValue(match)),
                 "no map values match", "some map values matched (checked 1)");
-        assertQuantifierFailure(diagnostic(nested).until(CollectionConditions.all(CollectionConditions.any(mismatch))),
+        assertQuantifierFailure(diagnostic(nested).until(all(any(mismatch))),
                 "all collection elements match: some collection elements match",
                 "not all collection elements matched (checked 1): no collection elements matched (checked 1)");
-        assertQuantifierFailure(diagnostic(collection).until(captured(isNotNull, CollectionConditions.all(mismatch))),
+        assertQuantifierFailure(diagnostic(collection).until(captured(isNotNull, all(mismatch))),
                 "all collection elements match", "not all collection elements matched (checked 1)");
     }
 

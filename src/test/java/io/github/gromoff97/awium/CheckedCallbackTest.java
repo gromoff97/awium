@@ -31,6 +31,10 @@ import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static io.github.gromoff97.awium.CollectionConditions.all;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
+import static java.lang.Thread.sleep;
 
 class CheckedCallbackTest {
 
@@ -39,19 +43,19 @@ class CheckedCallbackTest {
     @Test
     void interruptedSleepBecomesAnOrdinaryFailureWithoutRestoringTheFlag() {
         var result = tryAwait(() -> "ready").until(condition("sleep", value -> {
-            Thread.currentThread().interrupt();
-            Thread.sleep(0);
+            currentThread().interrupt();
+            sleep(0);
             return satisfied();
         }));
         var failure = failure(result);
         assertEquals(CONDITION_FAILED, failure.reason());
         assertInstanceOf(InterruptedException.class, failure.cause());
-        assertFalse(Thread.currentThread().isInterrupted());
+        assertFalse(currentThread().isInterrupted());
     }
 
     @AfterEach
     void clearInterruptFlag() {
-        Thread.interrupted();
+        interrupted();
     }
 
     @Test
@@ -79,7 +83,7 @@ class CheckedCallbackTest {
                 calls[0] = 0;
                 Throwable failure = assertFailure(CONDITION_FAILED, callback.getValue());
                 assertSame(cause, failure.getCause(), callback.getKey());
-                assertFalse(Thread.currentThread().isInterrupted());
+                assertFalse(currentThread().isInterrupted());
                 assertEquals(1, calls[0], callback.getKey());
                 assertThat(time.parkRequests).isEmpty();
             }
@@ -102,7 +106,7 @@ class CheckedCallbackTest {
         int[] evaluatorCalls = {0};
         Callable<CheckedFunction<String, ConditionResult>> factory = () -> {
             factoryCalls[0]++;
-            Thread.currentThread().interrupt();
+            currentThread().interrupt();
             return actual -> { evaluatorCalls[0]++; return satisfied(); };
         };
         var result = switch (form) {
@@ -116,7 +120,7 @@ class CheckedCallbackTest {
         assertInstanceOf(InterruptedException.class, failure.cause());
         assertEquals(1, factoryCalls[0]);
         assertEquals(0, evaluatorCalls[0]);
-        assertTrue(Thread.currentThread().isInterrupted());
+        assertTrue(currentThread().isInterrupted());
     }
 
     @Test
@@ -124,7 +128,7 @@ class CheckedCallbackTest {
         var entry = new AbstractMap.SimpleImmutableEntry<String, String>("key", "ready") {
             @Override
             public String getValue() {
-                Thread.currentThread().interrupt();
+                currentThread().interrupt();
                 return super.getValue();
             }
         };
@@ -141,7 +145,7 @@ class CheckedCallbackTest {
         assertInstanceOf(InterruptedException.class, failure.cause());
         assertEquals(0, factoryCalls[0]);
         assertEquals(0, evaluatorCalls[0]);
-        assertTrue(Thread.currentThread().isInterrupted());
+        assertTrue(currentThread().isInterrupted());
     }
 
     @Test
@@ -168,9 +172,9 @@ class CheckedCallbackTest {
         var visited = new ArrayList<Integer>();
         int[] sourceCalls = {0};
         var result = tryAwait(() -> { sourceCalls[0]++; return values; })
-                .usingTime(time, time).until(CollectionConditions.all(value -> {
+                .usingTime(time, time).until(all(value -> {
                     visited.add(value);
-                    Thread.currentThread().interrupt();
+                    currentThread().interrupt();
                     return true;
                 }));
         var failure = failure(result);
@@ -184,23 +188,23 @@ class CheckedCallbackTest {
     @Test
     void aFlagClearedWithinTheSameCallbackDoesNotInterruptTheQuantifier() {
         var actual = List.of(1, 2);
-        var result = tryAwait(() -> actual).usingTime(time, time).until(CollectionConditions.all(value -> {
-            Thread.currentThread().interrupt();
-            assertTrue(Thread.interrupted());
+        var result = tryAwait(() -> actual).usingTime(time, time).until(all(value -> {
+            currentThread().interrupt();
+            assertTrue(interrupted());
             return true;
         }));
         assertSame(actual, result.orThrow());
         assertEquals(1, attempts(result).size());
-        assertFalse(Thread.currentThread().isInterrupted());
+        assertFalse(currentThread().isInterrupted());
     }
 
     @Test
     void exceptionAfterAnInterruptWithinTheSameCallbackKeepsItsOriginalCause() {
         var cause = new IllegalStateException("callback failed");
         int[] calls = {0};
-        var result = tryAwait(() -> List.of(1, 2)).until(CollectionConditions.all(value -> {
+        var result = tryAwait(() -> List.of(1, 2)).until(all(value -> {
             calls[0]++;
-            Thread.currentThread().interrupt();
+            currentThread().interrupt();
             throw cause;
         }));
         var failure = failure(result);

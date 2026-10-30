@@ -25,6 +25,19 @@ import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.function.CheckedPredicate.not;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
+import static io.github.gromoff97.awium.MapConditions.allEntries;
+import static io.github.gromoff97.awium.MapConditions.allKeys;
+import static io.github.gromoff97.awium.MapConditions.allValues;
+import static io.github.gromoff97.awium.MapConditions.anyKey;
+import static io.github.gromoff97.awium.MapConditions.anyValue;
+import static io.github.gromoff97.awium.MapConditions.hasEntry;
+import static io.github.gromoff97.awium.MapConditions.hasNoEntry;
+import static io.github.gromoff97.awium.MapConditions.noKey;
+import static io.github.gromoff97.awium.MapConditions.noValue;
+import static io.github.gromoff97.awium.MapConditions.singleEntry;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.OptionalConditions.hasValue;
+import static java.lang.Thread.currentThread;
 
 class CheckedPredicateTest {
 
@@ -55,7 +68,7 @@ class CheckedPredicateTest {
 
         var entries = new ArrayDeque<>(List.of(Map.of("ready", FIRST), Map.of("pending", PENDING)));
         Map.Entry<String, User> entry = await(entries::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
-                .until(MapConditions.singleEntry(CheckedBiPredicate.not(CheckedPredicateTest::readyEntry)));
+                .until(singleEntry(CheckedBiPredicate.not(CheckedPredicateTest::readyEntry)));
         assertEquals("pending", entry.getKey());
         assertEquals(0, entry.getValue().id());
         assertTrue(entries.isEmpty());
@@ -72,11 +85,11 @@ class CheckedPredicateTest {
             var time = new FakeTime(0);
             var result = tryAwait(() -> FIRST).usingTime(time, time).until(matches(unary));
             assertSame(cause, failure(result).cause());
-            var mapResult = tryAwait(() -> Map.of("ready", FIRST)).usingTime(time, time).until(MapConditions.hasNoEntry(pair));
+            var mapResult = tryAwait(() -> Map.of("ready", FIRST)).usingTime(time, time).until(hasNoEntry(pair));
             assertSame(cause, failure(mapResult).cause());
             assertEquals(1, attempts(result).size());
             assertEquals(1, attempts(mapResult).size());
-            assertFalse(Thread.currentThread().isInterrupted());
+            assertFalse(currentThread().isInterrupted());
         }
     }
 
@@ -125,27 +138,27 @@ class CheckedPredicateTest {
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
 
         List<LinkedHashMap<String, User>> observed = List.of(
-                waiting.until(MapConditions.allEntries(CheckedPredicateTest::readyEntry)),
-                waiting.until(MapConditions.allEntries(entry -> readyEntry(entry.getKey(), entry.getValue()))),
-                waiting.until(MapConditions.hasEntry(CheckedPredicateTest::readyEntry)),
-                waiting.until(MapConditions.hasEntry(entry -> readyEntry(entry.getKey(), entry.getValue()))),
-                waiting.until(MapConditions.hasNoEntry(CheckedPredicateTest::pendingEntry)),
-                waiting.until(MapConditions.hasNoEntry(entry -> pendingEntry(entry.getKey(), entry.getValue()))),
-                waiting.until(MapConditions.allKeys(CheckedPredicateTest::validKey)),
-                waiting.until(MapConditions.anyKey(CheckedPredicateTest::validKey)),
-                waiting.until(MapConditions.noKey(CheckedPredicateTest::blankKey)),
-                waiting.until(MapConditions.allValues(User::checkReady)),
-                waiting.until(MapConditions.anyValue(User::checkReady)),
-                waiting.until(MapConditions.noValue(user -> !user.checkReady())));
+                waiting.until(allEntries(CheckedPredicateTest::readyEntry)),
+                waiting.until(allEntries(entry -> readyEntry(entry.getKey(), entry.getValue()))),
+                waiting.until(hasEntry(CheckedPredicateTest::readyEntry)),
+                waiting.until(hasEntry(entry -> readyEntry(entry.getKey(), entry.getValue()))),
+                waiting.until(hasNoEntry(CheckedPredicateTest::pendingEntry)),
+                waiting.until(hasNoEntry(entry -> pendingEntry(entry.getKey(), entry.getValue()))),
+                waiting.until(allKeys(CheckedPredicateTest::validKey)),
+                waiting.until(anyKey(CheckedPredicateTest::validKey)),
+                waiting.until(noKey(CheckedPredicateTest::blankKey)),
+                waiting.until(allValues(User::checkReady)),
+                waiting.until(anyValue(User::checkReady)),
+                waiting.until(noValue(user -> !user.checkReady())));
 
         observed.forEach(value -> assertSame(actual, value));
         assertEquals(1, observed.getFirst().get("first").id());
         actual.remove("last");
-        var entry = waiting.until(MapConditions.singleEntry(CheckedPredicateTest::firstEntry));
+        var entry = waiting.until(singleEntry(CheckedPredicateTest::firstEntry));
         assertEquals(5, entry.getKey().length());
         assertEquals(1, entry.getValue().id());
         AwaitResult<LinkedHashMap<String, User>, Map.Entry<String, User>> captured =
-                diagnostic(waiting).until(MapConditions.singleEntry(CheckedPredicateTest::firstEntry));
+                diagnostic(waiting).until(singleEntry(CheckedPredicateTest::firstEntry));
         switch (captured) {
             case AwaitResult.Satisfied(var history, var selected) -> assertEquals(1, selected.getValue().id());
             case AwaitResult.Failed(var history, var failure) -> fail(failure.message());
@@ -160,12 +173,12 @@ class CheckedPredicateTest {
         CheckedPredicate<User> ready = user -> { calls[0]++; return user.checkReady(); };
 
         assertEquals(1, await(optionals::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(4))
-                .until(OptionalConditions.hasValue(ready)).id());
+                .until(hasValue(ready)).id());
         assertEquals(1, calls[0]);
         assertTrue(optionals.isEmpty());
         calls[0] = 0;
         var waiting = await(maps::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(4));
-        AwaitResult<Map<String, User>, User> result = diagnostic(waiting).until(MapConditions.valueFor("user", ready));
+        AwaitResult<Map<String, User>, User> result = diagnostic(waiting).until(valueFor("user", ready));
         switch (result) {
             case AwaitResult.Satisfied(var history, var user) -> {
                 assertEquals(1, user.id());
@@ -196,7 +209,7 @@ class CheckedPredicateTest {
                     .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
             List<Supplier<AwaitResult<?, ?>>> waits = List.of(
                     () -> diagnostic(value).until(matches(check)),
-                    () -> diagnostic(optional).until(OptionalConditions.hasValue(check)),
+                    () -> diagnostic(optional).until(hasValue(check)),
                     () -> diagnostic(soleValue).until(singleElement(matches(check))),
                     () -> diagnostic(soleValue).until(singleElement(check)),
                     () -> diagnostic(values).until(firstElement(check)),
@@ -205,21 +218,21 @@ class CheckedPredicateTest {
                     () -> diagnostic(values).until(all(check)),
                     () -> diagnostic(values).until(any(check)),
                     () -> diagnostic(values).until(none(check)),
-                    () -> diagnostic(map).until(MapConditions.valueFor("first", check)),
-                    () -> diagnostic(soleEntry).until(MapConditions.singleEntry(entryCheck)),
-                    () -> diagnostic(soleEntry).until(MapConditions.singleEntry(entry -> check.test(entry.getValue()))),
-                    () -> diagnostic(map).until(MapConditions.allEntries(entryCheck)),
-                    () -> diagnostic(map).until(MapConditions.allEntries(entry -> check.test(entry.getValue()))),
-                    () -> diagnostic(map).until(MapConditions.hasEntry(entryCheck)),
-                    () -> diagnostic(map).until(MapConditions.hasEntry(entry -> check.test(entry.getValue()))),
-                    () -> diagnostic(map).until(MapConditions.hasNoEntry(entryCheck)),
-                    () -> diagnostic(map).until(MapConditions.hasNoEntry(entry -> check.test(entry.getValue()))),
-                    () -> diagnostic(map).until(MapConditions.allKeys(keyCheck)),
-                    () -> diagnostic(map).until(MapConditions.anyKey(keyCheck)),
-                    () -> diagnostic(map).until(MapConditions.noKey(keyCheck)),
-                    () -> diagnostic(map).until(MapConditions.allValues(check)),
-                    () -> diagnostic(map).until(MapConditions.anyValue(check)),
-                    () -> diagnostic(map).until(MapConditions.noValue(check)));
+                    () -> diagnostic(map).until(valueFor("first", check)),
+                    () -> diagnostic(soleEntry).until(singleEntry(entryCheck)),
+                    () -> diagnostic(soleEntry).until(singleEntry(entry -> check.test(entry.getValue()))),
+                    () -> diagnostic(map).until(allEntries(entryCheck)),
+                    () -> diagnostic(map).until(allEntries(entry -> check.test(entry.getValue()))),
+                    () -> diagnostic(map).until(hasEntry(entryCheck)),
+                    () -> diagnostic(map).until(hasEntry(entry -> check.test(entry.getValue()))),
+                    () -> diagnostic(map).until(hasNoEntry(entryCheck)),
+                    () -> diagnostic(map).until(hasNoEntry(entry -> check.test(entry.getValue()))),
+                    () -> diagnostic(map).until(allKeys(keyCheck)),
+                    () -> diagnostic(map).until(anyKey(keyCheck)),
+                    () -> diagnostic(map).until(noKey(keyCheck)),
+                    () -> diagnostic(map).until(allValues(check)),
+                    () -> diagnostic(map).until(anyValue(check)),
+                    () -> diagnostic(map).until(noValue(check)));
 
             for (var wait : waits) {
                 calls[0] = 0;
@@ -229,7 +242,7 @@ class CheckedPredicateTest {
                 assertSame(cause, failure.cause());
                 assertEquals(1, calls[0]);
                 assertEquals(1, attempts(result).size());
-                assertFalse(Thread.currentThread().isInterrupted());
+                assertFalse(currentThread().isInterrupted());
             }
             calls[0] = 0;
             assertSame(cause, assertThrows(AwaitExecutionException.class, () -> value.until(matches(check))).getCause());

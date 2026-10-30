@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.nio.CharBuffer;
@@ -12,6 +11,7 @@ import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
@@ -21,6 +21,21 @@ import static java.time.Duration.ofNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.OptionalConditions.hasValue;
+import static io.github.gromoff97.awium.StringConditions.contains;
+import static io.github.gromoff97.awium.StringConditions.containsAll;
+import static io.github.gromoff97.awium.StringConditions.containsIgnoringCase;
+import static io.github.gromoff97.awium.StringConditions.contentEquals;
+import static io.github.gromoff97.awium.StringConditions.doesNotContainAny;
+import static io.github.gromoff97.awium.StringConditions.doesNotMatchRegex;
+import static io.github.gromoff97.awium.StringConditions.equalToIgnoringCase;
+import static io.github.gromoff97.awium.StringConditions.matchesRegex;
+import static io.github.gromoff97.awium.StringConditions.startsWith;
+import static java.lang.Thread.currentThread;
+import static java.util.regex.Pattern.compile;
+import static java.util.stream.IntStream.range;
 
 class TextExpectedValuesTest {
 
@@ -28,7 +43,7 @@ class TextExpectedValuesTest {
 
     @Test
     void blanknessReadsCodePointsOnTheCallerThreadWithoutRenderingText() {
-        var caller = Thread.currentThread();
+        var caller = currentThread();
         record Text(String value) implements CharSequence {
             @Override public int length() { return value.length(); }
             @Override public char charAt(int index) { return value.charAt(index); }
@@ -52,8 +67,8 @@ class TextExpectedValuesTest {
             @Override public CharSequence subSequence(int start, int end) { throw new AssertionError("slice not needed"); }
             @Override public String toString() { throw new AssertionError("blankness must not render text"); }
             @Override public IntStream codePoints() {
-                return IntStream.range(0, length()).parallel().map(index -> {
-                    assertSame(caller, Thread.currentThread());
+                return range(0, length()).parallel().map(index -> {
+                    assertSame(caller, currentThread());
                     return charAt(index);
                 });
             }
@@ -75,17 +90,17 @@ class TextExpectedValuesTest {
             @Override public String toString() { throw renderingFailure; }
         };
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1));
-        for (var check : List.of(StringConditions.matchesRegex("Ready \\d+"),
-                StringConditions.matchesRegex(Pattern.compile("ready \\d+", Pattern.CASE_INSENSITIVE)),
-                StringConditions.doesNotMatchRegex("failed.*"),
-                StringConditions.doesNotMatchRegex(Pattern.compile("failed.*")),
-                StringConditions.containsIgnoringCase("READY"), StringConditions.contentEquals("Ready 42"))) {
+        for (var check : List.of(matchesRegex("Ready \\d+"),
+                matchesRegex(compile("ready \\d+", Pattern.CASE_INSENSITIVE)),
+                doesNotMatchRegex("failed.*"),
+                doesNotMatchRegex(compile("failed.*")),
+                containsIgnoringCase("READY"), contentEquals("Ready 42"))) {
             assertSame(actual, waiting.until(check.because("text is ready")));
-            assertSame(actual, await(() -> Optional.of(actual)).until(OptionalConditions.hasValue(check)));
+            assertSame(actual, await(() -> Optional.of(actual)).until(hasValue(check)));
         }
-        for (var check : List.of(StringConditions.matchesRegex("failed.*"),
-                StringConditions.doesNotMatchRegex("Ready \\d+"), StringConditions.containsIgnoringCase("failed"),
-                StringConditions.contentEquals("failed"))) {
+        for (var check : List.of(matchesRegex("failed.*"),
+                doesNotMatchRegex("Ready \\d+"), containsIgnoringCase("failed"),
+                contentEquals("failed"))) {
             var failure = failure(diagnostic(waiting).until(check));
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
             assertNull(failure.cause());
@@ -135,21 +150,21 @@ class TextExpectedValuesTest {
     void contentEqualityComparesCharactersAndKeepsTheObservedObject() {
         var text = new StringBuilder("ready");
         var expected = CharBuffer.wrap("ready");
-        var condition = StringConditions.contentEquals(expected);
+        var condition = contentEquals(expected);
         var values = await(() -> text).until(captured(condition, condition));
         assertSame(text, values.getFirst());
         assertEquals(text.capacity(), values.getLast().capacity());
 
-        StringBuilder selected = await(() -> List.of(text)).until(CollectionConditions.singleElement(
-                StringConditions.contentEquals(expected)));
+        StringBuilder selected = await(() -> List.of(text)).until(singleElement(
+                contentEquals(expected)));
         assertSame(text, selected);
-        CharBuffer buffer = await(() -> expected).until(StringConditions.contentEquals(text));
+        CharBuffer buffer = await(() -> expected).until(contentEquals(text));
         assertSame(expected, buffer);
         assertEquals(0, buffer.position());
 
-        assertSame(text, await(() -> Map.of("status", text)).until(MapConditions.valueFor("status",
-                StringConditions.contentEquals(expected))));
-        assertTrue(await(() -> new StringBuilder()).until(StringConditions.contentEquals("")).isEmpty());
+        assertSame(text, await(() -> Map.of("status", text)).until(valueFor("status",
+                contentEquals(expected))));
+        assertTrue(await(() -> new StringBuilder()).until(contentEquals("")).isEmpty());
 
         var absent = tryAwait(() -> (StringBuilder) null).usingTime(time, time)
                 .every(ofNanos(1)).upTo(ofNanos(1)).until(condition);
@@ -161,8 +176,8 @@ class TextExpectedValuesTest {
         var prefix = new StringBuilder("rea");
         char[] suffix = {'d', 'y'};
         CharSequence[] expected = {prefix, CharBuffer.wrap(suffix)};
-        var included = StringConditions.containsAll(java.util.Arrays.asList(expected));
-        var excluded = StringConditions.doesNotContainAny(java.util.Arrays.asList(expected));
+        var included = containsAll(java.util.Arrays.asList(expected));
+        var excluded = doesNotContainAny(java.util.Arrays.asList(expected));
         prefix.replace(0, prefix.length(), "changed");
         suffix[0] = 'x';
         expected[1] = "changed";
@@ -173,10 +188,10 @@ class TextExpectedValuesTest {
         assertEquals(text.capacity(), values.getLast().capacity());
         assertEquals(6, await(() -> "failed").until(excluded).length());
 
-        var nested = StringConditions.startsWith(CharBuffer.wrap("rea"));
-        assertEquals(text.capacity(), await(() -> Optional.of(text)).until(OptionalConditions.hasValue(nested)).capacity());
-        assertEquals(text.capacity(), await(() -> List.of(text)).until(CollectionConditions.singleElement(nested)).capacity());
-        assertEquals(text.capacity(), await(() -> Map.of("text", text)).until(MapConditions.valueFor("text", nested)).capacity());
+        var nested = startsWith(CharBuffer.wrap("rea"));
+        assertEquals(text.capacity(), await(() -> Optional.of(text)).until(hasValue(nested)).capacity());
+        assertEquals(text.capacity(), await(() -> List.of(text)).until(singleElement(nested)).capacity());
+        assertEquals(text.capacity(), await(() -> Map.of("text", text)).until(valueFor("text", nested)).capacity());
     }
 
     @Test
@@ -185,17 +200,17 @@ class TextExpectedValuesTest {
             var actual = new StringBuilder(value);
             var time = new FakeTime(0);
             var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
-            StringBuilder included = waiting.until(StringConditions.containsAll(List.of()));
-            StringBuilder excluded = waiting.until(StringConditions.doesNotContainAny(List.of()));
+            StringBuilder included = waiting.until(containsAll(List.of()));
+            StringBuilder excluded = waiting.until(doesNotContainAny(List.of()));
             assertSame(actual, included);
             assertSame(actual, excluded);
-            for (var check : List.of(StringConditions.containsAll(List.of()), StringConditions.doesNotContainAny(List.of()))) {
+            for (var check : List.of(containsAll(List.of()), doesNotContainAny(List.of()))) {
                 assertSame(actual, diagnostic(waiting).until(check).orThrow());
                 var absent = tryAwait(() -> (StringBuilder) null).usingTime(time, time)
                         .every(ofNanos(1)).upTo(ofNanos(2)).until(check);
                 assertEquals(AwaitFailure.Reason.TIMEOUT, failure(absent).reason());
             }
-            var emptyFragment = diagnostic(waiting).until(StringConditions.doesNotContainAny(List.of("")));
+            var emptyFragment = diagnostic(waiting).until(doesNotContainAny(List.of("")));
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure(emptyFragment).reason());
         }
     }
@@ -205,27 +220,27 @@ class TextExpectedValuesTest {
         var actual = mock(CharSequence.class, invocation -> {
             throw new AssertionError("text must not be read: " + invocation.getMethod().getName());
         });
-        for (var check : List.of(StringConditions.containsAll(List.of()), StringConditions.doesNotContainAny(List.of()))) {
+        for (var check : List.of(containsAll(List.of()), doesNotContainAny(List.of()))) {
             assertSame(actual, await(() -> actual).until(check));
         }
     }
 
     @Test
     void invalidExpectedTextIsRejectedDuringConstruction() {
-        assertThrows(NullPointerException.class, () -> StringConditions.containsAll(null));
-        assertThrows(NullPointerException.class, () -> StringConditions.containsAll(java.util.Arrays.asList("ready", null)));
-        assertThrows(NullPointerException.class, () -> StringConditions.doesNotContainAny(null));
+        assertThrows(NullPointerException.class, () -> containsAll(null));
+        assertThrows(NullPointerException.class, () -> containsAll(java.util.Arrays.asList("ready", null)));
+        assertThrows(NullPointerException.class, () -> doesNotContainAny(null));
         var invalid = new CharSequence() {
             @Override public int length() { return 0; }
             @Override public char charAt(int index) { throw new IndexOutOfBoundsException(index); }
             @Override public CharSequence subSequence(int start, int end) { throw new UnsupportedOperationException(); }
             @Override public String toString() { return null; }
         };
-        assertThrows(NullPointerException.class, () -> StringConditions.startsWith(invalid));
-        assertThrows(NullPointerException.class, () -> StringConditions.contains(invalid));
-        assertThrows(NullPointerException.class, () -> StringConditions.equalToIgnoringCase(invalid));
-        assertThrows(NullPointerException.class, () -> StringConditions.contentEquals(invalid));
-        assertThrows(NullPointerException.class, () -> StringConditions.contentEquals(null));
-        assertThrows(NullPointerException.class, () -> StringConditions.matchesRegex(invalid));
+        assertThrows(NullPointerException.class, () -> startsWith(invalid));
+        assertThrows(NullPointerException.class, () -> contains(invalid));
+        assertThrows(NullPointerException.class, () -> equalToIgnoringCase(invalid));
+        assertThrows(NullPointerException.class, () -> contentEquals(invalid));
+        assertThrows(NullPointerException.class, () -> contentEquals(null));
+        assertThrows(NullPointerException.class, () -> matchesRegex(invalid));
     }
 }

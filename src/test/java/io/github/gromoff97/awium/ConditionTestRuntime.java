@@ -1,10 +1,11 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.internal.AttemptResult;
 
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.fail;
+import static io.github.gromoff97.awium.ConditionSupport.bind;
 
 final class ConditionTestRuntime {
 
@@ -13,7 +14,7 @@ final class ConditionTestRuntime {
     }
 
     static <SOURCE, RESULT> AttemptResult<? extends RESULT> evaluate(Condition.Typed<? super SOURCE, ? extends RESULT> condition, SOURCE actual) {
-        return evaluated(ConditionSupport.bind(condition).create(actual).call());
+        return evaluated(bind(condition).create(actual).call());
     }
 
     static <SOURCE> AttemptResult<? extends SOURCE> evaluate(PreservingCondition<? super SOURCE> condition, SOURCE actual) {

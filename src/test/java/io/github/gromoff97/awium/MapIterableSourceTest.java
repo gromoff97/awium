@@ -12,6 +12,8 @@ import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
+import static io.github.gromoff97.awium.MapConditions.singleEntry;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
 
 class MapIterableSourceTest {
 
@@ -24,9 +26,9 @@ class MapIterableSourceTest {
         var waiting = await(() -> both).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
 
         assertEquals(10, waiting.until(MapConditions.singleEntry).getValue().intValue());
-        assertEquals(10, waiting.until(MapConditions.valueFor("key")).intValue());
-        assertEquals(10, waiting.until(MapConditions.singleEntry((key, value) -> true)).getValue().intValue());
-        assertEquals(10, waiting.until(MapConditions.valueFor("key", java.util.Objects::nonNull)).intValue());
+        assertEquals(10, waiting.until(valueFor("key")).intValue());
+        assertEquals(10, waiting.until(singleEntry((key, value) -> true)).getValue().intValue());
+        assertEquals(10, waiting.until(valueFor("key", java.util.Objects::nonNull)).intValue());
         AwaitResult<MapWithUsers, Map.Entry<String, Integer>> captured = diagnostic(waiting).until(MapConditions.singleEntry);
         switch (captured) {
             case AwaitResult.Satisfied(var history, var entry) -> assertEquals(10, entry.getValue().intValue());

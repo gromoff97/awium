@@ -1,16 +1,15 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
+import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.empty;
 import static io.github.gromoff97.awium.CollectionConditions.hasSize;
@@ -36,10 +35,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static io.github.gromoff97.awium.ProbeContainers.sizeOnlyCollection;
+import static java.util.Collections.singletonList;
 
 class CollectionSizeConditionsTest {
 
@@ -52,7 +52,7 @@ class CollectionSizeConditionsTest {
 
         String selected = await(source::call).usingTime(time, time).until(singleElement);
         String nullElement = await((Await.CollectionSource<List<String>>)
-                () -> Collections.singletonList(null)).usingTime(time, time).until(singleElement);
+                () -> singletonList(null)).usingTime(time, time).until(singleElement);
 
         assertSame(element, selected);
         assertNull(nullElement);
@@ -67,8 +67,8 @@ class CollectionSizeConditionsTest {
     @ParameterizedTest(name = "{0}: matches size {1}, rejects size {2}")
     @MethodSource("cases")
     void conditionsEvaluateEverySizeRelation(PreservingCondition<Collection<?>> condition, int matchingSize, int mismatchingSize) {
-        var matching = ProbeContainers.sizeOnlyCollection(matchingSize);
-        var mismatching = ProbeContainers.sizeOnlyCollection(mismatchingSize);
+        var matching = sizeOnlyCollection(matchingSize);
+        var mismatching = sizeOnlyCollection(mismatchingSize);
 
         assertSame(matching, result(evaluate(condition, matching)));
         assertUnsatisfied(evaluate(condition, mismatching));
@@ -89,7 +89,7 @@ class CollectionSizeConditionsTest {
     @Test
     void diagnosticsUseCollectionVocabularyAndCapturedSize() {
         assertEquals("collection size was 1", mismatch(evaluate(hasSize(2), List.of("value"))));
-        var actual = ProbeContainers.sizeOnlyCollection(1);
+        var actual = sizeOnlyCollection(1);
 
         var failure = assertFailure(TIMEOUT,
                 () -> await(() -> {
@@ -104,7 +104,7 @@ class CollectionSizeConditionsTest {
     @Test
     void throwingSizeIsTheExactFailFastConditionCause() {
         var cause = new IllegalStateException("collection size failed");
-        var collection = ProbeContainers.sizeOnlyCollection(0);
+        var collection = sizeOnlyCollection(0);
         when(collection.size()).thenThrow(cause);
 
         assertSame(cause, assertFailure(CONDITION_FAILED,

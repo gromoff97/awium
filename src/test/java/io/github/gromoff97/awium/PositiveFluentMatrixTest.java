@@ -1,9 +1,6 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.result.ConditionResult;
-import io.github.gromoff97.awium.Await.CollectionViewSource;
-import io.github.gromoff97.awium.Await.MapViewSource;
-import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.function.CheckedFunction;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.time.Duration;
@@ -20,6 +17,9 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.CollectionViewSource;
+import static io.github.gromoff97.awium.Await.MapViewSource;
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.AwaitTestAccess.observation;
 import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
@@ -31,6 +31,11 @@ import static io.github.gromoff97.awium.OptionalConditions.*;
 import static java.time.Duration.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static io.github.gromoff97.awium.MapConditions.allEntries;
+import static io.github.gromoff97.awium.MapConditions.hasEntry;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static java.util.function.Predicate.not;
 
 class PositiveFluentMatrixTest {
 
@@ -49,7 +54,7 @@ class PositiveFluentMatrixTest {
         assertSame(actual, selected);
 
         PreservingCondition<Object> selecting = condition(
-                "select actual", ignored -> ConditionResult.satisfied());
+                "select actual", ignored -> satisfied());
         assertSame(actual, await(source).usingTime(time, time).until(selecting));
         String nil = await(() -> (String) null).usingTime(time, time).until(isNull);
         assertSame(null, nil);
@@ -194,7 +199,7 @@ class PositiveFluentMatrixTest {
         Map<String, ? extends Number> values = Map.of("answer", actual);
         var source = new MapViewSource<String, Number, Map<String, ? extends Number>>(() -> values);
         var waiting = await(source);
-        var check = MapConditions.valueFor("answer", expected::equals).because("the answer must arrive");
+        var check = valueFor("answer", expected::equals).because("the answer must arrive");
 
         var selected = waiting.until(check);
         assertEquals(42, selected.intValue());
@@ -264,10 +269,10 @@ class PositiveFluentMatrixTest {
 
     @Test
     void constructorLambdasRetainTheirConcreteTypes() {
-        StringBuilder text = Await.await(() -> new StringBuilder()).until(StringConditions.empty);
-        ArrayList<String> values = Await.await(() -> new ArrayList<String>()).until(CollectionConditions.empty);
-        LinkedHashMap<String, Integer> entries = Await.await(() -> new LinkedHashMap<String, Integer>()).until(MapConditions.empty);
-        Optional<?> absent = Await.await(() -> Optional.empty()).until(OptionalConditions.absent);
+        StringBuilder text = await(() -> new StringBuilder()).until(StringConditions.empty);
+        ArrayList<String> values = await(() -> new ArrayList<String>()).until(CollectionConditions.empty);
+        LinkedHashMap<String, Integer> entries = await(() -> new LinkedHashMap<String, Integer>()).until(MapConditions.empty);
+        Optional<?> absent = await(() -> Optional.empty()).until(OptionalConditions.absent);
         assertEquals(0, text.length());
         assertEquals(0, values.size());
         assertEquals(0, entries.size());
@@ -301,12 +306,12 @@ class PositiveFluentMatrixTest {
         Consumer<String> first = value -> calls.add("first " + value);
         BiPredicate<String, Integer> entry = (key, value) -> value > 0;
 
-        String matched = await(() -> "ready").until(matches(Predicate.not(text).negate()::test));
+        String matched = await(() -> "ready").until(matches(not(text).negate()::test));
         String transformed = await(() -> trim.apply(" ready ")).until(isNotNull);
-        String custom = await(() -> trim.apply(" ready ")).until(condition("ready", ignored -> ConditionResult.satisfied()));
+        String custom = await(() -> trim.apply(" ready ")).until(condition("ready", ignored -> satisfied()));
         String asserted = await(() -> "ready").until(asserted(first.andThen(value -> calls.add("second " + value))::accept));
         Map<String, Integer> matchingEntry = await(() -> Map.of("ready", 1))
-                .until(MapConditions.hasEntry(entry.and((key, value) -> !key.isBlank())::test));
+                .until(hasEntry(entry.and((key, value) -> !key.isBlank())::test));
 
         assertEquals(List.of("ready", "ready", "ready", "ready"), List.of(matched, transformed, custom, asserted));
         assertEquals(List.of("first ready", "second ready"), calls);
@@ -331,10 +336,10 @@ class PositiveFluentMatrixTest {
 
     @Test
     void evaluatorFactoriesPreserveObservationsInSingleAndOrderedWaits() {
-        Callable<CheckedFunction<CharSequence, ConditionResult>> broadFactory = () -> ignored -> ConditionResult.satisfied();
+        Callable<CheckedFunction<CharSequence, ConditionResult>> broadFactory = () -> ignored -> satisfied();
         var waiting = await(() -> "ready").usingTime(time, time);
 
-        String direct = waiting.until(condition("direct", ignored -> ConditionResult.satisfied()));
+        String direct = waiting.until(condition("direct", ignored -> satisfied()));
         String created = waiting.until(conditionPerWait("created", PositiveFluentMatrixTest::evaluator));
         String concrete = waiting.until(conditionPerWait("broad", broadFactory));
         List<String> captured = waiting.until(captured(conditionPerWait("first", PositiveFluentMatrixTest::evaluator),
@@ -355,10 +360,10 @@ class PositiveFluentMatrixTest {
         ArrayList<User> allUsers = await(() -> users).until(all(value -> value.active()));
         User selected = await(() -> users).until(singleElement(value -> value.active()));
         User optional = await(() -> Optional.of(user)).until(hasValue(value -> value.active()));
-        User mapped = await(() -> Map.of("id", user)).until(MapConditions.valueFor("id", value -> value.active()));
+        User mapped = await(() -> Map.of("id", user)).until(valueFor("id", value -> value.active()));
         ArrayList<User> nested = await(() -> users).until(all(matches(value -> value.active())));
         Map<String, User> entries = await(() -> Map.of("id", user))
-                .until(MapConditions.allEntries((key, value) -> key.length() == 2 && value.active()));
+                .until(allEntries((key, value) -> key.length() == 2 && value.active()));
         List<Integer> sortedValues = await(() -> List.of(1, 2)).until(sorted(java.util.Comparator.naturalOrder()));
         List<ArrayList<User>> stages = await(() -> users).usingTime(time, time).until(captured(
                 singleElement(value -> value.active()), singleElement(value -> value.active())));
@@ -382,7 +387,7 @@ class PositiveFluentMatrixTest {
 
         User selected = await(collection).until(singleElement);
         User presentUser = await(optional).until(present);
-        User mapped = await(map).until(MapConditions.valueFor("id"));
+        User mapped = await(map).until(valueFor("id"));
         ArrayList<User> originalUsers = await(collection).until(nonEmpty);
         LinkedHashMap<String, User> originalIndex = await(map).until(MapConditions.nonEmpty);
 
@@ -394,7 +399,7 @@ class PositiveFluentMatrixTest {
     }
 
     private static CheckedFunction<String, ConditionResult> evaluator() {
-        return ignored -> ConditionResult.satisfied();
+        return ignored -> satisfied();
     }
 
 }

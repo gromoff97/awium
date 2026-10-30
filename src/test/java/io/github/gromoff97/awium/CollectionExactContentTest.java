@@ -1,9 +1,6 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.internal.AttemptResult;
-import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
-import io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -14,6 +11,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
+import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
+import static io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.*;
@@ -29,7 +29,6 @@ import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
-
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;

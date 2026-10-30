@@ -1,16 +1,15 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.result.Attempt;
-import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 import org.junitpioneer.jupiter.cartesian.CartesianTest;
-import org.junitpioneer.jupiter.cartesian.CartesianTest.Values;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static org.junitpioneer.jupiter.cartesian.CartesianTest.Values;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
@@ -25,6 +24,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 
 class TimingConfigurationTest {
 
@@ -47,9 +49,9 @@ class TimingConfigurationTest {
         var result = diagnostic(waiting).until(Conditions.condition("ready", (String actual) -> {
             if (calls[0] > 1) {
                 if (outcome.equals("condition failure")) throw cause;
-                if (outcome.equals("mismatch")) return ConditionResult.unsatisfied("changed");
+                if (outcome.equals("mismatch")) return unsatisfied("changed");
             }
-            return ConditionResult.satisfied();
+            return satisfied();
         }));
 
         assertEquals(2, calls[0], outcome);
@@ -98,7 +100,7 @@ class TimingConfigurationTest {
     void diagnosticMapPersistenceRechecksTheSelectedValue() {
         var states = List.of(Map.of("key", "ready"), Map.of("key", "changed")).iterator();
         var result = tryAwait(states::next).usingTime(time, time).every(ofNanos(1))
-                .persisting(ofNanos(2)).until(MapConditions.valueFor("key", equalTo("ready")));
+                .persisting(ofNanos(2)).until(valueFor("key", equalTo("ready")));
 
         var failure = failure(result);
         assertEquals(PERSISTENCE_FAILED, failure.reason());
@@ -130,7 +132,7 @@ class TimingConfigurationTest {
             factories[0]++;
             int[] calls = {0};
             return actual -> ++calls[0] == 2
-                    ? ConditionResult.satisfied() : ConditionResult.unsatisfied("first observation");
+                    ? satisfied() : unsatisfied("first observation");
         });
         var waiting = await(() -> "ready").usingTime(() -> {
             clockReads[0]++;

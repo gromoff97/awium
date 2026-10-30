@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.AbstractList;
 import java.util.AbstractMap;
@@ -30,12 +29,31 @@ import static java.time.Duration.ofNanos;
 import static org.apache.commons.lang3.exception.ExceptionUtils.rethrow;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static io.github.gromoff97.awium.Conditions.conditionPerWait;
+import static io.github.gromoff97.awium.Conditions.instanceOf;
+import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
+import static io.github.gromoff97.awium.MapConditions.allEntries;
+import static io.github.gromoff97.awium.MapConditions.allKeys;
+import static io.github.gromoff97.awium.MapConditions.allValues;
+import static io.github.gromoff97.awium.MapConditions.containsAllEntries;
+import static io.github.gromoff97.awium.MapConditions.containsExactlyEntries;
+import static io.github.gromoff97.awium.MapConditions.containsKey;
+import static io.github.gromoff97.awium.MapConditions.containsOnlyKeys;
+import static io.github.gromoff97.awium.MapConditions.containsValue;
+import static io.github.gromoff97.awium.MapConditions.entryFor;
+import static io.github.gromoff97.awium.MapConditions.hasEntry;
+import static io.github.gromoff97.awium.MapConditions.hasNoEntry;
+import static io.github.gromoff97.awium.MapConditions.singleEntry;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
 
 class ContainerInterruptionTest {
 
     @AfterEach
     void clearInterruptFlag() {
-        Thread.interrupted();
+        interrupted();
     }
 
     @Test
@@ -44,24 +62,24 @@ class ContainerInterruptionTest {
             @Override public int size() { return 1; }
             @Override public String get(int index) {
                 java.util.Objects.checkIndex(index, size());
-                Thread.currentThread().interrupt();
+                currentThread().interrupt();
                 return "ready";
             }
             @Override public String toString() { return "interrupting collection"; }
         };
         int[] factories = {0};
-        var nested = Conditions.conditionPerWait("nested check", () -> {
+        var nested = conditionPerWait("nested check", () -> {
             factories[0]++;
-            return (String value) -> ConditionResult.satisfied();
+            return (String value) -> satisfied();
         });
         for (var condition : List.of(all(nested), any(nested), none(nested))) {
             try {
                 var result = tryAwait(() -> actual).until(condition);
                 assertEquals(INTERRUPTED, failure(result).reason());
-                assertTrue(Thread.currentThread().isInterrupted());
+                assertTrue(currentThread().isInterrupted());
                 assertEquals(0, factories[0]);
             } finally {
-                Thread.interrupted();
+                interrupted();
             }
         }
     }
@@ -73,7 +91,7 @@ class ContainerInterruptionTest {
         var actual = new ArrayList<>(List.of("ready")) {
             @Override
             public Iterator<String> iterator() {
-                Thread.currentThread().interrupt();
+                currentThread().interrupt();
                 return rethrow(cause);
             }
 
@@ -82,25 +100,25 @@ class ContainerInterruptionTest {
         };
         var waiting = await(() -> actual);
         if (throwing) {
-            assertSame(cause, FailureTaxonomyTest.assertFailure(INTERRUPTED, () -> waiting.until(singleElement)).getCause());
+            assertSame(cause, assertFailure(INTERRUPTED, () -> waiting.until(singleElement)).getCause());
         } else {
             var failure = failure(diagnostic(waiting).until(singleElement));
             assertEquals(INTERRUPTED, failure.reason());
             assertSame(cause, failure.cause());
         }
-        assertTrue(Thread.currentThread().isInterrupted());
+        assertTrue(currentThread().isInterrupted());
     }
 
     @ParameterizedTest(name = "{0}")
     @CsvSource({"selected,false", "narrowed,true", "captured selected,false", "captured narrowed,true"})
     void interruptedExtractionKeepsTheDefinitionWithoutStartingTheNestedCheck(String form, boolean useNarrowed) {
         int[] factories = {0};
-        var check = Conditions.conditionPerWait("nested check", () -> {
+        var check = conditionPerWait("nested check", () -> {
             factories[0]++;
-            return (String value) -> ConditionResult.satisfied();
+            return (String value) -> satisfied();
         });
-        var selected = MapConditions.valueFor("key", check).because("value must be readable");
-        var narrowed = MapConditions.valueFor("key", Conditions.instanceOf(String.class)).because("value must be readable");
+        var selected = valueFor("key", check).because("value must be readable");
+        var narrowed = valueFor("key", instanceOf(String.class)).because("value must be readable");
         var actual = new SignallingMap("getValue");
         var waiting = await(() -> actual);
         var result = switch (form) {
@@ -119,7 +137,7 @@ class ContainerInterruptionTest {
         assertSame(useNarrowed ? narrowed : selected, condition);
         assertEquals("key", condition.references().getFirst().value());
         assertEquals("value must be readable", condition.explanation());
-        assertTrue(Thread.currentThread().isInterrupted());
+        assertTrue(currentThread().isInterrupted());
     }
 
     @Test
@@ -168,15 +186,15 @@ class ContainerInterruptionTest {
     void interruptionsWithinMapTraversalsStopAtTheConditionBoundary() {
         List<Function<MapAwait<SignallingMap, Map.Entry<String, String>, String>, AwaitResult<?, ?>>> waits = List.of(
                 waiting -> diagnostic(waiting).until(MapConditions.singleEntry),
-                waiting -> diagnostic(waiting).until(MapConditions.singleEntry(matches(value -> true))),
-                waiting -> diagnostic(waiting).until(MapConditions.valueFor("key")),
-                waiting -> diagnostic(waiting).until(MapConditions.entryFor("key")),
-                waiting -> diagnostic(waiting).until(MapConditions.allEntries((key, value) -> true)),
-                waiting -> diagnostic(waiting).until(MapConditions.hasEntry((key, value) -> true)),
-                waiting -> diagnostic(waiting).until(MapConditions.hasNoEntry((key, value) -> false)),
-                waiting -> diagnostic(waiting).until(MapConditions.hasEntry("key", "ready")),
-                waiting -> diagnostic(waiting).until(MapConditions.containsAllEntries(Map.of("key", "ready"))),
-                waiting -> diagnostic(waiting).until(MapConditions.containsExactlyEntries(Map.of("key", "ready"))));
+                waiting -> diagnostic(waiting).until(singleEntry(matches(value -> true))),
+                waiting -> diagnostic(waiting).until(valueFor("key")),
+                waiting -> diagnostic(waiting).until(entryFor("key")),
+                waiting -> diagnostic(waiting).until(allEntries((key, value) -> true)),
+                waiting -> diagnostic(waiting).until(hasEntry((key, value) -> true)),
+                waiting -> diagnostic(waiting).until(hasNoEntry((key, value) -> false)),
+                waiting -> diagnostic(waiting).until(hasEntry("key", "ready")),
+                waiting -> diagnostic(waiting).until(containsAllEntries(Map.of("key", "ready"))),
+                waiting -> diagnostic(waiting).until(containsExactlyEntries(Map.of("key", "ready"))));
         for (String boundary : List.of("entrySet", "iterator", "hasNext", "next", "getKey", "getValue")) {
             for (int index = 0; index < waits.size(); index++) {
                 // Selecting an entry does not inspect its key.
@@ -197,13 +215,13 @@ class ContainerInterruptionTest {
     void interruptionsDuringMapSizeAndViewsAreDetectedAfterTheCheck() {
         List<BoundaryCase<SignallingMap>> cases = List.of(
                 new BoundaryCase<>("entrySet", actual -> tryAwait(() -> actual).until(MapConditions.singleEntry)),
-                new BoundaryCase<>("size", actual -> tryAwait(() -> actual).until(MapConditions.containsExactlyEntries(Map.of("key", "ready")))),
+                new BoundaryCase<>("size", actual -> tryAwait(() -> actual).until(containsExactlyEntries(Map.of("key", "ready")))),
                 new BoundaryCase<>("size", actual -> tryAwait(() -> actual).until(MapConditions.hasSize(1))),
-                new BoundaryCase<>("keySet", actual -> tryAwait(() -> actual).until(MapConditions.allKeys(value -> true))),
-                new BoundaryCase<>("keySet", actual -> tryAwait(() -> actual).until(MapConditions.containsKey("key"))),
-                new BoundaryCase<>("keySet", actual -> tryAwait(() -> actual).until(MapConditions.containsOnlyKeys(java.util.Collections.singletonList("key")))),
-                new BoundaryCase<>("values", actual -> tryAwait(() -> actual).until(MapConditions.allValues(value -> true))),
-                new BoundaryCase<>("values", actual -> tryAwait(() -> actual).until(MapConditions.containsValue("ready"))));
+                new BoundaryCase<>("keySet", actual -> tryAwait(() -> actual).until(allKeys(value -> true))),
+                new BoundaryCase<>("keySet", actual -> tryAwait(() -> actual).until(containsKey("key"))),
+                new BoundaryCase<>("keySet", actual -> tryAwait(() -> actual).until(containsOnlyKeys(java.util.Collections.singletonList("key")))),
+                new BoundaryCase<>("values", actual -> tryAwait(() -> actual).until(allValues(value -> true))),
+                new BoundaryCase<>("values", actual -> tryAwait(() -> actual).until(containsValue("ready"))));
         for (var testCase : cases) {
             var actual = new SignallingMap(testCase.boundary());
             assertInterrupted(() -> testCase.check().apply(actual), testCase.boundary(), actual.calls);
@@ -235,9 +253,9 @@ class ContainerInterruptionTest {
             assertEquals(INTERRUPTED, failure.reason(), calls.toString());
             assertInstanceOf(InterruptedException.class, failure.cause());
             assertThat(calls).contains(boundary);
-            assertTrue(Thread.currentThread().isInterrupted());
+            assertTrue(currentThread().isInterrupted());
         } finally {
-            Thread.interrupted();
+            interrupted();
         }
     }
 
@@ -251,7 +269,7 @@ class ContainerInterruptionTest {
 
         private void called(String method) {
             calls.add(method);
-            if (method.equals(boundary)) Thread.currentThread().interrupt();
+            if (method.equals(boundary)) currentThread().interrupt();
         }
 
         @Override
@@ -311,7 +329,7 @@ class ContainerInterruptionTest {
 
         private void called(String method) {
             calls.add(method);
-            if (method.equals(boundary)) Thread.currentThread().interrupt();
+            if (method.equals(boundary)) currentThread().interrupt();
         }
 
         @Override
@@ -333,7 +351,7 @@ class ContainerInterruptionTest {
                 @Override
                 public String next() {
                     called("next");
-                    if (++nextCalls == 2 && boundary.equals("secondNext")) Thread.currentThread().interrupt();
+                    if (++nextCalls == 2 && boundary.equals("secondNext")) currentThread().interrupt();
                     return delegate.next();
                 }
             };

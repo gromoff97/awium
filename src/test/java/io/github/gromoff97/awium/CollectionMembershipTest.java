@@ -1,8 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
-import io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -11,6 +8,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
+import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
+import static io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
@@ -29,10 +29,10 @@ import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
-
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static io.github.gromoff97.awium.ProbeContainers.membershipCollection;
 
 class CollectionMembershipTest {
 
@@ -191,9 +191,9 @@ class CollectionMembershipTest {
     void traversalAndEqualityFailuresRemainFailFastForNegativeConditions() {
         var iteratorCause = new IllegalStateException("iterator failed");
         var equalityCause = new IllegalStateException("equals failed");
-        Collection<String> brokenIterator = ProbeContainers.membershipCollection(List.of());
+        Collection<String> brokenIterator = membershipCollection(List.of());
         when(brokenIterator.iterator()).thenThrow(iteratorCause);
-        var brokenEquality = ProbeContainers.membershipCollection(
+        var brokenEquality = membershipCollection(
                 List.of(new ThrowingEquals(equalityCause)));
 
         assertSame(iteratorCause, assertFailure(CONDITION_FAILED,
@@ -205,7 +205,7 @@ class CollectionMembershipTest {
 
     @Test
     void terminalDiagnosticsDoNotTraverseTheActualAgain() {
-        var actual = ProbeContainers.membershipCollection(
+        var actual = membershipCollection(
                 List.of("a", "b"));
 
         assertFailure(TIMEOUT,
@@ -228,7 +228,7 @@ class CollectionMembershipTest {
 
     @Test
     void emptyExpectedMembershipDoesNotTraverseTheObservedCollection() {
-        Collection<String> actual = ProbeContainers.membershipCollection(List.of());
+        Collection<String> actual = membershipCollection(List.of());
         when(actual.iterator()).thenThrow(new IllegalStateException("unnecessary traversal"));
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
 

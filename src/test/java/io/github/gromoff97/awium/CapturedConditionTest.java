@@ -1,8 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.ConditionResult;
-import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.internal.ExecutionStep.Phase;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
@@ -18,8 +15,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junitpioneer.jupiter.cartesian.CartesianTest;
-import org.junitpioneer.jupiter.cartesian.CartesianTest.Values;
 
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
+import static io.github.gromoff97.awium.internal.ExecutionStep.Phase;
+import static org.junitpioneer.jupiter.cartesian.CartesianTest.Values;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.observation;
 import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
@@ -45,6 +44,15 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static io.github.gromoff97.awium.CollectionConditions.hasSize;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.Conditions.equalTo;
+import static io.github.gromoff97.awium.Conditions.exactlyInstanceOf;
+import static io.github.gromoff97.awium.Conditions.instanceOf;
+import static io.github.gromoff97.awium.MapConditions.entryFor;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static java.lang.Math.min;
+import static java.lang.Thread.currentThread;
 
 class CapturedConditionTest {
 
@@ -66,13 +74,13 @@ class CapturedConditionTest {
                 .usingTime(time, time).every(ofNanos(1));
 
         List<List<Payment>> values = waiting.until(captured(
-                CollectionConditions.hasSize(1),
+                hasSize(1),
                 CollectionConditions.singleElement,
-                CollectionConditions.singleElement(Conditions.instanceOf(Payment.class))));
+                singleElement(instanceOf(Payment.class))));
         AwaitResult<List<Payment>, List<List<Payment>>> result = diagnostic(waiting).until(captured(
-                CollectionConditions.hasSize(1),
+                hasSize(1),
                 CollectionConditions.singleElement,
-                CollectionConditions.singleElement(Conditions.instanceOf(Payment.class))));
+                singleElement(instanceOf(Payment.class))));
 
         assertSame(first, values.getFirst());
         assertSame(second, values.get(1));
@@ -95,9 +103,9 @@ class CapturedConditionTest {
                 .usingTime(time, time).every(ofNanos(1));
 
         List<Object> values = waiting.until(captured(
-                Conditions.instanceOf(String.class), Conditions.instanceOf(Integer.class)));
+                instanceOf(String.class), instanceOf(Integer.class)));
         AwaitResult<Object, List<Object>> result = diagnostic(waiting).until(captured(
-                Conditions.instanceOf(String.class), Conditions.instanceOf(Integer.class)));
+                instanceOf(String.class), instanceOf(Integer.class)));
 
         assertSame(text, values.getFirst());
         assertSame(number, values.getLast());
@@ -127,13 +135,13 @@ class CapturedConditionTest {
                 .until(captured(present, present).because("present values"));
         assertEquals("paid", optionals.getFirst().orElseThrow().detail());
         var mapped = await(() -> Map.of("id", payment)).usingTime(time, time).every(ofNanos(1))
-                .until(captured(MapConditions.valueFor("id"), MapConditions.valueFor("id")).because("map values"));
+                .until(captured(valueFor("id"), valueFor("id")).because("map values"));
         assertEquals("paid", mapped.getFirst().get("id").detail());
         var entries = await(() -> Map.of("id", payment)).usingTime(time, time).every(ofNanos(1))
-                .until(captured(MapConditions.entryFor("id"), MapConditions.singleEntry).because("entries"));
+                .until(captured(entryFor("id"), MapConditions.singleEntry).because("entries"));
         assertEquals("paid", entries.getFirst().get("id").detail());
         var narrowed = await(() -> (Object) payment).usingTime(time, time).every(ofNanos(1))
-                .until(captured(Conditions.instanceOf(Payment.class), Conditions.instanceOf(Payment.class)).because("payments"));
+                .until(captured(instanceOf(Payment.class), instanceOf(Payment.class)).because("payments"));
         assertSame(payment, narrowed.getFirst());
 
         var single = await(() -> Optional.of(payment)).usingTime(time, time).until(captured(present));
@@ -144,15 +152,15 @@ class CapturedConditionTest {
     @ParameterizedTest(name = "interrupted={0}")
     @ValueSource(booleans = {false, true})
     void failureBeforeTheFirstCheckIdentifiesItsStageWithoutInventingAnEvaluation(boolean interrupted) {
-        var first = Conditions.equalTo("ready");
-        var sequence = captured(first, Conditions.equalTo("done")).because("lifecycle");
+        var first = equalTo("ready");
+        var sequence = captured(first, equalTo("done")).because("lifecycle");
         var cause = new IllegalStateException("source unavailable");
         int[] reads = {0};
         Callable<String> source = () -> {
             reads[0]++;
             throw cause;
         };
-        if (interrupted) Thread.currentThread().interrupt();
+        if (interrupted) currentThread().interrupt();
         var result = tryAwait(source).until(sequence);
         var attempt = attempts(result).getFirst();
         var failure = failure(result);
@@ -187,8 +195,8 @@ class CapturedConditionTest {
             if (reads[0] == completedStages && reason == WAIT_FAILED) throw cause;
             time.accept(nanos);
         }).every(ofNanos(1)).persisting(ofNanos(2));
-        var first = Conditions.equalTo("ready");
-        var second = Conditions.equalTo("done");
+        var first = equalTo("ready");
+        var second = equalTo("done");
         AwaitFailure failure;
         if (capture) {
             var result = diagnostic(waiting).until(captured(first, second));
@@ -212,14 +220,14 @@ class CapturedConditionTest {
         int completedStages = phase == Phase.ACQUISITION ? 1 : 2;
         int[] reads = {0};
         var waiting = await(() -> {
-            if (++reads[0] > completedStages && interruptInSource) Thread.currentThread().interrupt();
+            if (++reads[0] > completedStages && interruptInSource) currentThread().interrupt();
             return reads[0] == 1 ? "ready" : "done";
         }).usingTime(time, nanos -> {
-            if (reads[0] == completedStages && !interruptInSource) Thread.currentThread().interrupt();
+            if (reads[0] == completedStages && !interruptInSource) currentThread().interrupt();
             time.accept(nanos);
         }).every(ofNanos(1)).persisting(ofNanos(2));
-        var first = Conditions.equalTo("ready");
-        var second = Conditions.equalTo("done");
+        var first = equalTo("ready");
+        var second = equalTo("done");
         var result = diagnostic(waiting).until(captured(first, second));
         var failure = failure(result);
         var attempt = attempts(result).getLast();
@@ -228,7 +236,7 @@ class CapturedConditionTest {
                 : Attempt.FailedBeforeObservation.class, attempt.getClass());
         assertSame(second, result.conditions().getLast().condition());
         assertThat(failure.message()).contains("Sequence: captured " + completedStages + "/2", "stage 2/2");
-        assertTrue(Thread.currentThread().isInterrupted());
+        assertTrue(currentThread().isInterrupted());
     }
 
     @Test
@@ -239,8 +247,8 @@ class CapturedConditionTest {
         int[] reads = {0};
         var waiting = await(() -> observations[reads[0]++ % observations.length])
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10));
-        var start = Conditions.instanceOf(String.class);
-        var finish = Conditions.exactlyInstanceOf(String.class);
+        var start = instanceOf(String.class);
+        var finish = exactlyInstanceOf(String.class);
 
         var values = waiting.until(captured(start, finish));
         AwaitResult<Object, List<Object>> attempt = diagnostic(waiting).until(captured(start, finish));
@@ -264,11 +272,11 @@ class CapturedConditionTest {
         var waiting = await(() -> observations.get(reads[0]++ % observations.size()))
                 .usingTime(time, time).every(ofNanos(1));
 
-        var values = waiting.until(captured(CollectionConditions.singleElement(Conditions.instanceOf(Integer.class)),
-                CollectionConditions.singleElement(Conditions.exactlyInstanceOf(Integer.class))));
+        var values = waiting.until(captured(singleElement(instanceOf(Integer.class)),
+                singleElement(exactlyInstanceOf(Integer.class))));
         AwaitResult<List<Number>, List<List<Number>>> attempt = diagnostic(waiting).until(captured(
-                CollectionConditions.singleElement(Conditions.instanceOf(Integer.class)),
-                CollectionConditions.singleElement(Conditions.exactlyInstanceOf(Integer.class))));
+                singleElement(instanceOf(Integer.class)),
+                singleElement(exactlyInstanceOf(Integer.class))));
 
         assertEquals(1000, values.getFirst().getFirst().intValue());
         assertSame(observations.getFirst(), values.getFirst());
@@ -288,8 +296,8 @@ class CapturedConditionTest {
         var waiting = await(() -> observations.get(reads[0]++ % observations.size()))
                 .usingTime(time, time).every(java.time.Duration.ofNanos(1))
                 .persisting(java.time.Duration.ofNanos(1));
-        var start = MapConditions.valueFor("first");
-        var finish = MapConditions.valueFor("last", Conditions.isNotNull);
+        var start = valueFor("first");
+        var finish = valueFor("last", Conditions.isNotNull);
 
         List<Map<String, Number>> values = waiting.until(captured(start, finish));
         AwaitResult<Map<String, Number>, List<Map<String, Number>>> attempt = diagnostic(waiting).until(captured(start, finish));
@@ -317,9 +325,9 @@ class CapturedConditionTest {
         Number[] observations = {first, second, third, first, second, third};
         int[] reads = {0};
         var waiting = timedAwait(() -> observations[reads[0]++], config(1, 5, 0), time, time);
-        var firstStage = Conditions.equalTo(new BigDecimal("1.00"));
-        var secondStage = Conditions.equalTo(new BigInteger("2"));
-        var finalStage = Conditions.equalTo(1024L);
+        var firstStage = equalTo(new BigDecimal("1.00"));
+        var secondStage = equalTo(new BigInteger("2"));
+        var finalStage = equalTo(1024L);
 
         var sequence = captured(firstStage, secondStage, finalStage).because("numeric states");
         List<Number> values = waiting.until(sequence);
@@ -365,9 +373,9 @@ class CapturedConditionTest {
     @Test
     void historyRecordsTheCheckedStageAndItsActualResult() {
         var source = List.of("created", "created", "processing", "completed").iterator();
-        var first = Conditions.equalTo("created");
-        var second = Conditions.equalTo("processing");
-        var third = Conditions.equalTo("completed");
+        var first = equalTo("created");
+        var second = equalTo("processing");
+        var third = equalTo("completed");
         var sequence = captured(first, second, third).because("lifecycle");
         var result = tryAwait(source::next).usingTime(time, time).every(ofNanos(1)).until(sequence);
 
@@ -394,13 +402,13 @@ class CapturedConditionTest {
         }, config(1, 3, 0), time, time);
         var first = Conditions.<String>matches(value -> {
             if (stage == 1) {
-                Thread.currentThread().interrupt();
+                currentThread().interrupt();
                 return matching;
             }
             return true;
         });
         var second = Conditions.<String>matches(value -> {
-            Thread.currentThread().interrupt();
+            currentThread().interrupt();
             return matching;
         });
         AwaitFailure failure;
@@ -416,7 +424,7 @@ class CapturedConditionTest {
         assertInstanceOf(InterruptedException.class, failure.cause());
         assertThat(failure.message()).contains("Sequence: captured " + (stage - 1) + "/2", "stage " + stage + "/2");
         assertEquals(stage, sources[0]);
-        assertTrue(Thread.currentThread().isInterrupted());
+        assertTrue(currentThread().isInterrupted());
     }
 
     @ParameterizedTest(name = "delay={0}")
@@ -548,7 +556,7 @@ class CapturedConditionTest {
         int[] next = {0};
 
         List<Integer> result = timedAwait(() -> observations[next[0]++].length(),
-                config(1, 10, 0), time, time).until(captured(Conditions.equalTo(1), Conditions.equalTo(2)));
+                config(1, 10, 0), time, time).until(captured(equalTo(1), equalTo(2)));
 
         assertEquals(List.of(1, 2), result);
     }
@@ -582,8 +590,8 @@ class CapturedConditionTest {
     @Test
     void returnsAnImmutableCapturedCopyThatAllowsNull() {
         List<String> result = timedAwait((Callable<String>) () -> null, config(1, 10, 0),
-                time, time).until(captured(condition("first null", ignored -> ConditionResult.satisfied()),
-                condition("second null", ignored -> ConditionResult.satisfied())));
+                time, time).until(captured(condition("first null", ignored -> satisfied()),
+                condition("second null", ignored -> satisfied())));
 
         assertEquals(2, result.size());
         assertNull(result.get(0));
@@ -659,7 +667,7 @@ class CapturedConditionTest {
     private static List<Payment> runLifecycle(Payment[] observations, Condition.CapturedSource<Condition.InputCondition<Payment>> lifecycle, long timeout) {
         var time = new FakeTime(0);
         int[] next = {0};
-        return timedAwait(() -> observations[Math.min(next[0]++, observations.length - 1)],
+        return timedAwait(() -> observations[min(next[0]++, observations.length - 1)],
                 config(1, timeout, 0), time, time).until(lifecycle);
     }
 }

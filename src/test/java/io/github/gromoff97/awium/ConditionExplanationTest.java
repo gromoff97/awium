@@ -25,6 +25,10 @@ import static io.github.gromoff97.awium.OptionalConditions.present;
 import static java.time.Duration.ofNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static io.github.gromoff97.awium.MapConditions.allEntries;
+import static io.github.gromoff97.awium.MapConditions.hasEntry;
+import static io.github.gromoff97.awium.MapConditions.hasNoEntry;
+import static io.github.gromoff97.awium.function.CheckedPredicate.not;
 
 class ConditionExplanationTest {
 
@@ -81,19 +85,19 @@ class ConditionExplanationTest {
     void wildcardEntryChecksKeepTheMapTypeAndInheritedReason() {
         CheckedPredicate<Map.Entry<String, ? extends Number>> positive = entry -> entry.getValue().intValue() > 0;
         var check = matches(positive).because("entry requirement");
-        var opposite = matches(CheckedPredicate.not(positive)).because("entry requirement");
+        var opposite = matches(not(positive)).because("entry requirement");
         var actual = new LinkedHashMap<String, Integer>();
         actual.put("ready", 1);
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
 
         List<LinkedHashMap<String, Integer>> checked = List.of(
-                waiting.until(MapConditions.allEntries(check)),
-                waiting.until(MapConditions.hasEntry(check)),
-                waiting.until(MapConditions.hasNoEntry(opposite)));
+                waiting.until(allEntries(check)),
+                waiting.until(hasEntry(check)),
+                waiting.until(hasNoEntry(opposite)));
         checked.forEach(value -> assertSame(actual, value));
 
-        for (var result : List.of(diagnostic(waiting).until(MapConditions.allEntries(opposite)),
-                diagnostic(waiting).until(MapConditions.hasEntry(opposite)), diagnostic(waiting).until(MapConditions.hasNoEntry(check)))) {
+        for (var result : List.of(diagnostic(waiting).until(allEntries(opposite)),
+                diagnostic(waiting).until(hasEntry(opposite)), diagnostic(waiting).until(hasNoEntry(check)))) {
             var failure = failure(result);
             assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
             assertThat(failure.message()).contains("Because: entry requirement");

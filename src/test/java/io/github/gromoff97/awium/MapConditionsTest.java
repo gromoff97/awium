@@ -1,9 +1,6 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.internal.AttemptResult;
-import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
-import io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -16,6 +13,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
+import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
+import static io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
@@ -34,7 +34,6 @@ import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
-
 import static org.mockito.Mockito.verify;
 
 class MapConditionsTest {
@@ -173,9 +172,9 @@ class MapConditionsTest {
                 arrayActual, Satisfied.class);
 
         var objectArrayActual = entryMap(entry(new String[] {"key"}, new String[] {"value"}));
-        assertStatus(MapConditions.containsKey(new String[] {"key"}),
+        assertStatus(containsKey(new String[] {"key"}),
                 objectArrayActual, Satisfied.class);
-        assertStatus(MapConditions.containsValue(new String[] {"value"}),
+        assertStatus(containsValue(new String[] {"value"}),
                 objectArrayActual, Satisfied.class);
 
         var valueFailure = new IllegalStateException("value equals");

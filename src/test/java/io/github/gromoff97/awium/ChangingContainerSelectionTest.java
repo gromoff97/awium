@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static io.github.gromoff97.awium.CollectionConditions.elementAt;
 
 class ChangingContainerSelectionTest {
 
@@ -27,7 +28,7 @@ class ChangingContainerSelectionTest {
             if (++calls[0] == 2) values.add("ready");
             return values;
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
-                .until(CollectionConditions.elementAt(0));
+                .until(elementAt(0));
 
         assertEquals("ready", result.orThrow());
         assertEquals(2, calls[0]);

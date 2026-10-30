@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static io.github.gromoff97.awium.Conditions.conditionPerWait;
 
 class ConditionHistoriesTest {
 
@@ -79,7 +80,7 @@ class ConditionHistoriesTest {
     @Test
     void failureRetainsCompletedCurrentAndUnreachedConditionsWithoutInitializingTheLast() {
         int[] initialized = {0};
-        var unreached = Conditions.conditionPerWait("third", () -> {
+        var unreached = conditionPerWait("third", () -> {
             initialized[0]++;
             return (Integer actual) -> satisfied();
         }).because("last check");

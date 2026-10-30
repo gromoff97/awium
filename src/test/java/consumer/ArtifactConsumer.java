@@ -1,6 +1,5 @@
 package consumer;
 
-import io.github.gromoff97.awium.StringConditions;
 import io.github.gromoff97.awium.result.Attempt;
 import java.io.IOException;
 import java.util.List;
@@ -34,7 +33,7 @@ public final class ArtifactConsumer {
         String captured = result.orThrow();
         Number mapped = await(() -> Map.<String, Number>of("key", 1)).until(valueFor("key"));
         Map.Entry<String, Integer> entry = await(() -> Map.of("key", 1)).until(singleEntry);
-        String text = await(ArtifactConsumer::text).until(StringConditions.contains("read"));
+        String text = await(ArtifactConsumer::text).until(contains("read"));
         String regex = await(ArtifactConsumer::text).until(matchesRegex("ready"));
         return new Object[]{optional, selected, length, narrowed, stages, preserved, captured,
                 mapped, entry, text, regex, observed(result.conditions().getFirst().attempts().firstEntry().getValue())};

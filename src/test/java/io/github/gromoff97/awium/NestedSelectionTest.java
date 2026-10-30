@@ -1,12 +1,12 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.result.Attempt;
-import io.github.gromoff97.awium.Condition.PreservingCondition;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
@@ -19,6 +19,8 @@ import static io.github.gromoff97.awium.Conditions.*;
 import static java.time.Duration.ofNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
 
 class NestedSelectionTest {
 
@@ -104,9 +106,9 @@ class NestedSelectionTest {
                 assertThat(failure.message()).contains("broken");
                 assertEquals(1, checks[0]);
                 assertThat(time.parkRequests).isEmpty();
-                assertFalse(Thread.currentThread().isInterrupted());
+                assertFalse(currentThread().isInterrupted());
             } finally {
-                Thread.interrupted();
+                interrupted();
             }
         }
     }

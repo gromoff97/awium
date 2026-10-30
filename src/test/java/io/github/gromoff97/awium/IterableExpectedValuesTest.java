@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
@@ -10,9 +9,9 @@ import java.util.Map;
 import java.util.Spliterator;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
-import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
@@ -27,6 +26,9 @@ import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static io.github.gromoff97.awium.MapConditions.containsAllKeys;
+import static java.lang.Thread.currentThread;
+import static java.util.stream.IntStream.range;
 
 class IterableExpectedValuesTest {
 
@@ -70,14 +72,14 @@ class IterableExpectedValuesTest {
 
     @Test
     void expectedSnapshotsReadSplittableInputsOnTheCallingThread() {
-        var caller = Thread.currentThread();
-        var elements = IntStream.range(0, 2048).mapToObj(Integer::toString).toList();
+        var caller = currentThread();
+        var elements = range(0, 2048).mapToObj(Integer::toString).toList();
         int[] reads = {0};
         var expected = new Iterable<String>() {
             @Override public Iterator<String> iterator() { return elements.iterator(); }
             @Override public Spliterator<String> spliterator() {
                 return elements.parallelStream().map(value -> {
-                    assertSame(caller, Thread.currentThread(), "expected values must be read on the caller thread");
+                    assertSame(caller, currentThread(), "expected values must be read on the caller thread");
                     reads[0]++;
                     return value;
                 }).spliterator();
@@ -127,7 +129,7 @@ class IterableExpectedValuesTest {
         assertSame(actual, waiting(() -> actual).until(containsOnly(empty)));
         assertSame(actual, waiting(() -> actual).until(containsExactly(empty)));
         var entries = Map.of("key", "value");
-        assertSame(entries, waiting(() -> entries).until(MapConditions.containsAllKeys(empty)));
+        assertSame(entries, waiting(() -> entries).until(containsAllKeys(empty)));
 
         int[] reads = {0};
         var cause = new IllegalStateException("expected iterator failed");
