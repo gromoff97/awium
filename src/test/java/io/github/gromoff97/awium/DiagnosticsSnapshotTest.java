@@ -1017,8 +1017,7 @@ class DiagnosticsSnapshotTest {
                         ? satisfied() : unsatisfied("payment status was " + value));
     }
 
-    private static <OBSERVED> ExecutionStep<OBSERVED> evaluatedAttempt(
-            Condition condition, OBSERVED observed, ConditionResult result, long completedNanos) {
+    private static <OBSERVED> ExecutionStep<OBSERVED> evaluatedAttempt(Condition condition, OBSERVED observed, ConditionResult result, long completedNanos) {
         return new ExecutionStep<>(condition, 1, 0, ACQUISITION, completedNanos,
                 switch (result) {
                     case ConditionResult.Satisfied ignored -> new Attempt.Satisfied<>(observed);
@@ -1036,8 +1035,7 @@ class DiagnosticsSnapshotTest {
                 new Attempt.FailedBeforeObservation<>(Attempt.Operation.WAITING, failure)));
     }
 
-    private static WaitCompletion conditionFailure(
-            Condition expectation, Object observed, Throwable failure, long completedNanos) {
+    private static WaitCompletion conditionFailure(Condition expectation, Object observed, Throwable failure, long completedNanos) {
         return new Uncontrolled(new ExecutionStep<>(expectation, 1, 0, ACQUISITION, completedNanos,
                 new Attempt.FailedAfterObservation<>(observed, Attempt.Operation.CONDITION, failure, null)));
     }

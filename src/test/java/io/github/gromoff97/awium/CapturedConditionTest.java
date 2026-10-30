@@ -656,8 +656,7 @@ class CapturedConditionTest {
                 new Payment[]{nextCreated, firstFinished}, lifecycle, 10));
     }
 
-    private static List<Payment> runLifecycle(Payment[] observations,
-            Condition.CapturedSource<Condition.InputCondition<Payment>> lifecycle, long timeout) {
+    private static List<Payment> runLifecycle(Payment[] observations, Condition.CapturedSource<Condition.InputCondition<Payment>> lifecycle, long timeout) {
         var time = new FakeTime(0);
         int[] next = {0};
         return timedAwait(() -> observations[Math.min(next[0]++, observations.length - 1)],

@@ -66,8 +66,7 @@ class CollectionSizeConditionsTest {
 
     @ParameterizedTest(name = "{0}: matches size {1}, rejects size {2}")
     @MethodSource("cases")
-    void conditionsEvaluateEverySizeRelation(PreservingCondition<Collection<?>> condition,
-            int matchingSize, int mismatchingSize) {
+    void conditionsEvaluateEverySizeRelation(PreservingCondition<Collection<?>> condition, int matchingSize, int mismatchingSize) {
         var matching = ProbeContainers.sizeOnlyCollection(matchingSize);
         var mismatching = ProbeContainers.sizeOnlyCollection(mismatchingSize);
 

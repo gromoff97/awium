@@ -241,8 +241,7 @@ class ContainerInterruptionTest {
         }
     }
 
-    private record BoundaryCase<ACTUAL>(String boundary,
-            Function<ACTUAL, AwaitResult<?, ?>> check) {}
+    private record BoundaryCase<ACTUAL>(String boundary, Function<ACTUAL, AwaitResult<?, ?>> check) {}
 
     private static final class SignallingMap extends AbstractMap<String, String> {
         private final String boundary;

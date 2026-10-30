@@ -373,9 +373,7 @@ class MapConditionsTest {
         }
     }
 
-    private static <ACTUAL extends Map<?, ?>> void assertStatus(
-            PreservingCondition<? super ACTUAL> condition, ACTUAL actual,
-            Class<?> status) {
+    private static <ACTUAL extends Map<?, ?>> void assertStatus(PreservingCondition<? super ACTUAL> condition, ACTUAL actual, Class<?> status) {
         assertEquals(status, evaluate(condition, actual).getClass());
     }
 
@@ -389,13 +387,11 @@ class MapConditionsTest {
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    private static <K, V> ProbeContainers.EntryMap<K, V> entryMap(
-            ProbeContainers.ProbeEntry<K, V>... entries) {
+    private static <K, V> ProbeContainers.EntryMap<K, V> entryMap(ProbeContainers.ProbeEntry<K, V>... entries) {
         return new ProbeContainers.EntryMap<>(List.of(entries));
     }
 
-    private static <K, V> ProbeContainers.ProbeEntry<K, V> entry(K key,
-            V value) {
+    private static <K, V> ProbeContainers.ProbeEntry<K, V> entry(K key, V value) {
         return new ProbeContainers.ProbeEntry<>(key, value);
     }
 

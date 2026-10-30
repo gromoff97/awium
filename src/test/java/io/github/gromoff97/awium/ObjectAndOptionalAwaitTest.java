@@ -316,8 +316,7 @@ class ObjectAndOptionalAwaitTest {
         assertEquals(5, transformed);
     }
 
-    private static <T> ValueAwait<T> stage(
-            FakeTime time, Callable<T> source) {
+    private static <T> ValueAwait<T> stage(FakeTime time, Callable<T> source) {
         return timedAwait(source, DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(3)), time, time);
     }
     private static class Parent {

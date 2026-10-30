@@ -95,8 +95,7 @@ class TextExpectedValuesTest {
 
     @Test
     void textFactoriesFreezeMutableExpectedTextAndPreserveTheSource() {
-        record Check(Function<CharSequence, PreservingCondition<CharSequence>> factory,
-                String matching, String mismatch) {}
+        record Check(Function<CharSequence, PreservingCondition<CharSequence>> factory, String matching, String mismatch) {}
         var checks = List.of(
                 new Check(StringConditions::contains, "ready", "failed"),
                 new Check(StringConditions::doesNotContain, "failed", "ready"),

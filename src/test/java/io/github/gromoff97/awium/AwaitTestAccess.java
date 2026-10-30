@@ -47,14 +47,11 @@ final class AwaitTestAccess {
                 WaitConfiguration.DEFAULT.clock(), WaitConfiguration.DEFAULT.parker());
     }
 
-    static <S> ValueAwait<S> timedAwait(Callable<? extends S> source,
-            WaitConfiguration configuration, LongSupplier clock,
-            LongConsumer parker) {
+    static <S> ValueAwait<S> timedAwait(Callable<? extends S> source, WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {
         return new ValueAwait<>(source, configuration.withTime(clock, parker));
     }
 
-    static <S> DiagnosticAwait<S> timedTryAwait(Callable<? extends S> source,
-            WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {
+    static <S> DiagnosticAwait<S> timedTryAwait(Callable<? extends S> source, WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {
         return new DiagnosticAwait<>(source, configuration.withTime(clock, parker));
     }
 
@@ -62,8 +59,7 @@ final class AwaitTestAccess {
         return new DiagnosticAwait<>(waiting.source, waiting.configuration);
     }
 
-    static <OBSERVED, ELEMENT> DiagnosticSelectionAwait<OBSERVED, ELEMENT> diagnostic(
-            SelectionAwait<OBSERVED, ELEMENT> waiting) {
+    static <OBSERVED, ELEMENT> DiagnosticSelectionAwait<OBSERVED, ELEMENT> diagnostic(SelectionAwait<OBSERVED, ELEMENT> waiting) {
         return new DiagnosticSelectionAwait<>(waiting.source, waiting.configuration);
     }
 

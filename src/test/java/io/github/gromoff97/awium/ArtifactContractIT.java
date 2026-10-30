@@ -37,8 +37,7 @@ class ArtifactContractIT {
             "awium.test.jar must be configured"));
 
     @Test
-    void currentBuildJarIsAnExplicitJavaBaseOnlyModule()
-            throws Exception {
+    void currentBuildJarIsAnExplicitJavaBaseOnlyModule() throws Exception {
         assertTrue(isRegularFile(JAR), JAR.toString());
 
         ModuleReference module = ModuleFinder.of(JAR)

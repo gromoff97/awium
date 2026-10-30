@@ -305,8 +305,7 @@ class ScalarConditionsTest {
         assertStatus(condition, mismatching, Unsatisfied.class);
     }
 
-    private static <S> void assertStatus(PreservingCondition<? super S> condition, S actual,
-            Class<?> expected) {
+    private static <S> void assertStatus(PreservingCondition<? super S> condition, S actual, Class<?> expected) {
         assertEquals(expected, evaluate(condition, actual).getClass());
     }
 

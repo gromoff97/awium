@@ -24,6 +24,7 @@ import static org.mockito.Mockito.verify;
 class ConditionHistoryTest {
 
     private final FakeTime time = new FakeTime(0);
+    private int equalityChecks;
 
     @Test
     void typeChecksRetainActualTypesEvenWhenValuesHaveTheSameText() {
@@ -69,16 +70,6 @@ class ConditionHistoryTest {
 
     @Test
     void duplicatePositionSurvivesMutationWithoutRepeatingEqualityChecks() {
-        int[] comparisons = {0};
-        class Element {
-            final int number;
-            Element(int number) { this.number = number; }
-            @Override public boolean equals(Object other) {
-                comparisons[0]++;
-                return other instanceof Element element && number == element.number;
-            }
-            @Override public int hashCode() { return number; }
-        }
         var values = new ArrayList<>(List.of(new Element(1), new Element(1), new Element(2)));
         int[] calls = {0};
         var result = tryAwait(() -> {
@@ -93,7 +84,7 @@ class ConditionHistoryTest {
 
         assertSame(values, result.orThrow());
         assertEquals(4, calls[0]);
-        assertEquals(7, comparisons[0]);
+        assertEquals(7, equalityChecks);
         assertEquals(List.of("collection was null",
                 "duplicate collection element at index 1",
                 "duplicate collection element at index 2"), mismatches(result));
@@ -160,16 +151,6 @@ class ConditionHistoryTest {
 
     @Test
     void membershipRetainsTheFirstMissingExpectedPositionWithoutExtraComparisons() {
-        int[] comparisons = {0};
-        class Element {
-            final int number;
-            Element(int number) { this.number = number; }
-            @Override public boolean equals(Object other) {
-                comparisons[0]++;
-                return other instanceof Element element && number == element.number;
-            }
-            @Override public int hashCode() { return number; }
-        }
         var values = new ArrayList<Element>();
         int[] calls = {0};
         var result = tryAwait(() -> {
@@ -186,7 +167,7 @@ class ConditionHistoryTest {
 
         assertSame(values, result.orThrow());
         assertEquals(6, calls[0]);
-        assertEquals(15, comparisons[0]);
+        assertEquals(15, equalityChecks);
         assertThat(result.conditions().getFirst().attempts().keySet()).containsExactly(1L, 2L, 4L, 5L, 6L);
         assertEquals(List.of("collection was null",
                 "collection did not contain all expected elements; first missing at expected index 0",
@@ -286,6 +267,16 @@ class ConditionHistoryTest {
             }
         }
         return mismatches;
+    }
+
+    private final class Element {
+        final int number;
+        Element(int number) { this.number = number; }
+        @Override public boolean equals(Object other) {
+            equalityChecks++;
+            return other instanceof Element element && number == element.number;
+        }
+        @Override public int hashCode() { return number; }
     }
 
     private static final class CountedCheck {

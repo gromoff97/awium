@@ -280,10 +280,7 @@ class CollectionMembershipTest {
         assertSame(actual, result);
     }
 
-    private static <E> Collection<E> checkMembership(
-            Collection<E> actual,
-            PreservingCondition<? super Collection<E>>
-                    condition) {
+    private static <E> Collection<E> checkMembership(Collection<E> actual, PreservingCondition<? super Collection<E>> condition) {
         var time = new FakeTime(0);
         return await(() -> actual).usingTime(time, time).until(condition);
     }

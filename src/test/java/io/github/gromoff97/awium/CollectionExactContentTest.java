@@ -195,9 +195,7 @@ class CollectionExactContentTest {
         assertThat(failure.getMessage()).contains("Expected: [b]");
     }
 
-    private static <E> void assertStatus(
-            PreservingCondition<? super List<E>> condition,
-            List<? extends E> elements, Class<?> status) {
+    private static <E> void assertStatus(PreservingCondition<? super List<E>> condition, List<? extends E> elements, Class<?> status) {
         List<E> actual = new ArrayList<>(elements);
         assertEquals(status, evaluate(condition, actual).getClass());
     }

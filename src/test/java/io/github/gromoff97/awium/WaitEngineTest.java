@@ -574,11 +574,7 @@ class WaitEngineTest {
         assertSame(failure, attempt.cause());
     }
 
-    private static <S, R> WaitCompletion wait(
-            FakeTime time,
-            WaitConfiguration config,
-            Callable<S> source,
-            CheckedFunction<S, AttemptResult<R>> condition) {
+    private static <S, R> WaitCompletion wait(FakeTime time, WaitConfiguration config, Callable<S> source, CheckedFunction<S, AttemptResult<R>> condition) {
         return wait(time, config, time, source, condition);
     }
 

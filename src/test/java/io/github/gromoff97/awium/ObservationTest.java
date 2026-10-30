@@ -344,8 +344,7 @@ class ObservationTest {
             "false,2,satisfied", "false,2,unsatisfied", "false,2,null",
             "true,0,satisfied", "true,0,unsatisfied", "true,0,null",
             "true,2,satisfied", "true,2,unsatisfied", "true,2,null"})
-    void completionClockInterruptionStopsNormalResultsWithoutReplacingConditionFailure(
-            boolean capture, long persistence, String form) {
+    void completionClockInterruptionStopsNormalResultsWithoutReplacingConditionFailure(boolean capture, long persistence, String form) {
         var actual = new Object();
         var time = new FakeTime(0);
         int[] evaluations = {0};
@@ -482,8 +481,7 @@ class ObservationTest {
         throw new AssertionError("condition must not be called");
     }
 
-    private static Attempt<?> attempt(Callable<Object> source,
-            CheckedFunction<Object, ConditionResult> condition) {
+    private static Attempt<?> attempt(Callable<Object> source, CheckedFunction<Object, ConditionResult> condition) {
         var time = new FakeTime(0);
         return new WaitEngine<Object>(config(1, 2, 0).withTime(time, time), source, new SequenceExecution<>(ConditionSupport.bind(ConditionSupport.preserving("test condition", actual -> {
             ConditionResult evaluation = condition.apply(actual);

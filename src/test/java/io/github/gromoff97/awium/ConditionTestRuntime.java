@@ -12,18 +12,15 @@ final class ConditionTestRuntime {
         return new Condition.Typed<>(description, reference, () -> AttemptResult::satisfied);
     }
 
-    static <SOURCE, RESULT> AttemptResult<? extends RESULT> evaluate(
-            Condition.Typed<? super SOURCE, ? extends RESULT> condition, SOURCE actual) {
+    static <SOURCE, RESULT> AttemptResult<? extends RESULT> evaluate(Condition.Typed<? super SOURCE, ? extends RESULT> condition, SOURCE actual) {
         return evaluated(ConditionSupport.bind(condition).create(actual).call());
     }
 
-    static <SOURCE> AttemptResult<? extends SOURCE> evaluate(
-            PreservingCondition<? super SOURCE> condition, SOURCE actual) {
+    static <SOURCE> AttemptResult<? extends SOURCE> evaluate(PreservingCondition<? super SOURCE> condition, SOURCE actual) {
         return evaluated(ConditionSupport.<SOURCE, SOURCE>bind(condition).create(actual).call());
     }
 
-    static <SOURCE> AttemptResult<? extends SOURCE> evaluate(
-            Condition.ComparisonCondition<? extends SOURCE> condition, SOURCE actual) {
+    static <SOURCE> AttemptResult<? extends SOURCE> evaluate(Condition.ComparisonCondition<? extends SOURCE> condition, SOURCE actual) {
         return evaluated(ConditionSupport.<SOURCE, SOURCE>bind(condition).create(actual).call());
     }
 

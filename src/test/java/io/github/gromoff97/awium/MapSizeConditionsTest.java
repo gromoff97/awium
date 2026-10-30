@@ -65,8 +65,7 @@ class MapSizeConditionsTest {
 
     @ParameterizedTest(name = "{0}: matches size {1}, rejects size {2}")
     @MethodSource("cases")
-    void conditionsEvaluateEverySizeRelation(PreservingCondition<Map<?, ?>> condition,
-            int matchingSize, int mismatchingSize) {
+    void conditionsEvaluateEverySizeRelation(PreservingCondition<Map<?, ?>> condition, int matchingSize, int mismatchingSize) {
         Map<Integer, Integer> matching = mapWithSize(matchingSize);
         Map<Integer, Integer> mismatching = mapWithSize(mismatchingSize);
 
