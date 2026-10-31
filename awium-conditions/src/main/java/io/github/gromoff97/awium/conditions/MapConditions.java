@@ -12,7 +12,6 @@ import io.github.gromoff97.awium.conditions.internal.ContainsElementsCondition;
 import io.github.gromoff97.awium.conditions.internal.EmptyCondition;
 import io.github.gromoff97.awium.conditions.internal.EntryForCondition;
 import io.github.gromoff97.awium.conditions.internal.EntryMatchesCondition;
-import io.github.gromoff97.awium.conditions.internal.HasEntryCondition;
 import io.github.gromoff97.awium.conditions.internal.HasSizeCondition;
 import io.github.gromoff97.awium.conditions.internal.MapContentCondition;
 import io.github.gromoff97.awium.conditions.internal.MapEntries;
@@ -23,6 +22,7 @@ import io.github.gromoff97.awium.conditions.internal.SingleEntryCondition;
 import io.github.gromoff97.awium.conditions.internal.ValueForCondition;
 import io.github.gromoff97.awium.conditions.function.CheckedBiPredicate;
 import io.github.gromoff97.awium.conditions.function.CheckedPredicate;
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Map.Entry;
 import java.util.Map;
 import java.util.Objects;
@@ -117,7 +117,8 @@ public final class MapConditions {
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> hasEntry(KEY key, VALUE value) {
-        return new HasEntryCondition<>(key, value, false);
+        return new ContainsCondition<>("map", "entry", new SimpleImmutableEntry<>(key, value), false,
+                Map::entrySet, MapEntries::entryMatches);
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> hasEntry(CheckedPredicate<? super Entry<KEY, VALUE>> predicate) {
@@ -137,7 +138,8 @@ public final class MapConditions {
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> hasNoEntry(KEY key, VALUE value) {
-        return new HasEntryCondition<>(key, value, true);
+        return new ContainsCondition<>("map", "entry", new SimpleImmutableEntry<>(key, value), true,
+                Map::entrySet, MapEntries::entryMatches);
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> hasNoEntry(CheckedPredicate<? super Entry<KEY, VALUE>> predicate) {

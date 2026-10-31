@@ -19,7 +19,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments.argumentSet
 import org.junit.jupiter.params.provider.MethodSource
 
-class HasEntryConditionTest {
+class EntryMembershipTest {
     @ParameterizedTest
     @MethodSource("entries")
     fun `requires both the key and its value`(actual: Map<String?, String?>, found: Boolean) {
