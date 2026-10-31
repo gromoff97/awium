@@ -127,14 +127,14 @@ class ContainerInterruptionTest {
 
     @ParameterizedTest
     @MethodSource("collectionBoundaries")
-    fun `collection traversal stops at an interruption boundary`(factory: () -> AwaitCondition, boundary: String) {
+    fun `reports interruption signalled during collection traversal`(factory: () -> AwaitCondition, boundary: String) {
         val actual = SignallingList(boundary)
         assertInterrupted(factory(), actual, boundary, actual.calls)
     }
 
     @ParameterizedTest
     @MethodSource("mapBoundaries")
-    fun `map traversal stops at an interruption boundary`(factory: () -> AwaitCondition, boundary: String) {
+    fun `reports interruption signalled during map traversal`(factory: () -> AwaitCondition, boundary: String) {
         val actual = SignallingMap(boundary)
         assertInterrupted(factory(), actual, boundary, actual.calls)
     }

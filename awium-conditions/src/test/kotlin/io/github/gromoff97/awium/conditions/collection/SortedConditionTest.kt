@@ -19,37 +19,20 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.verifyNoInteractions
 
 class SortedConditionTest {
-    @Test
-    fun `later mutations do not change the reported out of order pairs`() {
-        var comparisons = 0
-        val check = sorted<Int> { left, right -> comparisons++; left.compareTo(right) }
-        val values = arrayListOf(3, 1, 2)
-        val mismatches = mutableListOf(rejection(check, null).mismatch(), rejection(check, values).mismatch())
-        values[0] = 1
-        values[1] = 3
-        mismatches += rejection(check, values).mismatch()
-        values[1] = 2
-        values[2] = 3
-
-        assertSame(values, result(evaluate(check, values)))
-        assertEquals(5, comparisons)
-        assertEquals(listOf("collection was null", "collection was not sorted at indices 0 and 1",
-            "collection was not sorted at indices 1 and 2"), mismatches)
-    }
-
     @ParameterizedTest
     @MethodSource("orderedValues")
     fun `uses the supplied order and permits equal neighbours`(actual: List<Int>, comparator: Comparator<Int>) {
         assertSame(actual, result(evaluate(sorted(comparator), actual)))
     }
 
-    @Test
-    fun `compares consecutive pairs and stops at the first inversion`() {
+    @ParameterizedTest
+    @MethodSource("inversions")
+    fun `compares consecutive pairs and stops at the first inversion`(actual: List<Int>, lastIndex: Int) {
         val comparisons = mutableListOf<Pair<Int, Int>>()
         val condition = sorted<Int> { first, second -> comparisons.add(first to second); first.compareTo(second) }
 
-        assertEquals("collection was not sorted at indices 1 and 2", rejection(condition, listOf(1, 3, 2, 4)).mismatch())
-        assertEquals(listOf(1 to 3, 3 to 2), comparisons)
+        assertEquals("collection was not sorted at indices ${lastIndex - 1} and $lastIndex", rejection(condition, actual).mismatch())
+        assertEquals(actual.zipWithNext().take(lastIndex), comparisons)
     }
 
     @ParameterizedTest
@@ -79,6 +62,12 @@ class SortedConditionTest {
     }
 
     companion object {
+        @JvmStatic
+        fun inversions() = listOf(
+            argumentSet("first pair", listOf(3, 1, 2), 1),
+            argumentSet("later pair", listOf(1, 3, 2, 4), 2)
+        )
+
         @JvmStatic
         fun orderedValues() = listOf(
             argumentSet("ascending", listOf(1, 2, 3), naturalOrder<Int>()),
