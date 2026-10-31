@@ -28,9 +28,6 @@ public abstract class AbstractConditionRun<OBSERVED, RESULT> implements Conditio
     protected List<? extends AwaitCondition> historyConditions() { return List.of(condition); }
 
     @Override
-    public abstract RESULT result();
-
-    @Override
     public final void record(Attempt<OBSERVED> attempt) {
         history.add(historySlot(), attempt);
     }

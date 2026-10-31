@@ -29,7 +29,7 @@ public class DefinedCondition<INPUT, RESULT> extends AwaitCondition.CheckDefinit
     }
 
     @Override
-    public ConditionResult<RESULT> probe(INPUT actual) throws Throwable {
+    public final ConditionResult<RESULT> probe(INPUT actual) throws Throwable {
         return newAttempt().probe(actual).mapValue(value -> value);
     }
 
