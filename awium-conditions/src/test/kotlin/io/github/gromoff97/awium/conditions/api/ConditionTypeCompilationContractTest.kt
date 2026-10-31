@@ -1,8 +1,19 @@
 package io.github.gromoff97.awium.conditions.api
 
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class ConditionTypeCompilationContractTest {
+
+    @ParameterizedTest
+    @ValueSource(strings = ["await", "tryAwait"])
+    fun `natural order rejects mutually incomparable elements`(entryPoint: String) {
+        assertRejected("""
+            $entryPoint(() -> List.of(1, "value"))
+                    .until(CollectionConditions.sorted(Comparator.naturalOrder()));
+        """.trimIndent())
+    }
 
     @Test
     fun `custom checks cannot return an attempt failure`() {
