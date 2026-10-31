@@ -1,5 +1,5 @@
 package io.github.gromoff97.awium.conditions.api
-import io.github.gromoff97.awium.conditions.ConditionAssertions.observation
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.observation
 import java.math.BigDecimal
 import java.util.Optional
 import java.util.concurrent.Callable

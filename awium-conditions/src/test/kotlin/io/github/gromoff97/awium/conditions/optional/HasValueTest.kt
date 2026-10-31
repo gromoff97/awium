@@ -2,9 +2,9 @@ package io.github.gromoff97.awium.conditions.optional
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
 import io.github.gromoff97.awium.Condition
-import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.Conditions.equalTo
 import io.github.gromoff97.awium.conditions.Conditions.notEqualTo
 import io.github.gromoff97.awium.conditions.OptionalConditions.hasValue

@@ -21,7 +21,7 @@ import io.github.gromoff97.awium.conditions.CollectionConditions.none as noEleme
 import io.github.gromoff97.awium.conditions.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.CollectionConditions.sorted
 import io.github.gromoff97.awium.conditions.CollectionConditions.startsWith
-import io.github.gromoff97.awium.conditions.ConditionAssertions.thrown
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.Conditions.captured
 import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait
 import io.github.gromoff97.awium.conditions.Conditions.instanceOf

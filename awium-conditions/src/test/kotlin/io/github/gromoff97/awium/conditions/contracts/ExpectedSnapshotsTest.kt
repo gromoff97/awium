@@ -3,9 +3,9 @@ package io.github.gromoff97.awium.conditions.contracts
 import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.conditions.CollectionConditions
 import io.github.gromoff97.awium.conditions.CollectionConditions.containsAll
-import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.Conditions
 import io.github.gromoff97.awium.conditions.MapConditions
 import io.github.gromoff97.awium.conditions.MapConditions.containsAllEntries

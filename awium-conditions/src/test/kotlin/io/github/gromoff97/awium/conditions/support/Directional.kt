@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.conditions.support
 
 class Directional(private val answer: Boolean) {
-    @JvmField var equalsCalls = 0
+    var equalsCalls = 0
 
     override fun equals(other: Any?): Boolean {
         equalsCalls++

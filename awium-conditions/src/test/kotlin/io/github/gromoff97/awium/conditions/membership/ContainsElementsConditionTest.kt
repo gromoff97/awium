@@ -5,9 +5,9 @@ import io.github.gromoff97.awium.conditions.CollectionConditions.containsAll
 import io.github.gromoff97.awium.conditions.CollectionConditions.containsAny
 import io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainAll
 import io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainAny
-import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.MapConditions.containsAllEntries
 import io.github.gromoff97.awium.conditions.MapConditions.containsAllKeys
 import io.github.gromoff97.awium.conditions.MapConditions.containsAllValues
@@ -16,9 +16,9 @@ import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainAllEntri
 import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainAnyEntries
 import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainAnyKeys
 import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainAnyValues
-import io.github.gromoff97.awium.conditions.ProbeContainers.EntryMap
-import io.github.gromoff97.awium.conditions.ProbeContainers.ProbeEntry
-import io.github.gromoff97.awium.conditions.ProbeContainers.membershipCollection
+import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
+import io.github.gromoff97.awium.conditions.support.ProbeContainers.ProbeEntry
+import io.github.gromoff97.awium.conditions.support.ProbeContainers.membershipCollection
 import io.github.gromoff97.awium.conditions.support.smallLists
 import io.github.gromoff97.awium.result.ConditionResult.Satisfied
 import org.assertj.core.api.Assertions.assertThat

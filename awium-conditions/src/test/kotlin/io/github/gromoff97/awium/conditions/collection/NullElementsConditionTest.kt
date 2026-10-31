@@ -4,8 +4,8 @@ import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.conditions.CollectionConditions.containsNull
 import io.github.gromoff97.awium.conditions.CollectionConditions.containsOnlyNulls
 import io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainNull
-import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.smallLists
 import io.github.gromoff97.awium.result.ConditionResult.Satisfied
 import org.junit.jupiter.api.Assertions.assertEquals

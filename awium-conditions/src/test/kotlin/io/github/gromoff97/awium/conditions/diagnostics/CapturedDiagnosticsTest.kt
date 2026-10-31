@@ -3,9 +3,8 @@ package io.github.gromoff97.awium.conditions.diagnostics
 import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.AwaitCondition.Reference
 import io.github.gromoff97.awium.Condition
-import io.github.gromoff97.awium.conditions.ConditionAssertions.diagnosticCondition
-import io.github.gromoff97.awium.conditions.ConditionAssertions.failure
-import io.github.gromoff97.awium.conditions.ConditionAssertions.probe
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.failure
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.probe
 import io.github.gromoff97.awium.conditions.Conditions.captured
 import io.github.gromoff97.awium.conditions.Conditions.condition
 import io.github.gromoff97.awium.conditions.Conditions.equalTo
@@ -142,7 +141,7 @@ class CapturedDiagnosticsTest {
         val original = object : AssertionError("not ready") {
             override val message: String get() { messages++; throw diagnostic }
         }
-        val first = diagnosticCondition("first stage", Reference("Expected", root))
+        val first = DefinedCondition<Any, Any>("first stage", Reference("Expected", root), AwaitAttempt { satisfied(it) })
         val second = DefinedCondition<Any, Any>("second stage", Reference("Expected", operand),
             AwaitAttempt { unsatisfied("not ready", original) })
         val run = start<Any, List<Any>>(captured(first, second), false)

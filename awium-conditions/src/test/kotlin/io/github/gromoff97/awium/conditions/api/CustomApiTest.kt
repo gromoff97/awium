@@ -3,8 +3,8 @@ package io.github.gromoff97.awium.conditions.api
 import consumer.value.CustomConsumer
 import consumer.value.CheckedCallbackConsumer
 import consumer.value.CustomConsumer.User
-import io.github.gromoff97.awium.conditions.ConditionAssertions.attempts
-import io.github.gromoff97.awium.conditions.ConditionAssertions.observation
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.observation
 import io.github.gromoff97.awium.result.AwaitResult.Succeeded
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf

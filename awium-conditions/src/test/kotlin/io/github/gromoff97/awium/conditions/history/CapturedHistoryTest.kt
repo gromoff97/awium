@@ -1,10 +1,10 @@
 package io.github.gromoff97.awium.conditions.history
 
 import io.github.gromoff97.awium.Await.tryAwait
-import io.github.gromoff97.awium.conditions.ConditionAssertions.attempts
-import io.github.gromoff97.awium.conditions.ConditionAssertions.failure
-import io.github.gromoff97.awium.conditions.ConditionAssertions.observation
-import io.github.gromoff97.awium.conditions.ConditionAssertions.probe
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.failure
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.observation
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.probe
 import io.github.gromoff97.awium.conditions.Conditions.captured
 import io.github.gromoff97.awium.conditions.Conditions.condition
 import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait

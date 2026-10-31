@@ -9,7 +9,7 @@ import io.github.gromoff97.awium.conditions.CollectionConditions.any
 import io.github.gromoff97.awium.conditions.CollectionConditions.containsAll
 import io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainAny
 import io.github.gromoff97.awium.conditions.CollectionConditions.hasNoDuplicates
-import io.github.gromoff97.awium.conditions.ConditionAssertions.attempts
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
 import io.github.gromoff97.awium.conditions.Conditions.exactlyInstanceOf
 import io.github.gromoff97.awium.conditions.Conditions.instanceOf
 import io.github.gromoff97.awium.conditions.MapConditions.containsAllEntries
@@ -19,7 +19,7 @@ import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainAnyEntri
 import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainAnyKeys
 import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainAnyValues
 import io.github.gromoff97.awium.conditions.MapConditions.noValue
-import io.github.gromoff97.awium.conditions.ProbeContainers.membershipCollection
+import io.github.gromoff97.awium.conditions.support.ProbeContainers.membershipCollection
 import io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation
 import io.github.gromoff97.awium.result.AwaitResult
 import java.time.Duration.ofNanos

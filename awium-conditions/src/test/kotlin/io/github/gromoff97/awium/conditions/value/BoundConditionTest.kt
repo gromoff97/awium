@@ -2,9 +2,9 @@ package io.github.gromoff97.awium.conditions.value
 
 import consumer.value.ComparableConsumer.missingBound
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
-import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.Conditions.atLeast
 import io.github.gromoff97.awium.conditions.Conditions.atMost
 import io.github.gromoff97.awium.conditions.Conditions.greaterThan

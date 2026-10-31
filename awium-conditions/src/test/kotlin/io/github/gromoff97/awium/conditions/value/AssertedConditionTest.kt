@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium.conditions.value
 
-import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
-import io.github.gromoff97.awium.conditions.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.ConditionAssertions.thrown
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.Conditions.asserted
 import io.github.gromoff97.awium.function.CheckedConsumer
 import io.github.gromoff97.awium.result.ConditionResult.unsatisfied

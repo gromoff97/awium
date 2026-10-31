@@ -7,11 +7,11 @@ import io.github.gromoff97.awium.conditions.CollectionConditions.containsOnly
 import io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainExactly
 import io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainExactlyInAnyOrder
 import io.github.gromoff97.awium.conditions.CollectionConditions.subsetOf
-import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.ConditionAssertions.thrown
-import io.github.gromoff97.awium.conditions.ProbeContainers.once
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
+import io.github.gromoff97.awium.conditions.support.ProbeContainers.once
 import io.github.gromoff97.awium.conditions.support.Directional
 import io.github.gromoff97.awium.conditions.support.ThrowingEquals
 import io.github.gromoff97.awium.conditions.support.smallLists

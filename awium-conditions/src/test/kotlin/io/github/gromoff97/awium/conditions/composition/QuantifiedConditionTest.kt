@@ -5,9 +5,9 @@ import io.github.gromoff97.awium.AwaitCondition.InputCondition
 import io.github.gromoff97.awium.conditions.CollectionConditions.all
 import io.github.gromoff97.awium.conditions.CollectionConditions.any
 import io.github.gromoff97.awium.conditions.CollectionConditions.none
-import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
-import io.github.gromoff97.awium.conditions.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.Conditions.captured
 import io.github.gromoff97.awium.conditions.Conditions.condition
 import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait
@@ -25,9 +25,9 @@ import io.github.gromoff97.awium.conditions.MapConditions.noKey
 import io.github.gromoff97.awium.conditions.MapConditions.noValue
 import io.github.gromoff97.awium.conditions.MapConditions.singleEntry
 import io.github.gromoff97.awium.conditions.MapConditions.valueFor
-import io.github.gromoff97.awium.conditions.ConditionAssertions.thrown
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.OptionalConditions.present
-import io.github.gromoff97.awium.conditions.ProbeContainers.EntryMap
+import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import io.github.gromoff97.awium.function.CheckedFunction
 import io.github.gromoff97.awium.function.CheckedPredicate

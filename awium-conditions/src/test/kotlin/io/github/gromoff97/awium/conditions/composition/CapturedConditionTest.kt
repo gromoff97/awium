@@ -5,7 +5,7 @@ import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
 import io.github.gromoff97.awium.conditions.CollectionConditions.firstElement
 import io.github.gromoff97.awium.conditions.CollectionConditions.lastElement
 import io.github.gromoff97.awium.conditions.CollectionConditions.singleElement
-import io.github.gromoff97.awium.conditions.ConditionAssertions.probe
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.probe
 import io.github.gromoff97.awium.conditions.Conditions.captured
 import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait
 import io.github.gromoff97.awium.conditions.Conditions.equalTo

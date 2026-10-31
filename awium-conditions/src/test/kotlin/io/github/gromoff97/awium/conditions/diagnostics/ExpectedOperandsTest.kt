@@ -8,7 +8,7 @@ import io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContain
 import io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainExactly
 import io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainExactlyInAnyOrder
 import io.github.gromoff97.awium.conditions.CollectionConditions.subsetOf
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.Conditions.between
 import io.github.gromoff97.awium.conditions.Conditions.equalTo
 import io.github.gromoff97.awium.conditions.Conditions.greaterThan

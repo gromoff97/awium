@@ -2,13 +2,13 @@ package io.github.gromoff97.awium.conditions.size
 
 import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.conditions.CollectionConditions
-import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.ConditionAssertions.thrown
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.MapConditions
-import io.github.gromoff97.awium.conditions.ProbeContainers.sizeOnlyCollection
-import io.github.gromoff97.awium.conditions.ProbeContainers.sizeOnlyMap
+import io.github.gromoff97.awium.conditions.support.ProbeContainers.sizeOnlyCollection
+import io.github.gromoff97.awium.conditions.support.ProbeContainers.sizeOnlyMap
 import io.github.gromoff97.awium.conditions.StringConditions
 import io.github.gromoff97.awium.result.ConditionResult.Satisfied
 import org.junit.jupiter.api.Assertions.assertEquals

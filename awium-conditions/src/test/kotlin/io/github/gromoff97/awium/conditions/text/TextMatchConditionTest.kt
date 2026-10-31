@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium.conditions.text
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
-import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.StringConditions
 import io.github.gromoff97.awium.conditions.support.Characters
 import org.junit.jupiter.api.Assertions.assertEquals

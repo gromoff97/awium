@@ -3,8 +3,8 @@ import io.github.gromoff97.awium.conditions.Conditions.matches
 import java.util.function.Predicate
 
 import consumer.value.ValueConsumer
-import io.github.gromoff97.awium.conditions.ConditionAssertions.attempts
-import io.github.gromoff97.awium.conditions.ConditionAssertions.observation
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.observation
 import java.math.BigDecimal
 import java.util.Optional
 import org.junit.jupiter.api.Assertions.assertEquals

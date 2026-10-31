@@ -1,10 +1,10 @@
 package io.github.gromoff97.awium.conditions.collection
 
 import io.github.gromoff97.awium.conditions.CollectionConditions.singleElement
-import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.ProbeContainers.once
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.support.ProbeContainers.once
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
 import java.util.concurrent.ConcurrentLinkedQueue

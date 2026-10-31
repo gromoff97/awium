@@ -3,7 +3,7 @@ package io.github.gromoff97.awium.conditions.api
 import consumer.map.SelectionConsumer
 import consumer.map.SelectionConsumer.ReceiptEntry
 import consumer.map.SelectionConsumer.User
-import io.github.gromoff97.awium.conditions.ProbeContainers.EntryMap
+import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import java.math.BigDecimal
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull

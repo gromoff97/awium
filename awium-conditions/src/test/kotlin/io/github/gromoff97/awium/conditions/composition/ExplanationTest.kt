@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition
 import io.github.gromoff97.awium.conditions.CollectionConditions.all
 import io.github.gromoff97.awium.conditions.CollectionConditions.singleElement
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.Conditions.equalTo
 import io.github.gromoff97.awium.conditions.Conditions.matches
 import io.github.gromoff97.awium.conditions.MapConditions.allEntries

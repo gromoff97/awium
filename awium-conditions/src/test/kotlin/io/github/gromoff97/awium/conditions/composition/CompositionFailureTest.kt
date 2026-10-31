@@ -4,11 +4,11 @@ import io.github.gromoff97.awium.Await.tryAwait
 import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.Condition
 import io.github.gromoff97.awium.conditions.CollectionConditions.singleElement
-import io.github.gromoff97.awium.conditions.ConditionAssertions.attempts
-import io.github.gromoff97.awium.conditions.ConditionAssertions.failure
-import io.github.gromoff97.awium.conditions.ConditionAssertions.probe
-import io.github.gromoff97.awium.conditions.ConditionAssertions.thrown
-import io.github.gromoff97.awium.conditions.ConditionAssertions.uncontrolled
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.failure
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.probe
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.uncontrolled
 import io.github.gromoff97.awium.conditions.Conditions.captured
 import io.github.gromoff97.awium.conditions.Conditions.condition
 import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait

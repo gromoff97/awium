@@ -9,12 +9,12 @@ import io.github.gromoff97.awium.conditions.CollectionConditions.all
 import io.github.gromoff97.awium.conditions.CollectionConditions.any
 import io.github.gromoff97.awium.conditions.CollectionConditions.none
 import io.github.gromoff97.awium.conditions.CollectionConditions.singleElement
-import io.github.gromoff97.awium.conditions.ConditionAssertions.attempts
-import io.github.gromoff97.awium.conditions.ConditionAssertions.failure
-import io.github.gromoff97.awium.conditions.ConditionAssertions.probe
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.ConditionAssertions.thrown
-import io.github.gromoff97.awium.conditions.ConditionAssertions.uncontrolled
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.failure
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.probe
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.uncontrolled
 import io.github.gromoff97.awium.conditions.Conditions.captured
 import io.github.gromoff97.awium.conditions.Conditions.condition
 import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait
@@ -32,7 +32,7 @@ import io.github.gromoff97.awium.conditions.MapConditions.noKey
 import io.github.gromoff97.awium.conditions.MapConditions.noValue
 import io.github.gromoff97.awium.conditions.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.OptionalConditions.hasValue
-import io.github.gromoff97.awium.conditions.ProbeContainers.EntryMap
+import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.execution.ConditionExecution.start
 import io.github.gromoff97.awium.result.Attempt.Operation.CONDITION
 import io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED

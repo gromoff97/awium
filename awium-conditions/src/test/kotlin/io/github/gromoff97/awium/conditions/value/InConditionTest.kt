@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium.conditions.value
 
 import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition
-import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.Conditions.`in`
 import io.github.gromoff97.awium.conditions.Conditions.notIn
 import io.github.gromoff97.awium.conditions.support.Directional

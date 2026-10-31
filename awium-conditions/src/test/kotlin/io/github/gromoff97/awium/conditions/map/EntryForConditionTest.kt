@@ -1,12 +1,12 @@
 package io.github.gromoff97.awium.conditions.map
 
-import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.ConditionAssertions.thrown
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.MapConditions.entryFor
-import io.github.gromoff97.awium.conditions.ProbeContainers.EntryMap
-import io.github.gromoff97.awium.conditions.ProbeContainers.ProbeEntry
+import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
+import io.github.gromoff97.awium.conditions.support.ProbeContainers.ProbeEntry
 import io.github.gromoff97.awium.conditions.support.Directional
 import io.github.gromoff97.awium.conditions.support.ThrowingEquals
 import org.junit.jupiter.api.Assertions.assertEquals

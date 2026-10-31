@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium.conditions.map
 
-import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.Conditions.equalTo
 import io.github.gromoff97.awium.execution.ConditionExecution.bind

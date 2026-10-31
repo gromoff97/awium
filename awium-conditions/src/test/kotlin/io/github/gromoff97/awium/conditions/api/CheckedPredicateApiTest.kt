@@ -2,7 +2,7 @@ package io.github.gromoff97.awium.conditions.api
 
 import consumer.value.CheckedPredicateConsumer
 import consumer.value.CheckedPredicateConsumer.User
-import io.github.gromoff97.awium.conditions.ConditionAssertions.attempts
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
 import java.util.Optional
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame

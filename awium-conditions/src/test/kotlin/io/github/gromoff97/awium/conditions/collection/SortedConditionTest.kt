@@ -1,10 +1,10 @@
 package io.github.gromoff97.awium.conditions.collection
 
 import io.github.gromoff97.awium.conditions.CollectionConditions.sorted
-import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
-import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.ConditionAssertions.thrown
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import java.util.Comparator.naturalOrder
 import java.util.Comparator.reverseOrder
 import org.junit.jupiter.api.Assertions.assertEquals

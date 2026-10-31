@@ -1,19 +1,20 @@
-package io.github.gromoff97.awium.conditions
+package io.github.gromoff97.awium.conditions.support
 
 import java.util.AbstractMap.SimpleImmutableEntry
-import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 
 object ProbeContainers {
-    @JvmStatic
     fun once(action: Runnable): Runnable {
-        val once: Runnable = mock()
-        doAnswer { action.run(); null }.doNothing().`when`(once).run()
-        return once
+        var pending = true
+        return Runnable {
+            if (pending) {
+                pending = false
+                action.run()
+            }
+        }
     }
 
-    @JvmStatic
     fun <ELEMENT> sizeOnlyCollection(size: Int): Collection<ELEMENT> {
         val collection: Collection<ELEMENT> = mock()
         `when`(collection.size).thenReturn(size)
@@ -23,7 +24,6 @@ object ProbeContainers {
         return collection
     }
 
-    @JvmStatic
     fun <KEY, VALUE> sizeOnlyMap(): Map<KEY, VALUE> {
         val map: Map<KEY, VALUE> = mock()
         `when`(map.size).thenReturn(1)
@@ -33,7 +33,6 @@ object ProbeContainers {
         return map
     }
 
-    @JvmStatic
     fun <ELEMENT> membershipCollection(elements: List<ELEMENT>): MutableCollection<ELEMENT> {
         val collection: MutableCollection<ELEMENT> = mock()
         `when`(collection.size).thenThrow(AssertionError("size must not be called"))
@@ -44,9 +43,9 @@ object ProbeContainers {
     }
 
     class EntryMap<KEY, VALUE>(private val sourceEntries: List<Map.Entry<KEY, VALUE>>) : AbstractMap<KEY, VALUE>() {
-        @JvmField var beforeEntrySet = Runnable {}
-        @JvmField var beforeIterator = Runnable {}
-        @JvmField var entrySetCalls = 0
+        var beforeEntrySet = Runnable {}
+        var beforeIterator = Runnable {}
+        var entrySetCalls = 0
 
         override fun isEmpty() = sourceEntries.isEmpty()
 
