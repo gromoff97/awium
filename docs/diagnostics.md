@@ -7,15 +7,15 @@
 `tryAwait(source).until(condition)` returns `AwaitResult<OBSERVED, RESULT>`:
 source type first, condition result type second.
 
+Import `Satisfied` and `Failed` from `AwaitResult`, and statically import `System.out`.
+
 ```java
 var result = tryAwait(paymentRepository::find).until(present);
 // AwaitResult<Optional<Payment>, Payment>
-switch (result) {
-    case AwaitResult.Satisfied(var conditions, var payment) ->
-            System.out.println(payment.receipt());
-    case AwaitResult.Failed(var conditions, var failure) ->
-            System.out.println(failure.message());
-}
+out.println(switch (result) {
+    case Satisfied(var conditions, var payment) -> payment.receipt();
+    case Failed(var conditions, var failure) -> failure.message();
+});
 ```
 
 Records expose `Satisfied.result()` or `Failed.failure()`. `AwaitFailure` has
@@ -119,8 +119,8 @@ History contains no timing or progress objects.
 ## Reading diagnostics
 
 ```java
-System.out.println(result);                       // Outcome and histories
-result.conditions().forEach(System.out::println); // Histories only
+out.println(result);                       // Outcome and histories
+result.conditions().forEach(out::println); // Histories only
 ```
 
 Each history prints its definition, operands, and `Because` reason once, then

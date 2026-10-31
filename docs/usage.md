@@ -2,8 +2,6 @@
 
 [README](../README.md) · [Conditions](conditions.md) · [Diagnostics](diagnostics.md)
 
-Examples use static imports from `Await`, the relevant condition catalog, and `java.time.Duration`.
-
 ## The chain
 
 ```java
@@ -37,27 +35,28 @@ Callable<Optional<Payment>> source = paymentRepository::find;
 Payment found = await(source::call).until(present);
 ```
 
-To pass a stored source directly, declare `Await.OptionalSource<VALUE>`,
-`Await.CollectionSource<VALUES>`, or `Await.MapSource<ENTRIES>`; all extend `Callable`.
+Import source types from `Await`. To pass a stored source directly, declare
+`OptionalSource<VALUE>`, `CollectionSource<VALUES>`, or `MapSource<ENTRIES>`;
+all extend `Callable`.
 
 ### Inference limits
 
 | Source | Remedy |
 | --- | --- |
 | Ambiguous reference, e.g. `StringBuilder::new` or `Optional::empty` | Use a lambda: `await(() -> new StringBuilder())`. |
-| Only returns null | Specify a category: `Await.OptionalSource<Payment> source = () -> null`. |
+| Only returns null | Specify a category: `OptionalSource<Payment> source = () -> null`. |
 | Wildcard method reference selects the general overload | Use `await(() -> repository.findAllView())` or a typed view. |
 
 Views declare the complete container type and selected bound without copying data:
 
 ```java
-var source = new Await.CollectionViewSource<Payment, List<? extends Payment>>(
+var source = new CollectionViewSource<Payment, List<? extends Payment>>(
         paymentRepository::findAllView);
 Payment payment = await(source).until(singleElement);
 
-var index = new Await.MapViewSource<String, Payment, Map<? extends String, ? extends Payment>>(
+var index = new MapViewSource<String, Payment, Map<? extends String, ? extends Payment>>(
         paymentRepository::indexView);
-Map.Entry<? extends String, ? extends Payment> entry = await(index).until(singleEntry);
+Entry<? extends String, ? extends Payment> entry = await(index).until(singleEntry);
 ```
 
 ## Timing
@@ -80,9 +79,9 @@ Settings accept `Duration` in any order; the last value wins. Awium validates du
 `usingTime(clock, parker)` replaces time for one configuration. For virtual time:
 
 ```java
-var nanos = new java.util.concurrent.atomic.AtomicLong();
+var nanos = new AtomicLong();
 Payment payment = await(paymentRepository::find)
-        .usingTime(nanos::get, delay -> nanos.addAndGet(delay))
+        .usingTime(nanos::get, nanos::addAndGet)
         .until(present);
 ```
 

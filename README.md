@@ -36,6 +36,8 @@ dependencies {
 
 ## Documentation
 
+Guide examples omit ordinary and static imports.
+
 - [Usage](docs/usage.md): sources and timing.
 - [Conditions](docs/conditions.md): checks, `because`, nested conditions, and `captured`.
 - [Diagnostics](docs/diagnostics.md): `tryAwait`, results, histories, and failures.

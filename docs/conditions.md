@@ -18,7 +18,7 @@ report reading failures before polling. Elements, keys, and values are not
 deep-copied. Single-value operands retain references, including containers.
 `StringConditions` freeze text operands at construction.
 
-Use `Collections.singletonList(array)` for one array in an expected set;
+Use `singletonList(array)` for one array in an expected set;
 `List.of(array)` expands reference arrays. Likewise, wrap a collection or array
 when it is one candidate for `in`/`notIn`.
 
@@ -81,7 +81,7 @@ String receipt = await(paymentRepository::load).until(condition("payment has a r
         actual.receipt() == null ? unsatisfied("receipt was absent") : satisfied(actual.receipt())));
 ```
 
-Use the static factories of `io.github.gromoff97.awium.result.ConditionResult<RESULT>`:
+Use the static factories of `ConditionResult<RESULT>`:
 
 | Factory | Meaning |
 | --- | --- |
@@ -247,17 +247,16 @@ identity in standard entries). Selected entries may remain connected to the map.
 Entry callbacks can call `setValue`, so they require compatible map types. For
 covariant views, use a key/value predicate with known parameter types. A reusable
 typed-result callback inside `singleEntry` needs an input such as
-`Map.Entry<? extends String, ? extends Payment>`; inline callbacks infer it.
+`Entry<? extends String, ? extends Payment>`; inline callbacks infer it.
 
 For wildcard entry predicates, even typed callbacks can lose the map type with
 an outer `because`. Put the reason on the inner check:
 
 ```java
-CheckedPredicate<Map.Entry<String, ? extends Number>> positive =
+CheckedPredicate<Entry<String, ? extends Number>> positive =
         entry -> entry.getValue().intValue() > 0;
-Map<String, Integer> counts = Map.of("ready", 1);
-Map<String, Integer> checked = await(() -> counts).until(
-        MapConditions.allEntries(matches(positive).because("Positive counts required")));
+Map<String, Integer> checked = await(() -> Map.of("ready", 1))
+        .until(allEntries(matches(positive).because("Positive counts required")));
 ```
 
 The same applies to `hasEntry` and `hasNoEntry`.
@@ -272,7 +271,7 @@ List<Payment> states = await(paymentRepository::load).until(captured(
         matches(Payment::created), matches(Payment::paid)));
 
 List<List<Payment>> batches = await(paymentRepository::findAll).until(captured(
-        CollectionConditions.hasSize(1), singleElement(Payment::paid)));
+        hasSize(1), singleElement(Payment::paid)));
 ```
 
 Each stage gets a fresh source observation, not the previous stage's extracted value.
