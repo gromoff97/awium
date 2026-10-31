@@ -1,16 +1,11 @@
 package io.github.gromoff97.awium.internal;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
-
 import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.execution.ExecutionStep;
 import io.github.gromoff97.awium.execution.WaitCompletion;
-import io.github.gromoff97.awium.execution.WaitTiming;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.result.Attempt;
-import io.github.gromoff97.awium.result.AwaitResult;
 import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +21,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
 import static io.github.gromoff97.awium.support.AwaitAssertions.observation;
 import static io.github.gromoff97.awium.support.ConditionTestRuntime.start;
 import static io.github.gromoff97.awium.support.AwaitAssertions.uncontrolled;
@@ -66,25 +62,10 @@ class WaitEngineTest {
     }
 
     @Test
-    void runControlsCompletionIndependentlyOfEachProbeResult() {
-        var observations = new ArrayList<String>();
-        var run = new ConditionRun<String, String>() {
-            @Override public void beginAttempt() {}
-            @Override public boolean complete() { return observations.size() == 2; }
-            @Override public String result() { return String.join(",", observations); }
-            @Override public void record(Attempt<String> attempt) {}
-
-            @Override public ConditionResult<?> probe(String actual) {
-                observations.add(actual);
-                return satisfied(actual.length());
-            }
-
-            @Override public AwaitResult<String, String> finish(
-                    WaitCompletion outcome,
-                    WaitTiming configuration) {
-                return new AwaitResult.Succeeded<>(List.of(), String.join(",", observations));
-            }
-        };
+    void runControlsCompletionIndependentlyOfEachProbeResult() throws Throwable {
+        ConditionRun<String, Integer> run = mock();
+        doReturn(satisfied(5)).when(run).probe("ready");
+        when(run.complete()).thenReturn(false, true);
         var attempts = new ArrayList<ExecutionStep<String>>();
 
         var outcome = new WaitEngine<>(withTime(config(1, 10, 0), time, time), () -> "ready", run)
@@ -93,7 +74,7 @@ class WaitEngineTest {
         assertInstanceOf(SatisfiedWait.class, outcome);
         assertThat(attempts).hasSize(2).allSatisfy(step ->
                 assertInstanceOf(SatisfiedObservation.class, step.attempt()));
-        assertEquals("ready,ready", run.finish(outcome, config(1, 10, 0)).orThrow());
+        verify(run, times(2)).probe("ready");
     }
 
     @Test
