@@ -35,9 +35,9 @@ Callable<Optional<Payment>> source = paymentRepository::find;
 Payment found = await(source::call).until(present);
 ```
 
-Import source types from `Await`. To pass a stored source directly, declare
-`OptionalSource<VALUE>`, `CollectionSource<VALUES>`, or `MapSource<ENTRIES>`;
-all extend `Callable`.
+To pass a stored source directly, use one of `Await`'s source types:
+`OptionalSource<VALUE>`, `CollectionSource<VALUES>`, or `MapSource<ENTRIES>`.
+All extend `Callable`.
 
 ### Inference limits
 

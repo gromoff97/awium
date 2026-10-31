@@ -7,8 +7,6 @@
 `tryAwait(source).until(condition)` returns `AwaitResult<OBSERVED, RESULT>`:
 source type first, condition result type second.
 
-Import `Satisfied` and `Failed` from `AwaitResult`, and statically import `System.out`.
-
 ```java
 var result = tryAwait(paymentRepository::find).until(present);
 // AwaitResult<Optional<Payment>, Payment>

@@ -3,7 +3,7 @@
 [README](../README.md) · [Usage](usage.md) · [Diagnostics](diagnostics.md)
 
 Checks return the exact observed object unless **→** indicates otherwise.
-Constants such as `present` need no parentheses. Qualify colliding imports:
+Constants such as `present` need no parentheses. Qualify colliding names:
 `CollectionConditions.nonEmpty` and `MapConditions.nonEmpty`.
 
 ## Shared rules
