@@ -109,6 +109,24 @@ class ConditionExecutionTest {
     }
 
     @Test
+    void factoryInterruptionSkipsEvaluationAndKeepsTheEvaluatorForTheNextProbe() throws Throwable {
+        int[] factories = {0};
+        int[] probes = {0};
+        var execution = new ConditionExecution<String, String>(() -> {
+            factories[0]++;
+            currentThread().interrupt();
+            return actual -> { probes[0]++; return satisfied(actual); };
+        });
+
+        assertThrows(InterruptedException.class, () -> execution.probe("ready"));
+        assertEquals(0, probes[0]);
+        interrupted();
+        assertEquals("ready", result(execution.probe("ready")));
+        assertEquals(1, factories[0]);
+        assertEquals(1, probes[0]);
+    }
+
+    @Test
     void ordinaryConditionKeepsMetadataAndCreatesIndependentEvaluators() {
         Condition<Integer, Integer> ordinary = new DefinedCondition<>(
                 "counted", null, () -> {

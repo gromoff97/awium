@@ -26,6 +26,7 @@ import io.github.gromoff97.awium.result.ConditionResult.unsatisfied
 import java.math.BigDecimal
 import java.io.IOException
 import java.util.Optional
+import java.util.AbstractMap.SimpleImmutableEntry
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame
@@ -151,6 +152,17 @@ class NestedConditionTest {
         assertEquals("map value: value is ready", condition.description())
         assertEquals("key", condition.references().first().value())
         assertEquals("the selected value must be ready", condition.explanation())
+    }
+
+    @Test
+    fun `an interrupted value extraction skips the nested factory`() {
+        val entry = object : SimpleImmutableEntry<String, String>("key", "ready") {
+            override val value: String
+                get() { Thread.currentThread().interrupt(); return super.value }
+        }
+        val nested = conditionPerWait<String, String>("must not run") { throw AssertionError("nested factory called") }
+        assertInstanceOf(InterruptedException::class.java, thrown(valueFor("key", nested), EntryMap(listOf(entry))))
+        assertTrue(Thread.currentThread().isInterrupted)
     }
 
     @Test

@@ -19,7 +19,7 @@ import org.mockito.Mockito.verify
 
 class AssertedConditionTest {
     @AfterEach
-    fun clearInterruptFlag() { Thread.interrupted() }
+    fun `clear the caller interrupt flag`() { Thread.interrupted() }
 
     @Test
     fun `passes the observation to the assertion once and returns it`() {

@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.conditions.api
 
 import consumer.value.CustomConsumer
+import consumer.value.CheckedCallbackConsumer
 import consumer.value.CustomConsumer.User
 import io.github.gromoff97.awium.conditions.ConditionAssertions.attempts
 import io.github.gromoff97.awium.conditions.ConditionAssertions.observation
@@ -15,6 +16,16 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
 class CustomApiTest {
+    @Test
+    fun `sources and checks accept method references declaring checked failures`() {
+        assertEquals(listOf(5, 5, 5), CheckedCallbackConsumer.checkedReferences())
+    }
+
+    @Test
+    fun `asserted retries an assertion failure from a checked method reference`() {
+        assertEquals(2, CheckedCallbackConsumer.retriedAssertion())
+    }
+
     @ParameterizedTest
     @MethodSource("selectedIds")
     fun `Java infers the result selected by a callback`(select: (User) -> Int) {

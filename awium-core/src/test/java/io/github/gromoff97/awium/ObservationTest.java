@@ -213,6 +213,22 @@ class ObservationTest {
         assertFalse(currentThread().isInterrupted());
     }
 
+    @ParameterizedTest(name = "{0}, {1}")
+    @MethodSource("conditionFailures")
+    void ordinaryAwaitPreservesCallbackAndFactoryFailures(Throwable cause, Condition<String, String> condition) {
+        var waiting = await(() -> "actual");
+        assertSame(cause, assertThrows(AwaitExecutionException.class, () -> waiting.until(condition)).getCause());
+        assertFalse(currentThread().isInterrupted());
+    }
+
+    private static Stream<Arguments> conditionFailures() {
+        return throwables().flatMap(cause -> Stream.of(
+                arguments(named(cause.getClass().getSimpleName(), cause),
+                        named("callback", check("callback", (String actual) -> { throw cause; }))),
+                arguments(named(cause.getClass().getSimpleName(), cause),
+                        named("factory", checkPerWait("factory", () -> rethrow(cause))))));
+    }
+
     @Test
     void diagnosesNullEvaluationOnceAtConditionOrigin() {
         var actual = new Object();

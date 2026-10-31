@@ -41,6 +41,7 @@ import java.util.Optional
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -159,6 +160,28 @@ class QuantifiedConditionTest {
         var calls = 0
         val nested = matches { _: User -> calls++; Thread.currentThread().interrupt(); false }
         assertInstanceOf(InterruptedException::class.java, thrown(any(nested), listOf(ready, pending)))
+        assertEquals(1, calls)
+        assertTrue(Thread.currentThread().isInterrupted)
+    }
+
+    @Test
+    fun `a flag cleared within the callback does not interrupt iteration`() {
+        val actual = listOf(ready, pending)
+        val check = all(matches { _: User ->
+            Thread.currentThread().interrupt()
+            Thread.interrupted()
+            true
+        })
+        assertSame(actual, result(evaluate(check, actual)))
+        assertFalse(Thread.currentThread().isInterrupted)
+    }
+
+    @Test
+    fun `a callback failure after interruption keeps its original cause`() {
+        val cause = IllegalStateException("callback failed")
+        var calls = 0
+        val check = all(matches { _: User -> calls++; Thread.currentThread().interrupt(); throw cause })
+        assertSame(cause, thrown(check, listOf(ready, pending)))
         assertEquals(1, calls)
         assertTrue(Thread.currentThread().isInterrupted)
     }
