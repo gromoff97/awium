@@ -8,6 +8,16 @@ import io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainA
 import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.MapConditions.containsAllEntries
+import io.github.gromoff97.awium.conditions.MapConditions.containsAllKeys
+import io.github.gromoff97.awium.conditions.MapConditions.containsAllValues
+import io.github.gromoff97.awium.conditions.MapConditions.containsAnyEntries
+import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainAllEntries
+import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainAnyEntries
+import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainAnyKeys
+import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainAnyValues
+import io.github.gromoff97.awium.conditions.ProbeContainers.EntryMap
+import io.github.gromoff97.awium.conditions.ProbeContainers.ProbeEntry
 import io.github.gromoff97.awium.conditions.ProbeContainers.membershipCollection
 import io.github.gromoff97.awium.conditions.support.smallLists
 import io.github.gromoff97.awium.result.ConditionResult.Satisfied
@@ -28,6 +38,65 @@ class ContainsElementsConditionTest {
         val factory: (Iterable<String?>?) -> AwaitCondition,
         val accepts: (List<String?>, List<String?>) -> Boolean
     )
+
+    data class MapMembership(
+        val factory: (Map<String?, String?>?) -> AwaitCondition,
+        val accepts: (Map<String?, String?>, Map<String?, String?>) -> Boolean
+    )
+
+    @ParameterizedTest
+    @MethodSource("mapMemberships")
+    fun `map membership checks the selected keys values or whole entries`(membership: MapMembership) {
+        val maps = listOf<Map<String?, String?>>(emptyMap(), mapOf("a" to "1"), mapOf("a" to "2"), mapOf("b" to "1"),
+            linkedMapOf("a" to "1", "b" to "2"), linkedMapOf("b" to "2", "a" to "1"),
+            mapOf(null to "1"), mapOf("a" to null))
+        for (expected in maps) for (actual in maps) {
+            assertEquals(membership.accepts(actual, expected), evaluate(membership.factory(expected), actual) is Satisfied<*>,
+                "actual=$actual, expected=$expected")
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("mapMemberships")
+    fun `a null map never matches an empty expectation`(membership: MapMembership) {
+        assertEquals("map was null", rejection(membership.factory(emptyMap()), null).mismatch())
+    }
+
+    @ParameterizedTest
+    @MethodSource("mapMemberships")
+    fun `empty map expectations need no traversal`(membership: MapMembership) {
+        val actual = EntryMap(listOf(ProbeEntry("a", "1")))
+        actual.beforeIterator = Runnable { error("unnecessary traversal") }
+        assertEquals(membership.accepts(mapOf("a" to "1"), emptyMap()),
+            evaluate(membership.factory(emptyMap()), actual) is Satisfied<*>)
+    }
+
+    @ParameterizedTest
+    @MethodSource("mapMemberships")
+    fun `rejects missing expected map contents`(membership: MapMembership) {
+        assertThrows(NullPointerException::class.java) { membership.factory(null) }
+    }
+
+    @ParameterizedTest
+    @MethodSource("mapMemberships")
+    fun `copies expected map contents before later changes`(membership: MapMembership) {
+        val expected = linkedMapOf<String?, String?>("a" to "1")
+        val condition = membership.factory(expected)
+        val actual = mapOf("a" to "1")
+        val before = evaluate(condition, actual)
+        expected.entries.single().setValue("changed")
+        expected.clear()
+
+        assertEquals(before, evaluate(condition, actual))
+    }
+
+    @Test
+    fun `entry snapshot failures are reported when the condition is created`() {
+        val cause = IllegalStateException("expected entries failed")
+        val expected = EntryMap(listOf(ProbeEntry("key", "value")))
+        expected.beforeEntrySet = Runnable { throw cause }
+        assertSame(cause, assertThrows(IllegalStateException::class.java) { doesNotContainAnyEntries(expected) })
+    }
 
     @ParameterizedTest
     @MethodSource("memberships")
@@ -118,6 +187,18 @@ class ContainsElementsConditionTest {
     }
 
     companion object {
+        @JvmStatic
+        fun mapMemberships() = listOf(
+            named("all keys", MapMembership({ containsAllKeys(it?.keys) }, { actual, expected -> actual.keys.containsAll(expected.keys) })),
+            named("no keys", MapMembership({ doesNotContainAnyKeys(it?.keys) }, { actual, expected -> expected.keys.none { it in actual } })),
+            named("all values", MapMembership({ containsAllValues(it?.values) }, { actual, expected -> actual.values.containsAll(expected.values) })),
+            named("no values", MapMembership({ doesNotContainAnyValues(it?.values) }, { actual, expected -> expected.values.none { it in actual.values } })),
+            named("all entries", MapMembership({ containsAllEntries(it) }, { actual, expected -> actual.entries.containsAll(expected.entries) })),
+            named("any entry", MapMembership({ containsAnyEntries(it) }, { actual, expected -> expected.entries.any { it in actual.entries } })),
+            named("no entries", MapMembership({ doesNotContainAnyEntries(it) }, { actual, expected -> expected.entries.none { it in actual.entries } })),
+            named("not all entries", MapMembership({ doesNotContainAllEntries(it) }, { actual, expected -> !actual.entries.containsAll(expected.entries) }))
+        )
+
         @JvmStatic
         fun memberships() = listOf(
             named("all", Membership({ containsAll(it) }, { actual, expected -> actual.containsAll(expected) })),

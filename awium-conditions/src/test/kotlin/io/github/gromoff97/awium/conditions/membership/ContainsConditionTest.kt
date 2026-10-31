@@ -12,6 +12,8 @@ import io.github.gromoff97.awium.conditions.MapConditions.containsValue
 import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainKey
 import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainValue
 import io.github.gromoff97.awium.conditions.ProbeContainers.membershipCollection
+import io.github.gromoff97.awium.conditions.ProbeContainers.EntryMap
+import io.github.gromoff97.awium.conditions.ProbeContainers.ProbeEntry
 import io.github.gromoff97.awium.conditions.support.Directional
 import io.github.gromoff97.awium.conditions.support.ThrowingEquals
 import java.util.IdentityHashMap
@@ -113,6 +115,21 @@ class ContainsConditionTest {
         val actual = membershipCollection(listOf("a", "b"))
         rejection(doesNotContain("a"), actual)
         verify(actual).iterator()
+    }
+
+    @Test
+    fun `reporting a mismatch does not traverse the map again`() {
+        val actual = EntryMap(listOf(ProbeEntry("a", "1")))
+        rejection(doesNotContainKey("a"), actual)
+        assertEquals(1, actual.entrySetCalls)
+    }
+
+    @Test
+    fun `map exclusion preserves entry traversal failures`() {
+        val cause = IllegalStateException("actual entries failed")
+        val actual = EntryMap(listOf(ProbeEntry("a", "1")))
+        actual.beforeEntrySet = Runnable { throw cause }
+        assertSame(cause, thrown(doesNotContainKey("a"), actual))
     }
 
     companion object {

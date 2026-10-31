@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.conditions.composition
 
 import io.github.gromoff97.awium.AwaitCondition
+import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
 import io.github.gromoff97.awium.Condition
 import io.github.gromoff97.awium.conditions.CollectionConditions.elementAt
 import io.github.gromoff97.awium.conditions.CollectionConditions.firstElement
@@ -10,6 +11,7 @@ import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait
 import io.github.gromoff97.awium.conditions.MapConditions.valueFor
+import io.github.gromoff97.awium.conditions.MapConditions.singleEntry
 import io.github.gromoff97.awium.conditions.OptionalConditions.hasValue
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import io.github.gromoff97.awium.function.CheckedFunction
@@ -21,6 +23,7 @@ import java.util.Optional
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -85,6 +88,57 @@ class NestedConditionTest {
         assertInstanceOf(Unsatisfied::class.java, execution.probe(listOf(1)))
         assertEquals(42, result(execution.probe(listOf(42))))
         assertEquals(2, checked)
+    }
+
+    @Test
+    fun `map value checks start only after the key is found`() {
+        val events = mutableListOf<String>()
+        val nested = conditionPerWait<Int, Int>("value is ready") {
+            events += "factory"
+            CheckedFunction { value -> events += "value $value"; satisfied(value) }
+        }
+        val execution = bind(valueFor("key", nested))
+
+        for (actual in listOf(null, emptyMap(), mapOf("other" to 2))) {
+            assertInstanceOf(Unsatisfied::class.java, execution.probe(actual))
+        }
+        assertEquals(emptyList<String>(), events)
+        assertEquals(1, result(execution.probe(mapOf("key" to 1, "other" to 2))))
+        assertEquals(2, result(execution.probe(mapOf("key" to 2, "other" to 1))))
+        assertEquals(listOf("factory", "value 1", "value 2"), events)
+    }
+
+    @Test
+    fun `single entry checks start only after one entry is found`() {
+        val events = mutableListOf<String>()
+        val nested = conditionPerWait<Map.Entry<String, Int>, Int>("entry is ready") {
+            events += "factory"
+            CheckedFunction { entry -> events += "value ${entry.value}"; satisfied(entry.value) }
+        }
+        val execution = bind(singleEntry(nested))
+
+        for (actual in listOf(null, emptyMap(), mapOf("key" to 2, "other" to 1))) {
+            assertInstanceOf(Unsatisfied::class.java, execution.probe(actual))
+        }
+        assertEquals(emptyList<String>(), events)
+        assertEquals(1, result(execution.probe(mapOf("key" to 1))))
+        assertEquals(2, result(execution.probe(mapOf("key" to 2))))
+        assertEquals(listOf("factory", "value 1", "value 2"), events)
+    }
+
+    @Test
+    fun `map value metadata retains the key and nested description`() {
+        val nested = conditionPerWait<Int, Int>("value is ready") { CheckedFunction { satisfied(it) } }
+        val condition = valueFor("key", nested).because("the selected value must be ready")
+
+        assertEquals("map value: value is ready", condition.description())
+        assertEquals("key", condition.references().first().value())
+        assertEquals("the selected value must be ready", condition.explanation())
+    }
+
+    @Test
+    fun `single entry rejects a missing nested condition`() {
+        assertThrows(NullPointerException::class.java) { singleEntry(null as PreservingCondition<Map.Entry<String, Int>>?) }
     }
 
     companion object {
