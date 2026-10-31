@@ -12,21 +12,26 @@ public final class AwaitTestAccess {
     private AwaitTestAccess() {}
 
     public static <OBSERVED> ValueAwait<OBSERVED> withTime(ValueAwait<OBSERVED> waiting, LongSupplier clock, LongConsumer parker) {
-        return new ValueAwait<>(waiting.source, waiting.configuration.withTime(clock, parker));
+        return new ValueAwait<>(waiting.source, withTime(waiting.configuration, clock, parker));
     }
 
     public static <OBSERVED> DiagnosticAwait<OBSERVED> withTime(DiagnosticAwait<OBSERVED> waiting, LongSupplier clock, LongConsumer parker) {
-        return new DiagnosticAwait<>(waiting.source, waiting.configuration.withTime(clock, parker));
+        return new DiagnosticAwait<>(waiting.source, withTime(waiting.configuration, clock, parker));
     }
 
     public static <OBSERVED extends Map<?, ?>, ENTRY extends Map.Entry<?, ?>, VALUE> MapAwait<OBSERVED, ENTRY, VALUE> withTime(
             MapAwait<OBSERVED, ENTRY, VALUE> waiting, LongSupplier clock, LongConsumer parker) {
-        return new MapAwait<>(waiting.source, waiting.configuration.withTime(clock, parker));
+        return new MapAwait<>(waiting.source, withTime(waiting.configuration, clock, parker));
     }
 
     public static <OBSERVED extends Map<?, ?>, ENTRY extends Map.Entry<?, ?>, VALUE> DiagnosticMapAwait<OBSERVED, ENTRY, VALUE> withTime(
             DiagnosticMapAwait<OBSERVED, ENTRY, VALUE> waiting, LongSupplier clock, LongConsumer parker) {
-        return new DiagnosticMapAwait<>(waiting.source, waiting.configuration.withTime(clock, parker));
+        return new DiagnosticMapAwait<>(waiting.source, withTime(waiting.configuration, clock, parker));
+    }
+
+    public static WaitConfiguration withTime(WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {
+        return new WaitConfiguration(configuration.everyNanos(), configuration.upToNanos(),
+                configuration.persistenceNanos(), clock, parker);
     }
 
     public static WaitConfiguration config(long every, long upTo, long persistence) {
@@ -39,11 +44,11 @@ public final class AwaitTestAccess {
     }
 
     public static <S> ValueAwait<S> timedAwait(Callable<? extends S> source, WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {
-        return new ValueAwait<>(source, configuration.withTime(clock, parker));
+        return new ValueAwait<>(source, withTime(configuration, clock, parker));
     }
 
     public static <S> DiagnosticAwait<S> timedTryAwait(Callable<? extends S> source, WaitConfiguration configuration, LongSupplier clock, LongConsumer parker) {
-        return new DiagnosticAwait<>(source, configuration.withTime(clock, parker));
+        return new DiagnosticAwait<>(source, withTime(configuration, clock, parker));
     }
 
     public static <OBSERVED> DiagnosticAwait<OBSERVED> diagnostic(ValueAwait<OBSERVED> waiting) {

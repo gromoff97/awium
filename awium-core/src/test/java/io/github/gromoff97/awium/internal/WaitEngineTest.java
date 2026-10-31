@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium.internal;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
+
 import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.execution.DefinedCondition;
@@ -85,7 +87,7 @@ class WaitEngineTest {
         };
         var attempts = new ArrayList<ExecutionStep<String>>();
 
-        var outcome = new WaitEngine<>(config(1, 10, 0).withTime(time, time), () -> "ready", run)
+        var outcome = new WaitEngine<>(withTime(config(1, 10, 0), time, time), () -> "ready", run)
                 .waitFor(attempts::add);
 
         assertInstanceOf(SatisfiedWait.class, outcome);
@@ -99,7 +101,7 @@ class WaitEngineTest {
         LongSupplier clock = mock();
         Callable<String> source = mock();
         when(clock.getAsLong()).thenReturn(0L, 7L);
-        var engine = new WaitEngine<String>(config(1, 10, 0).withTime(clock, time), source,
+        var engine = new WaitEngine<String>(withTime(config(1, 10, 0), clock, time), source,
                 start(new DefinedCondition<>("ready", null, ConditionResult::satisfied)));
         currentThread().interrupt();
 
@@ -116,7 +118,7 @@ class WaitEngineTest {
         int[] sourceCalls = {0};
         LongSupplier clock = mock();
         when(clock.getAsLong()).thenAnswer(ignored -> time.getAsLong());
-        var outcome = new WaitEngine<String>(config(5, 20, 10).withTime(clock, nanos -> {
+        var outcome = new WaitEngine<String>(withTime(config(5, 20, 10), clock, nanos -> {
             time.advanceNanos(nanos);
             doAnswer(ignored -> time.getAsLong())
                     .doAnswer(ignored -> { currentThread().interrupt(); return time.getAsLong(); })
@@ -223,7 +225,7 @@ class WaitEngineTest {
         LongSupplier clock = mock();
         when(clock.getAsLong()).thenReturn(0L, 10L);
 
-        WaitCompletion outcome = new WaitEngine<String>(config(1, 10, 0).withTime(clock,
+        WaitCompletion outcome = new WaitEngine<String>(withTime(config(1, 10, 0), clock,
                 ignored -> {}), () -> {
                     sourceCalls[0]++;
                     return "actual";
@@ -389,7 +391,7 @@ class WaitEngineTest {
             currentThread().interrupt();
             return 0L;
         });
-        var outcome = new WaitEngine<String>(config(5, 20, 0).withTime(clock,
+        var outcome = new WaitEngine<String>(withTime(config(5, 20, 0), clock,
                 nanos -> { throw new AssertionError("parker must not be called"); }),
                 () -> { sourceCalls[0]++; return "actual"; },
                 start(new DefinedCondition<>("ready", null, (String actual) -> ConditionResult.satisfied(actual)))).waitFor(ignored -> {});
@@ -407,7 +409,7 @@ class WaitEngineTest {
         LongSupplier clock = mock();
         when(clock.getAsLong()).thenReturn(0L, 0L, 0L, 0L, 0L, 1L)
                 .thenAnswer(ignored -> { currentThread().interrupt(); return 2L; }).thenReturn(2L);
-        var outcome = new WaitEngine<String>(config(1, 2, 0).withTime(clock, nanos -> {}), () -> {
+        var outcome = new WaitEngine<String>(withTime(config(1, 2, 0), clock, nanos -> {}), () -> {
             sourceCalls[0]++;
             return "actual";
         }, start(new DefinedCondition<>("not ready", null, (String value) -> ConditionResult.unsatisfied("not yet")))).waitFor(ignored -> {});
@@ -426,7 +428,7 @@ class WaitEngineTest {
         int[] parkCalls = {0};
         LongSupplier clock = mock();
         when(clock.getAsLong()).thenReturn(0L);
-        var outcome = new WaitEngine<String>(config(5, 20, persistence).withTime(clock,
+        var outcome = new WaitEngine<String>(withTime(config(5, 20, persistence), clock,
                 nanos -> parkCalls[0]++), () -> { sourceCalls[0]++; return "actual"; },
                 start(new DefinedCondition<>("ready", null, (String actual) -> {
                     doReturn(0L).doAnswer(ignored -> { currentThread().interrupt(); return 0L; }).when(clock).getAsLong();
@@ -615,7 +617,7 @@ class WaitEngineTest {
             LongConsumer parker,
             Callable<S> source,
             AwaitAttempt<S, R> condition) {
-        return new WaitEngine<S>(config.withTime(time, parker), source,
+        return new WaitEngine<S>(withTime(config, time, parker), source,
                 start(new DefinedCondition<>("test condition", null, condition))).waitFor(ignored -> {});
     }
 

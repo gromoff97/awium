@@ -39,10 +39,6 @@ public record WaitConfiguration(long everyNanos, long upToNanos, long persistenc
         return new WaitConfiguration(everyNanos, upToNanos, nanos(value, "persistence duration"), clock, parker);
     }
 
-    public WaitConfiguration withTime(LongSupplier clock, LongConsumer parker) {
-        return new WaitConfiguration(everyNanos, upToNanos, persistenceNanos, clock, parker);
-    }
-
     private static void requirePositive(long nanos, String label) {
         if (nanos <= 0) {
             throw new IllegalArgumentException(label + " must be positive");

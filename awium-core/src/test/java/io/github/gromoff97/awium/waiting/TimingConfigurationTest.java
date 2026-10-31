@@ -39,7 +39,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 class TimingConfigurationTest {
@@ -117,25 +116,11 @@ class TimingConfigurationTest {
         int[] calls = {0};
         var result = withTime(tryAwait(() -> ++calls[0]), time, time).upTo(timeout).until(expected(2));
 
-        var failure = failure(TIMEOUT, result);
+        failure(TIMEOUT, result);
         assertEquals(1, calls[0]);
         assertEquals(1, attempts(result).size());
         assertEquals(timeout.toNanos(), time.getAsLong());
         assertThat(time.parkRequests).containsExactly(timeout.toNanos());
-    }
-
-    @Test
-    void timeReplacementPreservesConfigurationAndLeavesTheOriginalIndependent() {
-        var originalTime = new FakeTime(0);
-        var replacementTime = new FakeTime(0);
-        var original = withTime(await(() -> "ready").every(ofNanos(1)).upTo(ofNanos(10)), originalTime, originalTime).persisting(ofNanos(2));
-        var replacement = withTime(original, replacementTime, replacementTime).upTo(ofNanos(20));
-
-        assertEquals("ready", replacement.until(accepted));
-        assertEquals(2, replacementTime.getAsLong());
-        assertEquals(0, originalTime.getAsLong());
-        assertEquals("ready", original.until(accepted));
-        assertEquals(2, originalTime.getAsLong());
     }
 
     @Test
@@ -168,14 +153,4 @@ class TimingConfigurationTest {
         assertEquals(2104, time.getAsLong());
     }
 
-    @TestFactory
-    List<DynamicTest> rejectsMissingTimeOperationsBeforePolling() {
-        Callable<String> source = () -> {
-            throw new AssertionError("source must not run");
-        };
-        var waiting = await(source);
-        return List.of(
-                dynamicTest("missing clock", () -> assertThrows(NullPointerException.class, () -> withTime(waiting, null, time))),
-                dynamicTest("missing parker", () -> assertThrows(NullPointerException.class, () -> withTime(waiting, time, null))));
-    }
 }

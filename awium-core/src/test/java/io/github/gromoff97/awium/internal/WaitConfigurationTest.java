@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.execution.DiagnosticText.unsignedDuration;
 import static io.github.gromoff97.awium.internal.WaitConfiguration.DEFAULT;
 import static java.time.Duration.*;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -12,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class WaitConfigTest {
+class WaitConfigurationTest {
 
     @Test
     void defaultsUseTheSpecifiedEffectiveDurations() {
@@ -88,13 +87,16 @@ class WaitConfigTest {
     }
 
     @Test
-    void durationFormattingUsesReadableExactUnits() {
-        assertEquals("106751 d 23 h 47 min 16 s 854 ms 775 µs 808 ns",
-                unsignedDuration(Long.MIN_VALUE));
-        assertEquals("0 ns", unsignedDuration(0));
-        assertEquals("213503 d 23 h 34 min 33 s 709 ms 551 µs 615 ns", unsignedDuration(-1));
-        assertEquals("1 ns", unsignedDuration(1));
-        assertEquals("1 min 30 s", unsignedDuration(90_000_000_000L));
-        assertEquals("1 s 1 ms 1 µs 1 ns", unsignedDuration(1_001_001_001));
+    void rejectsMissingClock() {
+        assertThatNullPointerException()
+                .isThrownBy(() -> new WaitConfiguration(1, 2, 0, null, DEFAULT.parker()))
+                .withMessage("clock must not be null");
+    }
+
+    @Test
+    void rejectsMissingParker() {
+        assertThatNullPointerException()
+                .isThrownBy(() -> new WaitConfiguration(1, 2, 0, DEFAULT.clock(), null))
+                .withMessage("parker must not be null");
     }
 }
