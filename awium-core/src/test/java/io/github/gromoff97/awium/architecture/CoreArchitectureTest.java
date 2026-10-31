@@ -2,54 +2,62 @@ package io.github.gromoff97.awium.architecture;
 
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
-import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.lang.ArchRule;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarFile;
-import org.junit.jupiter.api.Test;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.TestFactory;
 
 import static com.tngtech.archunit.base.DescribedPredicate.describe;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static io.github.gromoff97.awium.AwaitCondition.Reference;
 import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
 import static java.lang.System.getProperty;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 class CoreArchitectureTest {
-    @Test
-    void engineBoundariesDoNotDependOnCatalogsOrFormatting() throws Exception {
+    @TestFactory
+    Stream<DynamicTest> componentBoundaries() throws IOException {
         try (var jar = new JarFile(Path.of(getProperty("awium.core.jar")).toFile())) {
             var classes = new ClassFileImporter().importJars(jar);
-            noClasses().should().dependOnClassesThat().resideInAPackage("..awium.conditions..").check(classes);
-            var core = Set.of("ConditionRun", "AwaitAttempt", "ConditionExecution", "ProbeFailure", "ExecutionStep",
-                    "AttemptExecution", "WaitEngine", "WaitCompletion", "WaitConfiguration");
-            assertIndependent(classes, core,
-                    Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "Conditions", "CollectionConditions",
-                            "MapConditions", "OptionalConditions", "StringConditions", "DiagnosticText"));
-            noClasses().that(inFamilies(core)).should().dependOnClassesThat()
-                    .resideInAPackage("..awium.conditions.internal..").check(classes);
-            assertIndependent(classes, Set.of("AwaitSupport"),
-                    Set.of("CheckRun", "CapturedCondition", "AttemptHistory", "FailureDiagnostics"));
-            assertIndependent(classes, Set.of("ConditionResult"), Set.of("ConditionExecution", "Attempt", "AwaitResult"));
-            assertIndependent(classes, Set.of("WaitCompletion"), Set.of("AwaitFailure", "Attempt"));
-            assertIndependent(classes, Set.of("AttemptHistory"),
-                    Set.of("ExecutionStep", "ConditionRun", "ConditionExecution", "AttemptExecution",
-                            "WaitEngine", "WaitCompletion", "WaitConfiguration"));
-            assertIndependent(classes, Set.of("Condition"),
-                    Set.of("WaitEngine", "WaitCompletion", "WaitConfiguration", "AwaitResult", "FailureDiagnostics"));
-            assertIndependent(classes, Set.of("ConditionExecution"),
-                    Set.of("WaitEngine", "AttemptHistory", "Attempt", "WaitConfiguration"));
-            assertIndependent(classes, Set.of("Reference", "ConditionResult.Unsatisfied"),
-                    Set.of("AwaitAttempt", "ConditionExecution", "AttemptExecution", "WaitEngine", "WaitCompletion"));
-            assertIndependent(classes, Set.of("FailureDiagnostics"),
-                    Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "AwaitResult", "AwaitAssertionError",
-                            "AwaitExecutionException"));
+            return Stream.of(
+                    noClasses().should().dependOnClassesThat().resideInAPackage("..awium.conditions..")
+                            .as("core has no built-in condition dependencies"),
+                    independent(Set.of("ConditionRun", "AwaitAttempt", "ConditionExecution", "ProbeFailure",
+                                    "ExecutionStep", "AttemptExecution", "WaitEngine", "WaitCompletion", "WaitConfiguration"),
+                            Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "Conditions", "CollectionConditions",
+                                    "MapConditions", "OptionalConditions", "StringConditions", "DiagnosticText"))
+                            .as("polling and execution do not depend on facades or formatting"),
+                    independent(Set.of("AwaitSupport"), Set.of("CheckRun", "CapturedCondition", "AttemptHistory", "FailureDiagnostics"))
+                            .as("waiting facades do not depend on run implementations"),
+                    independent(Set.of("ConditionResult"), Set.of("ConditionExecution", "Attempt", "AwaitResult"))
+                            .as("check outcomes do not depend on execution"),
+                    independent(Set.of("WaitCompletion"), Set.of("AwaitFailure", "Attempt"))
+                            .as("wait completion does not depend on public result variants"),
+                    independent(Set.of("AttemptHistory"), Set.of("ExecutionStep", "ConditionRun", "ConditionExecution", "AttemptExecution",
+                            "WaitEngine", "WaitCompletion", "WaitConfiguration"))
+                            .as("history recording does not depend on execution"),
+                    independent(Set.of("Condition"), Set.of("WaitEngine", "WaitCompletion", "WaitConfiguration", "AwaitResult", "FailureDiagnostics"))
+                            .as("the condition contract does not depend on polling or diagnostics"),
+                    independent(Set.of("ConditionExecution"), Set.of("WaitEngine", "AttemptHistory", "Attempt", "WaitConfiguration"))
+                            .as("nested execution does not depend on polling or history"),
+                    independent(Set.of("Reference", "ConditionResult.Unsatisfied"),
+                            Set.of("AwaitAttempt", "ConditionExecution", "AttemptExecution", "WaitEngine", "WaitCompletion"))
+                            .as("condition metadata does not depend on execution"),
+                    independent(Set.of("FailureDiagnostics"),
+                            Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "AwaitResult", "AwaitAssertionError", "AwaitExecutionException"))
+                            .as("failure formatting does not depend on facades or exception wrappers"))
+                    .map(rule -> dynamicTest(rule.getDescription(), () -> rule.check(classes)));
         }
     }
 
-    private static void assertIndependent(JavaClasses classes, Set<String> origins, Set<String> targets) {
-        noClasses().that(inFamilies(origins)).should().dependOnClassesThat(inFamilies(targets)).check(classes);
+    private static ArchRule independent(Set<String> origins, Set<String> targets) {
+        return noClasses().that(inFamilies(origins)).should().dependOnClassesThat(inFamilies(targets));
     }
 
     private static DescribedPredicate<JavaClass> inFamilies(Set<String> families) {
