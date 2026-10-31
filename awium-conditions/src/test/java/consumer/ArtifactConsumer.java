@@ -29,7 +29,7 @@ public final class ArtifactConsumer {
         List<String> stages = await(ArtifactConsumer::text).every(ofMillis(1)).until(captured(
                 equalTo("ready"), contentEquals("ready")));
         boolean preserved = await(() -> values).until(asserted(actual -> {
-            assert actual.size() == 1 : "one value expected";
+            if (actual.size() != 1) throw new AssertionError("one value expected");
         })) == values;
         var result = tryAwait(() -> Optional.of("ready")).until(present);
         String captured = result.orThrow();
@@ -43,18 +43,16 @@ public final class ArtifactConsumer {
         var diagnostic = tryAwait(ArtifactConsumer::text).until(custom);
         List<String> customStages = await(ArtifactConsumer::text).every(ofMillis(1))
                 .until(captured(custom, equalTo("ready")));
-        assert diagnostic.conditions().getFirst().condition() == custom;
-        assert custom.explanation().equals("text has a length");
-        assert new Length().explanation() == null;
-        assert customStages.equals(List.of("ready", "ready"));
         var counted = new CountedCondition(2).because("two observations");
         int lifecycle = await(ArtifactConsumer::text).every(ofMillis(1)).until(counted);
         int nestedLifecycle = await(() -> values).every(ofMillis(1)).until(singleElement(counted));
         return new Object[]{optional, selected, length, narrowed, stages, preserved, captured,
-                mapped, entry, text, regex, observed(result.conditions().getFirst().attempts().firstEntry().getValue()), direct, nested, diagnostic.orThrow(), lifecycle, nestedLifecycle};
+                mapped, entry, text, regex, observed(result.conditions().getFirst().attempts().firstEntry().getValue()),
+                direct, nested, diagnostic.orThrow(), lifecycle, nestedLifecycle,
+                diagnostic.conditions().getFirst().condition() == custom, custom.explanation(), new Length().explanation(), customStages};
     }
 
-public static final class Length implements Condition<CharSequence, Integer> {
+    public static final class Length implements Condition<CharSequence, Integer> {
         @Override
         public String description() { return "text length"; }
 
