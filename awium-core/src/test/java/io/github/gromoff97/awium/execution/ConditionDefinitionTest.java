@@ -93,6 +93,15 @@ class ConditionDefinitionTest {
     }
 
     @Test
+    void nestedPreservingFactoriesRejectMissingEvaluators() {
+        var nested = new DefinedCondition<String, String>("ready", null, value -> satisfied(value));
+        var condition = new PreservingCondition<String>(nested, "outer", () -> null) {};
+
+        var failure = assertThrows(NullPointerException.class, condition::newAttempt);
+        assertEquals("evaluator must not be null", failure.getMessage());
+    }
+
+    @Test
     void preservingConditionsReturnTheObservationEvenIfTheEvaluatorReturnsAnotherValue() throws Throwable {
         var actual = new StringBuilder("observed");
         var condition = new PreservingCondition<CharSequence>("accepted", null, ignored -> satisfied("different")) {};
@@ -183,6 +192,9 @@ class ConditionDefinitionTest {
                 argumentSet("null evaluation", (Executable) () -> new DefinedCondition<String, String>("ready", null, (AwaitAttempt<String, String>) null),
                         NullPointerException.class, "evaluation must not be null"),
                 argumentSet("null factory", (Executable) () -> new DefinedCondition<String, String>("ready", null, (Callable<AwaitAttempt<String, String>>) null),
+                        NullPointerException.class, "evaluator factory must not be null"),
+                argumentSet("null nested preserving factory", (Executable) () -> new PreservingCondition<String>(
+                        new DefinedCondition<>("ready", null, evaluation), "outer", null) {},
                         NullPointerException.class, "evaluator factory must not be null"),
                 argumentSet("null nested condition", (Executable) () -> new DefinedCondition<>(null, "nested", List.of(), factory),
                         NullPointerException.class, "condition must not be null"),

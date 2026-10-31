@@ -97,9 +97,10 @@ public interface AwaitCondition {
                 Callable<? extends AwaitAttempt<? super INPUT, ? extends INPUT>> factory) {
             super(description + ": " + requireNonNull(nested, "condition must not be null").description(),
                     nested.references(), nested.explanation(), () -> {
-                        var evaluation = factory.call();
+                        var evaluation = requireNonNull(factory.call(), "evaluator must not be null");
                         return actual -> evaluation.probe(actual).mapValue(ignored -> actual);
                     });
+            requireNonNull(factory, "evaluator factory must not be null");
         }
 
         private PreservingCondition(PreservingCondition<INPUT> original, String explanation) {
