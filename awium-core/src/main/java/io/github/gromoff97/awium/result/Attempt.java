@@ -1,0 +1,70 @@
+package io.github.gromoff97.awium.result;
+
+import static io.github.gromoff97.awium.execution.DiagnosticText.attempt;
+import static java.util.Objects.requireNonNull;
+
+public sealed interface Attempt<OBSERVED> {
+
+    default Throwable cause() {
+        return null;
+    }
+
+    record SatisfiedObservation<OBSERVED>(OBSERVED observed) implements Attempt<OBSERVED> {
+        @Override
+        public String toString() {
+            return attempt(this);
+        }
+    }
+
+    record UnsatisfiedObservation<OBSERVED>(OBSERVED observed, String mismatch, Throwable cause) implements Attempt<OBSERVED> {
+        @Override
+        public String toString() {
+            return attempt(this);
+        }
+    }
+
+    record FailedAfterObservation<OBSERVED>(OBSERVED observed, Operation operation,
+            Throwable cause, String location) implements Failure<OBSERVED> {
+
+        public FailedAfterObservation {
+            requireNonNull(operation, "operation must not be null");
+            requireNonNull(cause, "cause must not be null");
+        }
+
+        @Override
+        public String toString() {
+            return attempt(this);
+        }
+    }
+
+    record FailedBeforeObservation<OBSERVED>(Operation operation, Throwable cause) implements Failure<OBSERVED> {
+
+        public FailedBeforeObservation {
+            requireNonNull(operation, "operation must not be null");
+            requireNonNull(cause, "cause must not be null");
+        }
+
+        @Override
+        public String toString() {
+            return attempt(this);
+        }
+    }
+
+    sealed interface Failure<OBSERVED> extends Attempt<OBSERVED> {
+
+        Operation operation();
+
+        default String location() {
+            return null;
+        }
+
+        @Override
+        Throwable cause();
+    }
+
+    enum Operation {
+        WAITING,
+        SOURCE,
+        CONDITION
+    }
+}

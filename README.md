@@ -1,7 +1,7 @@
 # Awium
 
 Awium waits for a condition and returns a value from the successful observation.
-It requires **Java 21**, has **no runtime dependencies**, and runs on the calling thread.
+It requires **Java 21**, has **no third-party runtime dependencies**, and runs on the calling thread.
 
 ```java
 Payment payment = await(paymentRepository::find)
@@ -26,7 +26,7 @@ Add to `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    testImplementation("io.github.gromoff97:awium:0.1.0-SNAPSHOT")
+    testImplementation("io.github.gromoff97:awium-conditions:0.1.0-SNAPSHOT")
 }
 ```
 
@@ -37,7 +37,8 @@ dependencies {
 - [Diagnostics](docs/diagnostics.md): `tryAwait`, results, histories, and failures.
 - [Development](docs/development.md): build, tests, and internal responsibilities.
 
-Public entry points and conditions are in `io.github.gromoff97.awium`;
-results are in `.result`, and checked callbacks in `.function`.
+`awium-conditions` brings in `awium-core`. Use `awium-core` alone for your own conditions.
+Entry points are in `io.github.gromoff97.awium`, built-in factories in `.conditions`,
+results in `.result`, and checked callbacks in `.function`.
 
 Licensed under [Apache License 2.0](LICENSE).

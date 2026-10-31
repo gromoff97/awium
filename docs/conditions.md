@@ -66,7 +66,7 @@ Negate checked predicates with `CheckedPredicate.not` or `CheckedBiPredicate.not
 Single bounds need not be comparable: the source must implement `Comparable<BOUND>`.
 Range bounds must also compare with each other. Empty `in` never matches;
 empty `notIn` matches anything, including null.
-[Signatures](../src/main/java/io/github/gromoff97/awium/Conditions.java).
+[Signatures](../awium-conditions/src/main/java/io/github/gromoff97/awium/conditions/Conditions.java).
 
 ### Predicates and assertions
 
@@ -106,6 +106,38 @@ var check = conditionPerWait("two paid observations", () -> {
 });
 ```
 
+### Implementing a condition
+
+Implement the open `Condition<INPUT, RESULT>` interface with two methods:
+
+```java
+final class PaidPayment implements Condition<Payment, Payment> {
+    @Override
+    public String description() { return "payment is paid"; }
+
+    @Override
+    public ConditionResult<Payment> probe(Payment actual) {
+        return actual.paid() ? satisfied(actual) : unsatisfied("payment was unpaid");
+    }
+}
+
+Payment payment = await(paymentRepository::load)
+        .until(new PaidPayment().because("Checkout must complete"));
+```
+
+The same object works in selectors, quantifiers, and `captured`. Choose a different
+`RESULT` to extract a value. `description()` names the check in diagnostics and keeps
+`Condition` distinct from predicate lambdas during overload resolution.
+
+Keep the definition immutable. Override `newAttempt()` to create an independent,
+stateful evaluator on first evaluation of each use. For a custom lifecycle, override
+`newRun(definition, recording)` and return a fresh `execution.AbstractConditionRun`:
+`probe` checks each observation, `complete` decides completion, and `result` returns
+the final value. The supplied definition carries any `because` reason. The base class
+records history and assembles the result; protected hooks customize history scopes
+and diagnostics. Nested uses wait for completion and return that run's final value.
+Polling, timeout, and persistence remain the engine's responsibility.
+
 ## Reasons and lambda types
 
 Every condition has `because(nonBlankReason)`, which returns a copy with a reason
@@ -126,8 +158,8 @@ var check = all(Payment::paid).because("Paid payments required");
 var typed = all((Payment value) -> value.paid()).because("Paid payments required");
 ```
 
-Keep a condition's inferred or specific type: base `Condition` loses the constraints
-needed by `until`.
+Keep a condition's inferred or specific type: the metadata interface `AwaitCondition`
+does not retain the constraints needed by `until`.
 
 ## Nested checks
 
@@ -163,7 +195,7 @@ map values have the same restriction.
 | `absent` | Empty optional |
 | `hasValue(check)` | Present → checked value or chosen result |
 
-[Signatures](../src/main/java/io/github/gromoff97/awium/OptionalConditions.java).
+[Signatures](../awium-conditions/src/main/java/io/github/gromoff97/awium/conditions/OptionalConditions.java).
 
 ## StringConditions
 
@@ -183,7 +215,7 @@ These checks accept any `CharSequence` without converting it to `String`.
 Text operands accept `CharSequence`. Blankness uses `Character.isWhitespace` on
 Unicode code points. Unlike `contentEquals`, general `equalTo` may reject distinct
 `StringBuilder` objects with identical characters.
-[Signatures](../src/main/java/io/github/gromoff97/awium/StringConditions.java).
+[Signatures](../awium-conditions/src/main/java/io/github/gromoff97/awium/conditions/StringConditions.java).
 
 ## CollectionConditions
 
@@ -214,7 +246,7 @@ lists. First/last traverse forward/backward; single selection uses one iterator 
 distinguish zero, one, or multiple elements. These reads are not atomic snapshots.
 For ordered map views, use `sequencedKeySet()`, `sequencedValues()`, or
 `sequencedEntrySet()`; plain `values()` exposes only `Collection`.
-[Signatures](../src/main/java/io/github/gromoff97/awium/CollectionConditions.java).
+[Signatures](../awium-conditions/src/main/java/io/github/gromoff97/awium/conditions/CollectionConditions.java).
 
 ## MapConditions
 
@@ -242,7 +274,7 @@ Expected keys and values use `Objects.deepEquals`, observed operand first, regar
 of map comparators or identity semantics. Nested checks keep their own comparison:
 `hasEntry(equalTo(entry))` follows entry equality (array keys/values compare by
 identity in standard entries). Selected entries may remain connected to the map.
-[Signatures](../src/main/java/io/github/gromoff97/awium/MapConditions.java).
+[Signatures](../awium-conditions/src/main/java/io/github/gromoff97/awium/conditions/MapConditions.java).
 
 ### Map entry inference
 

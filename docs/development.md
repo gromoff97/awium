@@ -5,11 +5,13 @@
 ## Build and checks
 
 ```sh
-./gradlew check
+./gradlew check                       # Both modules
+./gradlew :awium-core:build           # Core without compiling or testing conditions
+./gradlew :awium-conditions:build     # Conditions and its core dependency
 ```
 
 `check` covers behavior, fluent compilation, packaged-module boundaries, and zero
-product compile/runtime dependencies. Tests use JUnit 6, AssertJ, Mockito,
+third-party product compile/runtime dependencies. Tests use JUnit 6, AssertJ, Mockito,
 compile-testing, ArchUnit, and Commons Lang via Gradle `testImplementation`.
 Mockito uses JDK proxies and reflection without a Java agent.
 Test logging uses `slf4j-jdk14` via `testRuntimeOnly`.
@@ -32,32 +34,51 @@ use real time and only public methods.
 
 | Component | Owns |
 | --- | --- |
-| `Condition` families | Definitions and type constraints |
-| `Conditions`, domain catalogs | Public factories |
-| `ConditionSupport`, `ValueMatching` | Construction/composition and shared comparisons |
-| `Await`; `ValueAwait`, `SelectionAwait`, `MapAwait` | Source entry points; fluent configuration |
-| `DiagnosticAwait`, `DiagnosticSelectionAwait`, `DiagnosticMapAwait` | Diagnostic facade |
-| `AwaitSupport` | Terminal binding, execution, and result handling |
-| `ConditionExecution` | Lazy evaluator initialization and check invocation |
-| `SequenceExecution` | Stage transitions and retained selected/captured values |
-| `WaitEngine` | Polling, deadlines, persistence from immutable step snapshots |
-| `AttemptExecution`; transient `ExecutionStep` | Source/attempt calls; timing and execution context |
-| `AttemptHistory` | Invocation numbering and history grouping |
-| `FailureDiagnostics`, `DiagnosticText` | Terminal formatting and guarded rendering outside polling |
+| `Condition`, `AwaitCondition` families | Immutable definitions, type constraints, and creation of independent runs |
+| `Conditions`, domain catalogs | Public factories; no checking algorithms |
+| `conditions.internal.*Condition` | Check algorithms, operands, mismatch descriptions, and composition |
+| `AwaitCondition.CheckDefinition` | Shared evaluator storage and run creation for built-in checks |
+| `execution.CheckRun` | One check's evaluation and final value |
+| `conditions.CapturedCondition.Run` | Stage transitions, collected observations, and stage diagnostics |
+| `execution.AbstractConditionRun` | Shared history recording and terminal result assembly |
+| `execution.AttemptHistory` | Invocation numbering and grouping within each condition's history |
+| `Await`; fluent await classes | Source entry points and configuration |
+| `AwaitSupport` | Starting a run, passing it to the engine, and returning its result |
+| `execution.ConditionRun` | Uniform lifecycle contract; no sequence or stage concepts |
+| `execution.ConditionExecution` | Lazy evaluator initialization and nested check invocation |
+| `internal.WaitEngine` | Polling, deadlines, and persistence from immutable step snapshots |
+| `internal.AttemptExecution`; `ExecutionStep` | Source/check calls, failures, and attempt timing |
+| `execution.FailureDiagnostics`; `execution.DiagnosticText` | Terminal formatting; guarded value rendering |
 
 `ConditionResult` is the sole check outcome. Exceptions retain their original cause;
 `ProbeFailure` adds the location of a nested check before history records the failure.
 
 ## Type and module boundaries
 
-`Condition.Check` is one check; `Condition.Captured` is a sequence.
-`ApplicableCondition` constrains inputs and comparisons; `InputCondition` constrains
-only inputs. `PreservesObservation` lets preserving checks and comparisons
-share a terminal overload. Selectors infer results from source types;
-`Condition.Typed<INPUT, RESULT>` declares them.
+`Condition<INPUT, RESULT>` is open to consumer implementations. Its required
+`probe` and `description` methods keep predicate overloads unambiguous.
+`AwaitCondition` carries metadata and run creation. `ApplicableCondition` constrains
+inputs and comparisons; `InputCondition` fixes the comparison constraint for input-only
+checks. Its separate type supports single-source type hints in `captured`.
+`CollectingCondition` declares a source-observation list result; terminal bounds
+check inputs. `CapturedCondition` owns its stages in `awium-conditions`.
+`PreservesObservation` shares a terminal overload across preserving checks and comparisons.
+Selector contracts infer outputs from source types; their implementations must return
+the corresponding element, entry, or value. Custom checks normally implement
+`Condition<INPUT, RESULT>`, which declares both types explicitly.
 
-The module exports `io.github.gromoff97.awium`, `.result`, and `.function`.
-`.internal` is unsupported and unexported, even if reachable on the classpath;
-binding and value-matching helpers remain package-private.
-Artifact tests forbid execution dependencies on fluent facades, catalogs, or
-formatting, and catalog dependencies on execution classes.
+`awium-core` exports `io.github.gromoff97.awium`, `.result`, `.function`, and `.execution`.
+It depends only on the JDK. `awium-conditions` exports `.conditions` and depends on
+core's public API. Their Java modules are `io.github.gromoff97.awium.core` and
+`io.github.gromoff97.awium.conditions`; neither shares a package with the other.
+Both `.internal` packages are unexported. No core `permits` list names a built-in condition.
+
+The execution package supplies lifecycle contracts and shared implementation.
+`WaitTiming` exposes durations without clock-injection hooks. Core test fixtures
+share fake time and assertions with condition tests; they are not product dependencies.
+
+Architecture tests keep the engine independent of condition implementations,
+fluent facades, and formatting. Implementations cannot call the engine or catalogs.
+A condition run owns its completion decision, history scopes, result, and diagnostic
+context. The engine controls when it may run, whether it must persist, and when waiting
+ends. Mutable execution state belongs to one run; reusable definitions remain immutable.
