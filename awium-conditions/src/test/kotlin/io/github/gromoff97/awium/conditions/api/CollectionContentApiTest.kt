@@ -103,4 +103,10 @@ class CollectionContentApiTest {
         assertSame(actual, ContentConsumer.wordOrder(actual))
     }
 
+    @Test
+    fun `natural sorting infers the comparable element type`() {
+        val actual = listOf(1, 2)
+        assertSame(actual, ContentConsumer.naturalOrderResult(actual))
+    }
+
 }

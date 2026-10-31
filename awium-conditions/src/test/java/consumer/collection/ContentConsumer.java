@@ -1,5 +1,4 @@
 package consumer.collection;
-import static java.util.Comparator.comparingInt;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import java.util.ArrayList;
@@ -13,19 +12,21 @@ import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.contains;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.containsAll;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.containsOnly;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContain;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainAny;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.containsSequence;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.containsSubsequence;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContain;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainAny;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainSequence;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainSubsequence;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.startsWith;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.endsWith;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.sorted;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.subsetOf;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.sorted;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.startsWith;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.subsetOf;
 import static io.github.gromoff97.awium.conditions.Conditions.captured;
 import static java.util.Collections.singletonList;
+import static java.util.Comparator.comparingInt;
+import static java.util.Comparator.naturalOrder;
 
 public final class ContentConsumer {
     private ContentConsumer() {}
@@ -125,6 +126,10 @@ public final class ContentConsumer {
 
     public static ArrayList<String> wordOrder(ArrayList<String> actual) {
         return await(() -> actual).until(sorted(String::compareTo));
+    }
+
+    public static List<Integer> naturalOrderResult(List<Integer> actual) {
+        return await(() -> actual).until(sorted(naturalOrder()));
     }
 
 }

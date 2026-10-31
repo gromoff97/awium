@@ -1,19 +1,20 @@
 package consumer.value;
-import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.result.AwaitResult;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
-import java.math.BigDecimal;
+import java.util.function.Predicate;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.conditions.Conditions.asserted;
 import static io.github.gromoff97.awium.conditions.Conditions.captured;
+import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
 import static io.github.gromoff97.awium.conditions.Conditions.exactlyInstanceOf;
 import static io.github.gromoff97.awium.conditions.Conditions.in;
 import static io.github.gromoff97.awium.conditions.Conditions.instanceOf;
@@ -132,6 +133,19 @@ public final class ValueConsumer {
         String missing = null;
         var value = await(() -> missing).until(equalTo(missing));
         return value;
+    }
+
+    public static Class<?> optionalClass(Class<?> expected) {
+        Optional<Class<?>> actual = Optional.of(expected);
+        return await(() -> actual).until(hasValue(equalTo(expected)));
+    }
+
+    public static PreservingCondition<String> optionalCondition(PreservingCondition<String> expected) {
+        return await(() -> Optional.of(expected)).until(hasValue(equalTo(expected)));
+    }
+
+    public static Predicate<String> optionalPredicate(Predicate<String> expected) {
+        return await(() -> Optional.of(expected)).until(hasValue(equalTo(expected)));
     }
 
 }

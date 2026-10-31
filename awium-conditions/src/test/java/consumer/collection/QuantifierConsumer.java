@@ -1,21 +1,20 @@
 package consumer.collection;
-import java.util.function.BiPredicate;
-import static java.util.function.Predicate.not;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiPredicate;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.all;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.any;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.firstElement;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.none;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElement;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.firstElement;
 import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
 import static io.github.gromoff97.awium.conditions.Conditions.instanceOf;
 import static io.github.gromoff97.awium.conditions.Conditions.matches;
@@ -31,6 +30,7 @@ import static io.github.gromoff97.awium.conditions.MapConditions.noValue;
 import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
 import static io.github.gromoff97.awium.conditions.OptionalConditions.absent;
 import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
+import static java.util.function.Predicate.not;
 
 public final class QuantifierConsumer {
     private QuantifierConsumer() {}

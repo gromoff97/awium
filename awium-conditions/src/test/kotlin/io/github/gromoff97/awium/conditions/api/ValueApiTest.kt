@@ -1,4 +1,6 @@
 package io.github.gromoff97.awium.conditions.api
+import io.github.gromoff97.awium.conditions.Conditions.matches
+import java.util.function.Predicate
 
 import consumer.value.ValueConsumer
 import io.github.gromoff97.awium.conditions.ConditionAssertions.attempts
@@ -105,6 +107,23 @@ class ValueApiTest {
     @Test
     fun `a typed null expectation keeps the nullable source type`() {
         assertNull(ValueConsumer.nullableEquality())
+    }
+
+    @Test
+    fun `an optional payload can be a class`() {
+        assertSame(String::class.java, ValueConsumer.optionalClass(String::class.java))
+    }
+
+    @Test
+    fun `an optional payload can be a condition`() {
+        val check = matches<String> { it.isBlank() }
+        assertSame(check, ValueConsumer.optionalCondition(check))
+    }
+
+    @Test
+    fun `an optional payload can be a predicate`() {
+        val predicate = Predicate<String> { it.isBlank() }
+        assertSame(predicate, ValueConsumer.optionalPredicate(predicate))
     }
 
     companion object {

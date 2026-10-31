@@ -67,6 +67,16 @@ class CustomApiTest {
         CustomConsumer.inferredIdentities(actual).forEach { assertSame(actual, it) }
     }
 
+    @Test
+    fun `callbacks accept composed JDK functions and predicates`() {
+        assertEquals(listOf("ready", "ready", "ready", "ready", "first ready", "second ready", "1"), CustomConsumer.composedCallbacks())
+    }
+
+    @Test
+    fun `evaluator factories retain declared results while capture keeps observations`() {
+        assertEquals(List(5) { "ready" }, CustomConsumer.evaluatorResults())
+    }
+
     companion object {
         @JvmStatic
         fun selectedIds() = listOf(
