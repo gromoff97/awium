@@ -1,5 +1,7 @@
 plugins {
     `java-library`
+    jacoco
+    kotlin("jvm") version "2.4.21"
     id("info.solidsoft.pitest") version "1.19.0"
 }
 
@@ -12,6 +14,7 @@ java.toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 
 dependencies {
     api("io.github.gromoff97:awium-core:0.1.0-SNAPSHOT")
+    testImplementation(kotlin("stdlib"))
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.2")
     testImplementation("org.assertj:assertj-core:3.27.7")
     testImplementation("org.mockito:mockito-core:5.24.0")
@@ -26,6 +29,8 @@ tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.addAll(listOf("-Xlint:all,-serial", "-Werror"))
 }
 
+kotlin.compilerOptions.allWarningsAsErrors = true
+
 tasks.test {
     useJUnitPlatform()
     val testedJar = tasks.jar.flatMap { it.archiveFile }
@@ -33,6 +38,16 @@ tasks.test {
     inputs.files(testedJar, coreClasspath)
     systemProperty("awium.conditions.jar", testedJar.get().asFile)
     doFirst { systemProperty("awium.core.jar", coreClasspath.singleFile) }
+}
+
+jacoco.toolVersion = "0.8.16"
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required = true
+        html.required = true
+    }
 }
 
 tasks.check {

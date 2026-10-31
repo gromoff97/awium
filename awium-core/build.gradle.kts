@@ -1,5 +1,6 @@
 plugins {
     `java-library`
+    jacoco
     id("info.solidsoft.pitest") version "1.19.0"
 }
 
@@ -30,6 +31,16 @@ tasks.test {
     val testedJar = tasks.jar.flatMap { it.archiveFile }
     inputs.file(testedJar)
     systemProperty("awium.core.jar", testedJar.get().asFile)
+}
+
+jacoco.toolVersion = "0.8.16"
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required = true
+        html.required = true
+    }
 }
 
 // Mutation testing requires an explicit user request; build/check/test never run it.

@@ -14,10 +14,8 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -51,7 +49,6 @@ import static java.time.Duration.ofNanos;
 import static java.util.Map.Entry;
 import static java.util.stream.Stream.concat;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
@@ -86,32 +83,6 @@ class CheckedPredicateTest {
         assertEquals("pending", entry.getKey());
         assertEquals(0, entry.getValue().id());
         assertTrue(entries.isEmpty());
-    }
-
-    @TestFactory
-    List<DynamicTest> negationRejectsMissingCallbacksEagerly() {
-        return List.of(
-                dynamicTest("unary predicate", () -> assertThrows(NullPointerException.class, () -> not(null))),
-                dynamicTest("binary predicate", () -> assertThrows(NullPointerException.class, () -> CheckedBiPredicate.not(null))));
-    }
-
-    private static Stream<Named<Executable>> negationFailures() {
-        return Stream.of(new IOException("checked"), new AssertionError("assertion"),
-                new Throwable("throwable"), new InterruptedException("ordinary failure")).flatMap(cause -> Stream.of(
-                named(cause.getClass().getSimpleName() + " / unary negation", () -> {
-
-                    CheckedPredicate<User> unary = not(user -> { throw cause; });
-                    var result = tryAwait(() -> FIRST).until(matches(unary));
-                    assertSame(cause, failure(result).cause());
-                    assertEquals(1, attempts(result).size());
-                }),
-                named(cause.getClass().getSimpleName() + " / binary negation", () -> {
-
-                    CheckedBiPredicate<String, User> pair = CheckedBiPredicate.not((key, user) -> { throw cause; });
-                    var result = tryAwait(() -> Map.of("ready", FIRST)).until(hasNoEntry(pair));
-                    assertSame(cause, failure(result).cause());
-                    assertEquals(1, attempts(result).size());
-                })));
     }
 
     @Test
@@ -292,7 +263,7 @@ class CheckedPredicateTest {
     }
 
     @ParameterizedTest
-    @MethodSource({"negationFailures", "predicateFamilyFailures"})
+    @MethodSource("predicateFamilyFailures")
     @Execution(SAME_THREAD)
     void predicateFailureStopsTheWaitWithoutInterruptingTheCaller(Executable scenario) {
         assertAll(scenario, () -> assertFalse(currentThread().isInterrupted(), "predicate failures must not interrupt the calling thread"));

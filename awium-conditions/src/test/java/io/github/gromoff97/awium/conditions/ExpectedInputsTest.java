@@ -60,7 +60,7 @@ import static io.github.gromoff97.awium.conditions.MapConditions.doesNotContainV
 import static io.github.gromoff97.awium.conditions.MapConditions.entryFor;
 import static io.github.gromoff97.awium.conditions.MapConditions.hasEntry;
 import static io.github.gromoff97.awium.conditions.MapConditions.hasNoEntry;
-import static io.github.gromoff97.awium.conditions.ProbeContainers.Directional;
+import io.github.gromoff97.awium.conditions.support.Directional;
 import static io.github.gromoff97.awium.conditions.StringConditions.containsIgnoringCase;
 import static io.github.gromoff97.awium.conditions.StringConditions.contentEquals;
 import static io.github.gromoff97.awium.conditions.StringConditions.doesNotEndWith;
