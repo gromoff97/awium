@@ -75,9 +75,9 @@ class CompilationContractTest {
                 """await(() -> List.of("ready")).until(lastElement(equalTo(new Object())));""",
                 "String wrong = await(() -> values).until(firstElement(instanceOf(User.class)));",
                 "String wrong = await(() -> new User(1)).until(matches((User user)->true));",
-                "await(() -> new User(1)).until(matches(io.github.gromoff97.awium.function.CheckedPredicate.not(String::isBlank)));",
-                """await(() -> new User(1)).until(matches(io.github.gromoff97.awium.function.CheckedPredicate.not((User user)->"wrong boolean")));""",
-                """await(() -> Map.of("u",new User(1))).until(MapConditions.singleEntry(io.github.gromoff97.awium.function.CheckedBiPredicate.not((Integer key,User user)->true)));""",
+                "await(() -> new User(1)).until(matches(io.github.gromoff97.awium.conditions.function.CheckedPredicate.not(String::isBlank)));",
+                """await(() -> new User(1)).until(matches(io.github.gromoff97.awium.conditions.function.CheckedPredicate.not((User user)->"wrong boolean")));""",
+                """await(() -> Map.of("u",new User(1))).until(MapConditions.singleEntry(io.github.gromoff97.awium.conditions.function.CheckedBiPredicate.not((Integer key,User user)->true)));""",
                 "AwaitResult<List<Object>, String> wrong = tryAwait(() -> values).until(lastElement(instanceOf(User.class)));",
                 "AwaitResult<List<Object>, List<Integer>> wrong = tryAwait(() -> values).until(captured(elementAt(0,instanceOf(User.class)),firstElement(instanceOf(Integer.class))));")) {
             assertRejected("""

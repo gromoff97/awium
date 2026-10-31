@@ -1,6 +1,6 @@
 package consumer.value;
 
-import io.github.gromoff97.awium.function.CheckedBiPredicate;
+import io.github.gromoff97.awium.conditions.function.CheckedBiPredicate;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,7 +32,7 @@ import static io.github.gromoff97.awium.conditions.MapConditions.noValue;
 import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
 import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
 import static io.github.gromoff97.awium.conditions.OptionalConditions.hasValue;
-import static io.github.gromoff97.awium.function.CheckedPredicate.not;
+import static io.github.gromoff97.awium.conditions.function.CheckedPredicate.not;
 import static java.time.Duration.ofNanos;
 
 public final class CheckedPredicateConsumer {

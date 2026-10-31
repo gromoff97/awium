@@ -41,7 +41,7 @@ import io.github.gromoff97.awium.conditions.MapConditions.hasSize as mapHasSize
 import io.github.gromoff97.awium.conditions.MapConditions.singleEntry
 import io.github.gromoff97.awium.conditions.MapConditions.valueFor
 import io.github.gromoff97.awium.function.AwaitAttempt
-import io.github.gromoff97.awium.function.CheckedPredicate
+import io.github.gromoff97.awium.conditions.function.CheckedPredicate
 import io.github.gromoff97.awium.result.ConditionResult.satisfied
 import java.lang.Thread.currentThread
 import java.lang.Thread.interrupted

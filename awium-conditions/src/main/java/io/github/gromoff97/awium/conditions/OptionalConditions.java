@@ -6,7 +6,7 @@ import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.conditions.internal.AbsentCondition;
 import io.github.gromoff97.awium.conditions.internal.PresentCondition;
-import io.github.gromoff97.awium.function.CheckedPredicate;
+import io.github.gromoff97.awium.conditions.function.CheckedPredicate;
 import java.util.Optional;
 
 import static io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;

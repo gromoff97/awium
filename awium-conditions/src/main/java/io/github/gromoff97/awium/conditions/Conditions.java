@@ -15,8 +15,8 @@ import io.github.gromoff97.awium.conditions.internal.NullCondition;
 import io.github.gromoff97.awium.conditions.internal.RangeCondition;
 import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.function.CheckedConsumer;
-import io.github.gromoff97.awium.function.CheckedPredicate;
+import io.github.gromoff97.awium.conditions.function.CheckedConsumer;
+import io.github.gromoff97.awium.conditions.function.CheckedPredicate;
 import java.util.concurrent.Callable;
 
 import static io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;

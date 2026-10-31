@@ -23,7 +23,7 @@ It is separate from `build`, `check`, and `test`.
 ## Tests
 
 Java tests in `src/test` group API contracts, waiting, execution, results, diagnostics,
-functions, and architecture. `AwaitTestAccess` injects `FakeTime` through package access;
+and architecture. `AwaitTestAccess` injects `FakeTime` through package access;
 fluent builders contain no clock-injection methods. Clock and parker use the same
 nanosecond time base: the clock is monotonic, and parking may return early.
 Test clocks must not clear the interrupt flag. Clock failures propagate directly;

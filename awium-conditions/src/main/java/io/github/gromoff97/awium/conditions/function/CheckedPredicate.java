@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.function;
+package io.github.gromoff97.awium.conditions.function;
 
 import static java.util.Objects.requireNonNull;
 

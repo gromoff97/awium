@@ -31,7 +31,8 @@ class ArtifactContractIT {
         val conditions = ModuleFinder.of(conditionsJar).find("io.github.gromoff97.awium.conditions").orElseThrow().descriptor()
 
         assertFalse(conditions.isAutomatic)
-        assertEquals(setOf("io.github.gromoff97.awium.conditions"), conditions.exports().map { it.source() }.toSet())
+        assertEquals(setOf("io.github.gromoff97.awium.conditions", "io.github.gromoff97.awium.conditions.function"),
+            conditions.exports().map { it.source() }.toSet())
         assertEquals(setOf("java.base", "io.github.gromoff97.awium.core"), conditions.requires().map { it.name() }.toSet())
         assertTrue(conditions.requires().single { it.name() == "io.github.gromoff97.awium.core" }.modifiers().contains(TRANSITIVE))
         assertThat(core.packages()).doesNotContainAnyElementsOf(conditions.packages())

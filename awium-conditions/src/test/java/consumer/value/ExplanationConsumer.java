@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.Await.CollectionSource;
 import io.github.gromoff97.awium.Await.MapSource;
 import io.github.gromoff97.awium.Await.OptionalSource;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.function.CheckedPredicate;
+import io.github.gromoff97.awium.conditions.function.CheckedPredicate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,7 +21,7 @@ import static io.github.gromoff97.awium.conditions.MapConditions.hasEntry;
 import static io.github.gromoff97.awium.conditions.MapConditions.hasNoEntry;
 import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
 import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
-import static io.github.gromoff97.awium.function.CheckedPredicate.not;
+import static io.github.gromoff97.awium.conditions.function.CheckedPredicate.not;
 
 public final class ExplanationConsumer {
     private ExplanationConsumer() {}

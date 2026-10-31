@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.conditions.internal;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.function.CheckedBiPredicate;
+import io.github.gromoff97.awium.conditions.function.CheckedBiPredicate;
 import java.util.Map.Entry;
 
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;

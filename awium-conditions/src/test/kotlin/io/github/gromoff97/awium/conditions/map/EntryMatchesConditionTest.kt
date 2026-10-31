@@ -9,7 +9,7 @@ import io.github.gromoff97.awium.conditions.MapConditions.allEntries
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.ProbeEntry
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
-import io.github.gromoff97.awium.function.CheckedBiPredicate
+import io.github.gromoff97.awium.conditions.function.CheckedBiPredicate
 import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
 import java.io.IOException
 import org.junit.jupiter.api.Assertions.assertEquals

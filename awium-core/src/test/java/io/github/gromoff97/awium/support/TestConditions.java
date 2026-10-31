@@ -3,7 +3,7 @@ package io.github.gromoff97.awium.support;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.function.CheckedPredicate;
+import java.util.function.Predicate;
 import java.util.concurrent.Callable;
 
 import static io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
@@ -29,7 +29,7 @@ public final class TestConditions {
         return new DefinedCondition<>(description, null, factory);
     }
 
-    public static <INPUT> PreservingCondition<INPUT> matching(CheckedPredicate<? super INPUT> predicate) {
+    public static <INPUT> PreservingCondition<INPUT> matching(Predicate<? super INPUT> predicate) {
         return new PreservingCondition<>("test predicate", null,
                 (INPUT actual) -> predicate.test(actual) ? satisfied(actual) : unsatisfied()) {};
     }

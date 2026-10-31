@@ -230,7 +230,7 @@ class NestedConditionTest {
     @ValueSource(booleans = [false, true])
     fun `an interrupted positional predicate stops after one call`(last: Boolean) {
         var calls = 0
-        val predicate = io.github.gromoff97.awium.function.CheckedPredicate<Int> {
+        val predicate = io.github.gromoff97.awium.conditions.function.CheckedPredicate<Int> {
             calls++
             Thread.currentThread().interrupt()
             false

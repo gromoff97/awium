@@ -67,7 +67,7 @@ lacks the constraints required by `until`.
 - [Development](docs/development.md): build and extension architecture.
 
 Entry points and contracts are in `io.github.gromoff97.awium`, results in `.result`,
-checked callbacks in `.function`, and lifecycle support in `.execution`.
+`AwaitAttempt` in `.function`, and lifecycle support in `.execution`.
 Ready-made checks belong to the separate [Awium Conditions](../awium-conditions/README.md) project.
 
 Licensed under [Apache License 2.0](LICENSE).

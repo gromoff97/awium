@@ -44,7 +44,8 @@ Collections and maps have `hasSize(n)`, `hasSizeNotEqualTo(n)`, `hasSizeGreaterT
 ### Callback types
 
 Custom callbacks use `AwaitAttempt<INPUT, RESULT>`; predicates and assertions use
-`CheckedPredicate`, `CheckedBiPredicate`, and `CheckedConsumer`. All permit checked throwables.
+`CheckedPredicate`, `CheckedBiPredicate`, and `CheckedConsumer` from
+`io.github.gromoff97.awium.conditions.function`. All permit checked throwables.
 For stored JDK callbacks, use `predicate::test`, `consumer::accept`, or `function::apply`.
 Negate checked predicates with `CheckedPredicate.not` or `CheckedBiPredicate.not`.
 
@@ -155,7 +156,7 @@ map values have the same restriction.
 
 ## StringConditions
 
-These checks accept any `CharSequence` without converting it to `String`.
+These checks accept any `CharSequence`.
 
 | Condition | Meaning |
 | --- | --- |

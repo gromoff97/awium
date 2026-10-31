@@ -43,6 +43,6 @@ It is separate from `build`, `check`, and `test`.
 | `CapturedCondition.Run` | Stage transitions, collected observations, and stage diagnostics |
 
 Mutable state belongs to each run; reusable definitions stay immutable.
-The Java module `io.github.gromoff97.awium.conditions` exports only
-`io.github.gromoff97.awium.conditions` and requires core transitively.
+The Java module `io.github.gromoff97.awium.conditions` exports
+`io.github.gromoff97.awium.conditions` and `.conditions.function`, requiring core transitively.
 Concrete helpers in `.conditions.internal` are unexported.

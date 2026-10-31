@@ -11,7 +11,7 @@ Payment payment = await(paymentRepository::load)
 ```
 
 `paid` is a `Condition<Payment, Payment>`. `until` polls one condition, reading the
-source once per attempt and returning the result without another read.
+source at most once per attempt and returning the result without another read.
 
 Immutable configurations and conditions are reusable. Each terminal call starts
 fresh timing and execution state.

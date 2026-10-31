@@ -22,8 +22,8 @@ import io.github.gromoff97.awium.conditions.MapConditions.noValue
 import io.github.gromoff97.awium.conditions.MapConditions.singleEntry
 import io.github.gromoff97.awium.conditions.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.OptionalConditions.hasValue
-import io.github.gromoff97.awium.function.CheckedBiPredicate
-import io.github.gromoff97.awium.function.CheckedPredicate
+import io.github.gromoff97.awium.conditions.function.CheckedBiPredicate
+import io.github.gromoff97.awium.conditions.function.CheckedPredicate
 import java.io.IOException
 import java.util.Optional
 import org.junit.jupiter.api.AfterEach

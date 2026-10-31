@@ -18,7 +18,7 @@ import io.github.gromoff97.awium.conditions.MapConditions.hasNoEntry
 import io.github.gromoff97.awium.conditions.MapConditions.singleEntry
 import io.github.gromoff97.awium.conditions.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.OptionalConditions.hasValue
-import io.github.gromoff97.awium.function.CheckedPredicate
+import io.github.gromoff97.awium.conditions.function.CheckedPredicate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows

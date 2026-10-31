@@ -20,7 +20,7 @@ import io.github.gromoff97.awium.conditions.internal.QuantifiedCondition.Quantif
 import io.github.gromoff97.awium.conditions.internal.QuantifiedCondition;
 import io.github.gromoff97.awium.conditions.internal.SingleElementCondition;
 import io.github.gromoff97.awium.conditions.internal.SortedCondition;
-import io.github.gromoff97.awium.function.CheckedPredicate;
+import io.github.gromoff97.awium.conditions.function.CheckedPredicate;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Objects;

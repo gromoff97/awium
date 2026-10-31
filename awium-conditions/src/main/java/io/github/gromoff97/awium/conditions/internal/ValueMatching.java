@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.conditions.internal;
 
-import io.github.gromoff97.awium.function.CheckedBiPredicate;
-import io.github.gromoff97.awium.function.CheckedPredicate;
+import io.github.gromoff97.awium.conditions.function.CheckedBiPredicate;
+import io.github.gromoff97.awium.conditions.function.CheckedPredicate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;

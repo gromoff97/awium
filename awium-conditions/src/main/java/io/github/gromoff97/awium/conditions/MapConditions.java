@@ -21,8 +21,8 @@ import io.github.gromoff97.awium.conditions.internal.QuantifiedCondition.Quantif
 import io.github.gromoff97.awium.conditions.internal.QuantifiedCondition;
 import io.github.gromoff97.awium.conditions.internal.SingleEntryCondition;
 import io.github.gromoff97.awium.conditions.internal.ValueForCondition;
-import io.github.gromoff97.awium.function.CheckedBiPredicate;
-import io.github.gromoff97.awium.function.CheckedPredicate;
+import io.github.gromoff97.awium.conditions.function.CheckedBiPredicate;
+import io.github.gromoff97.awium.conditions.function.CheckedPredicate;
 import java.util.Map.Entry;
 import java.util.Map;
 import java.util.Objects;

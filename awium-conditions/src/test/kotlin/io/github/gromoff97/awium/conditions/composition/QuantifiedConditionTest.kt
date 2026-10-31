@@ -30,7 +30,7 @@ import io.github.gromoff97.awium.conditions.OptionalConditions.present
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import io.github.gromoff97.awium.function.AwaitAttempt
-import io.github.gromoff97.awium.function.CheckedPredicate
+import io.github.gromoff97.awium.conditions.function.CheckedPredicate
 import io.github.gromoff97.awium.result.ConditionResult.Satisfied
 import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
 import io.github.gromoff97.awium.result.ConditionResult.satisfied

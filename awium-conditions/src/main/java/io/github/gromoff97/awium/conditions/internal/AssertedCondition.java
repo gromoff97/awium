@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.conditions.internal;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.function.CheckedConsumer;
+import io.github.gromoff97.awium.conditions.function.CheckedConsumer;
 
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
