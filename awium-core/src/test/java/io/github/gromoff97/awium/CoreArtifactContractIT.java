@@ -1,16 +1,22 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.internal.WaitEngine;
 import java.lang.module.ModuleFinder;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
+import javax.tools.Diagnostic;
 import org.junit.jupiter.api.Test;
 
+import static com.google.testing.compile.Compiler.javac;
+import static com.google.testing.compile.JavaFileObjects.forSourceString;
 import static java.lang.ClassLoader.getPlatformClassLoader;
 import static java.lang.ModuleLayer.boot;
 import static java.lang.System.getProperty;
 import static java.util.Objects.requireNonNull;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,6 +36,9 @@ class CoreArtifactContractIT {
         var finder = ModuleFinder.of(JAR);
         var descriptor = finder.find("io.github.gromoff97.awium.core").orElseThrow().descriptor();
         assertFalse(descriptor.isAutomatic());
+        assertEquals(Set.of("io.github.gromoff97.awium", "io.github.gromoff97.awium.result",
+                        "io.github.gromoff97.awium.function", "io.github.gromoff97.awium.execution"),
+                Set.copyOf(descriptor.exports().stream().map(export -> export.source()).toList()));
         assertEquals(Set.of("java.base"), Set.copyOf(descriptor.requires().stream().map(require -> require.name()).toList()));
         var configuration = boot().configuration().resolve(finder, ModuleFinder.of(), Set.of(descriptor.name()));
         var layer = boot().defineModulesWithOneLoader(configuration, getPlatformClassLoader());
@@ -45,5 +54,20 @@ class CoreArtifactContractIT {
     private static void assertConsumer(ClassLoader loader) throws Exception {
         var consumer = loader.loadClass("consumer.CoreConsumer");
         assertArrayEquals(new Object[]{5, 5, 1, 1, false}, (Object[]) consumer.getMethod("run").invoke(null));
+    }
+
+    @Test
+    void engineInternalsAreHiddenFromModuleConsumers() {
+        for (var type : List.of(io.github.gromoff97.awium.internal.WaitConfiguration.class, WaitEngine.class)) {
+            var consumer = forSourceString("consumer.Contract", """
+                    package consumer;
+                    import %s;
+                    final class Contract {}
+                    """.formatted(type.getName()));
+            var module = forSourceString("module-info", "module consumer { requires io.github.gromoff97.awium.core; }");
+            var compilation = javac().withOptions("--release", "21", "-proc:none", "--module-path", JAR.toString())
+                    .compile(consumer, module);
+            assertThat(compilation.errors()).extracting(Diagnostic::getCode).contains("compiler.err.package.not.visible");
+        }
     }
 }

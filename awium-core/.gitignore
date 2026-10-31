@@ -1,0 +1,8 @@
+.gradle/
+.zvec-grep/
+build/
+.idea/
+*.iml
+.classpath
+.project
+.settings/

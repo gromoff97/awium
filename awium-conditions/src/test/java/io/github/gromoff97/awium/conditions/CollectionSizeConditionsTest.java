@@ -1,0 +1,137 @@
+package io.github.gromoff97.awium.conditions;
+
+import io.github.gromoff97.awium.Await;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.function.Supplier;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.empty;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.hasSize;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.hasSizeAtLeast;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.hasSizeAtMost;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.hasSizeBetween;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.hasSizeGreaterThan;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.hasSizeLessThan;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.hasSizeNotEqualTo;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.nonEmpty;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.conditions.ConditionAssertions.assertUnsatisfied;
+import static io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate;
+import static io.github.gromoff97.awium.conditions.ConditionAssertions.mismatch;
+import static io.github.gromoff97.awium.conditions.ConditionAssertions.rejection;
+import static io.github.gromoff97.awium.conditions.ConditionAssertions.result;
+import static io.github.gromoff97.awium.conditions.ConditionAssertions.thrown;
+import static io.github.gromoff97.awium.conditions.ProbeContainers.sizeOnlyCollection;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
+import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
+import static java.util.Collections.singletonList;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.params.provider.Arguments.argumentSet;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class CollectionSizeConditionsTest {
+
+    @Test
+    void hasSingleElementReturnsTheTypedElement() {
+        String element = new String("element");
+        java.util.concurrent.Callable<ArrayList<String>> source = () -> new ArrayList<>(List.of(element));
+
+        String selected = await(source::call).until(singleElement);
+        String nullElement = await((Await.CollectionSource<List<String>>)
+                () -> singletonList(null)).until(singleElement);
+
+        assertSame(element, selected);
+        assertNull(nullElement);
+        assertThat(rejection(singleElement, List.of()).mismatch()).contains("collection size was 0");
+        assertThat(rejection(singleElement, List.of("first", "second")).mismatch()).contains("collection size was greater than 1");
+    }
+
+    @ParameterizedTest
+    @MethodSource("cases")
+    void conditionsEvaluateEverySizeRelation(Supplier<PreservingCondition<Collection<?>>> factory, int matchingSize, int mismatchingSize) {
+        var condition = factory.get();
+        var matching = sizeOnlyCollection(matchingSize);
+        var mismatching = sizeOnlyCollection(mismatchingSize);
+
+        assertSame(matching, result(evaluate(condition, matching)));
+        assertUnsatisfied(evaluate(condition, mismatching));
+        assertEquals("collection was null", mismatch(evaluate(condition, null)));
+        verify(matching).size();
+        verify(mismatching).size();
+    }
+
+    @Test
+    void nullCollectionRemainsUnsatisfied() {
+        Collection<Object> actual = null;
+
+        rejection(empty, actual);
+    }
+
+    @Test
+    void diagnosticsUseCollectionVocabularyAndCapturedSize() {
+        assertEquals("collection size was 1", mismatch(evaluate(hasSize(2), List.of("value"))));
+        var actual = sizeOnlyCollection(1);
+
+        var failure = rejection(empty, actual);
+
+        assertThat(failure.mismatch()).contains("collection").doesNotContain("map");
+        verify(actual).size();
+    }
+
+    @Test
+    void throwingSizeIsTheExactFailFastConditionCause() {
+        var cause = new IllegalStateException("collection size failed");
+        var collection = sizeOnlyCollection(0);
+        when(collection.size()).thenThrow(cause);
+
+        assertSame(cause, thrown(nonEmpty, collection));
+        verify(collection).size();
+    }
+
+    @Test
+    void sizedFactoriesRejectNegativeBoundsAndAllowZero() {
+        assertEquals("size must be non-negative", assertThrows(
+                IllegalArgumentException.class, () -> hasSize(-1)).getMessage());
+        assertThrows(IllegalArgumentException.class, () -> hasSizeBetween(-1, 1));
+        assertThrows(IllegalArgumentException.class, () -> hasSizeBetween(2, 1));
+        assertDoesNotThrow(() -> hasSize(0));
+        assertDoesNotThrow(() -> hasSizeBetween(0, 0));
+    }
+
+    @Test
+    void betweenIncludesBothBoundsAndRejectsValuesOutsideThem() {
+        assertInstanceOf(Satisfied.class, evaluate(hasSizeBetween(2, 4), List.of(1, 2)));
+        assertInstanceOf(Satisfied.class,
+                evaluate(hasSizeBetween(2, 4), List.of(1, 2, 3, 4)));
+        assertUnsatisfied(evaluate(hasSizeBetween(2, 4), List.of(1)));
+        assertUnsatisfied(evaluate(hasSizeBetween(2, 4), List.of(1, 2, 3, 4, 5)));
+    }
+
+    private static List<Arguments> cases() {
+        return List.of(sizeCase("empty", () -> empty, 0, 1), sizeCase("nonEmpty", () -> nonEmpty, 1, 0),
+                sizeCase("hasSize", () -> hasSize(2), 2, 1),
+                sizeCase("hasSizeNotEqualTo", () -> hasSizeNotEqualTo(2), 1, 2),
+                sizeCase("hasSizeGreaterThan", () -> hasSizeGreaterThan(2), 3, 2),
+                sizeCase("hasSizeAtLeast", () -> hasSizeAtLeast(2), 2, 1),
+                sizeCase("hasSizeLessThan", () -> hasSizeLessThan(2), 1, 2),
+                sizeCase("hasSizeAtMost", () -> hasSizeAtMost(2), 2, 3));
+    }
+
+    private static Arguments sizeCase(String name, Supplier<PreservingCondition<Collection<?>>> factory, int matchingSize, int mismatchingSize) {
+        return argumentSet(name, factory, matchingSize, mismatchingSize);
+    }
+}
