@@ -27,8 +27,8 @@ public final class WaitEngine<OBSERVED> {
     public WaitEngine(WaitConfiguration configuration, Callable<? extends OBSERVED> source,
             ConditionRun<OBSERVED, ?> execution) {
         this.configuration = configuration;
-        started = now(configuration);
-        runner = new AttemptExecution<>(source, execution, () -> now(configuration), started);
+        started = configuration.clock().getAsLong();
+        runner = new AttemptExecution<>(source, execution, configuration.clock(), started);
     }
 
     public WaitCompletion waitFor(Consumer<ExecutionStep<OBSERVED>> recorder) {
@@ -55,7 +55,7 @@ public final class WaitEngine<OBSERVED> {
                 return new Uncontrolled(preparationFailure);
             }
 
-            long retrievalStarted = now(configuration);
+            long retrievalStarted = configuration.clock().getAsLong();
             if (lastStep != null && reached(retrievalStarted, deadline) && !currentThread().isInterrupted()) {
                 return new Timeout(retrievalStarted - started, lastStep);
             }
@@ -91,7 +91,7 @@ public final class WaitEngine<OBSERVED> {
             }
 
             // Keep the clock/cancellation boundary before source retrieval, as in acquisition.
-            now(configuration);
+            configuration.clock().getAsLong();
             ExecutionStep<OBSERVED> step = runner.call(PERSISTENCE);
             completed = started + step.completedAfterNanos();
             recorder.accept(step);
@@ -111,7 +111,7 @@ public final class WaitEngine<OBSERVED> {
             Phase phase, long completed) {
         long deadline = completed + delay;
         long remaining;
-        while ((remaining = remaining(now(configuration), deadline)) > 0) {
+        while ((remaining = remaining(configuration.clock().getAsLong(), deadline)) > 0) {
             ExecutionStep<OBSERVED> interrupted = runner.interruptedBefore(phase);
             if (interrupted != null) {
                 return interrupted;
@@ -127,15 +127,6 @@ public final class WaitEngine<OBSERVED> {
             }
         }
         return runner.interruptedBefore(phase);
-    }
-
-    private static long now(WaitConfiguration configuration) {
-        boolean interrupted = currentThread().isInterrupted();
-        try {
-            return configuration.clock().getAsLong();
-        } finally {
-            if (interrupted) currentThread().interrupt();
-        }
     }
 
     private static boolean reached(long now, long deadline) {

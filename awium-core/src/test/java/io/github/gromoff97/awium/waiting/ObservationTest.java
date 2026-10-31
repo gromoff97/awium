@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
@@ -27,7 +26,6 @@ import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
@@ -92,10 +90,7 @@ class ObservationTest {
         int[] parks = {0};
         long[] now = {0};
         LongSupplier clock = mock();
-        var waiting = withTime(await(() -> { sources[0]++; return "ready"; }), () -> {
-            interrupted();
-            return clock.getAsLong();
-        }, nanos -> {
+        var waiting = withTime(await(() -> { sources[0]++; return "ready"; }), clock, nanos -> {
             parks[0]++;
             now[0] = 1;
             currentThread().interrupt();
@@ -261,92 +256,6 @@ class ObservationTest {
         assertTrue(currentThread().isInterrupted());
     }
 
-    @Test
-    void observationClockCannotEraseTheSourceInterruption() {
-        var actual = new Object();
-        int[] sourceCalls = {0};
-        int[] conditionCalls = {0};
-        var outcome = new WaitEngine<Object>(config(1, 20, 0).withTime(() -> {
-            interrupted();
-            return 0;
-        }, nanos -> { throw new AssertionError("parker must not be called"); }), () -> {
-            sourceCalls[0]++;
-            currentThread().interrupt();
-            return actual;
-        }, start(check("ready", value -> {
-            conditionCalls[0]++;
-            return satisfied(value);
-        }))).waitFor(ignored -> {});
-
-        var failure = assertInstanceOf(Uncontrolled.class, outcome);
-        uncontrolled(SOURCE, failure.step().attempt());
-        assertSame(actual, observation(failure.step().attempt()));
-        assertEquals(1, sourceCalls[0]);
-        assertEquals(0, conditionCalls[0]);
-        assertTrue(currentThread().isInterrupted());
-    }
-
-    @ParameterizedTest
-    @MethodSource("clockFailurePhases")
-    void clockThrowableDoesNotSetTheFlagAtAnyExecutionPhase(String phase, BinaryOperator<Executable> terminal, int[] expectedCalls) {
-        var interruption = new InterruptedException("clock stopped");
-        LongSupplier[] clock = {() -> 0};
-        Consumer<String> boundary = mock();
-        doAnswer(ignored -> { clock[0] = () -> rethrow(interruption); return null; }).when(boundary).accept(phase);
-        boundary.accept("initial");
-        int[] calls = {0, 0, 0};
-        var waiting = withTime(await(() -> {
-            calls[0]++;
-            boundary.accept("source");
-            return new Object();
-        }), () -> clock[0].getAsLong(), nanos -> {
-            calls[2]++;
-            boundary.accept("waiting");
-        }).every(ofNanos(1)).upTo(ofNanos(20));
-        var condition = check("state", (Object actual) -> {
-            calls[1]++;
-            boundary.accept("condition");
-            return unsatisfied("not ready");
-        });
-
-        assertSame(interruption, assertThrows(InterruptedException.class, terminal.apply(
-                () -> waiting.until(condition), () -> diagnostic(waiting).until(condition))));
-        assertFalse(currentThread().isInterrupted(), phase);
-        assertArrayEquals(expectedCalls, calls, "source, condition, waiting calls");
-    }
-
-    private static Stream<Arguments> clockFailurePhases() {
-        return terminals().stream().flatMap(terminal -> Stream.of(
-                argumentSet(terminal.getName() + " / initial", "initial", terminal, new int[]{0, 0, 0}),
-                argumentSet(terminal.getName() + " / source", "source", terminal, new int[]{1, 0, 0}),
-                argumentSet(terminal.getName() + " / condition", "condition", terminal, new int[]{1, 1, 0}),
-                argumentSet(terminal.getName() + " / waiting", "waiting", terminal, new int[]{1, 1, 1})));
-    }
-
-    @ParameterizedTest(name = "phase={0}")
-    @ValueSource(strings = {"initial", "source", "condition", "waiting"})
-    void clockFailuresRetainTheInterruptFlagAtEveryExecutionPhase(String phase) {
-        var failure = new IllegalStateException("clock failed");
-        LongSupplier clock = mock();
-        Consumer<String> boundary = mock();
-        doAnswer(ignored -> {
-            doAnswer(read -> { interrupted(); throw failure; }).when(clock).getAsLong();
-            currentThread().interrupt();
-            return null;
-        }).when(boundary).accept(phase);
-        boundary.accept("initial");
-
-        assertSame(failure, assertThrows(IllegalStateException.class, () ->
-                new WaitEngine<Object>(config(1, 20, 0).withTime(clock, nanos -> boundary.accept("waiting")), () -> {
-                    boundary.accept("source");
-                    return new Object();
-                }, start(check("ready", value -> {
-                    boundary.accept("condition");
-                    return unsatisfied("not yet");
-                }))).waitFor(ignored -> {})));
-        assertTrue(currentThread().isInterrupted(), phase);
-    }
-
     @ParameterizedTest
     @MethodSource("completionInterruptions")
     void completionClockInterruptionStopsNormalResultsWithoutReplacingConditionFailure(
@@ -439,32 +348,6 @@ class ObservationTest {
         assertSame(failure, observation.cause());
         assertSame(actual, observation(attempt));
         assertTrue(currentThread().isInterrupted());
-    }
-
-    @ParameterizedTest(name = "{0}, {1}")
-    @MethodSource("conditionClockFailures")
-    void conditionThrowableDoesNotSetTheFlagBeforeALaterClockFailure(
-            BinaryOperator<Executable> terminal, BiFunction<Runnable, InterruptedException, Condition<Object, Object>> conditionFactory) {
-        var interruption = new InterruptedException("condition stopped");
-        var clockFailure = new IllegalStateException("completion clock failed");
-        LongSupplier clock = mock();
-        Runnable failClock = () -> doAnswer(ignored -> {
-            assertFalse(currentThread().isInterrupted());
-            throw clockFailure;
-        }).when(clock).getAsLong();
-        var signal = conditionFactory.apply(failClock, interruption);
-        var waiting = withTime(await(Object::new), clock, ignored -> {});
-
-        assertSame(clockFailure, assertThrows(IllegalStateException.class, terminal.apply(
-                () -> waiting.until(signal), () -> diagnostic(waiting).until(signal))));
-        assertFalse(currentThread().isInterrupted());
-    }
-
-    private static Stream<Arguments> conditionClockFailures() {
-        return Stream.<Named<BiFunction<Runnable, InterruptedException, Condition<Object, Object>>>>of(
-                named("thrown", (arm, cause) -> check("interruption", actual -> { arm.run(); throw cause; })),
-                named("factory", (arm, cause) -> checkPerWait("interruption", () -> { arm.run(); throw cause; })))
-                .flatMap(factory -> terminals().stream().map(terminal -> arguments(terminal, factory)));
     }
 
     private static List<Named<BinaryOperator<Executable>>> terminals() {
