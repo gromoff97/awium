@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.SequencedCollection;
 import java.util.concurrent.Callable;
 
 import static io.github.gromoff97.awium.Await.await;
@@ -13,6 +14,17 @@ import static io.github.gromoff97.awium.conditions.CollectionConditions.contains
 import static io.github.gromoff97.awium.conditions.CollectionConditions.containsOnly;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContain;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainAny;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.containsSequence;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.containsSubsequence;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainSequence;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainSubsequence;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.startsWith;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.endsWith;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.sorted;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.subsetOf;
+import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.conditions.Conditions.captured;
+import static java.util.Collections.singletonList;
 
 public final class ContentConsumer {
     private ContentConsumer() {}
@@ -48,5 +60,49 @@ public final class ContentConsumer {
         ArrayList<String> none = await(() -> actual).until(doesNotContainAny(List.of()));
         ArrayList<String> recorded = tryAwait(() -> actual).until(containsAll(List.of())).orThrow();
         return List.of(all, none, recorded);
+    }
+
+    public static List<ArrayList<String>> subsets(ArrayList<String> actual) {
+        var plain = await(() -> actual).until(subsetOf(List.of("ready", "done")));
+        var selected = await(() -> List.of(actual)).until(singleElement(subsetOf(List.of("ready"))));
+        var observations = await(() -> actual).until(captured(subsetOf(List.of("ready")), subsetOf(List.of("ready", "done"))));
+        var recorded = tryAwait(() -> actual).until(subsetOf(List.of("ready"))).orThrow();
+        plain.getFirst().length();
+        selected.getFirst().length();
+        observations.getLast().getFirst().length();
+        recorded.getFirst().length();
+        return List.of(plain, selected, observations.getLast(), recorded);
+    }
+
+    public static List<CharSequence> narrowerSubset(List<CharSequence> actual) {
+        return await(() -> actual).until(subsetOf(List.of("ready")));
+    }
+
+    public static List<ArrayList<Integer>> orderedChecks(ArrayList<Integer> actual) {
+        Callable<ArrayList<Integer>> source = () -> actual;
+        var waiting = await(source::call);
+        return List.of(waiting.until(startsWith(List.of(1, 2))), waiting.until(endsWith(List.of(3, 5))),
+                waiting.until(containsSequence(List.of(2, 3))), waiting.until(containsSubsequence(List.of(1, 3, 5))),
+                waiting.until(sorted(Integer::compareTo)));
+    }
+
+    public static List<ArrayList<String>> emptyOrderedPatterns(ArrayList<String> actual) {
+        var checks = List.<PreservingCondition<SequencedCollection<? super String>>>of(
+                startsWith(List.of()), endsWith(List.of()), containsSequence(List.of()), containsSubsequence(List.of()));
+        return checks.stream().flatMap(check -> List.of(
+                await(() -> actual).until(check), tryAwait(() -> actual).until(check).orThrow()).stream()).toList();
+    }
+
+    public static List<List<String[]>> arrayPatterns(List<String[]> actual) {
+        var expected = singletonList(new String[] {"a", "b"});
+        var unrelated = singletonList(new String[] {"other"});
+        var checks = List.of(startsWith(expected), endsWith(expected), containsSequence(expected), containsSubsequence(expected),
+                doesNotContainSequence(unrelated), doesNotContainSubsequence(unrelated));
+        return checks.stream().flatMap(check -> {
+            var selected = await(() -> actual).until(check);
+            var recorded = tryAwait(() -> actual).until(check).orThrow();
+            selected.getFirst()[0].length();
+            return List.of(selected, recorded).stream();
+        }).toList();
     }
 }

@@ -9,28 +9,45 @@ import io.github.gromoff97.awium.conditions.CollectionConditions.lastElement
 import io.github.gromoff97.awium.conditions.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.ConditionAssertions.thrown
+import io.github.gromoff97.awium.conditions.Conditions.condition
+import io.github.gromoff97.awium.conditions.Conditions.instanceOf
+import io.github.gromoff97.awium.conditions.Conditions.matches
 import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait
 import io.github.gromoff97.awium.conditions.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.MapConditions.singleEntry
 import io.github.gromoff97.awium.conditions.OptionalConditions.hasValue
+import io.github.gromoff97.awium.conditions.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import io.github.gromoff97.awium.function.CheckedFunction
 import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
 import io.github.gromoff97.awium.result.ConditionResult.satisfied
 import io.github.gromoff97.awium.result.ConditionResult.unsatisfied
 import java.math.BigDecimal
+import java.io.IOException
 import java.util.Optional
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.AfterEach
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments.argumentSet
 import org.junit.jupiter.params.provider.MethodSource
+import org.junit.jupiter.params.provider.ValueSource
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
 
 class NestedConditionTest {
+    @AfterEach
+    fun `clear the caller interrupt flag`() {
+        Thread.interrupted()
+    }
     data class Selection(
         val wrap: (Number) -> Any,
         val compose: (Condition<Number, Number>) -> AwaitCondition
@@ -141,7 +158,119 @@ class NestedConditionTest {
         assertThrows(NullPointerException::class.java) { singleEntry(null as PreservingCondition<Map.Entry<String, Int>>?) }
     }
 
+    @ParameterizedTest
+    @MethodSource("positions")
+    fun `positional selectors preserve nested mismatch details`(select: (Condition<Any, String>?) -> AwaitCondition) {
+        val rejected = rejection(select(instanceOf(String::class.java)), listOf(1, "ready", 2))
+        assertThat(rejected.mismatch()).contains("value type was java.lang.Integer")
+    }
+
+    @ParameterizedTest
+    @MethodSource("positions")
+    fun `positional selectors reject a missing nested condition`(select: (Condition<Any, String>?) -> AwaitCondition) {
+        assertEquals("condition must not be null", assertThrows(NullPointerException::class.java) { select(null) }.message)
+    }
+
+    @Test
+    fun `an absent index reports cardinality before checking the selected value`() {
+        val condition = elementAt(3, instanceOf(String::class.java))
+        assertEquals("collection size was 3", rejection(condition, listOf(1, "ready", 2)).mismatch())
+        assertThat(condition.description()).contains("index 3")
+    }
+
+    @Test
+    fun `a negative index is rejected before creating a nested selector`() {
+        assertThrows(IllegalArgumentException::class.java) { elementAt(-1, instanceOf(String::class.java)) }
+    }
+
+    @Test
+    fun `single element rejects a missing preserving condition`() {
+        assertEquals("condition must not be null", assertThrows(NullPointerException::class.java) {
+            singleElement(null as PreservingCondition<String>?)
+        }.message)
+    }
+
+    @ParameterizedTest
+    @MethodSource("nullableCollections")
+    fun `a nested selector can recover after a null collection`(condition: AwaitCondition) {
+        val execution = bind<List<String>?, String>(condition)
+        assertInstanceOf(Unsatisfied::class.java, execution.probe(null))
+        assertEquals(" ", result(execution.probe(listOf(" "))))
+    }
+
+    @Test
+    fun `a nested null result fails the probe`() {
+        val invalid = condition<String, String>("invalid") { null }
+        assertInstanceOf(NullPointerException::class.java, thrown(singleElement(invalid), listOf("ready")))
+    }
+
+    @ParameterizedTest
+    @MethodSource("failures")
+    fun `nested failures retain their cause without changing the interrupt flag`(cause: Throwable) {
+        var calls = 0
+        val nested = condition<String, String>("broken") { calls++; throw cause }
+        assertSame(cause, thrown(singleElement(nested), listOf("ready")))
+        assertEquals(1, calls)
+        assertFalse(Thread.currentThread().isInterrupted)
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `an interrupted positional predicate stops after one call`(last: Boolean) {
+        var calls = 0
+        val predicate = io.github.gromoff97.awium.function.CheckedPredicate<Int> {
+            calls++
+            Thread.currentThread().interrupt()
+            false
+        }
+        val condition = if (last) lastElement(predicate) else firstElement(predicate)
+        assertInstanceOf(InterruptedException::class.java, thrown(condition, listOf(1, 2)))
+        assertEquals(1, calls)
+        assertTrue(Thread.currentThread().isInterrupted)
+    }
+
+    @ParameterizedTest
+    @MethodSource("failedLookups")
+    fun `positional selectors retain nested lookup failures and their key`(position: Int, cause: Throwable) {
+        val entry: Map.Entry<String, Any> = mock()
+        `when`(entry.key).thenReturn("target-key")
+        `when`(entry.value).thenThrow(cause)
+        val broken = EntryMap(listOf(entry))
+        val lookup = valueFor("target-key", instanceOf(String::class.java))
+        val condition = when (position) {
+            0 -> firstElement(lookup)
+            1 -> lastElement(lookup)
+            else -> elementAt(0, lookup)
+        }
+
+        assertSame(cause, thrown(condition, listOf(broken, mapOf("target-key" to "ready"), broken)))
+        assertEquals("target-key", condition.references().first().value())
+    }
+
     companion object {
+        @JvmStatic
+        fun nullableCollections() = listOf(
+            argumentSet("last", lastElement { value: String -> value.isBlank() }),
+            argumentSet("single", singleElement(matches { value: String -> value.isBlank() })))
+
+        @JvmStatic
+        fun positions() = listOf(
+            argumentSet("first", { nested: Condition<Any, String>? -> firstElement(nested) }),
+            argumentSet("last", { nested: Condition<Any, String>? -> lastElement(nested) }),
+            argumentSet("index", { nested: Condition<Any, String>? -> elementAt(0, nested) }))
+
+        @JvmStatic
+        fun failures() = listOf(argumentSet("checked", IOException("checked")), argumentSet("interrupted", InterruptedException("interrupted")),
+            argumentSet("runtime", IllegalStateException("runtime")), argumentSet("assertion", AssertionError("assertion")),
+            argumentSet("fatal", OutOfMemoryError("fatal")))
+
+        @JvmStatic
+        fun failedLookups() = listOf("first", "last", "index").flatMapIndexed { index, name ->
+            listOf(IllegalStateException("getter failed"), AssertionError("getter failed")).map { cause ->
+                argumentSet("$name / ${cause.javaClass.simpleName}", index, cause)
+            }
+        }
+
         @JvmStatic
         fun selections() = listOf(
             named("optional value", Selection({ Optional.of(it) }, { hasValue(it) })),

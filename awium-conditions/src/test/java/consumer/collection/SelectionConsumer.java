@@ -3,6 +3,8 @@ package consumer.collection;
 import io.github.gromoff97.awium.conditions.Conditions;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.concurrent.Callable;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -15,9 +17,11 @@ import static io.github.gromoff97.awium.conditions.CollectionConditions.firstEle
 import static io.github.gromoff97.awium.conditions.CollectionConditions.lastElement;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.conditions.Conditions.captured;
+import static io.github.gromoff97.awium.conditions.Conditions.asserted;
 import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
 import static io.github.gromoff97.awium.conditions.Conditions.instanceOf;
 import static io.github.gromoff97.awium.conditions.Conditions.isNotNull;
+import static io.github.gromoff97.awium.conditions.Conditions.isNull;
 import static io.github.gromoff97.awium.conditions.Conditions.matches;
 import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
 import static io.github.gromoff97.awium.conditions.OptionalConditions.hasValue;
@@ -126,5 +130,28 @@ public final class SelectionConsumer {
     public static int narrowerExpectedType() {
         List<CharSequence> values = List.of("ready");
         return await(() -> values).until(firstElement(equalTo("ready"))).length();
+    }
+
+    public static List<User> singleChecks(ArrayList<User> actual) {
+        Callable<ArrayList<User>> source = () -> actual;
+        var waiting = await(source::call);
+        return List.of(waiting.until(singleElement(matches(user -> user.id() > 0))),
+                waiting.until(singleElement(asserted(user -> { if (!user.positive()) throw new AssertionError("not positive"); }))),
+                waiting.until(singleElement(equalTo(actual.getFirst()))));
+    }
+
+    public static int singleNarrowed(List<Number> actual) {
+        return await(() -> actual).until(singleElement(instanceOf(Integer.class))).intValue();
+    }
+
+    public static List<String> nullableSingle() {
+        var values = java.util.Collections.singletonList((String) null);
+        return java.util.Arrays.asList(await(() -> values).until(singleElement),
+                await(() -> values).until(singleElement(matches(value -> value == null))),
+                await(() -> values).until(singleElement(isNull)));
+    }
+
+    public static String singleMapKey() {
+        return await(() -> Map.of("key", 42).keySet()).until(singleElement);
     }
 }

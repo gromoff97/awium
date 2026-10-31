@@ -5,6 +5,7 @@ import consumer.collection.SelectionConsumer.User
 import java.util.ArrayDeque
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -61,6 +62,27 @@ class CollectionSelectionApiTest {
     @Test
     fun `a narrower comparison preserves the observed element type`() {
         assertEquals(5, SelectionConsumer.narrowerExpectedType())
+    }
+
+    @Test
+    fun `single element accepts checks assertions and comparisons`() {
+        val user = User(1)
+        SelectionConsumer.singleChecks(arrayListOf(user)).forEach { assertSame(user, it) }
+    }
+
+    @Test
+    fun `single element narrows Number to Integer`() {
+        assertEquals(42, SelectionConsumer.singleNarrowed(listOf(42)))
+    }
+
+    @Test
+    fun `single element accepts a null selection in each overload`() {
+        SelectionConsumer.nullableSingle().forEach { assertNull(it) }
+    }
+
+    @Test
+    fun `single element infers the type of a map key view`() {
+        assertEquals("key", SelectionConsumer.singleMapKey())
     }
 
     companion object {

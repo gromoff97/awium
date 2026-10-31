@@ -49,4 +49,35 @@ class CollectionContentApiTest {
         val actual = if (empty) arrayListOf() else arrayListOf("a")
         ContentConsumer.emptyExpectations(actual).forEach { assertSame(actual, it) }
     }
+
+    @Test
+    fun `subsets retain the concrete source through selection capture and both terminals`() {
+        val actual = arrayListOf("ready")
+        ContentConsumer.subsets(actual).forEach { assertSame(actual, it) }
+    }
+
+    @Test
+    fun `subset comparisons accept narrower expected types`() {
+        val actual = listOf<CharSequence>("ready")
+        assertSame(actual, ContentConsumer.narrowerSubset(actual))
+    }
+
+    @Test
+    fun `ordered checks preserve a stored collection source type`() {
+        val actual = arrayListOf(1, 2, 3, 5)
+        ContentConsumer.orderedChecks(actual).forEach { assertSame(actual, it) }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun `empty ordered patterns preserve concrete collections in both terminals`(empty: Boolean) {
+        val actual = if (empty) arrayListOf() else arrayListOf("a", "b")
+        ContentConsumer.emptyOrderedPatterns(actual).forEach { assertSame(actual, it) }
+    }
+
+    @Test
+    fun `ordered patterns retain array element types`() {
+        val actual = listOf(arrayOf("a", "b"))
+        ContentConsumer.arrayPatterns(actual).forEach { assertSame(actual, it) }
+    }
 }

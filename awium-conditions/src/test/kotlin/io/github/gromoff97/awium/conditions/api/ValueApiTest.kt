@@ -1,6 +1,9 @@
 package io.github.gromoff97.awium.conditions.api
 
 import consumer.value.ValueConsumer
+import io.github.gromoff97.awium.conditions.ConditionAssertions.attempts
+import io.github.gromoff97.awium.conditions.ConditionAssertions.observation
+import java.math.BigDecimal
 import java.util.Optional
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -74,6 +77,24 @@ class ValueApiTest {
     @Test
     fun `present selects the projected optional value`() {
         assertEquals(5, ValueConsumer.projectedOptionalLength())
+    }
+
+    @Test
+    fun `narrowed results retain the original observation`() {
+        val actual = BigDecimal("42.00")
+        val result = ValueConsumer.narrowedResult(actual)
+        assertSame(actual, result.orThrow())
+        assertSame(actual, observation(attempts(result).single()))
+    }
+
+    @Test
+    fun `null checks and predicates return successful null results`() {
+        ValueConsumer.nullResults().forEach { assertNull(it.orThrow()) }
+    }
+
+    @Test
+    fun `recorded optional selections expose their contained value`() {
+        assertEquals("payment", ValueConsumer.optionalResult().orThrow())
     }
 
     companion object {

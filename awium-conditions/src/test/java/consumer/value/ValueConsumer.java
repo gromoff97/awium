@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.math.BigDecimal;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
@@ -17,6 +18,7 @@ import static io.github.gromoff97.awium.conditions.Conditions.in;
 import static io.github.gromoff97.awium.conditions.Conditions.instanceOf;
 import static io.github.gromoff97.awium.conditions.Conditions.isNotNull;
 import static io.github.gromoff97.awium.conditions.Conditions.isNull;
+import static io.github.gromoff97.awium.conditions.Conditions.matches;
 import static io.github.gromoff97.awium.conditions.Conditions.notEqualTo;
 import static io.github.gromoff97.awium.conditions.Conditions.notIn;
 import static io.github.gromoff97.awium.conditions.Conditions.notSameAs;
@@ -103,5 +105,19 @@ public final class ValueConsumer {
 
     public static int projectedOptionalLength() {
         return await(() -> Optional.of("ready").map(String::length)).until(present).intValue();
+    }
+
+    public static AwaitResult<Number, BigDecimal> narrowedResult(BigDecimal actual) {
+        Callable<Number> source = () -> actual;
+        return tryAwait(source).until(instanceOf(BigDecimal.class));
+    }
+
+    public static List<AwaitResult<String, String>> nullResults() {
+        Callable<String> source = () -> null;
+        return List.of(tryAwait(source).until(isNull), tryAwait(source).until(matches(actual -> actual == null)));
+    }
+
+    public static AwaitResult<Optional<String>, String> optionalResult() {
+        return tryAwait(() -> Optional.of("payment")).until(present);
     }
 }
