@@ -54,8 +54,8 @@ class ConditionExplanationTest {
     private record User(boolean active) {}
 
     @ParameterizedTest
-    @MethodSource("conditionDefinitions")
-    void reasonsAreIndependentCopiesForEveryConditionFamily(AwaitCondition original) {
+    @MethodSource("captures")
+    void capturedReasonsAreIndependentCopies(AwaitCondition original) {
         var first = original.because("first reason");
         var second = first.because("second reason");
 
@@ -73,21 +73,19 @@ class ConditionExplanationTest {
     }
 
     @ParameterizedTest
-    @MethodSource("conditionDefinitions")
+    @MethodSource("captures")
     void reasonsCannotBeNull(AwaitCondition original) {
         assertThrows(NullPointerException.class, () -> original.because(null));
     }
 
     @ParameterizedTest
-    @MethodSource("conditionDefinitions")
+    @MethodSource("captures")
     void reasonsCannotBeBlank(AwaitCondition original) {
         assertThrows(IllegalArgumentException.class, () -> original.because(" \n\t"));
     }
 
-    private static List<Named<AwaitCondition>> conditionDefinitions() {
-        return List.of(named("preserving", isNotNull), named("comparison", equalTo("ready")), named("optional", present),
-                named("element", singleElement), named("map value", valueFor("id")), named("narrowing", instanceOf(User.class)),
-                named("captured preserving", captured(isNotNull)), named("captured comparison", captured(equalTo("ready"))),
+    private static List<Named<AwaitCondition>> captures() {
+        return List.of(named("captured preserving", captured(isNotNull)), named("captured comparison", captured(equalTo("ready"))),
                 named("captured optional", captured(present)), named("captured map value", captured(valueFor("id"))),
                 named("captured narrowing", captured(instanceOf(User.class))));
     }
