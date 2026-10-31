@@ -24,6 +24,11 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 
 class HasSizeConditionTest {
+    @Test
+    fun `describes the length unit and bound`() {
+        assertEquals("string length is 5", StringConditions.hasLength(5).description())
+    }
+
     @ParameterizedTest(name = "{0}, observed {1}")
     @MethodSource("boundaries")
     fun `checks the size boundary`(condition: AwaitCondition, actual: Any, expected: Boolean) {

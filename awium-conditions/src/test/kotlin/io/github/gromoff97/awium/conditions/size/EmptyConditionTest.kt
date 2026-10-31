@@ -10,6 +10,7 @@ import io.github.gromoff97.awium.conditions.MapConditions
 import io.github.gromoff97.awium.conditions.ProbeContainers.sizeOnlyCollection
 import io.github.gromoff97.awium.conditions.ProbeContainers.sizeOnlyMap
 import io.github.gromoff97.awium.conditions.StringConditions
+import io.github.gromoff97.awium.result.ConditionResult.Satisfied
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Named.named
@@ -21,6 +22,18 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 
 class EmptyConditionTest {
+    @ParameterizedTest
+    @MethodSource("textLengths")
+    fun `text emptiness reads only length`(condition: AwaitCondition, length: Int, matches: Boolean) {
+        val actual = object : CharSequence {
+            override val length = length
+            override fun get(index: Int): Char = throw AssertionError("characters are not needed")
+            override fun subSequence(startIndex: Int, endIndex: Int): CharSequence = throw AssertionError("slice is not needed")
+            override fun toString(): String = throw AssertionError("rendering is not needed")
+        }
+        assertEquals(matches, evaluate(condition, actual) is Satisfied<*>)
+    }
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("matchingInputs")
     fun `returns the observation`(condition: AwaitCondition, actual: Any) {
@@ -64,6 +77,12 @@ class EmptyConditionTest {
     }
 
     companion object {
+        @JvmStatic
+        fun textLengths() = listOf(
+            arguments(StringConditions.empty, 0, true), arguments(StringConditions.empty, 3, false),
+            arguments(StringConditions.nonEmpty, 3, true), arguments(StringConditions.nonEmpty, 0, false)
+        )
+
         @JvmStatic
         fun matchingInputs() = listOf(
             arguments(named("empty collection", CollectionConditions.empty), emptyList<Any>()),
