@@ -34,8 +34,8 @@ object ProbeContainers {
     }
 
     @JvmStatic
-    fun <ELEMENT> membershipCollection(elements: List<ELEMENT>): Collection<ELEMENT> {
-        val collection: Collection<ELEMENT> = mock()
+    fun <ELEMENT> membershipCollection(elements: List<ELEMENT>): MutableCollection<ELEMENT> {
+        val collection: MutableCollection<ELEMENT> = mock()
         `when`(collection.size).thenThrow(AssertionError("size must not be called"))
         `when`(collection.isEmpty()).thenAnswer { collection.size == 0 }
         `when`(collection.iterator()).thenAnswer { elements.iterator() }

@@ -19,6 +19,24 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.verifyNoInteractions
 
 class SortedConditionTest {
+    @Test
+    fun `later mutations do not change the reported out of order pairs`() {
+        var comparisons = 0
+        val check = sorted<Int> { left, right -> comparisons++; left.compareTo(right) }
+        val values = arrayListOf(3, 1, 2)
+        val mismatches = mutableListOf(rejection(check, null).mismatch(), rejection(check, values).mismatch())
+        values[0] = 1
+        values[1] = 3
+        mismatches += rejection(check, values).mismatch()
+        values[1] = 2
+        values[2] = 3
+
+        assertSame(values, result(evaluate(check, values)))
+        assertEquals(5, comparisons)
+        assertEquals(listOf("collection was null", "collection was not sorted at indices 0 and 1",
+            "collection was not sorted at indices 1 and 2"), mismatches)
+    }
+
     @ParameterizedTest
     @MethodSource("orderedValues")
     fun `uses the supplied order and permits equal neighbours`(actual: List<Int>, comparator: Comparator<Int>) {
