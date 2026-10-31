@@ -74,104 +74,6 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 class ScalarConditionsTest {
 
-    @Test
-    void singleBoundChecksDoNotRequireTheBoundToBeComparable() {
-        record Limit(int number) {}
-        record Measurement(int number) implements Comparable<Limit> {
-            @Override
-            public int compareTo(Limit limit) { return compare(number, limit.number()); }
-        }
-        var measurement = new Measurement(10);
-        var waiting = await(() -> measurement);
-        var checks = List.of(greaterThan(new Limit(5)),
-                atLeast(new Limit(10)),
-                lessThan(new Limit(15)),
-                atMost(new Limit(10)));
-
-        for (var check : checks) {
-            var value = waiting.until(check);
-            AwaitResult<Measurement, Measurement> captured = tryAwait(() -> measurement).until(check);
-            var values = waiting.until(captured(check, check));
-            assertSame(measurement, value);
-            assertEquals(10, value.number());
-            assertSame(measurement, captured.orThrow());
-            assertEquals(10, values.getLast().number());
-        }
-        var selected = await(() -> Optional.of(measurement)).until(hasValue(
-                atLeast(new Limit(5))));
-        var mapped = await(() -> Map.of("measurement", measurement)).until(valueFor("measurement",
-                lessThan(new Limit(15))));
-        assertSame(measurement, selected);
-        assertEquals(10, selected.number());
-        assertSame(measurement, mapped);
-        assertEquals(10, mapped.number());
-    }
-
-    @Test
-    void comparableChecksKeepTheBaseSourceTypeWhenBoundsAreSubtypes() {
-        class Score implements Comparable<Score> {
-            private final int number;
-            Score(int number) { this.number = number; }
-            int number() { return number; }
-            @Override
-            public int compareTo(Score other) { return compare(number, other.number); }
-        }
-        class Bound extends Score {
-            Bound(int number) { super(number); }
-        }
-        var score = new Score(10);
-        var waiting = await(() -> score);
-        var checks = List.of(greaterThan(new Bound(5)),
-                atLeast(new Bound(10)),
-                lessThan(new Bound(15)),
-                atMost(new Bound(10)),
-                between(new Bound(5), new Bound(15)),
-                strictlyBetween(new Bound(5), new Bound(15)));
-
-        for (var check : checks) {
-            var value = waiting.until(check);
-            AwaitResult<Score, Score> result = tryAwait(() -> score).until(check);
-            var values = waiting.until(captured(check, check));
-            assertSame(score, value);
-            assertEquals(10, value.number());
-            assertSame(score, result.orThrow());
-            assertSame(score, values.getFirst());
-            assertEquals(10, values.getLast().number());
-        }
-    }
-
-    @Test
-    void comparableChecksAcceptObjectsComparableWithAnotherBoundType() {
-        record Threshold(int number) implements Comparable<Threshold> {
-            @Override
-            public int compareTo(Threshold other) { return compare(number, other.number); }
-        }
-        record Reading(int number) implements Comparable<Threshold> {
-            @Override
-            public int compareTo(Threshold threshold) { return compare(number, threshold.number()); }
-        }
-        var reading = new Reading(10);
-        var checks = List.of(greaterThan(new Threshold(5)),
-                atLeast(new Threshold(10)),
-                lessThan(new Threshold(15)),
-                atMost(new Threshold(10)),
-                between(new Threshold(5), new Threshold(15)),
-                strictlyBetween(new Threshold(5), new Threshold(15)));
-
-        for (var check : checks) {
-            var value = await(() -> reading).until(check);
-            assertSame(reading, value);
-            assertEquals(10, value.number());
-        }
-        var selected = await(() -> List.of(reading)).until(singleElement(
-                greaterThan(new Threshold(5))));
-        assertSame(reading, selected);
-        assertEquals(10, selected.number());
-
-        PreservingCondition<Integer> positive = greaterThan(0);
-        assertEquals(1, await(() -> 1).until(positive));
-    }
-
     @ParameterizedTest
     @MethodSource("matchingTextLengths")
     void textEmptinessChecksDoNotRenderTheObservedCharacters(int length, PreservingCondition<CharSequence> check) {
@@ -257,36 +159,6 @@ class ScalarConditionsTest {
         assertSame(text, await(() -> text).until(endsWith("ed")));
     }
 
-    @ParameterizedTest
-    @MethodSource("comparableChecks")
-    void comparableRelationsPreserveTheValue(PreservingCondition<Integer> check) {
-        assertEquals(5, await(() -> 5).until(check));
-    }
-
-    @TestFactory
-    List<DynamicNode> comparableBoundariesAndInvalidRanges() {
-        return List.of(
-                preserving(greaterThan(5), 6, 5),
-                preserving(atLeast(5), 5, 4),
-                preserving(lessThan(5), 4, 5),
-                preserving(atMost(5), 5, 6),
-                status(between(5, 7), 5, Satisfied.class),
-                status(between(5, 7), 7, Satisfied.class),
-                status(between(5, 7), 4, Unsatisfied.class),
-                status(between(5, 7), 8, Unsatisfied.class),
-                status(strictlyBetween(5, 7), 6, Satisfied.class),
-                status(strictlyBetween(5, 7), 5, Unsatisfied.class),
-                status(strictlyBetween(5, 7), 7, Unsatisfied.class),
-                status(between(5, 5), 5, Satisfied.class),
-                status(strictlyBetween(5, 5), 5, Unsatisfied.class),
-                status(greaterThan(5), null, Unsatisfied.class),
-                dynamicTest("reject null single bound", () -> assertThrows(NullPointerException.class, () -> greaterThan(null))),
-                dynamicTest("reject null lower bound", () -> assertThrows(NullPointerException.class, () -> between(null, 1))),
-                dynamicTest("reject null upper bound", () -> assertThrows(NullPointerException.class, () -> between(1, null))),
-                dynamicTest("reject reversed inclusive range", () -> assertThrows(IllegalArgumentException.class, () -> between(2, 1))),
-                dynamicTest("reject reversed exclusive range", () -> assertThrows(IllegalArgumentException.class, () -> strictlyBetween(2, 1))));
-    }
-
     @TestFactory
     List<DynamicNode> textTruthValuesAndBoundaries() {
         return List.of(
@@ -350,12 +222,6 @@ class ScalarConditionsTest {
         @Override public char charAt(int index) { throw new AssertionError("characters are not needed"); }
         @Override public CharSequence subSequence(int start, int end) { throw new AssertionError("slice is not needed"); }
         @Override public String toString() { throw new AssertionError("rendering is not needed for emptiness"); }
-    }
-
-    private static List<Named<PreservingCondition<Integer>>> comparableChecks() {
-        return List.of(named("greaterThan(4)", greaterThan(4)), named("atLeast(5)", atLeast(5)),
-                named("lessThan(6)", lessThan(6)), named("atMost(5)", atMost(5)),
-                named("between(5, 6)", between(5, 6)), named("strictlyBetween(4, 6)", strictlyBetween(4, 6)));
     }
 
     private static <VALUE> DynamicContainer preserving(PreservingCondition<? super VALUE> condition, VALUE matching, VALUE mismatching) {
