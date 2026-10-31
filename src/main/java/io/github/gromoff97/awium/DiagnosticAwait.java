@@ -58,7 +58,7 @@ public sealed class DiagnosticAwait<OBSERVED> extends AwaitSupport<OBSERVED> per
      * @return an independent configuration with the same source and durations
      * @throws NullPointerException if either operation is null
      */
-    public DiagnosticAwait<OBSERVED> usingTime(LongSupplier clock, LongConsumer parker) {
+    DiagnosticAwait<OBSERVED> usingTime(LongSupplier clock, LongConsumer parker) {
         return new DiagnosticAwait<>(source, configuration.withTime(clock, parker));
     }
 

@@ -36,11 +36,10 @@ throwable is never modified.
 ## Execution failures
 
 Null sources or conditions and invalid eager arguments fail before polling.
-Any throwable escaping a source, check, factory, or parker stops the wait.
-Clock failures propagate directly.
+Any throwable escaping a source, check, or factory stops the wait.
 
 An interrupt flag stops polling, including before the next nested candidate, and
-survives clock reads and diagnostic formatting. Existing condition causes are kept;
+survives diagnostic formatting. Existing condition causes are kept;
 a service interruption cause is created only when absent. A thrown
 `InterruptedException` with an already-cleared flag is an ordinary failure:
 its type does not restore the flag. A blocked callback cannot be forcibly stopped.

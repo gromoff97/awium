@@ -41,7 +41,7 @@ public final class DiagnosticMapAwait<OBSERVED extends Map<?, ?>, ENTRY extends 
     }
 
     @Override
-    public DiagnosticMapAwait<OBSERVED, ENTRY, VALUE> usingTime(LongSupplier clock, LongConsumer parker) {
+    DiagnosticMapAwait<OBSERVED, ENTRY, VALUE> usingTime(LongSupplier clock, LongConsumer parker) {
         return new DiagnosticMapAwait<>(source, configuration.withTime(clock, parker));
     }
 

@@ -40,7 +40,7 @@ public final class MapAwait<OBSERVED extends Map<?, ?>, ENTRY extends Map.Entry<
     }
 
     @Override
-    public MapAwait<OBSERVED, ENTRY, VALUE> usingTime(LongSupplier clock, LongConsumer parker) {
+    MapAwait<OBSERVED, ENTRY, VALUE> usingTime(LongSupplier clock, LongConsumer parker) {
         return new MapAwait<>(source, configuration.withTime(clock, parker));
     }
 

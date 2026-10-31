@@ -57,7 +57,7 @@ public sealed class ValueAwait<OBSERVED> extends AwaitSupport<OBSERVED> permits 
      * @return an independent configuration with the same source and durations
      * @throws NullPointerException if either operation is null
      */
-    public ValueAwait<OBSERVED> usingTime(LongSupplier clock, LongConsumer parker) {
+    ValueAwait<OBSERVED> usingTime(LongSupplier clock, LongConsumer parker) {
         return new ValueAwait<>(source, configuration.withTime(clock, parker));
     }
 

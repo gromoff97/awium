@@ -75,16 +75,3 @@ Settings accept `Duration` in any order; the last value wins. Awium validates du
 - Intervals may exceed the timeout; parking is capped at the remaining acquisition time.
 - After success, `persisting` keeps checking for its duration, possibly beyond `upTo`.
   Any persistence mismatch fails immediately.
-
-`usingTime(clock, parker)` replaces time for one configuration. For virtual time:
-
-```java
-var nanos = new AtomicLong();
-Payment payment = await(paymentRepository::find)
-        .usingTime(nanos::get, nanos::addAndGet)
-        .until(present);
-```
-
-The clock returns monotonic nanoseconds; the parker accepts nanoseconds and may
-return early. Both must share a time base. Defaults are `System.nanoTime` and
-`LockSupport.parkNanos`.

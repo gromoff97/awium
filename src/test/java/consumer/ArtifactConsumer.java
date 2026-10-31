@@ -14,7 +14,7 @@ import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.MapConditions.*;
 import static io.github.gromoff97.awium.OptionalConditions.*;
 import static io.github.gromoff97.awium.StringConditions.*;
-import static java.time.Duration.ofNanos;
+import static java.time.Duration.ofMillis;
 
 public final class ArtifactConsumer {
     public static Object[] run() {
@@ -23,8 +23,7 @@ public final class ArtifactConsumer {
         String selected = await(() -> values).until(singleElement);
         int length = await(() -> length(text())).until(isNotNull);
         String narrowed = await((Callable<Object>) ArtifactConsumer::text).until(instanceOf(String.class));
-        long[] time = {0};
-        List<String> stages = await(ArtifactConsumer::text).usingTime(() -> time[0], nanos -> time[0] += nanos).every(ofNanos(1)).upTo(ofNanos(5)).until(captured(
+        List<String> stages = await(ArtifactConsumer::text).every(ofMillis(1)).until(captured(
                 equalTo("ready"), contentEquals("ready")));
         boolean preserved = await(() -> values).until(asserted(actual -> {
             assert actual.size() == 1 : "one value expected";

@@ -37,7 +37,7 @@ public sealed class SelectionAwait<OBSERVED, ELEMENT> extends ValueAwait<OBSERVE
     }
 
     @Override
-    public SelectionAwait<OBSERVED, ELEMENT> usingTime(LongSupplier clock, LongConsumer parker) {
+    SelectionAwait<OBSERVED, ELEMENT> usingTime(LongSupplier clock, LongConsumer parker) {
         return new SelectionAwait<>(source, configuration.withTime(clock, parker));
     }
 

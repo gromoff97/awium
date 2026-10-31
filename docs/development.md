@@ -17,9 +17,16 @@ Mockito uses JDK proxies without a Java agent.
 PIT uses `ALL`: run `./gradlew pitest` **only on explicit user request**, never
 through `build`, `check`, or `test`.
 
-Behavior tests use virtual time; integration tests cover platform/virtual callers,
-cancellation, and concurrent state isolation. Ordinary compiled tests demonstrate
-valid API use; negative compilation tests protect incompatible-type rejection.
+Behavior tests share the product package and use package-private `usingTime(clock, parker)`
+with `FakeTime`. This replaces time for one configuration. Both callbacks use the
+same time base in nanoseconds: the clock is monotonic, and the parker may return early.
+Clock failures propagate directly; parker failures stop the wait. Clock reads preserve
+the interrupt flag. Production defaults are `System.nanoTime` and `LockSupport.parkNanos`.
+
+Integration tests cover platform/virtual callers, cancellation, and concurrent
+state isolation. Ordinary compiled tests demonstrate valid API use; negative
+compilation tests protect incompatible-type rejection. Packaged-JAR consumer tests
+use real time and only public methods.
 
 ## Responsibilities
 

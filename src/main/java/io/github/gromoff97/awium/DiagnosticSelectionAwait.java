@@ -38,7 +38,7 @@ public sealed class DiagnosticSelectionAwait<OBSERVED, ELEMENT> extends Diagnost
     }
 
     @Override
-    public DiagnosticSelectionAwait<OBSERVED, ELEMENT> usingTime(LongSupplier clock, LongConsumer parker) {
+    DiagnosticSelectionAwait<OBSERVED, ELEMENT> usingTime(LongSupplier clock, LongConsumer parker) {
         return new DiagnosticSelectionAwait<>(source, configuration.withTime(clock, parker));
     }
 

@@ -73,8 +73,9 @@ class PublicSurfaceTest {
     @ParameterizedTest
     @FieldSource("STAGES")
     void bothEntryPointsExposeOnlySharedTimingSettings(Class<?> stage) {
-        var settings = Set.of("every", "upTo", "persisting", "usingTime");
-        assertThat(stage.getMethods()).noneMatch(method -> method.getName().equals("historyTail"))
+        var settings = Set.of("every", "upTo", "persisting");
+        var hidden = Set.of("historyTail", "usingTime");
+        assertThat(stage.getMethods()).noneMatch(method -> hidden.contains(method.getName()))
                 .filteredOn(method -> settings.contains(method.getName()) && !method.isBridge())
                 .allSatisfy(method -> assertTrue(stage.isAssignableFrom(method.getReturnType()), method.toGenericString()));
     }
