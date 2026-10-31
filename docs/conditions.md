@@ -2,166 +2,170 @@
 
 [README](../README.md) · [Usage](usage.md) · [Diagnostics](diagnostics.md)
 
-Checks return the exact observed object unless a selection or custom result is
-specified below. Constants such as `present`, `singleElement`, and `nonEmpty`
-need no parentheses. Qualify colliding names, e.g. `CollectionConditions.nonEmpty`
-and `MapConditions.nonEmpty`; importing both makes an unqualified name ambiguous.
+Checks return the exact observed object unless **→** indicates otherwise.
+Constants such as `present` need no parentheses. Qualify colliding imports:
+`CollectionConditions.nonEmpty` and `MapConditions.nonEmpty`.
 
 ## Conditions
 
-| Condition | Check | Result |
-| --- | --- | --- |
-| `isNull`, `isNotNull` | Nullness | Observation, including null |
-| `equalTo(x)`, `notEqualTo(x)` | `Objects.deepEquals`, including array contents | Observation |
-| `sameAs(x)`, `notSameAs(x)` | Reference identity | Observation |
-| `in(values)`, `notIn(values)` | Membership in an iterable | Observation |
-| `greaterThan(x)`, `atLeast(x)`, `lessThan(x)`, `atMost(x)` | Comparable bound | Observation |
-| `between(min, max)`, `strictlyBetween(min, max)` | Inclusive or exclusive range | Observation |
-| `instanceOf(Type.class)`, `exactlyInstanceOf(Type.class)` | Compatible or exact runtime class | Observation typed as `Type` |
-| `matches(predicate)`, `asserted(assertion)` | [Callback](#callbacks) | Observation |
-| `condition(name, callback)`, `conditionPerWait(name, factory)` | [Custom check](#custom-conditions) | Chosen value |
-| `captured(first, second, ...)` | [Ordered states](usage.md#ordered-states) | List of source observations |
+| Condition | Meaning |
+| --- | --- |
+| `isNull`, `isNotNull` | Nullness |
+| `equalTo(x)`, `notEqualTo(x)` | `Objects.deepEquals`: object equality or array contents |
+| `sameAs(x)`, `notSameAs(x)` | Reference identity |
+| `in(xs)`, `notIn(xs)` | Membership in an iterable |
+| `greaterThan(x)`, `atLeast(x)`, `lessThan(x)`, `atMost(x)` | Comparable bound |
+| `between(min, max)`, `strictlyBetween(min, max)` | Inclusive or exclusive range |
+| `instanceOf(Type.class)`, `exactlyInstanceOf(Type.class)` | Compatible or exact runtime class → `Type` |
+| `matches(predicate)`, `asserted(assertion)` | [Callbacks](#callbacks) |
+| `condition(name, callback)`, `conditionPerWait(name, factory)` | → [Custom result](#custom-conditions) |
+| `captured(first, second, ...)` | → [Ordered states](usage.md#ordered-states) |
 
-Single-bound comparisons require the source's `Comparable<BOUND>` contract;
-the bound need not be comparable. Range bounds must also compare with each other.
-An empty `in` never matches; empty `notIn` matches any value, including null.
-[Full signatures](../src/main/java/io/github/gromoff97/awium/Conditions.java).
+Single bounds need not be comparable: the source must implement `Comparable<BOUND>`.
+Range bounds must also compare with each other. Empty `in` never matches;
+empty `notIn` matches anything, including null.
+[Signatures](../src/main/java/io/github/gromoff97/awium/Conditions.java).
 
 ## OptionalConditions
 
-| Condition | Check | Result |
-| --- | --- | --- |
-| `present` | Optional contains a value | Contained value |
-| `absent` | Optional is empty | Original optional |
-| `hasValue(predicateOrCondition)` | Present value passes the check | Value or nested condition's result |
+| Condition | Meaning |
+| --- | --- |
+| `present` | Present → contained value |
+| `absent` | Empty optional |
+| `hasValue(check)` | Present → [checked value or chosen result](#nested-checks) |
 
-A null optional satisfies none of these. [Full signatures](../src/main/java/io/github/gromoff97/awium/OptionalConditions.java).
+[Signatures](../src/main/java/io/github/gromoff97/awium/OptionalConditions.java).
 
 ## StringConditions
 
-All checks accept `CharSequence` and preserve its concrete type and identity.
+Accepts any `CharSequence`, checked without conversion to `String`.
 
-| Conditions | Check |
+| Condition | Meaning |
 | --- | --- |
 | `empty`, `nonEmpty`, `blank`, `nonBlank` | Empty or whitespace-only text |
 | `contentEquals(text)` | Equal characters across text implementations |
 | `equalToIgnoringCase(text)`, `notEqualToIgnoringCase(text)` | Case-insensitive equality |
 | `contains(text)`, `doesNotContain(text)`, `containsIgnoringCase(text)` | One fragment |
-| `containsAll(texts)`, `doesNotContainAny(texts)` | An iterable of fragments |
+| `containsAll(xs)`, `doesNotContainAny(xs)` | An iterable of fragments |
 | `startsWith(text)`, `doesNotStartWith(text)`, `endsWith(text)`, `doesNotEndWith(text)` | Prefix or suffix |
-| `matchesRegex(regex)`, `doesNotMatchRegex(regex)` | Regex text or a `Pattern` |
+| `matchesRegex(regex)`, `doesNotMatchRegex(regex)` | JDK regex, supplied as text or `Pattern` |
 | `hasLength...` | [Length bounds](#size-and-length) |
 
-Expected text accepts `CharSequence` and is frozen at construction. Observed text
-is not converted to `String`; regex checks use the JDK regex engine. Blankness
-uses `Character.isWhitespace` on Unicode code points. General `equalTo` follows
-object equality: two `StringBuilder` objects may differ despite equal characters.
-[Full signatures](../src/main/java/io/github/gromoff97/awium/StringConditions.java).
+Text operands accept `CharSequence`. Blankness uses `Character.isWhitespace` on
+Unicode code points. Unlike `contentEquals`, general `equalTo` may reject distinct
+`StringBuilder` objects with identical characters.
+[Signatures](../src/main/java/io/github/gromoff97/awium/StringConditions.java).
 
 ## CollectionConditions
 
-The source must be a `Collection`; expected sets may be any `Iterable`.
-Ordered operations require `SequencedCollection` (lists, deques, sequenced sets).
+Requires `Collection`; ordered operations require `SequencedCollection` (lists,
+deques, sequenced sets). `xs` below is an iterable of [expected elements](#expectations-and-empty-inputs).
 
-| Conditions | Check | Result |
-| --- | --- | --- |
-| `empty`, `nonEmpty`, `containsNull`, `doesNotContainNull`, `containsOnlyNulls`, `hasNoDuplicates` | Contents | Collection |
-| `hasSize...` | [Size bounds](#size-and-length) | Collection |
-| `all(check)`, `any(check)`, `none(check)` | Every, some, or no element matches | Collection |
-| `contains(x)`, `doesNotContain(x)` | One element, even when `x` is an array or collection | Collection |
-| `containsAll(xs)`, `containsAny(xs)`, `doesNotContainAll(xs)`, `doesNotContainAny(xs)` | Membership | Collection |
-| `containsOnly(xs)`, `subsetOf(xs)` | Same distinct elements, or only elements from `xs` | Collection |
-| `containsExactly(xs)`, `doesNotContainExactly(xs)` | Exact order and multiplicity | Collection |
-| `containsExactlyInAnyOrder(xs)`, `doesNotContainExactlyInAnyOrder(xs)` | Exact multiplicity, any order | Collection |
-| `startsWith(xs)`, `endsWith(xs)` | Ordered prefix or suffix | Collection |
-| `containsSequence(xs)`, `doesNotContainSequence(xs)` | Consecutive ordered elements | Collection |
-| `containsSubsequence(xs)`, `doesNotContainSubsequence(xs)` | Ordered elements, allowing gaps | Collection |
-| `sorted(comparator)` | Ordered by the comparator | Collection |
-| `singleElement` | Exactly one element | That element |
-| `firstElement`, `lastElement`, `elementAt(index)` | An element at the specified ordered position | That element |
+| Condition | Meaning |
+| --- | --- |
+| `empty`, `nonEmpty`, `containsNull`, `doesNotContainNull`, `containsOnlyNulls`, `hasNoDuplicates` | Contents |
+| `hasSize...` | [Size bounds](#size-and-length) |
+| `all(check)`, `any(check)`, `none(check)` | Every, some, or no element matches |
+| `contains(x)`, `doesNotContain(x)` | One element, including an array or collection |
+| `containsAll(xs)`, `containsAny(xs)`, `doesNotContainAll(xs)`, `doesNotContainAny(xs)` | Membership |
+| `containsOnly(xs)`, `subsetOf(xs)` | Same distinct elements, or only elements from `xs` |
+| `containsExactly(xs)`, `doesNotContainExactly(xs)` | Exact order and multiplicity |
+| `containsExactlyInAnyOrder(xs)`, `doesNotContainExactlyInAnyOrder(xs)` | Exact multiplicity, any order |
+| `startsWith(xs)`, `endsWith(xs)` | Ordered prefix or suffix |
+| `containsSequence(xs)`, `doesNotContainSequence(xs)` | Consecutive ordered elements |
+| `containsSubsequence(xs)`, `doesNotContainSubsequence(xs)` | Ordered elements, allowing gaps |
+| `sorted(comparator)` | Comparator order |
+| `singleElement` | Exactly one element → element |
+| `firstElement`, `lastElement`, `elementAt(index)` | Ordered position → element |
 
-Selections also accept nested checks, e.g. `singleElement(Payment::paid)` or
-`elementAt(0, instanceOf(Payment.class))`. `elementAt` requires a non-negative index
-and traverses to it, even for an array-backed list. First/last selections traverse
-forward/backward; single-value selection uses one iterator to distinguish zero,
-one, or multiple elements. These reads are not atomic snapshots.
+Selections accept [nested checks](#nested-checks), e.g. `elementAt(0, check)`.
+`elementAt` requires a non-negative index and traverses to it even in array-backed
+lists. First/last traverse forward/backward; single selection uses one iterator to
+distinguish zero, one, or multiple elements. These reads are not atomic snapshots.
 For ordered map views, use `sequencedKeySet()`, `sequencedValues()`, or
 `sequencedEntrySet()`; plain `values()` exposes only `Collection`.
-[Full signatures](../src/main/java/io/github/gromoff97/awium/CollectionConditions.java).
+[Signatures](../src/main/java/io/github/gromoff97/awium/CollectionConditions.java).
 
 ## MapConditions
 
-| Conditions | Check | Result |
-| --- | --- | --- |
-| `empty`, `nonEmpty`, `hasSize...` | Contents or [size](#size-and-length) | Map |
-| `hasEntry(key, value)`, `hasNoEntry(key, value)` | Expected pair present or absent | Map |
-| `allEntries(check)`, `hasEntry(check)`, `hasNoEntry(check)` | Every, some, or no entry matches | Map |
-| `allKeys(check)`, `anyKey(check)`, `noKey(check)` | Key quantifier | Map |
-| `allValues(check)`, `anyValue(check)`, `noValue(check)` | Value quantifier | Map |
-| `containsKey(key)`, `doesNotContainKey(key)`, `containsValue(value)`, `doesNotContainValue(value)` | One key or value | Map |
-| `containsAllKeys(keys)`, `doesNotContainAnyKeys(keys)`, `containsOnlyKeys(keys)` | Key membership | Map |
-| `containsAllValues(values)`, `doesNotContainAnyValues(values)` | Value membership | Map |
-| `containsAllEntries(map)`, `containsAnyEntries(map)`, `doesNotContainAllEntries(map)`, `doesNotContainAnyEntries(map)` | Entry membership | Map |
-| `containsExactlyEntries(map)`, `doesNotContainExactlyEntries(map)` | Same entries, regardless of order, or its opposite | Map |
-| `singleEntry` | Exactly one entry | Original entry |
-| `entryFor(key)` | A matching key exists | First matching original entry |
-| `valueFor(key)` | A matching key exists | Its value |
+| Condition | Meaning |
+| --- | --- |
+| `empty`, `nonEmpty`, `hasSize...` | Contents or [size](#size-and-length) |
+| `hasEntry(key, value)`, `hasNoEntry(key, value)` | Expected pair present or absent |
+| `allEntries(check)`, `hasEntry(check)`, `hasNoEntry(check)` | Every, some, or no entry matches |
+| `allKeys(check)`, `anyKey(check)`, `noKey(check)` | Key quantifier |
+| `allValues(check)`, `anyValue(check)`, `noValue(check)` | Value quantifier |
+| `containsKey(key)`, `doesNotContainKey(key)`, `containsValue(value)`, `doesNotContainValue(value)` | One key or value |
+| `containsAllKeys(xs)`, `doesNotContainAnyKeys(xs)`, `containsOnlyKeys(xs)` | Key membership |
+| `containsAllValues(xs)`, `doesNotContainAnyValues(xs)` | Value membership |
+| `containsAllEntries(map)`, `containsAnyEntries(map)`, `doesNotContainAllEntries(map)`, `doesNotContainAnyEntries(map)` | Entry membership |
+| `containsExactlyEntries(map)`, `doesNotContainExactlyEntries(map)` | Same entries, regardless of order, or its opposite |
+| `singleEntry` | Exactly one entry → original entry |
+| `entryFor(key)` | First matching key → original entry |
+| `valueFor(key)` | First matching key → value |
 
 `singleEntry`, `allEntries`, `hasEntry`, and `hasNoEntry` accept an entry predicate,
-a `(key, value)` predicate, or a nested condition. `valueFor(key, check)` checks
-only the selected value. For example:
+a `(key, value)` predicate, or a nested condition. `valueFor(key, check)` tests the
+selected value. Key/value sets accept iterables; entry sets accept maps.
+
+Expected keys/values use `Objects.deepEquals`, observed operand first, regardless
+of map comparators or identity semantics. Nested checks keep their own comparison:
+`hasEntry(equalTo(entry))` follows entry equality (array keys/values compare by
+identity in standard entries). Selected entries may remain connected to the map.
+[Signatures](../src/main/java/io/github/gromoff97/awium/MapConditions.java).
+
+### Map entry inference
+
+Entry callbacks can call `setValue`, so they require compatible map types. For
+covariant views, use a key/value predicate with known parameter types. A reusable
+typed-result callback inside `singleEntry` needs an input such as
+`Map.Entry<? extends String, ? extends Payment>`; inline callbacks infer it.
+
+For wildcard entry predicates, even typed callbacks can lose the map type with
+an outer `because`. Put the reason on the inner check:
 
 ```java
-String status = await(() -> Map.of("payment", "READY"))
-        .until(MapConditions.valueFor("payment", equalTo("READY")));
+CheckedPredicate<Map.Entry<String, ? extends Number>> positive =
+        entry -> entry.getValue().intValue() > 0;
+Map<String, Integer> counts = Map.of("ready", 1);
+Map<String, Integer> checked = await(() -> counts).until(
+        MapConditions.allEntries(matches(positive).because("Positive counts required")));
 ```
 
-Expected keys and values use `Objects.deepEquals`, observed operand first,
-regardless of the map's comparator or identity semantics. This includes array contents.
-Nested checks keep their own comparison rules: `hasEntry(equalTo(entry))` follows
-entry equality, which compares array keys/values by identity for standard entries.
-Original entries may stay connected to the map, depending on its implementation.
-
-Entry callbacks can call `setValue`, so their types must be compatible with the map.
-For covariant views, prefer a key/value predicate with known parameter types.
-A reusable typed-result callback inside `singleEntry` needs an input such as
-`Map.Entry<? extends String, ? extends Payment>`; an inline callback infers it.
-See [reason placement](usage.md#reasons-and-lambda-types) for wildcard entry checks.
-[Full signatures](../src/main/java/io/github/gromoff97/awium/MapConditions.java).
+The same applies to `hasEntry` and `hasNoEntry`. General
+[`because` and inference rules](usage.md#reasons-and-lambda-types) apply elsewhere.
 
 ## Size and length
 
-Collections and maps use `hasSize(n)`, `hasSizeNotEqualTo(n)`,
-`hasSizeGreaterThan(n)`, `hasSizeAtLeast(n)`, `hasSizeLessThan(n)`,
-`hasSizeAtMost(n)`, and inclusive `hasSizeBetween(min, max)`.
-Text uses the same suffixes with `hasLength`.
+Collections/maps have `hasSize(n)`, `hasSizeNotEqualTo(n)`, `hasSizeGreaterThan(n)`,
+`hasSizeAtLeast(n)`, `hasSizeLessThan(n)`, `hasSizeAtMost(n)`, and inclusive
+`hasSizeBetween(min, max)`. Text uses the same suffixes with `hasLength`.
 
 ## Expectations and empty inputs
 
-Bulk factories take one iterable or map and snapshot it shallowly at construction.
-Encounter order, duplicates, and supported nulls are retained; reading failures
-happen before polling. Null expected iterables/maps are rejected.
-Single-value operands keep their original reference, even for containers and arrays.
-Neither form deep-copies elements, keys, or values. Diagnostics label operands
-`Expected` or `Unexpected`.
+Bulk iterables/maps are traversed once and shallow-copied at construction,
+preserving encounter order, duplicates, and supported nulls. Null inputs are
+rejected; reading failures occur before polling. Elements, keys, and values are
+not deep-copied. Single-value operands retain references, including containers.
+`StringConditions` freeze text operands.
 
-To put an array into an expected set as **one element**, use
-`Collections.singletonList(array)`; `List.of(array)` expands a reference array.
-For an object membership check, likewise wrap a collection or array that is one candidate.
+Use `Collections.singletonList(array)` for one array in an expected set;
+`List.of(array)` expands reference arrays. Likewise, wrap a collection or array
+when it is one candidate for `in`/`notIn`.
 
-Container and text checks do not match null observations. For non-null observations:
+Optional, collection, map, and text conditions do not match null observations.
+For non-null observations:
 
 | Empty expectation | Outcome |
 | --- | --- |
-| `containsAll`, `doesNotContainAny`, and their map key/value/entry forms | Satisfied |
-| `containsAny`, `doesNotContainAll`, including entry-map forms | Unsatisfied |
-| `containsOnly`, `containsOnlyKeys`, exact-content checks | Satisfied only for an empty observation; negative exact checks have the opposite result |
-| Ordered prefix, suffix, sequence, subsequence | Satisfied; negative sequence/subsequence checks are unsatisfied |
+| `containsAll`, `doesNotContainAny`, including map key/value/entry forms | Satisfied |
+| `containsAny`, `doesNotContainAll`, including entry forms | Unsatisfied |
+| `containsOnly`, `containsOnlyKeys`, exact-content checks | Only empty observations match; negative exact checks have the opposite result |
+| Ordered prefix/suffix/sequence/subsequence | Satisfied; negative sequence/subsequence checks are unsatisfied |
 
-Empty text-fragment sets do not read characters; empty ordered patterns do not
-read size or elements. Non-empty ordered patterns longer than the collection are
-rejected by size without reading elements. A set containing `""` is not empty:
-every non-null text contains that fragment.
+Empty fragment sets read no characters; empty ordered patterns read neither size
+nor elements. Longer non-empty patterns are rejected by size without reading
+elements. A set containing `""` differs from an empty set: all non-null text contains it.
 
 ## Nested checks
 
@@ -170,65 +174,58 @@ Payment payment = await(paymentRepository::findAll)
         .until(singleElement(instanceOf(Payment.class)));
 ```
 
-A selector first extracts, then checks at most once per attempt. A missing value,
-wrong cardinality, or failed nested check retries the source. `firstElement`,
-`lastElement`, `elementAt`, and `valueFor` never search for a different candidate
-when their selected value fails. A nested typed condition returns its chosen
-result; a predicate or preserving check returns the selected value.
+Selectors extract first and check at most once per attempt. Missing values, wrong
+cardinality, or rejected selections are mismatches. A positional/key selector
+never searches another candidate after a failed check. Predicates and preserving
+checks return the selection; typed conditions return their chosen result.
 
-Quantifiers return the complete original container and discard nested results.
-They accept predicates or conditions, including `all(present)` and
-`allValues(singleElement)`; narrowing checks do not narrow the container's element type.
-`all`/`none` succeed on empty containers, `any` fails. Evaluation short-circuits
-at the first decisive candidate. Nested callback state starts lazily and is retained
-across candidates and retries, independently for each wait and captured stage.
+Quantifiers accept predicates or conditions, including `all(present)` and
+`allValues(singleElement)`. Nested results are discarded; narrowing does not
+change the container's element type. `all`/`none` match empty containers, `any`
+does not. Evaluation stops at the first decisive candidate.
 
-Bare selectors derive their result type from the source at `until`; they cannot
-be nested inside another selector: `singleElement(present)` and
-`singleElement(singleElement)` are unsupported. A selector with a declared result,
-such as `singleElement(instanceOf(Payment.class))`, can be nested again.
+Bare selectors cannot be nested in selectors: `singleElement(present)` and
+`singleElement(singleElement)` are unsupported. Selectors with a declared result,
+e.g. `singleElement(instanceOf(Payment.class))`, can be nested again.
 
-Conditions expose `description()` and immutable `references()`; compositions retain
-lookup keys, expected operands, and nested check names. See [diagnostics](diagnostics.md#reading-diagnostics)
-for failed extraction, iteration progress, and callback errors.
+Wildcard views retain comparison constraints. For `List<? extends Payment>`,
+`singleElement(equalTo(expectedPayment))` may be rejected; use
+`singleElement(expectedPayment::equals)`, also inside `captured`. Upper-bounded
+map values have the same restriction.
 
 ## Callbacks
 
-- `matches(predicate)` uses a boolean result; `asserted(assertion)` succeeds on normal
-  return and retries an `AssertionError`. A value returned by a method reference
-  passed to `asserted` is discarded: returning `false` does **not** fail the assertion.
-- Callbacks use `CheckedPredicate`, `CheckedBiPredicate`, `CheckedConsumer`, or
-  `CheckedFunction`, all permitting checked throwables. An escaping throwable stops
-  the wait; only the explicit `asserted` adapter retries `AssertionError`.
-- For stored JDK callbacks, pass `predicate::test`, `consumer::accept`, or
-  `function::apply`. Negate checked predicates with `CheckedPredicate.not(check)`
-  or `CheckedBiPredicate.not(check)`.
+`matches` uses a boolean result. `asserted` accepts normal return and converts
+`AssertionError` to a mismatch. A method reference's return value is discarded
+by `asserted`: returning `false` does **not** fail the assertion.
+
+Callbacks use `CheckedPredicate`, `CheckedBiPredicate`, `CheckedConsumer`, or
+`CheckedFunction`, permitting checked throwables. See [failure handling](diagnostics.md#failures-and-interruption).
+For stored JDK callbacks, use `predicate::test`, `consumer::accept`, or `function::apply`.
+Negate checked predicates with `CheckedPredicate.not` or `CheckedBiPredicate.not`.
 
 ## Custom conditions
 
 ```java
-import static io.github.gromoff97.awium.Conditions.condition;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
-
 String receipt = await(paymentRepository::load).until(condition("payment has a receipt", actual ->
         actual.receipt() == null ? unsatisfied("receipt was absent") : satisfied(actual.receipt())));
 ```
 
-The callback returns `ConditionResult<RESULT>`: `satisfied(value)` chooses the
-result, including null; `unsatisfied()`, `unsatisfied(message)`, or
-`unsatisfied(message, cause)` requests a retry. Use `satisfied(actual)` to return
-the observation. There is no no-argument `satisfied()` or user-returnable uncontrolled state.
-History and `captured` still keep source observations, not selected results.
-Project in the source when history should instead observe the derived value.
+Use the static factories of `io.github.gromoff97.awium.result.ConditionResult<RESULT>`:
 
-The declared callback result determines the terminal type: a callback returning
-`ConditionResult<CharSequence>` yields `CharSequence`, even with a `String` source.
-Standalone callbacks and factories followed by `because` may need a typed parameter
-such as `(Payment actual)`; see [type inference](usage.md#reasons-and-lambda-types).
+| Factory | Meaning |
+| --- | --- |
+| `satisfied(value)` | Chosen result, including null; pass `actual` to return the observation |
+| `unsatisfied()`, `unsatisfied(message)`, `unsatisfied(message, cause)` | Mismatch with optional diagnostics |
 
-`condition` reuses its callback. `conditionPerWait` takes a `Callable` creating
-one callback per wait and captured position, lazily when first needed:
+There is no no-argument success or user-returnable uncontrolled state. The declared
+callback result determines the terminal type: `ConditionResult<CharSequence>`
+yields `CharSequence` even with a `String` source. See [lambda inference](usage.md#reasons-and-lambda-types).
+
+`condition` reuses its callback. `conditionPerWait` takes a `Callable` creating one
+callback per wait and captured position, on first evaluation. Nested factories wait
+for successful extraction. State persists across candidates and retries. Only state
+created inside the factory is isolated; external state remains shared.
 
 ```java
 var check = conditionPerWait("two paid observations", () -> {
@@ -237,6 +234,3 @@ var check = conditionPerWait("two paid observations", () -> {
             ? satisfied(actual) : unsatisfied();
 });
 ```
-
-State created inside the factory is independent; state captured outside remains
-shared. Both creation and evaluation may throw; either failure stops the wait.

@@ -4,13 +4,12 @@
 
 ## Results
 
-`tryAwait(source).until(condition)` returns `AwaitResult<OBSERVED, RESULT>`.
-`OBSERVED` is the complete source value; `RESULT` is the condition's result:
+`tryAwait(source).until(condition)` returns `AwaitResult<OBSERVED, RESULT>`:
+source type first, condition result type second.
 
 ```java
 var result = tryAwait(paymentRepository::find).until(present);
 // AwaitResult<Optional<Payment>, Payment>
-
 switch (result) {
     case AwaitResult.Satisfied(var conditions, var payment) ->
             System.out.println(payment.receipt());
@@ -19,31 +18,25 @@ switch (result) {
 }
 ```
 
-| Access | Meaning |
-| --- | --- |
-| `result.orThrow()` | Selected value, including null, or the same failure as ordinary `await` |
-| `result.conditions()` | Immutable histories in condition declaration order |
-| `Satisfied.result()` | Successful result |
-| `Failed.failure()` | `AwaitFailure`: `reason()`, `message()`, original `cause()`, immutable `suppressed()` |
-
-`orThrow()` does not rerun the source or check. For [captured states](usage.md#ordered-states),
-its result is the list of source observations. `tryAwait` constructs no wrapper
-exception until a failed result's `orThrow()` is called.
+Records expose `Satisfied.result()` or `Failed.failure()`. `AwaitFailure` has
+`reason()`, `message()`, original `cause()`, and immutable `suppressed()` causes.
+`result.orThrow()` returns the selected value (including null) or throws the
+[ordinary wait failure](#failures-and-interruption). Reading a result never reruns
+checks; a failed result creates its wrapper exception only at `orThrow()`.
+For sequence result types, see [`captured`](usage.md#ordered-states).
 
 ## Histories
 
-Each `ConditionHistory<OBSERVED>` has two fields:
+`result.conditions()` is an immutable list in declaration order: one history per
+check position, even when the same condition is reused. Unreached positions have
+empty maps. Each `ConditionHistory<OBSERVED>` exposes:
 
-- `condition()`: the original check for this position.
-- `attempts()`: an immutable `NavigableMap<Long, Attempt<OBSERVED>>`.
+| Access | Value |
+| --- | --- |
+| `condition()` | Original check |
+| `attempts()` | Immutable `NavigableMap<Long, Attempt<OBSERVED>>` |
 
-One ordinary condition has one history; three captured stages have three.
-Unreached stages have empty maps. Reusing a condition at multiple positions still
-produces separate histories.
-
-Each map key is the **inclusive last attempt number**, counted across the whole wait.
-Consecutive equal observations with unchanged status, mismatch, and exception
-instance share an entry, retaining the latest observation:
+The key is the **inclusive last attempt number**, numbered across the whole wait:
 
 ```text
 key → observed
@@ -54,115 +47,107 @@ key → observed
  30 → 40         attempts 25–30
 ```
 
-A range starts after the preceding key, or after the previous condition's last
-attempt (1 for the first condition). `attempts().size()` counts retained states,
-not polling calls. For a nonempty map, `lastEntry().getValue()` gives the latest state.
+Each range starts after the preceding key, or after the previous condition's
+last attempt (1 for the first condition). `attempts().size()` counts retained
+states; `lastEntry().getValue()` gives the last state of a nonempty map.
 
-A captured sequence can therefore look like this:
+For `captured(equalTo("created"), equalTo("paid"))`:
 
 ```text
-captured(equalTo("created"), equalTo("paid"))
 conditions[0]: 1 → Satisfied("created")
 conditions[1]: 3 → Unsatisfied("pending", ...)
                4 → Satisfied("paid")
-orThrow(): ["created", "paid"]
 ```
-
-`persisting` extends the final condition's history. Changing phase alone does not
-start a new entry. History has no timing or progress objects; the terminal failure
-message contains elapsed time, phase, stage number, and sequence reason.
-A timeout after an intermediate success identifies the next stage separately.
 
 ## Attempts
 
-`Attempt<OBSERVED>` has four immutable variants:
+The sealed `Attempt<OBSERVED>` has four immutable records:
 
 | Variant | Fields | Meaning |
 | --- | --- | --- |
-| `Satisfied` | `observed` | Check succeeded; later captured stages may still be pending |
-| `Unsatisfied` | `observed`, `mismatch`, `cause` | Check rejected the value; polling may continue |
-| `FailedAfterObservation` | `observed`, `operation`, `cause`, `location` | Observation was obtained, then execution failed |
-| `FailedBeforeObservation` | `operation`, `cause` | No observation was obtained |
+| `Satisfied` | `observed` | This check passed |
+| `Unsatisfied` | `observed`, `mismatch`, `cause` | Mismatch; retry allowed even with a cause |
+| `FailedAfterObservation` | `observed`, `operation`, `cause`, `location` | Observation obtained, then execution failed |
+| `FailedBeforeObservation` | `operation`, `cause` | Observation unavailable |
 
-`observed` may legitimately be null; a failure before observation has no such
-accessor. Every attempt exposes `cause()`, null when absent. Both failure variants
-implement `Attempt.Failure<OBSERVED>`: the cause is non-null, operation is `SOURCE`,
-`CONDITION`, or `WAITING`, and `location()` optionally identifies nested work.
-Java record patterns retain observation types without casts.
-
-Attempts store source observations, not extracted results. A returned mismatch
-can carry a cause and still allow retries. An escaping throwable ends the wait;
-a source returning null followed by a thrown check is `FailedAfterObservation(null, ...)`.
-An interrupt after source retrieval also has an observation, even if the check never ran.
+An observed null still counts as an observation, including when a check or
+interruption fails afterward. Every variant exposes `cause()` (null if absent).
+Failure variants share `Attempt.Failure<OBSERVED>`: non-null cause, operation
+`SOURCE`/`CONDITION`/`WAITING`, optional nested `location()`. Record patterns retain
+types without casts. A successful stage may precede later sequence failure.
 
 ## What history retains
 
-- History groups repetitions without trimming earlier states. 999 identical
-  mismatches followed by success produce keys 999 and 1000; the check still ran
-  1000 times. Every changed value, diagnostic transition, or new exception instance
-  starts an entry. Returning to an earlier value creates a new chronological entry.
-- Observations use `Objects.deepEquals`: object equality or array contents. Equality
-  should be side-effect free. History never calls `hashCode`, `toString`, or exception
-  messages for grouping. If equality throws, states stay separate and the wait outcome
-  is unchanged. Repeated references to the same exception may share an entry.
-- Containers of history records are immutable; observations retain caller-owned
-  references. Awium does not copy or freeze objects. Reusing one mutable object loses
-  its earlier contents; later changes are visible in earlier entries. `matches`
-  cannot record which fields its predicate read. Status and mismatch strings stay fixed.
-- Memory grows with changes and distinct errors; there is no fixed limit.
-  [Ordinary `await`](usage.md#the-chain) does not retain or compare attempt records.
+Attempts store complete source observations, not selected results. Project in the
+source if history should observe a derived value instead.
+
+Consecutive check outcomes share one entry when observations are equal under
+`Objects.deepEquals` and status, mismatch, and exception instance stay unchanged
+(identical exception text is insufficient). Each entry retains the latest observation.
+Returning to an earlier value starts another entry; phase changes alone do not.
+
+Grouping preserves chronological changes without trimming or skipping checks.
+Equality should be side-effect free; grouping never calls `hashCode`, `toString`,
+or exception messages. Failed equality keeps observations separate without changing
+the outcome.
+Memory has no fixed bound. Ordinary `await` neither retains nor compares attempts.
+
+History and captured values retain caller-owned references, without copying or
+freezing. Reusing one mutable object loses earlier contents; later mutations affect
+old entries. Copy values in the source for independent snapshots. `matches` cannot
+record fields read by its predicate. Recorded statuses and mismatch strings stay fixed.
+History contains no timing or progress objects.
 
 ## Reading diagnostics
 
 ```java
-System.out.println(result);                         // Outcome and all histories
-result.conditions().forEach(System.out::println);   // Histories only
+System.out.println(result);                       // Outcome and histories
+result.conditions().forEach(System.out::println); // Histories only
 ```
 
-Each history prints its condition, operands, and reason once, followed by
+Each history prints its definition, operands, and `Because` reason once, then
 `Through #N: satisfied`, `unsatisfied`, or `failed (...)`. Unreached conditions show
-`Result: not attempted`. An individual attempt prints only its observation and status.
+`Result: not attempted`; individual attempts print only observation/status details.
+Definitions expose `description()` and immutable `references()`; compositions keep
+lookup keys, expected operands, and nested names. Operands are labelled `Expected`
+or `Unexpected`.
 
-Histories record polling attempts, not each candidate inside a quantifier.
-Nested mismatches retain completed selection steps; `(checked N)` is the number
-of evaluated candidates in iteration order, not attempts or necessarily container size.
-Nested errors include paths such as `Within: optional value → collection elements[1]`.
-Candidate indices are zero-based; attempt numbers start at 1.
-Built-ins retain measured facts such as size, length, actual class, duplicate index,
-out-of-order indices, or the first missing/forbidden operand index. These facts
-survive later observation changes without re-running the check.
+Quantifier candidates are not separate attempts. `(checked N)` counts evaluated
+candidates in iteration order, not polls or necessarily container size. Nested
+mismatches retain completed selections; nested errors show paths such as
+`Within: optional value → collection elements[1]`. Candidate indices start at 0.
+Built-ins retain measured size, length, class, duplicate or
+out-of-order indices, and missing/forbidden operand indices despite later mutations.
 
-`Observed: unavailable` differs from `Observed now: null`. Text is quoted and
-control characters escaped; objects and containers use their own representation.
-Cause type and message share one field; times use exact units such as `1 s 20 ms`.
-Failed renderers yield `<unprintable>` and a `Rendering failure` line, preserving
-other details. Original exceptions and stack traces remain available via `cause()`.
-Terminal failure text is saved at completion; histories and condition operands
-are rendered on demand from their current contents.
+`Observed: unavailable` differs from `Observed now: null`. Text is quoted with
+escaped control characters; other objects use their own representation. Cause
+type/message share one field; time uses exact units such as `1 s 20 ms`.
+Failed renderers produce `<unprintable>` and `Rendering failure` without hiding
+other fields.
+
+Terminal failure text is saved at completion, with elapsed time, phase, stage
+number, and sequence reason. Timeout after an intermediate success identifies
+the next stage. Histories and operands are rendered on demand from current contents.
 
 ## Failures and interruption
 
-Ordinary `await` throws a wrapper exposing `failure()`; `tryAwait` returns the same
-structured failure:
+Ordinary `await` and `orThrow()` throw a wrapper exposing `failure()`:
 
-| Wrapper | `failure.reason()` |
+| Wrapper | Reasons |
 | --- | --- |
 | `AwaitAssertionError extends AssertionError` | `TIMEOUT`, `PERSISTENCE_FAILED` |
 | `AwaitExecutionException extends RuntimeException` | `SOURCE_FAILED`, `CONDITION_FAILED`, `INTERRUPTED`, `WAIT_FAILED` |
 
-The message and original cause come from `AwaitFailure`. Distinct rendering failures
-are retained by identity in `suppressed()` and on the thrown wrapper's `getSuppressed()`;
-the original throwable is never modified to attach diagnostics.
+Wrapper message/cause come from `AwaitFailure`. Distinct rendering failures are
+retained by identity in `suppressed()` and wrapper `getSuppressed()`; the original
+throwable is never modified.
 
-Null sources/conditions and invalid eager arguments fail before polling. Every
-throwable escaping a source, check, callback factory, or parker stops the wait.
-Only [`asserted`](conditions.md#callbacks) converts an `AssertionError` into a retry.
-Custom clock failures propagate directly.
+Null sources/conditions and invalid eager arguments fail before polling.
+Any throwable escaping a source, [check](conditions.md#callbacks), factory, or
+parker stops the wait. Clock failures propagate directly.
 
-An interrupt flag set before or during execution stops polling, including before
-the next nested candidate. The flag is preserved through clock reads and diagnostic
-formatting. An existing condition cause is retained; a service interruption cause
-is created only when none exists. A callback throwing `InterruptedException` with
-an already-cleared flag is an ordinary thrown failure: its type does not restore
-the flag. Callbacks execute on the caller; interruption cannot force a blocked
-callback to return.
+An interrupt flag stops polling, including before the next nested candidate, and
+survives clock reads and diagnostic formatting. Existing condition causes are kept;
+a service interruption cause is created only when absent. A thrown
+`InterruptedException` with an already-cleared flag is an ordinary failure:
+its type does not restore the flag. A blocked callback cannot be forcibly stopped.
