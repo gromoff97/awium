@@ -83,10 +83,10 @@ class NestedSelectionTest {
     @Test
     void eachTerminalAndSequenceStageGetsAFreshLazyCallback() {
         int[] factories = {0};
-        PreservingCondition<String> ready = conditionPerWait("ready after retry", () -> {
+        Condition.Typed<String, String> ready = conditionPerWait("ready after retry", () -> {
             ++factories[0];
             int[] calls = {0};
-            return value -> ++calls[0] == 2 ? satisfied() : unsatisfied("retry");
+            return value -> ++calls[0] == 2 ? satisfied(value) : unsatisfied("retry");
         });
         for (List<String> invalid : java.util.Arrays.asList(null, List.<String>of(), List.of("ready", "other"))) {
             tryAwait(() -> invalid).usingTime(time, time).upTo(ofNanos(1)).until(singleElement(ready));

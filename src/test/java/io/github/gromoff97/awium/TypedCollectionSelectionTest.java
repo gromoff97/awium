@@ -23,7 +23,6 @@ import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.CollectionConditions.*;
-import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.Condition.SelectedCondition;
 import static io.github.gromoff97.awium.Condition.Typed;
 import static io.github.gromoff97.awium.Conditions.captured;
@@ -136,12 +135,12 @@ class TypedCollectionSelectionTest {
     @Test
     void nestedCheckStateIsRetainedAcrossRetriesAndResetForEachWait() {
         int[] factories = {0};
-        PreservingCondition<User> secondObservation = conditionPerWait("second observation", () -> {
+        Condition.Typed<User, User> secondObservation = conditionPerWait("second observation", () -> {
             factories[0]++;
             int[] calls = {0};
-            return value -> ++calls[0] == 2 ? satisfied() : unsatisfied("one more");
+            return value -> ++calls[0] == 2 ? satisfied(value) : unsatisfied("one more");
         });
-        List<SelectedCondition<? super List<User>>> selectors = List.of(
+        List<Condition.Typed<? super List<User>, User>> selectors = List.of(
                 firstElement(secondObservation), lastElement(secondObservation), elementAt(0, secondObservation));
         int[] reads = {0};
         var waiting = await(() -> { reads[0]++; return List.of(FIRST); })

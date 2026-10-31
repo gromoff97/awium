@@ -476,10 +476,10 @@ class CompilationContractTest {
                         import io.github.gromoff97.awium.result.ConditionResult;
 
                         final class Contract {
-                            static ConditionResult status(String value) {
-                                return ConditionResult.satisfied();
+                            static ConditionResult<String> status(String value) {
+                                return ConditionResult.satisfied(value);
                             }
-                            static CheckedFunction<String, ConditionResult> evaluator() {
+                            static CheckedFunction<String, ConditionResult<String>> evaluator() {
                                 return Contract::status;
                             }
                             void check(Callable<Integer> source) {

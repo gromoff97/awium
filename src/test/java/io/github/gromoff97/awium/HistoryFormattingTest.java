@@ -149,7 +149,7 @@ class HistoryFormattingTest {
             }
         };
         var result = tryAwait(() -> observed).usingTime(time, time)
-                .until(condition("ready", actual -> satisfied()));
+                .until(condition("ready", actual -> satisfied(actual)));
 
         assertEquals(0, renders[0]);
         assertSame(observed, result.orThrow());
@@ -184,7 +184,7 @@ class HistoryFormattingTest {
             @Override public boolean equals(Object other) { throw new AssertionError("unexpected equals"); }
             @Override public int hashCode() { throw new AssertionError("unexpected hashCode"); }
         };
-        var outcomes = List.of(unsatisfied(), unsatisfied(), satisfied()).iterator();
+        var outcomes = List.of(unsatisfied(), unsatisfied(), satisfied(observed)).iterator();
         var result = tryAwait(() -> observed).usingTime(time, time).every(ofNanos(1))
                 .until(condition("ready", actual -> outcomes.next()));
 
@@ -210,7 +210,7 @@ class HistoryFormattingTest {
         var first = new Observation();
         var last = new Observation();
         var values = List.of(first, last, last).iterator();
-        var outcomes = List.of(unsatisfied(), unsatisfied(), satisfied()).iterator();
+        var outcomes = List.of(unsatisfied(), unsatisfied(), satisfied(last)).iterator();
         var result = tryAwait(values::next).usingTime(time, time).every(ofNanos(1))
                 .until(condition("ready", actual -> outcomes.next()));
 
@@ -234,7 +234,7 @@ class HistoryFormattingTest {
             @Override public String toString() { throw new IllegalStateException("value renderer failed"); }
         };
         var successful = tryAwait(() -> observed).usingTime(time, time)
-                .until(condition("ready", actual -> satisfied()));
+                .until(condition("ready", actual -> satisfied(actual)));
         var cause = new IllegalArgumentException("original cause") {
             @Override public String toString() { throw new IllegalStateException("cause renderer failed"); }
         };

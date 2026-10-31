@@ -172,7 +172,7 @@ class ObjectAndOptionalAwaitTest {
     void nullablePreservingTerminalsReturnNullOnSuccess() {
         assertNull(await((Callable<Object>) () -> null).usingTime(time, time).until(isNull));
         assertNull(await((Callable<String>) () -> null).usingTime(time, time).until(matches(actual -> actual == null)));
-        assertNull(await((Callable<String>) () -> null).usingTime(time, time).until(condition("nullable property", ignored -> satisfied())));
+        assertNull(await((Callable<String>) () -> null).usingTime(time, time).until(condition("nullable property", ignored -> satisfied(ignored))));
     }
 
     @Test
@@ -235,10 +235,10 @@ class ObjectAndOptionalAwaitTest {
             sourceCalls[0]++;
             return "value";
         });
-        PreservingCondition<String> never = condition(
+        Condition.Typed<String, String> never = condition(
                 "never", value -> unsatisfied("not yet"));
         var failure = new IllegalStateException("condition failed");
-        PreservingCondition<String> broken = condition(
+        Condition.Typed<String, String> broken = condition(
                 "broken", value -> {
                     throw failure;
                 });
@@ -248,7 +248,7 @@ class ObjectAndOptionalAwaitTest {
                 () -> stage.until(broken)).getCause());
 
         assertEquals("value", stage.until(condition(
-                "ready", ignored -> satisfied())));
+                "ready", ignored -> satisfied(ignored))));
         assertEquals(5, sourceCalls[0]);
     }
 

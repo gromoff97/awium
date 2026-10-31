@@ -52,7 +52,7 @@ class TimingConfigurationTest {
                     String label = "origin=" + origin + ", persistence=" + persistence + " / ";
                     return Stream.of(
                             dynamicTest(label + "success", () -> {
-                                var result = persistPastSignedNanoseconds(origin, persistence, () -> "ready", ConditionResult::satisfied);
+                                var result = persistPastSignedNanoseconds(origin, persistence, () -> "ready", () -> satisfied("ready"));
                                 assertEquals(1, attempts(result).size());
                                 assertInstanceOf(Satisfied.class, attempts(result).getLast());
                                 assertEquals("ready", result.orThrow());
@@ -68,20 +68,20 @@ class TimingConfigurationTest {
                             }),
                             dynamicTest(label + "source failure", () -> {
                                 var cause = new IllegalStateException("source failure");
-                                var result = persistPastSignedNanoseconds(origin, persistence, () -> { throw cause; }, ConditionResult::satisfied);
+                                var result = persistPastSignedNanoseconds(origin, persistence, () -> { throw cause; }, () -> satisfied("ready"));
                                 assertOverflowFailure(result, FailedBeforeObservation.class, SOURCE_FAILED, cause, timing.getValue());
                             }));
                 }));
     }
 
     private static AwaitResult<String, String> persistPastSignedNanoseconds(
-            long origin, long persistence, Callable<String> nextRead, Supplier<ConditionResult> nextCheck) {
+            long origin, long persistence, Callable<String> nextRead, Supplier<ConditionResult<String>> nextCheck) {
         var time = new FakeTime(origin);
         var observations = List.<Callable<String>>of(() -> {
             time.advanceNanos(Long.MAX_VALUE - 1);
             return "ready";
         }, nextRead).iterator();
-        var checks = List.<Supplier<ConditionResult>>of(ConditionResult::satisfied, nextCheck).iterator();
+        var checks = List.<Supplier<ConditionResult<String>>>of(() -> satisfied("ready"), nextCheck).iterator();
         var waiting = await(() -> observations.next().call()).usingTime(time, time).every(ofNanos(Long.MAX_VALUE))
                 .upTo(ofNanos(Long.MAX_VALUE)).persisting(ofNanos(persistence));
         var result = diagnostic(waiting).until(condition("ready", (String actual) -> checks.next().get()));
@@ -153,10 +153,10 @@ class TimingConfigurationTest {
         var time = new FakeTime(100);
         int[] clockReads = {0};
         int[] factories = {0};
-        var condition = Conditions.<String>conditionPerWait("second observation", () -> {
+        var condition = Conditions.conditionPerWait("second observation", () -> {
             factories[0]++;
-            var outcomes = List.of(unsatisfied("first observation"), satisfied()).iterator();
-            return actual -> outcomes.next();
+            var outcomes = List.<ConditionResult<String>>of(unsatisfied("first observation"), satisfied("ready")).iterator();
+            return (String actual) -> outcomes.next();
         });
         var waiting = await(() -> "ready").usingTime(() -> {
             clockReads[0]++;

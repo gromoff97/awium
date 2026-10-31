@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.io.IOException;
 import java.util.ArrayDeque;
@@ -14,7 +15,6 @@ import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.observation;
 import static io.github.gromoff97.awium.CollectionConditions.singleElement;
-import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static io.github.gromoff97.awium.OptionalConditions.hasValue;
@@ -113,9 +113,9 @@ class MixedConditionSequenceTest {
     @Test
     void repeatedFactoryBackedStagesStayIndependentAcrossMixedWaits() {
         int[] factories = {0};
-        PreservingCondition<User> afterRetry = conditionPerWait("second invocation", () -> {
+        Condition.Typed<User, User> afterRetry = conditionPerWait("second invocation", () -> {
             factories[0]++;
-            var outcomes = new ArrayDeque<>(List.of(unsatisfied("retry"), satisfied()));
+            var outcomes = new ArrayDeque<>(List.<ConditionResult<User>>of(unsatisfied("retry"), satisfied(CREATED)));
             return user -> requireNonNullElse(outcomes.pollFirst(), unsatisfied("retry"));
         });
         var values = List.of(CREATED, CREATED, PENDING, CREATED, CREATED);

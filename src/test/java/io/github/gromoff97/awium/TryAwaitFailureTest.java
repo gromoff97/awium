@@ -16,6 +16,7 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -70,7 +71,7 @@ class TryAwaitFailureTest {
     @ParameterizedTest
     @MethodSource("evaluationInterruptions")
     void interruptionAfterEvaluationRetainsTheOriginalCauseAndNestedLocation(
-            Runnable onEvaluation, CheckedFunction<Throwable, ConditionResult> evaluation, String location) {
+            Runnable onEvaluation, CheckedFunction<Throwable, ConditionResult<Throwable>> evaluation, String location) {
         Runnable[] clockEffect = { () -> {} };
         var cause = new IllegalStateException("not ready");
         var check = hasValue(condition("ready", (String actual) -> {
@@ -125,7 +126,7 @@ class TryAwaitFailureTest {
 
     @Test
     void unsatisfiedPersistenceHasTheSameOutcomeInBothTerminals() {
-        var persistence = assertParity(time -> timedAwait(() -> "actual",
+        var persistence = assertTypedParity(time -> timedAwait(() -> "actual",
                         config(1, 3, 2), time, time),
                 TryAwaitFailureTest::unstableCondition);
         assertInstanceOf(Unsatisfied.class, attempts(persistence).getLast());
@@ -148,7 +149,7 @@ class TryAwaitFailureTest {
     @ParameterizedTest
     @MethodSource("conditionFailures")
     void capturesConditionFailuresWithoutChangingThem(Supplier<Throwable> failure) {
-        var condition = assertParity(time -> timedAwait(() -> "actual",
+        var condition = assertTypedParity(time -> timedAwait(() -> "actual",
                         config(1, 2, 0), time, time),
                 () -> condition("condition succeeds", actual -> {
                     throw failure.get();
@@ -158,7 +159,7 @@ class TryAwaitFailureTest {
 
     @Test
     void capturesConditionFactoryFailuresInsideTheFirstAttempt() {
-        var failure = assertParity(time -> timedAwait(() -> "actual",
+        var failure = assertTypedParity(time -> timedAwait(() -> "actual",
                         config(1, 2, 0), time, time),
                 () -> conditionPerWait("condition succeeds", () -> {
                     throw new IllegalStateException("condition factory failed");
@@ -170,7 +171,7 @@ class TryAwaitFailureTest {
 
     @Test
     void rejectsNullConditionEvaluators() {
-        var failure = assertParity(time -> timedAwait(() -> "actual", config(1, 2, 0), time, time),
+        var failure = assertTypedParity(time -> timedAwait(() -> "actual", config(1, 2, 0), time, time),
                 () -> conditionPerWait("condition succeeds", () -> null));
         assertEquals(1, attempts(failure).size());
         uncontrolled(Operation.CONDITION, attempts(failure).getFirst());
@@ -236,14 +237,14 @@ class TryAwaitFailureTest {
         failed(timedTryAwait(() -> "actual", config(1, 2, 0),
                 time, time).until(condition("condition succeeds", actual -> {
                     currentThread().interrupt();
-                    return satisfied();
+                    return satisfied(actual);
                 })));
         assertTrue(currentThread().isInterrupted());
     }
 
     @Test
     void capturesNullEvaluation() {
-        var nullEvaluation = assertParity(time -> timedAwait(() -> "actual",
+        var nullEvaluation = assertTypedParity(time -> timedAwait(() -> "actual",
                         config(1, 2, 0), time, time),
                 () -> condition("condition succeeds", actual -> null));
 
@@ -252,7 +253,7 @@ class TryAwaitFailureTest {
 
     @Test
     void capturesDiagnosticRenderingFailure() {
-        var diagnostics = assertParity(time -> timedAwait(
+        var diagnostics = assertTypedParity(time -> timedAwait(
                         TryAwaitFailureTest::brokenDiagnosticActual,
                         config(1, 2, 0), time, time),
                 TryAwaitFailureTest::brokenDiagnostics);
@@ -263,7 +264,7 @@ class TryAwaitFailureTest {
 
     @ParameterizedTest
     @MethodSource("nullEvaluationSources")
-    void nullEvaluationIsAConditionFailure(Function<PreservingCondition<String>, AwaitResult<?, ?>> source) {
+    void nullEvaluationIsAConditionFailure(Function<Condition.Typed<String, String>, AwaitResult<?, ?>> source) {
         var result = failed(source.apply(condition("broken", actual -> null)));
         assertEquals(CONDITION_FAILED, result.failure().reason());
         assertInstanceOf(NullPointerException.class, result.failure().cause());
@@ -274,7 +275,7 @@ class TryAwaitFailureTest {
 
     @ParameterizedTest
     @MethodSource("nullEvaluationSources")
-    void interruptionTakesPriorityOverNullEvaluation(Function<PreservingCondition<String>, AwaitResult<?, ?>> source) {
+    void interruptionTakesPriorityOverNullEvaluation(Function<Condition.Typed<String, String>, AwaitResult<?, ?>> source) {
         var result = failed(source.apply(condition("broken", actual -> {
             currentThread().interrupt();
             return null;
@@ -288,12 +289,12 @@ class TryAwaitFailureTest {
 
     @ParameterizedTest
     @MethodSource("interruptedEvaluations")
-    void capturedInterruptRetainsCauseAndSequenceProgress(ConditionResult evaluation, Class<? extends Throwable> causeType, String message) {
+    void capturedInterruptRetainsCauseAndSequenceProgress(ConditionResult<String> evaluation, Class<? extends Throwable> causeType, String message) {
         var result = failed(timedTryAwait(() -> "actual", config(1, 2, 0), time, time).until(captured(condition("first stage", actual -> {
                     currentThread().interrupt();
                     return evaluation;
                 }),
-                condition("second stage", actual -> satisfied()))));
+                condition("second stage", actual -> satisfied(actual)))));
         var observation = uncontrolled(Operation.CONDITION, attempts(result).getFirst());
         assertTrue(result.conditions().getLast().attempts().isEmpty());
 
@@ -332,9 +333,20 @@ class TryAwaitFailureTest {
     }
 
     private static <VALUE> Failed<?, ?> assertParity(Function<FakeTime, ValueAwait<VALUE>> waiting, Supplier<PreservingCondition<? super VALUE>> condition) {
-        var thrown = assertThrows(Throwable.class, () -> waiting.apply(new FakeTime(0)).until(condition.get()));
+        return assertParity(() -> waiting.apply(new FakeTime(0)).until(condition.get()),
+                () -> diagnostic(waiting.apply(new FakeTime(0))).until(condition.get()));
+    }
+
+    private static <VALUE> Failed<?, ?> assertTypedParity(
+            Function<FakeTime, ValueAwait<VALUE>> waiting, Supplier<Condition.Typed<? super VALUE, ?>> condition) {
+        return assertParity(() -> waiting.apply(new FakeTime(0)).until(condition.get()),
+                () -> diagnostic(waiting.apply(new FakeTime(0))).until(condition.get()));
+    }
+
+    private static Failed<?, ?> assertParity(Executable waiting, Supplier<AwaitResult<?, ?>> diagnostic) {
+        var thrown = assertThrows(Throwable.class, waiting);
         interrupted();
-        var captured = failed(diagnostic(waiting.apply(new FakeTime(0))).until(condition.get()));
+        var captured = failed(diagnostic.get());
         assertSameFailure(thrown, captured.failure());
         interrupted();
         return captured;
@@ -365,7 +377,7 @@ class TryAwaitFailureTest {
                 named("assertion", () -> { throw new AssertionError("source assertion"); }));
     }
 
-    private static List<Named<Function<PreservingCondition<String>, AwaitResult<?, ?>>>> nullEvaluationSources() {
+    private static List<Named<Function<Condition.Typed<String, String>, AwaitResult<?, ?>>>> nullEvaluationSources() {
         return List.of(named("value", condition -> tryAwait(() -> "actual").until(condition)),
                 named("captured", condition -> tryAwait(() -> "actual").until(captured(condition, condition))),
                 named("optional", condition -> tryAwait(() -> Optional.of("actual")).until(hasValue(condition))),
@@ -376,8 +388,8 @@ class TryAwaitFailureTest {
     private static List<Arguments> evaluationInterruptions() {
         Runnable interrupt = () -> currentThread().interrupt();
         Runnable continueEvaluation = () -> {};
-        CheckedFunction<Throwable, ConditionResult> mismatch = cause -> unsatisfied("not ready", cause);
-        CheckedFunction<Throwable, ConditionResult> throwing = cause -> { throw cause; };
+        CheckedFunction<Throwable, ConditionResult<Throwable>> mismatch = cause -> unsatisfied("not ready", cause);
+        CheckedFunction<Throwable, ConditionResult<Throwable>> throwing = cause -> { throw cause; };
         return List.of(argumentSet("callback mismatch", interrupt, mismatch, "optional value"),
                 argumentSet("callback exception", interrupt, throwing, "optional value"),
                 argumentSet("clock mismatch", continueEvaluation, mismatch, null),
@@ -391,16 +403,16 @@ class TryAwaitFailureTest {
 
     private static List<Arguments> interruptedEvaluations() {
         return List.of(argumentSet("null result", null, NullPointerException.class, "condition returned null ConditionResult"),
-                argumentSet("satisfied result", satisfied(), InterruptedException.class, "caller thread interrupt flag was set"));
+                argumentSet("satisfied result", satisfied("actual"), InterruptedException.class, "caller thread interrupt flag was set"));
     }
 
     private static List<Arguments> parkingConditions() {
-        return List.of(argumentSet("acquisition", 0L, condition("never", actual -> unsatisfied("not ready"))),
+        return List.of(argumentSet("acquisition", 0L, matches(actual -> false)),
                 argumentSet("persistence", 2L, isNotNull));
     }
 
-    private static PreservingCondition<Object> unstableCondition() {
-        var evaluations = List.of(satisfied(), unsatisfied("not ready")).iterator();
+    private static Condition.Typed<Object, Object> unstableCondition() {
+        var evaluations = List.<ConditionResult<Object>>of(satisfied("actual"), unsatisfied("not ready")).iterator();
         return condition("value remains ready", actual -> evaluations.next());
     }
 
@@ -416,7 +428,7 @@ class TryAwaitFailureTest {
         return actual;
     }
 
-    private static PreservingCondition<Object> brokenDiagnostics() {
+    private static Condition.Typed<Object, Object> brokenDiagnostics() {
         return condition("condition", actual ->
                 unsatisfied("not ready", new AssertionError("engine")));
     }

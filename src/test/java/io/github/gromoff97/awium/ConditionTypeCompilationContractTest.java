@@ -24,12 +24,17 @@ class ConditionTypeCompilationContractTest {
     }
 
     @Test
-    void customChecksCannotTransformTheObservedType() {
+    void customChecksRejectIncompatibleInputAndResultTypes() {
         for (String expression : List.of(
-                "String wrong = await(numbers).until(condition(\"identity\", ignored -> ConditionResult.satisfied()));",
-                "AwaitResult<Number, String> wrong = tryAwait(numbers).until(condition(\"identity\", ignored -> ConditionResult.satisfied()));",
-                "List<String> wrong = await(numbers).until(captured(condition(\"first\", ignored -> ConditionResult.satisfied()), isNotNull));",
-                "Condition.Typed<Number, String> wrong = condition(\"transform\", value -> ConditionResult.satisfied());")) {
+                "String wrong = await(numbers).until(condition(\"identity\", value -> ConditionResult.satisfied(value)));",
+                "AwaitResult<Number, String> wrong = tryAwait(numbers).until(condition(\"identity\", value -> ConditionResult.satisfied(value)));",
+                "List<String> wrong = await(numbers).until(captured(condition(\"first\", value -> ConditionResult.satisfied(value)), isNotNull));",
+                "Condition.Typed<Number, String> wrong = condition(\"transform\", value -> ConditionResult.satisfied(value));",
+                "String wrong = await(numbers).until(conditionPerWait(\"identity\", () -> value -> ConditionResult.satisfied(value)));",
+                "await(numbers).until(condition(\"length\", (String value) -> ConditionResult.satisfied(value.length())));",
+                "String wrong = await(numbers).until(condition(\"id\", (Number value) -> ConditionResult.satisfied(value.intValue())).because(\"reason\"));",
+                "await(() -> Map.of(\"key\", 1)).until(MapConditions.hasEntry(condition(\"wrong value\", "
+                        + "(Map.Entry<String, String> entry) -> ConditionResult.satisfied(entry.getValue()))));")) {
             assertRejected(expression);
         }
     }

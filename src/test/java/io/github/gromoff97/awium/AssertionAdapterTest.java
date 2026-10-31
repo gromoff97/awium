@@ -1,11 +1,9 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.function.CheckedConsumer;
-import io.github.gromoff97.awium.function.CheckedFunction;
 import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.List;
-import java.util.concurrent.Callable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
@@ -78,10 +76,10 @@ class AssertionAdapterTest {
     @Test
     void namedConditionDelegatesOnceAndSuppliesItsDescription() {
         var invocations = new int[1];
-        var condition = Conditions.<String>condition(
-                "payment id", value -> {
+        var condition = Conditions.condition(
+                "payment id", (String value) -> {
                     invocations[0]++;
-                    return satisfied();
+                    return satisfied(value);
                 });
 
         AttemptResult<? extends String> evaluation = evaluate(condition, "42");
@@ -95,15 +93,15 @@ class AssertionAdapterTest {
     List<DynamicTest> customConditionFactoriesRejectInvalidArguments() {
         return List.of(
                 dynamicTest("null description", () -> assertThatNullPointerException()
-                        .isThrownBy(() -> condition(null, payment -> satisfied())).withMessageContaining("description")),
+                        .isThrownBy(() -> condition(null, payment -> satisfied(payment))).withMessageContaining("description")),
                 dynamicTest("null description and callback", () -> assertThatNullPointerException()
-                        .isThrownBy(() -> condition(null, (CheckedFunction<Object, ConditionResult>) null)).withMessageContaining("description")),
+                        .isThrownBy(() -> condition(null, null)).withMessageContaining("description")),
                 dynamicTest("blank description", () -> assertThatIllegalArgumentException()
-                        .isThrownBy(() -> condition(" \n ", payment -> satisfied())).withMessageContaining("description")),
+                        .isThrownBy(() -> condition(" \n ", payment -> satisfied(payment))).withMessageContaining("description")),
                 dynamicTest("null evaluation", () -> assertThatNullPointerException()
-                        .isThrownBy(() -> condition("payment", (CheckedFunction<Object, ConditionResult>) null)).withMessageContaining("evaluation")),
+                        .isThrownBy(() -> condition("payment", null)).withMessageContaining("evaluation")),
                 dynamicTest("null evaluator factory", () -> assertThatNullPointerException()
-                        .isThrownBy(() -> conditionPerWait("payment", (Callable<CheckedFunction<Object, ConditionResult>>) null))
+                        .isThrownBy(() -> conditionPerWait("payment", null))
                         .withMessageContaining("evaluator factory")),
                 dynamicTest("null assertion", () -> assertThatNullPointerException()
                         .isThrownBy(() -> asserted((CheckedConsumer<String>) null)).withMessageContaining("assertion")));
@@ -135,7 +133,7 @@ class AssertionAdapterTest {
 
         var failure = assertFailure(CONDITION_FAILED, () -> timedAwait(
                 () -> "42",
-                DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(10)), time, time).until(Conditions.<String>condition("checked value", value -> {
+                DEFAULT.withEvery(ofNanos(1)).withUpTo(ofNanos(10)), time, time).until(Conditions.condition("checked value", (String value) -> {
                             invocations[0]++;
                             throw assertion;
                         })));

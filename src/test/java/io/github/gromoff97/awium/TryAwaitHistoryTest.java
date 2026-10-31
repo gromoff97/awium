@@ -73,7 +73,7 @@ class TryAwaitHistoryTest {
     void groupsRepeatedReferencesWithoutCallingTheirObjectMethods() {
         var probe = new ThrowingProbe();
         var execution = timedTryAwait(() -> probe,
-                config(1, 10, 3), time, time).until(condition("ready", actual -> satisfied()));
+                config(1, 10, 3), time, time).until(condition("ready", actual -> satisfied(actual)));
 
         assertEquals(1, attempts(execution).size());
         assertEquals(4L, execution.conditions().getFirst().attempts().lastKey());
@@ -161,7 +161,7 @@ class TryAwaitHistoryTest {
     @Test
     void capturedKeepsEverySuccessfulObservationAndTheIdentityOfEachStage() {
         int[] calls = {0};
-        var stage = condition("same description", actual -> satisfied());
+        var stage = condition("same description", actual -> satisfied(actual));
         var result = tryAwait(() -> ++calls[0])
                 .usingTime(time, time).every(ofNanos(1))
                 .until(captured(stage, stage, stage));
@@ -221,7 +221,7 @@ class TryAwaitHistoryTest {
             @Override public int hashCode() { throw new AssertionError("hashCode must not be called"); }
             @Override public String toString() { throw new AssertionError("toString must not be called"); }
         }).toList();
-        var outcomes = concat(errors.stream().map(error -> unsatisfied("pending", error)), Stream.of(satisfied())).iterator();
+        var outcomes = concat(errors.stream().map(error -> unsatisfied("pending", error)), Stream.of(satisfied(1))).iterator();
         var result = tryAwait(() -> 1).usingTime(time, time).every(ofNanos(1))
                 .until(condition("ready", value -> outcomes.next()));
 
@@ -240,8 +240,8 @@ class TryAwaitHistoryTest {
     void repetitionsOfTheSameErrorCanStillBeGrouped() {
         var error = new AssertionError("same error");
         var observations = List.of(1, 1, 1, 4).iterator();
-        var outcomes = List.<ConditionResult>of(unsatisfied("pending", error), unsatisfied("pending", error),
-                unsatisfied("pending", error), satisfied()).iterator();
+        var outcomes = List.<ConditionResult<Integer>>of(unsatisfied("pending", error), unsatisfied("pending", error),
+                unsatisfied("pending", error), satisfied(4)).iterator();
         var result = tryAwait(observations::next).usingTime(time, time).every(ofNanos(1))
                 .until(condition("ready", value -> outcomes.next()));
 
@@ -254,7 +254,7 @@ class TryAwaitHistoryTest {
     @Test
     void failedObservationComparisonsKeepSeparateAttemptsWithoutFailingTheWait() {
         var result = timedTryAwait(ThrowingProbe::new,
-                config(1, 10, 3), time, time).until(condition("ready", actual -> satisfied()));
+                config(1, 10, 3), time, time).until(condition("ready", actual -> satisfied(actual)));
 
         assertInstanceOf(Satisfied.class, result);
         assertThat(attempts(result)).hasSize(4).hasOnlyElementsOfType(Attempt.Satisfied.class);

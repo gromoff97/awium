@@ -27,7 +27,6 @@ import static io.github.gromoff97.awium.CollectionConditions.all;
 import static io.github.gromoff97.awium.CollectionConditions.any;
 import static io.github.gromoff97.awium.CollectionConditions.none;
 import static io.github.gromoff97.awium.CollectionConditions.singleElement;
-import static io.github.gromoff97.awium.Condition.MapValueCondition;
 import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.Condition.Reference;
 import static io.github.gromoff97.awium.Conditions.*;
@@ -146,8 +145,8 @@ class CompositionDiagnosticsTest {
     @Test
     void nestedQuantifierErrorsKeepTheirPositionsAlongsideCapturedProgress() {
         var cause = new IllegalArgumentException("probe failed");
-        Function<String, ConditionResult> probe = mock();
-        when(probe.apply(anyString())).thenReturn(satisfied());
+        Function<String, ConditionResult<String>> probe = mock();
+        when(probe.apply(anyString())).thenAnswer(call -> satisfied(call.getArgument(0, String.class)));
         when(probe.apply("bad")).thenAnswer(ignored -> { throw cause; });
         var observed = Optional.of(List.of(List.of("ready"), List.of("bad", "unused")));
         var check = hasValue(all(all(condition("value is ready", probe::apply))));
@@ -197,7 +196,7 @@ class CompositionDiagnosticsTest {
     private void assertTraversalFailure(Collection<String> observed, Throwable cause, int completed) {
         int[] calls = {0};
         var result = tryAwait(() -> observed).usingTime(time, time).until(all(
-                condition("ready", value -> { calls[0]++; return satisfied(); })));
+                condition("ready", value -> { calls[0]++; return satisfied(value); })));
         var failure = failure(result);
 
         assertEquals(completed, calls[0]);
@@ -224,7 +223,7 @@ class CompositionDiagnosticsTest {
         var result = tryAwait(() -> observed).usingTime(time, time).until(allEntries(
                 conditionPerWait("ready", () -> {
                     fail("nested check must not initialize before obtaining an entry");
-                    return ignored -> satisfied();
+                    return ignored -> satisfied(ignored);
                 })));
         var failure = failure(result);
         var status = uncontrolled(CONDITION, attempts(result).getFirst());
@@ -243,7 +242,7 @@ class CompositionDiagnosticsTest {
 
     private static List<Arguments> collectionQuantifierFailures() {
         var mismatch = condition("account is active", ignored -> unsatisfied());
-        var match = condition("account is active", ignored -> satisfied());
+        var match = condition("account is active", ignored -> satisfied(ignored));
         return List.of(
                 arguments(all(mismatch), "all collection elements match", "not all collection elements matched (checked 1)"),
                 arguments(any(mismatch), "some collection elements match", "no collection elements matched (checked 1)"),
@@ -260,7 +259,7 @@ class CompositionDiagnosticsTest {
 
     private static List<Arguments> mapQuantifierFailures() {
         var mismatch = condition("account is active", ignored -> unsatisfied());
-        var match = condition("account is active", ignored -> satisfied());
+        var match = condition("account is active", ignored -> satisfied(ignored));
         return List.of(
                 arguments(allEntries(mismatch), "all map entries match", "not all map entries matched (checked 1)"),
                 arguments(hasEntry(mismatch), "some map entries match", "no map entries matched (checked 1)"),
@@ -370,7 +369,7 @@ class CompositionDiagnosticsTest {
 
     @Test
     void missingKeyInsideCapturedKeepsLookupContextAndDoesNotCreateTheNestedSession() {
-        MapValueCondition<Map<? super String, ? extends String>> selected = valueFor("customerId", conditionPerWait("nested", () -> {
+        var selected = valueFor("customerId", conditionPerWait("nested", () -> {
             throw new AssertionError("nested factory must not run before extraction succeeds");
         }));
         var failure = assertFailure(TIMEOUT, () -> await(() -> Map.<String, String>of())

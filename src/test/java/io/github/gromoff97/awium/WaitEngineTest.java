@@ -35,7 +35,6 @@ import static io.github.gromoff97.awium.internal.WaitCompletion.*;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.*;
 import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.apache.commons.lang3.exception.ExceptionUtils.rethrow;
@@ -90,8 +89,8 @@ class WaitEngineTest {
                     .doAnswer(ignored -> { currentThread().interrupt(); return time.getAsLong(); })
                     .doAnswer(ignored -> time.getAsLong()).when(clock).getAsLong();
         }), () -> { sourceCalls[0]++; return "actual"; },
-                new SequenceExecution<>(bind(Conditions.<String>condition(
-                        "ready", actual -> satisfied()))), 0).waitFor();
+                new SequenceExecution<>(bind(Conditions.condition(
+                        "ready", (String actual) -> ConditionResult.satisfied(actual)))), 0).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -196,7 +195,7 @@ class WaitEngineTest {
                 ignored -> {}), () -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, new SequenceExecution<>(bind(Conditions.<String>condition("test condition", actual -> satisfied())))).waitFor();
+                }, new SequenceExecution<>(bind(Conditions.condition("test condition", (String actual) -> ConditionResult.satisfied(actual))))).waitFor();
 
         assertInstanceOf(Timeout.class, outcome);
         assertEquals(1, sourceCalls[0]);
@@ -360,7 +359,7 @@ class WaitEngineTest {
         var outcome = new WaitEngine<String>(config(5, 20, 0).withTime(clock,
                 nanos -> { throw new AssertionError("parker must not be called"); }),
                 () -> { sourceCalls[0]++; return "actual"; },
-                new SequenceExecution<>(bind(Conditions.<String>condition("ready", actual -> satisfied()))), 0).waitFor();
+                new SequenceExecution<>(bind(Conditions.condition("ready", (String actual) -> ConditionResult.satisfied(actual)))), 0).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -378,7 +377,7 @@ class WaitEngineTest {
         var outcome = new WaitEngine<String>(config(1, 2, 0).withTime(clock, nanos -> {}), () -> {
             sourceCalls[0]++;
             return "actual";
-        }, new SequenceExecution<>(bind(Conditions.<String>condition("not ready", value -> ConditionResult.unsatisfied("not yet"))))).waitFor();
+        }, new SequenceExecution<>(bind(Conditions.condition("not ready", (String value) -> ConditionResult.unsatisfied("not yet"))))).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -389,14 +388,14 @@ class WaitEngineTest {
 
     @ParameterizedTest
     @MethodSource("intervalInterruptions")
-    void skipsParkingWhenIntervalClockSetsInterruptFlag(long persistence, ConditionResult evaluation, Phase phase) {
+    void skipsParkingWhenIntervalClockSetsInterruptFlag(long persistence, ConditionResult<String> evaluation, Phase phase) {
         int[] sourceCalls = {0};
         int[] parkCalls = {0};
         LongSupplier clock = mock();
         when(clock.getAsLong()).thenReturn(0L);
         var outcome = new WaitEngine<String>(config(5, 20, persistence).withTime(clock,
                 nanos -> parkCalls[0]++), () -> { sourceCalls[0]++; return "actual"; },
-                new SequenceExecution<>(bind(Conditions.<String>condition("ready", actual -> {
+                new SequenceExecution<>(bind(Conditions.condition("ready", (String actual) -> {
                     doReturn(0L).doAnswer(ignored -> { currentThread().interrupt(); return 0L; }).when(clock).getAsLong();
                     return evaluation;
                 }))), 0).waitFor();
@@ -412,7 +411,7 @@ class WaitEngineTest {
 
     private static List<Arguments> intervalInterruptions() {
         return List.of(argumentSet("acquisition", 0L, ConditionResult.unsatisfied("not yet"), ACQUISITION),
-                argumentSet("persistence", 10L, satisfied(), PERSISTENCE));
+                argumentSet("persistence", 10L, ConditionResult.satisfied("actual"), PERSISTENCE));
     }
 
     @Test

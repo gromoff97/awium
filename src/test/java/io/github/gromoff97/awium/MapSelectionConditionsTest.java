@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.function.CheckedBiPredicate;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.math.BigDecimal;
@@ -131,7 +132,7 @@ class MapSelectionConditionsTest {
         var source = observations.iterator();
         var events = new ArrayList<String>();
         var checked = new ArrayList<Integer>();
-        var outcomes = List.of(unsatisfied("not ready"), satisfied()).iterator();
+        var outcomes = List.<ConditionResult<Integer>>of(unsatisfied("not ready"), satisfied(2)).iterator();
         var check = conditionPerWait("value is ready", () -> {
             events.add("factory");
             return (Integer value) -> {
@@ -163,10 +164,10 @@ class MapSelectionConditionsTest {
         var source = observations.iterator();
         var events = new ArrayList<String>();
         var checked = new ArrayList<Integer>();
-        var outcomes = List.of(unsatisfied("not ready"), satisfied()).iterator();
+        var outcomes = List.<ConditionResult<Entry<String, Integer>>>of(unsatisfied("not ready"), satisfied(Map.entry("key", 2))).iterator();
         var check = conditionPerWait("entry is ready", () -> {
             events.add("factory");
-            return (Entry<String, Integer> entry) -> {
+            return (Entry<? extends String, ? extends Integer> entry) -> {
                 checked.add(entry.getValue());
                 return outcomes.next();
             };

@@ -10,7 +10,6 @@ import io.github.gromoff97.awium.function.CheckedPredicate;
 import io.github.gromoff97.awium.internal.AttemptFactory;
 import io.github.gromoff97.awium.internal.AttemptResult;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
 import java.util.function.Supplier;
@@ -84,25 +83,15 @@ final class ConditionSupport {
     }
 
     static <INPUT> PreservingCondition<INPUT> preserving(String description,
-            CheckedFunction<? super INPUT, ? extends ConditionResult> evaluator) {
+            CheckedFunction<? super INPUT, ? extends ConditionResult<?>> evaluator) {
         return preserving(description, null, evaluator);
     }
 
     static <INPUT> PreservingCondition<INPUT> preserving(String description, Reference<?> reference,
-            CheckedFunction<? super INPUT, ? extends ConditionResult> evaluator) {
+            CheckedFunction<? super INPUT, ? extends ConditionResult<?>> evaluator) {
         var definition = condition(description, reference, (INPUT actual) ->
-                AttemptResult.of(evaluator.apply(actual), actual));
+                AttemptResult.of(evaluator.apply(actual)).mapSatisfied(ignored -> actual));
         requireNonNull(evaluator, "evaluation must not be null");
-        return new PreservingCondition<>(definition);
-    }
-
-    static <INPUT> PreservingCondition<INPUT> preserving(String description,
-            Callable<? extends CheckedFunction<? super INPUT, ? extends ConditionResult>> evaluatorFactory) {
-        var definition = new Condition.Typed<INPUT, INPUT>(description, null, () -> {
-            var evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
-            return actual -> AttemptResult.of(evaluator.apply(actual), actual);
-        });
-        requireNonNull(evaluatorFactory, "evaluator factory must not be null");
         return new PreservingCondition<>(definition);
     }
 
@@ -213,14 +202,14 @@ final class ConditionSupport {
     static <INPUT> PreservingCondition<INPUT> preserving(String description, String mismatch,
             CheckedPredicate<? super INPUT> matches) {
         return preserving(description, actual -> matches.test(actual)
-                ? satisfied() : unsatisfied(mismatch));
+                ? satisfied(null) : unsatisfied(mismatch));
     }
 
     static <INPUT> PreservingCondition<INPUT> preservingNonNull(String subject, String description,
             String mismatch, Reference<?> reference, CheckedPredicate<? super INPUT> matches) {
         return preserving(description, reference, actual -> actual == null
                 ? unsatisfied(subject + " was null")
-                : matches.test(actual) ? satisfied() : unsatisfied(mismatch));
+                : matches.test(actual) ? satisfied(null) : unsatisfied(mismatch));
     }
 
     static <INPUT> PreservingCondition<INPUT> sized(String subject, String measure, int bound, IntPredicate matches,
@@ -233,7 +222,7 @@ final class ConditionSupport {
                 return unsatisfied(subject + " was null");
             }
             int size = sizeOf.applyAsInt(actual);
-            return matches.test(size) ? satisfied() : unsatisfied(subject + " " + measure + " was " + size);
+            return matches.test(size) ? satisfied(null) : unsatisfied(subject + " " + measure + " was " + size);
         });
     }
 

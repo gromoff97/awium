@@ -195,15 +195,15 @@ class FluentConditionTest {
     void customChecksKeepInferredTypesThroughComposition() {
         record Payment(String id) {}
         var actual = new Payment("receipt");
-        var check = condition("identity", ignored -> satisfied());
+        var check = condition("identity", (Payment value) -> satisfied(value));
 
-        var payment = await(() -> actual).usingTime(time, time).until(condition("inline", value -> satisfied()));
-        var created = await(() -> actual).usingTime(time, time).until(conditionPerWait("factory", () -> ignored -> satisfied()));
+        var payment = await(() -> actual).usingTime(time, time).until(condition("inline", value -> satisfied(value)));
+        var created = await(() -> actual).usingTime(time, time).until(conditionPerWait("factory", () -> ignored -> satisfied(ignored)));
         var selected = await(() -> List.of(actual)).usingTime(time, time).until(singleElement(check));
         var optional = await(() -> Optional.of(actual)).usingTime(time, time).until(hasValue(check));
         var mapped = await(() -> Map.of("key", actual)).usingTime(time, time).until(valueFor("key", check));
         var sequence = await(() -> actual).usingTime(time, time)
-                .until(captured(check, condition("second", ignored -> satisfied())));
+                .until(captured(check, condition("second", ignored -> satisfied(ignored))));
         var diagnostic = tryAwait(() -> actual).usingTime(time, time).until(check);
 
         assertEquals(List.of("receipt", "receipt", "receipt", "receipt", "receipt", "receipt"),

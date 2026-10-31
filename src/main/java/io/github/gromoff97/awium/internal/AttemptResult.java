@@ -12,11 +12,11 @@ public sealed interface AttemptResult<RESULT> {
         return null;
     }
 
-    static <RESULT> AttemptResult<RESULT> of(ConditionResult status, RESULT actual) {
+    static <RESULT> AttemptResult<RESULT> of(ConditionResult<? extends RESULT> status) {
         requireNonNull(status, "condition returned null ConditionResult");
         return switch (status) {
-            case ConditionResult.Satisfied ignored -> satisfied(actual);
-            case ConditionResult.Unsatisfied mismatch -> unsatisfied(mismatch.mismatch(), mismatch.cause());
+            case ConditionResult.Satisfied<? extends RESULT> success -> satisfied(success.value());
+            case ConditionResult.Unsatisfied<?> mismatch -> unsatisfied(mismatch.mismatch(), mismatch.cause());
         };
     }
 

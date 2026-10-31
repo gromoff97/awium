@@ -53,8 +53,8 @@ class PositiveFluentMatrixTest {
                 .every(EVERY).upTo(UP_TO).persisting(ZERO).until(isNotNull);
         assertSame(actual, selected);
 
-        PreservingCondition<Object> selecting = condition(
-                "select actual", ignored -> satisfied());
+        Condition.Typed<Object, Object> selecting = condition(
+                "select actual", ignored -> satisfied(ignored));
         assertSame(actual, await(source).usingTime(time, time).until(selecting));
         String nil = await(() -> (String) null).usingTime(time, time).until(isNull);
         assertSame(null, nil);
@@ -308,7 +308,7 @@ class PositiveFluentMatrixTest {
 
         String matched = await(() -> "ready").until(matches(not(text).negate()::test));
         String transformed = await(() -> trim.apply(" ready ")).until(isNotNull);
-        String custom = await(() -> trim.apply(" ready ")).until(condition("ready", ignored -> satisfied()));
+        String custom = await(() -> trim.apply(" ready ")).until(condition("ready", ignored -> satisfied(ignored)));
         String asserted = await(() -> "ready").until(asserted(first.andThen(value -> calls.add("second " + value))::accept));
         Map<String, Integer> matchingEntry = await(() -> Map.of("ready", 1))
                 .until(hasEntry(entry.and((key, value) -> !key.isBlank())::test));
@@ -335,13 +335,13 @@ class PositiveFluentMatrixTest {
     }
 
     @Test
-    void evaluatorFactoriesPreserveObservationsInSingleAndOrderedWaits() {
-        Callable<CheckedFunction<CharSequence, ConditionResult>> broadFactory = () -> ignored -> satisfied();
+    void evaluatorFactoriesReturnTheirDeclaredResultTypeAndCapturedPreservesObservations() {
+        Callable<CheckedFunction<CharSequence, ConditionResult<CharSequence>>> broadFactory = () -> ignored -> satisfied(ignored);
         var waiting = await(() -> "ready").usingTime(time, time);
 
-        String direct = waiting.until(condition("direct", ignored -> satisfied()));
+        String direct = waiting.until(condition("direct", ignored -> satisfied(ignored)));
         String created = waiting.until(conditionPerWait("created", PositiveFluentMatrixTest::evaluator));
-        String concrete = waiting.until(conditionPerWait("broad", broadFactory));
+        CharSequence concrete = waiting.until(conditionPerWait("broad", broadFactory));
         List<String> captured = waiting.until(captured(conditionPerWait("first", PositiveFluentMatrixTest::evaluator),
                 conditionPerWait("second", PositiveFluentMatrixTest::evaluator)));
 
@@ -398,8 +398,8 @@ class PositiveFluentMatrixTest {
         assertSame(index, originalIndex);
     }
 
-    private static CheckedFunction<String, ConditionResult> evaluator() {
-        return ignored -> satisfied();
+    private static CheckedFunction<String, ConditionResult<String>> evaluator() {
+        return ignored -> satisfied(ignored);
     }
 
 }

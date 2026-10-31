@@ -180,8 +180,8 @@ class DiagnosticsSnapshotTest {
         var frame = new StackTraceElement("Payments", "verifyPending",
                 "Payments.java", 42);
         assertion.setStackTrace(new StackTraceElement[]{frame});
-        PreservingCondition<String> assertedPending = Conditions.<String>condition(
-                "payment status is pending", value -> unsatisfied(
+        Condition.Typed<String, String> assertedPending = Conditions.condition(
+                "payment status is pending", (String value) -> unsatisfied(
                         "payment status was created", assertion));
 
         var failure = assertFailure(TIMEOUT,
@@ -206,8 +206,8 @@ class DiagnosticsSnapshotTest {
     @Test
     void capturedNestedUncontrolledRetainsCauseAndStage() {
         var cause = new IllegalStateException("status callback failed");
-        PreservingCondition<String> brokenPending = Conditions.<String>condition(
-                "payment status is pending", value -> {
+        Condition.Typed<String, String> brokenPending = Conditions.condition(
+                "payment status is pending", (String value) -> {
                     throw cause;
                 });
 
@@ -273,7 +273,7 @@ class DiagnosticsSnapshotTest {
     @Test
     void lateSuccessReportsATimeoutWithoutAMismatch() {
         var outcome = new Timeout(evaluatedAttempt(diagnosticCondition("status equals COMPLETED", null),
-                "Payment[COMPLETED]", satisfied(), 10 * SECOND + 200 * MILLISECOND));
+                "Payment[COMPLETED]", satisfied("Payment[COMPLETED]"), 10 * SECOND + 200 * MILLISECOND));
 
         var failure = assertFailure(TIMEOUT,
                 () -> complete(outcome, config(100 * MILLISECOND, 10 * SECOND, 0), 100));
@@ -391,7 +391,7 @@ class DiagnosticsSnapshotTest {
                 return super.getMessage();
             }
         };
-        PreservingCondition<Object> condition = condition("condition", actual -> {
+        var condition = condition("condition", actual -> {
             currentThread().interrupt();
             throw cause;
         });
@@ -598,7 +598,7 @@ class DiagnosticsSnapshotTest {
         var first = diagnosticCondition("first stage", new Reference<>("Expected", values[0]));
         var second = new Typed<Object, Object>("second stage",
                 new Reference<>("Expected", values[2]),
-                () -> actual -> AttemptResult.of(unsatisfied("not ready", original), null));
+                () -> actual -> AttemptResult.of(unsatisfied("not ready", original)));
         var check = captured(first, second);
         var waiting = timedAwait(() -> {
             time.advanceNanos(2);
@@ -637,7 +637,7 @@ class DiagnosticsSnapshotTest {
         };
         var second = new Typed<Object, Object>("second stage",
                 new Reference<>("Expected", expected),
-                () -> value -> AttemptResult.of(unsatisfied("not ready", original), null));
+                () -> value -> AttemptResult.of(unsatisfied("not ready", original)));
         var check = captured(CONDITION, second);
         var waiting = timedAwait(() -> actual, config(1, 2, 0), time, time);
         var failure = terminal.apply(
@@ -984,7 +984,7 @@ class DiagnosticsSnapshotTest {
         Callable<String> source = () -> { throw cause; };
         var sourceFailure = assertFailure(SOURCE_FAILED,
                 () -> await(source).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
-                        .until(condition("condition\rdescription", ignored -> satisfied())));
+                        .until(condition("condition\rdescription", ignored -> satisfied(ignored))));
         var arrayFailure = assertFailure(TIMEOUT,
                 () -> complete(new Timeout(
                                 evaluatedAttempt(CONDITION, new int[] {1, 2}, unsatisfied("not ready"), 2)), config(1, 2, 0), 1));
@@ -1045,30 +1045,30 @@ class DiagnosticsSnapshotTest {
         return List.of(named("await", (thrown, captured) -> thrown), named("tryAwait", (thrown, captured) -> captured));
     }
 
-    private static CapturedSource<InputCondition<String>> lifecycle(PreservingCondition<String> pending, PreservingCondition<String> completed) {
+    private static CapturedSource<InputCondition<String>> lifecycle(InputCondition<String> pending, InputCondition<String> completed) {
         return captured(status("created", "payment status is created"),
                 pending, completed);
     }
 
-    private static PreservingCondition<String> pending() {
+    private static Condition.Typed<String, String> pending() {
         return status("pending", "payment status is pending");
     }
 
-    private static PreservingCondition<String> completed() {
+    private static Condition.Typed<String, String> completed() {
         return status("completed", "payment status is completed");
     }
 
-    private static PreservingCondition<String> status(String expected, String description) {
+    private static Condition.Typed<String, String> status(String expected, String description) {
         return condition(description,
                 value -> value.equals(expected)
-                        ? satisfied() : unsatisfied("payment status was " + value));
+                        ? satisfied(value) : unsatisfied("payment status was " + value));
     }
 
-    private static <OBSERVED> ExecutionStep<OBSERVED> evaluatedAttempt(Condition condition, OBSERVED observed, ConditionResult result, long completedNanos) {
+    private static <OBSERVED> ExecutionStep<OBSERVED> evaluatedAttempt(Condition condition, OBSERVED observed, ConditionResult<?> result, long completedNanos) {
         return new ExecutionStep<>(condition, 1, 0, ACQUISITION, completedNanos,
                 switch (result) {
-                    case ConditionResult.Satisfied ignored -> new Attempt.Satisfied<>(observed);
-                    case ConditionResult.Unsatisfied mismatch -> new Attempt.Unsatisfied<>(observed, mismatch.mismatch(), mismatch.cause());
+                    case ConditionResult.Satisfied<?> ignored -> new Attempt.Satisfied<>(observed);
+                    case ConditionResult.Unsatisfied<?> mismatch -> new Attempt.Unsatisfied<>(observed, mismatch.mismatch(), mismatch.cause());
                 });
     }
 

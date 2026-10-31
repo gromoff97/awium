@@ -68,7 +68,7 @@ class ThreadIntegrationTest {
         List<Thread> callbackThreads = new ArrayList<>();
         int[] observations = {0};
         int[] result = {0};
-        var outcomes = List.of(unsatisfied("not the third observation"), unsatisfied("not the third observation"), satisfied()).iterator();
+        var outcomes = List.<ConditionResult<Integer>>of(unsatisfied("not the third observation"), unsatisfied("not the third observation"), satisfied(3)).iterator();
 
         Thread caller = callers.newThread(() -> result[0] = await(() -> {
             callbackThreads.add(currentThread());
@@ -99,14 +99,14 @@ class ThreadIntegrationTest {
             return currentThread();
         }).usingTime(() -> timers.get().getAsLong(), nanos -> timers.get().accept(nanos))
                 .every(ofNanos(1)).upTo(ofNanos(3));
-        var check = Conditions.<Thread>conditionPerWait("two observations per caller", () -> {
+        var check = Conditions.conditionPerWait("two observations per caller", () -> {
             Thread owner = currentThread();
-            Callable<ConditionResult> probe = mock();
+            Callable<ConditionResult<Thread>> probe = mock();
             when(probe.call()).thenAnswer(ignored -> {
                 rendezvous.await(3, SECONDS);
                 return unsatisfied("first observation");
-            }).thenReturn(satisfied());
-            return actual -> {
+            }).thenReturn(satisfied(owner));
+            return (Thread actual) -> {
                 assertSame(owner, actual, "source must stay on its caller thread");
                 assertSame(owner, currentThread(), "callback must stay on its caller thread");
                 return probe.call();

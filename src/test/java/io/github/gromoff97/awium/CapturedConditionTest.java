@@ -474,10 +474,10 @@ class CapturedConditionTest {
     @ParameterizedTest(name = "delay={0}")
     @ValueSource(longs = {4, 5})
     void lateSuccessfulSequenceKeepsTheFinalStageDiagnostics(long delay) {
-        var sequence = captured(condition("first stage", (String value) -> satisfied()),
+        var sequence = captured(condition("first stage", (String value) -> satisfied(value)),
                 condition("final stage", (String value) -> {
                     time.advanceNanos(delay);
-                    return satisfied();
+                    return satisfied(value);
                 }));
         var failure = assertFailure(TIMEOUT,
                 () -> timedAwait(() -> "ready", config(1, 5, 0), time, time).until(sequence));
@@ -632,8 +632,8 @@ class CapturedConditionTest {
     @Test
     void returnsAnImmutableCapturedCopyThatAllowsNull() {
         List<String> result = timedAwait((Callable<String>) () -> null, config(1, 10, 0),
-                time, time).until(captured(condition("first null", ignored -> satisfied()),
-                condition("second null", ignored -> satisfied())));
+                time, time).until(captured(condition("first null", ignored -> satisfied(ignored)),
+                condition("second null", ignored -> satisfied(ignored))));
 
         assertEquals(2, result.size());
         assertNull(result.get(0));

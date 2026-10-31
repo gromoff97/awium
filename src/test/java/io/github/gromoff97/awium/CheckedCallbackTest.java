@@ -45,7 +45,7 @@ class CheckedCallbackTest {
         var result = tryAwait(() -> "ready").until(condition("sleep", value -> {
             currentThread().interrupt();
             sleep(0);
-            return satisfied();
+            return satisfied(value);
         }));
         var failure = failure(CONDITION_FAILED, result);
         assertInstanceOf(InterruptedException.class, failure.cause());
@@ -103,10 +103,10 @@ class CheckedCallbackTest {
     void interruptionDuringFactoryCreationSkipsItsEvaluator(String form) {
         int[] factoryCalls = {0};
         int[] evaluatorCalls = {0};
-        Callable<CheckedFunction<String, ConditionResult>> factory = () -> {
+        Callable<CheckedFunction<String, ConditionResult<String>>> factory = () -> {
             factoryCalls[0]++;
             currentThread().interrupt();
-            return actual -> { evaluatorCalls[0]++; return satisfied(); };
+            return actual -> { evaluatorCalls[0]++; return satisfied(actual); };
         };
         var result = switch (form) {
             case "value" -> tryAwait(() -> "ready").until(conditionPerWait("lazy", factory));
@@ -135,7 +135,7 @@ class CheckedCallbackTest {
         int[] evaluatorCalls = {0};
         var result = tryAwait(() -> actual).usingTime(time, time).until(valueFor("key", conditionPerWait("nested", () -> {
             factoryCalls[0]++;
-            return value -> { evaluatorCalls[0]++; return satisfied(); };
+            return value -> { evaluatorCalls[0]++; return satisfied(value); };
         })));
 
         var failure = failure(INTERRUPTED, result);
@@ -216,8 +216,8 @@ class CheckedCallbackTest {
         return actual.length();
     }
 
-    private static ConditionResult evaluate(String actual) throws Throwable {
-        return satisfied();
+    private static ConditionResult<String> evaluate(String actual) throws Throwable {
+        return satisfied(actual);
     }
 
     private static void verifySecond(int actual) throws Throwable {

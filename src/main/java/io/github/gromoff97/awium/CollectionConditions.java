@@ -447,7 +447,7 @@ public final class CollectionConditions {
         return true;
     }
 
-    private static ConditionResult checkUniqueness(Collection<?> actual) throws Throwable {
+    private static ConditionResult<?> checkUniqueness(Collection<?> actual) throws Throwable {
         if (actual == null) return ConditionResult.unsatisfied("collection was null");
         List<Object> seen = new ArrayList<>();
         for (Object value : actual) {
@@ -456,15 +456,15 @@ public final class CollectionConditions {
             }
             seen.add(value);
         }
-        return ConditionResult.satisfied();
+        return ConditionResult.satisfied(null);
     }
 
-    private static <ELEMENT> ConditionResult checkOrder(SequencedCollection<ELEMENT> actual,
+    private static <ELEMENT> ConditionResult<?> checkOrder(SequencedCollection<ELEMENT> actual,
             Comparator<? super ELEMENT> comparator) {
         if (actual == null) return ConditionResult.unsatisfied("collection was null");
         Iterator<ELEMENT> values = actual.iterator();
         if (!values.hasNext()) {
-            return ConditionResult.satisfied();
+            return ConditionResult.satisfied(null);
         }
         ELEMENT previous = values.next();
         long index = 1;
@@ -476,7 +476,7 @@ public final class CollectionConditions {
             previous = next;
             index++;
         }
-        return ConditionResult.satisfied();
+        return ConditionResult.satisfied(null);
     }
 
 }

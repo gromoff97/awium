@@ -126,15 +126,11 @@ public final class MapConditions {
         return quantified("map", "entries", Quantifier.ALL, entryCheck(predicate), Map::entrySet);
     }
 
-    public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> allEntries(PreservingCondition<? super Entry<KEY, VALUE>> nested) {
+    public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> allEntries(Condition.InputCondition<? super Entry<KEY, VALUE>> nested) {
         return quantified("map", "entries", Quantifier.ALL, nested, Map::entrySet);
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> allEntries(ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
-        return quantified("map", "entries", Quantifier.ALL, nested, Map::entrySet);
-    }
-
-    public static PreservingCondition<Map<?, ?>> allEntries(Condition.Typed<? super Entry<?, ?>, ?> nested) {
         return quantified("map", "entries", Quantifier.ALL, nested, Map::entrySet);
     }
 
@@ -156,17 +152,12 @@ public final class MapConditions {
     }
 
     /** Applies the condition to entries until one matches, returning the original map. */
-    public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> hasEntry(PreservingCondition<? super Entry<KEY, VALUE>> nested) {
+    public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> hasEntry(Condition.InputCondition<? super Entry<KEY, VALUE>> nested) {
         return quantified("map", "entries", Quantifier.ANY, nested, Map::entrySet);
     }
 
     /** Requires at least one entry satisfying the comparison and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> hasEntry(ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
-        return quantified("map", "entries", Quantifier.ANY, nested, Map::entrySet);
-    }
-
-    /** Requires at least one matching entry; the nested result is discarded and the original map is returned. */
-    public static PreservingCondition<Map<?, ?>> hasEntry(Condition.Typed<? super Entry<?, ?>, ?> nested) {
         return quantified("map", "entries", Quantifier.ANY, nested, Map::entrySet);
     }
 
@@ -188,17 +179,12 @@ public final class MapConditions {
     }
 
     /** Requires no entry to satisfy the condition and returns the original map. */
-    public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> hasNoEntry(PreservingCondition<? super Entry<KEY, VALUE>> nested) {
+    public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> hasNoEntry(Condition.InputCondition<? super Entry<KEY, VALUE>> nested) {
         return quantified("map", "entries", Quantifier.NONE, nested, Map::entrySet);
     }
 
     /** Requires no entry to satisfy the comparison and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> hasNoEntry(ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
-        return quantified("map", "entries", Quantifier.NONE, nested, Map::entrySet);
-    }
-
-    /** Requires no entry to satisfy the nested condition and returns the original map. */
-    public static PreservingCondition<Map<?, ?>> hasNoEntry(Condition.Typed<? super Entry<?, ?>, ?> nested) {
         return quantified("map", "entries", Quantifier.NONE, nested, Map::entrySet);
     }
 

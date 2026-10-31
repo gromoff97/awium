@@ -13,7 +13,6 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.CollectionConditions.singleElement;
-import static io.github.gromoff97.awium.Condition.MapValueCondition;
 import static io.github.gromoff97.awium.Condition.Typed;
 import static io.github.gromoff97.awium.ConditionSupport.bind;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluated;
@@ -22,7 +21,6 @@ import static io.github.gromoff97.awium.Conditions.conditionPerWait;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static io.github.gromoff97.awium.OptionalConditions.hasValue;
 import static io.github.gromoff97.awium.internal.AttemptResult.Uncontrolled;
-import static io.github.gromoff97.awium.internal.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.lang.Thread.currentThread;
@@ -48,7 +46,7 @@ class AttemptFactoryTest {
             factories[0]++;
             return actual -> {
                 observations.add(actual);
-                return satisfied(observations.size());
+                return AttemptResult.satisfied(observations.size());
             };
         });
         var factory = bind(condition);
@@ -77,7 +75,7 @@ class AttemptFactoryTest {
                 () -> actual -> switch (++calls[0]) {
                     case 1 -> throw failure;
                     case 2 -> null;
-                    default -> satisfied(actual.length());
+                    default -> AttemptResult.satisfied(actual.length());
                 });
         var attempt = bind(condition).create("ready");
 
@@ -122,13 +120,13 @@ class AttemptFactoryTest {
     }
 
     @Test
-    void preservingFactoryIsLazyIndependentAndReturnsTheOriginalObservation() {
+    void customFactoryIsLazyIndependentAndCanReturnTheOriginalObservation() {
         int[] factories = {0};
         var actual = new Object();
         var condition = conditionPerWait("two observations", () -> {
             factories[0]++;
             int[] calls = {0};
-            return ignored -> ++calls[0] == 2 ? satisfied() : unsatisfied("first observation");
+            return ignored -> ++calls[0] == 2 ? satisfied(ignored) : unsatisfied("first observation");
         }).because("second observation is required");
         var time = new FakeTime(0);
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3));
@@ -147,15 +145,14 @@ class AttemptFactoryTest {
     void nestedChecksPreserveSelectedIdentityAndIndependentSessions() {
         int[] factories = {0};
         Number actual = new java.math.BigDecimal("1.00");
-        var nested = Conditions.<Number>conditionPerWait("second observation", () -> {
+        var nested = Conditions.conditionPerWait("second observation", () -> {
             factories[0]++;
             int[] calls = {0};
-            return ignored -> ++calls[0] == 2 ? satisfied() : unsatisfied("first observation");
+            return (Number ignored) -> ++calls[0] == 2 ? satisfied(ignored) : unsatisfied("first observation");
         });
         var optional = hasValue(nested);
         var collection = singleElement(nested);
-        MapValueCondition<Map<? super String, ? extends Number>> map =
-                valueFor("key", nested);
+        var map = valueFor("key", nested);
         assertEquals(0, factories[0]);
 
         for (int run = 0; run < 2; run++) {
@@ -181,7 +178,7 @@ class AttemptFactoryTest {
         Typed<Integer, Integer> ordinary = new Typed<>(
                 "counted", null, () -> {
                     int[] calls = {0};
-                    return ignored -> satisfied(++calls[0]);
+                    return ignored -> AttemptResult.satisfied(++calls[0]);
                 });
         assertEquals("counted", ordinary.description());
         var first = bind(ordinary).create(0);

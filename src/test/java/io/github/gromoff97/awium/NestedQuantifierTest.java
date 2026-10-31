@@ -278,8 +278,8 @@ class NestedQuantifierTest {
         int[] factories = {0};
         var check = conditionPerWait("second check", () -> {
             factories[0]++;
-            Supplier<ConditionResult> probe = mock();
-            when(probe.get()).thenReturn(unsatisfied()).thenAnswer(ignored -> satisfied());
+            Supplier<ConditionResult<User>> probe = mock();
+            when(probe.get()).thenReturn(unsatisfied()).thenReturn(satisfied(ACTIVE));
             return (User user) -> probe.get();
         });
         var source = List.of(ACTIVE, ACTIVE);

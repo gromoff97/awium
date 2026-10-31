@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -40,7 +39,6 @@ import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.observation;
 import static io.github.gromoff97.awium.AwaitTestAccess.uncontrolled;
 import static io.github.gromoff97.awium.CollectionConditions.singleElement;
-import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.ConditionSupport.bind;
 import static io.github.gromoff97.awium.ConditionSupport.condition;
 import static io.github.gromoff97.awium.ConditionSupport.preserving;
@@ -72,7 +70,6 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -94,7 +91,7 @@ class ObservationTest {
     @ParameterizedTest
     @MethodSource("waitingInterruptions")
     void interruptionWhileWaitingRetainsItsOriginalCompletionTime(
-            long persistence, ConditionResult state, Runnable beforePark, long secondTick, int expectedParks) {
+            long persistence, ConditionResult<?> state, Runnable beforePark, long secondTick, int expectedParks) {
         int[] sources = {0};
         int[] parks = {0};
         long[] now = {0};
@@ -132,11 +129,11 @@ class ObservationTest {
         Runnable keepRunning = () -> {};
         return List.of(
                 argumentSet("before park / acquisition", 0L, unsatisfied("waiting"), interrupt, 1L, 0),
-                argumentSet("before park / persistence", 5L, satisfied(), interrupt, 1L, 0),
+                argumentSet("before park / persistence", 5L, satisfied(null), interrupt, 1L, 0),
                 argumentSet("after park / acquisition", 0L, unsatisfied("waiting"), keepRunning, 1L, 1),
-                argumentSet("after park / persistence", 5L, satisfied(), keepRunning, 1L, 1),
+                argumentSet("after park / persistence", 5L, satisfied(null), keepRunning, 1L, 1),
                 argumentSet("after interval / acquisition", 0L, unsatisfied("waiting"), interrupt, 5L, 0),
-                argumentSet("after interval / persistence", 5L, satisfied(), interrupt, 5L, 0));
+                argumentSet("after interval / persistence", 5L, satisfied(null), interrupt, 5L, 0));
     }
 
     @Test
@@ -166,7 +163,7 @@ class ObservationTest {
     @Test
     void satisfiedAttemptsRetainTheirObservation() {
         var actual = new Object();
-        var attempt = attempt(() -> actual, value -> satisfied());
+        var attempt = attempt(() -> actual, value -> satisfied(value));
 
         assertSame(actual, observation(attempt));
         assertInstanceOf(Satisfied.class, attempt);
@@ -174,7 +171,7 @@ class ObservationTest {
 
     @ParameterizedTest
     @MethodSource("mismatches")
-    void unsatisfiedAttemptsRetainTheirObservationAndDiagnosticDetails(ConditionResult.Unsatisfied original) {
+    void unsatisfiedAttemptsRetainTheirObservationAndDiagnosticDetails(ConditionResult.Unsatisfied<?> original) {
         var actual = new Object();
         var attempt = attempt(() -> actual, value -> original);
         var status = assertInstanceOf(Unsatisfied.class, attempt);
@@ -184,7 +181,7 @@ class ObservationTest {
         assertSame(original.cause(), attempt.cause());
     }
 
-    private static Stream<Named<ConditionResult.Unsatisfied>> mismatches() {
+    private static Stream<Named<ConditionResult.Unsatisfied<?>>> mismatches() {
         return Stream.of(
                 named("returned mismatch with cause", unsatisfied("not ready", new AssertionError("assertion"))),
                 named("plain mismatch", unsatisfied("not ready")),
@@ -224,7 +221,7 @@ class ObservationTest {
 
     @ParameterizedTest(name = "{0}, {1}")
     @MethodSource("ordinaryConditionFailures")
-    void ordinaryAwaitRetainsConditionThrowables(Throwable cause, PreservingCondition<String> check) {
+    void ordinaryAwaitRetainsConditionThrowables(Throwable cause, Condition.Typed<String, String> check) {
         var time = new FakeTime(0);
         var waiting = await(() -> "actual").usingTime(time, time).every(ofNanos(1));
 
@@ -235,8 +232,8 @@ class ObservationTest {
     @ParameterizedTest(name = "{0}, {1}, {2}")
     @MethodSource("composedConditionFailures")
     void conditionThrowablesStayUncontrolledThroughTerminalsAndComposition(
-            Throwable cause, PreservingCondition<String> check,
-            BiFunction<PreservingCondition<String>, FakeTime, AwaitResult<?, ?>> wait) {
+            Throwable cause, Condition.Typed<String, String> check,
+            BiFunction<Condition.Typed<String, String>, FakeTime, AwaitResult<?, ?>> wait) {
         Failed<?, ?> result = assertInstanceOf(Failed.class, wait.apply(check, new FakeTime(0)));
 
         assertEquals(CONDITION_FAILED, result.failure().reason());
@@ -252,7 +249,7 @@ class ObservationTest {
     }
 
     private static Stream<Arguments> composedConditionFailures() {
-        var waits = List.<Named<BiFunction<PreservingCondition<String>, FakeTime, AwaitResult<?, ?>>>>of(
+        var waits = List.<Named<BiFunction<Condition.Typed<String, String>, FakeTime, AwaitResult<?, ?>>>>of(
                 named("value", (check, time) -> diagnostic(await(() -> "actual").usingTime(time, time).every(ofNanos(1))).until(check)),
                 named("optional", (check, time) -> tryAwait(() -> Optional.of("actual")).usingTime(time, time).until(hasValue(check))),
                 named("collection", (check, time) -> tryAwait(() -> List.of("actual")).usingTime(time, time).until(singleElement(check))),
@@ -262,7 +259,7 @@ class ObservationTest {
                 .map(wait -> arguments(named(cause.getClass().getSimpleName(), cause), check, wait))));
     }
 
-    private static Stream<Named<PreservingCondition<String>>> throwingConditions(Throwable cause) {
+    private static Stream<Named<Condition.Typed<String, String>>> throwingConditions(Throwable cause) {
         return Stream.of(named("callback", condition("callback", actual -> { throw cause; })),
                 named("factory", conditionPerWait("factory", () -> rethrow(cause))));
     }
@@ -311,7 +308,7 @@ class ObservationTest {
             return actual;
         }, new SequenceExecution<>(bind(condition("ready", value -> {
             conditionCalls[0]++;
-            return satisfied();
+            return satisfied(value);
         })))).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
@@ -387,12 +384,12 @@ class ObservationTest {
     @MethodSource("completionInterruptions")
     void completionClockInterruptionStopsNormalResultsWithoutReplacingConditionFailure(
             BinaryOperator<Executable> terminal, long persistence, int interruptedAttempt,
-            ConditionResult state, Consumer<Throwable> assertCause) throws Throwable {
+            ConditionResult<?> state, Consumer<Throwable> assertCause) throws Throwable {
         var actual = new Object();
         var time = new FakeTime(0);
         int[] evaluations = {0};
         LongSupplier[] clock = {time::getAsLong};
-        List<Supplier<ConditionResult>> steps = new ArrayList<>(nCopies(interruptedAttempt - 1, ConditionResult::satisfied));
+        List<Supplier<ConditionResult<?>>> steps = new ArrayList<>(nCopies(interruptedAttempt - 1, () -> satisfied(actual)));
         steps.add(() -> {
             clock[0] = () -> { currentThread().interrupt(); return time.getAsLong(); };
             return state;
@@ -429,7 +426,7 @@ class ObservationTest {
         return terminals().stream().flatMap(terminal -> Stream.of(Map.entry(0L, 1), Map.entry(2L, 2)).flatMap(timing -> {
             String label = terminal.getName() + ", persistence=" + timing.getKey() + " / ";
             return Stream.of(
-                    argumentSet(label + "satisfied", terminal, timing.getKey(), timing.getValue(), satisfied(), interruption),
+                    argumentSet(label + "satisfied", terminal, timing.getKey(), timing.getValue(), satisfied(null), interruption),
                     argumentSet(label + "unsatisfied", terminal, timing.getKey(), timing.getValue(), unsatisfied("not ready"), interruption),
                     argumentSet(label + "null", terminal, timing.getKey(), timing.getValue(), null, missingResult));
         }));
@@ -440,7 +437,7 @@ class ObservationTest {
         var actual = new Object();
         var attempt = attempt(() -> actual, value -> {
             currentThread().interrupt();
-            return satisfied();
+            return satisfied(value);
         });
 
         var observation = uncontrolled(CONDITION, attempt);
@@ -480,7 +477,7 @@ class ObservationTest {
     @ParameterizedTest(name = "{0}, {1}")
     @MethodSource("conditionClockFailures")
     void conditionThrowableDoesNotSetTheFlagBeforeALaterClockFailure(
-            BinaryOperator<Executable> terminal, BiFunction<Runnable, InterruptedException, PreservingCondition<Object>> conditionFactory) {
+            BinaryOperator<Executable> terminal, BiFunction<Runnable, InterruptedException, Condition.Typed<Object, Object>> conditionFactory) {
         var interruption = new InterruptedException("condition stopped");
         var clockFailure = new IllegalStateException("completion clock failed");
         LongSupplier clock = mock();
@@ -497,7 +494,7 @@ class ObservationTest {
     }
 
     private static Stream<Arguments> conditionClockFailures() {
-        return Stream.<Named<BiFunction<Runnable, InterruptedException, PreservingCondition<Object>>>>of(
+        return Stream.<Named<BiFunction<Runnable, InterruptedException, Condition.Typed<Object, Object>>>>of(
                 named("thrown", (arm, cause) -> condition("interruption", actual -> { arm.run(); throw cause; })),
                 named("factory", (arm, cause) -> conditionPerWait("interruption", () -> { arm.run(); throw cause; })))
                 .flatMap(factory -> terminals().stream().map(terminal -> arguments(terminal, factory)));
@@ -529,14 +526,14 @@ class ObservationTest {
                 new InternalError("fatal"), new ThreadDeath());
     }
 
-    private static ConditionResult failIfCalled(Object ignored) {
+    private static ConditionResult<Object> failIfCalled(Object ignored) {
         throw new AssertionError("condition must not be called");
     }
 
-    private static Attempt<?> attempt(Callable<Object> source, CheckedFunction<Object, ConditionResult> condition) {
+    private static Attempt<?> attempt(Callable<Object> source, CheckedFunction<Object, ConditionResult<?>> condition) {
         var time = new FakeTime(0);
         return new WaitEngine<Object>(config(1, 2, 0).withTime(time, time), source, new SequenceExecution<>(bind(preserving("test condition", actual -> {
-            ConditionResult evaluation = condition.apply(actual);
+            ConditionResult<?> evaluation = condition.apply(actual);
             time.advanceNanos(2);
             return evaluation;
         })))).waitFor().step().attempt();

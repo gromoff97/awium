@@ -82,7 +82,7 @@ class ConditionHistoriesTest {
         int[] initialized = {0};
         var unreached = conditionPerWait("third", () -> {
             initialized[0]++;
-            return (Integer actual) -> satisfied();
+            return (Integer actual) -> satisfied(actual);
         }).because("last check");
         var source = List.of(1, 0, 0, 2, 2).iterator();
         var result = tryAwait(source::next).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))

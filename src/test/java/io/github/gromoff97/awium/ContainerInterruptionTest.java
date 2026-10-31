@@ -75,7 +75,7 @@ class ContainerInterruptionTest {
     @ParameterizedTest
     @MethodSource("quantifiers")
     void interruptionBeforeTheFirstNestedCheckSkipsItsFactory(
-            Function<PreservingCondition<String>, PreservingCondition<Collection<? extends String>>> quantify) {
+            Function<Condition.InputCondition<String>, PreservingCondition<Collection<? extends String>>> quantify) {
         var actual = new AbstractList<String>() {
             @Override public int size() { return 1; }
             @Override public String get(int index) {
@@ -88,7 +88,7 @@ class ContainerInterruptionTest {
         int[] factories = {0};
         var nested = conditionPerWait("nested check", () -> {
             factories[0]++;
-            return (String value) -> satisfied();
+            return (String value) -> satisfied(value);
         });
         var result = tryAwait(() -> actual).until(quantify.apply(nested));
         failure(INTERRUPTED, result);
@@ -96,7 +96,7 @@ class ContainerInterruptionTest {
         assertEquals(0, factories[0]);
     }
 
-    private static List<Named<Function<PreservingCondition<String>, PreservingCondition<Collection<? extends String>>>>> quantifiers() {
+    private static List<Named<Function<Condition.InputCondition<String>, PreservingCondition<Collection<? extends String>>>>> quantifiers() {
         return List.of(named("all", CollectionConditions::all), named("any", CollectionConditions::any), named("none", CollectionConditions::none));
     }
 
@@ -136,7 +136,7 @@ class ContainerInterruptionTest {
         int[] factories = {0};
         var check = conditionPerWait("nested check", () -> {
             factories[0]++;
-            return (String value) -> satisfied();
+            return (String value) -> satisfied(value);
         });
         var selected = valueFor("key", check).because("value must be readable");
         var actual = new SignallingMap("getValue");

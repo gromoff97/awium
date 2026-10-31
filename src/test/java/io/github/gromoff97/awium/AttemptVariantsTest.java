@@ -77,7 +77,7 @@ class AttemptVariantsTest {
     @Test
     void returnedMismatchWithACauseIsUnsatisfiedAndCanRetry() {
         var cause = new AssertionError("not ready");
-        var outcomes = List.of(unsatisfied("pending", cause), satisfied()).iterator();
+        var outcomes = List.of(unsatisfied("pending", cause), satisfied(null)).iterator();
         var result = tryAwait((Callable<String>) () -> null).usingTime(time, time).every(ofNanos(1))
                 .until(condition("ready", actual -> outcomes.next()));
 

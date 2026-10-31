@@ -26,7 +26,7 @@ class AttemptHistoryTest {
         var empty = history.conditions(definitions).getFirst().attempts();
         var first = entry(condition, new String("pending"), unsatisfied("pending"));
         var second = entry(condition, new String("pending"), unsatisfied("pending"));
-        var third = entry(condition, "third", satisfied());
+        var third = entry(condition, "third", satisfied("third"));
         history.add(first);
         var before = history.conditions(definitions).getFirst().attempts();
         history.add(second);
@@ -88,10 +88,10 @@ class AttemptHistoryTest {
         });
     }
 
-    private static <OBSERVED> ExecutionStep<OBSERVED> entry(Condition condition, OBSERVED observed, ConditionResult status) {
+    private static <OBSERVED> ExecutionStep<OBSERVED> entry(Condition condition, OBSERVED observed, ConditionResult<?> status) {
         return new ExecutionStep<>(condition, 1, 0, ACQUISITION, 0, switch (status) {
-            case ConditionResult.Satisfied ignored -> new Attempt.Satisfied<>(observed);
-            case ConditionResult.Unsatisfied mismatch -> new Attempt.Unsatisfied<>(observed, mismatch.mismatch(), mismatch.cause());
+            case ConditionResult.Satisfied<?> ignored -> new Attempt.Satisfied<>(observed);
+            case ConditionResult.Unsatisfied<?> mismatch -> new Attempt.Unsatisfied<>(observed, mismatch.mismatch(), mismatch.cause());
         });
     }
 }

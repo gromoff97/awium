@@ -73,24 +73,32 @@ public final class Conditions {
     }
 
     /**
-     * Creates a named check using the supplied callback for every execution.
-     * A satisfied result returns the original observation. The callback returns a
-     * status without a payload: {@link ConditionResult#satisfied()} or
-     * {@link ConditionResult#unsatisfied(String)}.
+     * Creates a named condition using the supplied callback for every execution.
+     * Return {@link ConditionResult#satisfied(Object)} with the value the wait should return,
+     * or {@link ConditionResult#unsatisfied(String)} to retry. To return the observation,
+     * pass the callback argument to {@code satisfied}.
      */
-    public static <INPUT> PreservingCondition<INPUT> condition(String description,
-            CheckedFunction<? super INPUT, ? extends ConditionResult> evaluation) {
-        return ConditionSupport.preserving(description, evaluation);
+    public static <INPUT, RESULT> Condition.Typed<INPUT, RESULT> condition(String description,
+            CheckedFunction<? super INPUT, ? extends ConditionResult<? extends RESULT>> evaluation) {
+        var condition = ConditionSupport.<INPUT, RESULT>condition(description, null,
+                (INPUT actual) -> AttemptResult.of(evaluation.apply(actual)));
+        requireNonNull(evaluation, "evaluation must not be null");
+        return condition;
     }
 
     /**
      * Lazily invokes the factory separately for each use of the condition in a wait.
      * Create mutable callback state inside the factory to isolate waits and sequence stages.
-     * Like {@link #condition(String, CheckedFunction)}, a satisfied check returns the original observation.
+     * Like {@link #condition(String, CheckedFunction)}, the callback chooses the successful result.
      */
-    public static <INPUT> PreservingCondition<INPUT> conditionPerWait(String description,
-            Callable<? extends CheckedFunction<? super INPUT, ? extends ConditionResult>> evaluatorFactory) {
-        return ConditionSupport.preserving(description, evaluatorFactory);
+    public static <INPUT, RESULT> Condition.Typed<INPUT, RESULT> conditionPerWait(String description,
+            Callable<? extends CheckedFunction<? super INPUT, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory) {
+        var condition = new Condition.Typed<INPUT, RESULT>(description, null, () -> {
+            var evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
+            return actual -> AttemptResult.of(evaluator.apply(actual));
+        });
+        requireNonNull(evaluatorFactory, "evaluator factory must not be null");
+        return condition;
     }
 
     /**
@@ -103,7 +111,7 @@ public final class Conditions {
         return ConditionSupport.preserving("value satisfies assertion", actual -> {
             try {
                 assertion.accept(actual);
-                return satisfied();
+                return satisfied(null);
             } catch (AssertionError error) {
                 return unsatisfied("value did not satisfy assertion", error);
             }
