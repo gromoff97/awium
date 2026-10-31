@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.conditions.value
 
 import io.github.gromoff97.awium.AwaitCondition
+import io.github.gromoff97.awium.AwaitCondition.Reference
 import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.ConditionAssertions.result
@@ -25,6 +26,11 @@ import org.junit.jupiter.params.provider.Arguments.arguments
 import org.junit.jupiter.params.provider.MethodSource
 
 class EqualityConditionTest {
+    @Test
+    fun `retains the expected operand for diagnostics`() {
+        assertEquals(listOf(Reference("Expected", "expected")), equalTo("expected").references())
+    }
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("successfulComparisons")
     fun `returns the original observation`(condition: AwaitCondition, actual: Any?) {
