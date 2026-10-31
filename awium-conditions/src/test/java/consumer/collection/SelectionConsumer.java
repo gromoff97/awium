@@ -152,6 +152,7 @@ public final class SelectionConsumer {
     }
 
     public static String singleMapKey() {
-        return await(() -> Map.of("key", 42).keySet()).until(singleElement);
+        var entries = Map.of("key", 42);
+        return await(entries::keySet).until(singleElement);
     }
 }

@@ -91,4 +91,16 @@ class CollectionContentApiTest {
         val actual = listOf(arrayOf("a", "b"))
         ContentConsumer.arrayPatterns(actual).forEach { assertSame(actual, it) }
     }
+    @Test
+    fun `a stored sort order can compare a supertype of the elements`() {
+        val actual = arrayListOf(1, 2)
+        assertSame(actual, ContentConsumer.storedSortOrder(actual))
+    }
+
+    @Test
+    fun `a string comparator preserves the concrete collection type`() {
+        val actual = arrayListOf("a", "b")
+        assertSame(actual, ContentConsumer.wordOrder(actual))
+    }
+
 }

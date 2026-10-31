@@ -123,4 +123,9 @@ class MapSelectionApiTest {
     fun `maps implementing Iterable keep map selection types`() {
         assertEquals(listOf(10, 10, 10, 10, 10), SelectionConsumer.mapWithDifferentIterableElements())
     }
+    @Test
+    fun `a typed null key keeps the selected value type`() {
+        assertEquals(5, SelectionConsumer.nullableKeyLength())
+    }
+
 }

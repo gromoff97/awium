@@ -1,4 +1,6 @@
 package consumer.collection;
+import java.util.function.BiPredicate;
+import static java.util.function.Predicate.not;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -95,4 +97,17 @@ public final class QuantifierConsumer {
         var waiting = await(() -> actual);
         return List.of(waiting.until(allEntries(equalTo(Map.entry("count", 1)))), waiting.until(allValues(equalTo(1))));
     }
+    public static List<LinkedHashMap<String, Integer>> supertypeEntryPredicates(LinkedHashMap<String, Integer> actual) {
+        var waiting = await(() -> actual);
+        BiPredicate<CharSequence, Number> valid = (key, value) -> !key.isEmpty() && value.intValue() > 0;
+        return List.of(waiting.until(allEntries(valid::test)), waiting.until(hasEntry(valid::test)),
+                waiting.until(hasNoEntry(valid.negate()::test)));
+    }
+
+    public static List<ArrayList<String>> supertypeElementPredicates(ArrayList<String> actual) {
+        var waiting = await(() -> actual);
+        return List.of(waiting.until(all(CharSequence::isEmpty)), waiting.until(any(CharSequence::isEmpty)),
+                waiting.until(none(not(CharSequence::isEmpty)::test)));
+    }
+
 }

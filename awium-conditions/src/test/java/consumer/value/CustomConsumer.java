@@ -1,4 +1,6 @@
 package consumer.value;
+import static io.github.gromoff97.awium.conditions.Conditions.captured;
+import static java.time.Duration.ofNanos;
 
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.function.CheckedFunction;
@@ -69,10 +71,12 @@ public final class CustomConsumer {
 
     public static User recordPattern(User user) {
         var result = tryAwait(() -> user).until(condition("ready", actual -> satisfied(actual)));
-        return switch (result) {
+        var value = switch (result) {
             case AwaitResult.Succeeded(var history, var actual) -> actual;
             case AwaitResult.Failed(var history, var failure) -> throw new AssertionError(failure.message());
         };
+        value.id();
+        return value;
     }
 
     public static String nullSelection(User user) {
@@ -96,4 +100,21 @@ public final class CustomConsumer {
         return await(() -> users).until(hasNoEntry(condition("missing id", entry -> entry.getValue().id() == 0
                 ? satisfied(entry.getValue()) : unsatisfied())));
     }
+    public static List<User> inferredIdentities(User user) {
+        var check = condition("identity", (User actual) -> satisfied(actual));
+        var direct = await(() -> user).until(condition("inline", actual -> satisfied(actual)));
+        var created = await(() -> user).until(conditionPerWait("factory", () -> actual -> satisfied(actual)));
+        var selected = await(() -> List.of(user)).until(singleElement(check));
+        var optional = await(() -> Optional.of(user)).until(hasValue(check));
+        var mapped = await(() -> Map.of("key", user)).until(valueFor("key", check));
+        var sequence = await(() -> user).every(ofNanos(1)).until(captured(check, condition("second", actual -> satisfied(actual))));
+        direct.id();
+        created.id();
+        selected.id();
+        optional.id();
+        mapped.id();
+        sequence.getLast().id();
+        return List.of(direct, created, selected, optional, mapped, sequence.getLast());
+    }
+
 }

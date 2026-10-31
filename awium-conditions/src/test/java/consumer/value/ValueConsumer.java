@@ -1,4 +1,5 @@
 package consumer.value;
+import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.result.AwaitResult;
@@ -120,4 +121,17 @@ public final class ValueConsumer {
     public static AwaitResult<Optional<String>, String> optionalResult() {
         return tryAwait(() -> Optional.of("payment")).until(present);
     }
+    public static List<Integer> inferredCaptureLengths() {
+        var value = await(() -> "ready").until(equalTo("ready"));
+        var comparisons = await(() -> "ready").every(ofNanos(1)).until(captured(equalTo("ready"), notIn(List.of("failed"))));
+        var checks = await(() -> "ready").every(ofNanos(1)).until(captured(isNotNull, matches(ignored -> true)));
+        return List.of(value.length(), comparisons.getFirst().length(), checks.getLast().length());
+    }
+
+    public static String nullableEquality() {
+        String missing = null;
+        var value = await(() -> missing).until(equalTo(missing));
+        return value;
+    }
+
 }

@@ -97,6 +97,16 @@ class ValueApiTest {
         assertEquals("payment", ValueConsumer.optionalResult().orThrow())
     }
 
+    @Test
+    fun `captured families keep inferred string results`() {
+        assertEquals(listOf(5, 5, 5), ValueConsumer.inferredCaptureLengths())
+    }
+
+    @Test
+    fun `a typed null expectation keeps the nullable source type`() {
+        assertNull(ValueConsumer.nullableEquality())
+    }
+
     companion object {
         @JvmStatic
         fun arrays() = listOf(named("empty", emptyArray<String>()), named("one element", arrayOf("ready")))

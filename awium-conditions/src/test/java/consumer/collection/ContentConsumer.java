@@ -1,4 +1,5 @@
 package consumer.collection;
+import static java.util.Comparator.comparingInt;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import java.util.ArrayList;
@@ -117,4 +118,13 @@ public final class ContentConsumer {
             return List.of(selected, recorded).stream();
         }).toList();
     }
+    public static ArrayList<Integer> storedSortOrder(ArrayList<Integer> actual) {
+        var ordered = sorted(comparingInt(Number::intValue));
+        return await(() -> actual).until(ordered);
+    }
+
+    public static ArrayList<String> wordOrder(ArrayList<String> actual) {
+        return await(() -> actual).until(sorted(String::compareTo));
+    }
+
 }

@@ -75,4 +75,16 @@ class QuantifierApiTest {
         val actual = mapOf<String, Number>("count" to 1)
         QuantifierConsumer.narrowerExpectedValues(actual).forEach { assertSame(actual, it) }
     }
+    @Test
+    fun `entry predicates can accept broader key and value types`() {
+        val actual = linkedMapOf("key" to 1)
+        QuantifierConsumer.supertypeEntryPredicates(actual).forEach { assertSame(actual, it) }
+    }
+
+    @Test
+    fun `element predicates can accept a broader element type`() {
+        val actual = arrayListOf("")
+        QuantifierConsumer.supertypeElementPredicates(actual).forEach { assertSame(actual, it) }
+    }
+
 }

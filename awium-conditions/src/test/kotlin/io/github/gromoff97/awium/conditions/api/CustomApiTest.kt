@@ -61,6 +61,12 @@ class CustomApiTest {
         assertSame(actual, observation(attempts(result).single()))
     }
 
+    @Test
+    fun `identity callbacks infer their result through factories selectors and capture`() {
+        val actual = CustomConsumer.User(42)
+        CustomConsumer.inferredIdentities(actual).forEach { assertSame(actual, it) }
+    }
+
     companion object {
         @JvmStatic
         fun selectedIds() = listOf(

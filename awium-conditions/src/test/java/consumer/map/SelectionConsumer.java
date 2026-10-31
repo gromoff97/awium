@@ -38,7 +38,8 @@ public final class SelectionConsumer {
     }
 
     public static ReceiptEntry narrowedEntry(Map<String, Number> actual) {
-        return await(() -> actual).until(singleEntry(instanceOf(ReceiptEntry.class)));
+        var check = singleEntry(instanceOf(ReceiptEntry.class));
+        return await(() -> actual).until(check);
     }
 
     public static ReceiptEntry recordedNarrowedEntry(Map<String, Number> actual) {
@@ -140,4 +141,11 @@ public final class SelectionConsumer {
         @Override public Set<Entry<String, Integer>> entrySet() { return Set.of(Map.entry("key", 10)); }
         @Override public Iterator<User> iterator() { return List.of(new User(true)).iterator(); }
     }
+    public static int nullableKeyLength() {
+        String missing = null;
+        var actual = java.util.Collections.singletonMap(missing, "ready");
+        var selected = await(() -> actual).until(valueFor(missing));
+        return selected.length();
+    }
+
 }
