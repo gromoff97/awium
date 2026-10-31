@@ -6,38 +6,49 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
-import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.ConditionTestRuntime.result;
-import static java.time.Duration.ofNanos;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.Condition.MapValueCondition;
+import static io.github.gromoff97.awium.Condition.Typed;
 import static io.github.gromoff97.awium.ConditionSupport.bind;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluated;
+import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.Conditions.conditionPerWait;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static io.github.gromoff97.awium.OptionalConditions.hasValue;
+import static io.github.gromoff97.awium.internal.AttemptResult.Uncontrolled;
+import static io.github.gromoff97.awium.internal.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
+import static java.time.Duration.ofNanos;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class AttemptFactoryTest {
+
+    @AfterEach
+    void clearInterruptFlag() {
+        interrupted();
+    }
 
     @Test
     void attemptsKeepTheirBindingAndEachCallReturnsAnIndependentTypedResult() {
         int[] factories = {0};
         var observations = new ArrayList<String>();
-        Condition.Typed<String, Integer> condition = new Condition.Typed<>("count calls", null, () -> {
+        Typed<String, Integer> condition = new Typed<>("count calls", null, () -> {
             factories[0]++;
             return actual -> {
                 observations.add(actual);
-                return AttemptResult.satisfied(observations.size());
+                return satisfied(observations.size());
             };
         });
         var factory = bind(condition);
@@ -62,11 +73,11 @@ class AttemptFactoryTest {
     void thrownAndInvalidResultsBelongToTheirOwnCalls() {
         var failure = new AssertionError("first call failed");
         int[] calls = {0};
-        Condition.Typed<String, Integer> condition = new Condition.Typed<>("three calls", null,
+        Typed<String, Integer> condition = new Typed<>("three calls", null,
                 () -> actual -> switch (++calls[0]) {
                     case 1 -> throw failure;
                     case 2 -> null;
-                    default -> AttemptResult.satisfied(actual.length());
+                    default -> satisfied(actual.length());
                 });
         var attempt = bind(condition).create("ready");
 
@@ -74,8 +85,8 @@ class AttemptFactoryTest {
         var second = attempt.call();
         var third = attempt.call();
 
-        assertSame(failure, assertInstanceOf(AttemptResult.Uncontrolled.class, first).cause());
-        var invalid = assertInstanceOf(AttemptResult.Uncontrolled.class, second).cause();
+        assertSame(failure, assertInstanceOf(Uncontrolled.class, first).cause());
+        var invalid = assertInstanceOf(Uncontrolled.class, second).cause();
         assertInstanceOf(NullPointerException.class, invalid);
         assertEquals("condition returned null evaluation", invalid.getMessage());
         assertEquals(5, result(third));
@@ -83,7 +94,7 @@ class AttemptFactoryTest {
 
     @Test
     void nullIsAValidBoundObservation() {
-        Condition.Typed<String, String> condition = new Condition.Typed<>("preserve null", null,
+        Typed<String, String> condition = new Typed<>("preserve null", null,
                 () -> AttemptResult::satisfied);
         var attempt = bind(condition).create(null);
 
@@ -94,20 +105,17 @@ class AttemptFactoryTest {
     @Test
     void interruptedCallDoesNotInitializeTheConditionAndCanBeRetriedAfterClearingTheFlag() {
         int[] factories = {0};
-        Condition.Typed<String, String> condition = new Condition.Typed<>("preserve", null, () -> {
+        Typed<String, String> condition = new Typed<>("preserve", null, () -> {
             factories[0]++;
             return AttemptResult::satisfied;
         });
         var attempt = bind(condition).create("ready");
 
         currentThread().interrupt();
-        try {
-            var interrupted = assertInstanceOf(AttemptResult.Uncontrolled.class, attempt.call());
-            assertInstanceOf(InterruptedException.class, interrupted.cause());
-            assertEquals(0, factories[0]);
-        } finally {
-            Thread.interrupted();
-        }
+        var interruption = assertInstanceOf(Uncontrolled.class, attempt.call());
+        assertInstanceOf(InterruptedException.class, interruption.cause());
+        assertEquals(0, factories[0]);
+        interrupted();
 
         assertEquals("ready", result(attempt.call()));
         assertEquals(1, factories[0]);
@@ -146,7 +154,7 @@ class AttemptFactoryTest {
         });
         var optional = hasValue(nested);
         var collection = singleElement(nested);
-        Condition.MapValueCondition<Map<? super String, ? extends Number>> map =
+        MapValueCondition<Map<? super String, ? extends Number>> map =
                 valueFor("key", nested);
         assertEquals(0, factories[0]);
 
@@ -170,10 +178,10 @@ class AttemptFactoryTest {
 
     @Test
     void ordinaryConditionKeepsMetadataAndCreatesIndependentEvaluators() {
-        Condition.Typed<Integer, Integer> ordinary = new Condition.Typed<>(
+        Typed<Integer, Integer> ordinary = new Typed<>(
                 "counted", null, () -> {
                     int[] calls = {0};
-                    return ignored -> AttemptResult.satisfied(++calls[0]);
+                    return ignored -> satisfied(++calls[0]);
                 });
         assertEquals("counted", ordinary.description());
         var first = bind(ordinary).create(0);

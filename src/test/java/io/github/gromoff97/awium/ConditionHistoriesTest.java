@@ -88,7 +88,7 @@ class ConditionHistoriesTest {
         var result = tryAwait(source::next).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
                 .until(captured(equalTo(1), equalTo(3), unreached));
 
-        assertEquals(AwaitFailure.Reason.TIMEOUT, failure(result).reason());
+        failure(AwaitFailure.Reason.TIMEOUT, result);
         assertThat(result.conditions()).hasSize(3);
         assertEquals(1, observation(result.conditions().getFirst().attempts().firstEntry().getValue()));
         assertThat(result.conditions().get(1).attempts().values()).extracting(AwaitTestAccess::observation)

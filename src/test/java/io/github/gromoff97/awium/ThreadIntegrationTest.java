@@ -1,46 +1,66 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.result.AwaitExecutionException;
-import io.github.gromoff97.awium.result.AwaitFailure;
+import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.observation;
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.AwaitTestAccess.observation;
+import static io.github.gromoff97.awium.Conditions.condition;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.INTERRUPTED;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
-import static io.github.gromoff97.awium.Conditions.condition;
 import static java.lang.System.nanoTime;
 import static java.lang.Thread.State.*;
 import static java.lang.Thread.currentThread;
+import static java.lang.Thread.ofPlatform;
+import static java.lang.Thread.ofVirtual;
+import static java.lang.ThreadLocal.withInitial;
 import static java.time.Duration.*;
 import static java.util.Collections.nCopies;
+import static java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.concurrent.locks.LockSupport.parkNanos;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Named.named;
-import static java.lang.Thread.ofPlatform;
-import static java.lang.Thread.ofVirtual;
-import static java.lang.ThreadLocal.withInitial;
-import static java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ThreadIntegrationTest {
+
+    @AutoClose
+    private final ExecutorService executor = newVirtualThreadPerTaskExecutor();
+    private final List<Thread> startedThreads = new ArrayList<>();
+
+    @AfterEach
+    void stopStartedThreads() throws InterruptedException {
+        for (var thread : startedThreads) {
+            thread.interrupt();
+            thread.join(2_000);
+        }
+    }
 
     @ParameterizedTest
     @MethodSource("callers")
@@ -48,21 +68,20 @@ class ThreadIntegrationTest {
         List<Thread> callbackThreads = new ArrayList<>();
         int[] observations = {0};
         int[] result = {0};
+        var outcomes = List.of(unsatisfied("not the third observation"), unsatisfied("not the third observation"), satisfied()).iterator();
 
         Thread caller = callers.newThread(() -> result[0] = await(() -> {
             callbackThreads.add(currentThread());
             return ++observations[0];
         }).every(ofMillis(20)).upTo(ofSeconds(2)).until(condition("third observation", value -> {
             callbackThreads.add(currentThread());
-            return value == 3 ? satisfied()
-                    : unsatisfied("not the third observation");
+            return outcomes.next();
         })));
+        startedThreads.add(caller);
         caller.start();
         caller.join(5_000);
-        if (caller.isAlive()) {
-            caller.interrupt();
-            caller.join(2_000);
-        }
+        caller.interrupt();
+        caller.join(2_000);
 
         assertFalse(caller.isAlive());
         assertEquals(3, result[0]);
@@ -82,31 +101,28 @@ class ThreadIntegrationTest {
                 .every(ofNanos(1)).upTo(ofNanos(3));
         var check = Conditions.<Thread>conditionPerWait("two observations per caller", () -> {
             Thread owner = currentThread();
-            int[] calls = {0};
+            Callable<ConditionResult> probe = mock();
+            when(probe.call()).thenAnswer(ignored -> {
+                rendezvous.await(3, SECONDS);
+                return unsatisfied("first observation");
+            }).thenReturn(satisfied());
             return actual -> {
-                if (actual != owner || currentThread() != owner) {
-                    throw new IllegalStateException("callback moved to another caller");
-                }
-                if (++calls[0] == 1) {
-                    rendezvous.await(3, SECONDS);
-                    return unsatisfied("first observation");
-                }
-                return satisfied();
+                assertSame(owner, actual, "source must stay on its caller thread");
+                assertSame(owner, currentThread(), "callback must stay on its caller thread");
+                return probe.call();
             };
         });
         var resultThreads = new HashSet<Thread>();
 
-        try (var callers = newVirtualThreadPerTaskExecutor()) {
-            var results = List.of(callers.submit(() -> diagnostic(waiting).until(check)),
-                    callers.submit(() -> diagnostic(waiting).until(check)));
-            for (var future : results) {
-                var result = future.get(5, SECONDS);
-                Thread caller = result.orThrow();
-                assertTrue(caller.isVirtual());
-                assertThat(attempts(result)).hasSize(2)
-                        .allSatisfy(attempt -> assertSame(caller, observation(attempt)));
-                resultThreads.add(caller);
-            }
+        var results = List.of(executor.submit(() -> diagnostic(waiting).until(check)),
+                executor.submit(() -> diagnostic(waiting).until(check)));
+        for (var future : results) {
+            var result = future.get(5, SECONDS);
+            Thread caller = result.orThrow();
+            assertTrue(caller.isVirtual());
+            assertThat(attempts(result)).hasSize(2)
+                    .allSatisfy(attempt -> assertSame(caller, observation(attempt)));
+            resultThreads.add(caller);
         }
         assertEquals(2, resultThreads.size());
         assertEquals(4, sourceCalls.get());
@@ -118,27 +134,20 @@ class ThreadIntegrationTest {
         Throwable[] terminal = new Throwable[1];
         boolean[] interrupted = new boolean[1];
         Thread caller = callers.newThread(() -> {
-            try {
-                await(() -> 1).every(ofSeconds(5)).upTo(ofSeconds(10)).until(condition(
-                                "never satisfied", value ->
-                                        unsatisfied("not ready")));
-            } catch (Throwable failure) {
-                terminal[0] = failure;
-                interrupted[0] = currentThread().isInterrupted();
-            }
+            terminal[0] = catchThrowable(() -> await(() -> 1).every(ofSeconds(5)).upTo(ofSeconds(10))
+                    .until(condition("never satisfied", value -> unsatisfied("not ready"))));
+            interrupted[0] = currentThread().isInterrupted();
         });
+        startedThreads.add(caller);
         caller.start();
-        try {
-            awaitTimedWaiting(caller);
-        } finally {
-            caller.interrupt();
-            caller.join(2_000);
-        }
+        awaitTimedWaiting(caller);
+        caller.interrupt();
+        caller.join(2_000);
 
         assertSame(TERMINATED, caller.getState());
         var failure = assertInstanceOf(
                 AwaitExecutionException.class, terminal[0]);
-        assertEquals(AwaitFailure.Reason.INTERRUPTED, failure.failure().reason());
+        assertEquals(INTERRUPTED, failure.failure().reason());
         assertInstanceOf(InterruptedException.class, failure.getCause());
         assertThat(failure).hasMessageStartingWith("Waiting interrupted");
         assertTrue(interrupted[0]);

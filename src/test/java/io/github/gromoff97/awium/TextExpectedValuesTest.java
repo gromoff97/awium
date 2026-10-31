@@ -57,8 +57,7 @@ class TextExpectedValuesTest {
             var matching = value.isBlank() ? StringConditions.blank : StringConditions.nonBlank;
             var mismatching = value.isBlank() ? StringConditions.nonBlank : StringConditions.blank;
             assertSame(text, waiting.until(matching));
-            var failure = failure(diagnostic(waiting).until(mismatching));
-            assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+            var failure = failure(AwaitFailure.Reason.TIMEOUT, diagnostic(waiting).until(mismatching));
             assertNull(failure.cause());
         }
         CharSequence parallel = new CharSequence() {
@@ -75,8 +74,7 @@ class TextExpectedValuesTest {
         };
         var waiting = await(() -> parallel).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(1));
         assertSame(parallel, waiting.until(StringConditions.blank));
-        var failure = failure(diagnostic(waiting).until(StringConditions.nonBlank));
-        assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+        var failure = failure(AwaitFailure.Reason.TIMEOUT, diagnostic(waiting).until(StringConditions.nonBlank));
     }
 
     @Test
@@ -101,8 +99,7 @@ class TextExpectedValuesTest {
         for (var check : List.of(matchesRegex("failed.*"),
                 doesNotMatchRegex("Ready \\d+"), containsIgnoringCase("failed"),
                 contentEquals("failed"))) {
-            var failure = failure(diagnostic(waiting).until(check));
-            assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+            var failure = failure(AwaitFailure.Reason.TIMEOUT, diagnostic(waiting).until(check));
             assertNull(failure.cause());
             assertEquals(List.of(renderingFailure), failure.suppressed());
         }
@@ -140,8 +137,7 @@ class TextExpectedValuesTest {
             assertSame(actual, captured.orThrow());
 
             actual.replace(0, actual.length(), check.mismatch());
-            var failure = failure(diagnostic(waiting).until(condition));
-            assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+            var failure = failure(AwaitFailure.Reason.TIMEOUT, diagnostic(waiting).until(condition));
             assertThat(failure.message()).doesNotContain("changed");
         }
     }
@@ -168,7 +164,7 @@ class TextExpectedValuesTest {
 
         var absent = tryAwait(() -> (StringBuilder) null).usingTime(time, time)
                 .every(ofNanos(1)).upTo(ofNanos(1)).until(condition);
-        assertEquals(AwaitFailure.Reason.TIMEOUT, failure(absent).reason());
+        failure(AwaitFailure.Reason.TIMEOUT, absent);
     }
 
     @Test
@@ -208,10 +204,10 @@ class TextExpectedValuesTest {
                 assertSame(actual, diagnostic(waiting).until(check).orThrow());
                 var absent = tryAwait(() -> (StringBuilder) null).usingTime(time, time)
                         .every(ofNanos(1)).upTo(ofNanos(2)).until(check);
-                assertEquals(AwaitFailure.Reason.TIMEOUT, failure(absent).reason());
+                failure(AwaitFailure.Reason.TIMEOUT, absent);
             }
             var emptyFragment = diagnostic(waiting).until(doesNotContainAny(List.of("")));
-            assertEquals(AwaitFailure.Reason.TIMEOUT, failure(emptyFragment).reason());
+            failure(AwaitFailure.Reason.TIMEOUT, emptyFragment);
         }
     }
 

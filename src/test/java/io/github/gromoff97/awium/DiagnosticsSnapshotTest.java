@@ -1,78 +1,90 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.internal.AttemptResult;
+import io.github.gromoff97.awium.internal.ExecutionStep;
 import io.github.gromoff97.awium.internal.WaitCompletion;
 import io.github.gromoff97.awium.result.Attempt;
-import io.github.gromoff97.awium.internal.ExecutionStep;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
+import io.github.gromoff97.awium.result.ConditionResult;
 import java.io.IOException;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.function.BinaryOperator;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AutoClose;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitSupport.complete;
-import static io.github.gromoff97.awium.Conditions.isNotNull;
-import static io.github.gromoff97.awium.Condition.Reference;
-import static io.github.gromoff97.awium.Condition.Typed;
+import static io.github.gromoff97.awium.AwaitTestAccess.config;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
+import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.Condition.CapturedSource;
 import static io.github.gromoff97.awium.Condition.InputCondition;
-import static io.github.gromoff97.awium.result.Attempt.Operation;
-import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
-import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
-import static io.github.gromoff97.awium.internal.ExecutionStep.Phase.PERSISTENCE;
 import static io.github.gromoff97.awium.Condition.PreservingCondition;
-import static java.util.AbstractMap.SimpleImmutableEntry;
-import static io.github.gromoff97.awium.AwaitTestAccess.failure;
-import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
-import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitTestAccess.config;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.Condition.Reference;
+import static io.github.gromoff97.awium.Condition.Typed;
+import static io.github.gromoff97.awium.ConditionSupport.preserving;
 import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
 import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.Conditions.equalTo;
-import static io.github.gromoff97.awium.Conditions.notEqualTo;
-import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-import static io.github.gromoff97.awium.internal.WaitCompletion.*;
-import static io.github.gromoff97.awium.internal.ExecutionStep.Phase.ACQUISITION;
-import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
-import static java.lang.Thread.currentThread;
-import static java.lang.Thread.interrupted;
-import static java.time.Duration.ofNanos;
-import static org.apache.commons.lang3.exception.ExceptionUtils.rethrow;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static io.github.gromoff97.awium.ConditionSupport.preserving;
 import static io.github.gromoff97.awium.Conditions.in;
+import static io.github.gromoff97.awium.Conditions.isNotNull;
+import static io.github.gromoff97.awium.Conditions.notEqualTo;
 import static io.github.gromoff97.awium.Conditions.notIn;
+import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.containsAllEntries;
 import static io.github.gromoff97.awium.MapConditions.containsAnyEntries;
 import static io.github.gromoff97.awium.MapConditions.containsExactlyEntries;
 import static io.github.gromoff97.awium.MapConditions.doesNotContainAllEntries;
 import static io.github.gromoff97.awium.MapConditions.doesNotContainAnyEntries;
 import static io.github.gromoff97.awium.MapConditions.doesNotContainExactlyEntries;
+import static io.github.gromoff97.awium.internal.ExecutionStep.Phase.ACQUISITION;
+import static io.github.gromoff97.awium.internal.ExecutionStep.Phase.PERSISTENCE;
+import static io.github.gromoff97.awium.internal.WaitCompletion.*;
+import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
+import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
+import static io.github.gromoff97.awium.result.Attempt.Operation;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
+import static java.time.Duration.ofNanos;
+import static java.util.AbstractMap.SimpleImmutableEntry;
+import static org.apache.commons.lang3.exception.ExceptionUtils.rethrow;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Named.named;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class DiagnosticsSnapshotTest {
+
+    @AutoClose
+    private AutoCloseable classResource = () -> {};
 
     private final FakeTime time = new FakeTime(0);
 
@@ -433,31 +445,32 @@ class DiagnosticsSnapshotTest {
         }
     }
 
-    @Test
-    void blankCauseMessagesAreOmittedAndReadOnlyOnce() {
-        for (boolean capture : List.of(false, true)) {
-            for (String message : new String[]{null, "", " \r\n\t"}) {
-                int[] reads = {0};
-                var cause = new IllegalStateException(message) {
-                    @Override
-                    public String getMessage() {
-                        reads[0]++;
-                        return super.getMessage();
-                    }
-                };
-                var time = new FakeTime(0);
-                Callable<Object> source = () -> { throw cause; };
-                var waiting = await(source).usingTime(time, time);
-                AwaitFailure failure = capture
-                        ? failure(diagnostic(waiting).until(isNotNull))
-                        : assertThrows(AwaitExecutionException.class, () -> waiting.until(isNotNull)).failure();
-
-                assertEquals(SOURCE_FAILED, failure.reason());
-                assertSame(cause, failure.cause());
-                assertThat(failure.message()).endsWith("Cause: " + cause.getClass().getName());
-                assertEquals(1, reads[0]);
+    @ParameterizedTest(name = "{0}, message={1}")
+    @MethodSource("blankMessageTerminals")
+    void blankCauseMessagesAreOmittedAndReadOnlyOnce(BinaryOperator<Supplier<AwaitFailure>> terminal, String message) {
+        int[] reads = {0};
+        var cause = new IllegalStateException(message) {
+            @Override
+            public String getMessage() {
+                reads[0]++;
+                return super.getMessage();
             }
-        }
+        };
+        Callable<Object> source = () -> { throw cause; };
+        var waiting = await(source).usingTime(time, time);
+        var failure = terminal.apply(
+                () -> assertThrows(AwaitExecutionException.class, () -> waiting.until(isNotNull)).failure(),
+                () -> failure(diagnostic(waiting).until(isNotNull))).get();
+
+        assertEquals(SOURCE_FAILED, failure.reason());
+        assertSame(cause, failure.cause());
+        assertThat(failure.message()).endsWith("Cause: " + cause.getClass().getName());
+        assertEquals(1, reads[0]);
+    }
+
+    private static Stream<Arguments> blankMessageTerminals() {
+        return terminals().stream().flatMap(terminal -> Stream.of(null, "", " \r\n\t")
+                .map(message -> arguments(terminal, message)));
     }
 
     @Test
@@ -559,9 +572,9 @@ class DiagnosticsSnapshotTest {
         assertEquals(1, expected.calls);
     }
 
-    @ParameterizedTest(name = "tryAwait={0}")
-    @ValueSource(booleans = {false, true})
-    void causeMessageFailureDoesNotRepeatValueRendering(boolean capture) {
+    @ParameterizedTest
+    @MethodSource("terminals")
+    void causeMessageFailureDoesNotRepeatValueRendering(BinaryOperator<Supplier<AwaitFailure>> terminal) {
         int[] renders = {0, 0, 0};
         Object[] values = new Object[3];
         List<String> labels = List.of("root operand", "observed value", "stage operand");
@@ -592,9 +605,9 @@ class DiagnosticsSnapshotTest {
             return values[1];
         }, config(1, 6, 0), time, time);
 
-        AwaitFailure failure = capture
-                ? failure(diagnostic(waiting).until(check))
-                : assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure();
+        var failure = terminal.apply(
+                () -> assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure(),
+                () -> failure(diagnostic(waiting).until(check))).get();
         assertEquals(TIMEOUT, failure.reason());
         assertSame(original, failure.cause());
         assertEquals(List.of(diagnostic), failure.suppressed());
@@ -606,9 +619,9 @@ class DiagnosticsSnapshotTest {
         assertEquals(1, messageCalls[0]);
     }
 
-    @ParameterizedTest(name = "tryAwait={0}")
-    @ValueSource(booleans = {false, true})
-    void failuresInSeveralFieldsDoNotHideLaterFieldsOrTheOriginalCause(boolean capture) {
+    @ParameterizedTest
+    @MethodSource("terminals")
+    void failuresInSeveralFieldsDoNotHideLaterFieldsOrTheOriginalCause(BinaryOperator<Supplier<AwaitFailure>> terminal) {
         var expectedFailure = new IllegalStateException("expected rendering failed");
         var actualFailure = new InternalError("actual rendering failed");
         var causeFailure = new IllegalArgumentException("cause message failed");
@@ -627,9 +640,9 @@ class DiagnosticsSnapshotTest {
                 () -> value -> AttemptResult.of(unsatisfied("not ready", original), null));
         var check = captured(CONDITION, second);
         var waiting = timedAwait(() -> actual, config(1, 2, 0), time, time);
-        AwaitFailure failure = capture
-                ? failure(diagnostic(waiting).until(check))
-                : assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure();
+        var failure = terminal.apply(
+                () -> assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure(),
+                () -> failure(diagnostic(waiting).until(check))).get();
 
         assertSame(original, failure.cause());
         assertEquals(List.of(expectedFailure, actualFailure, causeFailure), failure.suppressed());
@@ -707,7 +720,7 @@ class DiagnosticsSnapshotTest {
         assertThat(valueFailure).hasMessageContainingAll(array ? "Actual: [null]" : "Actual: null", "Timing:");
     }
 
-    @ParameterizedTest(name = "tryAwait={0}, negative={1}")
+    @ParameterizedTest(name = "{displayName}: tryAwait={0}, negative={1}")
     @CsvSource({"false,false", "false,true", "true,false", "true,true"})
     void expectedListFormattingUsesTheFinalInterruptFlagOfTheField(boolean capture, boolean negative) {
         int[] renders = {0, 0};
@@ -748,7 +761,7 @@ class DiagnosticsSnapshotTest {
         assertFalse(currentThread().isInterrupted());
     }
 
-    @ParameterizedTest(name = "tryAwait={0}, negative={1}")
+    @ParameterizedTest(name = "{displayName}: tryAwait={0}, negative={1}")
     @CsvSource({"false,false", "false,true", "true,false", "true,true"})
     void expectedEntryFormattingUsesTheFinalInterruptFlagOfTheField(boolean capture, boolean negative) {
         int[] renders = {0, 0};
@@ -833,9 +846,9 @@ class DiagnosticsSnapshotTest {
         assertEquals(!array, currentThread().isInterrupted());
     }
 
-    @ParameterizedTest(name = "tryAwait={0}")
-    @ValueSource(booleans = {false, true})
-    void diagnosticFailurePreservesTheInterruptRaisedByRendering(boolean capture) {
+    @ParameterizedTest
+    @MethodSource("terminals")
+    void diagnosticFailurePreservesTheInterruptRaisedByRendering(BinaryOperator<Supplier<AwaitFailure>> terminal) {
         int[] messageCalls = {0};
         var diagnostic = new IllegalStateException() {
             @Override
@@ -853,9 +866,9 @@ class DiagnosticsSnapshotTest {
         var original = new AssertionError("not ready");
         var waiting = timedAwait(() -> actual, config(1, 2, 0), time, time);
         var check = condition("ready", value -> unsatisfied("not ready", original));
-        AwaitFailure failure = capture
-                ? failure(diagnostic(waiting).until(check))
-                : assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure();
+        var failure = terminal.apply(
+                () -> assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure(),
+                () -> failure(diagnostic(waiting).until(check))).get();
         assertEquals(TIMEOUT, failure.reason());
         assertSame(original, failure.cause());
         assertSame(diagnostic, failure.suppressed().getFirst());
@@ -863,9 +876,9 @@ class DiagnosticsSnapshotTest {
         assertTrue(currentThread().isInterrupted());
     }
 
-    @ParameterizedTest(name = "tryAwait={0}")
-    @ValueSource(booleans = {false, true})
-    void diagnosticErrorMessagesAreNotEvaluatedRecursively(boolean capture) {
+    @ParameterizedTest
+    @MethodSource("terminals")
+    void diagnosticErrorMessagesAreNotEvaluatedRecursively(BinaryOperator<Supplier<AwaitFailure>> terminal) {
         var interruption = new InterruptedException("diagnostic message interrupted");
         int[] messageCalls = {0};
         var diagnostic = new IllegalStateException() {
@@ -882,12 +895,9 @@ class DiagnosticsSnapshotTest {
             return actual;
         }).usingTime(time, time).upTo(ofNanos(2));
         var check = condition("not ready", value -> unsatisfied("not ready", original));
-        AwaitFailure failure;
-        if (capture) {
-            failure = failure(diagnostic(waiting).until(check));
-        } else {
-            failure = assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure();
-        }
+        var failure = terminal.apply(
+                () -> assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure(),
+                () -> failure(diagnostic(waiting).until(check))).get();
         assertEquals(TIMEOUT, failure.reason());
         assertSame(original, failure.cause());
         assertSame(diagnostic, failure.suppressed().getFirst());
@@ -898,10 +908,9 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void isolatedExceptionClassDoesNotRequireItsEnclosingClassForDiagnostics() throws Exception {
-        byte[] bytes;
-        try (var resource = CountingAssertion.class.getResourceAsStream("DiagnosticsSnapshotTest$CountingAssertion.class")) {
-            bytes = resource.readAllBytes();
-        }
+        var resource = CountingAssertion.class.getResourceAsStream("DiagnosticsSnapshotTest$CountingAssertion.class");
+        classResource = resource;
+        byte[] bytes = resource.readAllBytes();
         var loader = new ClassLoader(null) {
             Class<?> isolatedClass() {
                 return defineClass(null, bytes, 0, bytes.length);
@@ -950,9 +959,7 @@ class DiagnosticsSnapshotTest {
 
         var result = tryAwait(() -> actual).usingTime(time, time)
                 .every(ofNanos(1)).upTo(ofNanos(2)).until(equalTo(expected));
-        var failure = failure(result);
-
-        assertEquals(TIMEOUT, failure.reason());
+        var failure = failure(TIMEOUT, result);
         assertEquals(2, failure.suppressed().size());
         assertSame(expectedFailure, failure.suppressed().get(0));
         assertSame(actualFailure, failure.suppressed().get(1));
@@ -1032,6 +1039,10 @@ class DiagnosticsSnapshotTest {
         var failure = assertFailure(TIMEOUT,
                 () -> complete(new Timeout(evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 2)), config(1, 2, 0), 1));
         assertThat(failure).hasMessageContainingAll("[[[1, 2], leaf], [[1, 2], leaf], [null, [a, b]], [[...]]]");
+    }
+
+    private static List<Named<BinaryOperator<Supplier<AwaitFailure>>>> terminals() {
+        return List.of(named("await", (thrown, captured) -> thrown), named("tryAwait", (thrown, captured) -> captured));
     }
 
     private static CapturedSource<InputCondition<String>> lifecycle(PreservingCondition<String> pending, PreservingCondition<String> completed) {

@@ -1,19 +1,27 @@
 package io.github.gromoff97.awium;
 
-import java.util.Collection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static java.util.AbstractMap.SimpleImmutableEntry;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 final class ProbeContainers {
 
     private ProbeContainers() {}
+
+    static Runnable once(Runnable action) {
+        Runnable once = mock();
+        doAnswer(ignored -> { action.run(); return null; }).doNothing().when(once).run();
+        return once;
+    }
 
     static <ELEMENT> Collection<ELEMENT> sizeOnlyCollection(int size) {
         Collection<ELEMENT> collection = mock();
@@ -44,8 +52,8 @@ final class ProbeContainers {
 
     static final class EntryMap<K, V> extends AbstractMap<K, V> {
         private final List<Entry<K, V>> entries;
-        RuntimeException entrySetFailure;
-        RuntimeException iteratorFailure;
+        Runnable beforeEntrySet = () -> {};
+        Runnable beforeIterator = () -> {};
         int entrySetCalls;
 
         EntryMap(List<Entry<K, V>> entries) {
@@ -60,13 +68,11 @@ final class ProbeContainers {
         @Override
         public Set<Entry<K, V>> entrySet() {
             entrySetCalls++;
-            if (entrySetFailure != null) {
-                throw entrySetFailure;
-            }
+            beforeEntrySet.run();
             return new AbstractSet<>() {
                 @Override
                 public Iterator<Entry<K, V>> iterator() {
-                    if (iteratorFailure != null) throw iteratorFailure;
+                    beforeIterator.run();
                     return entries.iterator();
                 }
 
@@ -83,7 +89,7 @@ final class ProbeContainers {
         }
     }
 
-    static final class ProbeEntry<K, V> extends AbstractMap.SimpleImmutableEntry<K, V> {
+    static final class ProbeEntry<K, V> extends SimpleImmutableEntry<K, V> {
         ProbeEntry(K key, V value) {
             super(key, value);
         }
@@ -119,12 +125,10 @@ final class ProbeContainers {
         }
     }
 
-    record ThrowingEquals(RuntimeException failure) {
+    record ThrowingEquals(Runnable beforeEquality) {
         @Override
         public boolean equals(Object other) {
-            if (failure != null) {
-                throw failure;
-            }
+            beforeEquality.run();
             return other instanceof ThrowingEquals;
         }
 

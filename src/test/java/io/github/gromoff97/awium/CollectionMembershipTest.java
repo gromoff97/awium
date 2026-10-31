@@ -80,9 +80,13 @@ class CollectionMembershipTest {
         record Value(String name, List<String> calls) {
             @Override
             public boolean equals(Object other) {
-                if (!(other instanceof Value value)) return false;
-                calls.add(name + "->" + value.name);
-                return name.equals(value.name);
+                return switch (other) {
+                    case Value value -> {
+                        calls.add(name + "->" + value.name);
+                        yield name.equals(value.name);
+                    }
+                    case null, default -> false;
+                };
             }
 
             @Override
@@ -194,13 +198,13 @@ class CollectionMembershipTest {
         Collection<String> brokenIterator = membershipCollection(List.of());
         when(brokenIterator.iterator()).thenThrow(iteratorCause);
         var brokenEquality = membershipCollection(
-                List.of(new ThrowingEquals(equalityCause)));
+                List.of(new ThrowingEquals(() -> { throw equalityCause; })));
 
         assertSame(iteratorCause, assertFailure(CONDITION_FAILED,
                 () -> checkMembership(brokenIterator, doesNotContain("a"))).getCause());
         assertSame(equalityCause, assertFailure(CONDITION_FAILED,
                 () -> checkMembership(brokenEquality,
-                        doesNotContain(new ThrowingEquals(null)))).getCause());
+                        doesNotContain(new ThrowingEquals(() -> {})))).getCause());
     }
 
     @Test
@@ -235,7 +239,7 @@ class CollectionMembershipTest {
         assertSame(actual, waiting.until(containsAll(List.of())));
         assertSame(actual, waiting.until(doesNotContainAny(List.of())));
         for (var result : List.of(diagnostic(waiting).until(containsAny(List.of())), diagnostic(waiting).until(doesNotContainAll(List.of())))) {
-            assertEquals(TIMEOUT, failure(result).reason());
+            failure(TIMEOUT, result);
         }
         verify(actual, never()).iterator();
     }
@@ -260,7 +264,7 @@ class CollectionMembershipTest {
 
             for (var failed : List.of(diagnostic(waiting).until(containsAny(List.of())),
                     diagnostic(waiting).until(doesNotContainAll(List.of())))) {
-                assertEquals(TIMEOUT, failure(failed).reason());
+                failure(TIMEOUT, failed);
                 assertEquals(List.of(), failed.conditions().getLast().condition().references().getFirst().value());
             }
             assertEquals(actual.isEmpty() ? Satisfied.class : Unsatisfied.class,

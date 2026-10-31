@@ -3,6 +3,7 @@ package io.github.gromoff97.awium;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -35,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static io.github.gromoff97.awium.ProbeContainers.sizeOnlyCollection;
@@ -64,9 +65,10 @@ class CollectionSizeConditionsTest {
                 .hasMessageContaining("collection size was greater than 1");
     }
 
-    @ParameterizedTest(name = "{0}: matches size {1}, rejects size {2}")
+    @ParameterizedTest
     @MethodSource("cases")
-    void conditionsEvaluateEverySizeRelation(PreservingCondition<Collection<?>> condition, int matchingSize, int mismatchingSize) {
+    void conditionsEvaluateEverySizeRelation(Supplier<PreservingCondition<Collection<?>>> factory, int matchingSize, int mismatchingSize) {
+        var condition = factory.get();
         var matching = sizeOnlyCollection(matchingSize);
         var mismatching = sizeOnlyCollection(mismatchingSize);
 
@@ -132,13 +134,16 @@ class CollectionSizeConditionsTest {
     }
 
     private static List<Arguments> cases() {
-        return List.of(arguments(empty, 0, 1), arguments(nonEmpty, 1, 0),
-                arguments(hasSize(2), 2, 1),
-                arguments(hasSizeNotEqualTo(2), 1, 2),
-                arguments(hasSizeGreaterThan(2), 3, 2),
-                arguments(hasSizeAtLeast(2), 2, 1),
-                arguments(hasSizeLessThan(2), 1, 2),
-                arguments(hasSizeAtMost(2), 2, 3));
+        return List.of(sizeCase("empty", () -> empty, 0, 1), sizeCase("nonEmpty", () -> nonEmpty, 1, 0),
+                sizeCase("hasSize", () -> hasSize(2), 2, 1),
+                sizeCase("hasSizeNotEqualTo", () -> hasSizeNotEqualTo(2), 1, 2),
+                sizeCase("hasSizeGreaterThan", () -> hasSizeGreaterThan(2), 3, 2),
+                sizeCase("hasSizeAtLeast", () -> hasSizeAtLeast(2), 2, 1),
+                sizeCase("hasSizeLessThan", () -> hasSizeLessThan(2), 1, 2),
+                sizeCase("hasSizeAtMost", () -> hasSizeAtMost(2), 2, 3));
     }
 
+    private static Arguments sizeCase(String name, Supplier<PreservingCondition<Collection<?>>> factory, int matchingSize, int mismatchingSize) {
+        return argumentSet(name, factory, matchingSize, mismatchingSize);
+    }
 }

@@ -5,29 +5,38 @@ import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static io.github.gromoff97.awium.Condition.PreservingCondition;
-import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
-import static io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
-import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
+import static java.util.stream.Stream.concat;
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.CollectionConditions.*;
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.mismatch;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
+import static io.github.gromoff97.awium.ProbeContainers.once;
+import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
+import static io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
+import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
@@ -61,23 +70,15 @@ class CollectionExactContentTest {
                 Satisfied.class);
     }
 
-    @ParameterizedTest(name = "negative={0}, anyOrder={1}")
-    @CsvSource({"false, false", "false, true", "true, false", "true, true"})
-    void exactContentRequiresEqualSizesWithoutStartingTraversal(boolean negative, boolean anyOrder) {
-        for (var elements : List.of(List.<String>of(), List.of("a"), List.of("a", "b", "c"))) {
-            var actual = new ArrayList<>(elements) {
-                @Override
-                public Iterator<String> iterator() {
-                    throw new AssertionError("different sizes must not start traversal");
-                }
-            };
-            PreservingCondition<? super ArrayList<String>> condition = anyOrder
-                    ? negative ? doesNotContainExactlyInAnyOrder(List.of("a", "b")) : containsExactlyInAnyOrder(List.of("a", "b"))
-                    : negative ? doesNotContainExactly(List.of("a", "b")) : containsExactly(List.of("a", "b"));
-            var evaluation = evaluate(condition, actual);
-            assertThat(evaluation).isInstanceOf(negative ? Satisfied.class : Unsatisfied.class);
-            if (negative) assertSame(actual, result(evaluation));
-        }
+    @TestFactory
+    Stream<DynamicTest> exactContentRequiresEqualSizesWithoutStartingTraversal() {
+        return Stream.of(List.<String>of(), List.of("a"), List.of("a", "b", "c"))
+                .flatMap(elements -> exactMismatches("size " + elements.size(), () -> new ArrayList<>(elements) {
+                    @Override
+                    public Iterator<String> iterator() {
+                        throw new AssertionError("different sizes must not start traversal");
+                    }
+                }));
     }
 
     @Test
@@ -92,30 +93,33 @@ class CollectionExactContentTest {
         assertStatus(containsOnly(List.of()), List.of("a"), Unsatisfied.class);
     }
 
-    @ParameterizedTest(name = "negative={0}, anyOrder={1}")
-    @CsvSource({"false, false", "false, true", "true, false", "true, true"})
-    void exactComparisonRejectsChangesBetweenSizeAndTraversal(boolean negative, boolean anyOrder) {
-        for (boolean shrink : List.of(false, true)) {
-            var actual = new ArrayList<>(List.of("a", "b")) {
-                private boolean changed;
+    @TestFactory
+    Stream<DynamicTest> exactComparisonRejectsChangesBetweenSizeAndTraversal() {
+        var mutations = List.<Named<Consumer<ArrayList<String>>>>of(
+                named("grow", values -> values.add("c")), named("shrink", List::removeLast));
+        return mutations.stream().flatMap(mutation -> exactMismatches(mutation.getName(), () -> new ArrayList<>(List.of("a", "b")) {
+            private final Runnable change = once(() -> mutation.getPayload().accept(this));
 
-                @Override
-                public Iterator<String> iterator() {
-                    if (!changed) {
-                        changed = true;
-                        if (shrink) removeLast();
-                        else add("c");
-                    }
-                    return super.iterator();
-                }
-            };
-            PreservingCondition<? super ArrayList<String>> condition = anyOrder
-                    ? negative ? doesNotContainExactlyInAnyOrder(List.of("a", "b")) : containsExactlyInAnyOrder(List.of("a", "b"))
-                    : negative ? doesNotContainExactly(List.of("a", "b")) : containsExactly(List.of("a", "b"));
-            var evaluation = evaluate(condition, actual);
-            assertThat(evaluation).isInstanceOf(negative ? Satisfied.class : Unsatisfied.class);
-            if (negative) assertSame(actual, result(evaluation));
-        }
+            @Override
+            public Iterator<String> iterator() {
+                change.run();
+                return super.iterator();
+            }
+        }));
+    }
+
+    private static Stream<DynamicTest> exactMismatches(String scenario, Supplier<ArrayList<String>> values) {
+        var expected = List.of("a", "b");
+        return concat(
+                Stream.<PreservingCondition<? super ArrayList<String>>>of(containsExactly(expected), containsExactlyInAnyOrder(expected))
+                        .map(condition -> dynamicTest(scenario + " / " + condition.description(),
+                                () -> assertInstanceOf(Unsatisfied.class, evaluate(condition, values.get())))),
+                Stream.<PreservingCondition<? super ArrayList<String>>>of(
+                        doesNotContainExactly(expected), doesNotContainExactlyInAnyOrder(expected))
+                        .map(condition -> dynamicTest(scenario + " / " + condition.description(), () -> {
+                            var actual = values.get();
+                            assertSame(actual, result(evaluate(condition, actual)));
+                        })));
     }
 
     @Test
@@ -159,14 +163,14 @@ class CollectionExactContentTest {
         var equalityCause = new IllegalStateException("equals failed");
         var brokenIterator = probeList(List.of("a"));
         when(brokenIterator.iterator()).thenThrow(iteratorCause);
-        var brokenEquality = probeList(List.of(new ThrowingEquals(equalityCause)));
+        var brokenEquality = probeList(List.of(new ThrowingEquals(() -> { throw equalityCause; })));
         java.util.concurrent.Callable<List<String>> iteratorSource = () -> brokenIterator;
         java.util.concurrent.Callable<List<ThrowingEquals>> equalitySource = () -> brokenEquality;
 
         assertSame(iteratorCause, assertFailure(CONDITION_FAILED,
                 () -> await(iteratorSource::call).usingTime(time, time).until(doesNotContainExactly(List.of("a")))).getCause());
         assertSame(equalityCause, assertFailure(CONDITION_FAILED,
-                () -> await(equalitySource::call).usingTime(time, time).until(doesNotContainExactly(asList(new ThrowingEquals(null))))).getCause());
+                () -> await(equalitySource::call).usingTime(time, time).until(doesNotContainExactly(asList(new ThrowingEquals(() -> {}))))).getCause());
     }
 
     @Test

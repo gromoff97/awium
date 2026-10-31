@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import static io.github.gromoff97.awium.AwaitTestAccess.observation;
 import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedTryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
@@ -25,10 +26,28 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
+import static java.time.Duration.ofNanos;
 
 class TryAwaitTest {
 
     private final FakeTime time = new FakeTime(0);
+
+    @Test
+    void ordinaryAwaitDoesNotCompareObservationsForHistory() {
+        int[] comparisons = {0};
+        class Observation {
+            @Override public boolean equals(Object other) { comparisons[0]++; return true; }
+            @Override public int hashCode() { return 0; }
+        }
+        var ready = new Observation();
+        var observations = List.of(new Observation(), new Observation(), ready).iterator();
+
+        var result = await(observations::next).usingTime(time, time).every(ofNanos(1))
+                .until(matches(actual -> actual == ready));
+
+        assertSame(ready, result);
+        assertEquals(0, comparisons[0]);
+    }
 
     @Test
     void narrowingKeepsTheOriginalObservationAndReturnsItsConcreteType() {

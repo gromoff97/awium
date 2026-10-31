@@ -252,8 +252,7 @@ class CollectionSelectionConditionsTest {
             }
             for (var check : negative) {
                 var failed = diagnostic(waiting).until(check.because("pattern must be absent"));
-                var failure = failure(failed);
-                assertEquals(TIMEOUT, failure.reason());
+                var failure = failure(TIMEOUT, failed);
                 assertThat(failure.message()).contains("Because: pattern must be absent");
                 assertEquals(List.of(), failed.conditions().getLast().condition().references().getFirst().value());
             }
@@ -276,8 +275,7 @@ class CollectionSelectionConditionsTest {
         }
         for (var check : List.of(doesNotContainSequence(List.of()),
                 doesNotContainSubsequence(List.of()))) {
-            var failure = failure(diagnostic(waiting).until(check));
-            assertEquals(TIMEOUT, failure.reason());
+            var failure = failure(TIMEOUT, diagnostic(waiting).until(check));
         }
     }
 

@@ -21,6 +21,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.values;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitSupport.complete;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
@@ -80,8 +81,7 @@ class FailureTaxonomyTest {
         var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
         var check = asserted(value -> { throw original; });
 
-        var captured = failure(diagnostic(waiting).until(check));
-        assertEquals(TIMEOUT, captured.reason());
+        var captured = failure(TIMEOUT, diagnostic(waiting).until(check));
         assertSame(original, captured.cause());
         assertSame(rendering, captured.suppressed().getFirst());
         var thrown = assertInstanceOf(AwaitAssertionError.class,
@@ -182,7 +182,7 @@ class FailureTaxonomyTest {
                         step -> new Uncontrolled(step, true)),
                 failureCase(WAIT_FAILED, waiting, ACQUISITION, new FailedBeforeObservation<>(WAITING, waiting),
                         step -> new Uncontrolled(step, false)));
-        assertThat(cases).extracting(arguments -> arguments.get()[0]).containsExactlyElementsOf(List.of(Reason.values()));
+        assertThat(cases).extracting(arguments -> arguments.get()[0]).containsExactlyElementsOf(List.of(values()));
         return cases;
     }
 

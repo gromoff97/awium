@@ -47,8 +47,7 @@ class CheckedCallbackTest {
             sleep(0);
             return satisfied();
         }));
-        var failure = failure(result);
-        assertEquals(CONDITION_FAILED, failure.reason());
+        var failure = failure(CONDITION_FAILED, result);
         assertInstanceOf(InterruptedException.class, failure.cause());
         assertFalse(currentThread().isInterrupted());
     }
@@ -115,8 +114,7 @@ class CheckedCallbackTest {
             case "captured" -> tryAwait(() -> "ready").until(captured(conditionPerWait("lazy", factory), matches(value -> true)));
             default -> throw new AssertionError(form);
         };
-        var failure = failure(result);
-        assertEquals(INTERRUPTED, failure.reason());
+        var failure = failure(INTERRUPTED, result);
         assertInstanceOf(InterruptedException.class, failure.cause());
         assertEquals(1, factoryCalls[0]);
         assertEquals(0, evaluatorCalls[0]);
@@ -140,8 +138,7 @@ class CheckedCallbackTest {
             return value -> { evaluatorCalls[0]++; return satisfied(); };
         })));
 
-        var failure = failure(result);
-        assertEquals(INTERRUPTED, failure.reason());
+        var failure = failure(INTERRUPTED, result);
         assertInstanceOf(InterruptedException.class, failure.cause());
         assertEquals(0, factoryCalls[0]);
         assertEquals(0, evaluatorCalls[0]);
@@ -177,8 +174,7 @@ class CheckedCallbackTest {
                     currentThread().interrupt();
                     return true;
                 }));
-        var failure = failure(result);
-        assertEquals(INTERRUPTED, failure.reason());
+        var failure = failure(INTERRUPTED, result);
         assertInstanceOf(InterruptedException.class, failure.cause());
         assertEquals(List.of(1), visited);
         assertEquals(1, sourceCalls[0]);
@@ -207,8 +203,7 @@ class CheckedCallbackTest {
             currentThread().interrupt();
             throw cause;
         }));
-        var failure = failure(result);
-        assertEquals(INTERRUPTED, failure.reason());
+        var failure = failure(INTERRUPTED, result);
         assertSame(cause, failure.cause());
         assertEquals(1, calls[0]);
     }

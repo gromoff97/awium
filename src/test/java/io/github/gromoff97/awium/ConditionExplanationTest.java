@@ -2,33 +2,44 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.function.CheckedPredicate;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
-import io.github.gromoff97.awium.result.AwaitFailure;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.failure;
+import static io.github.gromoff97.awium.Await.CollectionSource;
+import static io.github.gromoff97.awium.Await.MapSource;
+import static io.github.gromoff97.awium.Await.OptionalSource;
+import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.CollectionConditions.all;
 import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.Conditions.*;
-import static io.github.gromoff97.awium.MapConditions.valueFor;
-import static io.github.gromoff97.awium.OptionalConditions.hasValue;
-import static io.github.gromoff97.awium.OptionalConditions.present;
-import static java.time.Duration.ofNanos;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 import static io.github.gromoff97.awium.MapConditions.allEntries;
 import static io.github.gromoff97.awium.MapConditions.hasEntry;
 import static io.github.gromoff97.awium.MapConditions.hasNoEntry;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.OptionalConditions.hasValue;
+import static io.github.gromoff97.awium.OptionalConditions.present;
 import static io.github.gromoff97.awium.function.CheckedPredicate.not;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
+import static java.time.Duration.ofNanos;
+import static java.util.Map.Entry;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
+import static org.junit.jupiter.api.Named.named;
 
 class ConditionExplanationTest {
 
@@ -36,34 +47,49 @@ class ConditionExplanationTest {
 
     private record User(boolean active) {}
 
-    @Test
-    void reasonsAreIndependentCopiesForEveryConditionFamily() {
-        for (Condition original : List.of(isNotNull, equalTo("ready"), present, singleElement,
-                valueFor("id"), instanceOf(User.class), captured(isNotNull), captured(equalTo("ready")),
-                captured(present), captured(valueFor("id")), captured(instanceOf(User.class)))) {
-            var first = original.because("first reason");
-            var second = first.because("second reason");
+    @ParameterizedTest
+    @MethodSource("conditionDefinitions")
+    void reasonsAreIndependentCopiesForEveryConditionFamily(Condition original) {
+        var first = original.because("first reason");
+        var second = first.because("second reason");
 
-            assertNotSame(original, first);
-            assertNotSame(first, second);
-            assertEquals(original.getClass(), second.getClass());
-            assertNull(original.explanation());
-            assertEquals("first reason", first.explanation());
-            assertEquals("second reason", second.explanation());
-            assertEquals(original.description(), second.description());
-            assertEquals(original.references(), second.references());
-            assertThrows(NullPointerException.class, () -> original.because(null));
-            assertThrows(IllegalArgumentException.class, () -> original.because(" \n\t"));
-        }
+        assertNotSame(original, first);
+        assertNotSame(first, second);
+        assertEquals(original.getClass(), second.getClass());
+        assertNull(original.explanation());
+        assertEquals("first reason", first.explanation());
+        assertEquals("second reason", second.explanation());
+        assertEquals(original.description(), second.description());
+        assertEquals(original.references(), second.references());
+    }
+
+    @ParameterizedTest
+    @MethodSource("conditionDefinitions")
+    void reasonsCannotBeNull(Condition original) {
+        assertThrows(NullPointerException.class, () -> original.because(null));
+    }
+
+    @ParameterizedTest
+    @MethodSource("conditionDefinitions")
+    void reasonsCannotBeBlank(Condition original) {
+        assertThrows(IllegalArgumentException.class, () -> original.because(" \n\t"));
+    }
+
+    private static List<Named<Condition>> conditionDefinitions() {
+        return List.of(named("preserving", isNotNull), named("comparison", equalTo("ready")), named("optional", present),
+                named("element", singleElement), named("map value", valueFor("id")), named("narrowing", instanceOf(User.class)),
+                named("captured preserving", captured(isNotNull)), named("captured comparison", captured(equalTo("ready"))),
+                named("captured optional", captured(present)), named("captured map value", captured(valueFor("id"))),
+                named("captured narrowing", captured(instanceOf(User.class))));
     }
 
     @Test
     void typedLambdasAndMethodReferencesKeepTheFluentResults() {
         var user = new User(true);
         var users = new ArrayList<>(List.of(user));
-        Await.CollectionSource<ArrayList<User>> source = () -> users;
-        Await.OptionalSource<User> optional = () -> Optional.of(user);
-        Await.MapSource<Map<String, User>> map = () -> Map.of("id", user);
+        CollectionSource<ArrayList<User>> source = () -> users;
+        OptionalSource<User> optional = () -> Optional.of(user);
+        MapSource<Map<String, User>> map = () -> Map.of("id", user);
 
         ArrayList<User> checked = await(source).until(all((User value) -> value.active()).because("active users required"));
         ArrayList<User> referenced = await(source).until(all(User::active).because("active users required"));
@@ -72,7 +98,7 @@ class ConditionExplanationTest {
         User found = await(optional).until(present.because("user must exist"));
         User mapped = await(map).until(valueFor("id", (User value) -> value.active()).because("user must be active"));
         User narrowed = await(() -> (Object) user).until(instanceOf(User.class).because("user value required"));
-        Condition.PreservingCondition<User> check = matches(User::active);
+        PreservingCondition<User> check = matches(User::active);
         User direct = await(() -> user).until(check.because("active user required"));
 
         assertSame(users, checked);
@@ -83,7 +109,7 @@ class ConditionExplanationTest {
 
     @Test
     void wildcardEntryChecksKeepTheMapTypeAndInheritedReason() {
-        CheckedPredicate<Map.Entry<String, ? extends Number>> positive = entry -> entry.getValue().intValue() > 0;
+        CheckedPredicate<Entry<String, ? extends Number>> positive = entry -> entry.getValue().intValue() > 0;
         var check = matches(positive).because("entry requirement");
         var opposite = matches(not(positive)).because("entry requirement");
         var actual = new LinkedHashMap<String, Integer>();
@@ -98,8 +124,7 @@ class ConditionExplanationTest {
 
         for (var result : List.of(diagnostic(waiting).until(allEntries(opposite)),
                 diagnostic(waiting).until(hasEntry(opposite)), diagnostic(waiting).until(hasNoEntry(check)))) {
-            var failure = failure(result);
-            assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+            var failure = failure(TIMEOUT, result);
             assertThat(failure.message()).contains("Because: entry requirement");
             assertEquals("entry requirement", result.conditions().getLast().condition().explanation());
         }
@@ -123,35 +148,51 @@ class ConditionExplanationTest {
         assertEquals(second.explanation(), result.conditions().getLast().condition().explanation());
     }
 
-    @ParameterizedTest(name = "override={0}, present={1}")
-    @CsvSource({"false, false", "false, true", "true, false", "true, true"})
-    void composedChecksInheritReasonsAndAllowAnOuterOverride(boolean override, boolean present) {
-        var nested = equalTo("ready").because("inner reason");
-        var optional = hasValue(nested);
-        var mapped = valueFor("id", nested);
-        var selected = singleElement(nested);
-        var quantified = all(nested);
-        if (override) {
-            optional = optional.because("outer reason");
-            mapped = mapped.because("outer reason");
-            selected = selected.because("outer reason");
-            quantified = quantified.because("outer reason");
+    @TestFactory
+    List<DynamicTest> composedChecksInheritReasonsAndAllowAnOuterOverride() {
+        var tests = new ArrayList<DynamicTest>();
+        for (var value : List.of(Optional.<String>empty(), Optional.of("pending"))) {
+            tests.add(dynamicTest("optional / " + value, () -> {
+                var nested = equalTo("ready").because("inner reason");
+                var check = hasValue(nested);
+                var time = new FakeTime(0);
+                var waiting = tryAwait(() -> value).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+                assertInheritedAndOverriddenReasons(nested, waiting.until(check), waiting.until(check.because("outer reason")));
+            }));
         }
-        String expected = override ? "outer reason" : "inner reason";
-        Optional<String> value = present ? Optional.of("pending") : Optional.empty();
-        Map<String, String> entries = present ? Map.of("id", "pending") : Map.of();
-        List<String> values = present ? List.of("pending") : List.of();
-        var results = List.of(
-                tryAwait(() -> value).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(optional),
-                tryAwait(() -> entries).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(mapped),
-                tryAwait(() -> values).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(selected),
-                tryAwait(() -> List.of("pending")).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(quantified));
-        for (var result : results) {
-            var failure = failure(result);
-            assertThat(failure.message()).contains("Because: " + expected);
-            assertEquals(expected, result.conditions().getLast().condition().explanation());
-            if (override) assertThat(failure.message()).doesNotContain("inner reason");
+        for (var entries : List.of(Map.<String, String>of(), Map.of("id", "pending"))) {
+            tests.add(dynamicTest("map / " + entries, () -> {
+                var nested = equalTo("ready").because("inner reason");
+                var check = valueFor("id", nested);
+                var time = new FakeTime(0);
+                var waiting = tryAwait(() -> entries).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+                assertInheritedAndOverriddenReasons(nested, waiting.until(check), waiting.until(check.because("outer reason")));
+            }));
         }
+        for (var values : List.of(List.<String>of(), List.of("pending"))) {
+            tests.add(dynamicTest("single element / " + values, () -> {
+                var nested = equalTo("ready").because("inner reason");
+                var check = singleElement(nested);
+                var time = new FakeTime(0);
+                var waiting = tryAwait(() -> values).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+                assertInheritedAndOverriddenReasons(nested, waiting.until(check), waiting.until(check.because("outer reason")));
+            }));
+        }
+        tests.add(dynamicTest("all elements", () -> {
+            var nested = equalTo("ready").because("inner reason");
+            var check = all(nested);
+            var time = new FakeTime(0);
+            var waiting = tryAwait(() -> List.of("pending")).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+            assertInheritedAndOverriddenReasons(nested, waiting.until(check), waiting.until(check.because("outer reason")));
+        }));
+        return tests;
+    }
+
+    private static void assertInheritedAndOverriddenReasons(Condition nested, AwaitResult<?, ?> inherited, AwaitResult<?, ?> overridden) {
+        assertThat(failure(inherited).message()).contains("Because: inner reason");
+        assertEquals("inner reason", inherited.conditions().getLast().condition().explanation());
+        assertThat(failure(overridden).message()).contains("Because: outer reason").doesNotContain("inner reason");
+        assertEquals("outer reason", overridden.conditions().getLast().condition().explanation());
         assertEquals("inner reason", nested.explanation());
     }
 }

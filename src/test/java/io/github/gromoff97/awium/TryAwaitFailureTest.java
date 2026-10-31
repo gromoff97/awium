@@ -1,11 +1,11 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.function.CheckedFunction;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
+import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -20,30 +20,30 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.failure;
-import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedTryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.timedTryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.uncontrolled;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.Conditions.asserted;
 import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.Conditions.conditionPerWait;
 import static io.github.gromoff97.awium.Conditions.isNotNull;
 import static io.github.gromoff97.awium.Conditions.matches;
-import static io.github.gromoff97.awium.Condition.PreservingCondition;
-import static io.github.gromoff97.awium.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static io.github.gromoff97.awium.OptionalConditions.hasValue;
 import static io.github.gromoff97.awium.result.Attempt.Operation;
 import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
-import static io.github.gromoff97.awium.result.AwaitResult.Failed;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
+import static io.github.gromoff97.awium.result.AwaitResult.Failed;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -332,21 +332,12 @@ class TryAwaitFailureTest {
     }
 
     private static <VALUE> Failed<?, ?> assertParity(Function<FakeTime, ValueAwait<VALUE>> waiting, Supplier<PreservingCondition<? super VALUE>> condition) {
-        Throwable thrown;
-        try {
-            thrown = assertThrows(Throwable.class,
-                    () -> waiting.apply(new FakeTime(0)).until(condition.get()));
-        } finally {
-            interrupted();
-        }
-
-        try {
-            var captured = failed(diagnostic(waiting.apply(new FakeTime(0))).until(condition.get()));
-            assertSameFailure(thrown, captured.failure());
-            return captured;
-        } finally {
-            interrupted();
-        }
+        var thrown = assertThrows(Throwable.class, () -> waiting.apply(new FakeTime(0)).until(condition.get()));
+        interrupted();
+        var captured = failed(diagnostic(waiting.apply(new FakeTime(0))).until(condition.get()));
+        assertSameFailure(thrown, captured.failure());
+        interrupted();
+        return captured;
     }
 
     private static void assertSameFailure(Throwable thrown, AwaitFailure captured) {

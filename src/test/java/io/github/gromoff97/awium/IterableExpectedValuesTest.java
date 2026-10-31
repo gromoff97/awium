@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.result.AwaitAssertionError;
-import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -9,7 +8,12 @@ import java.util.Map;
 import java.util.Spliterator;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
@@ -27,51 +31,36 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static io.github.gromoff97.awium.MapConditions.containsAllKeys;
+import static io.github.gromoff97.awium.result.AwaitResult.Satisfied;
+import static io.github.gromoff97.awium.result.AwaitResult.Failed;
 import static java.lang.Thread.currentThread;
 import static java.util.stream.IntStream.range;
+import static org.junit.jupiter.api.Named.named;
+import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
 class IterableExpectedValuesTest {
 
-    @Test
-    void collectionFactoriesSnapshotExpectedIterablesOnce() {
-        List<Function<Iterable<String>, PreservingCondition<? super List<String>>>> factories = List.of(
-                CollectionConditions::containsAll, CollectionConditions::doesNotContainAny,
-                CollectionConditions::doesNotContainAll, CollectionConditions::containsAny,
-                CollectionConditions::containsExactly, CollectionConditions::doesNotContainExactly,
-                CollectionConditions::containsExactlyInAnyOrder, CollectionConditions::doesNotContainExactlyInAnyOrder,
-                CollectionConditions::containsOnly, CollectionConditions::subsetOf,
-                CollectionConditions::startsWith, CollectionConditions::endsWith,
-                CollectionConditions::containsSequence, CollectionConditions::doesNotContainSequence,
-                CollectionConditions::containsSubsequence, CollectionConditions::doesNotContainSubsequence);
-
-        for (var factory : factories) {
-            assertStableSnapshot(factory, asList("a", null, "b"), asList("a", null, "b"));
-        }
+    @ParameterizedTest
+    @MethodSource("collectionFactories")
+    void collectionFactoriesSnapshotExpectedIterablesOnce(Function<Iterable<String>, PreservingCondition<? super List<String>>> factory) {
+        assertStableSnapshot(factory, asList("a", null, "b"), asList("a", null, "b"));
     }
 
-    @Test
-    void mapKeyAndValueFactoriesSnapshotExpectedIterablesOnce() {
-        List<Function<Iterable<String>, PreservingCondition<? super Map<String, String>>>> factories = List.of(
-                MapConditions::containsAllKeys, MapConditions::doesNotContainAnyKeys, MapConditions::containsOnlyKeys,
-                MapConditions::containsAllValues, MapConditions::doesNotContainAnyValues);
-
-        for (var factory : factories) {
-            assertStableSnapshot(factory, List.of("a", "b"), Map.of("a", "a", "b", "b"));
-        }
+    @ParameterizedTest
+    @MethodSource("mapFactories")
+    void mapKeyAndValueFactoriesSnapshotExpectedIterablesOnce(Function<Iterable<String>, PreservingCondition<? super Map<String, String>>> factory) {
+        assertStableSnapshot(factory, List.of("a", "b"), Map.of("a", "a", "b", "b"));
     }
 
-    @Test
-    void textFactoriesSnapshotExpectedIterablesOnce() {
-        List<Function<Iterable<String>, PreservingCondition<? super StringBuilder>>> factories = List.of(
-                StringConditions::containsAll, StringConditions::doesNotContainAny);
-        for (var factory : factories) {
-            assertStableSnapshot(factory, List.of("a", "b"), new StringBuilder("abc"));
-            assertStableSnapshot(factory, List.of("x", "y"), new StringBuilder("abc"));
-        }
+    @ParameterizedTest
+    @MethodSource("textFactories")
+    void textFactoriesSnapshotExpectedIterablesOnce(Function<Iterable<String>, PreservingCondition<? super StringBuilder>> factory, List<String> expected) {
+        assertStableSnapshot(factory, expected, new StringBuilder("abc"));
     }
 
-    @Test
-    void expectedSnapshotsReadSplittableInputsOnTheCallingThread() {
+    @ParameterizedTest
+    @MethodSource("splittableFactories")
+    void expectedSnapshotsReadSplittableInputsOnTheCallingThread(Function<Iterable<String>, Condition> factory) {
         var caller = currentThread();
         var elements = range(0, 2048).mapToObj(Integer::toString).toList();
         int[] reads = {0};
@@ -85,15 +74,9 @@ class IterableExpectedValuesTest {
                 }).spliterator();
             }
         };
-        List<Function<Iterable<String>, Condition>> factories = List.of(
-                CollectionConditions::containsExactly, MapConditions::containsAllKeys,
-                Conditions::in, StringConditions::containsAll, StringConditions::doesNotContainAny);
-        for (var factory : factories) {
-            reads[0] = 0;
-            var condition = factory.apply(expected);
-            assertEquals(elements.size(), reads[0]);
-            assertEquals(elements, condition.references().getFirst().value());
-        }
+        var condition = factory.apply(expected);
+        assertEquals(elements.size(), reads[0]);
+        assertEquals(elements, condition.references().getFirst().value());
     }
 
     @Test
@@ -153,16 +136,18 @@ class IterableExpectedValuesTest {
 
         verify(expected).iterator();
         assertEquals(before.getClass(), after.getClass());
-        if (before instanceof AwaitResult.Satisfied(var ignoredHistory, var observed)) {
-            ACTUAL value = waiting.until(condition);
-            assertSame(actual, value);
-            assertSame(actual, observed);
-        } else {
-            var original = failure(before);
-            var current = failure(after);
-            assertEquals(original.message(), current.message());
-            assertThat(current.message()).doesNotContain("changed");
-            assertThrows(AwaitAssertionError.class, () -> waiting.until(condition));
+        switch (before) {
+            case Satisfied(var ignoredHistory, var observed) -> {
+                ACTUAL value = waiting.until(condition);
+                assertSame(actual, value);
+                assertSame(actual, observed);
+            }
+            case Failed(var ignoredHistory, var original) -> {
+                var current = failure(after);
+                assertEquals(original.message(), current.message());
+                assertThat(current.message()).doesNotContain("changed");
+                assertThrows(AwaitAssertionError.class, () -> waiting.until(condition));
+            }
         }
         verify(expected).iterator();
     }
@@ -177,5 +162,41 @@ class IterableExpectedValuesTest {
         when(expected.iterator()).thenAnswer(ignored -> values.iterator())
                 .thenAnswer(ignored -> { throw new AssertionError("expected values were traversed again"); });
         return expected;
+    }
+
+    private static Stream<Named<Function<Iterable<String>, PreservingCondition<? super List<String>>>>> collectionFactories() {
+        return Stream.of(
+                named("containsAll", CollectionConditions::containsAll), named("doesNotContainAny", CollectionConditions::doesNotContainAny),
+                named("doesNotContainAll", CollectionConditions::doesNotContainAll), named("containsAny", CollectionConditions::containsAny),
+                named("containsExactly", CollectionConditions::containsExactly), named("doesNotContainExactly", CollectionConditions::doesNotContainExactly),
+                named("containsExactlyInAnyOrder", CollectionConditions::containsExactlyInAnyOrder),
+                named("doesNotContainExactlyInAnyOrder", CollectionConditions::doesNotContainExactlyInAnyOrder),
+                named("containsOnly", CollectionConditions::containsOnly), named("subsetOf", CollectionConditions::subsetOf),
+                named("startsWith", CollectionConditions::startsWith), named("endsWith", CollectionConditions::endsWith),
+                named("containsSequence", CollectionConditions::containsSequence), named("doesNotContainSequence", CollectionConditions::doesNotContainSequence),
+                named("containsSubsequence", CollectionConditions::containsSubsequence),
+                named("doesNotContainSubsequence", CollectionConditions::doesNotContainSubsequence));
+    }
+
+    private static Stream<Named<Function<Iterable<String>, PreservingCondition<? super Map<String, String>>>>> mapFactories() {
+        return Stream.of(
+                named("containsAllKeys", MapConditions::containsAllKeys), named("doesNotContainAnyKeys", MapConditions::doesNotContainAnyKeys),
+                named("containsOnlyKeys", MapConditions::containsOnlyKeys), named("containsAllValues", MapConditions::containsAllValues),
+                named("doesNotContainAnyValues", MapConditions::doesNotContainAnyValues));
+    }
+
+    private static Stream<Arguments> textFactories() {
+        Function<Iterable<String>, PreservingCondition<? super StringBuilder>> contains = StringConditions::containsAll;
+        Function<Iterable<String>, PreservingCondition<? super StringBuilder>> excludes = StringConditions::doesNotContainAny;
+        return Stream.of(argumentSet("contains present", contains, List.of("a", "b")),
+                argumentSet("contains absent", contains, List.of("x", "y")),
+                argumentSet("excludes present", excludes, List.of("a", "b")),
+                argumentSet("excludes absent", excludes, List.of("x", "y")));
+    }
+
+    private static Stream<Named<Function<Iterable<String>, Condition>>> splittableFactories() {
+        return Stream.of(named("collection containsExactly", CollectionConditions::containsExactly),
+                named("map containsAllKeys", MapConditions::containsAllKeys), named("in", Conditions::in),
+                named("text containsAll", StringConditions::containsAll), named("text doesNotContainAny", StringConditions::doesNotContainAny));
     }
 }

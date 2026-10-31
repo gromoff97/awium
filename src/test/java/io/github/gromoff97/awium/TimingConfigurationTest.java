@@ -1,95 +1,121 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.Attempt;
+import io.github.gromoff97.awium.result.AwaitResult;
+import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
-import org.junitpioneer.jupiter.cartesian.CartesianTest;
+import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.junitpioneer.jupiter.cartesian.CartesianTest.Values;
-import static io.github.gromoff97.awium.AwaitTestAccess.failure;
-import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
-import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
+import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.Conditions.equalTo;
 import static io.github.gromoff97.awium.Conditions.isNotNull;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
+import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
+import static io.github.gromoff97.awium.result.Attempt.Satisfied;
+import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static io.github.gromoff97.awium.MapConditions.valueFor;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 class TimingConfigurationTest {
 
     private final FakeTime time = new FakeTime(0);
 
-    @CartesianTest(name = "origin={0}, persistence={1}, outcome={2}")
-    void persistenceKeepsPositiveElapsedTimeBeyondSignedNanoseconds(
-            @Values(longs = {0, Long.MAX_VALUE - 2, Long.MIN_VALUE + 2}) long origin,
-            @Values(longs = {2, Long.MAX_VALUE}) long persistence,
-            @Values(strings = {"success", "mismatch", "condition failure", "source failure"}) String outcome) {
-        var time = new FakeTime(origin);
-        var cause = new IllegalStateException(outcome);
-        int[] calls = {0};
-        var waiting = await(() -> {
-            if (++calls[0] == 1) time.advanceNanos(Long.MAX_VALUE - 1);
-            else if (outcome.equals("source failure")) throw cause;
-            return "ready";
-        }).usingTime(time, time).every(ofNanos(Long.MAX_VALUE))
-                .upTo(ofNanos(Long.MAX_VALUE)).persisting(ofNanos(persistence));
-        var result = diagnostic(waiting).until(Conditions.condition("ready", (String actual) -> {
-            if (calls[0] > 1) {
-                if (outcome.equals("condition failure")) throw cause;
-                if (outcome.equals("mismatch")) return unsatisfied("changed");
-            }
-            return satisfied();
-        }));
+    @TestFactory
+    Stream<DynamicTest> persistenceKeepsPositiveElapsedTimeBeyondSignedNanoseconds() {
+        return Stream.of(0L, Long.MAX_VALUE - 2, Long.MIN_VALUE + 2).flatMap(origin ->
+                Stream.of(Map.entry(2L, "106751 d"), Map.entry(Long.MAX_VALUE, "213503 d")).flatMap(timing -> {
+                    long persistence = timing.getKey();
+                    String label = "origin=" + origin + ", persistence=" + persistence + " / ";
+                    return Stream.of(
+                            dynamicTest(label + "success", () -> {
+                                var result = persistPastSignedNanoseconds(origin, persistence, () -> "ready", ConditionResult::satisfied);
+                                assertEquals(1, attempts(result).size());
+                                assertInstanceOf(Satisfied.class, attempts(result).getLast());
+                                assertEquals("ready", result.orThrow());
+                            }),
+                            dynamicTest(label + "mismatch", () -> {
+                                var result = persistPastSignedNanoseconds(origin, persistence, () -> "ready", () -> unsatisfied("changed"));
+                                assertOverflowFailure(result, Unsatisfied.class, PERSISTENCE_FAILED, null, timing.getValue());
+                            }),
+                            dynamicTest(label + "condition failure", () -> {
+                                var cause = new IllegalStateException("condition failure");
+                                var result = persistPastSignedNanoseconds(origin, persistence, () -> "ready", () -> { throw cause; });
+                                assertOverflowFailure(result, FailedAfterObservation.class, CONDITION_FAILED, cause, timing.getValue());
+                            }),
+                            dynamicTest(label + "source failure", () -> {
+                                var cause = new IllegalStateException("source failure");
+                                var result = persistPastSignedNanoseconds(origin, persistence, () -> { throw cause; }, ConditionResult::satisfied);
+                                assertOverflowFailure(result, FailedBeforeObservation.class, SOURCE_FAILED, cause, timing.getValue());
+                            }));
+                }));
+    }
 
-        assertEquals(2, calls[0], outcome);
-        assertEquals(outcome.equals("success") ? 1 : 2, attempts(result).size(), outcome);
+    private static AwaitResult<String, String> persistPastSignedNanoseconds(
+            long origin, long persistence, Callable<String> nextRead, Supplier<ConditionResult> nextCheck) {
+        var time = new FakeTime(origin);
+        var observations = List.<Callable<String>>of(() -> {
+            time.advanceNanos(Long.MAX_VALUE - 1);
+            return "ready";
+        }, nextRead).iterator();
+        var checks = List.<Supplier<ConditionResult>>of(ConditionResult::satisfied, nextCheck).iterator();
+        var waiting = await(() -> observations.next().call()).usingTime(time, time).every(ofNanos(Long.MAX_VALUE))
+                .upTo(ofNanos(Long.MAX_VALUE)).persisting(ofNanos(persistence));
+        var result = diagnostic(waiting).until(condition("ready", (String actual) -> checks.next().get()));
+
+        assertFalse(observations.hasNext(), "both source calls must run");
         assertEquals(2L, result.conditions().getFirst().attempts().lastKey());
-        assertEquals(switch (outcome) {
-            case "source failure" -> Attempt.FailedBeforeObservation.class;
-            case "condition failure" -> Attempt.FailedAfterObservation.class;
-            case "mismatch" -> Attempt.Unsatisfied.class;
-            default -> Attempt.Satisfied.class;
-        }, attempts(result).getLast().getClass());
         assertEquals(origin + Long.MAX_VALUE - 1 + persistence, time.getAsLong());
-        if (outcome.equals("success")) {
-            assertEquals("ready", result.orThrow());
-        } else {
-            var failure = failure(result);
-            assertEquals(switch (outcome) {
-                case "mismatch" -> PERSISTENCE_FAILED;
-                case "condition failure" -> CONDITION_FAILED;
-                default -> SOURCE_FAILED;
-            }, failure.reason());
-            assertSame(outcome.equals("mismatch") ? null : cause, failure.cause());
-            assertThat(failure.message()).contains("elapsed " + (persistence == 2 ? "106751 d" : "213503 d"));
-        }
+        return result;
+    }
+
+    private static void assertOverflowFailure(AwaitResult<String, String> result, Class<?> status, Reason reason, Throwable cause, String elapsed) {
+        assertEquals(2, attempts(result).size());
+        assertInstanceOf(status, attempts(result).getLast());
+        var failure = failure(reason, result);
+        assertSame(cause, failure.cause());
+        assertThat(failure.message()).contains("elapsed " + elapsed);
     }
 
     @ParameterizedTest
     @ValueSource(longs = {50, 100})
-    void timeoutAtMostTheDefaultIntervalAllowsImmediateSuccessAndOneFailedObservation(long timeoutMillis) {
+    void timeoutAtMostTheDefaultIntervalAllowsImmediateSuccess(long timeoutMillis) {
         var timeout = ofMillis(timeoutMillis);
         assertEquals("ready", await(() -> "ready").usingTime(time, time).upTo(timeout).until(isNotNull));
         assertThat(time.parkRequests).isEmpty();
+    }
 
+    @ParameterizedTest
+    @ValueSource(longs = {50, 100})
+    void timeoutAtMostTheDefaultIntervalAllowsOnlyOneFailedObservation(long timeoutMillis) {
+        var timeout = ofMillis(timeoutMillis);
         int[] calls = {0};
         var result = tryAwait(() -> ++calls[0]).usingTime(time, time).upTo(timeout).until(equalTo(2));
 
-        var failure = failure(result);
-        assertEquals(TIMEOUT, failure.reason());
+        var failure = failure(TIMEOUT, result);
         assertEquals(1, calls[0]);
         assertEquals(1, attempts(result).size());
         assertEquals(timeout.toNanos(), time.getAsLong());
@@ -102,8 +128,7 @@ class TimingConfigurationTest {
         var result = tryAwait(states::next).usingTime(time, time).every(ofNanos(1))
                 .persisting(ofNanos(2)).until(valueFor("key", equalTo("ready")));
 
-        var failure = failure(result);
-        assertEquals(PERSISTENCE_FAILED, failure.reason());
+        var failure = failure(PERSISTENCE_FAILED, result);
         assertEquals(2, attempts(result).size());
         assertEquals(1, time.getAsLong());
     }
@@ -130,9 +155,8 @@ class TimingConfigurationTest {
         int[] factories = {0};
         var condition = Conditions.<String>conditionPerWait("second observation", () -> {
             factories[0]++;
-            int[] calls = {0};
-            return actual -> ++calls[0] == 2
-                    ? satisfied() : unsatisfied("first observation");
+            var outcomes = List.of(unsatisfied("first observation"), satisfied()).iterator();
+            return actual -> outcomes.next();
         });
         var waiting = await(() -> "ready").usingTime(() -> {
             clockReads[0]++;
@@ -154,13 +178,14 @@ class TimingConfigurationTest {
         assertEquals(2104, time.getAsLong());
     }
 
-    @Test
-    void rejectsMissingTimeOperationsBeforePolling() {
+    @TestFactory
+    List<DynamicTest> rejectsMissingTimeOperationsBeforePolling() {
         Callable<String> source = () -> {
             throw new AssertionError("source must not run");
         };
         var waiting = await(source);
-        assertThrows(NullPointerException.class, () -> waiting.usingTime(null, time));
-        assertThrows(NullPointerException.class, () -> waiting.usingTime(time, null));
+        return List.of(
+                dynamicTest("missing clock", () -> assertThrows(NullPointerException.class, () -> waiting.usingTime(null, time))),
+                dynamicTest("missing parker", () -> assertThrows(NullPointerException.class, () -> waiting.usingTime(time, null))));
     }
 }

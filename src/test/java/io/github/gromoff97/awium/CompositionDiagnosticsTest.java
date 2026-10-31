@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitResult;
+import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.Collection;
@@ -10,28 +10,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.failure;
-import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
-import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.uncontrolled;
-import static io.github.gromoff97.awium.Conditions.*;
-import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-import static io.github.gromoff97.awium.MapConditions.valueFor;
-import static io.github.gromoff97.awium.OptionalConditions.hasValue;
-import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
-import static java.time.Duration.ofNanos;
-import static java.util.Arrays.asList;
-import static org.apache.commons.lang3.exception.ExceptionUtils.rethrow;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 import static io.github.gromoff97.awium.CollectionConditions.all;
 import static io.github.gromoff97.awium.CollectionConditions.any;
 import static io.github.gromoff97.awium.CollectionConditions.none;
 import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.Condition.MapValueCondition;
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
+import static io.github.gromoff97.awium.Condition.Reference;
+import static io.github.gromoff97.awium.Conditions.*;
+import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.allEntries;
 import static io.github.gromoff97.awium.MapConditions.allKeys;
 import static io.github.gromoff97.awium.MapConditions.allValues;
@@ -41,26 +41,45 @@ import static io.github.gromoff97.awium.MapConditions.hasEntry;
 import static io.github.gromoff97.awium.MapConditions.hasNoEntry;
 import static io.github.gromoff97.awium.MapConditions.noKey;
 import static io.github.gromoff97.awium.MapConditions.noValue;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.OptionalConditions.hasValue;
+import static io.github.gromoff97.awium.ProbeContainers.EntryMap;
+import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
+import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static java.time.Duration.ofNanos;
+import static java.util.AbstractMap.SimpleImmutableEntry;
+import static java.util.Arrays.asList;
+import static java.util.Map.Entry;
+import static org.apache.commons.lang3.exception.ExceptionUtils.rethrow;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class CompositionDiagnosticsTest {
 
     private final FakeTime time = new FakeTime(0);
 
-    @Test
-    void selectedMapValuesRetainTheLookupKeyAlongsideTheNestedExpectation() {
-        for (String key : List.of("billing", "shipping")) {
-            var time = new FakeTime(0);
-            var check = valueFor(key, equalTo("ready"));
-            var result = tryAwait(() -> Map.of("billing", "pending", "shipping", "pending"))
-                    .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(check);
-            var failure = failure(result);
+    @ParameterizedTest
+    @ValueSource(strings = {"billing", "shipping"})
+    void selectedMapValuesRetainTheLookupKeyAlongsideTheNestedExpectation(String key) {
+        var check = valueFor(key, equalTo("ready"));
+        var result = tryAwait(() -> Map.of("billing", "pending", "shipping", "pending"))
+                .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(check);
+        var failure = failure(result);
 
-            assertThat(failure.message()).contains("Key: \"" + key + "\"", "Expected: \"ready\"");
-            assertSame(check, result.conditions().getFirst().condition());
-            assertThat(result.conditions().getFirst().toString()).contains("Key: \"" + key + "\"");
-        }
+        assertThat(failure.message()).contains("Key: \"" + key + "\"", "Expected: \"ready\"");
+        assertSame(check, result.conditions().getFirst().condition());
+        assertThat(result.conditions().getFirst().toString()).contains("Key: \"" + key + "\"");
     }
 
     @Test
@@ -127,14 +146,11 @@ class CompositionDiagnosticsTest {
     @Test
     void nestedQuantifierErrorsKeepTheirPositionsAlongsideCapturedProgress() {
         var cause = new IllegalArgumentException("probe failed");
-        int[] calls = {0};
-        var probe = condition("value is ready", (String value) -> {
-            calls[0]++;
-            if (value.equals("bad")) throw cause;
-            return satisfied();
-        });
+        Function<String, ConditionResult> probe = mock();
+        when(probe.apply(anyString())).thenReturn(satisfied());
+        when(probe.apply("bad")).thenAnswer(ignored -> { throw cause; });
         var observed = Optional.of(List.of(List.of("ready"), List.of("bad", "unused")));
-        var check = hasValue(all(all(probe)));
+        var check = hasValue(all(all(condition("value is ready", probe::apply))));
         var result = tryAwait(() -> observed).usingTime(time, time).every(ofNanos(1))
                 .until(captured(isNotNull, check));
         var failure = failure(result);
@@ -142,50 +158,58 @@ class CompositionDiagnosticsTest {
         String location = "optional value → collection elements[1] → collection elements[0]";
 
         assertSame(cause, failure.cause());
-        assertEquals(2, calls[0]);
+        verify(probe, times(2)).apply(anyString());
         assertSame(check, result.conditions().getLast().condition());
         assertEquals(2L, result.conditions().getLast().attempts().firstKey());
-        assertEquals(location, uncontrolled(Attempt.Operation.CONDITION, last).location());
+        assertEquals(location, uncontrolled(CONDITION, last).location());
         assertThat(failure.message()).contains("Within: " + location);
         assertThat(last.toString()).contains("Within: " + location);
     }
 
     @Test
-    void traversalFailuresRetainHowManyCandidatesWereChecked() {
-        for (int completed : new int[]{0, 1}) {
-            var cause = new AssertionError("iterator failed");
-            var observed = new AbstractCollection<String>() {
-                @Override public int size() { return completed + 1; }
-                @Override public Iterator<String> iterator() {
-                    if (completed == 0) throw cause;
-                    return new Iterator<>() {
-                        int read;
-                        @Override public boolean hasNext() {
-                            if (read == completed) throw cause;
-                            return true;
-                        }
-                        @Override public String next() { read++; return "ready"; }
-                    };
-                }
-                @Override public String toString() { return "unavailable collection"; }
-            };
-            int[] calls = {0};
-            var time = new FakeTime(0);
-            var result = tryAwait(() -> observed).usingTime(time, time).until(all(
-                    condition("ready", value -> { calls[0]++; return satisfied(); })));
-            var failure = failure(result);
-
-            assertEquals(completed, calls[0]);
-            assertSame(cause, failure.cause());
-            assertEquals(CONDITION_FAILED, failure.reason());
-            assertThat(failure.message()).contains("Within: collection elements (checked " + completed + ")");
-        }
+    void iteratorCreationFailureReportsNoCheckedCandidates() {
+        var cause = new AssertionError("iterator failed");
+        assertTraversalFailure(brokenCollection(cause), cause, 0);
     }
 
-    private static <ELEMENT> Collection<ELEMENT> brokenCollection(RuntimeException cause) {
+    @Test
+    void traversalFailureReportsTheAlreadyCheckedCandidate() {
+        var cause = new AssertionError("iterator failed");
+        var observed = new AbstractCollection<String>() {
+            @Override public int size() { return 2; }
+            @Override public Iterator<String> iterator() {
+                Iterator<String> iterator = mock();
+                when(iterator.hasNext()).thenReturn(true);
+                when(iterator.next()).thenAnswer(ignored -> {
+                    doAnswer(call -> { throw cause; }).when(iterator).hasNext();
+                    return "ready";
+                }).thenAnswer(ignored -> {
+                    doReturn(true).when(iterator).hasNext();
+                    return "ready";
+                });
+                return iterator;
+            }
+            @Override public String toString() { return "unavailable collection"; }
+        };
+        assertTraversalFailure(observed, cause, 1);
+    }
+
+    private void assertTraversalFailure(Collection<String> observed, Throwable cause, int completed) {
+        int[] calls = {0};
+        var result = tryAwait(() -> observed).usingTime(time, time).until(all(
+                condition("ready", value -> { calls[0]++; return satisfied(); })));
+        var failure = failure(result);
+
+        assertEquals(completed, calls[0]);
+        assertSame(cause, failure.cause());
+        assertEquals(CONDITION_FAILED, failure.reason());
+        assertThat(failure.message()).contains("Within: collection elements (checked " + completed + ")");
+    }
+
+    private static <ELEMENT> Collection<ELEMENT> brokenCollection(Throwable cause) {
         return new AbstractCollection<>() {
             @Override public int size() { return 1; }
-            @Override public Iterator<ELEMENT> iterator() { throw cause; }
+            @Override public Iterator<ELEMENT> iterator() { return rethrow(cause); }
             @Override public String toString() { return "unavailable collection"; }
         };
     }
@@ -203,92 +227,104 @@ class CompositionDiagnosticsTest {
                     return ignored -> satisfied();
                 })));
         var failure = failure(result);
-        var status = uncontrolled(Attempt.Operation.CONDITION, attempts(result).getFirst());
+        var status = uncontrolled(CONDITION, attempts(result).getFirst());
 
         assertSame(cause, failure.cause());
         assertEquals("map entries (checked 0)", status.location());
         assertThat(failure.message()).contains("Within: " + status.location());
     }
 
-    @Test
-    void quantifiersReportTheirScopeAndNamedCheckOnFailure() {
-        String description = "account is active";
-        var mismatch = condition(description, ignored -> unsatisfied());
-        var match = condition(description, ignored -> satisfied());
-        var collection = await(() -> List.of("pending"))
-                .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
-        var map = await(() -> Map.of("account", "pending"))
-                .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
-        var nested = await(() -> List.of(List.of("pending")))
-                .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+    @ParameterizedTest
+    @MethodSource("collectionQuantifierFailures")
+    void collectionQuantifiersReportTheirScopeAndNamedCheck(PreservingCondition<Collection<?>> check, String scope, String mismatch) {
+        var result = tryAwait(() -> List.of("pending")).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(check);
+        assertQuantifierFailure(result, scope, mismatch);
+    }
 
-        assertQuantifierFailure(diagnostic(collection).until(all(mismatch)),
-                "all collection elements match", "not all collection elements matched (checked 1)");
-        assertQuantifierFailure(diagnostic(collection).until(any(mismatch)),
-                "some collection elements match", "no collection elements matched (checked 1)");
-        assertQuantifierFailure(diagnostic(collection).until(none(match)),
-                "no collection elements match", "some collection elements matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(allEntries(mismatch)),
-                "all map entries match", "not all map entries matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(hasEntry(mismatch)),
-                "some map entries match", "no map entries matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(hasNoEntry(match)),
-                "no map entries match", "some map entries matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(allKeys(mismatch)),
-                "all map keys match", "not all map keys matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(anyKey(mismatch)),
-                "some map keys match", "no map keys matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(noKey(match)),
-                "no map keys match", "some map keys matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(allValues(mismatch)),
-                "all map values match", "not all map values matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(anyValue(mismatch)),
-                "some map values match", "no map values matched (checked 1)");
-        assertQuantifierFailure(diagnostic(map).until(noValue(match)),
-                "no map values match", "some map values matched (checked 1)");
-        assertQuantifierFailure(diagnostic(nested).until(all(any(mismatch))),
-                "all collection elements match: some collection elements match",
+    private static List<Arguments> collectionQuantifierFailures() {
+        var mismatch = condition("account is active", ignored -> unsatisfied());
+        var match = condition("account is active", ignored -> satisfied());
+        return List.of(
+                arguments(all(mismatch), "all collection elements match", "not all collection elements matched (checked 1)"),
+                arguments(any(mismatch), "some collection elements match", "no collection elements matched (checked 1)"),
+                arguments(none(match), "no collection elements match", "some collection elements matched (checked 1)"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("mapQuantifierFailures")
+    void mapQuantifiersReportTheirScopeAndNamedCheck(PreservingCondition<Map<?, ?>> check, String scope, String mismatch) {
+        var result = tryAwait(() -> Map.of("account", "pending"))
+                .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(check);
+        assertQuantifierFailure(result, scope, mismatch);
+    }
+
+    private static List<Arguments> mapQuantifierFailures() {
+        var mismatch = condition("account is active", ignored -> unsatisfied());
+        var match = condition("account is active", ignored -> satisfied());
+        return List.of(
+                arguments(allEntries(mismatch), "all map entries match", "not all map entries matched (checked 1)"),
+                arguments(hasEntry(mismatch), "some map entries match", "no map entries matched (checked 1)"),
+                arguments(hasNoEntry(match), "no map entries match", "some map entries matched (checked 1)"),
+                arguments(allKeys(mismatch), "all map keys match", "not all map keys matched (checked 1)"),
+                arguments(anyKey(mismatch), "some map keys match", "no map keys matched (checked 1)"),
+                arguments(noKey(match), "no map keys match", "some map keys matched (checked 1)"),
+                arguments(allValues(mismatch), "all map values match", "not all map values matched (checked 1)"),
+                arguments(anyValue(mismatch), "some map values match", "no map values matched (checked 1)"),
+                arguments(noValue(match), "no map values match", "some map values matched (checked 1)"));
+    }
+
+    @Test
+    void nestedQuantifiersReportBothScopesAndTheNamedCheck() {
+        var mismatch = condition("account is active", ignored -> unsatisfied());
+        var result = tryAwait(() -> List.of(List.of("pending")))
+                .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2)).until(all(any(mismatch)));
+        assertQuantifierFailure(result, "all collection elements match: some collection elements match",
                 "not all collection elements matched (checked 1): no collection elements matched (checked 1)");
-        assertQuantifierFailure(diagnostic(collection).until(captured(isNotNull, all(mismatch))),
-                "all collection elements match", "not all collection elements matched (checked 1)");
+    }
+
+    @Test
+    void capturedQuantifiersReportTheFailedStageScopeAndNamedCheck() {
+        var mismatch = condition("account is active", ignored -> unsatisfied());
+        var result = tryAwait(() -> List.of("pending")).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
+                .until(captured(isNotNull, all(mismatch)));
+        assertQuantifierFailure(result, "all collection elements match", "not all collection elements matched (checked 1)");
     }
 
     private static void assertQuantifierFailure(AwaitResult<?, ?> result, String scope, String mismatch) {
-        var failure = failure(result);
-        assertEquals(TIMEOUT, failure.reason());
+        var failure = failure(TIMEOUT, result);
         String description = scope + ": account is active";
         assertThat(failure.message()).contains(description, mismatch);
         var last = attempts(result).getLast();
         var condition = result.conditions().getLast().condition();
         assertEquals(description, condition.description());
-        assertEquals(mismatch, assertInstanceOf(Attempt.Unsatisfied.class, last).mismatch());
+        assertEquals(mismatch, assertInstanceOf(Unsatisfied.class, last).mismatch());
     }
 
-    @Test
-    void missingOptionalKeepsItsCompleteDefinitionAndThePresenceMismatch() {
-        List<Optional<String>> observations = asList(null, Optional.empty());
-        for (var actual : observations) {
-            var time = new FakeTime(0);
-            var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
-            var selected = hasValue(equalTo("Bob"));
-            var typed = hasValue(instanceOf(Integer.class));
-            var selectedResult = diagnostic(waiting).until(selected);
-            var typedResult = diagnostic(waiting).until(typed);
+    @ParameterizedTest
+    @MethodSource("missingOptionals")
+    void missingOptionalKeepsItsCompleteDefinitionAndThePresenceMismatch(Optional<String> actual, String mismatch) {
+        var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+        var selected = hasValue(equalTo("Bob"));
+        var typed = hasValue(instanceOf(Integer.class));
+        var selectedResult = diagnostic(waiting).until(selected);
+        var typedResult = diagnostic(waiting).until(typed);
 
-            for (var result : List.of(selectedResult, typedResult)) {
-                var failure = failure(result);
-                var entry = attempts(result).getLast();
-                assertEquals(TIMEOUT, failure.reason());
-                assertEquals(actual == null ? "optional was null" : "optional was empty",
-                        assertInstanceOf(Attempt.Unsatisfied.class, entry).mismatch());
-            }
-            assertSame(selected, selectedResult.conditions().getFirst().condition());
-            assertSame(typed, typedResult.conditions().getFirst().condition());
-            assertEquals(failure(selectedResult).message(),
-                    assertFailure(TIMEOUT, () -> waiting.until(selected)).getMessage());
-            assertEquals(failure(typedResult).message(),
-                    assertFailure(TIMEOUT, () -> waiting.until(typed)).getMessage());
+        for (var result : List.of(selectedResult, typedResult)) {
+            var failure = failure(result);
+            var entry = attempts(result).getLast();
+            assertEquals(TIMEOUT, failure.reason());
+            assertEquals(mismatch, assertInstanceOf(Unsatisfied.class, entry).mismatch());
         }
+        assertSame(selected, selectedResult.conditions().getFirst().condition());
+        assertSame(typed, typedResult.conditions().getFirst().condition());
+        assertEquals(failure(selectedResult).message(),
+                assertFailure(TIMEOUT, () -> waiting.until(selected)).getMessage());
+        assertEquals(failure(typedResult).message(),
+                assertFailure(TIMEOUT, () -> waiting.until(typed)).getMessage());
+    }
+
+    private static List<Arguments> missingOptionals() {
+        return List.of(arguments(null, "optional was null"), arguments(Optional.empty(), "optional was empty"));
     }
 
     @Test
@@ -304,37 +340,37 @@ class CompositionDiagnosticsTest {
         assertEquals(nested.references(), result.conditions().getFirst().condition().references());
     }
 
-    @Test
-    void missingKeyAndNestedMismatchRetainBothExpectedOperands() {
-        for (Map<String, String> actual : asList(null, Map.<String, String>of(), Map.of("customerId", "Alice"))) {
-            var time = new FakeTime(0);
-            var result = tryAwait(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).until(
-                    valueFor("customerId", equalTo("Bob")));
-            var failure = failure(result);
-            assertEquals(TIMEOUT, failure.reason());
-            assertThat(failure.message()).contains("Key: \"customerId\"", "Expected: \"Bob\"");
-            assertEquals(1, attempts(result).size());
-            assertEquals(3, result.conditions().getFirst().attempts().firstKey());
-        }
+    @ParameterizedTest
+    @MethodSource("missingValues")
+    void missingKeyAndNestedMismatchRetainBothExpectedOperands(Map<String, String> actual) {
+        var result = tryAwait(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3)).until(
+                valueFor("customerId", equalTo("Bob")));
+        var failure = failure(TIMEOUT, result);
+        assertThat(failure.message()).contains("Key: \"customerId\"", "Expected: \"Bob\"");
+        assertEquals(1, attempts(result).size());
+        assertEquals(3, result.conditions().getFirst().attempts().firstKey());
+    }
+
+    private static List<Map<String, String>> missingValues() {
+        return asList(null, Map.of(), Map.of("customerId", "Alice"));
     }
 
     @Test
     void historyRetainsLookupAndNestedExpectationsAfterTheKeyAppears() {
-        var observations = List.of(Map.<String, String>of(), Map.of("customerId", "Alice"), Map.of("customerId", "Bob"));
-        int[] calls = {0};
+        var observations = List.of(Map.<String, String>of(), Map.of("customerId", "Alice"), Map.of("customerId", "Bob")).iterator();
         var check = valueFor("customerId", equalTo("Bob"));
-        var result = tryAwait(() -> observations.get(calls[0]++)).usingTime(time, time).every(ofNanos(1)).until(check);
+        var result = tryAwait(observations::next).usingTime(time, time).every(ofNanos(1)).until(check);
 
         assertEquals("Bob", result.orThrow());
         assertEquals(3, attempts(result).size());
         assertSame(check, result.conditions().getFirst().condition());
-        assertEquals(List.of(new Condition.Reference<>("Key", "customerId"),
-                new Condition.Reference<>("Expected", "Bob")), result.conditions().getFirst().condition().references());
+        assertEquals(List.of(new Reference<>("Key", "customerId"),
+                new Reference<>("Expected", "Bob")), result.conditions().getFirst().condition().references());
     }
 
     @Test
     void missingKeyInsideCapturedKeepsLookupContextAndDoesNotCreateTheNestedSession() {
-        Condition.MapValueCondition<Map<? super String, ? extends String>> selected = valueFor("customerId", conditionPerWait("nested", () -> {
+        MapValueCondition<Map<? super String, ? extends String>> selected = valueFor("customerId", conditionPerWait("nested", () -> {
             throw new AssertionError("nested factory must not run before extraction succeeds");
         }));
         var failure = assertFailure(TIMEOUT, () -> await(() -> Map.<String, String>of())
@@ -361,34 +397,35 @@ class CompositionDiagnosticsTest {
         assertEquals(1, renders[0]);
     }
 
-    @Test
-    void failedExtractionRetainsTheKeyAndDoesNotInitializeTheNestedCallback() {
-        for (Throwable cause : List.of(new IllegalStateException("value failed"),
-                new AssertionError("getter assertion"), new Throwable("getter throwable"))) {
-            var entry = new java.util.AbstractMap.SimpleImmutableEntry<>("customerId", "Alice") {
-                @Override public String getValue() { return rethrow(cause); }
-            };
-            var actual = new ProbeContainers.EntryMap<String, String>(List.of(entry));
-            var selected = valueFor("customerId", conditionPerWait("nested", () -> {
-                throw new AssertionError("nested factory must not run before extraction succeeds");
-            })).because("customer lookup must succeed");
-            var waiting = await(() -> actual);
+    @ParameterizedTest
+    @MethodSource("extractionFailures")
+    void failedExtractionRetainsTheKeyAndDoesNotInitializeTheNestedCallback(Throwable cause) {
+        var entry = new SimpleImmutableEntry<>("customerId", "Alice") {
+            @Override public String getValue() { return rethrow(cause); }
+        };
+        var actual = new EntryMap<String, String>(List.of(entry));
+        var selected = valueFor("customerId", conditionPerWait("nested", () -> {
+            throw new AssertionError("nested factory must not run before extraction succeeds");
+        })).because("customer lookup must succeed");
+        var waiting = await(() -> actual);
 
-            var result = diagnostic(waiting).until(selected);
-            var failure = failure(result);
-            assertEquals(CONDITION_FAILED, failure.reason());
-            assertSame(cause, failure.cause());
-            assertThat(failure.message()).contains("Key: \"customerId\"", "Because: customer lookup must succeed");
-            uncontrolled(Attempt.Operation.CONDITION, attempts(result).getFirst());
-            assertEquals("customerId", result.conditions().getFirst().condition().references().getFirst().value());
-            assertSame(cause, assertFailure(CONDITION_FAILED, () -> waiting.until(selected)).getCause());
+        var result = diagnostic(waiting).until(selected);
+        var failure = failure(CONDITION_FAILED, result);
+        assertSame(cause, failure.cause());
+        assertThat(failure.message()).contains("Key: \"customerId\"", "Because: customer lookup must succeed");
+        uncontrolled(CONDITION, attempts(result).getFirst());
+        assertEquals("customerId", result.conditions().getFirst().condition().references().getFirst().value());
+        assertSame(cause, assertFailure(CONDITION_FAILED, () -> waiting.until(selected)).getCause());
 
-            var captured = diagnostic(waiting).until(captured(selected, selected));
-            var capturedOutcome = uncontrolled(Attempt.Operation.CONDITION, attempts(captured).getFirst());
-            assertSame(cause, capturedOutcome.cause());
-            assertThat(captured.conditions().getLast().attempts()).isEmpty();
-            assertEquals("customerId", captured.conditions().getFirst().condition().references().getFirst().value());
-            assertEquals("customer lookup must succeed", captured.conditions().getFirst().condition().explanation());
-        }
+        var captured = diagnostic(waiting).until(captured(selected, selected));
+        var capturedOutcome = uncontrolled(CONDITION, attempts(captured).getFirst());
+        assertSame(cause, capturedOutcome.cause());
+        assertThat(captured.conditions().getLast().attempts()).isEmpty();
+        assertEquals("customerId", captured.conditions().getFirst().condition().references().getFirst().value());
+        assertEquals("customer lookup must succeed", captured.conditions().getFirst().condition().explanation());
+    }
+
+    private static List<Throwable> extractionFailures() {
+        return List.of(new IllegalStateException("value failed"), new AssertionError("getter assertion"), new Throwable("getter throwable"));
     }
 }

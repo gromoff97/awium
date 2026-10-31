@@ -1,164 +1,157 @@
 package io.github.gromoff97.awium;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.SequencedCollection;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.CollectionConditions.elementAt;
+import static io.github.gromoff97.awium.CollectionConditions.firstElement;
+import static io.github.gromoff97.awium.CollectionConditions.lastElement;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.Condition.SelectedCondition;
+import static io.github.gromoff97.awium.MapConditions.singleEntry;
+import static io.github.gromoff97.awium.ProbeContainers.once;
 import static java.time.Duration.ofNanos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static io.github.gromoff97.awium.CollectionConditions.elementAt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class ChangingContainerSelectionTest {
 
     private final FakeTime time = new FakeTime(0);
 
     @Test
-    void indexedSelectionRetriesWhenTheListIsEmptiedBeforeSelection() {
+    void indexedSelectionRetriesWhenTheListIsEmptiedBeforeSelection() throws Exception {
         var values = new ChangingList();
         values.add("old");
-        int[] calls = {0};
 
-        var result = tryAwait(() -> {
-            if (++calls[0] == 2) values.add("ready");
-            return values;
-        }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
+        var source = changingSource(values, () -> values.add("ready"));
+        var result = tryAwait(source::call).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
                 .until(elementAt(0));
 
         assertEquals("ready", result.orThrow());
-        assertEquals(2, calls[0]);
+        verify(source, times(2)).call();
     }
 
-    @Test
-    void firstAndLastRetryWhenTheDequeIsEmptiedBeforeSelection() {
-        for (boolean last : new boolean[] {false, true}) {
-            var values = new ChangingDeque();
-            values.add("old");
-            int[] calls = {0};
-            var time = new FakeTime(0);
-
-            var result = tryAwait(() -> {
-                if (++calls[0] == 2) values.add("ready");
-                return values;
-            }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
-                    .until(last ? CollectionConditions.lastElement : CollectionConditions.firstElement);
-
-            assertEquals("ready", result.orThrow());
-            assertEquals(2, calls[0]);
-        }
-    }
-
-    @Test
-    void singleRetriesWhenTheQueueIsEmptiedBeforeItsIteratorIsCreated() {
-        var values = new ChangingQueue();
+    @ParameterizedTest
+    @MethodSource("ends")
+    void firstAndLastRetryWhenTheDequeIsEmptiedBeforeSelection(SelectedCondition<SequencedCollection<?>> selection) throws Exception {
+        var values = new ChangingDeque();
         values.add("old");
-        int[] calls = {0};
 
-        var result = tryAwait(() -> {
-            if (++calls[0] == 2) values.add("ready");
-            return values;
-        }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).until(CollectionConditions.singleElement);
+        var source = changingSource(values, () -> values.add("ready"));
+        var result = tryAwait(source::call).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
+                .until(selection);
 
         assertEquals("ready", result.orThrow());
-        assertEquals(2, calls[0]);
+        verify(source, times(2)).call();
+    }
+
+    private static List<SelectedCondition<SequencedCollection<?>>> ends() {
+        return List.of(firstElement, lastElement);
     }
 
     @Test
-    void singleEntryRetriesWhenTheMapIsEmptiedBeforeItsViewIsObtained() {
+    void singleRetriesWhenTheQueueIsEmptiedBeforeItsIteratorIsCreated() throws Exception {
+        var values = new ChangingQueue();
+        values.add("old");
+
+        var source = changingSource(values, () -> values.add("ready"));
+        var result = tryAwait(source::call).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).until(singleElement);
+
+        assertEquals("ready", result.orThrow());
+        verify(source, times(2)).call();
+    }
+
+    @Test
+    void singleEntryRetriesWhenTheMapIsEmptiedBeforeItsViewIsObtained() throws Exception {
         var values = new ChangingMap();
         values.put("key", "old");
-        int[] calls = {0};
-        var result = tryAwait(() -> {
-            if (++calls[0] == 2) values.put("key", "ready");
-            return values;
-        }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).until(MapConditions.singleEntry);
+        var source = changingSource(values, () -> values.put("key", "ready"));
+        var result = tryAwait(source::call).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).until(singleEntry);
 
-        assertEquals(Map.entry("key", "ready"),
-                result.orThrow());
-        assertEquals(2, calls[0]);
+        assertEquals(Map.entry("key", "ready"), result.orThrow());
+        verify(source, times(2)).call();
+    }
+
+    private static <VALUES> Callable<VALUES> changingSource(VALUES values, Runnable change) throws Exception {
+        Callable<VALUES> source = mock();
+        when(source.call()).thenReturn(values).thenAnswer(ignored -> {
+            change.run();
+            return values;
+        }).thenReturn(values);
+        return source;
     }
 
     private static final class ChangingQueue extends ConcurrentLinkedQueue<String> {
-        private boolean first = true;
+        private final Runnable change = once(this::clear);
 
         @Override
         public Iterator<String> iterator() {
-            if (first) {
-                first = false;
-                clear();
-            }
+            change.run();
             return super.iterator();
         }
     }
 
     private static final class ChangingDeque extends ConcurrentLinkedDeque<String> {
-        private boolean first = true;
-
-        private void change() {
-            if (first) {
-                first = false;
-                clear();
-            }
-        }
+        private final Runnable change = once(this::clear);
 
         @Override
         public boolean isEmpty() {
             boolean empty = super.isEmpty();
-            change();
+            change.run();
             return empty;
         }
 
         @Override
         public Iterator<String> iterator() {
-            change();
+            change.run();
             return super.iterator();
         }
 
         @Override
         public Iterator<String> descendingIterator() {
-            change();
+            change.run();
             return super.descendingIterator();
         }
     }
 
     private static final class ChangingList extends CopyOnWriteArrayList<String> {
-        private boolean first = true;
-
-        private void change() {
-            if (first) {
-                first = false;
-                clear();
-            }
-        }
+        private final Runnable change = once(this::clear);
 
         @Override
         public int size() {
             int size = super.size();
-            change();
+            change.run();
             return size;
         }
 
         @Override
         public Iterator<String> iterator() {
-            change();
+            change.run();
             return super.iterator();
         }
     }
 
     private static final class ChangingMap extends ConcurrentHashMap<String, String> {
-        private boolean first = true;
+        private final Runnable change = once(this::clear);
 
         @Override
         public Set<Map.Entry<String, String>> entrySet() {
-            if (first) {
-                first = false;
-                clear();
-            }
+            change.run();
             return super.entrySet();
         }
     }

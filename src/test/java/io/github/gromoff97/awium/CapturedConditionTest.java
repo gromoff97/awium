@@ -1,41 +1,69 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.Attempt;
+import io.github.gromoff97.awium.function.CheckedPredicate;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.function.BiConsumer;
+import java.util.function.BinaryOperator;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.junitpioneer.jupiter.cartesian.CartesianTest;
 
-import static io.github.gromoff97.awium.Condition.PreservingCondition;
-import static io.github.gromoff97.awium.internal.ExecutionStep.Phase;
-import static org.junitpioneer.jupiter.cartesian.CartesianTest.Values;
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
+import static io.github.gromoff97.awium.AwaitTestAccess.config;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.observation;
-import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
-import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
-import static io.github.gromoff97.awium.AwaitTestAccess.timedTryAwait;
-import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.timedTryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.uncontrolled;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.CollectionConditions.firstElement;
+import static io.github.gromoff97.awium.CollectionConditions.hasSize;
+import static io.github.gromoff97.awium.CollectionConditions.lastElement;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.Conditions.condition;
+import static io.github.gromoff97.awium.Conditions.equalTo;
+import static io.github.gromoff97.awium.Conditions.exactlyInstanceOf;
+import static io.github.gromoff97.awium.Conditions.instanceOf;
+import static io.github.gromoff97.awium.Conditions.isNotNull;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
+import static io.github.gromoff97.awium.MapConditions.entryFor;
+import static io.github.gromoff97.awium.MapConditions.singleEntry;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static io.github.gromoff97.awium.OptionalConditions.present;
+import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
+import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
+import static io.github.gromoff97.awium.result.Attempt.Operation.*;
+import static io.github.gromoff97.awium.result.Attempt.Operation;
+import static io.github.gromoff97.awium.result.Attempt.Satisfied;
+import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static java.lang.Math.min;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
 import static java.time.Duration.ofNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,15 +72,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static io.github.gromoff97.awium.CollectionConditions.hasSize;
-import static io.github.gromoff97.awium.CollectionConditions.singleElement;
-import static io.github.gromoff97.awium.Conditions.equalTo;
-import static io.github.gromoff97.awium.Conditions.exactlyInstanceOf;
-import static io.github.gromoff97.awium.Conditions.instanceOf;
-import static io.github.gromoff97.awium.MapConditions.entryFor;
-import static io.github.gromoff97.awium.MapConditions.valueFor;
-import static java.lang.Math.min;
-import static java.lang.Thread.currentThread;
+import static org.junit.jupiter.api.Named.named;
+import static org.junit.jupiter.params.provider.Arguments.argumentSet;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class CapturedConditionTest {
 
@@ -60,7 +86,7 @@ class CapturedConditionTest {
 
     @AfterEach
     void clearInterruptFlag() {
-        Thread.interrupted();
+        interrupted();
     }
 
     @Test
@@ -75,11 +101,11 @@ class CapturedConditionTest {
 
         List<List<Payment>> values = waiting.until(captured(
                 hasSize(1),
-                CollectionConditions.singleElement,
+                singleElement,
                 singleElement(instanceOf(Payment.class))));
         AwaitResult<List<Payment>, List<List<Payment>>> result = diagnostic(waiting).until(captured(
                 hasSize(1),
-                CollectionConditions.singleElement,
+                singleElement,
                 singleElement(instanceOf(Payment.class))));
 
         assertSame(first, values.getFirst());
@@ -88,7 +114,7 @@ class CapturedConditionTest {
         List<List<Payment>> captured = result.orThrow();
         assertEquals(values, captured);
         assertSame(captured, result.orThrow());
-        assertThat(attempts(result)).hasOnlyElementsOfType(Attempt.Satisfied.class)
+        assertThat(attempts(result)).hasOnlyElementsOfType(Satisfied.class)
                 .extracting(AwaitTestAccess::observation).containsExactlyElementsOf(observations);
         assertEquals(6, reads[0]);
     }
@@ -117,12 +143,12 @@ class CapturedConditionTest {
     @Test
     void reusableCaptureKeepsTheCompleteSourceTypeWithoutExplicitArguments() {
         var payment = new Payment(Status.FINISHED, "paid");
-        var payments = new java.util.ArrayList<>(List.of(payment));
-        var checks = captured(Conditions.isNotNull, Conditions.isNotNull).because("observations");
-        var selections = captured(CollectionConditions.singleElement, CollectionConditions.singleElement).because("elements");
+        var payments = new ArrayList<>(List.of(payment));
+        var checks = captured(isNotNull, isNotNull).because("observations");
+        var selections = captured(singleElement, singleElement).because("elements");
 
         var sources = await(() -> payments).usingTime(time, time).every(ofNanos(1)).until(checks);
-        java.util.ArrayList<Payment> original = sources.getFirst();
+        ArrayList<Payment> original = sources.getFirst();
         assertSame(payments, original);
         assertEquals("paid", original.getFirst().detail());
 
@@ -138,7 +164,7 @@ class CapturedConditionTest {
                 .until(captured(valueFor("id"), valueFor("id")).because("map values"));
         assertEquals("paid", mapped.getFirst().get("id").detail());
         var entries = await(() -> Map.of("id", payment)).usingTime(time, time).every(ofNanos(1))
-                .until(captured(entryFor("id"), MapConditions.singleEntry).because("entries"));
+                .until(captured(entryFor("id"), singleEntry).because("entries"));
         assertEquals("paid", entries.getFirst().get("id").detail());
         var narrowed = await(() -> (Object) payment).usingTime(time, time).every(ofNanos(1))
                 .until(captured(instanceOf(Payment.class), instanceOf(Payment.class)).because("payments"));
@@ -149,9 +175,10 @@ class CapturedConditionTest {
         assertSame(payment, single.getFirst().orElseThrow());
     }
 
-    @ParameterizedTest(name = "interrupted={0}")
-    @ValueSource(booleans = {false, true})
-    void failureBeforeTheFirstCheckIdentifiesItsStageWithoutInventingAnEvaluation(boolean interrupted) {
+    @ParameterizedTest
+    @MethodSource("earlyFailures")
+    void failureBeforeTheFirstCheckIdentifiesItsStageWithoutInventingAnEvaluation(
+            Runnable beforeAwait, int expectedReads, Operation operation, Reason reason, BiConsumer<Throwable, Throwable> assertCause) {
         var first = equalTo("ready");
         var sequence = captured(first, equalTo("done")).because("lifecycle");
         var cause = new IllegalStateException("source unavailable");
@@ -160,83 +187,95 @@ class CapturedConditionTest {
             reads[0]++;
             throw cause;
         };
-        if (interrupted) currentThread().interrupt();
+        beforeAwait.run();
         var result = tryAwait(source).until(sequence);
-        var attempt = attempts(result).getFirst();
         var failure = failure(result);
 
         assertEquals(1, attempts(result).size());
         assertSame(first, result.conditions().getFirst().condition());
         assertTrue(result.conditions().getLast().attempts().isEmpty());
-        assertEquals(interrupted ? 0 : 1, reads[0]);
-        if (interrupted) {
-            uncontrolled(Attempt.Operation.WAITING, attempt);
-            assertEquals(INTERRUPTED, failure.reason());
-        } else {
-            uncontrolled(Attempt.Operation.SOURCE, attempt);
-            assertEquals(SOURCE_FAILED, failure.reason());
-            assertSame(cause, failure.cause());
-        }
+        assertEquals(expectedReads, reads[0]);
+        uncontrolled(operation, attempts(result).getFirst());
+        assertEquals(reason, failure.reason());
+        assertCause.accept(cause, failure.cause());
         assertThat(failure.message()).contains("Because: lifecycle", "stage 1/2");
     }
 
-    @CartesianTest(name = "tryAwait={0}, phase={1}, reason={2}")
+    private static List<Arguments> earlyFailures() {
+        return List.of(
+                argumentSet("source failure", (Runnable) () -> {}, 1, SOURCE, SOURCE_FAILED,
+                        (BiConsumer<Throwable, Throwable>) Assertions::assertSame),
+                argumentSet("already interrupted", (Runnable) () -> currentThread().interrupt(), 0, WAITING, INTERRUPTED,
+                        (BiConsumer<Throwable, Throwable>) (expected, actual) -> assertInstanceOf(InterruptedException.class, actual)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("progressionFailures")
     void sourceAndWaitingFailuresRetainProgressInBothPhasesAndTerminals(
-            @Values(booleans = {false, true}) boolean capture,
-            @CartesianTest.Enum Phase phase,
-            @CartesianTest.Enum(names = {"SOURCE_FAILED", "WAIT_FAILED"}) AwaitFailure.Reason reason) {
-        int completedStages = phase == Phase.ACQUISITION ? 1 : 2;
+            int completedStages, Reason reason, String failureAt, BinaryOperator<Supplier<AwaitFailure>> terminal) {
         var cause = new IllegalStateException("after a completed stage");
-        int[] reads = {0};
-        var waiting = await(() -> {
-            if (++reads[0] > completedStages && reason == SOURCE_FAILED) throw cause;
-            return reads[0] == 1 ? "ready" : "done";
-        }).usingTime(time, nanos -> {
-            if (reads[0] == completedStages && reason == WAIT_FAILED) throw cause;
-            time.accept(nanos);
-        }).every(ofNanos(1)).persisting(ofNanos(2));
+        Consumer<String> boundary = mock();
+        doAnswer(ignored -> { throw cause; }).when(boundary).accept(failureAt);
+        var waiting = progressing(boundary);
         var first = equalTo("ready");
         var second = equalTo("done");
-        AwaitFailure failure;
-        if (capture) {
-            var result = diagnostic(waiting).until(captured(first, second));
-            failure = failure(result);
-            var attempt = attempts(result).getLast();
-            assertInstanceOf(Attempt.FailedBeforeObservation.class, attempt);
-            assertSame(second, result.conditions().getLast().condition());
-            assertSame(first, result.conditions().getFirst().condition());
-        } else {
-            failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(captured(first, second))).failure();
-        }
+        var failure = terminal.apply(
+                () -> assertThrows(AwaitExecutionException.class, () -> waiting.until(captured(first, second))).failure(),
+                () -> {
+                    var result = diagnostic(waiting).until(captured(first, second));
+                    assertInstanceOf(FailedBeforeObservation.class, attempts(result).getLast());
+                    assertSame(second, result.conditions().getLast().condition());
+                    assertSame(first, result.conditions().getFirst().condition());
+                    return failure(result);
+                }).get();
 
         assertEquals(reason, failure.reason());
         assertSame(cause, failure.cause());
         assertThat(failure.message()).contains("Sequence: captured " + completedStages + "/2", "stage 2/2");
     }
 
-    @CartesianTest(name = "phase={0}, interruptInSource={1}")
-    void sourceAndWaitingInterruptionsRetainProgressInBothPhases(
-            @CartesianTest.Enum Phase phase, @Values(booleans = {false, true}) boolean interruptInSource) {
-        int completedStages = phase == Phase.ACQUISITION ? 1 : 2;
-        int[] reads = {0};
-        var waiting = await(() -> {
-            if (++reads[0] > completedStages && interruptInSource) currentThread().interrupt();
-            return reads[0] == 1 ? "ready" : "done";
-        }).usingTime(time, nanos -> {
-            if (reads[0] == completedStages && !interruptInSource) currentThread().interrupt();
-            time.accept(nanos);
-        }).every(ofNanos(1)).persisting(ofNanos(2));
+    private static Stream<Arguments> progressionFailures() {
+        return terminals().stream().flatMap(terminal -> Stream.of(
+                argumentSet(terminal.getName() + " / acquiring / source", 1, SOURCE_FAILED, "source 2", terminal),
+                argumentSet(terminal.getName() + " / acquiring / waiting", 1, WAIT_FAILED, "park 1", terminal),
+                argumentSet(terminal.getName() + " / persisting / source", 2, SOURCE_FAILED, "source 3", terminal),
+                argumentSet(terminal.getName() + " / persisting / waiting", 2, WAIT_FAILED, "park 2", terminal)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("progressionInterruptions")
+    void sourceAndWaitingInterruptionsRetainProgressInBothPhases(int completedStages, String interruptionAt, Class<?> status) {
+        Consumer<String> boundary = mock();
+        doAnswer(ignored -> { currentThread().interrupt(); return null; }).when(boundary).accept(interruptionAt);
+        var waiting = progressing(boundary);
         var first = equalTo("ready");
         var second = equalTo("done");
         var result = diagnostic(waiting).until(captured(first, second));
-        var failure = failure(result);
-        var attempt = attempts(result).getLast();
-        assertEquals(INTERRUPTED, failure.reason());
-        assertEquals(interruptInSource ? Attempt.FailedAfterObservation.class
-                : Attempt.FailedBeforeObservation.class, attempt.getClass());
+        var failure = failure(INTERRUPTED, result);
+        assertInstanceOf(status, attempts(result).getLast());
         assertSame(second, result.conditions().getLast().condition());
         assertThat(failure.message()).contains("Sequence: captured " + completedStages + "/2", "stage 2/2");
         assertTrue(currentThread().isInterrupted());
+    }
+
+    private static List<Arguments> progressionInterruptions() {
+        return List.of(argumentSet("acquiring / source", 1, "source 2", FailedAfterObservation.class),
+                argumentSet("acquiring / waiting", 1, "park 1", FailedBeforeObservation.class),
+                argumentSet("persisting / source", 2, "source 3", FailedAfterObservation.class),
+                argumentSet("persisting / waiting", 2, "park 2", FailedBeforeObservation.class));
+    }
+
+    private ValueAwait<String> progressing(Consumer<String> boundary) {
+        Supplier<String> values = mock();
+        when(values.get()).thenReturn("ready", "done");
+        int[] reads = {0};
+        return await(() -> {
+            boundary.accept("source " + ++reads[0]);
+            return values.get();
+        }).usingTime(time, nanos -> {
+            boundary.accept("park " + reads[0]);
+            time.accept(nanos);
+        }).every(ofNanos(1)).persisting(ofNanos(2));
     }
 
     @Test
@@ -257,7 +296,7 @@ class CapturedConditionTest {
         assertSame(second, values.getLast());
         assertEquals(values, attempt.orThrow());
         assertEquals(4, attempts(attempt).size());
-        assertInstanceOf(Attempt.Satisfied.class, attempts(attempt).get(1));
+        assertInstanceOf(Satisfied.class, attempts(attempt).get(1));
         assertSame(first, observation(attempts(attempt).get(1)));
         assertEquals(8, reads[0]);
         assertThrows(UnsupportedOperationException.class, values::clear);
@@ -297,7 +336,7 @@ class CapturedConditionTest {
                 .usingTime(time, time).every(java.time.Duration.ofNanos(1))
                 .persisting(java.time.Duration.ofNanos(1));
         var start = valueFor("first");
-        var finish = valueFor("last", Conditions.isNotNull);
+        var finish = valueFor("last", isNotNull);
 
         List<Map<String, Number>> values = waiting.until(captured(start, finish));
         AwaitResult<Map<String, Number>, List<Map<String, Number>>> attempt = diagnostic(waiting).until(captured(start, finish));
@@ -309,10 +348,10 @@ class CapturedConditionTest {
         assertEquals(3, attempts(attempt).size());
         assertEquals(6, reads[0]);
         var acquisition = attempts(attempt).get(1);
-        assertInstanceOf(Attempt.Satisfied.class, acquisition);
+        assertInstanceOf(Satisfied.class, acquisition);
         assertSame(acquired, observation(acquisition).get("last"));
         var firstAttempt = attempts(attempt).getFirst();
-        assertInstanceOf(Attempt.Satisfied.class, firstAttempt);
+        assertInstanceOf(Satisfied.class, firstAttempt);
         assertSame(first, observation(firstAttempt));
         assertThrows(UnsupportedOperationException.class, values::clear);
     }
@@ -354,16 +393,16 @@ class CapturedConditionTest {
 
         AwaitResult<List<String>, List<List<String>>> result = tryAwait(() -> observations.get(reads[0]++))
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5)).persisting(ofNanos(1))
-                .until(captured(CollectionConditions.firstElement, CollectionConditions.lastElement));
+                .until(captured(firstElement, lastElement));
 
         var values = result.orThrow();
         assertSame(observations.getFirst(), values.get(0));
         assertSame(observations.getLast(), values.get(1));
         var earlier = attempts(result).get(1);
-        assertInstanceOf(Attempt.Satisfied.class, earlier);
+        assertInstanceOf(Satisfied.class, earlier);
         assertSame(acquired, observation(earlier).getLast());
         var firstAttempt = attempts(result).getFirst();
-        assertInstanceOf(Attempt.Satisfied.class, firstAttempt);
+        assertInstanceOf(Satisfied.class, firstAttempt);
         assertSame(first, observation(firstAttempt).getFirst());
         assertThrows(UnsupportedOperationException.class, values::clear);
         assertEquals(3, reads[0]);
@@ -383,48 +422,53 @@ class CapturedConditionTest {
                 .containsExactly(first, second, third);
         assertThat(result.conditions()).extracting(history -> List.copyOf(history.attempts().keySet()))
                 .containsExactly(List.of(1L), List.of(2L, 3L), List.of(4L));
-        assertThat(attempts(result)).hasExactlyElementsOfTypes(Attempt.Satisfied.class, Attempt.Unsatisfied.class,
-                        Attempt.Satisfied.class, Attempt.Satisfied.class)
+        assertThat(attempts(result)).hasExactlyElementsOfTypes(Satisfied.class, Unsatisfied.class,
+                        Satisfied.class, Satisfied.class)
                 .allSatisfy(attempt -> assertThat(observation(attempt)).isNotEmpty());
 
         assertEquals(List.of("created", "processing", "completed"),
                 result.orThrow());
     }
 
-    @CartesianTest(name = "tryAwait={0}, stage={1}, matching={2}")
+    @ParameterizedTest
+    @MethodSource("interruptedStages")
     void interruptedStageIsNotCapturedAfterANormalCallbackReturn(
-            @Values(booleans = {false, true}) boolean capture,
-            @Values(ints = {1, 2}) int stage, @Values(booleans = {false, true}) boolean matching) {
+            int stage, boolean matching, CheckedPredicate<String> firstCheck, BinaryOperator<Supplier<AwaitFailure>> terminal) {
         int[] sources = {0};
         var waiting = timedAwait(() -> {
             sources[0]++;
             return "ready";
         }, config(1, 3, 0), time, time);
-        var first = Conditions.<String>matches(value -> {
-            if (stage == 1) {
-                currentThread().interrupt();
-                return matching;
-            }
-            return true;
-        });
+        var first = Conditions.<String>matches(firstCheck);
         var second = Conditions.<String>matches(value -> {
             currentThread().interrupt();
             return matching;
         });
-        AwaitFailure failure;
-        if (capture) {
-            var result = diagnostic(waiting).until(captured(first, second));
-            failure = failure(result);
-            uncontrolled(Attempt.Operation.CONDITION, attempts(result).getLast());
-            assertThat(result.conditions()).filteredOn(history -> !history.attempts().isEmpty()).hasSize(stage);
-        } else {
-            failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(captured(first, second))).failure();
-        }
+        var failure = terminal.apply(
+                () -> assertThrows(AwaitExecutionException.class, () -> waiting.until(captured(first, second))).failure(),
+                () -> {
+                    var result = diagnostic(waiting).until(captured(first, second));
+                    uncontrolled(CONDITION, attempts(result).getLast());
+                    assertThat(result.conditions()).filteredOn(history -> !history.attempts().isEmpty()).hasSize(stage);
+                    return failure(result);
+                }).get();
         assertEquals(INTERRUPTED, failure.reason());
         assertInstanceOf(InterruptedException.class, failure.cause());
         assertThat(failure.message()).contains("Sequence: captured " + (stage - 1) + "/2", "stage " + stage + "/2");
         assertEquals(stage, sources[0]);
         assertTrue(currentThread().isInterrupted());
+    }
+
+    private static Stream<Arguments> interruptedStages() {
+        return terminals().stream().flatMap(terminal -> Stream.of(false, true).flatMap(matching -> Stream.of(
+                argumentSet(terminal.getName() + " / first stage / matching=" + matching, 1, matching,
+                        (CheckedPredicate<String>) value -> { currentThread().interrupt(); return matching; }, terminal),
+                argumentSet(terminal.getName() + " / second stage / matching=" + matching, 2, matching,
+                        (CheckedPredicate<String>) value -> true, terminal))));
+    }
+
+    private static List<Named<BinaryOperator<Supplier<AwaitFailure>>>> terminals() {
+        return List.of(named("await", (thrown, captured) -> thrown), named("tryAwait", (thrown, captured) -> captured));
     }
 
     @ParameterizedTest(name = "delay={0}")
@@ -465,13 +509,12 @@ class CapturedConditionTest {
             time.advanceNanos(2);
             return "observed";
         }, config(1, 2, 0), time, time).until(captured(matches(value -> true), matches(value -> true)));
-        var outcome = assertInstanceOf(Attempt.Satisfied.class,
+        var outcome = assertInstanceOf(Satisfied.class,
                 attempts(result).getFirst());
 
         assertEquals("observed", observation(attempts(result).getFirst()));
         assertTrue(result.conditions().getLast().attempts().isEmpty());
-        var failure = failure(result);
-        assertEquals(TIMEOUT, failure.reason());
+        var failure = failure(TIMEOUT, result);
         assertThat(failure.message()).contains("Next stage 2/2:");
     }
 
@@ -539,15 +582,14 @@ class CapturedConditionTest {
     void doesNotSkipAMissedIntermediateStage() {
         var created = new Payment(Status.CREATED, "accepted");
         var finished = new Payment(Status.FINISHED, "paid");
-        int[] calls = {0};
+        Supplier<Payment> observations = mock();
+        when(observations.get()).thenReturn(created, finished);
 
-        assertFailure(TIMEOUT, () -> timedAwait(() ->
-                calls[0]++ == 0 ? created : finished,
-                config(1, 3, 0), time, time).until(captured(matches(payment -> payment.status() == Status.CREATED),
-                matches(payment -> payment.status() == Status.PENDING),
-                matches(payment -> payment.status() == Status.FINISHED))));
+        assertFailure(TIMEOUT, () -> timedAwait(observations::get, config(1, 3, 0), time, time)
+                .until(captured(matches(payment -> payment.status() == Status.CREATED),
+                        matches(payment -> payment.status() == Status.PENDING), matches(payment -> payment.status() == Status.FINISHED))));
 
-        assertEquals(3, calls[0]);
+        verify(observations, times(3)).get();
     }
 
     @Test

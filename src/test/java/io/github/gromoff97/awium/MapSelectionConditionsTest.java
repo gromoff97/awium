@@ -3,35 +3,29 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.function.CheckedBiPredicate;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.math.BigDecimal;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
-import static io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
-import static java.util.AbstractMap.SimpleImmutableEntry;
-import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
-import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
-import static io.github.gromoff97.awium.Conditions.matches;
-import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
-import static java.time.Duration.ofNanos;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static io.github.gromoff97.awium.Conditions.atLeast;
 import static io.github.gromoff97.awium.Conditions.conditionPerWait;
 import static io.github.gromoff97.awium.Conditions.equalTo;
 import static io.github.gromoff97.awium.Conditions.greaterThan;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
+import static io.github.gromoff97.awium.Conditions.matches;
+import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.allEntries;
 import static io.github.gromoff97.awium.MapConditions.allKeys;
 import static io.github.gromoff97.awium.MapConditions.allValues;
@@ -52,8 +46,24 @@ import static io.github.gromoff97.awium.MapConditions.noKey;
 import static io.github.gromoff97.awium.MapConditions.noValue;
 import static io.github.gromoff97.awium.MapConditions.singleEntry;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.ProbeContainers.EntryMap;
+import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
+import static io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static java.time.Duration.ofNanos;
+import static java.util.AbstractMap.SimpleImmutableEntry;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
+import static java.util.Map.Entry;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MapSelectionConditionsTest {
 
@@ -68,20 +78,20 @@ class MapSelectionConditionsTest {
         var value = new BigDecimal("42.00");
         var entry = new ReceiptEntry("receipt", value);
         var equalEntry = new ReceiptEntry("receipt", new BigDecimal("42.00"));
-        var actual = new ProbeContainers.EntryMap<String, Number>(List.of(entry));
+        var actual = new EntryMap<String, Number>(List.of(entry));
         int[] reads = {0};
-        java.util.concurrent.Callable<ProbeContainers.EntryMap<String, Number>> source = () -> {
+        Callable<EntryMap<String, Number>> source = () -> {
             reads[0]++;
             return actual;
         };
         var waiting = await(source::call).usingTime(time, time);
 
-        Map.Entry<String, Number> matching = waiting.until(singleEntry(equalTo(equalEntry)));
+        Entry<String, Number> matching = waiting.until(singleEntry(equalTo(equalEntry)));
         ReceiptEntry narrowed = waiting.until(singleEntry(instanceOf(ReceiptEntry.class)));
-        Map.Entry<String, Number> byKey = waiting.until(entryFor("receipt")
+        Entry<String, Number> byKey = waiting.until(entryFor("receipt")
                 .because("the receipt has arrived"));
         BigDecimal selected = waiting.until(valueFor("receipt", instanceOf(BigDecimal.class)));
-        AwaitResult<ProbeContainers.EntryMap<String, Number>, ReceiptEntry> captured =
+        AwaitResult<EntryMap<String, Number>, ReceiptEntry> captured =
                 diagnostic(waiting).until(singleEntry(instanceOf(ReceiptEntry.class)));
 
         assertSame(entry, matching);
@@ -91,7 +101,7 @@ class MapSelectionConditionsTest {
         assertSame(entry, captured.orThrow());
         assertEquals(5, reads[0]);
 
-        var multiple = new ProbeContainers.EntryMap<String, Number>(List.of(entry, Map.entry("other", 1)));
+        var multiple = new EntryMap<String, Number>(List.of(entry, Map.entry("other", 1)));
         var many = await(() -> multiple).usingTime(time, time).upTo(ofNanos(1));
         assertFailure(TIMEOUT, () -> many.until(singleEntry(equalTo(equalEntry))));
         assertFailure(TIMEOUT, () -> many.until(singleEntry(instanceOf(ReceiptEntry.class))));
@@ -99,8 +109,8 @@ class MapSelectionConditionsTest {
 
     @Test
     void pairedEntryPredicatesRetryInsteadOfReturningANonMatchingEntry() {
-        var observations = new java.util.ArrayDeque<>(List.of(Map.of("key", 1), Map.of("key", 2)));
-        var checked = new java.util.ArrayList<Map.Entry<String, Integer>>();
+        var observations = new ArrayDeque<>(List.of(Map.of("key", 1), Map.of("key", 2)));
+        var checked = new ArrayList<Entry<String, Integer>>();
         CheckedBiPredicate<String, Integer> predicate = (key, value) -> {
             checked.add(Map.entry(key, value));
             return value == 2;
@@ -116,27 +126,28 @@ class MapSelectionConditionsTest {
 
     @Test
     void valueForInitializesItsCheckAfterFindingTheKeyAndChecksOnlyThatValue() {
-        List<Map<String, Integer>> observations = java.util.Arrays.asList(
+        List<Map<String, Integer>> observations = asList(
                 null, Map.of(), Map.of("other", 2), Map.of("key", 1, "other", 2), Map.of("key", 2, "other", 1));
-        int[] reads = {0};
-        int[] factories = {0};
-        var checked = new java.util.ArrayList<Integer>();
+        var source = observations.iterator();
+        var events = new ArrayList<String>();
+        var checked = new ArrayList<Integer>();
+        var outcomes = List.of(unsatisfied("not ready"), satisfied()).iterator();
         var check = conditionPerWait("value is ready", () -> {
-            factories[0]++;
+            events.add("factory");
             return (Integer value) -> {
                 checked.add(value);
-                return value == 2 ? satisfied() : unsatisfied("not ready");
+                return outcomes.next();
             };
         });
         var result = tryAwait(() -> {
-            if (reads[0] <= 3) assertEquals(0, factories[0]);
-            return observations.get(reads[0]++);
+            events.add("source");
+            return source.next();
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
                 .until(valueFor("key", check).because("the selected value must be ready"));
 
         assertEquals(2, result.orThrow());
         assertThat(attempts(result)).extracting(AwaitTestAccess::observation).containsExactlyElementsOf(observations);
-        assertEquals(1, factories[0]);
+        assertThat(events).containsExactly("source", "source", "source", "source", "factory", "source");
         assertEquals(List.of(1, 2), checked);
         var missingGroup = attempts(result).get(1);
         assertSame(missingGroup, result.conditions().getFirst().attempts().get(2L));
@@ -147,27 +158,28 @@ class MapSelectionConditionsTest {
 
     @Test
     void singleEntryInitializesTheNestedCheckOnlyAfterExtractingTheSoleEntry() {
-        List<Map<String, Integer>> observations = java.util.Arrays.asList(
+        List<Map<String, Integer>> observations = asList(
                 null, Map.of(), Map.of("key", 2, "other", 1), Map.of("key", 1), Map.of("key", 2));
-        int[] reads = {0};
-        int[] factories = {0};
-        var checked = new java.util.ArrayList<Integer>();
+        var source = observations.iterator();
+        var events = new ArrayList<String>();
+        var checked = new ArrayList<Integer>();
+        var outcomes = List.of(unsatisfied("not ready"), satisfied()).iterator();
         var check = conditionPerWait("entry is ready", () -> {
-            factories[0]++;
-            return (Map.Entry<String, Integer> entry) -> {
+            events.add("factory");
+            return (Entry<String, Integer> entry) -> {
                 checked.add(entry.getValue());
-                return entry.getValue() == 2 ? satisfied() : unsatisfied("not ready");
+                return outcomes.next();
             };
         });
         var result = tryAwait(() -> {
-            if (reads[0] <= 3) assertEquals(0, factories[0]);
-            return observations.get(reads[0]++);
+            events.add("source");
+            return source.next();
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
                 .until(singleEntry(check).because("one ready entry required"));
 
         assertEquals(Map.entry("key", 2), result.orThrow());
         assertEquals(5, attempts(result).size());
-        assertEquals(1, factories[0]);
+        assertThat(events).containsExactly("source", "source", "source", "source", "factory", "source");
         assertEquals(List.of(1, 2), checked);
         assertEquals("single entry: entry is ready", result.conditions().getFirst().condition().description());
         assertEquals("one ready entry required", result.conditions().getFirst().condition().explanation());
@@ -178,12 +190,12 @@ class MapSelectionConditionsTest {
         var actual = new LinkedHashMap<String, Integer>();
         actual.put("first", 1);
         actual.put("second", 2);
-        java.util.concurrent.Callable<LinkedHashMap<String, Integer>> source = () -> actual;
+        Callable<LinkedHashMap<String, Integer>> source = () -> actual;
         var waiting = await(source::call).usingTime(time, time);
 
         var sole = await(() -> Map.of("second", 2)).usingTime(time, time);
-        Map.Entry<String, Integer> selected = sole.until(singleEntry(matches((Map.Entry<String, Integer> entry) -> entry.getValue() == 2)));
-        Map.Entry<String, Integer> byKey = waiting.until(entryFor("first"));
+        Entry<String, Integer> selected = sole.until(singleEntry(matches((Entry<String, Integer> entry) -> entry.getValue() == 2)));
+        Entry<String, Integer> byKey = waiting.until(entryFor("first"));
         Integer value = waiting.until(valueFor("second"));
         Integer nested = waiting.until(valueFor("second", atLeast(2)));
         String key = sole.until(singleEntry(
@@ -217,7 +229,7 @@ class MapSelectionConditionsTest {
     @Test
     void quantifiersAndBulkConditionsPreserveTheConcreteMap() {
         var actual = new LinkedHashMap<>(Map.of("a", 1, "b", 2));
-        java.util.concurrent.Callable<LinkedHashMap<String, Integer>> source = () -> actual;
+        Callable<LinkedHashMap<String, Integer>> source = () -> actual;
         var waiting = await(source::call).usingTime(time, time);
 
         assertSame(actual, waiting.until(allEntries((key, value) -> value > 0)));
@@ -238,42 +250,32 @@ class MapSelectionConditionsTest {
                 evaluate(doesNotContainValue(2), actual));
     }
 
-    @Test
-    void quantifiersAndBulkConditionsCoverTheirUnsatisfiedBranches() {
+    @ParameterizedTest
+    @MethodSource("mismatchingQuantifiersAndBulkChecks")
+    void quantifiersAndBulkConditionsRejectMismatches(PreservingCondition<? super LinkedHashMap<String, Integer>> check) {
         var actual = new LinkedHashMap<>(Map.of("a", 1, "b", 2));
+        assertInstanceOf(Unsatisfied.class, evaluate(check, actual));
+    }
 
-        assertInstanceOf(Unsatisfied.class, evaluate(allEntries(
-                (String key, Integer value) -> value < 2), actual));
-        assertInstanceOf(Unsatisfied.class, evaluate(hasEntry(
-                (String key, Integer value) -> value > 2), actual));
-        assertInstanceOf(Unsatisfied.class, evaluate(hasNoEntry(
-                (String key, Integer value) -> value == 2), actual));
-        assertInstanceOf(Unsatisfied.class, evaluate(allKeys(
-                key -> key.equals("a")), actual));
-        assertInstanceOf(Unsatisfied.class, evaluate(anyKey(
-                key -> key.equals("missing")), actual));
-        assertInstanceOf(Unsatisfied.class, evaluate(noKey(
-                key -> key.equals("a")), actual));
-        assertInstanceOf(Unsatisfied.class, evaluate(allValues(
-                value -> value < 2), actual));
-        assertInstanceOf(Unsatisfied.class, evaluate(anyValue(
-                value -> value > 2), actual));
-        assertInstanceOf(Unsatisfied.class, evaluate(noValue(
-                value -> value == 2), actual));
-        assertInstanceOf(Unsatisfied.class,
-                evaluate(containsAllKeys(List.of("a", "missing")), actual));
-        assertInstanceOf(Satisfied.class,
-                evaluate(doesNotContainKey("missing"), actual));
-        assertInstanceOf(Unsatisfied.class, evaluate(
-                doesNotContainAnyKeys(List.of("a", "missing")), actual));
-        assertInstanceOf(Unsatisfied.class,
-                evaluate(containsOnlyKeys(java.util.Collections.singletonList("a")), actual));
-        assertInstanceOf(Unsatisfied.class,
-                evaluate(containsAllValues(List.of(1, 3)), actual));
-        assertInstanceOf(Satisfied.class,
-                evaluate(doesNotContainValue(3), actual));
-        assertInstanceOf(Unsatisfied.class,
-                evaluate(doesNotContainAnyValues(List.of(2, 3)), actual));
+    private static List<PreservingCondition<? super LinkedHashMap<String, Integer>>> mismatchingQuantifiersAndBulkChecks() {
+        return List.of(allEntries((String key, Integer value) -> value < 2),
+                hasEntry((String key, Integer value) -> value > 2),
+                hasNoEntry((String key, Integer value) -> value == 2),
+                allKeys(key -> key.equals("a")), anyKey(key -> key.equals("missing")), noKey(key -> key.equals("a")),
+                allValues(value -> value < 2), anyValue(value -> value > 2), noValue(value -> value == 2),
+                containsAllKeys(List.of("a", "missing")), doesNotContainAnyKeys(List.of("a", "missing")),
+                containsOnlyKeys(singletonList("a")), containsAllValues(List.of(1, 3)), doesNotContainAnyValues(List.of(2, 3)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("matchingAbsenceChecks")
+    void absenceChecksAcceptMissingKeysAndValues(PreservingCondition<? super LinkedHashMap<String, Integer>> check) {
+        var actual = new LinkedHashMap<>(Map.of("a", 1, "b", 2));
+        assertInstanceOf(Satisfied.class, evaluate(check, actual));
+    }
+
+    private static List<PreservingCondition<? super LinkedHashMap<String, Integer>>> matchingAbsenceChecks() {
+        return List.of(doesNotContainKey("missing"), doesNotContainValue(3));
     }
 
     @Test
@@ -291,7 +293,7 @@ class MapSelectionConditionsTest {
         assertFailure(TIMEOUT, () -> waiting.until(valueFor("missing")));
         assertFailure(TIMEOUT, () -> waiting.until(valueFor("first", greaterThan(1))));
         assertThrows(NullPointerException.class, () -> singleEntry(
-                (Condition.PreservingCondition<Map.Entry<?, ?>>) null));
+                (PreservingCondition<Entry<?, ?>>) null));
         assertThrows(NullPointerException.class, () -> allEntries((CheckedBiPredicate<Object, Object>) null));
     }
 }

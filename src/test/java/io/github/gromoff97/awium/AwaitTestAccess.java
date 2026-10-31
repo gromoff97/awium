@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -20,6 +21,12 @@ final class AwaitTestAccess {
 
     static AwaitFailure failure(AwaitResult<?, ?> result) {
         return assertInstanceOf(AwaitResult.Failed.class, result).failure();
+    }
+
+    static AwaitFailure failure(Reason expected, AwaitResult<?, ?> result) {
+        var failure = failure(result);
+        assertEquals(expected, failure.reason());
+        return failure;
     }
 
     /** Flattens condition histories for tests of the complete execution timeline. */

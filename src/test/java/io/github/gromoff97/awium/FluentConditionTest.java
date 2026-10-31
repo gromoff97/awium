@@ -12,19 +12,21 @@ import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.CollectionViewSource;
 import static io.github.gromoff97.awium.Await.MapViewSource;
-import static java.util.AbstractMap.SimpleImmutableEntry;
-import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
-import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.MapConditions.*;
 import static io.github.gromoff97.awium.OptionalConditions.*;
+import static io.github.gromoff97.awium.result.AwaitResult.Failed;
+import static io.github.gromoff97.awium.result.AwaitResult.Satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static java.util.AbstractMap.SimpleImmutableEntry;
+import static java.util.Comparator.comparingInt;
 import static java.util.function.Predicate.not;
 import static org.junit.jupiter.api.Assertions.*;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static java.util.Comparator.comparingInt;
 
 class FluentConditionTest {
 
@@ -206,12 +208,12 @@ class FluentConditionTest {
 
         assertEquals(List.of("receipt", "receipt", "receipt", "receipt", "receipt", "receipt"),
                 List.of(payment.id(), created.id(), selected.id(), optional.id(), mapped.id(), sequence.getLast().id()));
-        if (diagnostic instanceof AwaitResult.Satisfied(var history, var value)) {
-            assertEquals("receipt", value.id());
-            assertSame(actual, value);
-        } else {
-            fail("custom check must succeed");
-        }
+        var value = switch (diagnostic) {
+            case Satisfied(var history, var observed) -> observed;
+            case Failed(var history, var failure) -> throw new AssertionError(failure.message());
+        };
+        assertEquals("receipt", value.id());
+        assertSame(actual, value);
         assertSame(actual, payment);
         assertSame(actual, selected);
     }

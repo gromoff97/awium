@@ -62,8 +62,7 @@ class ConditionResultContractTest {
 
         for (var check : List.of(direct, lazy)) {
             var failed = tryAwait(() -> new User(0)).usingTime(time, time).upTo(ofNanos(1)).until(check);
-            var failure = failure(failed);
-            assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+            var failure = failure(AwaitFailure.Reason.TIMEOUT, failed);
             assertThat(failure.message()).contains("id must be positive", "Because: user must be saved");
         }
     }
@@ -99,8 +98,7 @@ class ConditionResultContractTest {
         AwaitResult<String, String> result = tryAwait(() -> "pending")
                 .usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
                 .until(condition("status is ready", value -> unsatisfied()));
-        var failure = failure(result);
-        assertEquals(AwaitFailure.Reason.TIMEOUT, failure.reason());
+        var failure = failure(AwaitFailure.Reason.TIMEOUT, result);
         assertThat(failure.message()).contains("Condition: status is ready", "Actual: \"pending\"").doesNotContain("Mismatch:");
     }
 

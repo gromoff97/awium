@@ -975,8 +975,7 @@ checks. Mutation testing uses PIT's `ALL` set and runs separately with
 `./gradlew pitest`, only on explicit user request. Do not run it as a routine
 verification step or attach it to `build`, `check`, or `test`.
 
-Tests use JUnit 6, JUnit Pioneer for parameter combinations, AssertJ, Mockito,
-compile-testing, ArchUnit, and Commons Lang.
+Tests use JUnit 6, AssertJ, Mockito, compile-testing, ArchUnit, and Commons Lang.
 Gradle declares these as `testImplementation` dependencies. Mockito uses JDK
 proxies configured in test resources and requires no Java agent.
 

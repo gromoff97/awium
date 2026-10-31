@@ -1,24 +1,30 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.Attempt;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.observation;
-import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
-import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.CollectionConditions.hasSize;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.Conditions.equalTo;
+import static io.github.gromoff97.awium.Conditions.isNotNull;
+import static io.github.gromoff97.awium.Conditions.isNull;
+import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
+import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.time.Duration.ofNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static io.github.gromoff97.awium.CollectionConditions.hasSize;
 
 class HistoryFormattingTest {
 
@@ -44,8 +50,8 @@ class HistoryFormattingTest {
 
     @Test
     void historyRendersTheDefinitionOnceFollowedByNumberedStates() {
-        int[] calls = {0};
-        var result = tryAwait(() -> ++calls[0] < 4 ? 1 : 4).usingTime(time, time).every(ofNanos(1))
+        var observations = List.of(1, 1, 1, 4).iterator();
+        var result = tryAwait(observations::next).usingTime(time, time).every(ofNanos(1))
                 .until(equalTo(4).because("worker must finish"));
 
         assertEquals("""
@@ -59,10 +65,10 @@ class HistoryFormattingTest {
 
                 Through #4: satisfied
                     Observed now: 4""", result.conditions().getFirst().toString());
-        assertEquals(4, calls[0]);
+        assertFalse(observations.hasNext());
         String report = result.toString();
         assertEquals(1, report.lines().filter(line -> line.startsWith("Condition ")).count());
-        assertThat(report).contains("Through #3", "Through #4");
+        assertThat(report).startsWith("Wait satisfied\n    Result: 4\n\nCondition 1:").contains("Through #3", "Through #4");
     }
 
     @Test
@@ -80,7 +86,7 @@ class HistoryFormattingTest {
         assertThat(report).contains(": unsatisfied", ": satisfied");
         String last = attempts(result).getLast().toString();
         assertEquals(1, renders[0]);
-        assertThat(last).doesNotContain("Condition:").contains("Observed now: [ready]");
+        assertEquals("Result: satisfied\n    Observed now: [ready]", last);
     }
 
     @Test
@@ -117,11 +123,11 @@ class HistoryFormattingTest {
 
     @Test
     void aReturnedNullIsDifferentFromAnUnavailableObservation() {
-        var returnedNull = tryAwait((java.util.concurrent.Callable<String>) () -> null)
-                .usingTime(time, time).until(Conditions.isNull);
+        var returnedNull = tryAwait((Callable<String>) () -> null)
+                .usingTime(time, time).until(isNull);
         var cause = new IllegalStateException("source unavailable");
-        var sourceFailed = tryAwait((java.util.concurrent.Callable<String>) () -> { throw cause; })
-                .usingTime(time, time).until(Conditions.isNull);
+        var sourceFailed = tryAwait((Callable<String>) () -> { throw cause; })
+                .usingTime(time, time).until(isNull);
 
         assertThat(attempts(returnedNull).getFirst().toString()).contains("Observed now: null");
         String failed = attempts(sourceFailed).getFirst().toString();
@@ -161,12 +167,12 @@ class HistoryFormattingTest {
     @Test
     void multilineReasonsAndArrayValuesRemainReadable() {
         var result = tryAwait(() -> new int[]{1, 2}).usingTime(time, time)
-                .until(equalTo(new int[]{1, 2}).because("first line\r\nsecond line"));
+                .until(equalTo(new int[]{1, 2}).because("first line\r\nsecond line\r\n"));
 
         String rendered = result.conditions().getFirst().toString();
         assertThat(rendered).contains(
                 "Expected: [1, 2]",
-                "Because:\n        first line\n        second line",
+                "    Because:\n        first line\n        second line\n\n\nThrough #1: satisfied",
                 "Observed now: [1, 2]");
     }
 
@@ -178,10 +184,11 @@ class HistoryFormattingTest {
             @Override public boolean equals(Object other) { throw new AssertionError("unexpected equals"); }
             @Override public int hashCode() { throw new AssertionError("unexpected hashCode"); }
         };
-        int[] calls = {0};
+        var outcomes = List.of(unsatisfied(), unsatisfied(), satisfied()).iterator();
         var result = tryAwait(() -> observed).usingTime(time, time).every(ofNanos(1))
-                .until(condition("ready", actual -> ++calls[0] == 3 ? satisfied() : unsatisfied()));
+                .until(condition("ready", actual -> outcomes.next()));
 
+        assertSame(observed, result.orThrow());
         assertEquals(0, renders[0]);
         var attempt = attempts(result).getFirst();
         assertEquals(2L, result.conditions().getFirst().attempts().firstKey());
@@ -203,10 +210,11 @@ class HistoryFormattingTest {
         var first = new Observation();
         var last = new Observation();
         var values = List.of(first, last, last).iterator();
-        int[] calls = {0};
+        var outcomes = List.of(unsatisfied(), unsatisfied(), satisfied()).iterator();
         var result = tryAwait(values::next).usingTime(time, time).every(ofNanos(1))
-                .until(condition("ready", actual -> ++calls[0] == 3 ? satisfied() : unsatisfied()));
+                .until(condition("ready", actual -> outcomes.next()));
 
+        assertSame(last, result.orThrow());
         assertEquals(0, first.renders + last.renders);
         assertEquals(1, first.comparisons + last.comparisons);
         var attempt = attempts(result).getFirst();
@@ -230,8 +238,8 @@ class HistoryFormattingTest {
         var cause = new IllegalArgumentException("original cause") {
             @Override public String toString() { throw new IllegalStateException("cause renderer failed"); }
         };
-        var failed = tryAwait((java.util.concurrent.Callable<String>) () -> { throw cause; })
-                .usingTime(time, time).until(Conditions.isNotNull);
+        var failed = tryAwait((Callable<String>) () -> { throw cause; })
+                .usingTime(time, time).until(isNotNull);
 
         String successText = successful.toString();
         String failureText = failed.toString();
@@ -258,7 +266,7 @@ class HistoryFormattingTest {
         var source = new ArrayList<>(List.of(selected)) {
             @Override public String toString() { return "readable source"; }
         };
-        var result = tryAwait(() -> source).until(CollectionConditions.singleElement);
+        var result = tryAwait(() -> source).until(singleElement);
 
         assertSame(selected, result.orThrow());
         assertEquals(0, renders[0]);
@@ -276,7 +284,7 @@ class HistoryFormattingTest {
             @Override public String getMessage() { throw new AssertionError("message unavailable"); }
         };
         var mismatch = unsatisfied("pending", cause);
-        var failure = new Attempt.FailedAfterObservation<>("actual", Attempt.Operation.CONDITION, cause, null);
+        var failure = new FailedAfterObservation<>("actual", CONDITION, cause, null);
         assertThat(mismatch.toString()).startsWith("Unsatisfied[");
         assertThat(failure.toString()).contains("Result: failed (CONDITION)");
         assertSame(cause, mismatch.cause());
@@ -288,10 +296,10 @@ class HistoryFormattingTest {
 
     @Test
     void liveObservationLabelsCannotBeMistakenForSnapshotsOfEarlierSizes() {
-        var values = new java.util.ArrayList<Integer>();
-        int[] calls = {0};
+        var values = new ArrayList<Integer>();
+        var updates = List.<Runnable>of(() -> values.add(1), () -> {}, () -> values.add(3), () -> {}, () -> values.add(5)).iterator();
         var result = tryAwait(() -> {
-            if ((++calls[0] & 1) == 1) values.add(calls[0]);
+            updates.next().run();
             return values;
         }).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(5))
                 .until(hasSize(4));

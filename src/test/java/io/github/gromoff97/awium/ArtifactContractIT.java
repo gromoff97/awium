@@ -4,9 +4,9 @@ import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
-import io.github.gromoff97.awium.internal.BoundAttempt;
 import io.github.gromoff97.awium.internal.AttemptFactory;
 import io.github.gromoff97.awium.internal.AwaitAttempt;
+import io.github.gromoff97.awium.internal.BoundAttempt;
 import io.github.gromoff97.awium.internal.SequenceExecution;
 import io.github.gromoff97.awium.internal.WaitEngine;
 import java.lang.module.ModuleFinder;
@@ -18,24 +18,31 @@ import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarFile;
 import javax.tools.Diagnostic;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.Test;
 
-import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.google.testing.compile.Compiler.javac;
 import static com.google.testing.compile.JavaFileObjects.forSourceString;
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.tngtech.archunit.base.DescribedPredicate.describe;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static io.github.gromoff97.awium.Condition.Reference;
+import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
+import static java.lang.ClassLoader.getPlatformClassLoader;
+import static java.lang.ModuleLayer.boot;
+import static java.lang.System.getProperty;
+import static java.lang.reflect.Modifier.isPublic;
 import static java.nio.file.Files.isRegularFile;
 import static java.util.Objects.requireNonNull;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static com.tngtech.archunit.base.DescribedPredicate.describe;
-import static java.lang.ClassLoader.getPlatformClassLoader;
-import static java.lang.ModuleLayer.boot;
-import static java.lang.System.getProperty;
 
 class ArtifactContractIT {
+
+    @AutoClose
+    private AutoCloseable resource = () -> {};
 
     static final Path JAR = Path.of(requireNonNull(getProperty("awium.test.jar"),
             "awium.test.jar must be configured"));
@@ -57,43 +64,42 @@ class ArtifactContractIT {
 
     @Test
     void executionDoesNotDependOnFluentCatalogOrFormattingCode() throws Exception {
-        try (var jar = new JarFile(JAR.toFile())) {
-            var classes = new ClassFileImporter().importJar(jar);
-            assertIndependent(classes,
-                    Set.of("Condition", "AwaitAttempt", "BoundAttempt", "AttemptFactory", "ConditionSupport",
-                            "ConditionResult", "AttemptResult", "SequenceExecution", "ExecutionStep", "AttemptExecution",
-                            "WaitEngine", "WaitCompletion", "WaitConfiguration"),
-                    Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "Conditions", "CollectionConditions",
-                            "MapConditions", "OptionalConditions", "StringConditions", "FailureDiagnostics", "DiagnosticText"));
-            assertIndependent(classes, Set.of("ConditionResult"), Set.of("BoundAttempt", "Attempt", "AwaitResult"));
-            assertIndependent(classes, Set.of("Condition"), Set.of("AttemptFactory", "AttemptResult"));
-            assertIndependent(classes, Set.of("Reference", "ConditionResult.Unsatisfied"),
-                    Set.of("AwaitAttempt", "BoundAttempt", "AttemptFactory", "SequenceExecution", "AttemptExecution",
-                            "WaitEngine", "WaitCompletion"));
-            assertIndependent(classes, Set.of("ConditionSupport"),
-                    Set.of("WaitEngine", "WaitCompletion", "FailureDiagnostics", "ValueMatching"));
-            assertFalse(AwaitAttempt.class.isAssignableFrom(SequenceExecution.class));
-            assertIndependent(classes, Set.of("SequenceExecution"),
-                    Set.of("ConditionSupport", "WaitEngine", "WaitConfiguration"));
-            assertIndependent(classes, Set.of("BoundAttempt"),
-                    Set.of("SequenceExecution", "WaitEngine", "AttemptHistory", "Attempt", "WaitConfiguration"));
-            assertIndependent(classes,
-                    Set.of("Conditions", "CollectionConditions", "MapConditions", "OptionalConditions", "StringConditions"),
-                    Set.of("AwaitAttempt", "BoundAttempt", "AttemptFactory", "SequenceExecution", "AttemptExecution",
-                            "WaitEngine", "WaitCompletion", "WaitConfiguration", "FailureDiagnostics"));
-            assertIndependent(classes, Set.of("FailureDiagnostics"),
-                    Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "AwaitResult", "AwaitAssertionError",
-                            "AwaitExecutionException"));
-        }
+        var jar = new JarFile(JAR.toFile());
+        resource = jar;
+        var classes = new ClassFileImporter().importJar(jar);
+        assertIndependent(classes,
+                Set.of("Condition", "AwaitAttempt", "BoundAttempt", "AttemptFactory", "ConditionSupport",
+                        "ConditionResult", "AttemptResult", "SequenceExecution", "ExecutionStep", "AttemptExecution",
+                        "WaitEngine", "WaitCompletion", "WaitConfiguration"),
+                Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "Conditions", "CollectionConditions",
+                        "MapConditions", "OptionalConditions", "StringConditions", "FailureDiagnostics", "DiagnosticText"));
+        assertIndependent(classes, Set.of("ConditionResult"), Set.of("BoundAttempt", "Attempt", "AwaitResult"));
+        assertIndependent(classes, Set.of("Condition"), Set.of("AttemptFactory", "AttemptResult"));
+        assertIndependent(classes, Set.of("Reference", "ConditionResult.Unsatisfied"),
+                Set.of("AwaitAttempt", "BoundAttempt", "AttemptFactory", "SequenceExecution", "AttemptExecution",
+                        "WaitEngine", "WaitCompletion"));
+        assertIndependent(classes, Set.of("ConditionSupport"),
+                Set.of("WaitEngine", "WaitCompletion", "FailureDiagnostics", "ValueMatching"));
+        assertFalse(AwaitAttempt.class.isAssignableFrom(SequenceExecution.class));
+        assertIndependent(classes, Set.of("SequenceExecution"),
+                Set.of("ConditionSupport", "WaitEngine", "WaitConfiguration"));
+        assertIndependent(classes, Set.of("BoundAttempt"),
+                Set.of("SequenceExecution", "WaitEngine", "AttemptHistory", "Attempt", "WaitConfiguration"));
+        assertIndependent(classes,
+                Set.of("Conditions", "CollectionConditions", "MapConditions", "OptionalConditions", "StringConditions"),
+                Set.of("AwaitAttempt", "BoundAttempt", "AttemptFactory", "SequenceExecution", "AttemptExecution",
+                        "WaitEngine", "WaitCompletion", "WaitConfiguration", "FailureDiagnostics"));
+        assertIndependent(classes, Set.of("FailureDiagnostics"),
+                Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "AwaitResult", "AwaitAssertionError",
+                        "AwaitExecutionException"));
     }
 
     @Test
     void packagedJarExecutesConsumerCodeInAnIndependentClassLoader() throws Exception {
         var testClasses = consumer.ArtifactConsumer.class.getProtectionDomain().getCodeSource().getLocation();
-        try (var loader = new URLClassLoader(new java.net.URL[]{testClasses, JAR.toUri().toURL()},
-                getPlatformClassLoader())) {
-            assertConsumerResult(loader);
-        }
+        var loader = new URLClassLoader(new java.net.URL[]{testClasses, JAR.toUri().toURL()}, getPlatformClassLoader());
+        resource = loader;
+        assertConsumerResult(loader);
     }
 
     @Test
@@ -105,13 +111,16 @@ class ArtifactContractIT {
         var moduleLoader = layer.findLoader("io.github.gromoff97.awium");
         assertEquals("io.github.gromoff97.awium", moduleLoader.loadClass(Await.class.getName()).getModule().getName());
         var testClasses = consumer.ArtifactConsumer.class.getProtectionDomain().getCodeSource().getLocation();
-        try (var loader = new URLClassLoader(new java.net.URL[]{testClasses}, moduleLoader)) {
-            assertConsumerResult(loader);
-        }
+        var loader = new URLClassLoader(new java.net.URL[]{testClasses}, moduleLoader);
+        resource = loader;
+        assertConsumerResult(loader);
     }
 
     private static void assertConsumerResult(ClassLoader loader) throws Exception {
-        Object[] result = (Object[]) loader.loadClass("consumer.ArtifactConsumer").getMethod("run").invoke(null);
+        loader.setPackageAssertionStatus("consumer", true);
+        var consumer = loader.loadClass("consumer.ArtifactConsumer");
+        assertTrue(consumer.desiredAssertionStatus());
+        Object[] result = (Object[]) consumer.getMethod("run").invoke(null);
         assertArrayEquals(new Object[]{"ready", "ready", 5, "ready", List.of("ready", "ready"), true, "ready",
                 1, Map.entry("key", 1), "ready", "ready", "ready"}, result);
     }
@@ -119,7 +128,7 @@ class ArtifactContractIT {
     @Test
     void definitionBindingsStayPackagePrivate() {
         for (Class<?> internal : List.of(ConditionSupport.class, ValueMatching.class)) {
-            assertFalse(java.lang.reflect.Modifier.isPublic(internal.getModifiers()), internal.getName());
+            assertFalse(isPublic(internal.getModifiers()), internal.getName());
         }
         for (boolean modulePath : List.of(false, true)) {
             assertInaccessible(ConditionSupport.class, modulePath, "compiler.err.not.def.public.cant.access");
@@ -157,11 +166,8 @@ class ArtifactContractIT {
 
     private static String owner(String className) {
         // Value records may format themselves without coupling condition execution to formatting.
-        if (className.equals(Condition.Reference.class.getName())) return "Reference";
-        if (className.equals(io.github.gromoff97.awium.result.ConditionResult.Unsatisfied.class.getName())) {
-            return "ConditionResult.Unsatisfied";
-        }
-        return className.substring(className.lastIndexOf('.') + 1).split("\\$", 2)[0];
+        return Map.of(Reference.class.getName(), "Reference", Unsatisfied.class.getName(), "ConditionResult.Unsatisfied")
+                .getOrDefault(className, className.substring(className.lastIndexOf('.') + 1).split("\\$", 2)[0]);
     }
 
 }

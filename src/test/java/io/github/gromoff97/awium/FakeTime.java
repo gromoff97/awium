@@ -7,6 +7,7 @@ import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
 import static java.lang.Math.min;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class FakeTime implements LongSupplier, LongConsumer {
 
@@ -23,9 +24,8 @@ final class FakeTime implements LongSupplier, LongConsumer {
 
     @Override
     public long getAsLong() {
-        if (++operations > MAX_TIME_OPERATIONS) {
-            throw new AssertionError("test exceeded " + MAX_TIME_OPERATIONS + " virtual time operations");
-        }
+        assertTrue(++operations <= MAX_TIME_OPERATIONS,
+                "test exceeded " + MAX_TIME_OPERATIONS + " virtual time operations");
         return nowNanos;
     }
 

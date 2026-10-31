@@ -59,8 +59,7 @@ class ValueEqualityTest {
     @Test
     void stopsAtTheFirstUnequalObjectArrayElement() {
         assertFalse(equal(
-                new Object[]{"different", new ThrowingEquals(
-                        new IllegalStateException("comparison continued"))},
+                new Object[]{"different", new ThrowingEquals(() -> { throw new IllegalStateException("comparison continued"); })},
                 new Object[]{"expected", new Object()}));
     }
 
@@ -74,8 +73,7 @@ class ValueEqualityTest {
         Object[] rightSecond = {"second", rightFirst};
         rightFirst[1] = rightSecond;
         var result = tryAwait(() -> leftFirst).until(equalTo(rightFirst));
-        var failure = failure(result);
-        assertEquals(CONDITION_FAILED, failure.reason());
+        var failure = failure(CONDITION_FAILED, result);
         assertInstanceOf(StackOverflowError.class, failure.cause());
         assertEquals(1, attempts(result).size());
         assertTrue(equal(leftFirst, leftFirst));

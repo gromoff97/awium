@@ -12,24 +12,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
-import org.junit.jupiter.api.Test;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Named;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.api.parallel.Execution;
-import java.util.stream.Stream;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.failure;
-import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
-import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
+import static java.util.stream.Stream.concat;
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.CollectionConditions.*;
 import static io.github.gromoff97.awium.Conditions.matches;
-import static io.github.gromoff97.awium.function.CheckedPredicate.not;
-import static java.time.Duration.ofNanos;
-import static org.junit.jupiter.api.Assertions.*;
 import static io.github.gromoff97.awium.MapConditions.allEntries;
 import static io.github.gromoff97.awium.MapConditions.allKeys;
 import static io.github.gromoff97.awium.MapConditions.allValues;
@@ -42,11 +43,18 @@ import static io.github.gromoff97.awium.MapConditions.noValue;
 import static io.github.gromoff97.awium.MapConditions.singleEntry;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static io.github.gromoff97.awium.OptionalConditions.hasValue;
+import static io.github.gromoff97.awium.function.CheckedPredicate.not;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED;
+import static io.github.gromoff97.awium.result.AwaitResult.Failed;
+import static io.github.gromoff97.awium.result.AwaitResult.Satisfied;
+import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
+import static java.time.Duration.ofNanos;
+import static java.util.Map.Entry;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
-import static io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED;
 
 class CheckedPredicateTest {
 
@@ -76,7 +84,7 @@ class CheckedPredicateTest {
         assertSame(PENDING, captured.orThrow());
 
         var entries = new ArrayDeque<>(List.of(Map.of("ready", FIRST), Map.of("pending", PENDING)));
-        Map.Entry<String, User> entry = await(entries::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
+        Entry<String, User> entry = await(entries::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(3))
                 .until(singleEntry(CheckedBiPredicate.not(CheckedPredicateTest::readyEntry)));
         assertEquals("pending", entry.getKey());
         assertEquals(0, entry.getValue().id());
@@ -90,18 +98,17 @@ class CheckedPredicateTest {
                 dynamicTest("binary predicate", () -> assertThrows(NullPointerException.class, () -> CheckedBiPredicate.not(null))));
     }
 
-    @TestFactory
-    Stream<DynamicTest> negationDoesNotCatchFailures() {
+    private static Stream<Named<Executable>> negationFailures() {
         return Stream.of(new IOException("checked"), new AssertionError("assertion"),
                 new Throwable("throwable"), new InterruptedException("ordinary failure")).flatMap(cause -> Stream.of(
-                nonInterruptingTest(cause.getClass().getSimpleName() + " / unary negation", () -> {
+                named(cause.getClass().getSimpleName() + " / unary negation", () -> {
                     var time = new FakeTime(0);
                     CheckedPredicate<User> unary = not(user -> { throw cause; });
                     var result = tryAwait(() -> FIRST).usingTime(time, time).until(matches(unary));
                     assertSame(cause, failure(result).cause());
                     assertEquals(1, attempts(result).size());
                 }),
-                nonInterruptingTest(cause.getClass().getSimpleName() + " / binary negation", () -> {
+                named(cause.getClass().getSimpleName() + " / binary negation", () -> {
                     var time = new FakeTime(0);
                     CheckedBiPredicate<String, User> pair = CheckedBiPredicate.not((key, user) -> { throw cause; });
                     var result = tryAwait(() -> Map.of("ready", FIRST)).usingTime(time, time).until(hasNoEntry(pair));
@@ -120,11 +127,11 @@ class CheckedPredicateTest {
         observations.addAll(List.of(PENDING, LAST));
         AwaitResult<User, User> captured = diagnostic(waiting).until(matches(User::checkReady));
         switch (captured) {
-            case AwaitResult.Satisfied(var history, var user) -> {
+            case Satisfied(var history, var user) -> {
                 assertEquals(2, user.id());
                 assertEquals(2, history.getFirst().attempts().size());
             }
-            case AwaitResult.Failed(var history, var failure) -> fail(failure.message());
+            case Failed(var history, var failure) -> fail(failure.message());
         }
         assertTrue(observations.isEmpty());
         assertEquals(1, await(() -> FIRST).usingTime(time, time).until(matches(user -> user.checkReady())).id());
@@ -174,18 +181,17 @@ class CheckedPredicateTest {
         var entry = waiting.until(singleEntry(CheckedPredicateTest::firstEntry));
         assertEquals(5, entry.getKey().length());
         assertEquals(1, entry.getValue().id());
-        AwaitResult<LinkedHashMap<String, User>, Map.Entry<String, User>> captured =
+        AwaitResult<LinkedHashMap<String, User>, Entry<String, User>> captured =
                 diagnostic(waiting).until(singleEntry(CheckedPredicateTest::firstEntry));
         switch (captured) {
-            case AwaitResult.Satisfied(var history, var selected) -> assertEquals(1, selected.getValue().id());
-            case AwaitResult.Failed(var history, var failure) -> fail(failure.message());
+            case Satisfied(var history, var selected) -> assertEquals(1, selected.getValue().id());
+            case Failed(var history, var failure) -> fail(failure.message());
         }
     }
 
     @Test
-    void optionalAndKeyedValuePredicatesSkipMissingValuesAndRetryMismatches() {
+    void optionalPredicatesSkipMissingValues() {
         ArrayDeque<Optional<User>> optionals = new ArrayDeque<>(List.of(Optional.empty(), Optional.of(FIRST)));
-        ArrayDeque<Map<String, User>> maps = new ArrayDeque<>(List.of(Map.of(), Map.of("user", PENDING), Map.of("user", FIRST)));
         int[] calls = {0};
         CheckedPredicate<User> ready = user -> { calls[0]++; return user.checkReady(); };
 
@@ -193,29 +199,33 @@ class CheckedPredicateTest {
                 .until(hasValue(ready)).id());
         assertEquals(1, calls[0]);
         assertTrue(optionals.isEmpty());
-        calls[0] = 0;
+    }
+
+    @Test
+    void keyedValuePredicatesSkipMissingValuesAndRetryMismatches() {
+        ArrayDeque<Map<String, User>> maps = new ArrayDeque<>(List.of(Map.of(), Map.of("user", PENDING), Map.of("user", FIRST)));
+        int[] calls = {0};
+        CheckedPredicate<User> ready = user -> { calls[0]++; return user.checkReady(); };
         var waiting = await(maps::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(4));
         AwaitResult<Map<String, User>, User> result = diagnostic(waiting).until(valueFor("user", ready));
         switch (result) {
-            case AwaitResult.Satisfied(var history, var user) -> {
+            case Satisfied(var history, var user) -> {
                 assertEquals(1, user.id());
                 assertEquals(3, history.getFirst().attempts().size());
             }
-            case AwaitResult.Failed(var history, var failure) -> fail(failure.message());
+            case Failed(var history, var failure) -> fail(failure.message());
         }
         assertEquals(2, calls[0]);
         assertTrue(maps.isEmpty());
     }
 
-    @TestFactory
-    @Execution(SAME_THREAD)
-    Stream<DynamicTest> everyPredicateFamilyStopsAtTheFirstThrowableAndRetainsIt() {
+    private static Stream<Named<Executable>> predicateFamilyFailures() {
         return Stream.of(new IOException("checked"), new AssertionError("assertion"),
                 new Throwable("throwable"), new InterruptedException("ordinary condition failure"))
                 .flatMap(CheckedPredicateTest::predicateFailures);
     }
 
-    private static Stream<DynamicTest> predicateFailures(Throwable cause) {
+    private static Stream<Named<Executable>> predicateFailures(Throwable cause) {
         int[] calls = {0};
         CheckedPredicate<User> check = user -> { calls[0]++; throw cause; };
         CheckedPredicate<String> keyCheck = key -> { calls[0]++; throw cause; };
@@ -256,29 +266,30 @@ class CheckedPredicateTest {
                 named("anyValue", () -> diagnostic(map).until(anyValue(check))),
                 named("noValue", () -> diagnostic(map).until(noValue(check))));
         var label = cause.getClass().getSimpleName();
-        return Stream.concat(waits.stream().map(wait -> nonInterruptingTest(label + " / " + wait.getName(), () -> {
+        return concat(waits.stream().map(wait -> named(label + " / " + wait.getName(), () -> {
             calls[0] = 0;
             var result = wait.getPayload().get();
-            var failure = failure(result);
-            assertEquals(CONDITION_FAILED, failure.reason());
+            var failure = failure(CONDITION_FAILED, result);
             assertSame(cause, failure.cause());
             assertEquals(1, calls[0]);
             assertEquals(1, attempts(result).size());
-        })), Stream.of(nonInterruptingTest(label + " / await matches", () -> {
+        })), Stream.of(named(label + " / await matches", () -> {
             calls[0] = 0;
             assertSame(cause, assertThrows(AwaitExecutionException.class, () -> value.until(matches(check))).getCause());
             assertEquals(1, calls[0]);
         })));
     }
 
-    private static DynamicTest nonInterruptingTest(String name, Executable check) {
-        return dynamicTest(name, () -> {
-            try {
-                check.execute();
-            } finally {
-                assertFalse(interrupted(), "predicate failures must not interrupt the calling thread");
-            }
-        });
+    @ParameterizedTest
+    @MethodSource({"negationFailures", "predicateFamilyFailures"})
+    @Execution(SAME_THREAD)
+    void predicateFailureStopsTheWaitWithoutInterruptingTheCaller(Executable scenario) {
+        assertAll(scenario, () -> assertFalse(currentThread().isInterrupted(), "predicate failures must not interrupt the calling thread"));
+    }
+
+    @AfterEach
+    void clearInterruptFlag() {
+        interrupted();
     }
 
     private static boolean readyEntry(String key, User user) throws Throwable {

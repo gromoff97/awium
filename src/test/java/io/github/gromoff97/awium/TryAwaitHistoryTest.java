@@ -3,37 +3,47 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitResult;
+import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
+import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.observation;
-import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
-import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedTryAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.config;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.Conditions.equalTo;
+import static io.github.gromoff97.awium.Conditions.instanceOf;
 import static io.github.gromoff97.awium.Conditions.isNotNull;
+import static io.github.gromoff97.awium.MapConditions.singleEntry;
+import static io.github.gromoff97.awium.MapConditions.valueFor;
+import static io.github.gromoff97.awium.OptionalConditions.hasValue;
+import static io.github.gromoff97.awium.OptionalConditions.present;
+import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
+import static io.github.gromoff97.awium.result.AwaitResult.Failed;
+import static io.github.gromoff97.awium.result.AwaitResult.Satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.time.Duration.ofNanos;
+import static java.util.Collections.nCopies;
+import static java.util.Map.Entry;
+import static java.util.stream.IntStream.range;
+import static java.util.stream.Stream.concat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static io.github.gromoff97.awium.CollectionConditions.singleElement;
-import static io.github.gromoff97.awium.Conditions.instanceOf;
-import static io.github.gromoff97.awium.MapConditions.valueFor;
-import static io.github.gromoff97.awium.OptionalConditions.hasValue;
-import static java.util.Collections.nCopies;
 
 class TryAwaitHistoryTest {
 
@@ -52,9 +62,9 @@ class TryAwaitHistoryTest {
                 .every(ofNanos(1)).upTo(ofNanos(30))
                 .until(captured(equalTo(100), equalTo(200)));
 
-        assertInstanceOf(AwaitResult.Failed.class, result);
+        assertInstanceOf(Failed.class, result);
         assertThat(result.conditions().getFirst().attempts().keySet()).containsExactly(4L, 6L, 12L, 24L, 30L);
-        assertThat(attempts(result)).hasOnlyElementsOfType(Attempt.Unsatisfied.class)
+        assertThat(attempts(result)).hasOnlyElementsOfType(Unsatisfied.class)
                 .extracting(AwaitTestAccess::observation).containsExactly(0, 10, 20, 30, 40);
         assertTrue(result.conditions().getLast().attempts().isEmpty());
     }
@@ -106,9 +116,18 @@ class TryAwaitHistoryTest {
         }
     }
 
-    @ParameterizedTest(name = "expected={0}")
-    @ValueSource(ints = {300, 301})
-    void successAndTimeoutKeepAllGroupsWithoutChangingTheTerminalValue(int expected) {
+    @Test
+    void successKeepsAllGroupsAndTheTerminalValue() {
+        assertEquals(300, historyThrough300Attempts(300).orThrow());
+    }
+
+    @Test
+    void timeoutKeepsAllGroupsAndTheTerminalFailure() {
+        var result = historyThrough300Attempts(301);
+        assertThrows(AwaitAssertionError.class, result::orThrow);
+    }
+
+    private AwaitResult<Integer, Integer> historyThrough300Attempts(int expected) {
         int[] calls = {0};
         var result = tryAwait(() -> ++calls[0])
                 .every(ofNanos(1)).upTo(ofNanos(300)).usingTime(time, time)
@@ -119,11 +138,7 @@ class TryAwaitHistoryTest {
         assertEquals(1, observation(attempts(result).getFirst()));
         assertEquals(300, observation(attempts(result).getLast()));
         assertEquals(300, attempts(result).size());
-        if (expected == 300) {
-            assertEquals(300, result.orThrow());
-        } else {
-            assertThrows(AwaitAssertionError.class, result::orThrow);
-        }
+        return result;
     }
 
     @Test
@@ -161,14 +176,14 @@ class TryAwaitHistoryTest {
     void historyRetainsSourceTypesAlongsideEveryContainerSelection() {
         var optional = tryAwait(() -> Optional.of("ready"))
                 .every(ofNanos(1)).upTo(ofNanos(10)).usingTime(time, time)
-                .until(OptionalConditions.present);
+                .until(present);
         var collection = tryAwait(() -> List.of("ready"))
                 .persisting(ofNanos(0)).usingTime(time, time)
-                .until(CollectionConditions.singleElement);
+                .until(singleElement);
         var map = tryAwait(() -> Map.of("user", "ready"))
                 .every(ofNanos(1)).upTo(ofNanos(10)).persisting(ofNanos(0)).usingTime(time, time);
         var value = map.until(valueFor("user"));
-        var entry = map.until(MapConditions.singleEntry);
+        var entry = map.until(singleEntry);
 
         String selectedOptional = optional.orThrow();
         Optional<String> observedOptional = observation(attempts(optional).getFirst());
@@ -176,7 +191,7 @@ class TryAwaitHistoryTest {
         List<String> observedCollection = observation(attempts(collection).getFirst());
         String selectedValue = value.orThrow();
         Map<String, String> observedMap = observation(attempts(value).getFirst());
-        Map.Entry<String, String> selectedEntry = entry.orThrow();
+        Entry<String, String> selectedEntry = entry.orThrow();
         assertEquals("ready", selectedOptional);
         assertEquals(Optional.of("ready"), observedOptional);
         assertEquals("ready", selectedElement);
@@ -195,25 +210,20 @@ class TryAwaitHistoryTest {
         assertEquals(1, attempts(result).size());
         assertEquals(300, result.conditions().getFirst().attempts().firstKey());
         assertEquals("one ready element", result.conditions().getFirst().condition().explanation());
-        assertInstanceOf(Attempt.Unsatisfied.class, attempts(result).getFirst());
+        assertInstanceOf(Unsatisfied.class, attempts(result).getFirst());
     }
 
     @Test
     void retainsEveryNewErrorWithoutReadingItsMessageOrComparingIt() {
-        var errors = new java.util.ArrayList<Throwable>();
-        int[] calls = {0};
+        var errors = range(0, 3).mapToObj(ignored -> new AssertionError("same message") {
+            @Override public String getMessage() { throw new AssertionError("message must not be read"); }
+            @Override public boolean equals(Object other) { throw new AssertionError("equals must not be called"); }
+            @Override public int hashCode() { throw new AssertionError("hashCode must not be called"); }
+            @Override public String toString() { throw new AssertionError("toString must not be called"); }
+        }).toList();
+        var outcomes = concat(errors.stream().map(error -> unsatisfied("pending", error)), Stream.of(satisfied())).iterator();
         var result = tryAwait(() -> 1).usingTime(time, time).every(ofNanos(1))
-                .until(condition("ready", value -> {
-                    if (++calls[0] == 4) return satisfied();
-                    var error = new AssertionError("same message") {
-                        @Override public String getMessage() { throw new AssertionError("message must not be read"); }
-                        @Override public boolean equals(Object other) { throw new AssertionError("equals must not be called"); }
-                        @Override public int hashCode() { throw new AssertionError("hashCode must not be called"); }
-                        @Override public String toString() { throw new AssertionError("toString must not be called"); }
-                    };
-                    errors.add(error);
-                    return unsatisfied("pending", error);
-                }));
+                .until(condition("ready", value -> outcomes.next()));
 
         assertEquals(1, result.orThrow());
         assertEquals(4, attempts(result).size());
@@ -229,9 +239,11 @@ class TryAwaitHistoryTest {
     @Test
     void repetitionsOfTheSameErrorCanStillBeGrouped() {
         var error = new AssertionError("same error");
-        int[] calls = {0};
-        var result = tryAwait(() -> ++calls[0] < 4 ? 1 : 4).usingTime(time, time).every(ofNanos(1))
-                .until(condition("ready", value -> value == 4 ? satisfied() : unsatisfied("pending", error)));
+        var observations = List.of(1, 1, 1, 4).iterator();
+        var outcomes = List.<ConditionResult>of(unsatisfied("pending", error), unsatisfied("pending", error),
+                unsatisfied("pending", error), satisfied()).iterator();
+        var result = tryAwait(observations::next).usingTime(time, time).every(ofNanos(1))
+                .until(condition("ready", value -> outcomes.next()));
 
         assertEquals(4, result.orThrow());
         assertEquals(2, attempts(result).size());
@@ -244,7 +256,7 @@ class TryAwaitHistoryTest {
         var result = timedTryAwait(ThrowingProbe::new,
                 config(1, 10, 3), time, time).until(condition("ready", actual -> satisfied()));
 
-        assertInstanceOf(AwaitResult.Satisfied.class, result);
+        assertInstanceOf(Satisfied.class, result);
         assertThat(attempts(result)).hasSize(4).hasOnlyElementsOfType(Attempt.Satisfied.class);
         assertSame(observation(attempts(result).getLast()), result.orThrow());
     }
@@ -263,7 +275,7 @@ class TryAwaitHistoryTest {
         assertEquals("ready", selected);
         assertThat(result.conditions().getFirst().attempts().keySet()).containsExactly(2L, 4L, 5L);
         assertThat(attempts(result).subList(0, 2))
-                .extracting(attempt -> assertInstanceOf(Attempt.Unsatisfied.class, attempt).mismatch())
+                .extracting(attempt -> assertInstanceOf(Unsatisfied.class, attempt).mismatch())
                 .containsExactly("collection size was 0", "single element: collection size was 0");
         assertSame(check, result.conditions().getFirst().condition());
     }
@@ -280,7 +292,7 @@ class TryAwaitHistoryTest {
         assertEquals("ready", result.orThrow());
         assertEquals(4, attempts(result).size());
         assertThat(attempts(result).subList(0, 3))
-                .extracting(attempt -> assertInstanceOf(Attempt.Unsatisfied.class, attempt).mismatch())
+                .extracting(attempt -> assertInstanceOf(Unsatisfied.class, attempt).mismatch())
                 .containsExactly("optional was empty", "optional value: collection size was 0",
                         "optional value: single element: collection size was 0");
     }

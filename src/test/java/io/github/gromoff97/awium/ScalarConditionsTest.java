@@ -5,6 +5,7 @@ import java.nio.CharBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.DynamicContainer;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.DynamicTest;
@@ -187,7 +188,7 @@ class ScalarConditionsTest {
     void textEmptinessMismatchesRemainTimeoutsWhenRenderingFails(int length, PreservingCondition<CharSequence> check) {
         var text = new Text(length);
         var waiting = await(() -> text).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
-        assertEquals(TIMEOUT, failure(diagnostic(waiting).until(check)).reason());
+        failure(TIMEOUT, diagnostic(waiting).until(check));
     }
 
     @Test
@@ -334,6 +335,8 @@ class ScalarConditionsTest {
                         assertThrows(IllegalArgumentException.class, () -> hasLengthBetween(-1, 1)).getMessage())),
                 dynamicTest("reject reversed length range", () -> assertThrows(IllegalArgumentException.class, () -> hasLengthBetween(2, 1))),
                 dynamicTest("reject null expected collection", () -> assertThrows(NullPointerException.class, () -> containsAll(null))),
+                dynamicTest("reject null regex pattern", () -> assertThrows(NullPointerException.class, () -> matchesRegex((Pattern) null))),
+                dynamicTest("reject null negative regex pattern", () -> assertThrows(NullPointerException.class, () -> doesNotMatchRegex((Pattern) null))),
                 dynamicTest("reject null expected text", () -> assertThrows(NullPointerException.class, () -> containsAll(asList("ready", null)))));
     }
 

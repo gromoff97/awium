@@ -4,29 +4,37 @@ import io.github.gromoff97.awium.result.Attempt;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import static io.github.gromoff97.awium.Condition.PreservingCondition;
-import static io.github.gromoff97.awium.AwaitTestAccess.failure;
-import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
-import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
+import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
-import static io.github.gromoff97.awium.Conditions.*;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
 import static java.time.Duration.ofNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
-import static java.lang.Thread.currentThread;
-import static java.lang.Thread.interrupted;
 
 class NestedSelectionTest {
 
     private final FakeTime time = new FakeTime(0);
 
     record Payment(int id, boolean paid) {}
+
+    @AfterEach
+    void clearInterruptFlag() {
+        interrupted();
+    }
 
     @Test
     void nestedConditionsCheckAndNarrowTheSoleValue() {
@@ -90,27 +98,25 @@ class NestedSelectionTest {
         assertEquals(3, factories[0]);
     }
 
-    @Test
-    void nestedFailuresStopSelectionAndRetainTheirOriginalCause() {
-        for (Throwable cause : List.of(new IOException("checked"), new InterruptedException("interrupted"),
-                new IllegalStateException("runtime"), new AssertionError("uncontrolled assertion"))) {
-            var time = new FakeTime(0);
-            int[] checks = {0};
-            try {
-                var result = tryAwait(() -> List.of("a")).usingTime(time, time).until(singleElement(condition("broken", (String value) -> {
-                    ++checks[0];
-                    throw cause;
-                })));
-                var failure = failure(result);
-                assertSame(cause, failure.cause());
-                assertThat(failure.message()).contains("broken");
-                assertEquals(1, checks[0]);
-                assertThat(time.parkRequests).isEmpty();
-                assertFalse(currentThread().isInterrupted());
-            } finally {
-                interrupted();
-            }
-        }
+    @ParameterizedTest
+    @MethodSource("nestedFailures")
+    void nestedFailuresStopSelectionAndRetainTheirOriginalCause(Throwable cause) {
+        int[] checks = {0};
+        var result = tryAwait(() -> List.of("a")).usingTime(time, time).until(singleElement(condition("broken", (String value) -> {
+            ++checks[0];
+            throw cause;
+        })));
+        var failure = failure(result);
+        assertSame(cause, failure.cause());
+        assertThat(failure.message()).contains("broken");
+        assertEquals(1, checks[0]);
+        assertThat(time.parkRequests).isEmpty();
+        assertFalse(currentThread().isInterrupted());
+    }
+
+    private static List<Throwable> nestedFailures() {
+        return List.of(new IOException("checked"), new InterruptedException("interrupted"),
+                new IllegalStateException("runtime"), new AssertionError("uncontrolled assertion"));
     }
 
     @Test

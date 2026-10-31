@@ -17,7 +17,6 @@ java.toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 
 dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.2")
-    testImplementation("org.junit-pioneer:junit-pioneer:2.3.0")
     testImplementation("org.assertj:assertj-core:3.27.7")
     testImplementation("com.google.testing.compile:compile-testing:0.23.0")
     testImplementation("com.tngtech.archunit:archunit:1.5.1")

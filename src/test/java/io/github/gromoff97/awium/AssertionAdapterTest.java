@@ -1,24 +1,34 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.AttemptResult;
-import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.function.CheckedConsumer;
 import io.github.gromoff97.awium.function.CheckedFunction;
+import io.github.gromoff97.awium.internal.AttemptResult;
+import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.List;
 import java.util.concurrent.Callable;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.failure;
-import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
+import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.ConditionTestRuntime.evaluate;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.internal.WaitConfiguration.DEFAULT;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
 import static java.time.Duration.ofNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -26,37 +36,43 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static java.lang.Thread.currentThread;
-import static java.lang.Thread.interrupted;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
+import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
+@Execution(SAME_THREAD)
 class AssertionAdapterTest {
 
-    @Test
-    void assertionFailuresRetainTheirCauseWithAndWithoutInterruption() {
-        // Exercise ordinary diagnostics first: PIT clears interrupt flags while loading classes.
-        for (boolean interrupt : List.of(false, true)) {
-            var cause = new AssertionError("payment is not ready");
-            var check = asserted((String value) -> {
-                if (interrupt) currentThread().interrupt();
-                throw cause;
-            });
-            var time = new FakeTime(0);
-            var waiting = await(() -> "pending").usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
-            var reason = interrupt ? INTERRUPTED : TIMEOUT;
-            try {
-                var failure = failure(diagnostic(waiting).until(check));
-                assertEquals(interrupt, interrupted());
-                assertEquals(reason, failure.reason());
-                assertSame(cause, failure.cause());
+    @AfterEach
+    void clearInterruptFlag() {
+        interrupted();
+    }
 
-                var thrown = assertFailure(reason, () -> waiting.until(check));
-                assertEquals(interrupt, interrupted());
-                assertSame(cause, thrown.getCause());
-                assertEquals(failure.message(), thrown.getMessage());
-            } finally {
-                interrupted();
-            }
-        }
+    @ParameterizedTest
+    @MethodSource("assertionInterruptions")
+    void assertionFailuresRetainTheirCauseInBothTerminals(Runnable beforeFailure, Reason reason, boolean expectedInterrupt) {
+        var cause = new AssertionError("payment is not ready");
+        var check = asserted((String value) -> {
+            beforeFailure.run();
+            throw cause;
+        });
+        var time = new FakeTime(0);
+        var waiting = await(() -> "pending").usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+        var failure = failure(diagnostic(waiting).until(check));
+        assertEquals(expectedInterrupt, interrupted());
+        assertEquals(reason, failure.reason());
+        assertSame(cause, failure.cause());
+
+        var thrown = assertFailure(reason, () -> waiting.until(check));
+        assertEquals(expectedInterrupt, interrupted());
+        assertSame(cause, thrown.getCause());
+        assertEquals(failure.message(), thrown.getMessage());
+    }
+
+    private static List<Arguments> assertionInterruptions() {
+        // Exercise ordinary diagnostics first: PIT clears interrupt flags while loading classes.
+        return List.of(argumentSet("ordinary assertion", (Runnable) () -> {}, TIMEOUT, false),
+                argumentSet("interrupted assertion", (Runnable) () -> currentThread().interrupt(), INTERRUPTED, true));
     }
 
     @Test
@@ -75,19 +91,22 @@ class AssertionAdapterTest {
         assertEquals("payment id", condition.description());
     }
 
-    @Test
-    void namedConditionValidatesItsArguments() {
-        assertThatNullPointerException().isThrownBy(() -> condition(null, payment -> satisfied()))
-                .withMessageContaining("description");
-        assertThatNullPointerException().isThrownBy(() -> condition(null, (CheckedFunction<Object, ConditionResult>) null))
-                .withMessageContaining("description");
-        assertThatIllegalArgumentException().isThrownBy(() -> condition(" \n ", payment -> satisfied()))
-                .withMessageContaining("description");
-        assertThatNullPointerException().isThrownBy(() -> condition("payment", (CheckedFunction<Object, ConditionResult>) null))
-                .withMessageContaining("evaluation");
-        assertThatNullPointerException()
-                .isThrownBy(() -> conditionPerWait("payment", (Callable<CheckedFunction<Object, ConditionResult>>) null))
-                .withMessageContaining("evaluator factory");
+    @TestFactory
+    List<DynamicTest> customConditionFactoriesRejectInvalidArguments() {
+        return List.of(
+                dynamicTest("null description", () -> assertThatNullPointerException()
+                        .isThrownBy(() -> condition(null, payment -> satisfied())).withMessageContaining("description")),
+                dynamicTest("null description and callback", () -> assertThatNullPointerException()
+                        .isThrownBy(() -> condition(null, (CheckedFunction<Object, ConditionResult>) null)).withMessageContaining("description")),
+                dynamicTest("blank description", () -> assertThatIllegalArgumentException()
+                        .isThrownBy(() -> condition(" \n ", payment -> satisfied())).withMessageContaining("description")),
+                dynamicTest("null evaluation", () -> assertThatNullPointerException()
+                        .isThrownBy(() -> condition("payment", (CheckedFunction<Object, ConditionResult>) null)).withMessageContaining("evaluation")),
+                dynamicTest("null evaluator factory", () -> assertThatNullPointerException()
+                        .isThrownBy(() -> conditionPerWait("payment", (Callable<CheckedFunction<Object, ConditionResult>>) null))
+                        .withMessageContaining("evaluator factory")),
+                dynamicTest("null assertion", () -> assertThatNullPointerException()
+                        .isThrownBy(() -> asserted((CheckedConsumer<String>) null)).withMessageContaining("assertion")));
     }
 
     @Test
@@ -127,9 +146,5 @@ class AssertionAdapterTest {
                 failure.getCause().getStackTrace());
     }
 
-    @Test
-    void callbackFactoriesRejectNullCallbacks() {
-        assertThatNullPointerException().isThrownBy(() -> asserted((CheckedConsumer<String>) null))
-                .withMessageContaining("assertion");
-    }
+
 }
