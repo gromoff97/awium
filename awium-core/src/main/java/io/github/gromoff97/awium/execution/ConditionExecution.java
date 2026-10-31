@@ -31,7 +31,11 @@ public final class ConditionExecution<OBSERVED, RESULT> {
             return (INPUT actual) -> {
                 run.beginAttempt();
                 var attempted = requireNonNull(run.probe(actual), "condition returned null ConditionResult");
-                if (run.complete()) return satisfied(run.result());
+                if (currentThread().isInterrupted()) throw interrupted(attempted.cause());
+                if (run.complete()) {
+                    if (currentThread().isInterrupted()) throw interrupted(attempted.cause());
+                    return satisfied(run.result());
+                }
                 return attempted instanceof Satisfied<?> ? unsatisfied() : attempted.<RESULT>mapValue(ignored -> null);
             };
         });
