@@ -43,23 +43,16 @@ public final class ConditionExecution<OBSERVED, RESULT> {
         return (ConditionRun<INPUT, RESULT>) requireNonNull(condition, "condition must not be null").newRun(condition, recording);
     }
 
-    private final Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory;
+    private final Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory;
     private AwaitAttempt<? super OBSERVED, ? extends RESULT> evaluator;
 
-    public ConditionExecution(Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory) {
+    public ConditionExecution(Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
         this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <OBSERVED, RESULT> AwaitAttempt<? super OBSERVED, ? extends RESULT> createEvaluator(
-            Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory) throws Exception {
-        // Condition constructors validate factories; source/selection contracts are bound by their terminal constraints.
-        return (AwaitAttempt<? super OBSERVED, ? extends RESULT>) evaluatorFactory.call();
     }
 
     public ConditionResult<? extends RESULT> probe(OBSERVED actual) throws Throwable {
         if (currentThread().isInterrupted()) throw interrupted(null);
-        if (evaluator == null) evaluator = createEvaluator(evaluatorFactory);
+        if (evaluator == null) evaluator = evaluatorFactory.call();
         if (currentThread().isInterrupted()) throw interrupted(null);
         var result = requireNonNull(evaluator.probe(actual), "condition returned null ConditionResult");
         if (currentThread().isInterrupted()) throw interrupted(result.cause());

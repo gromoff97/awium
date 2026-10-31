@@ -1,9 +1,12 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.execution.DefinedCondition;
+import io.github.gromoff97.awium.execution.ConditionExecution;
+import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,6 +26,14 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ConditionExecutionTest {
+
+    @Test
+    void evaluatorFactoriesAcceptBroaderInputsAndNarrowerResults() throws Throwable {
+        Callable<AwaitAttempt<CharSequence, Integer>> factory = () -> actual -> satisfied(actual.length());
+        var execution = new ConditionExecution<String, Number>(factory);
+
+        assertEquals(5, result(execution.probe("ready")));
+    }
 
     @AfterEach
     void clearInterruptFlag() {

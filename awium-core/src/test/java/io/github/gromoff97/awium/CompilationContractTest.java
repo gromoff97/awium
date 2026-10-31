@@ -2,10 +2,29 @@ package io.github.gromoff97.awium;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class CompilationContractTest {
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "() -> (Integer actual) -> satisfied(actual)",
+            "() -> (String actual) -> satisfied(actual)"
+    })
+    void executionFactoriesMustMatchTheirInputAndResultTypes(String factory) {
+        assertRejected("""
+                import io.github.gromoff97.awium.execution.ConditionExecution;
+                import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+                final class Contract {
+                    void check() {
+                        new ConditionExecution<String, Integer>(%s);
+                    }
+                }
+                """.formatted(factory));
+    }
 
     @Test
     void negativeFixturesRejectValidCodeAndUnrelatedErrors() {
