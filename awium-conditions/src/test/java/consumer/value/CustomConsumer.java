@@ -1,9 +1,8 @@
 package consumer.value;
 
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.function.CheckedFunction;
+import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AwaitResult;
-import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -68,13 +67,13 @@ public final class CustomConsumer {
         return await(() -> List.of(user)).until(firstElement(condition("ready", actual -> satisfied(actual)))).id();
     }
 
-    public static User checkedFunction(User user) {
-        CheckedFunction<User, ConditionResult<User>> callback = actual -> satisfied(actual);
+    public static User storedAttempt(User user) {
+        AwaitAttempt<User, User> callback = actual -> satisfied(actual);
         return await(() -> user).until(condition("ready", callback).because("user is ready"));
     }
 
     public static User callableFactory(User user) {
-        Callable<CheckedFunction<User, ConditionResult<User>>> factory = () -> actual -> satisfied(actual);
+        Callable<AwaitAttempt<User, User>> factory = () -> actual -> satisfied(actual);
         return await(() -> user).until(conditionPerWait("ready", factory).because("user is ready"));
     }
 
@@ -142,7 +141,7 @@ public final class CustomConsumer {
     }
 
     public static List<CharSequence> evaluatorResults() {
-        Callable<CheckedFunction<CharSequence, ConditionResult<CharSequence>>> broad = () -> actual -> satisfied(actual);
+        Callable<AwaitAttempt<CharSequence, CharSequence>> broad = () -> actual -> satisfied(actual);
         var waiting = await(() -> "ready").every(ofNanos(1));
         String direct = waiting.until(condition("direct", actual -> satisfied(actual)));
         String created = waiting.until(conditionPerWait("created", CustomConsumer::evaluator));
@@ -152,6 +151,6 @@ public final class CustomConsumer {
         return List.of(direct, created, selected, captured.getFirst(), captured.getLast());
     }
 
-    private static CheckedFunction<String, ConditionResult<String>> evaluator() { return actual -> satisfied(actual); }
+    private static AwaitAttempt<String, String> evaluator() { return actual -> satisfied(actual); }
 
 }

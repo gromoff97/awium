@@ -29,7 +29,7 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.OptionalConditions.present
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
-import io.github.gromoff97.awium.function.CheckedFunction
+import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.function.CheckedPredicate
 import io.github.gromoff97.awium.result.ConditionResult.Satisfied
 import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
@@ -98,7 +98,7 @@ class QuantifiedConditionTest {
         val nested = conditionPerWait<User, User>("second check") {
             factories++
             var calls = 0
-            CheckedFunction { actual -> if (++calls == 2) satisfied(actual) else unsatisfied() }
+            AwaitAttempt { actual -> if (++calls == 2) satisfied(actual) else unsatisfied() }
         }
         val actual = listOf(ready, ready)
         repeat(2) {
@@ -113,7 +113,7 @@ class QuantifiedConditionTest {
         val nested = conditionPerWait<User, User>("second check") {
             factories++
             var calls = 0
-            CheckedFunction { actual -> if (++calls == 2) satisfied(actual) else unsatisfied() }
+            AwaitAttempt { actual -> if (++calls == 2) satisfied(actual) else unsatisfied() }
         }
         val actual = listOf(ready, ready)
         val execution = bind<List<User>, List<List<User>>>(captured(any(nested), any(nested)))

@@ -75,7 +75,7 @@ public interface AwaitCondition {
         }
 
         public final AwaitAttempt<? super INPUT, ? extends RESULT> newAttempt() throws Exception {
-            return factory.call();
+            return requireNonNull(factory.call(), "evaluator must not be null");
         }
 
         @Override

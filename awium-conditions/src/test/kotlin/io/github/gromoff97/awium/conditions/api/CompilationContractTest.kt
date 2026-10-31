@@ -404,14 +404,14 @@ class CompilationContractTest {
                     """conditionPerWait("typed", Contract::evaluator)""")) {
                 assertRejected("""
                         import static io.github.gromoff97.awium.conditions.Conditions.*;
-                        import io.github.gromoff97.awium.function.CheckedFunction;
+                        import io.github.gromoff97.awium.function.AwaitAttempt;
                         import io.github.gromoff97.awium.result.ConditionResult;
 
                         final class Contract {
                             static ConditionResult<String> status(String value) {
                                 return ConditionResult.satisfied(value);
                             }
-                            static CheckedFunction<String, ConditionResult<String>> evaluator() {
+                            static AwaitAttempt<String, String> evaluator() {
                                 return Contract::status;
                             }
                             void check(Callable<Integer> source) {

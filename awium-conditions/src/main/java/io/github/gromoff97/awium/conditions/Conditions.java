@@ -7,17 +7,16 @@ import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.conditions.internal.AssertedCondition;
 import io.github.gromoff97.awium.conditions.internal.BoundCondition;
-import io.github.gromoff97.awium.conditions.internal.CustomCondition;
 import io.github.gromoff97.awium.conditions.internal.EqualityCondition;
 import io.github.gromoff97.awium.conditions.internal.InCondition;
 import io.github.gromoff97.awium.conditions.internal.InstanceOfCondition;
 import io.github.gromoff97.awium.conditions.internal.MatchesCondition;
 import io.github.gromoff97.awium.conditions.internal.NullCondition;
 import io.github.gromoff97.awium.conditions.internal.RangeCondition;
+import io.github.gromoff97.awium.execution.DefinedCondition;
+import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.function.CheckedConsumer;
-import io.github.gromoff97.awium.function.CheckedFunction;
 import io.github.gromoff97.awium.function.CheckedPredicate;
-import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.concurrent.Callable;
 
 import static io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
@@ -56,13 +55,13 @@ public final class Conditions {
     }
 
     public static <INPUT, RESULT> Condition<INPUT, RESULT> condition(String description,
-            CheckedFunction<? super INPUT, ? extends ConditionResult<? extends RESULT>> evaluation) {
-        return new CustomCondition<>(description, evaluation);
+            AwaitAttempt<? super INPUT, ? extends RESULT> evaluation) {
+        return new DefinedCondition<>(description, null, evaluation);
     }
 
     public static <INPUT, RESULT> Condition<INPUT, RESULT> conditionPerWait(String description,
-            Callable<? extends CheckedFunction<? super INPUT, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory) {
-        return new CustomCondition<>(description, evaluatorFactory);
+            Callable<? extends AwaitAttempt<? super INPUT, ? extends RESULT>> evaluatorFactory) {
+        return new DefinedCondition<>(description, null, evaluatorFactory);
     }
 
     public static <INPUT> PreservingCondition<INPUT> asserted(CheckedConsumer<? super INPUT> assertion) {

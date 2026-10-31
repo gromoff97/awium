@@ -8,7 +8,7 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.Conditions.condition
 import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
-import io.github.gromoff97.awium.function.CheckedFunction
+import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.ConditionResult
 import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
 import io.github.gromoff97.awium.result.ConditionResult.satisfied
@@ -29,15 +29,15 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 
-class CustomConditionTest {
+class CustomConditionFactoryTest {
     @Test
     fun `delegates once and returns the selected result`() {
-        val evaluation: CheckedFunction<String, ConditionResult<Int>> = mock()
-        `when`(evaluation.apply("ready")).thenReturn(satisfied(5))
+        val evaluation: AwaitAttempt<String, Int> = mock()
+        `when`(evaluation.probe("ready")).thenReturn(satisfied(5))
         val condition = condition("text length", evaluation)
 
         assertEquals(5, result(evaluate(condition, "ready")))
-        verify(evaluation).apply("ready")
+        verify(evaluation).probe("ready")
     }
 
     @Test
@@ -76,7 +76,7 @@ class CustomConditionTest {
         var factories = 0
         val condition: Condition<Any, Any> = conditionPerWait("lazy") {
             factories++
-            CheckedFunction { satisfied(it) }
+            AwaitAttempt { satisfied(it) }
         }
         bind(condition)
 
@@ -89,7 +89,7 @@ class CustomConditionTest {
         val condition: Condition<Any, Any> = conditionPerWait("second observation") {
             factories++
             var calls = 0
-            CheckedFunction { actual -> if (++calls == 2) satisfied(actual) else unsatisfied("first observation") }
+            AwaitAttempt { actual -> if (++calls == 2) satisfied(actual) else unsatisfied("first observation") }
         }
         val actual = Any()
 

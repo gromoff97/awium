@@ -19,7 +19,7 @@ import io.github.gromoff97.awium.conditions.MapConditions.singleEntry
 import io.github.gromoff97.awium.conditions.OptionalConditions.hasValue
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
-import io.github.gromoff97.awium.function.CheckedFunction
+import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
 import io.github.gromoff97.awium.result.ConditionResult.satisfied
 import io.github.gromoff97.awium.result.ConditionResult.unsatisfied
@@ -61,7 +61,7 @@ class NestedConditionTest {
         val nested: Condition<Number, Number> = conditionPerWait("second observation") {
             factories++
             var calls = 0
-            CheckedFunction { actual -> if (++calls == 2) satisfied(actual) else unsatisfied("first observation") }
+            AwaitAttempt { actual -> if (++calls == 2) satisfied(actual) else unsatisfied("first observation") }
         }
         val condition = selection.compose(nested)
         val selected = BigDecimal("1.00")
@@ -82,7 +82,7 @@ class NestedConditionTest {
         var factories = 0
         val nested = conditionPerWait<String, String>("ready") {
             factories++
-            CheckedFunction { satisfied(it) }
+            AwaitAttempt { satisfied(it) }
         }
         rejection(singleElement(nested), actual)
         assertEquals(0, factories)
@@ -92,7 +92,7 @@ class NestedConditionTest {
     fun `single selection checks cardinality before checking its value`() {
         var checked = 0
         val nested = conditionPerWait<Int, Int>("answer") {
-            CheckedFunction { actual ->
+            AwaitAttempt { actual ->
                 checked++
                 if (actual == 42) satisfied(actual) else unsatisfied("not the answer")
             }
@@ -113,7 +113,7 @@ class NestedConditionTest {
         val events = mutableListOf<String>()
         val nested = conditionPerWait<Int, Int>("value is ready") {
             events += "factory"
-            CheckedFunction { value -> events += "value $value"; satisfied(value) }
+            AwaitAttempt { value -> events += "value $value"; satisfied(value) }
         }
         val execution = bind(valueFor("key", nested))
 
@@ -131,7 +131,7 @@ class NestedConditionTest {
         val events = mutableListOf<String>()
         val nested = conditionPerWait<Map.Entry<String, Int>, Int>("entry is ready") {
             events += "factory"
-            CheckedFunction { entry -> events += "value ${entry.value}"; satisfied(entry.value) }
+            AwaitAttempt { entry -> events += "value ${entry.value}"; satisfied(entry.value) }
         }
         val execution = bind(singleEntry(nested))
 
@@ -146,7 +146,7 @@ class NestedConditionTest {
 
     @Test
     fun `map value metadata retains the key and nested description`() {
-        val nested = conditionPerWait<Int, Int>("value is ready") { CheckedFunction { satisfied(it) } }
+        val nested = conditionPerWait<Int, Int>("value is ready") { AwaitAttempt { satisfied(it) } }
         val condition = valueFor("key", nested).because("the selected value must be ready")
 
         assertEquals("map value: value is ready", condition.description())

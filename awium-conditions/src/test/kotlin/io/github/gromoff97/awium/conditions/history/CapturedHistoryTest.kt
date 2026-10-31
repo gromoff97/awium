@@ -29,7 +29,7 @@ import io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION
 import io.github.gromoff97.awium.execution.WaitCompletion.Timeout
 import io.github.gromoff97.awium.execution.WaitCompletion.SatisfiedWait
 import io.github.gromoff97.awium.execution.WaitTiming
-import io.github.gromoff97.awium.function.CheckedFunction
+import io.github.gromoff97.awium.function.AwaitAttempt
 import java.io.IOException
 import java.time.Duration.ofNanos
 import java.util.concurrent.Callable
@@ -145,7 +145,7 @@ class CapturedHistoryTest {
         var initialized = 0
         val unreached = conditionPerWait<Int, Int>("third") {
             initialized++
-            CheckedFunction { satisfied(it) }
+            AwaitAttempt { satisfied(it) }
         }.because("last check")
         val run = start<Int, List<Int>>(captured(equalTo(1), equalTo(3), unreached), true)
         probe(run, 1)

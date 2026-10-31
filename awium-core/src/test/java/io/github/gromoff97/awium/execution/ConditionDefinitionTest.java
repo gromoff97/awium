@@ -85,6 +85,14 @@ class ConditionDefinitionTest {
     }
 
     @Test
+    void missingEvaluatorsAreRejectedWhenTheFactoryRuns() {
+        var condition = new DefinedCondition<String, String>("ready", null, () -> null);
+
+        var failure = assertThrows(NullPointerException.class, () -> condition.probe("ready"));
+        assertEquals("evaluator must not be null", failure.getMessage());
+    }
+
+    @Test
     void preservingConditionsReturnTheObservationEvenIfTheEvaluatorReturnsAnotherValue() throws Throwable {
         var actual = new StringBuilder("observed");
         var condition = new PreservingCondition<CharSequence>("accepted", null, ignored -> satisfied("different")) {};

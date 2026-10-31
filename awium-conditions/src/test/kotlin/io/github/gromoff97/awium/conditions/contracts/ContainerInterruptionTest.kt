@@ -40,7 +40,7 @@ import io.github.gromoff97.awium.conditions.MapConditions.hasNoEntry
 import io.github.gromoff97.awium.conditions.MapConditions.hasSize as mapHasSize
 import io.github.gromoff97.awium.conditions.MapConditions.singleEntry
 import io.github.gromoff97.awium.conditions.MapConditions.valueFor
-import io.github.gromoff97.awium.function.CheckedFunction
+import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.function.CheckedPredicate
 import io.github.gromoff97.awium.result.ConditionResult.satisfied
 import java.lang.Thread.currentThread
@@ -77,7 +77,7 @@ class ContainerInterruptionTest {
             override fun toString() = "interrupting collection"
         }
         var factories = 0
-        val nested = conditionPerWait<String, String>("nested check") { factories++; CheckedFunction { satisfied(it) } }
+        val nested = conditionPerWait<String, String>("nested check") { factories++; AwaitAttempt { satisfied(it) } }
         assertInstanceOf(InterruptedException::class.java, thrown(quantify(nested), actual))
         assertTrue(currentThread().isInterrupted)
         assertEquals(0, factories)
@@ -97,7 +97,7 @@ class ContainerInterruptionTest {
     @ValueSource(booleans = [false, true])
     fun `an interrupted extraction skips the nested factory`(sequence: Boolean) {
         var factories = 0
-        val nested = conditionPerWait<String, String>("nested check") { factories++; CheckedFunction { satisfied(it) } }
+        val nested = conditionPerWait<String, String>("nested check") { factories++; AwaitAttempt { satisfied(it) } }
         val check = valueFor("key", nested).because("value must be readable")
         val actual = SignallingMap("getValue")
         assertInstanceOf(InterruptedException::class.java, thrown(if (sequence) captured(check, check) else check, actual))

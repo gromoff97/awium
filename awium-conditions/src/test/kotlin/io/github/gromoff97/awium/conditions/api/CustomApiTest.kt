@@ -91,7 +91,7 @@ class CustomApiTest {
 
         @JvmStatic
         fun selectedUsers() = listOf(
-            named("checked function", CustomConsumer::checkedFunction),
+            named("stored attempt", CustomConsumer::storedAttempt),
             named("callable factory", CustomConsumer::callableFactory),
             named("result pattern", CustomConsumer::recordPattern)
         )

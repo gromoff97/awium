@@ -3,7 +3,7 @@ package io.github.gromoff97.awium.waiting;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.execution.WaitCompletion;
-import io.github.gromoff97.awium.function.CheckedFunction;
+import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.internal.WaitEngine;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
@@ -380,10 +380,10 @@ class ObservationTest {
         throw new AssertionError("condition must not be called");
     }
 
-    private static Attempt<?> attempt(Callable<Object> source, CheckedFunction<Object, ConditionResult<?>> condition) {
+    private static Attempt<?> attempt(Callable<Object> source, AwaitAttempt<Object, Object> condition) {
         var time = new FakeTime(0);
         return new WaitEngine<Object>(config(1, 2, 0).withTime(time, time), source, start(check("test condition", actual -> {
-            ConditionResult<?> evaluation = condition.apply(actual);
+            ConditionResult<?> evaluation = condition.probe(actual);
             time.advanceNanos(2);
             return evaluation;
         }))).waitFor(ignored -> {}).step().attempt();

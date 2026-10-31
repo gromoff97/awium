@@ -18,7 +18,7 @@ import io.github.gromoff97.awium.conditions.OptionalConditions.hasValue
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import io.github.gromoff97.awium.execution.ConditionExecution.start
 import io.github.gromoff97.awium.execution.ProbeFailure
-import io.github.gromoff97.awium.function.CheckedFunction
+import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.Attempt.Operation.CONDITION
 import io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED
 import io.github.gromoff97.awium.result.AwaitResult
@@ -52,7 +52,7 @@ class CompositionFailureTest {
         val nested = conditionPerWait<String, String>("lazy") {
             events += "factory"
             Thread.currentThread().interrupt()
-            CheckedFunction { actual -> events += "probe"; satisfied(actual) }
+            AwaitAttempt { actual -> events += "probe"; satisfied(actual) }
         }
         val check = if (sequence) captured(nested, isNotNull) else hasValue(nested)
         val actual = if (sequence) "ready" else Optional.of("ready")

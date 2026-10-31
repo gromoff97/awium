@@ -26,9 +26,11 @@ class ConditionsArchitectureTest {
 
     @Test
     fun `catalogs leave execution to condition implementations`() {
-        noClasses().that(inFamilies(setOf("Conditions", "CollectionConditions", "MapConditions", "OptionalConditions", "StringConditions")))
-            .should().dependOnClassesThat(inFamilies(setOf("AwaitAttempt", "ConditionRun", "ConditionExecution", "AttemptExecution",
+        val catalogs = inFamilies(setOf("Conditions", "CollectionConditions", "MapConditions", "OptionalConditions", "StringConditions"))
+        noClasses().that(catalogs)
+            .should().dependOnClassesThat(inFamilies(setOf("ConditionRun", "ConditionExecution", "AttemptExecution",
                 "WaitEngine", "WaitCompletion", "WaitConfiguration", "FailureDiagnostics"))).check(productClasses)
+        noClasses().that(catalogs).should().accessClassesThat(inFamilies(setOf("AwaitAttempt"))).check(productClasses)
     }
 
     @Test

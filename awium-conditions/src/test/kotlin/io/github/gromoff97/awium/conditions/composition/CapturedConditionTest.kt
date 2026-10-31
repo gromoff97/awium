@@ -14,7 +14,7 @@ import io.github.gromoff97.awium.conditions.Conditions.instanceOf
 import io.github.gromoff97.awium.conditions.Conditions.matches
 import io.github.gromoff97.awium.conditions.MapConditions.valueFor
 import io.github.gromoff97.awium.execution.ConditionExecution.start
-import io.github.gromoff97.awium.function.CheckedFunction
+import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
 import io.github.gromoff97.awium.result.ConditionResult.Satisfied
 import io.github.gromoff97.awium.result.ConditionResult.satisfied
@@ -127,7 +127,7 @@ class CapturedConditionTest {
         val nested = conditionPerWait<String, String>("ready after retry") {
             factories++
             var calls = 0
-            CheckedFunction { actual -> if (++calls == 2) satisfied(actual) else unsatisfied("retry") }
+            AwaitAttempt { actual -> if (++calls == 2) satisfied(actual) else unsatisfied("retry") }
         }
         val run = start<List<String>, List<List<String>>>(captured(singleElement(nested), singleElement(nested)), false)
 
@@ -142,7 +142,7 @@ class CapturedConditionTest {
         val afterRetry = conditionPerWait<String, Int>("second invocation") {
             factories++
             var calls = 0
-            CheckedFunction { if (++calls == 2) satisfied(42) else unsatisfied("retry") }
+            AwaitAttempt { if (++calls == 2) satisfied(42) else unsatisfied("retry") }
         }
         val sequence = captured(afterRetry, equalTo("pending"), afterRetry)
         repeat(2) {
