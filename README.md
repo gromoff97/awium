@@ -19,7 +19,7 @@ the outcome and attempt history instead of throwing a wait failure.
 
 ## Installation
 
-The snapshot is not published. Clone Awium next to the consuming Gradle project
+The snapshot is not published. Clone Awium next to your Gradle project
 and add to `settings.gradle.kts`:
 
 ```kotlin
@@ -36,8 +36,8 @@ dependencies {
 
 ## Documentation
 
-- [Usage](docs/usage.md): sources, timing, `because`, and ordered states with `captured`.
-- [Conditions](docs/conditions.md): built-in checks, selections, and custom conditions.
+- [Usage](docs/usage.md): sources and timing.
+- [Conditions](docs/conditions.md): checks, `because`, nested conditions, and `captured`.
 - [Diagnostics](docs/diagnostics.md): `tryAwait`, results, histories, and failures.
 - [Development](docs/development.md): build, tests, and internal responsibilities.
 

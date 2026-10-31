@@ -31,27 +31,24 @@ valid API use; negative compilation tests protect incompatible-type rejection.
 | `Await`; `ValueAwait`, `SelectionAwait`, `MapAwait` | Source entry points; fluent configuration |
 | `DiagnosticAwait`, `DiagnosticSelectionAwait`, `DiagnosticMapAwait` | Diagnostic facade |
 | `AwaitSupport` | Shared execution and terminal handling |
-| `AttemptFactory` | Evaluator initialization and observation binding; [callback lifecycle](conditions.md#custom-conditions) |
+| `AttemptFactory` | Evaluator initialization and observation binding |
 | `BoundAttempt.call()` | Check invocation, returning internal `AttemptResult` |
 | `SequenceExecution` | Stage transitions and retained selected/captured values |
 | `WaitEngine` | Polling, deadlines, persistence |
 | `AttemptExecution`; transient `ExecutionStep` | Source/attempt calls; timing and execution context |
-| `AttemptHistory` | Invocation numbering and [history grouping](diagnostics.md#what-history-retains) |
+| `AttemptHistory` | Invocation numbering and history grouping |
 | `FailureDiagnostics`, `DiagnosticText` | Terminal formatting and guarded rendering outside polling |
 
 `BoundAttempt` stores no previous result, timing, number, or progress.
-`AttemptResult` adds uncontrolled failure to the public
-[condition outcomes](conditions.md#custom-conditions); public record shapes belong
-to [diagnostics](diagnostics.md).
+`AttemptResult` adds uncontrolled failure to public `ConditionResult` outcomes.
 
 ## Type and module boundaries
 
-`Condition.Check` represents one check; `Condition.Captured`, a sequence.
-`ApplicableCondition` carries input/comparison constraints; `InputCondition`,
-input-only constraints. `PreservesObservation` lets preserving checks and comparisons
+`Condition.Check` is one check; `Condition.Captured` is a sequence.
+`ApplicableCondition` constrains inputs and comparisons; `InputCondition` constrains
+only inputs. `PreservesObservation` lets preserving checks and comparisons
 share a terminal overload. Selectors infer results from source types;
-`Condition.Typed<INPUT, RESULT>` declares them. User-facing inference rules are in
-[usage](usage.md#reasons-and-lambda-types).
+`Condition.Typed<INPUT, RESULT>` declares them.
 
 The module exports `io.github.gromoff97.awium`, `.result`, and `.function`.
 `.internal` is unsupported and unexported, even if reachable on the classpath;
