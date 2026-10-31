@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.execution.CheckRun;
+import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.execution.DiagnosticText;
 import io.github.gromoff97.awium.function.AwaitAttempt;
@@ -136,7 +137,8 @@ public interface AwaitCondition {
         }
 
         protected SelectedCondition(Condition<INPUT, ?> definition) {
-            super(definition.description(), definition.references(), definition.explanation(), definition::newAttempt);
+            super(definition.description(), definition.references(), definition.explanation(),
+                    () -> ConditionExecution.<INPUT, Object>bind(definition)::probe);
         }
 
         private SelectedCondition(SelectedCondition<INPUT> original, String explanation) { super(original, explanation); }
@@ -152,7 +154,8 @@ public interface AwaitCondition {
         }
 
         protected MapValueCondition(Condition<INPUT, ?> definition) {
-            super(definition.description(), definition.references(), definition.explanation(), definition::newAttempt);
+            super(definition.description(), definition.references(), definition.explanation(),
+                    () -> ConditionExecution.<INPUT, Object>bind(definition)::probe);
         }
 
         private MapValueCondition(MapValueCondition<INPUT> original, String explanation) { super(original, explanation); }
