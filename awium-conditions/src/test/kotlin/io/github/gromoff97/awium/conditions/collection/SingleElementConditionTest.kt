@@ -4,7 +4,12 @@ import io.github.gromoff97.awium.conditions.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.ProbeContainers.once
+import io.github.gromoff97.awium.execution.ConditionExecution.bind
+import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
+import java.util.concurrent.ConcurrentLinkedQueue
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
@@ -28,6 +33,23 @@ class SingleElementConditionTest {
     @MethodSource("invalidCollections")
     fun `reports why no single element exists`(actual: Collection<*>?, expected: String) {
         assertEquals(expected, rejection(singleElement, actual).mismatch())
+    }
+
+    @Test
+    fun `a queue emptied before traversal can match on the next probe`() {
+        val actual = object : ConcurrentLinkedQueue<String>() {
+            val clearOnce = once { clear() }
+            override fun iterator(): MutableIterator<String> {
+                clearOnce.run()
+                return super.iterator()
+            }
+        }
+        actual.add("old")
+        val execution = bind<Collection<String>, String>(singleElement)
+
+        assertInstanceOf(Unsatisfied::class.java, execution.probe(actual))
+        actual.add("ready")
+        assertEquals("ready", result(execution.probe(actual)))
     }
 
     companion object {

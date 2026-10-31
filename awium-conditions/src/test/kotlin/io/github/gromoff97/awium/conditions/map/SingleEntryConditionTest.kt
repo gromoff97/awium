@@ -4,7 +4,14 @@ import io.github.gromoff97.awium.conditions.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.MapConditions.singleEntry
+import io.github.gromoff97.awium.conditions.ProbeContainers.EntryMap
+import io.github.gromoff97.awium.conditions.ProbeContainers.ProbeEntry
+import io.github.gromoff97.awium.conditions.ProbeContainers.once
+import io.github.gromoff97.awium.execution.ConditionExecution.bind
+import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments.arguments
@@ -21,6 +28,19 @@ class SingleEntryConditionTest {
     @MethodSource("invalidMaps")
     fun `reports why no single entry exists`(actual: Map<*, *>?, expected: String) {
         assertEquals(expected, rejection(singleEntry, actual).mismatch())
+    }
+
+    @Test
+    fun `a map emptied before reading entries can match on the next probe`() {
+        val entries = mutableListOf<Map.Entry<String, String>>(ProbeEntry("key", "old"))
+        val actual = EntryMap(entries)
+        actual.beforeEntrySet = once { entries.clear() }
+        val execution = bind<Map<String, String>, Map.Entry<String, String>>(singleEntry)
+
+        assertInstanceOf(Unsatisfied::class.java, execution.probe(actual))
+        val ready = ProbeEntry("key", "ready")
+        entries.add(ready)
+        assertSame(ready, result(execution.probe(actual)))
     }
 
     companion object {
