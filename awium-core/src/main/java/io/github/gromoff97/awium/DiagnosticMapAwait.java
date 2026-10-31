@@ -6,8 +6,6 @@ import io.github.gromoff97.awium.result.AwaitResult;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.function.LongConsumer;
-import java.util.function.LongSupplier;
 
 import static java.util.Map.Entry;
 
@@ -31,11 +29,6 @@ public final class DiagnosticMapAwait<OBSERVED extends Map<?, ?>, ENTRY extends 
     @Override
     public DiagnosticMapAwait<OBSERVED, ENTRY, VALUE> persisting(Duration persistence) {
         return new DiagnosticMapAwait<>(source, configuration.withPersistence(persistence));
-    }
-
-    @Override
-    DiagnosticMapAwait<OBSERVED, ENTRY, VALUE> usingTime(LongSupplier clock, LongConsumer parker) {
-        return new DiagnosticMapAwait<>(source, configuration.withTime(clock, parker));
     }
 
     public AwaitResult<OBSERVED, VALUE> until(

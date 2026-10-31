@@ -9,8 +9,6 @@ import io.github.gromoff97.awium.result.AwaitResult;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.function.LongConsumer;
-import java.util.function.LongSupplier;
 
 public sealed class DiagnosticAwait<OBSERVED> extends AwaitSupport<OBSERVED> permits DiagnosticSelectionAwait {
 
@@ -28,10 +26,6 @@ public sealed class DiagnosticAwait<OBSERVED> extends AwaitSupport<OBSERVED> per
 
     public DiagnosticAwait<OBSERVED> persisting(Duration persistence) {
         return new DiagnosticAwait<>(source, configuration.withPersistence(persistence));
-    }
-
-    DiagnosticAwait<OBSERVED> usingTime(LongSupplier clock, LongConsumer parker) {
-        return new DiagnosticAwait<>(source, configuration.withTime(clock, parker));
     }
 
     public <CHECK extends ApplicableCondition<? super OBSERVED, ? super Reference<? super OBSERVED>> & PreservesObservation>

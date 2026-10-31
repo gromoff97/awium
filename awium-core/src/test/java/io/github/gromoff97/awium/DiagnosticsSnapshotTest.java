@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
+
 import io.github.gromoff97.awium.support.FakeTime;
 import org.junit.jupiter.params.provider.CsvSource;
 import io.github.gromoff97.awium.AwaitCondition.Reference;
@@ -246,7 +248,7 @@ class DiagnosticsSnapshotTest {
         });
 
         var failure = assertFailure(INTERRUPTED,
-                () -> await(Object::new).usingTime(time, time).until(condition));
+                () -> withTime(await(Object::new), time, time).until(condition));
 
         assertSame(cause, failure.getCause());
         assertTrue(currentThread().isInterrupted());
@@ -305,7 +307,7 @@ class DiagnosticsSnapshotTest {
             }
         };
         Callable<Object> source = () -> { throw cause; };
-        var waiting = await(source).usingTime(time, time);
+        var waiting = withTime(await(source), time, time);
         var failure = terminal.apply(
                 () -> assertThrows(AwaitExecutionException.class, () -> waiting.until(accepted)).failure(),
                 () -> failure(diagnostic(waiting).until(accepted))).get();
@@ -402,7 +404,7 @@ class DiagnosticsSnapshotTest {
             return "gone";
         }).iterator();
         var failure = assertFailure(PERSISTENCE_FAILED,
-                () -> await(() -> observations.next().call()).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10))
+                () -> withTime(await(() -> observations.next().call()), time, time).every(ofNanos(1)).upTo(ofNanos(10))
                         .persisting(ofNanos(2)).until(expected("ready")));
 
         assertThat(failure).hasMessageContainingAll("Attempt: 2 (PERSISTENCE)", "elapsed 11 ns",
@@ -419,7 +421,7 @@ class DiagnosticsSnapshotTest {
         }).iterator();
 
         var failure = assertFailure(SOURCE_FAILED,
-                () -> await(() -> observations.next().call()).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(10))
+                () -> withTime(await(() -> observations.next().call()), time, time).every(ofNanos(1)).upTo(ofNanos(10))
                         .persisting(ofNanos(5)).until(expected("ready")));
 
         assertSame(cause, failure.getCause());
@@ -486,10 +488,10 @@ class DiagnosticsSnapshotTest {
         };
         var actual = new ThrowingValue(diagnostic);
         var original = new AssertionError("not ready");
-        var waiting = await(() -> {
+        var waiting = withTime(await(() -> {
             time.advanceNanos(2);
             return actual;
-        }).usingTime(time, time).upTo(ofNanos(2));
+        }), time, time).upTo(ofNanos(2));
         var check = check("not ready", value -> unsatisfied("not ready", original));
         var failure = terminal.apply(
                 () -> assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure(),
@@ -533,7 +535,7 @@ class DiagnosticsSnapshotTest {
     void repeatedRenderingFailureIsReportedOnceAcrossBothTerminals() {
         var diagnostic = new IllegalStateException("rendering failed");
         var value = new ThrowingValue(diagnostic);
-        var waiting = await(() -> value).usingTime(time, time)
+        var waiting = withTime(await(() -> value), time, time)
                 .every(ofNanos(1)).upTo(ofNanos(2));
         var check = new DefinedCondition<>("not ready", new Reference<>("Expected", value),
                 (Object actual) -> unsatisfied());
@@ -554,7 +556,7 @@ class DiagnosticsSnapshotTest {
         var expected = new ThrowingValue(expectedFailure);
         var actual = new ThrowingValue(actualFailure);
 
-        var result = tryAwait(() -> actual).usingTime(time, time)
+        var result = withTime(tryAwait(() -> actual), time, time)
                 .every(ofNanos(1)).upTo(ofNanos(2)).until(expected(expected));
         var failure = failure(TIMEOUT, result);
         assertEquals(2, failure.suppressed().size());
@@ -580,7 +582,7 @@ class DiagnosticsSnapshotTest {
         var cause = new IllegalStateException("first\r\n\r\nsecond");
         Callable<String> source = () -> { throw cause; };
         var sourceFailure = assertFailure(SOURCE_FAILED,
-                () -> await(source).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
+                () -> withTime(await(source), time, time).every(ofNanos(1)).upTo(ofNanos(2))
                         .until(check("condition\rdescription", ignored -> satisfied(ignored))));
         var arrayFailure = renderFailure(CONDITION, TIMEOUT,
                 timeout(evaluatedAttempt(new int[] {1, 2}, unsatisfied("not ready"), 2)), config(1, 2, 0), 1);

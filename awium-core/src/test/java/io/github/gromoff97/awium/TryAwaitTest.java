@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
+
 import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.List;
@@ -45,7 +47,7 @@ class TryAwaitTest {
         var ready = new Observation();
         var observations = List.of(new Observation(), new Observation(), ready).iterator();
 
-        var result = await(observations::next).usingTime(time, time).every(ofNanos(1))
+        var result = withTime(await(observations::next), time, time).every(ofNanos(1))
                 .until(matching(actual -> actual == ready));
 
         assertSame(ready, result);
@@ -83,7 +85,7 @@ class TryAwaitTest {
     void returnedMismatchWithACauseIsUnsatisfiedAndCanRetry() {
         var cause = new AssertionError("not ready");
         var outcomes = List.of(unsatisfied("pending", cause), satisfied(null)).iterator();
-        var result = tryAwait((Callable<String>) () -> null).usingTime(time, time).every(ofNanos(1))
+        var result = withTime(tryAwait((Callable<String>) () -> null), time, time).every(ofNanos(1))
                 .until(check("ready", actual -> outcomes.next()));
 
         assertNull(result.orThrow());

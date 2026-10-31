@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
+
 import io.github.gromoff97.awium.support.FakeTime;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import io.github.gromoff97.awium.function.CheckedBiPredicate;
@@ -58,7 +60,7 @@ class SourceContractTest {
         Callable<String> source = () -> { throw unexpected; };
         LongSupplier clock = () -> { throw unexpected; };
         LongConsumer parker = nanos -> { throw unexpected; };
-        var waiting = await(source).usingTime(clock, parker);
+        var waiting = withTime(await(source), clock, parker);
         assertNullRejected("condition", () -> waiting.until((PreservingCondition<String>) null));
         assertNullRejected("condition", () -> diagnostic(waiting).until((PreservingCondition<String>) null));
         assertNullRejected("condition", () -> waiting.until((Condition<String, String>) null));
@@ -70,20 +72,20 @@ class SourceContractTest {
         assertNullRejected("condition", () -> diagnostic(waiting).until(sequence));
 
         Await.MapSource<Map<String, String>> mapSource = () -> { throw unexpected; };
-        var map = await(mapSource).usingTime(clock, parker);
+        var map = withTime(await(mapSource), clock, parker);
         SelectedCondition<Map<?, ?>> selected = null;
         AwaitCondition.MapValueCondition<Map<?, ?>> mapped = null;
         assertNullRejected("condition", () -> map.until(selected));
-        assertNullRejected("condition", () -> tryAwait(mapSource).usingTime(clock, parker).until(selected));
+        assertNullRejected("condition", () -> withTime(tryAwait(mapSource), clock, parker).until(selected));
         assertNullRejected("condition", () -> map.until(mapped));
-        assertNullRejected("condition", () -> tryAwait(mapSource).usingTime(clock, parker).until(mapped));
+        assertNullRejected("condition", () -> withTime(tryAwait(mapSource), clock, parker).until(mapped));
     }
 
     @Test
     void repeatedConfigurationUsesTheLastValueWithoutMutatingEarlierStages() {
         var pollingTime = new FakeTime(0);
         int[] calls = {0};
-        var initial = await(() -> "v" + ++calls[0]).usingTime(pollingTime, pollingTime);
+        var initial = withTime(await(() -> "v" + ++calls[0]), pollingTime, pollingTime);
 
         var slow = initial.every(ofSeconds(20));
         var repaired = slow.upTo(ofSeconds(10)).every(ofMillis(1)).upTo(ofSeconds(1))

@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
+
 import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
@@ -71,7 +73,7 @@ class TryAwaitHistoryTest {
     @Test
     void everyDiagnosticTransitionSurvivesBeyondTheFormerTailLimit() {
         int[] calls = {0};
-        var result = tryAwait(() -> ++calls[0]).usingTime(time, time)
+        var result = withTime(tryAwait(() -> ++calls[0]), time, time)
                 .every(ofNanos(1)).upTo(ofNanos(1_000))
                 .until(check("changing", value -> unsatisfied("value " + value)));
 
@@ -96,8 +98,8 @@ class TryAwaitHistoryTest {
 
     private AwaitResult<Integer, Integer> historyThrough300Attempts(int expected) {
         int[] calls = {0};
-        var result = tryAwait(() -> ++calls[0])
-                .every(ofNanos(1)).upTo(ofNanos(300)).usingTime(time, time)
+        var result = withTime(tryAwait(() -> ++calls[0])
+                .every(ofNanos(1)).upTo(ofNanos(300)), time, time)
                 .until(expected(expected));
 
         assertEquals(300, calls[0]);
@@ -110,11 +112,11 @@ class TryAwaitHistoryTest {
 
     @Test
     void immutableConfigurationsAndRepeatedWaitsOwnIndependentHistories() {
-        var original = tryAwait(() -> "ready").usingTime(time, time)
+        var original = withTime(tryAwait(() -> "ready"), time, time)
                 .every(ofNanos(1)).upTo(ofNanos(10)).persisting(ofNanos(3));
         var otherTime = new FakeTime(0);
-        var changed = original.every(ofNanos(2)).upTo(ofNanos(20))
-                .persisting(ofNanos(6)).usingTime(otherTime, otherTime);
+        var changed = withTime(original.every(ofNanos(2)).upTo(ofNanos(20))
+                .persisting(ofNanos(6)), otherTime, otherTime);
 
         changed.until(accepted);
         assertEquals(6, otherTime.getAsLong());
@@ -134,7 +136,7 @@ class TryAwaitHistoryTest {
             @Override public String toString() { throw new AssertionError("toString must not be called"); }
         }).toList();
         var outcomes = concat(errors.stream().map(error -> unsatisfied("pending", error)), Stream.of(satisfied(1))).iterator();
-        var result = tryAwait(() -> 1).usingTime(time, time).every(ofNanos(1))
+        var result = withTime(tryAwait(() -> 1), time, time).every(ofNanos(1))
                 .until(check("ready", value -> outcomes.next()));
 
         assertEquals(1, result.orThrow());
@@ -154,7 +156,7 @@ class TryAwaitHistoryTest {
         var observations = List.of(1, 1, 1, 4).iterator();
         var outcomes = List.<ConditionResult<Integer>>of(unsatisfied("pending", error), unsatisfied("pending", error),
                 unsatisfied("pending", error), satisfied(4)).iterator();
-        var result = tryAwait(observations::next).usingTime(time, time).every(ofNanos(1))
+        var result = withTime(tryAwait(observations::next), time, time).every(ofNanos(1))
                 .until(check("ready", value -> outcomes.next()));
 
         assertEquals(4, result.orThrow());

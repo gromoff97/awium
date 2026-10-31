@@ -8,8 +8,6 @@ import io.github.gromoff97.awium.internal.WaitConfiguration;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.function.LongConsumer;
-import java.util.function.LongSupplier;
 
 public sealed class ValueAwait<OBSERVED> extends AwaitSupport<OBSERVED> permits SelectionAwait {
 
@@ -27,10 +25,6 @@ public sealed class ValueAwait<OBSERVED> extends AwaitSupport<OBSERVED> permits 
 
     public ValueAwait<OBSERVED> persisting(Duration persistence) {
         return new ValueAwait<>(source, configuration.withPersistence(persistence));
-    }
-
-    ValueAwait<OBSERVED> usingTime(LongSupplier clock, LongConsumer parker) {
-        return new ValueAwait<>(source, configuration.withTime(clock, parker));
     }
 
     public <CHECK extends ApplicableCondition<? super OBSERVED, ? super Reference<? super OBSERVED>> & PreservesObservation>

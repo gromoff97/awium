@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
+
 import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
@@ -161,8 +163,7 @@ class TryAwaitFailureTest {
     @Test
     void capturesFatalSourceErrors() {
         var sourceFatal = new InternalError("fatal source");
-        var source = failed(tryAwait((Callable<Object>) () -> { throw sourceFatal; })
-                .usingTime(time, time).until(accepted));
+        var source = failed(withTime(tryAwait((Callable<Object>) () -> { throw sourceFatal; }), time, time).until(accepted));
         assertSame(sourceFatal, source.failure().cause());
         assertEquals(SOURCE_FAILED, source.failure().reason());
     }

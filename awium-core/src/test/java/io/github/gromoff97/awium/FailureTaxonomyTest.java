@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
+
 import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.execution.ExecutionStep;
@@ -78,7 +80,7 @@ class FailureTaxonomyTest {
         var actual = new Object() {
             @Override public String toString() { throw rendering; }
         };
-        var waiting = await(() -> actual).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2));
+        var waiting = withTime(await(() -> actual), time, time).every(ofNanos(1)).upTo(ofNanos(2));
         var check = check("not ready", value -> io.github.gromoff97.awium.result.ConditionResult.unsatisfied("not ready", original));
 
         var captured = failure(TIMEOUT, diagnostic(waiting).until(check));

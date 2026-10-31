@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
+
 import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.execution.WaitCompletion;
@@ -90,7 +92,7 @@ class ObservationTest {
         int[] parks = {0};
         long[] now = {0};
         LongSupplier clock = mock();
-        var waiting = await(() -> { sources[0]++; return "ready"; }).usingTime(() -> {
+        var waiting = withTime(await(() -> { sources[0]++; return "ready"; }), () -> {
             interrupted();
             return clock.getAsLong();
         }, nanos -> {
@@ -186,7 +188,7 @@ class ObservationTest {
     @MethodSource("throwables")
     void classifiesEverySourceThrowableBeforeObservation(Throwable failure) {
         var time = new FakeTime(0);
-        var waiting = await((Callable<Object>) () -> rethrow(failure)).usingTime(time, time);
+        var waiting = withTime(await((Callable<Object>) () -> rethrow(failure)), time, time);
         var check = check("must not run", ObservationTest::failIfCalled);
         var result = diagnostic(waiting).until(check);
         var failed = failure(SOURCE_FAILED, result);
@@ -293,11 +295,11 @@ class ObservationTest {
         doAnswer(ignored -> { clock[0] = () -> rethrow(interruption); return null; }).when(boundary).accept(phase);
         boundary.accept("initial");
         int[] calls = {0, 0, 0};
-        var waiting = await(() -> {
+        var waiting = withTime(await(() -> {
             calls[0]++;
             boundary.accept("source");
             return new Object();
-        }).usingTime(() -> clock[0].getAsLong(), nanos -> {
+        }), () -> clock[0].getAsLong(), nanos -> {
             calls[2]++;
             boundary.accept("waiting");
         }).every(ofNanos(1)).upTo(ofNanos(20));
@@ -360,7 +362,7 @@ class ObservationTest {
             return state;
         });
         var checks = steps.iterator();
-        var waiting = await(() -> actual).usingTime(() -> clock[0].getAsLong(), time).every(ofNanos(1))
+        var waiting = withTime(await(() -> actual), () -> clock[0].getAsLong(), time).every(ofNanos(1))
                 .upTo(ofNanos(10)).persisting(ofNanos(persistence));
         var check = check("completion boundary", value -> {
             evaluations[0]++;
@@ -451,7 +453,7 @@ class ObservationTest {
             throw clockFailure;
         }).when(clock).getAsLong();
         var signal = conditionFactory.apply(failClock, interruption);
-        var waiting = await(Object::new).usingTime(clock, ignored -> {});
+        var waiting = withTime(await(Object::new), clock, ignored -> {});
 
         assertSame(clockFailure, assertThrows(IllegalStateException.class, terminal.apply(
                 () -> waiting.until(signal), () -> diagnostic(waiting).until(signal))));

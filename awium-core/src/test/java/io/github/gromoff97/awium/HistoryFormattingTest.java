@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
+
 import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.result.ConditionHistory;
 import java.util.ArrayList;
@@ -49,7 +51,7 @@ class HistoryFormattingTest {
     @Test
     void historyRendersTheDefinitionOnceFollowedByNumberedStates() {
         var observations = List.of(1, 1, 1, 4).iterator();
-        var result = tryAwait(observations::next).usingTime(time, time).every(ofNanos(1))
+        var result = withTime(tryAwait(observations::next), time, time).every(ofNanos(1))
                 .until(expected(4).because("worker must finish"));
 
         assertEquals("""
@@ -76,7 +78,7 @@ class HistoryFormattingTest {
             @Override public String toString() { renders[0]++; return super.toString(); }
         };
         var values = List.of(List.<String>of(), List.of("ready")).iterator();
-        var result = tryAwait(values::next).usingTime(time, time).every(ofNanos(1)).until(expected(expected));
+        var result = withTime(tryAwait(values::next), time, time).every(ofNanos(1)).until(expected(expected));
 
         assertEquals(0, renders[0]);
         String report = result.toString();
@@ -89,11 +91,9 @@ class HistoryFormattingTest {
 
     @Test
     void aReturnedNullIsDifferentFromAnUnavailableObservation() {
-        var returnedNull = tryAwait((Callable<String>) () -> null)
-                .usingTime(time, time).until(accepted);
+        var returnedNull = withTime(tryAwait((Callable<String>) () -> null), time, time).until(accepted);
         var cause = new IllegalStateException("source unavailable");
-        var sourceFailed = tryAwait((Callable<String>) () -> { throw cause; })
-                .usingTime(time, time).until(accepted);
+        var sourceFailed = withTime(tryAwait((Callable<String>) () -> { throw cause; }), time, time).until(accepted);
 
         assertThat(attempts(returnedNull).getFirst().toString()).contains("Observed now: null");
         String failed = attempts(sourceFailed).getFirst().toString();
@@ -114,7 +114,7 @@ class HistoryFormattingTest {
                 throw new IllegalArgumentException("unprintable");
             }
         };
-        var result = tryAwait(() -> observed).usingTime(time, time)
+        var result = withTime(tryAwait(() -> observed), time, time)
                 .until(check("ready", actual -> satisfied(actual)));
 
         assertEquals(0, renders[0]);
@@ -132,7 +132,7 @@ class HistoryFormattingTest {
 
     @Test
     void multilineReasonsAndArrayValuesRemainReadable() {
-        var result = tryAwait(() -> new int[]{1, 2}).usingTime(time, time)
+        var result = withTime(tryAwait(() -> new int[]{1, 2}), time, time)
                 .until(expected(new int[]{1, 2}).because("first line\r\nsecond line\r\n"));
 
         String rendered = result.conditions().getFirst().toString();
@@ -151,7 +151,7 @@ class HistoryFormattingTest {
             @Override public int hashCode() { throw new AssertionError("unexpected hashCode"); }
         };
         var outcomes = List.of(unsatisfied(), unsatisfied(), satisfied(observed)).iterator();
-        var result = tryAwait(() -> observed).usingTime(time, time).every(ofNanos(1))
+        var result = withTime(tryAwait(() -> observed), time, time).every(ofNanos(1))
                 .until(check("ready", actual -> outcomes.next()));
 
         assertSame(observed, result.orThrow());
@@ -177,7 +177,7 @@ class HistoryFormattingTest {
         var last = new Observation();
         var values = List.of(first, last, last).iterator();
         var outcomes = List.of(unsatisfied(), unsatisfied(), satisfied(last)).iterator();
-        var result = tryAwait(values::next).usingTime(time, time).every(ofNanos(1))
+        var result = withTime(tryAwait(values::next), time, time).every(ofNanos(1))
                 .until(check("ready", actual -> outcomes.next()));
 
         assertSame(last, result.orThrow());
@@ -199,13 +199,12 @@ class HistoryFormattingTest {
         Object observed = new Object() {
             @Override public String toString() { throw new IllegalStateException("value renderer failed"); }
         };
-        var successful = tryAwait(() -> observed).usingTime(time, time)
+        var successful = withTime(tryAwait(() -> observed), time, time)
                 .until(check("ready", actual -> satisfied(actual)));
         var cause = new IllegalArgumentException("original cause") {
             @Override public String toString() { throw new IllegalStateException("cause renderer failed"); }
         };
-        var failed = tryAwait((Callable<String>) () -> { throw cause; })
-                .usingTime(time, time).until(accepted);
+        var failed = withTime(tryAwait((Callable<String>) () -> { throw cause; }), time, time).until(accepted);
 
         String successText = successful.toString();
         String failureText = failed.toString();

@@ -4,8 +4,6 @@ import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
 import io.github.gromoff97.awium.internal.WaitConfiguration;
 import java.time.Duration;
 import java.util.concurrent.Callable;
-import java.util.function.LongConsumer;
-import java.util.function.LongSupplier;
 
 public sealed class SelectionAwait<OBSERVED, ELEMENT> extends ValueAwait<OBSERVED> permits MapAwait {
 
@@ -26,11 +24,6 @@ public sealed class SelectionAwait<OBSERVED, ELEMENT> extends ValueAwait<OBSERVE
     @Override
     public SelectionAwait<OBSERVED, ELEMENT> persisting(Duration persistence) {
         return new SelectionAwait<>(source, configuration.withPersistence(persistence));
-    }
-
-    @Override
-    SelectionAwait<OBSERVED, ELEMENT> usingTime(LongSupplier clock, LongConsumer parker) {
-        return new SelectionAwait<>(source, configuration.withTime(clock, parker));
     }
 
     public ELEMENT until(SelectedCondition<? super OBSERVED> condition) {

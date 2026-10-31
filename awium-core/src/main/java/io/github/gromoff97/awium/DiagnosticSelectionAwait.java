@@ -5,8 +5,6 @@ import io.github.gromoff97.awium.internal.WaitConfiguration;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.time.Duration;
 import java.util.concurrent.Callable;
-import java.util.function.LongConsumer;
-import java.util.function.LongSupplier;
 
 public sealed class DiagnosticSelectionAwait<OBSERVED, ELEMENT> extends DiagnosticAwait<OBSERVED> permits DiagnosticMapAwait {
 
@@ -27,11 +25,6 @@ public sealed class DiagnosticSelectionAwait<OBSERVED, ELEMENT> extends Diagnost
     @Override
     public DiagnosticSelectionAwait<OBSERVED, ELEMENT> persisting(Duration persistence) {
         return new DiagnosticSelectionAwait<>(source, configuration.withPersistence(persistence));
-    }
-
-    @Override
-    DiagnosticSelectionAwait<OBSERVED, ELEMENT> usingTime(LongSupplier clock, LongConsumer parker) {
-        return new DiagnosticSelectionAwait<>(source, configuration.withTime(clock, parker));
     }
 
     public AwaitResult<OBSERVED, ELEMENT> until(

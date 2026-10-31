@@ -8,6 +8,7 @@ import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
@@ -20,6 +21,24 @@ import static org.junit.jupiter.api.Assertions.fail;
 public final class AwaitTestAccess {
 
     private AwaitTestAccess() {}
+
+    public static <OBSERVED> ValueAwait<OBSERVED> withTime(ValueAwait<OBSERVED> waiting, LongSupplier clock, LongConsumer parker) {
+        return new ValueAwait<>(waiting.source, waiting.configuration.withTime(clock, parker));
+    }
+
+    public static <OBSERVED> DiagnosticAwait<OBSERVED> withTime(DiagnosticAwait<OBSERVED> waiting, LongSupplier clock, LongConsumer parker) {
+        return new DiagnosticAwait<>(waiting.source, waiting.configuration.withTime(clock, parker));
+    }
+
+    public static <OBSERVED extends Map<?, ?>, ENTRY extends Map.Entry<?, ?>, VALUE> MapAwait<OBSERVED, ENTRY, VALUE> withTime(
+            MapAwait<OBSERVED, ENTRY, VALUE> waiting, LongSupplier clock, LongConsumer parker) {
+        return new MapAwait<>(waiting.source, waiting.configuration.withTime(clock, parker));
+    }
+
+    public static <OBSERVED extends Map<?, ?>, ENTRY extends Map.Entry<?, ?>, VALUE> DiagnosticMapAwait<OBSERVED, ENTRY, VALUE> withTime(
+            DiagnosticMapAwait<OBSERVED, ENTRY, VALUE> waiting, LongSupplier clock, LongConsumer parker) {
+        return new DiagnosticMapAwait<>(waiting.source, waiting.configuration.withTime(clock, parker));
+    }
 
     public static <INPUT, RESULT> ConditionRun<INPUT, RESULT> start(AwaitCondition condition) {
         return ConditionExecution.start(condition, false);

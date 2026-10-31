@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
+
 import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.ConditionResult;
@@ -96,10 +98,10 @@ class ThreadIntegrationTest {
         var rendezvous = new CyclicBarrier(2);
         var sourceCalls = new AtomicInteger();
         var timers = withInitial(() -> new FakeTime(0));
-        var waiting = await(() -> {
+        var waiting = withTime(await(() -> {
             sourceCalls.incrementAndGet();
             return currentThread();
-        }).usingTime(() -> timers.get().getAsLong(), nanos -> timers.get().accept(nanos))
+        }), () -> timers.get().getAsLong(), nanos -> timers.get().accept(nanos))
                 .every(ofNanos(1)).upTo(ofNanos(3));
         var check = checkPerWait("two observations per caller", () -> {
             Thread owner = currentThread();

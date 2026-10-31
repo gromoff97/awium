@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium;
 
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
+
 import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.result.AwaitResult;
 import io.github.gromoff97.awium.result.ConditionResult;
@@ -83,7 +85,7 @@ class TimingConfigurationTest {
             return "ready";
         }, nextRead).iterator();
         var checks = List.<Supplier<ConditionResult<String>>>of(() -> satisfied("ready"), nextCheck).iterator();
-        var waiting = await(() -> observations.next().call()).usingTime(time, time).every(ofNanos(Long.MAX_VALUE))
+        var waiting = withTime(await(() -> observations.next().call()), time, time).every(ofNanos(Long.MAX_VALUE))
                 .upTo(ofNanos(Long.MAX_VALUE)).persisting(ofNanos(persistence));
         var result = diagnostic(waiting).until(check("ready", (String actual) -> checks.next().get()));
 
@@ -105,7 +107,7 @@ class TimingConfigurationTest {
     @ValueSource(longs = {50, 100})
     void timeoutAtMostTheDefaultIntervalAllowsImmediateSuccess(long timeoutMillis) {
         var timeout = ofMillis(timeoutMillis);
-        assertEquals("ready", await(() -> "ready").usingTime(time, time).upTo(timeout).until(accepted));
+        assertEquals("ready", withTime(await(() -> "ready"), time, time).upTo(timeout).until(accepted));
         assertThat(time.parkRequests).isEmpty();
     }
 
@@ -114,7 +116,7 @@ class TimingConfigurationTest {
     void timeoutAtMostTheDefaultIntervalAllowsOnlyOneFailedObservation(long timeoutMillis) {
         var timeout = ofMillis(timeoutMillis);
         int[] calls = {0};
-        var result = tryAwait(() -> ++calls[0]).usingTime(time, time).upTo(timeout).until(expected(2));
+        var result = withTime(tryAwait(() -> ++calls[0]), time, time).upTo(timeout).until(expected(2));
 
         var failure = failure(TIMEOUT, result);
         assertEquals(1, calls[0]);
@@ -127,9 +129,8 @@ class TimingConfigurationTest {
     void timeReplacementPreservesConfigurationAndLeavesTheOriginalIndependent() {
         var originalTime = new FakeTime(0);
         var replacementTime = new FakeTime(0);
-        var original = await(() -> "ready").every(ofNanos(1)).upTo(ofNanos(10))
-                .usingTime(originalTime, originalTime).persisting(ofNanos(2));
-        var replacement = original.usingTime(replacementTime, replacementTime).upTo(ofNanos(20));
+        var original = withTime(await(() -> "ready").every(ofNanos(1)).upTo(ofNanos(10)), originalTime, originalTime).persisting(ofNanos(2));
+        var replacement = withTime(original, replacementTime, replacementTime).upTo(ofNanos(20));
 
         assertEquals("ready", replacement.until(accepted));
         assertEquals(2, replacementTime.getAsLong());
@@ -148,7 +149,7 @@ class TimingConfigurationTest {
             var outcomes = List.<ConditionResult<String>>of(unsatisfied("first observation"), satisfied("ready")).iterator();
             return (String actual) -> outcomes.next();
         });
-        var waiting = await(() -> "ready").usingTime(() -> {
+        var waiting = withTime(await(() -> "ready"), () -> {
             clockReads[0]++;
             return time.getAsLong();
         }, time).every(ofNanos(2)).upTo(ofNanos(10));
@@ -175,7 +176,7 @@ class TimingConfigurationTest {
         };
         var waiting = await(source);
         return List.of(
-                dynamicTest("missing clock", () -> assertThrows(NullPointerException.class, () -> waiting.usingTime(null, time))),
-                dynamicTest("missing parker", () -> assertThrows(NullPointerException.class, () -> waiting.usingTime(time, null))));
+                dynamicTest("missing clock", () -> assertThrows(NullPointerException.class, () -> withTime(waiting, null, time))),
+                dynamicTest("missing parker", () -> assertThrows(NullPointerException.class, () -> withTime(waiting, time, null))));
     }
 }
