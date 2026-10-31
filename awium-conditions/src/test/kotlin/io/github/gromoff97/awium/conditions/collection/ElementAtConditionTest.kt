@@ -72,6 +72,22 @@ class ElementAtConditionTest {
     }
 
     @ParameterizedTest
+    @MethodSource("requiredReads")
+    fun `reads only through the selected position`(condition: AwaitCondition, expected: List<Int>) {
+        val reads = mutableListOf<Int>()
+        val actual = object : AbstractList<String>() {
+            override val size = 3
+            override fun get(index: Int): String {
+                reads.add(index)
+                return "ready"
+            }
+        }
+
+        assertEquals("ready", result(evaluate(condition, actual)))
+        assertEquals(expected, reads)
+    }
+
+    @ParameterizedTest
     @MethodSource("changingContainers")
     fun `a collection emptied before traversal can match on the next probe`(
         condition: AwaitCondition, create: () -> SequencedCollection<String>
@@ -94,6 +110,13 @@ class ElementAtConditionTest {
 
         @JvmStatic
         fun selectors() = listOf(firstElement, lastElement, elementAt(0))
+
+        @JvmStatic
+        fun requiredReads() = listOf(
+            argumentSet("first", firstElement, listOf(0)),
+            argumentSet("last", lastElement, listOf(2)),
+            argumentSet("index", elementAt(1), listOf(0, 1))
+        )
 
         @JvmStatic
         fun changingContainers() = listOf(

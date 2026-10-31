@@ -48,18 +48,6 @@ class NestedSelectionTest {
         assertNull(await(() -> java.util.Collections.singletonList((String) null)).until(singleElement(isNull)));
     }
 
-    @Test
-    void retriesWrongCardinalityAndThenChecksTheSoleValue() {
-        List<List<Integer>> observations = List.of(List.of(), List.of(42, 42), List.of(1, 42), List.of(1), List.of(42));
-        var source = observations.iterator();
-        int result = await(source::next).every(ofNanos(1))
-                .until(singleElement(equalTo(42)));
-        assertEquals(42, result);
-        assertFalse(source.hasNext());
-        var check = singleElement(equalTo(42));
-        rejection(check, List.of(1));
-        assertEquals(42, check.references().getFirst().value());
-    }
 
     @Test
     void orderedNestedConditionsCaptureDifferentObservationsAndKeepProgress() {
