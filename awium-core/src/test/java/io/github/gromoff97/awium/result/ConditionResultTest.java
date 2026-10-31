@@ -2,25 +2,26 @@ package io.github.gromoff97.awium.result;
 
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.result.ConditionResult.*;
-import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-class ConditionResultContractTest {
+class ConditionResultTest {
 
     @Test
-    void mappingChangesOnlySatisfiedValues() {
-        var mapped = satisfied("abc").mapValue(String::length);
-        assertEquals(3, assertInstanceOf(Satisfied.class, mapped).value());
+    void mapsSuccessfulValues() {
+        assertEquals(satisfied(3), satisfied("abc").mapValue(String::length));
+    }
+
+    @Test
+    void mappingSkipsMismatchesAndPreservesTheirDiagnostics() {
         var cause = new IllegalStateException("not ready");
         var mismatch = ConditionResult.<String>unsatisfied("retry", cause).mapValue(value -> {
             throw new AssertionError("mismatches must not be mapped");
         });
-        assertEquals("retry", assertInstanceOf(Unsatisfied.class, mismatch).mismatch());
-        assertSame(cause, mismatch.cause());
+        assertEquals(new Unsatisfied<>("retry", cause), mismatch);
     }
 
     @Test

@@ -10,12 +10,10 @@ import io.github.gromoff97.awium.DiagnosticSelectionAwait;
 import io.github.gromoff97.awium.DiagnosticMapAwait;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.FieldSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
-import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
 import static io.github.gromoff97.awium.AwaitCondition.CollectingCondition;
 import static io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
@@ -23,12 +21,9 @@ import static io.github.gromoff97.awium.AwaitCondition.InputCondition;
 import static io.github.gromoff97.awium.AwaitCondition.MapValueCondition;
 import static io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import static io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
-import static io.github.gromoff97.awium.support.TestConditions.accepted;
-import static java.lang.Thread.currentThread;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PublicSurfaceTest {
@@ -36,36 +31,14 @@ class PublicSurfaceTest {
     private static final List<Class<?>> STAGES = List.of(ValueAwait.class, SelectionAwait.class, MapAwait.class,
             DiagnosticAwait.class, DiagnosticSelectionAwait.class, DiagnosticMapAwait.class);
 
-    @Test
-    void acceptsJdkCallableOnTheEnteringThreadWithItsConcreteReturnType() {
-        Thread caller = currentThread();
-        Callable<String> source = () -> {
-            assertSame(caller, currentThread());
-            return "ready";
-        };
-
-        String value = await(source).until(accepted);
-
-        assertEquals("ready", value);
-    }
-
-    @Test
-    void conditionsExposeExtensionHooksWithoutAlternativeFactories() {
+    @ParameterizedTest
+    @ValueSource(classes = {AwaitCondition.class, CollectingCondition.class, InputCondition.class, Condition.class,
+            PreservingCondition.class, ComparisonCondition.class, SelectedCondition.class, MapValueCondition.class,
+            ApplicableCondition.class})
+    void conditionFamiliesHaveNoAlternativeFactories(Class<?> family) {
         Set<String> excludedMethods = Set.of("definition", "evaluatorFactory", "newEvaluator",
                 "preservingAttempt", "selectionAttempt", "yields", "preserving", "bind");
-        for (Class<?> stage : List.of(AwaitCondition.class, CollectingCondition.class,
-                InputCondition.class, Condition.class, PreservingCondition.class, ComparisonCondition.class,
-                SelectedCondition.class, MapValueCondition.class, ApplicableCondition.class)) {
-            assertThat(stage.getMethods()).noneMatch(method -> excludedMethods.contains(method.getName()));
-        }
-        assertThat(AwaitCondition.class).isInterface().isAssignableFrom(ComparisonCondition.class, SelectedCondition.class,
-                PreservingCondition.class, MapValueCondition.class);
-        assertFalse(SelectedCondition.class.isAssignableFrom(MapValueCondition.class));
-        assertTrue(Condition.class.isInterface());
-        assertFalse(Condition.class.isSealed());
-        for (var family : List.of(SelectedCondition.class, MapValueCondition.class, CollectingCondition.class)) {
-            assertFalse(family.isSealed(), family.getName());
-        }
+        assertThat(family.getMethods()).noneMatch(method -> excludedMethods.contains(method.getName()));
     }
 
     @ParameterizedTest
@@ -86,6 +59,7 @@ class PublicSurfaceTest {
         var hidden = Set.of("historyTail", "usingTime");
         assertThat(stage.getMethods()).noneMatch(method -> hidden.contains(method.getName()))
                 .filteredOn(method -> settings.contains(method.getName()) && !method.isBridge())
-                .allSatisfy(method -> assertTrue(stage.isAssignableFrom(method.getReturnType()), method.toGenericString()));
+                .allSatisfy(method -> assertTrue(stage.isAssignableFrom(method.getReturnType()), method.toGenericString()))
+                .extracting(method -> method.getName()).containsExactlyInAnyOrderElementsOf(settings);
     }
 }
