@@ -1,52 +1,51 @@
-package io.github.gromoff97.awium.conditions;
+package io.github.gromoff97.awium.conditions.api
 
-import java.util.List;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class OrderedWaitCompilationContractTest {
 
     @ParameterizedTest
-    @ValueSource(strings = {"await", "tryAwait"})
-    void rejectsIncompatibleCallbackAndSourceTypes(String factory) {
-        for (String expression : List.of(
+    @ValueSource(strings = ["await", "tryAwait"])
+    fun `rejects incompatible callback and source types`(factory: String) {
+        for (expression in listOf(
                 "%s(Contract::text).until(matches((Integer value) -> true));",
-                "%s(Contract::text).until(captured(captured(equalTo(\"ready\"))));",
+                """%s(Contract::text).until(captured(captured(equalTo("ready"))));""",
                 "%s(Contract::text).until(matches(value -> value.length()));",
                 "%s(Contract::optional).until(captured(firstElement, lastElement));",
                 "%s(Contract::collection).until(captured(present, present));",
                 "%s(Contract::map).until(captured(firstElement, lastElement));",
                 "%s(Contract::collection).until(captured(singleEntry, singleEntry));")) {
-            assertRejected(expression.formatted(factory));
+            assertRejected(expression.format(factory))
         }
     }
 
     @Test
-    void sequenceResultsCannotBeAssignedToSingleOrUnrelatedValues() {
-        for (String expression : List.of(
+    fun `sequence results cannot be assigned to single or unrelated values`() {
+        for (expression in listOf(
                 "String value = await(Contract::text).until(captured(isNotNull, isNotNull));",
                 "AwaitResult<String, String> value = tryAwait(Contract::text).until(captured(isNotNull, isNotNull));",
                 "List<Integer> value = await(Contract::collection).until(captured(firstElement, lastElement));",
                 "Callable<List<String>> source = Contract::collection; List<Integer> wrong = await(source::call).until(captured(firstElement, lastElement));",
                 "Callable<List<String>> source = Contract::collection; AwaitResult<List<String>, List<Integer>> wrong = tryAwait(source::call).until(captured(firstElement, lastElement));",
                 "List<Integer> result = await(Contract::text).until(captured(instanceOf(String.class), instanceOf(String.class)));")) {
-            assertRejected(expression);
+            assertRejected(expression)
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"await", "tryAwait"})
-    void terminalsRequireOneExplicitCondition(String factory) {
-        for (String arguments : List.of("", "isNotNull, isNotNull", "present, present",
-                "singleElement, singleElement", "valueFor(\"ready\"), valueFor(\"ready\")",
+    @ValueSource(strings = ["await", "tryAwait"])
+    fun `terminals require one explicit condition`(factory: String) {
+        for (arguments in listOf("", "isNotNull, isNotNull", "present, present",
+                "singleElement, singleElement", """valueFor("ready"), valueFor("ready")""",
                 "instanceOf(String.class), instanceOf(String.class)",
                 "new io.github.gromoff97.awium.AwaitCondition.PreservingCondition<?>[]{isNotNull}")) {
-            assertRejected("%s(Contract::text).until(%s);".formatted(factory, arguments));
+            assertRejected("%s(Contract::text).until(%s);".format(factory, arguments))
         }
     }
 
-    private void assertRejected(String body) {
+    private fun assertRejected(body: String) {
         CompilationSupport.assertRejected("""
                 import java.util.*;
                 import java.util.concurrent.Callable;
@@ -66,6 +65,6 @@ class OrderedWaitCompilationContractTest {
                     static Map<String,Integer> map() { return Map.of("ready", 1); }
                     void check() { %s }
                 }
-                """.formatted(body));
+                """.trimIndent().format(body))
     }
 }
