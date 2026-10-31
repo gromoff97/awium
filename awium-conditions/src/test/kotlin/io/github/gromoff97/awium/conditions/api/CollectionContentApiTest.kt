@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.conditions.api
 
 import consumer.collection.ContentConsumer
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -23,6 +24,16 @@ class CollectionContentApiTest {
     fun `containsOnly keeps the array element type`() {
         val actual = listOf(arrayOf("a", "b"))
         assertSame(actual, ContentConsumer.onlyArrays(actual, arrayOf("a", "b")))
+    }
+
+    @Test
+    fun `iterable expectations retain primitive array elements after until`() {
+        assertEquals(2, ContentConsumer.iterableArrayElements(intArrayOf(1, 2)))
+    }
+
+    @Test
+    fun `iterable expectations retain nested list elements after until`() {
+        assertEquals(5, ContentConsumer.iterableListElements(listOf("ready")))
     }
 
     @Test

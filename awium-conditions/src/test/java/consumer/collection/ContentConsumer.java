@@ -38,7 +38,19 @@ public final class ContentConsumer {
     }
 
     public static List<String[]> onlyArrays(List<String[]> actual, String[] expected) {
-        return await(() -> actual).until(containsOnly(java.util.Collections.singletonList(expected)));
+        return await(() -> actual).until(containsOnly(singletonList(expected)));
+    }
+
+    public static int iterableArrayElements(int[] expected) {
+        Iterable<int[]> candidates = List.of(expected);
+        Callable<List<int[]>> source = () -> List.of(expected.clone());
+        return await(source).until(containsOnly(candidates)).getFirst().length;
+    }
+
+    public static int iterableListElements(List<String> expected) {
+        Iterable<List<String>> candidates = List.of(expected);
+        Callable<List<List<String>>> source = () -> List.of(expected);
+        return await(source).until(containsOnly(candidates)).getFirst().getFirst().length();
     }
 
     public static List<String[]> excludedArrays(List<String[]> actual, String[] unexpected) {
