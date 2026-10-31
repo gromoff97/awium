@@ -4,9 +4,7 @@ import com.tngtech.archunit.base.DescribedPredicate.describe
 import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
-import io.github.gromoff97.awium.AwaitCondition.Reference
 import io.github.gromoff97.awium.conditions.support.conditionsJar
-import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
 import java.util.jar.JarFile
 import org.junit.jupiter.api.Test
 
@@ -18,7 +16,8 @@ class ConditionsArchitectureTest {
 
     @Test
     fun `condition implementations do not call factories or waiting facades`() {
-        noClasses().that().resideInAPackage("..awium.conditions.internal..").should().dependOnClassesThat(
+        noClasses().that().resideInAPackage("..awium.conditions.internal..")
+            .or(inFamilies(setOf("CapturedCondition"))).should().dependOnClassesThat(
             inFamilies(setOf("WaitEngine", "Await", "ValueAwait", "SelectionAwait", "MapAwait", "DiagnosticAwait", "AwaitSupport",
                 "Conditions", "CollectionConditions", "MapConditions", "OptionalConditions", "StringConditions"))
         ).check(productClasses)
@@ -39,12 +38,8 @@ class ConditionsArchitectureTest {
         noClasses().should().dependOnClassesThat().resideInAPackage("io.github.gromoff97.awium.internal..").check(classes)
     }
 
-    private fun inFamilies(families: Set<String>) = describe<JavaClass>("belong to $families") { families.contains(owner(it.name)) }
-
-    private fun owner(name: String): String = when (name) {
-        Reference::class.java.name -> "Reference"
-        Unsatisfied::class.java.name -> "ConditionResult.Unsatisfied"
-        else -> name.substringAfterLast('.').substringBefore('$')
+    private fun inFamilies(families: Set<String>) = describe<JavaClass>("belong to $families") {
+        families.contains(it.name.substringAfterLast('.').substringBefore('$'))
     }
 
     companion object {
