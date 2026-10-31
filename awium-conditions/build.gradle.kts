@@ -67,7 +67,7 @@ pitest {
     targetTests = setOf("io.github.gromoff97.awium.conditions.*Test")
     excludedTestClasses = setOf(
         "io.github.gromoff97.awium.conditions.*CompilationContractTest",
-        "io.github.gromoff97.awium.conditions.CapturedConcurrencyTest",
+        "io.github.gromoff97.awium.conditions.composition.CapturedConcurrencyTest",
     )
     pitestVersion = "1.25.9"
     junit5PluginVersion = "1.2.3"

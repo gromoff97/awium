@@ -23,6 +23,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertNotSame
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -35,6 +37,32 @@ class CapturedConditionTest {
     @AfterEach
     fun `clear the caller interrupt flag`() {
         Thread.interrupted()
+    }
+
+    @Test
+    fun `changing a reason creates an independent definition with the same stages`() {
+        val original = captured(equalTo("ready"), equalTo("done"))
+        val first = original.because("first reason")
+        val second = first.because("second reason")
+
+        assertNotSame(original, first)
+        assertNotSame(first, second)
+        assertNull(original.explanation())
+        assertEquals("first reason", first.explanation())
+        assertEquals("second reason", second.explanation())
+        assertEquals(original.description(), second.description())
+        assertEquals(original.references(), second.references())
+        assertEquals(original.stages(), second.stages())
+    }
+
+    @Test
+    fun `a null reason is rejected`() {
+        assertThrows(NullPointerException::class.java) { captured(isNotNull).because(null) }
+    }
+
+    @Test
+    fun `a blank reason is rejected`() {
+        assertThrows(IllegalArgumentException::class.java) { captured(isNotNull).because(" \n\t") }
     }
 
     @Test

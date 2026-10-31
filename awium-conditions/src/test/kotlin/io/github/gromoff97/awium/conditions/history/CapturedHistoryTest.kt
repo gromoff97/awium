@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.Await.tryAwait
 import io.github.gromoff97.awium.conditions.ConditionAssertions.attempts
 import io.github.gromoff97.awium.conditions.ConditionAssertions.failure
 import io.github.gromoff97.awium.conditions.ConditionAssertions.observation
+import io.github.gromoff97.awium.conditions.ConditionAssertions.probe
 import io.github.gromoff97.awium.conditions.Conditions.captured
 import io.github.gromoff97.awium.conditions.Conditions.condition
 import io.github.gromoff97.awium.conditions.Conditions.equalTo
@@ -20,6 +21,12 @@ import io.github.gromoff97.awium.result.AwaitFailure.Reason.INTERRUPTED
 import io.github.gromoff97.awium.result.AwaitFailure.Reason.SOURCE_FAILED
 import io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED
 import io.github.gromoff97.awium.result.ConditionResult.satisfied
+import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
+import io.github.gromoff97.awium.execution.ConditionExecution.start
+import io.github.gromoff97.awium.execution.ExecutionStep
+import io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION
+import io.github.gromoff97.awium.execution.WaitCompletion.Timeout
+import io.github.gromoff97.awium.execution.WaitTiming
 import java.io.IOException
 import java.time.Duration.ofNanos
 import java.util.concurrent.Callable
@@ -33,11 +40,30 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.mockito.Mockito.mock
 
 class CapturedHistoryTest {
     @AfterEach
     fun `clear the caller interrupt flag`() {
         Thread.interrupted()
+    }
+
+    @Test
+    fun `a sequence failure identifies the pending stage and both relevant reasons`() {
+        val first = equalTo("created").because("payment must be created")
+        val second = equalTo("paid").because("payment must be completed")
+        val run = start<String, List<String>>(captured(first, second).because("checkout lifecycle"), true)
+        probe(run, "created")
+        run.record(SatisfiedObservation("created"))
+        val rejected = assertInstanceOf(Unsatisfied::class.java, probe(run, "created"))
+        val attempt = UnsatisfiedObservation("created", rejected.mismatch(), rejected.cause())
+        run.record(attempt)
+        val result = run.finish(Timeout(ExecutionStep(false, ACQUISITION, 0, attempt)), mock(WaitTiming::class.java))
+
+        assertThat(failure(result).message()).contains("stage 2/2", "Expected: \"paid\"",
+            "Because: payment must be completed", "Because: checkout lifecycle", "Mismatch: value was not equal")
+            .doesNotContain("payment must be created")
+        assertSame(second, result.conditions().last().condition())
     }
 
     @Test
