@@ -20,10 +20,14 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.support.ConditionTestRuntime.result;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
@@ -78,6 +82,65 @@ class ConditionDefinitionTest {
         var condition = new DefinedCondition<String, Number>("length", null, length);
 
         assertEquals(satisfied(5), condition.probe("ready"));
+    }
+
+    @Test
+    void preservingConditionsReturnTheObservationEvenIfTheEvaluatorReturnsAnotherValue() throws Throwable {
+        var actual = new StringBuilder("observed");
+        var condition = new PreservingCondition<CharSequence>("accepted", null, ignored -> satisfied("different")) {};
+
+        assertSame(actual, result(condition.newAttempt().probe(actual)));
+    }
+
+    @Test
+    void comparisonsReturnTheObservationEvenIfTheEvaluatorReturnsAnotherValue() throws Throwable {
+        var actual = new StringBuilder("observed");
+        var condition = new ComparisonCondition<CharSequence>("comparison", new Reference<>("Expected", "value"),
+                ignored -> satisfied("different")) {};
+
+        assertSame(actual, result(condition.newAttempt().probe(actual)));
+    }
+
+    @Test
+    void nestedPreservingFactoriesInitializeOncePerExecution() throws Throwable {
+        var definition = new DefinedCondition<String, String>("nested", new Reference<>("Expected", "ready"), value -> satisfied(value))
+                .because("nested reason");
+        int[] factories = {0};
+        var condition = new PreservingCondition<String>(definition, "outer", () -> {
+            factories[0]++;
+            int[] calls = {0};
+            return actual -> ++calls[0] == 1 ? unsatisfied("retry") : satisfied("different");
+        }) {};
+        var execution = ConditionExecution.<String, String>bind(condition);
+
+        assertEquals(0, factories[0]);
+        assertEquals(unsatisfied("retry"), execution.probe("ready"));
+        assertEquals(satisfied("ready"), execution.probe("ready"));
+        assertEquals(1, factories[0]);
+    }
+
+    @Test
+    void selectedDefinitionsRetainNestedMetadataAndTheDeclaredValue() {
+        var definition = new DefinedCondition<Collection<String>, String>("known element", new Reference<>("Index", 0),
+                actual -> satisfied(actual.iterator().next())).because("element is needed");
+        var selector = new SelectedCondition<>(definition) {};
+
+        assertEquals("ready", await(() -> List.of("ready")).until(selector));
+        assertEquals(definition.description(), selector.description());
+        assertEquals(definition.explanation(), selector.explanation());
+        assertEquals(definition.references(), selector.references());
+    }
+
+    @Test
+    void mapValueDefinitionsRetainNestedMetadataAndTheDeclaredValue() {
+        var definition = new DefinedCondition<Map<String, String>, String>("known value", new Reference<>("Key", "key"),
+                actual -> satisfied(actual.get("key"))).because("value is needed");
+        var selector = new MapValueCondition<>(definition) {};
+
+        assertEquals("ready", await(() -> Map.of("key", "ready")).until(selector));
+        assertEquals(definition.description(), selector.description());
+        assertEquals(definition.explanation(), selector.explanation());
+        assertEquals(definition.references(), selector.references());
     }
 
     @ParameterizedTest
