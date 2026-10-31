@@ -5,7 +5,6 @@ import java.util.concurrent.Callable;
 
 import static java.util.Objects.requireNonNull;
 
-/** Binds observations to a condition, sharing its lazily initialized evaluator within one wait. */
 public final class AttemptFactory<OBSERVED, RESULT> {
 
     final Condition.Check condition;
@@ -17,7 +16,6 @@ public final class AttemptFactory<OBSERVED, RESULT> {
         this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
     }
 
-    /** Captures the original input after a check succeeds, irrespective of its selected result. */
     public static <OBSERVED> AttemptFactory<OBSERVED, OBSERVED> observing(
             Condition.Check condition, Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory) {
         requireNonNull(evaluatorFactory, "evaluator factory must not be null");

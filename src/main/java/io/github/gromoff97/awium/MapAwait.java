@@ -10,13 +10,6 @@ import java.util.function.LongSupplier;
 
 import static io.github.gromoff97.awium.Condition.required;
 
-/**
- * Immutable wait configuration supporting both entry and value selection from a map.
- *
- * @param <OBSERVED> complete map returned by the source
- * @param <ENTRY> entry selected from the map
- * @param <VALUE> value selected from the map
- */
 public final class MapAwait<OBSERVED extends Map<?, ?>, ENTRY extends Map.Entry<?, ?>, VALUE>
         extends SelectionAwait<OBSERVED, ENTRY> {
 

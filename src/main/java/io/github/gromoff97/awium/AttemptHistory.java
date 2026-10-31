@@ -12,7 +12,6 @@ import java.util.TreeMap;
 import static java.util.Collections.emptyNavigableMap;
 import static java.util.Objects.requireNonNull;
 
-/** Assigns global attempt numbers and compacts repeated observations for each condition occurrence. */
 final class AttemptHistory<OBSERVED> {
 
     private final List<NavigableMap<Long, Attempt<OBSERVED>>> histories;

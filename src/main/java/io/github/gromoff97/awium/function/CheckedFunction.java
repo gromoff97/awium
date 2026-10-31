@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium.function;
 
-/** A condition callback that may propagate any throwable to the wait's failure handling. */
 @FunctionalInterface
 public interface CheckedFunction<VALUE, RESULT> {
 

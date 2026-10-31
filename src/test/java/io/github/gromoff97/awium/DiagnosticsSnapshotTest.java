@@ -2,11 +2,14 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.internal.ExecutionStep;
+import io.github.gromoff97.awium.internal.FailureDiagnostics;
 import io.github.gromoff97.awium.internal.WaitCompletion;
+import io.github.gromoff97.awium.internal.WaitConfiguration;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
+import io.github.gromoff97.awium.result.AwaitResult;
 import io.github.gromoff97.awium.result.ConditionResult;
 import java.io.IOException;
 import java.util.IdentityHashMap;
@@ -28,7 +31,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitSupport.complete;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
@@ -234,8 +236,7 @@ class DiagnosticsSnapshotTest {
                 evaluatedAttempt(diagnosticCondition("collection to be non-empty", null),
                         null, unsatisfied("collection was empty", cause), 9 * SECOND));
 
-        var failure = assertFailure(TIMEOUT,
-                () -> complete(outcome, config(3 * SECOND, 10 * SECOND, 0), 4));
+        var failure = renderFailure(TIMEOUT, outcome, config(3 * SECOND, 10 * SECOND, 0), 4);
 
         assertEquals("""
                 Wait timed out
@@ -253,11 +254,10 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void lateMismatchReportsTheActualCompletionTime() {
-        var outcome = new Timeout(evaluatedAttempt(diagnosticCondition("status equals COMPLETED", null),
+        var outcome = timeout(evaluatedAttempt(diagnosticCondition("status equals COMPLETED", null),
                 "Payment[PENDING]", unsatisfied("status was PENDING"), 10 * SECOND + 200 * MILLISECOND));
 
-        var failure = assertFailure(TIMEOUT,
-                () -> complete(outcome, config(100 * MILLISECOND, 10 * SECOND, 0), 100));
+        var failure = renderFailure(TIMEOUT, outcome, config(100 * MILLISECOND, 10 * SECOND, 0), 100);
 
         assertEquals("""
                 Wait timed out
@@ -272,11 +272,10 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void lateSuccessReportsATimeoutWithoutAMismatch() {
-        var outcome = new Timeout(evaluatedAttempt(diagnosticCondition("status equals COMPLETED", null),
+        var outcome = timeout(evaluatedAttempt(diagnosticCondition("status equals COMPLETED", null),
                 "Payment[COMPLETED]", satisfied("Payment[COMPLETED]"), 10 * SECOND + 200 * MILLISECOND));
 
-        var failure = assertFailure(TIMEOUT,
-                () -> complete(outcome, config(100 * MILLISECOND, 10 * SECOND, 0), 100));
+        var failure = renderFailure(TIMEOUT, outcome, config(100 * MILLISECOND, 10 * SECOND, 0), 100);
 
         assertEquals("""
                 Wait timed out
@@ -296,8 +295,7 @@ class DiagnosticsSnapshotTest {
         var outcome = new PersistenceFailure(7 * SECOND,
                 new ExecutionStep<>(attempt.definition(), 1, 0, PERSISTENCE, attempt.completedAfterNanos(), attempt.attempt()));
 
-        var failure = assertFailure(PERSISTENCE_FAILED,
-                () -> complete(outcome, config(100 * MILLISECOND, 10 * SECOND, 5 * SECOND), 71));
+        var failure = renderFailure(PERSISTENCE_FAILED, outcome, config(100 * MILLISECOND, 10 * SECOND, 5 * SECOND), 71);
 
         assertEquals("""
                 Condition did not stay satisfied
@@ -316,8 +314,7 @@ class DiagnosticsSnapshotTest {
     @Test
     void sourceFailureHasItsCauseAndAttemptWithoutAnObservation() {
         var cause = new IllegalStateException("source failed");
-        var failure = assertFailure(SOURCE_FAILED,
-                () -> complete(sourceFailure(CONDITION, cause, SECOND), config(SECOND, 10 * SECOND, 0), 2));
+        var failure = renderFailure(SOURCE_FAILED, sourceFailure(CONDITION, cause, SECOND), config(SECOND, 10 * SECOND, 0), 2);
 
         assertSame(cause, failure.getCause());
         assertEquals("""
@@ -333,8 +330,8 @@ class DiagnosticsSnapshotTest {
     @Test
     void conditionFailureRetainsItsCauseAttemptAndObservation() {
         var cause = new IllegalArgumentException("condition failed");
-        var failure = assertFailure(CONDITION_FAILED,
-                () -> complete(conditionFailure(CONDITION, "actual", cause, SECOND), config(SECOND, 10 * SECOND, 0), 3));
+        var failure = renderFailure(CONDITION_FAILED,
+                conditionFailure(CONDITION, "actual", cause, SECOND), config(SECOND, 10 * SECOND, 0), 3);
 
         assertSame(cause, failure.getCause());
         assertEquals("""
@@ -351,8 +348,7 @@ class DiagnosticsSnapshotTest {
     @Test
     void waitingFailureRetainsItsCauseAndAttempt() {
         var cause = new IllegalStateException("waiting failed");
-        var failure = assertFailure(WAIT_FAILED,
-                () -> complete(waitingFailure(cause, SECOND), config(SECOND, 10 * SECOND, 0), 4));
+        var failure = renderFailure(WAIT_FAILED, waitingFailure(cause, SECOND), config(SECOND, 10 * SECOND, 0), 4);
 
         assertSame(cause, failure.getCause());
         assertEquals("""
@@ -368,8 +364,7 @@ class DiagnosticsSnapshotTest {
     @Test
     void thrownInterruptionRemainsAWaitingFailure() {
         var cause = new InterruptedException("stopped");
-        var failure = assertFailure(WAIT_FAILED,
-                () -> complete(waitingFailure(cause, SECOND), config(SECOND, 10 * SECOND, 0), 5));
+        var failure = renderFailure(WAIT_FAILED, waitingFailure(cause, SECOND), config(SECOND, 10 * SECOND, 0), 5);
 
         assertSame(cause, failure.getCause());
         assertEquals("""
@@ -406,11 +401,10 @@ class DiagnosticsSnapshotTest {
     @Test
     void assertionCauseIsRetainedAndItsMessageIsReadOnce() {
         var assertion = new CountingAssertion("assertion failed");
-        WaitCompletion outcome = new Timeout(
+        WaitCompletion outcome = timeout(
                 evaluatedAttempt(CONDITION, "actual", unsatisfied("business mismatch", assertion), 3 * SECOND));
 
-        var failure = assertFailure(TIMEOUT,
-                () -> complete(outcome, config(SECOND, 2 * SECOND, 0), 2));
+        var failure = renderFailure(TIMEOUT, outcome, config(SECOND, 2 * SECOND, 0), 2);
 
         assertSame(assertion, failure.getCause());
         assertEquals("""
@@ -477,11 +471,10 @@ class DiagnosticsSnapshotTest {
     void diagnosticRenderingFailuresPreserveTheTimeoutWithoutACause() {
         var valueCause = new IllegalArgumentException("toString failed");
         var actual = new ThrowingValue(valueCause);
-        WaitCompletion outcome = new Timeout(
+        WaitCompletion outcome = timeout(
                 evaluatedAttempt(diagnosticCondition("condition", null), actual, unsatisfied("not ready"), 2));
 
-        var valueFailure = assertFailure(TIMEOUT,
-                () -> complete(outcome, config(1, 2, 0), 1));
+        var valueFailure = renderFailure(TIMEOUT, outcome, config(1, 2, 0), 1);
 
         assertNull(valueFailure.getCause());
         assertArrayEquals(new Throwable[]{valueCause}, valueFailure.getSuppressed());
@@ -508,8 +501,8 @@ class DiagnosticsSnapshotTest {
             }
         };
 
-        var failure = assertFailure(TIMEOUT,
-                () -> complete(new Timeout(evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 2)), config(1, 2, 0), 1));
+        var failure = renderFailure(TIMEOUT,
+                timeout(evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 2)), config(1, 2, 0), 1);
 
         assertNull(failure.getCause());
         assertArrayEquals(new Throwable[]{interruption}, failure.getSuppressed());
@@ -539,8 +532,7 @@ class DiagnosticsSnapshotTest {
         var attempt = new ExecutionStep<>(captured(CONDITION, stage), 2, 1, ACQUISITION, 2,
                 new Attempt.Unsatisfied<>(new ThrowingValue(cause), "inner mismatch", null));
 
-        var failure = assertFailure(TIMEOUT,
-                () -> complete(new Timeout(attempt), config(1, 2, 0), 2));
+        var failure = renderFailure(TIMEOUT, timeout(attempt), config(1, 2, 0), 2);
 
         assertThat(failure).hasMessageContainingAll("Sequence: captured 1/2",
                 "Condition: inner second",
@@ -561,8 +553,7 @@ class DiagnosticsSnapshotTest {
         var attempt = new ExecutionStep<>(captured(CONDITION, stage), 2, 1, ACQUISITION, 2,
                 new Attempt.Unsatisfied<>(actual, "not ready", null));
 
-        var failure = assertFailure(TIMEOUT,
-                () -> complete(new Timeout(attempt), config(1, 2, 0), 2));
+        var failure = renderFailure(TIMEOUT, timeout(attempt), config(1, 2, 0), 2);
 
         assertNull(failure.getCause());
         assertArrayEquals(new Throwable[]{cause}, failure.getSuppressed());
@@ -660,12 +651,11 @@ class DiagnosticsSnapshotTest {
         for (Throwable diagnosticCause : List.of(new IllegalStateException("toString failed"),
                 new InternalError("value fatal"))) {
             var engineCause = new AssertionError("assertion failed");
-            WaitCompletion outcome = new Timeout(
+            WaitCompletion outcome = timeout(
                     evaluatedAttempt(CONDITION, new ThrowingValue(diagnosticCause),
                             unsatisfied("not ready", engineCause), 2));
 
-            var failure = assertFailure(TIMEOUT,
-                    () -> complete(outcome, config(1, 2, 0), 1));
+            var failure = renderFailure(TIMEOUT, outcome, config(1, 2, 0), 1);
 
             assertSame(engineCause, failure.getCause());
             assertThat(failure.getSuppressed()).singleElement().isSameAs(diagnosticCause);
@@ -709,11 +699,10 @@ class DiagnosticsSnapshotTest {
         Object value = mock();
         when(value.toString()).thenReturn(null);
         Object actual = array ? new Object[] {value} : value;
-        WaitCompletion rendered = new Timeout(
+        WaitCompletion rendered = timeout(
                 evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 2));
 
-        var valueFailure = assertFailure(TIMEOUT,
-                () -> complete(rendered, config(1, 2, 0), 1));
+        var valueFailure = renderFailure(TIMEOUT, rendered, config(1, 2, 0), 1);
 
         assertNull(valueFailure.getCause());
         assertEquals(0, valueFailure.getSuppressed().length);
@@ -985,9 +974,8 @@ class DiagnosticsSnapshotTest {
         var sourceFailure = assertFailure(SOURCE_FAILED,
                 () -> await(source).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
                         .until(condition("condition\rdescription", ignored -> satisfied(ignored))));
-        var arrayFailure = assertFailure(TIMEOUT,
-                () -> complete(new Timeout(
-                                evaluatedAttempt(CONDITION, new int[] {1, 2}, unsatisfied("not ready"), 2)), config(1, 2, 0), 1));
+        var arrayFailure = renderFailure(TIMEOUT,
+                timeout(evaluatedAttempt(CONDITION, new int[] {1, 2}, unsatisfied("not ready"), 2)), config(1, 2, 0), 1);
 
         assertEquals("""
                 Source retrieval failed
@@ -1025,8 +1013,8 @@ class DiagnosticsSnapshotTest {
     void errorsFromArrayElementToStringAreRetainedAsDiagnosticFailures() {
         var fatal = new InternalError("array element fatal");
         Object[] actual = {new ThrowingValue(fatal)};
-        var failure = assertThrows(AwaitAssertionError.class,
-                () -> complete(new Timeout(evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 2)), config(1, 2, 0), 1));
+        var failure = renderFailure(TIMEOUT,
+                timeout(evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 2)), config(1, 2, 0), 1);
         assertArrayEquals(new Throwable[]{fatal}, failure.getSuppressed());
     }
 
@@ -1036,9 +1024,19 @@ class DiagnosticsSnapshotTest {
         Object[] cycle = new Object[1];
         cycle[0] = cycle;
         Object[] actual = {shared, shared, new Object[] {null, new char[] {'a', 'b'}}, cycle};
-        var failure = assertFailure(TIMEOUT,
-                () -> complete(new Timeout(evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 2)), config(1, 2, 0), 1));
+        var failure = renderFailure(TIMEOUT,
+                timeout(evaluatedAttempt(CONDITION, actual, unsatisfied("not ready"), 2)), config(1, 2, 0), 1);
         assertThat(failure).hasMessageContainingAll("[[[1, 2], leaf], [[1, 2], leaf], [null, [a, b]], [[...]]]");
+    }
+
+    private static Throwable renderFailure(AwaitFailure.Reason reason, WaitCompletion outcome,
+            WaitConfiguration configuration, long attemptNumber) {
+        var failure = FailureDiagnostics.failure(outcome, configuration, attemptNumber);
+        return assertFailure(reason, () -> new AwaitResult.Failed<>(List.of(), failure).orThrow());
+    }
+
+    private static Timeout timeout(ExecutionStep<?> step) {
+        return new Timeout(step.completedAfterNanos(), step);
     }
 
     private static List<Named<BinaryOperator<Supplier<AwaitFailure>>>> terminals() {
@@ -1074,17 +1072,17 @@ class DiagnosticsSnapshotTest {
 
     private static WaitCompletion sourceFailure(Condition condition, Throwable failure, long completedNanos) {
         return new Uncontrolled(new ExecutionStep<>(condition, 1, 0, ACQUISITION, completedNanos,
-                new FailedBeforeObservation<>(Operation.SOURCE, failure)));
+                new FailedBeforeObservation<>(Operation.SOURCE, failure)), currentThread().isInterrupted());
     }
 
     private static WaitCompletion waitingFailure(Throwable failure, long completedNanos) {
         return new Uncontrolled(new ExecutionStep<>(CONDITION, 1, 0, ACQUISITION, completedNanos,
-                new FailedBeforeObservation<>(Operation.WAITING, failure)));
+                new FailedBeforeObservation<>(Operation.WAITING, failure)), currentThread().isInterrupted());
     }
 
     private static WaitCompletion conditionFailure(Condition expectation, Object observed, Throwable failure, long completedNanos) {
         return new Uncontrolled(new ExecutionStep<>(expectation, 1, 0, ACQUISITION, completedNanos,
-                new FailedAfterObservation<>(observed, Operation.CONDITION, failure, null)));
+                new FailedAfterObservation<>(observed, Operation.CONDITION, failure, null)), currentThread().isInterrupted());
     }
 
     private static final class EqualFailure extends RuntimeException {

@@ -13,7 +13,6 @@ import java.util.function.Supplier;
 import static java.lang.Thread.currentThread;
 import static java.util.Arrays.deepToString;
 
-/** Formats diagnostic values on demand, retaining failures without replacing the original outcome. */
 public final class DiagnosticText {
 
     private static final List<TimeUnit> DURATION_UNITS = List.of(
@@ -27,7 +26,7 @@ public final class DiagnosticText {
         this.primaryCause = primaryCause;
     }
 
-    public List<Throwable> failures() {
+    List<Throwable> failures() {
         return List.copyOf(diagnosticFailures);
     }
 
@@ -35,21 +34,18 @@ public final class DiagnosticText {
         for (Throwable failure : diagnosticFailures) field(out, indentation, "Rendering failure", failure.getClass().getName());
     }
 
-    /** Formats a cause without invoking an overridden Throwable.toString(). */
     public String cause(Throwable cause) {
         if (cause == null) return "null";
         String message = render(cause::getMessage);
         return cause.getClass().getName() + (message == null || message.isBlank() ? "" : ": " + message);
     }
 
-    /** Formats a retained state without its condition or attempt number. */
     public static String attempt(Attempt<?> attempt) {
         var out = new StringBuilder();
         appendAttempt(out, "Result", attempt);
         return out.substring(0, out.length() - 1);
     }
 
-    /** Formats one condition occurrence followed by its observation changes. */
     public static String conditionHistory(String label, ConditionHistory<?> history) {
         var out = new StringBuilder();
         var text = new DiagnosticText(null);
@@ -87,13 +83,12 @@ public final class DiagnosticText {
         text.appendFailures(out, "    ");
     }
 
-    /** Formats unsigned elapsed nanoseconds, including acquisition plus persistence beyond Long.MAX_VALUE. */
-    public static String duration(long remaining) {
+    static String unsignedDuration(long remainingNanos) {
         StringJoiner result = new StringJoiner(" ").setEmptyValue("0 ns");
         for (TimeUnit unit : DURATION_UNITS) {
             long unitNanos = unit.toNanos(1);
-            long count = Long.divideUnsigned(remaining, unitNanos);
-            remaining = Long.remainderUnsigned(remaining, unitNanos);
+            long count = Long.divideUnsigned(remainingNanos, unitNanos);
+            remainingNanos = Long.remainderUnsigned(remainingNanos, unitNanos);
             if (count != 0) {
                 String suffix = switch (unit) {
                     case DAYS -> "d";
@@ -110,7 +105,7 @@ public final class DiagnosticText {
         return result.toString();
     }
 
-    public String render(Supplier<String> rendering) {
+    private String render(Supplier<String> rendering) {
         boolean interrupted = currentThread().isInterrupted();
         try {
             return rendering.get();
@@ -124,8 +119,7 @@ public final class DiagnosticText {
         }
     }
 
-    /** Formats the returned value, or returns null when execution obtained no observation. */
-    public String observation(Attempt<?> attempt) {
+    String observation(Attempt<?> attempt) {
         return switch (attempt) {
             case Attempt.Satisfied<?> evaluated -> value(evaluated.observed());
             case Attempt.Unsatisfied<?> evaluated -> value(evaluated.observed());
@@ -163,7 +157,7 @@ public final class DiagnosticText {
         return out.append(quote).toString();
     }
 
-    public void condition(StringBuilder out, String label, Condition condition, String indentation) {
+    void condition(StringBuilder out, String label, Condition condition, String indentation) {
         field(out, indentation, label, condition.description());
         String detailsIndentation = indentation + "    ";
         for (var reference : condition.references()) {
@@ -178,7 +172,7 @@ public final class DiagnosticText {
         field(out, "    ", label, value);
     }
 
-    public static void field(StringBuilder out, String indentation,
+    static void field(StringBuilder out, String indentation,
             String label, String value) {
         String normalized = value.replace("\r\n", "\n").replace('\r', '\n');
         if (!normalized.contains("\n")) {

@@ -41,16 +41,15 @@ final class ValueMatching {
             if (actual == null) {
                 return unsatisfied(subject + " was null");
             }
-            int missing = firstMissing(actualElements.apply(actual), expected, matches);
-            return missing < 0 ? satisfied(null) : unsatisfied(subject + " did not contain all expected " + elements
-                    + "; first missing at expected index " + missing);
+            int missingIndex = firstMissingExpectedIndex(actualElements.apply(actual), expected, matches);
+            return missingIndex < 0 ? satisfied(null) : unsatisfied(subject + " did not contain all expected " + elements
+                    + "; first missing at expected index " + missingIndex);
         });
     }
 
-    /** Returns the first missing expected index, or -1 when every operand is present. */
-    static <ACTUAL, EXPECTED> int firstMissing(Collection<ACTUAL> actual, Collection<EXPECTED> expected,
+    static <ACTUAL, EXPECTED> int firstMissingExpectedIndex(Collection<ACTUAL> actual, Collection<EXPECTED> expected,
             CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) throws Throwable {
-        return firstIndex(expected, candidate -> !matchesAny(actual, value -> matches.test(value, candidate)));
+        return indexOfFirstMatch(expected, candidate -> !matchesAny(actual, value -> matches.test(value, candidate)));
     }
 
     static <INPUT, ACTUAL, UNEXPECTED> PreservingCondition<INPUT> containingNone(
@@ -61,19 +60,18 @@ final class ValueMatching {
             if (actual == null) {
                 return unsatisfied(subject + " was null");
             }
-            int present = firstPresent(actualElements.apply(actual), unexpected, matches);
-            return present < 0 ? satisfied(null) : unsatisfied(subject + " contained unexpected " + elements
-                    + "; first at unexpected index " + present);
+            int presentIndex = firstPresentExpectedIndex(actualElements.apply(actual), unexpected, matches);
+            return presentIndex < 0 ? satisfied(null) : unsatisfied(subject + " contained unexpected " + elements
+                    + "; first at unexpected index " + presentIndex);
         });
     }
 
-    /** Returns the first present expected index, or -1 when no operand is present. */
-    static <ACTUAL, EXPECTED> int firstPresent(Collection<ACTUAL> actual, Collection<EXPECTED> expected,
+    static <ACTUAL, EXPECTED> int firstPresentExpectedIndex(Collection<ACTUAL> actual, Collection<EXPECTED> expected,
             CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) throws Throwable {
-        return firstIndex(expected, candidate -> matchesAny(actual, value -> matches.test(value, candidate)));
+        return indexOfFirstMatch(expected, candidate -> matchesAny(actual, value -> matches.test(value, candidate)));
     }
 
-    private static <VALUE> int firstIndex(Collection<VALUE> values, CheckedPredicate<? super VALUE> matches) throws Throwable {
+    private static <VALUE> int indexOfFirstMatch(Collection<VALUE> values, CheckedPredicate<? super VALUE> matches) throws Throwable {
         int index = 0;
         for (VALUE value : values) {
             if (matches.test(value)) {
@@ -84,16 +82,13 @@ final class ValueMatching {
         return -1;
     }
 
-    static <ACTUAL, EXPECTED> boolean exactly(Iterator<ACTUAL> actual, Collection<EXPECTED> expected,
+    static <ACTUAL, EXPECTED> boolean sameElementsInAnyOrder(Iterator<ACTUAL> actual, Collection<EXPECTED> expected,
             CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) throws Throwable {
         var remainingExpected = new ArrayList<>(expected);
         while (actual.hasNext()) {
             ACTUAL value = actual.next();
-            int index = 0;
-            while (index < remainingExpected.size() && !matches.test(value, remainingExpected.get(index))) {
-                index++;
-            }
-            if (index == remainingExpected.size()) {
+            int index = indexOfFirstMatch(remainingExpected, candidate -> matches.test(value, candidate));
+            if (index < 0) {
                 return false;
             }
             remainingExpected.remove(index);

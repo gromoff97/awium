@@ -149,7 +149,7 @@ class ObservationTest {
         WaitCompletion terminal = new WaitEngine<>(config(1, 20, 0).withTime(time, time), () -> {
             time.advanceNanos(2);
             return actual;
-        }, execution).waitFor();
+        }, execution).waitFor(ignored -> {});
 
         var step = terminal.step();
         var observation = step.attempt();
@@ -309,7 +309,7 @@ class ObservationTest {
         }, new SequenceExecution<>(bind(condition("ready", value -> {
             conditionCalls[0]++;
             return satisfied(value);
-        })))).waitFor();
+        })))).waitFor(ignored -> {});
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         uncontrolled(SOURCE, failure.step().attempt());
@@ -376,7 +376,7 @@ class ObservationTest {
                 }, new SequenceExecution<>(bind(condition("ready", value -> {
                     boundary.accept("condition");
                     return unsatisfied("not yet");
-                })))).waitFor()));
+                })))).waitFor(ignored -> {})));
         assertTrue(currentThread().isInterrupted(), phase);
     }
 
@@ -536,6 +536,6 @@ class ObservationTest {
             ConditionResult<?> evaluation = condition.apply(actual);
             time.advanceNanos(2);
             return evaluation;
-        })))).waitFor().step().attempt();
+        })))).waitFor(ignored -> {}).step().attempt();
     }
 }

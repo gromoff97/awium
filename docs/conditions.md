@@ -176,8 +176,8 @@ These checks accept any `CharSequence` without converting it to `String`.
 | `contains(text)`, `doesNotContain(text)`, `containsIgnoringCase(text)` | One fragment |
 | `containsAll(xs)`, `doesNotContainAny(xs)` | An iterable of fragments |
 | `startsWith(text)`, `doesNotStartWith(text)`, `endsWith(text)`, `doesNotEndWith(text)` | Prefix or suffix |
-| `matchesRegex(regex)`, `doesNotMatchRegex(regex)` | JDK regex, supplied as text or `Pattern` |
-| `hasLength...` | Text length |
+| `matchesRegex(regex)`, `doesNotMatchRegex(regex)` | Full JDK regex match, supplied as text or `Pattern` |
+| `hasLength...` | Length in UTF-16 code units |
 
 Text operands accept `CharSequence`. Blankness uses `Character.isWhitespace` on
 Unicode code points. Unlike `contentEquals`, general `equalTo` may reject distinct
@@ -188,6 +188,7 @@ Unicode code points. Unlike `contentEquals`, general `equalTo` may reject distin
 
 These checks require `Collection`. Ordered operations require `SequencedCollection`
 (lists, deques, sequenced sets). `xs` is an iterable of expected elements.
+Element comparisons include array contents.
 
 | Condition | Meaning |
 | --- | --- |
@@ -202,7 +203,7 @@ These checks require `Collection`. Ordered operations require `SequencedCollecti
 | `startsWith(xs)`, `endsWith(xs)` | Ordered prefix or suffix |
 | `containsSequence(xs)`, `doesNotContainSequence(xs)` | Consecutive ordered elements |
 | `containsSubsequence(xs)`, `doesNotContainSubsequence(xs)` | Ordered elements, allowing gaps |
-| `sorted(comparator)` | Comparator order |
+| `sorted(comparator)` | Nondecreasing comparator order |
 | `singleElement` | Exactly one element → element |
 | `firstElement`, `lastElement`, `elementAt(index)` | Ordered position → element |
 

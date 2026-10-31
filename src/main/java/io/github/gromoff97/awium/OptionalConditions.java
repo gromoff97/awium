@@ -10,12 +10,6 @@ import static io.github.gromoff97.awium.internal.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.internal.AttemptResult.unsatisfied;
 import static io.github.gromoff97.awium.ConditionSupport.compose;
 
-/**
- * Checks and selections for {@link Optional} sources. {@link #absent} returns the original empty
- * optional; {@link #present} returns its contained value. {@code hasValue(...)} first requires
- * presence, then returns the checked value or the nested condition's result.
- * A null observed optional is unsatisfied, including for {@code absent}.
- */
 public final class OptionalConditions {
 
     public static final SelectedCondition<Optional<?>> present =
@@ -25,7 +19,6 @@ public final class OptionalConditions {
 
     private OptionalConditions() {}
 
-    /** Selects the present value if it matches, retaining the source's contained type. */
     public static <VALUE> SelectedCondition<Optional<? extends VALUE>> hasValue(CheckedPredicate<? super VALUE> predicate) {
         return hasValue(Conditions.matches(predicate));
     }

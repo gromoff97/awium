@@ -5,7 +5,6 @@ import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
-/** A typed value or failure from one check. */
 public sealed interface AttemptResult<RESULT> {
 
     default Throwable cause() {

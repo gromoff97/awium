@@ -23,14 +23,6 @@ import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static java.util.Objects.deepEquals;
 import static java.util.Objects.requireNonNull;
 
-/**
- * Value checks that preserve the observed type and instance; type checks narrow that type.
- * Equality and membership use {@link java.util.Objects#deepEquals(Object, Object)},
- * with the observed value first. Identity checks use {@code ==}.
- *
- * <p>Single expected values remain caller-owned. Membership factories copy their expected
- * iterable when the condition is created, without copying the elements.
- */
 public final class Conditions {
 
     public static final PreservingCondition<Object> isNull = ConditionSupport.preserving("value is null",
@@ -40,15 +32,6 @@ public final class Conditions {
 
     private Conditions() {}
 
-    /**
-     * Captures the original observations satisfying each check in order, one stage per observation.
-     * Checks may preserve, select, or transform a value; their result values are discarded here.
-     * Each stage must accept the source type. Each wait creates independent stage executions.
-     * A single stage still returns a list. During persistence, only the final stage is rechecked.
-     *
-     * @throws NullPointerException if the array or any condition is null
-     * @throws IllegalArgumentException if the array is empty
-     */
     @SafeVarargs
     @SuppressWarnings("varargs")
     public static <CHECK extends Condition.Check> CapturedSource<CHECK> captured(CHECK... conditions) {
@@ -56,7 +39,6 @@ public final class Conditions {
         return new CapturedSource<>(conditions);
     }
 
-    /** Captures checks with comparisons, retaining their expected-value constraints. */
     @SafeVarargs
     @SuppressWarnings("varargs")
     public static <INPUT, EXPECTED> CapturedSource<Condition.ApplicableCondition<INPUT, Reference<? super EXPECTED>>> captured(
@@ -64,7 +46,6 @@ public final class Conditions {
         return new CapturedSource<>(conditions);
     }
 
-    /** Captures compatible input checks, retaining their source-independent applicability. */
     @SafeVarargs
     @SuppressWarnings("varargs")
     public static <INPUT> CapturedSource<Condition.InputCondition<INPUT>> captured(
@@ -72,12 +53,6 @@ public final class Conditions {
         return new CapturedSource<>(conditions);
     }
 
-    /**
-     * Creates a named condition using the supplied callback for every execution.
-     * Return {@link ConditionResult#satisfied(Object)} with the value the wait should return,
-     * or {@link ConditionResult#unsatisfied(String)} to retry. To return the observation,
-     * pass the callback argument to {@code satisfied}.
-     */
     public static <INPUT, RESULT> Condition.Typed<INPUT, RESULT> condition(String description,
             CheckedFunction<? super INPUT, ? extends ConditionResult<? extends RESULT>> evaluation) {
         var condition = ConditionSupport.<INPUT, RESULT>condition(description, null,
@@ -86,11 +61,6 @@ public final class Conditions {
         return condition;
     }
 
-    /**
-     * Lazily invokes the factory separately for each use of the condition in a wait.
-     * Create mutable callback state inside the factory to isolate waits and sequence stages.
-     * Like {@link #condition(String, CheckedFunction)}, the callback chooses the successful result.
-     */
     public static <INPUT, RESULT> Condition.Typed<INPUT, RESULT> conditionPerWait(String description,
             Callable<? extends CheckedFunction<? super INPUT, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory) {
         var condition = new Condition.Typed<INPUT, RESULT>(description, null, () -> {
@@ -101,11 +71,6 @@ public final class Conditions {
         return condition;
     }
 
-    /**
-     * Adapts an assertion to a check: normal return satisfies it, and {@link AssertionError}
-     * means a mismatch that can be retried. Any other throwable fails the attempt.
-     * Successful checks return the original observation.
-     */
     public static <INPUT> PreservingCondition<INPUT> asserted(CheckedConsumer<? super INPUT> assertion) {
         requireNonNull(assertion, "assertion must not be null");
         return ConditionSupport.preserving("value satisfies assertion", actual -> {

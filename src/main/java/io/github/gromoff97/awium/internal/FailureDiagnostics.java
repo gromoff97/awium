@@ -5,10 +5,9 @@ import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitFailure;
 
 import static java.util.Objects.requireNonNull;
-import static io.github.gromoff97.awium.internal.DiagnosticText.duration;
+import static io.github.gromoff97.awium.internal.DiagnosticText.unsignedDuration;
 import static io.github.gromoff97.awium.internal.DiagnosticText.field;
 
-/** Saves the terminal failure without retaining execution machinery or replacing its cause. */
 public final class FailureDiagnostics {
 
     private FailureDiagnostics() {}
@@ -25,7 +24,7 @@ public final class FailureDiagnostics {
         var out = new StringBuilder(title(outcome)).append('\n');
         field(out, "", "Attempt", attemptNumber + " (" + step.phase() + ")");
         if (sequence != null) {
-            field(out, "", "Sequence", "captured " + step.capturedStages() + "/" + sequence.stages().size()
+            field(out, "", "Sequence", "captured " + step.completedStages() + "/" + sequence.stages().size()
                     + "; stage " + step.stageNumber() + "/" + sequence.stages().size());
             if (sequence.explanation() != null) field(out, "Because", sequence.explanation());
         }
@@ -39,8 +38,8 @@ public final class FailureDiagnostics {
         if (attempt instanceof Attempt.Failure<?> failure && failure.location() != null) {
             field(out, "Within", failure.location());
         }
-        if (sequence != null && attempt instanceof Attempt.Satisfied<?> && step.capturedStages() < sequence.stages().size()) {
-            int next = step.capturedStages() + 1;
+        if (sequence != null && attempt instanceof Attempt.Satisfied<?> && step.completedStages() < sequence.stages().size()) {
+            int next = step.completedStages() + 1;
             text.condition(out, "Next stage " + next + "/" + sequence.stages().size(), sequence.stages().get(next - 1), "");
         }
         timing(out, outcome, configuration);
@@ -66,15 +65,15 @@ public final class FailureDiagnostics {
         var completedAfter = outcome.step().completedAfterNanos();
         var elapsed = outcome instanceof WaitCompletion.Timeout timeout ? timeout.elapsedNanos() : completedAfter;
         out.append('\n');
-        field(out, "", "Timing", "elapsed " + duration(elapsed)
-                + "; timeout " + duration(configuration.upToNanos())
-                + "; interval " + duration(configuration.everyNanos()));
-        if (elapsed != completedAfter) field(out, "", "Last completed after", duration(completedAfter));
+        field(out, "", "Timing", "elapsed " + unsignedDuration(elapsed)
+                + "; timeout " + unsignedDuration(configuration.upToNanos())
+                + "; interval " + unsignedDuration(configuration.everyNanos()));
+        if (elapsed != completedAfter) field(out, "", "Last completed after", unsignedDuration(completedAfter));
         if (outcome instanceof WaitCompletion.PersistenceFailure failure) {
             var acquiredAfter = failure.acquiredAfterNanos();
-            field(out, "", "Persistence", "failed after " + duration(completedAfter - acquiredAfter)
-                    + "; required " + duration(configuration.persistenceNanos())
-                    + "; acquired after " + duration(acquiredAfter));
+            field(out, "", "Persistence", "failed after " + unsignedDuration(completedAfter - acquiredAfter)
+                    + "; required " + unsignedDuration(configuration.persistenceNanos())
+                    + "; acquired after " + unsignedDuration(acquiredAfter));
         }
     }
 }

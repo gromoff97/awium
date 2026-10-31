@@ -9,12 +9,6 @@ import java.util.function.LongSupplier;
 
 import static io.github.gromoff97.awium.Condition.required;
 
-/**
- * Immutable wait configuration for a source whose element can be selected.
- *
- * @param <OBSERVED> complete value returned by the source
- * @param <ELEMENT> value selected from an optional, collection, or map
- */
 public sealed class SelectionAwait<OBSERVED, ELEMENT> extends ValueAwait<OBSERVED> permits MapAwait {
 
     SelectionAwait(Callable<? extends OBSERVED> source, WaitConfiguration configuration) {

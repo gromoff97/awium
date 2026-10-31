@@ -6,29 +6,10 @@ import java.util.List;
 import static io.github.gromoff97.awium.internal.DiagnosticText.field;
 import static java.util.Objects.requireNonNull;
 
-/**
- * Public {@code tryAwait(...).until(...)} result containing the terminal value or failure and each condition's history.
- *
- * @param <OBSERVED> complete value returned by the source
- * @param <RESULT> final value returned by the wait
- */
 public sealed interface AwaitResult<OBSERVED, RESULT> {
 
-    /**
-     * Returns an immutable list of condition histories in declaration order.
-     * A single-condition wait has one history; captured waits have one per stage,
-     * including empty histories for stages execution did not reach.
-     */
     List<ConditionHistory<OBSERVED>> conditions();
 
-    /**
-     * Returns the successful value, including {@code null}, or throws the same kind of failure
-     * as {@code await(...).until(...)}. Reading a result does not run the source or conditions again.
-     *
-     * @return the final value retained by a successful wait
-     * @throws AwaitAssertionError if the wait timed out or its persistence check failed
-     * @throws AwaitExecutionException if execution failed or the wait was interrupted
-     */
     default RESULT orThrow() {
         return switch (this) {
             case Satisfied<OBSERVED, RESULT> success -> success.result();

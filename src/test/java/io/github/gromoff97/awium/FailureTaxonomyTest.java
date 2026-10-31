@@ -23,7 +23,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.values;
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitSupport.complete;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
@@ -119,9 +118,6 @@ class FailureTaxonomyTest {
         assertSame(original, reported.getCause());
         assertArrayEquals(new Throwable[]{rendering}, reported.getSuppressed());
         assertNotSame(reported, assertFailure(reason, report::orThrow));
-        var thrown = assertFailure(reason, () -> complete(outcome, configuration, 1));
-        assertSame(original, thrown.getCause());
-        assertArrayEquals(new Throwable[]{rendering}, thrown.getSuppressed());
         assertEquals(0, original.getSuppressed().length);
         assertEquals(0, rendering.getSuppressed().length);
     }
@@ -171,7 +167,7 @@ class FailureTaxonomyTest {
         var interruption = new InterruptedException("interrupted");
         var waiting = new IllegalStateException("operation failed");
         var cases = List.of(
-                failureCase(TIMEOUT, timeout, ACQUISITION, new Unsatisfied<>("actual", "not ready", timeout), Timeout::new),
+                failureCase(TIMEOUT, timeout, ACQUISITION, new Unsatisfied<>("actual", "not ready", timeout), step -> new Timeout(step.completedAfterNanos(), step)),
                 failureCase(PERSISTENCE_FAILED, persistence, PERSISTENCE, new Unsatisfied<>("actual", "not ready", persistence),
                         step -> new PersistenceFailure(0, step)),
                 failureCase(SOURCE_FAILED, source, ACQUISITION, new FailedBeforeObservation<>(SOURCE, source),

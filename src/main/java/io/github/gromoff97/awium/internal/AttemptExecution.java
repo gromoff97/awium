@@ -6,7 +6,6 @@ import java.util.function.LongSupplier;
 
 import static java.lang.Thread.currentThread;
 
-/** Retrieves observations, invokes their bound attempts, and records execution diagnostics. */
 record AttemptExecution<OBSERVED, RESULT>(Callable<? extends OBSERVED> source,
         SequenceExecution<OBSERVED, RESULT> execution, LongSupplier clock, long started) {
 
@@ -49,7 +48,7 @@ record AttemptExecution<OBSERVED, RESULT>(Callable<? extends OBSERVED> source,
 
     private ExecutionStep<OBSERVED> step(ExecutionStep.Phase phase, int stageNumber,
             Attempt<OBSERVED> attempt, long completed) {
-        return new ExecutionStep<>(execution.definition(), stageNumber, execution.capturedStages(),
+        return new ExecutionStep<>(execution.definition(), stageNumber, execution.completedStages(),
                 phase, completed - started, attempt);
     }
 

@@ -10,17 +10,12 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Thread.currentThread;
 
-/** Schedules attempts through acquisition and optional persistence. */
 public record WaitEngine<OBSERVED>(WaitConfiguration configuration, Callable<? extends OBSERVED> source,
         SequenceExecution<OBSERVED, ?> execution, long started) {
 
     public WaitEngine(WaitConfiguration configuration, Callable<? extends OBSERVED> source,
             SequenceExecution<OBSERVED, ?> execution) {
         this(configuration, source, execution, now(configuration));
-    }
-
-    public WaitCompletion waitFor() {
-        return waitFor(ignored -> {});
     }
 
     public WaitCompletion waitFor(Consumer<ExecutionStep<OBSERVED>> recorder) {
@@ -62,7 +57,7 @@ public record WaitEngine<OBSERVED>(WaitConfiguration configuration, Callable<? e
             if (reached(completed, deadline)) {
                 return new WaitCompletion.Timeout(step);
             }
-            if (execution.complete()) {
+            if (execution.isComplete()) {
                 return new WaitCompletion.Satisfied(step);
             }
             lastStep = step;
@@ -91,7 +86,7 @@ public record WaitEngine<OBSERVED>(WaitConfiguration configuration, Callable<? e
             if (step.attempt() instanceof Attempt.Failure<?>) {
                 return new WaitCompletion.Uncontrolled(step);
             }
-            if (!execution.complete()) {
+            if (!execution.isComplete()) {
                 return new WaitCompletion.PersistenceFailure(acquired.step().completedAfterNanos(), step);
             }
             if (reached(completed, deadline)) {

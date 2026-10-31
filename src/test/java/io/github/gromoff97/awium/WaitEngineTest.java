@@ -70,7 +70,7 @@ class WaitEngineTest {
                 new SequenceExecution<>(bind(Conditions.isNotNull)), 0);
         currentThread().interrupt();
 
-        var failure = assertInstanceOf(Uncontrolled.class, engine.waitFor());
+        var failure = assertInstanceOf(Uncontrolled.class, engine.waitFor(ignored -> {}));
 
         assertInstanceOf(InterruptedException.class, uncontrolled(WAITING, failure.step().attempt()).cause());
         assertEquals(7L, failure.step().completedAfterNanos());
@@ -90,7 +90,7 @@ class WaitEngineTest {
                     .doAnswer(ignored -> time.getAsLong()).when(clock).getAsLong();
         }), () -> { sourceCalls[0]++; return "actual"; },
                 new SequenceExecution<>(bind(Conditions.condition(
-                        "ready", (String actual) -> ConditionResult.satisfied(actual)))), 0).waitFor();
+                        "ready", (String actual) -> ConditionResult.satisfied(actual)))), 0).waitFor(ignored -> {});
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -195,7 +195,7 @@ class WaitEngineTest {
                 ignored -> {}), () -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, new SequenceExecution<>(bind(Conditions.condition("test condition", (String actual) -> ConditionResult.satisfied(actual))))).waitFor();
+                }, new SequenceExecution<>(bind(Conditions.condition("test condition", (String actual) -> ConditionResult.satisfied(actual))))).waitFor(ignored -> {});
 
         assertInstanceOf(Timeout.class, outcome);
         assertEquals(1, sourceCalls[0]);
@@ -359,7 +359,7 @@ class WaitEngineTest {
         var outcome = new WaitEngine<String>(config(5, 20, 0).withTime(clock,
                 nanos -> { throw new AssertionError("parker must not be called"); }),
                 () -> { sourceCalls[0]++; return "actual"; },
-                new SequenceExecution<>(bind(Conditions.condition("ready", (String actual) -> ConditionResult.satisfied(actual)))), 0).waitFor();
+                new SequenceExecution<>(bind(Conditions.condition("ready", (String actual) -> ConditionResult.satisfied(actual)))), 0).waitFor(ignored -> {});
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -377,7 +377,7 @@ class WaitEngineTest {
         var outcome = new WaitEngine<String>(config(1, 2, 0).withTime(clock, nanos -> {}), () -> {
             sourceCalls[0]++;
             return "actual";
-        }, new SequenceExecution<>(bind(Conditions.condition("not ready", (String value) -> ConditionResult.unsatisfied("not yet"))))).waitFor();
+        }, new SequenceExecution<>(bind(Conditions.condition("not ready", (String value) -> ConditionResult.unsatisfied("not yet"))))).waitFor(ignored -> {});
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -398,7 +398,7 @@ class WaitEngineTest {
                 new SequenceExecution<>(bind(Conditions.condition("ready", (String actual) -> {
                     doReturn(0L).doAnswer(ignored -> { currentThread().interrupt(); return 0L; }).when(clock).getAsLong();
                     return evaluation;
-                }))), 0).waitFor();
+                }))), 0).waitFor(ignored -> {});
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -583,7 +583,7 @@ class WaitEngineTest {
             Callable<S> source,
             CheckedFunction<S, AttemptResult<R>> condition) {
         return new WaitEngine<S>(config.withTime(time, parker), source,
-                new SequenceExecution<>(bind(condition("test condition", null, condition)))).waitFor();
+                new SequenceExecution<>(bind(condition("test condition", null, condition)))).waitFor(ignored -> {});
     }
 
     private static long completed(ExecutionStep<?> attempt) {

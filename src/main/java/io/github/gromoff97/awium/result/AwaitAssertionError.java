@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium.result;
 
-/** An acquisition timeout or persistence failure. */
 public final class AwaitAssertionError extends AssertionError {
 
     private final AwaitFailure failure;

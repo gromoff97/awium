@@ -28,29 +28,14 @@ import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
 import static io.github.gromoff97.awium.ValueMatching.containingAll;
 import static io.github.gromoff97.awium.ValueMatching.containingNone;
-import static io.github.gromoff97.awium.ValueMatching.exactly;
-import static io.github.gromoff97.awium.ValueMatching.firstMissing;
-import static io.github.gromoff97.awium.ValueMatching.firstPresent;
+import static io.github.gromoff97.awium.ValueMatching.sameElementsInAnyOrder;
+import static io.github.gromoff97.awium.ValueMatching.firstMissingExpectedIndex;
+import static io.github.gromoff97.awium.ValueMatching.firstPresentExpectedIndex;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.ValueMatching.sameDistinctElements;
 import static java.util.Objects.deepEquals;
 import static java.util.Objects.requireNonNull;
 
-/**
- * Checks and selections for {@link Map} sources. Checks preserve the observed map's type and
- * instance; selections return an entry, a value, or the nested condition's result.
- * A null observed map is unsatisfied, including for absence checks.
- *
- * <p>Checks with explicit expected keys, values, or entry maps compare each key and value with
- * {@link java.util.Objects#deepEquals(Object, Object)}, with the observed operand first,
- * independently of the map's comparator or identity rules. Key lookup uses the same comparison.
- * Exact entry checks ignore encounter order.
- * Nested conditions retain their own comparison rules; equality of a whole entry follows
- * {@link Entry#equals(Object)}, which compares array keys and values by identity.
- * Selected entries are the original entry objects, with the map implementation's lifecycle.
- * Expected sets and entry maps are copied when the condition is created; their keys and values
- * remain caller-owned.
- */
 public final class MapConditions {
 
     public static final SelectedCondition<Map<?, ?>> singleEntry = selected("map has a single entry",
@@ -90,13 +75,11 @@ public final class MapConditions {
                 "is between " + lowerBound + " and " + upperBound);
     }
 
-    /** Checks the sole entry, retaining the source's entry type. */
     public static <KEY, VALUE> SelectedCondition<Map<KEY, VALUE>> singleEntry(
             CheckedPredicate<? super Entry<KEY, VALUE>> predicate) {
         return singleEntry(Conditions.matches(predicate));
     }
 
-    /** Checks the sole entry's key and value, retaining the source's entry type. */
     public static <KEY, VALUE> SelectedCondition<Map<? extends KEY, ? extends VALUE>> singleEntry(
             CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
         return new SelectedCondition<>(compose("single entry", entryCheck(predicate), singleEntry));
@@ -117,7 +100,6 @@ public final class MapConditions {
         return new SelectedCondition<>(compose("single entry", nested, singleEntry));
     }
 
-    /** Checks every entry, returning the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> allEntries(CheckedPredicate<? super Entry<KEY, VALUE>> predicate) {
         return allEntries(Conditions.matches(predicate));
     }
@@ -134,56 +116,46 @@ public final class MapConditions {
         return quantified("map", "entries", Quantifier.ALL, nested, Map::entrySet);
     }
 
-    /** Requires the expected key-value pair and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> hasEntry(KEY key, VALUE value) {
         var expected = new SimpleImmutableEntry<>(key, value);
         return preserving("map contains expected entry", "map did not contain expected entry", expectedReference(expected),
                 actual -> matchesAny(actual.entrySet(), entry -> entryMatches(entry, expected)));
     }
 
-    /** Applies the predicate to entries until one matches, returning the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> hasEntry(CheckedPredicate<? super Entry<KEY, VALUE>> predicate) {
         return hasEntry(Conditions.matches(predicate));
     }
 
-    /** Requires at least one matching key-value pair and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> hasEntry(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
         return quantified("map", "entries", Quantifier.ANY, entryCheck(predicate), Map::entrySet);
     }
 
-    /** Applies the condition to entries until one matches, returning the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> hasEntry(Condition.InputCondition<? super Entry<KEY, VALUE>> nested) {
         return quantified("map", "entries", Quantifier.ANY, nested, Map::entrySet);
     }
 
-    /** Requires at least one entry satisfying the comparison and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> hasEntry(ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
         return quantified("map", "entries", Quantifier.ANY, nested, Map::entrySet);
     }
 
-    /** Requires the key-value pair to be absent and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> hasNoEntry(KEY key, VALUE value) {
         var unexpected = new SimpleImmutableEntry<>(key, value);
         return preserving("map does not contain unexpected entry", "map contained unexpected entry", unexpectedReference(unexpected),
                 actual -> !matchesAny(actual.entrySet(), entry -> entryMatches(entry, unexpected)));
     }
 
-    /** Requires every entry to fail the predicate and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> hasNoEntry(CheckedPredicate<? super Entry<KEY, VALUE>> predicate) {
         return hasNoEntry(Conditions.matches(predicate));
     }
 
-    /** Requires every key-value pair to fail the predicate and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> hasNoEntry(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
         return quantified("map", "entries", Quantifier.NONE, entryCheck(predicate), Map::entrySet);
     }
 
-    /** Requires no entry to satisfy the condition and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> hasNoEntry(Condition.InputCondition<? super Entry<KEY, VALUE>> nested) {
         return quantified("map", "entries", Quantifier.NONE, nested, Map::entrySet);
     }
 
-    /** Requires no entry to satisfy the comparison and returns the original map. */
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> hasNoEntry(ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
         return quantified("map", "entries", Quantifier.NONE, nested, Map::entrySet);
     }
@@ -264,7 +236,6 @@ public final class MapConditions {
         return new MapValueCondition<>(ConditionSupport.condition("map contains the expected key", new Reference<>("Key", key), actual -> value(actual, key)));
     }
 
-    /** Selects the key's value if it matches, retaining the source's value type. */
     public static <KEY, VALUE> MapValueCondition<Map<? super KEY, ? extends VALUE>> valueFor(KEY key,
             CheckedPredicate<? super VALUE> predicate) {
         return valueFor(key, Conditions.matches(predicate));
@@ -289,25 +260,21 @@ public final class MapConditions {
         return new SelectedCondition<>(ConditionSupport.condition("map contains the expected key", new Reference<>("Key", key), actual -> findEntry(actual, key)));
     }
 
-    /** Matches one key, including a collection or array as that single key. */
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> containsKey(KEY expected) {
         return preserving("map contains expected key", "map did not contain expected key", expectedReference(expected),
                 actual -> matchesAny(actual.keySet(), key -> deepEquals(key, expected)));
     }
 
-    /** Matches when the single unexpected key is absent. */
     public static <KEY> PreservingCondition<Map<? super KEY, ?>> doesNotContainKey(KEY unexpected) {
         return preserving("map does not contain unexpected key", "map contained unexpected key", unexpectedReference(unexpected),
                 actual -> !matchesAny(actual.keySet(), key -> deepEquals(key, unexpected)));
     }
 
-    /** Matches one value, including a collection or array as that single value. */
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> containsValue(VALUE expected) {
         return preserving("map contains expected value", "map did not contain expected value", expectedReference(expected),
                 actual -> matchesAny(actual.values(), value -> deepEquals(value, expected)));
     }
 
-    /** Matches when the single unexpected value is absent. */
     public static <VALUE> PreservingCondition<Map<?, ? super VALUE>> doesNotContainValue(VALUE unexpected) {
         return preserving("map does not contain unexpected value", "map contained unexpected value", unexpectedReference(unexpected),
                 actual -> !matchesAny(actual.values(), value -> deepEquals(value, unexpected)));
@@ -347,13 +314,13 @@ public final class MapConditions {
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainAllEntries(Map<? extends KEY, ? extends VALUE> unexpected) {
         var entries = snapshotEntries(unexpected, "unexpected entries");
         return preserving("map does not contain all unexpected entries", "map contained all unexpected entries", unexpectedReference(entries),
-                actual -> firstMissing(actual.entrySet(), entries, MapConditions::entryMatches) >= 0);
+                actual -> firstMissingExpectedIndex(actual.entrySet(), entries, MapConditions::entryMatches) >= 0);
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> containsAnyEntries(Map<? extends KEY, ? extends VALUE> expected) {
         var entries = snapshotEntries(expected, "expected entries");
         return preserving("map contains an expected entry", "map did not contain an expected entry", expectedReference(entries),
-                actual -> firstPresent(actual.entrySet(), entries, MapConditions::entryMatches) >= 0);
+                actual -> firstPresentExpectedIndex(actual.entrySet(), entries, MapConditions::entryMatches) >= 0);
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainAnyEntries(Map<? extends KEY, ? extends VALUE> unexpected) {
@@ -414,7 +381,7 @@ public final class MapConditions {
 
     private static boolean exactContent(Map<?, ?> actual, List<? extends Entry<?, ?>> expected) throws Throwable {
         return actual.size() == expected.size()
-                && exactly(actual.entrySet().iterator(), expected, MapConditions::entryMatches);
+                && sameElementsInAnyOrder(actual.entrySet().iterator(), expected, MapConditions::entryMatches);
     }
 
     // Preserve encounter order and distinct entries without calling user equals/hashCode.

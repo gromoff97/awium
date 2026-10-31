@@ -8,11 +8,6 @@ import java.util.concurrent.Callable;
 
 import static java.util.Objects.requireNonNull;
 
-/**
- * Immutable check definition and diagnostic metadata.
- * A check's {@code INPUT} bounds the observations it accepts; it does not widen the
- * concrete source type returned by a preserving check or a capture sequence.
- */
 public abstract sealed class Condition
         permits Condition.Check, Condition.Captured {
 
@@ -20,11 +15,11 @@ public abstract sealed class Condition
     private final String explanation;
     private final List<Reference<?>> references;
 
-    Condition(Condition original) {
+    private Condition(Condition original) {
         this(required(original).description, original.references, original.explanation);
     }
 
-    Condition(Condition original, String explanation) {
+    private Condition(Condition original, String explanation) {
         this(required(original).description, original.references, nonBlank(explanation, "explanation"));
     }
 
@@ -38,29 +33,12 @@ public abstract sealed class Condition
         return description;
     }
 
-    /** Returns the reason for this condition, or null when no reason was supplied. */
     public final String explanation() {
         return explanation;
     }
 
-    /**
-     * Returns an independent copy with the supplied reason and the same evaluation.
-     * Replaces any earlier reason. Inline generic factories before this call may need
-     * a typed lambda parameter or method reference because Java cannot use the terminal's
-     * target type to infer their input types through a chained method call.
-     *
-     * @param explanation non-null, non-blank reason for the condition
-     * @return a condition with the same input and result constraints
-     * @throws NullPointerException if the explanation is null
-     * @throws IllegalArgumentException if the explanation is blank
-     */
     public abstract Condition because(String explanation);
 
-    /**
-     * Diagnostic operands in selection order; their values are retained by reference.
-     *
-     * @return an immutable list, empty when the definition has no diagnostic operands
-     */
     public final List<Reference<?>> references() {
         return references;
     }
@@ -69,24 +47,23 @@ public abstract sealed class Condition
         return requireNonNull(condition, "condition must not be null");
     }
 
-    /** A check evaluated against one observation; capture sequences contain these checks. */
     public abstract static sealed class Check extends Condition
             permits ApplicableCondition {
 
         final Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory;
 
-        Check(String description, List<Reference<?>> references,
+        private Check(String description, List<Reference<?>> references,
                 Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory, String explanation) {
             super(description, references, explanation);
             this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
         }
 
-        Check(Check original) {
+        private Check(Check original) {
             super(original);
             evaluatorFactory = original.evaluatorFactory;
         }
 
-        Check(Check original, String explanation) {
+        private Check(Check original, String explanation) {
             super(original, explanation);
             evaluatorFactory = original.evaluatorFactory;
         }
@@ -95,23 +72,21 @@ public abstract sealed class Condition
         public abstract Check because(String explanation);
     }
 
-    /** Marks checks that retain both the source type and the original observed instance. */
     public sealed interface PreservesObservation permits PreservingCondition, ComparisonCondition {}
 
-    /** Input and expected-value constraints shared by checks used in a capture sequence. */
     public abstract static sealed class ApplicableCondition<INPUT, REFERENCE> extends Check
             permits InputCondition, ComparisonCondition {
 
-        ApplicableCondition(String description, List<Reference<?>> references,
+        private ApplicableCondition(String description, List<Reference<?>> references,
                 Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory, String explanation) {
             super(description, references, evaluatorFactory, explanation);
         }
 
-        ApplicableCondition(Check original) {
+        private ApplicableCondition(Check original) {
             super(original);
         }
 
-        ApplicableCondition(ApplicableCondition<INPUT, REFERENCE> original, String explanation) {
+        private ApplicableCondition(ApplicableCondition<INPUT, REFERENCE> original, String explanation) {
             super(original, explanation);
         }
 
@@ -119,21 +94,20 @@ public abstract sealed class Condition
         public abstract ApplicableCondition<INPUT, REFERENCE> because(String explanation);
     }
 
-    /** A check whose compatibility depends on its accepted input, with no expected-value bound. */
     public abstract static sealed class InputCondition<INPUT>
             extends ApplicableCondition<INPUT, Reference<?>>
             permits Typed, PreservingCondition, SelectedCondition, MapValueCondition {
 
-        InputCondition(String description, List<Reference<?>> references,
+        private InputCondition(String description, List<Reference<?>> references,
                 Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory, String explanation) {
             super(description, references, evaluatorFactory, explanation);
         }
 
-        InputCondition(Check original) {
+        private InputCondition(Check original) {
             super(original);
         }
 
-        InputCondition(InputCondition<INPUT> original, String explanation) {
+        private InputCondition(InputCondition<INPUT> original, String explanation) {
             super(original, explanation);
         }
 
@@ -141,20 +115,19 @@ public abstract sealed class Condition
         public abstract InputCondition<INPUT> because(String explanation);
     }
 
-    /** Immutable ordered checks; each terminal creates its own execution and captured values. */
     public abstract static sealed class Captured extends Condition
             permits CapturedSource {
 
         private final List<Check> stages;
 
-        Captured(Check[] conditions) {
+        private Captured(Check[] conditions) {
             super("conditions are satisfied in order", List.of(), null);
             stages = Arrays.stream(requireNonNull(conditions, "conditions must not be null"))
                     .map(Condition::required).toList();
             if (stages.isEmpty()) throw new IllegalArgumentException("conditions must not be empty");
         }
 
-        Captured(Captured original, String explanation) {
+        private Captured(Captured original, String explanation) {
             super(original, explanation);
             stages = original.stages;
         }
@@ -167,12 +140,6 @@ public abstract sealed class Condition
         public abstract Captured because(String explanation);
     }
 
-    /**
-     * A condition with a declared result type, such as a type check or a nested typed selection.
-     *
-     * @param <INPUT> accepted input type
-     * @param <RESULT> successful result type
-     */
     public static final class Typed<INPUT, RESULT> extends InputCondition<INPUT> {
 
         Typed(String description, Reference<?> reference,
@@ -195,10 +162,6 @@ public abstract sealed class Condition
         }
     }
 
-    /**
-     * Checks a value while retaining the source's concrete type at the terminal.
-     * @param <INPUT> accepted input type
-     */
     public static final class PreservingCondition<INPUT>
             extends InputCondition<INPUT> implements PreservesObservation {
 
@@ -216,10 +179,6 @@ public abstract sealed class Condition
         }
     }
 
-    /**
-     * Compares with an expected value compatible with the source type.
-     * @param <EXPECTED> expected type compatible with the source
-     */
     public static final class ComparisonCondition<EXPECTED>
             extends ApplicableCondition<Object, Reference<? super EXPECTED>> implements PreservesObservation {
 
@@ -237,11 +196,6 @@ public abstract sealed class Condition
         }
     }
 
-    /**
-     * A container selection whose result type is supplied by its source.
-     *
-     * @param <INPUT> accepted container type
-     */
     public static final class SelectedCondition<INPUT>
             extends InputCondition<INPUT> {
 
@@ -259,11 +213,6 @@ public abstract sealed class Condition
         }
     }
 
-    /**
-     * A map value selection whose result type is supplied by its source.
-     *
-     * @param <INPUT> accepted map type
-     */
     public static final class MapValueCondition<INPUT>
             extends InputCondition<INPUT> {
 
@@ -281,11 +230,6 @@ public abstract sealed class Condition
         }
     }
 
-    /**
-     * A sequence returning a list of original observations, with their type supplied by the source.
-     *
-     * @param <CHECK> check constraints used to validate the source type
-     */
     public static final class CapturedSource<CHECK extends Check> extends Captured {
 
         CapturedSource(Check[] conditions) {

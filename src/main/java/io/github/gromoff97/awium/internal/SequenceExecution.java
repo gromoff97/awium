@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-/** Owns stage transitions and captured values for one wait, including a single-check wait. */
 public final class SequenceExecution<OBSERVED, RESULT> {
 
     private final Condition definition;
@@ -34,11 +33,11 @@ public final class SequenceExecution<OBSERVED, RESULT> {
         return definition;
     }
 
-    int capturedStages() {
+    int completedStages() {
         return results.size();
     }
 
-    boolean complete() {
+    boolean isComplete() {
         return results.size() == stages.size();
     }
 
@@ -54,7 +53,7 @@ public final class SequenceExecution<OBSERVED, RESULT> {
     BoundAttempt<OBSERVED, RESULT> attempt(OBSERVED actual) {
         var stage = stages.get(stageNumber() - 1);
         // Persistence rechecks the final stage, retaining all earlier values.
-        if (complete()) results.removeLast();
+        if (isComplete()) results.removeLast();
         return stage.create(actual);
     }
 

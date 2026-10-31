@@ -12,7 +12,9 @@
 `check` covers behavior, fluent compilation, packaged-module boundaries, and zero
 product compile/runtime dependencies. Tests use JUnit 6, AssertJ, Mockito,
 compile-testing, ArchUnit, and Commons Lang via Gradle `testImplementation`.
-Mockito uses JDK proxies without a Java agent.
+Mockito uses JDK proxies and reflection without a Java agent.
+Test logging uses `slf4j-jdk14` via `testRuntimeOnly`.
+Javadoc comments are optional; the remaining doclint checks still apply.
 
 PIT uses `ALL`: run `./gradlew pitest` **only on explicit user request**, never
 through `build`, `check`, or `test`.

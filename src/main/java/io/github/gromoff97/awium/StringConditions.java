@@ -16,11 +16,6 @@ import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.StreamSupport.stream;
 
-/**
- * Text checks that preserve the original {@link CharSequence} type and instance.
- * A null observed text is unsatisfied, including for absence checks.
- * Expected text is snapshotted as a string when a condition is created.
- */
 public final class StringConditions {
 
     public static final PreservingCondition<CharSequence> empty = preservingNonNull("string",
@@ -110,7 +105,6 @@ public final class StringConditions {
                 actual -> !unexpected.matcher(actual).matches());
     }
 
-    /** Compares characters, including case, rather than the source object's equality contract. */
     public static PreservingCondition<CharSequence> contentEquals(CharSequence expected) {
         String value = text(expected, "expected string");
         return preservingNonNull("string", "string content equals expected string",

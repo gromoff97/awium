@@ -4,7 +4,6 @@ import java.util.concurrent.Callable;
 
 import static java.util.Objects.requireNonNull;
 
-/** An immutable binding of an observation to a check; each call returns a separate evaluation. */
 public record BoundAttempt<OBSERVED, RESULT>(OBSERVED observed,
         Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluator)
         implements Callable<AttemptResult<? extends RESULT>> {

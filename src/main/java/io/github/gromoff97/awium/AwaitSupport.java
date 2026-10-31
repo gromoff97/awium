@@ -14,7 +14,6 @@ import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
-/** Shared execution and result handling for both immutable wait configurations. */
 abstract sealed class AwaitSupport<OBSERVED> permits ValueAwait, DiagnosticAwait {
 
     final Callable<? extends OBSERVED> source;
@@ -36,7 +35,7 @@ abstract sealed class AwaitSupport<OBSERVED> permits ValueAwait, DiagnosticAwait
         return execution.values();
     }
 
-    static void complete(WaitCompletion outcome,
+    private static void complete(WaitCompletion outcome,
             WaitConfiguration configuration, long attemptNumber) {
         if (outcome instanceof WaitCompletion.Satisfied) {
             return;

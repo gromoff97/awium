@@ -21,7 +21,6 @@ import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.StreamSupport.stream;
 
-/** Creates conditions and shares checks and composition across catalogs. */
 final class ConditionSupport {
 
     private ConditionSupport() {}
@@ -51,22 +50,22 @@ final class ConditionSupport {
             this.mismatchPrefix = mismatchPrefix;
         }
 
-        String description(String elements) {
+        private String description(String elements) {
             return descriptionPrefix + " " + elements + " match";
         }
 
-        String mismatch(String elements) {
+        private String mismatch(String elements) {
             return mismatchPrefix + " " + elements + " matched";
         }
 
-        boolean stops(boolean matched) {
+        private boolean stops(boolean matched) {
             return switch (this) {
                 case ALL -> !matched;
                 case ANY, NONE -> matched;
             };
         }
 
-        boolean satisfied(boolean stopped) {
+        private boolean satisfied(boolean stopped) {
             return switch (this) {
                 case ALL, NONE -> !stopped;
                 case ANY -> stopped;

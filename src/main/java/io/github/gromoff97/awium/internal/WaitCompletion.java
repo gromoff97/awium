@@ -5,7 +5,6 @@ import io.github.gromoff97.awium.result.AwaitFailure;
 
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 
-/** Terminal outcome and diagnostics of a complete acquisition and optional persistence execution. */
 public sealed interface WaitCompletion {
 
     ExecutionStep<?> step();
@@ -29,7 +28,7 @@ public sealed interface WaitCompletion {
     record Uncontrolled(ExecutionStep<?> step,
             boolean interrupted) implements WaitCompletion {
 
-        public Uncontrolled(ExecutionStep<?> step) {
+        Uncontrolled(ExecutionStep<?> step) {
             this(step, Thread.currentThread().isInterrupted());
         }
     }
@@ -37,7 +36,7 @@ public sealed interface WaitCompletion {
     record Timeout(long elapsedNanos,
             ExecutionStep<?> step) implements WaitCompletion {
 
-        public Timeout(ExecutionStep<?> step) {
+        Timeout(ExecutionStep<?> step) {
             this(step.completedAfterNanos(), step);
         }
     }

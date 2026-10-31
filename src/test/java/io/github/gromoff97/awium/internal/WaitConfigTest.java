@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static io.github.gromoff97.awium.internal.DiagnosticText.duration;
+import static io.github.gromoff97.awium.internal.DiagnosticText.unsignedDuration;
 
 class WaitConfigTest {
 
@@ -90,11 +90,11 @@ class WaitConfigTest {
     @Test
     void durationFormattingUsesReadableExactUnits() {
         assertEquals("106751 d 23 h 47 min 16 s 854 ms 775 µs 808 ns",
-                duration(Long.MIN_VALUE));
-        assertEquals("0 ns", duration(0));
-        assertEquals("213503 d 23 h 34 min 33 s 709 ms 551 µs 615 ns", duration(-1));
-        assertEquals("1 ns", duration(1));
-        assertEquals("1 min 30 s", duration(90_000_000_000L));
-        assertEquals("1 s 1 ms 1 µs 1 ns", duration(1_001_001_001));
+                unsignedDuration(Long.MIN_VALUE));
+        assertEquals("0 ns", unsignedDuration(0));
+        assertEquals("213503 d 23 h 34 min 33 s 709 ms 551 µs 615 ns", unsignedDuration(-1));
+        assertEquals("1 ns", unsignedDuration(1));
+        assertEquals("1 min 30 s", unsignedDuration(90_000_000_000L));
+        assertEquals("1 s 1 ms 1 µs 1 ns", unsignedDuration(1_001_001_001));
     }
 }

@@ -1,4 +1,5 @@
 import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.external.javadoc.StandardJavadocDocletOptions
 
 plugins {
     `java-library`
@@ -22,11 +23,16 @@ dependencies {
     testImplementation("com.tngtech.archunit:archunit:1.5.1")
     testImplementation("org.mockito:mockito-core:5.24.0")
     testImplementation("org.apache.commons:commons-lang3:3.21.0")
+    testRuntimeOnly("org.slf4j:slf4j-jdk14:2.0.20")
 }
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
     options.compilerArgs.addAll(listOf("-Xlint:all,-serial", "-Werror"))
+}
+
+tasks.javadoc {
+    (options as StandardJavadocDocletOptions).addBooleanOption("Xdoclint:all,-missing", true)
 }
 
 tasks.test {

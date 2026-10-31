@@ -11,13 +11,6 @@ import java.util.function.LongSupplier;
 
 import static io.github.gromoff97.awium.Condition.required;
 
-/**
- * Immutable diagnostic wait configuration supporting both entry and value selection from a map.
- *
- * @param <OBSERVED> complete map returned by the source
- * @param <ENTRY> entry selected from the map
- * @param <VALUE> value selected from the map
- */
 public final class DiagnosticMapAwait<OBSERVED extends Map<?, ?>, ENTRY extends Map.Entry<?, ?>, VALUE>
         extends DiagnosticSelectionAwait<OBSERVED, ENTRY> {
 
