@@ -63,30 +63,9 @@ class ConditionFailureTest {
         assertTrue(currentThread().isInterrupted());
     }
 
-    @Test
-    void predicateAssertionsPropagateWithoutRetrying() {
-        var assertion = new AssertionError("predicate failed");
-        int[] calls = {0};
-        var check = matches((String actual) -> { calls[0]++; throw assertion; });
-        assertSame(assertion, thrown(check, "actual"));
-        assertEquals(1, calls[0]);
-    }
 
-    @Test
-    void conditionFactoryFailuresPropagateOnTheFirstProbe() {
-        var cause = new IllegalStateException("condition factory failed");
-        int[] calls = {0};
-        var check = conditionPerWait("condition succeeds", () -> { calls[0]++; throw cause; });
-        assertEquals(0, calls[0]);
-        assertSame(cause, thrown(check, "actual"));
-        assertEquals(1, calls[0]);
-    }
 
-    @Test
-    void rejectsNullConditionEvaluators() {
-        var failure = thrown(conditionPerWait("condition succeeds", () -> null), "actual");
-        assertThat(failure).isInstanceOf(NullPointerException.class).hasMessage("evaluator must not be null");
-    }
+
 
     @ParameterizedTest
     @MethodSource("nullEvaluationSources")

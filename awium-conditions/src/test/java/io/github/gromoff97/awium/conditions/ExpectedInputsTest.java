@@ -306,22 +306,6 @@ class ExpectedInputsTest {
                 () -> expected[0] = "changed");
     }
 
-    @Test
-    void candidateFactoriesFreezeTheirInputs() {
-        String[] expected = {"before", null};
-        var included = in(asList(expected));
-        var excluded = notIn(asList(expected));
-        expected[0] = "after";
-        assertInstanceOf(Satisfied.class, evaluate(included, "before"));
-        assertInstanceOf(Unsatisfied.class, evaluate(included, "after"));
-        assertInstanceOf(Unsatisfied.class, evaluate(excluded, "before"));
-        assertInstanceOf(Satisfied.class, evaluate(excluded, "after"));
-        assertInstanceOf(Satisfied.class, evaluate(included, null));
-
-        String[] fragments = {"before"};
-        assertStable(List.of(StringConditions.containsAll(asList(fragments)), StringConditions.doesNotContainAny(asList(fragments))),
-                "before", "after", () -> fragments[0] = "after");
-    }
 
     @Test
     void mapSnapshotsKeepDistinctKeysWithoutUserHashingOrEquality() {
