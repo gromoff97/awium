@@ -18,7 +18,6 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.2")
     testImplementation("org.assertj:assertj-core:3.27.7")
     testImplementation("org.mockito:mockito-core:5.24.0")
-    testImplementation("org.apache.commons:commons-lang3:3.21.0")
     testImplementation("com.google.testing.compile:compile-testing:0.23.0")
     testImplementation("com.tngtech.archunit:archunit:1.5.1")
     testRuntimeOnly("org.slf4j:slf4j-jdk14:2.0.20")
