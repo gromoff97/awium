@@ -10,19 +10,15 @@ import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.support.FakeTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -40,7 +36,7 @@ import static io.github.gromoff97.awium.result.Attempt.Operation.SOURCE;
 import static io.github.gromoff97.awium.result.Attempt.Operation.WAITING;
 import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
 import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
-import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.INTERRUPTED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.SOURCE_FAILED;
 import static io.github.gromoff97.awium.result.AwaitResult.Failed;
@@ -57,10 +53,7 @@ import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static java.lang.Thread.sleep;
 import static java.time.Duration.ofNanos;
-import static java.util.Collections.nCopies;
 import static org.apache.commons.lang3.exception.ExceptionUtils.rethrow;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -259,36 +252,28 @@ class ObservationTest {
     @ParameterizedTest
     @MethodSource("completionInterruptions")
     void completionClockInterruptionStopsNormalResultsWithoutReplacingConditionFailure(
-            BinaryOperator<Executable> terminal, long persistence, int interruptedAttempt,
-            ConditionResult<?> state, Consumer<Throwable> assertCause) throws Throwable {
+            boolean recording, long persistence, int interruptedAttempt,
+            ConditionResult<?> state, Consumer<Throwable> assertCause) {
         var actual = new Object();
         var time = new FakeTime(0);
         int[] evaluations = {0};
-        LongSupplier[] clock = {time::getAsLong};
-        List<Supplier<ConditionResult<?>>> steps = new ArrayList<>(nCopies(interruptedAttempt - 1, () -> satisfied(actual)));
-        steps.add(() -> {
-            clock[0] = () -> { currentThread().interrupt(); return time.getAsLong(); };
-            return state;
-        });
-        var checks = steps.iterator();
-        var waiting = withTime(await(() -> actual), () -> clock[0].getAsLong(), time).every(ofNanos(1))
-                .upTo(ofNanos(10)).persisting(ofNanos(persistence));
-        var check = check("completion boundary", value -> {
-            evaluations[0]++;
-            return checks.next().get();
-        });
-        Consumer<AwaitFailure> verifyFailure = failure -> {
-            assertEquals(INTERRUPTED, failure.reason());
-            assertCause.accept(failure.cause());
-        };
-        terminal.apply(
-                () -> verifyFailure.accept(assertThrows(AwaitExecutionException.class, () -> waiting.until(check)).failure()),
-                () -> {
-                    var result = diagnostic(waiting).until(check);
-                    verifyFailure.accept(failure(result));
-                    assertEquals(interruptedAttempt, attempts(result).size());
-                    uncontrolled(CONDITION, attempts(result).getLast());
-                }).execute();
+        var waiting = withTime(await(() -> actual), () -> {
+            if (evaluations[0] == interruptedAttempt) currentThread().interrupt();
+            return time.getAsLong();
+        }, time).every(ofNanos(1)).upTo(ofNanos(10)).persisting(ofNanos(persistence));
+        var check = check("completion boundary", value ->
+                ++evaluations[0] == interruptedAttempt ? state : satisfied(actual));
+        AwaitFailure failure;
+        if (recording) {
+            var result = diagnostic(waiting).until(check);
+            failure = failure(result);
+            assertEquals(interruptedAttempt, attempts(result).size());
+            uncontrolled(CONDITION, attempts(result).getLast());
+        } else {
+            failure = assertThrows(AwaitExecutionException.class, () -> waiting.until(check)).failure();
+        }
+        assertEquals(INTERRUPTED, failure.reason());
+        assertCause.accept(failure.cause());
         assertEquals(interruptedAttempt, evaluations[0]);
         assertTrue(currentThread().isInterrupted());
     }
@@ -299,12 +284,12 @@ class ObservationTest {
             assertInstanceOf(NullPointerException.class, cause);
             assertEquals("condition returned null ConditionResult", cause.getMessage());
         };
-        return terminals().stream().flatMap(terminal -> Stream.of(Map.entry(0L, 1), Map.entry(2L, 2)).flatMap(timing -> {
-            String label = terminal.getName() + ", persistence=" + timing.getKey() + " / ";
+        return Stream.of(false, true).flatMap(recording -> Stream.of(Map.entry(0L, 1), Map.entry(2L, 2)).flatMap(timing -> {
+            String label = (recording ? "tryAwait" : "await") + ", persistence=" + timing.getKey() + " / ";
             return Stream.of(
-                    argumentSet(label + "satisfied", terminal, timing.getKey(), timing.getValue(), satisfied(null), interruption),
-                    argumentSet(label + "unsatisfied", terminal, timing.getKey(), timing.getValue(), unsatisfied("not ready"), interruption),
-                    argumentSet(label + "null", terminal, timing.getKey(), timing.getValue(), null, missingResult));
+                    argumentSet(label + "satisfied", recording, timing.getKey(), timing.getValue(), satisfied(null), interruption),
+                    argumentSet(label + "unsatisfied", recording, timing.getKey(), timing.getValue(), unsatisfied("not ready"), interruption),
+                    argumentSet(label + "null", recording, timing.getKey(), timing.getValue(), null, missingResult));
         }));
     }
 
@@ -348,10 +333,6 @@ class ObservationTest {
         assertSame(failure, observation.cause());
         assertSame(actual, observation(attempt));
         assertTrue(currentThread().isInterrupted());
-    }
-
-    private static List<Named<BinaryOperator<Executable>>> terminals() {
-        return List.of(named("await", (thrown, captured) -> thrown), named("tryAwait", (thrown, captured) -> captured));
     }
 
     @ParameterizedTest

@@ -4,7 +4,6 @@ import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.AwaitCondition.Reference;
 import io.github.gromoff97.awium.execution.ConditionExecution;
-import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.execution.ExecutionStep;
 import io.github.gromoff97.awium.execution.WaitCompletion;
@@ -19,12 +18,8 @@ import io.github.gromoff97.awium.support.FakeTime;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.function.BinaryOperator;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AutoClose;
-import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -65,15 +60,11 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class DiagnosticsSnapshotTest {
-
-    @AutoClose
-    private AutoCloseable classResource = () -> {};
 
     private final FakeTime time = new FakeTime(0);
 
@@ -296,9 +287,9 @@ class DiagnosticsSnapshotTest {
         }
     }
 
-    @ParameterizedTest(name = "{0}, message={1}")
+    @ParameterizedTest(name = "tryAwait={0}, message={1}")
     @MethodSource("blankMessageTerminals")
-    void blankCauseMessagesAreOmittedAndReadOnlyOnce(BinaryOperator<Supplier<AwaitFailure>> terminal, String message) {
+    void blankCauseMessagesAreOmittedAndReadOnlyOnce(boolean recording, String message) {
         int[] reads = {0};
         var cause = new IllegalStateException(message) {
             @Override
@@ -309,9 +300,8 @@ class DiagnosticsSnapshotTest {
         };
         Callable<Object> source = () -> { throw cause; };
         var waiting = withTime(await(source), time, time);
-        var failure = terminal.apply(
-                () -> assertThrows(AwaitExecutionException.class, () -> waiting.until(accepted)).failure(),
-                () -> failure(diagnostic(waiting).until(accepted))).get();
+        var failure = recording ? failure(diagnostic(waiting).until(accepted))
+                : assertThrows(AwaitExecutionException.class, () -> waiting.until(accepted)).failure();
 
         assertEquals(SOURCE_FAILED, failure.reason());
         assertSame(cause, failure.cause());
@@ -320,8 +310,8 @@ class DiagnosticsSnapshotTest {
     }
 
     private static Stream<Arguments> blankMessageTerminals() {
-        return terminals().stream().flatMap(terminal -> Stream.of(null, "", " \r\n\t")
-                .map(message -> arguments(terminal, message)));
+        return Stream.of(false, true).flatMap(recording -> Stream.of(null, "", " \r\n\t")
+                .map(message -> arguments(recording, message)));
     }
 
     @Test
@@ -445,9 +435,9 @@ class DiagnosticsSnapshotTest {
         assertThat(valueFailure).hasMessageContainingAll(array ? "Actual: [null]" : "Actual: null", "Timing:");
     }
 
-    @ParameterizedTest
-    @MethodSource("terminals")
-    void diagnosticFailurePreservesTheInterruptRaisedByRendering(BinaryOperator<Supplier<AwaitFailure>> terminal) {
+    @ParameterizedTest(name = "tryAwait={0}")
+    @ValueSource(booleans = {false, true})
+    void diagnosticFailurePreservesTheInterruptRaisedByRendering(boolean recording) {
         int[] messageCalls = {0};
         var diagnostic = new IllegalStateException() {
             @Override
@@ -465,9 +455,8 @@ class DiagnosticsSnapshotTest {
         var original = new AssertionError("not ready");
         var waiting = timedAwait(() -> actual, config(1, 2, 0), time, time);
         var check = check("ready", value -> unsatisfied("not ready", original));
-        var failure = terminal.apply(
-                () -> assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure(),
-                () -> failure(diagnostic(waiting).until(check))).get();
+        var failure = recording ? failure(diagnostic(waiting).until(check))
+                : assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure();
         assertEquals(TIMEOUT, failure.reason());
         assertSame(original, failure.cause());
         assertSame(diagnostic, failure.suppressed().getFirst());
@@ -475,9 +464,9 @@ class DiagnosticsSnapshotTest {
         assertTrue(currentThread().isInterrupted());
     }
 
-    @ParameterizedTest
-    @MethodSource("terminals")
-    void diagnosticErrorMessagesAreNotEvaluatedRecursively(BinaryOperator<Supplier<AwaitFailure>> terminal) {
+    @ParameterizedTest(name = "tryAwait={0}")
+    @ValueSource(booleans = {false, true})
+    void diagnosticErrorMessagesAreNotEvaluatedRecursively(boolean recording) {
         var interruption = new InterruptedException("diagnostic message interrupted");
         int[] messageCalls = {0};
         var diagnostic = new IllegalStateException() {
@@ -494,9 +483,8 @@ class DiagnosticsSnapshotTest {
             return actual;
         }), time, time).upTo(ofNanos(2));
         var check = check("not ready", value -> unsatisfied("not ready", original));
-        var failure = terminal.apply(
-                () -> assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure(),
-                () -> failure(diagnostic(waiting).until(check))).get();
+        var failure = recording ? failure(diagnostic(waiting).until(check))
+                : assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure();
         assertEquals(TIMEOUT, failure.reason());
         assertSame(original, failure.cause());
         assertSame(diagnostic, failure.suppressed().getFirst());
@@ -507,9 +495,10 @@ class DiagnosticsSnapshotTest {
 
     @Test
     void isolatedExceptionClassDoesNotRequireItsEnclosingClassForDiagnostics() throws Exception {
-        var resource = CountingAssertion.class.getResourceAsStream("DiagnosticsSnapshotTest$CountingAssertion.class");
-        classResource = resource;
-        byte[] bytes = resource.readAllBytes();
+        byte[] bytes;
+        try (var resource = CountingAssertion.class.getResourceAsStream("DiagnosticsSnapshotTest$CountingAssertion.class")) {
+            bytes = resource.readAllBytes();
+        }
         var loader = new ClassLoader(null) {
             Class<?> isolatedClass() {
                 return defineClass(null, bytes, 0, bytes.length);
@@ -642,24 +631,16 @@ class DiagnosticsSnapshotTest {
 
     private static Throwable renderFailure(AwaitCondition condition, AwaitFailure.Reason reason, WaitCompletion outcome,
             WaitConfiguration configuration, long attemptNumber) {
-        return renderFailure(ConditionExecution.start(condition, false), reason, outcome, configuration, attemptNumber);
-    }
-
-    private static Throwable renderFailure(ConditionRun<?, ?> condition,
-            AwaitFailure.Reason reason, WaitCompletion outcome, WaitConfiguration configuration, long attemptNumber) {
+        var run = ConditionExecution.start(condition, false);
         for (long number = 0; number < attemptNumber; number++) {
-            condition.record(new Attempt.SatisfiedObservation<>(null));
+            run.record(new Attempt.SatisfiedObservation<>(null));
         }
-        var failure = failure(condition.finish(outcome, configuration));
+        var failure = failure(run.finish(outcome, configuration));
         return assertFailure(reason, () -> new AwaitResult.Failed<>(List.of(), failure).orThrow());
     }
 
     private static Timeout timeout(ExecutionStep<?> step) {
         return new Timeout(step.completedAfterNanos(), step);
-    }
-
-    private static List<Named<BinaryOperator<Supplier<AwaitFailure>>>> terminals() {
-        return List.of(named("await", (thrown, captured) -> thrown), named("tryAwait", (thrown, captured) -> captured));
     }
 
     private static <OBSERVED> ExecutionStep<OBSERVED> evaluatedAttempt(OBSERVED observed, ConditionResult<?> result, long completedNanos) {
