@@ -22,6 +22,29 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 
 class ConditionContractTest {
     @Test
+    void reasonsPreserveDirectProbeResults() throws Throwable {
+        var expected = unsatisfied("not ready", new IllegalStateException("offline"));
+        var condition = new Condition<String, Object>() {
+            @Override public String description() { return "ready"; }
+            @Override public ConditionResult<Object> probe(String actual) { return expected; }
+        }.because("a value is required");
+
+        assertSame(expected, condition.probe("pending"));
+    }
+
+    @Test
+    void reasonsPreserveTheSuppliedEvaluator() throws Exception {
+        AwaitAttempt<String, String> evaluator = actual -> satisfied(actual);
+        var condition = new Condition<String, String>() {
+            @Override public String description() { return "ready"; }
+            @Override public ConditionResult<String> probe(String actual) { throw new AssertionError("use evaluator"); }
+            @Override public AwaitAttempt<String, String> newAttempt() { return evaluator; }
+        }.because("a value is required");
+
+        assertSame(evaluator, condition.newAttempt());
+    }
+
+    @Test
     void reasonsLeaveTheOriginalUserConditionUnchanged() {
         var original = new Condition<String, Integer>() {
             @Override public String description() { return "text length"; }

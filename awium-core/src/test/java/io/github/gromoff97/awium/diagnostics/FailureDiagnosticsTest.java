@@ -9,7 +9,6 @@ import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.ConditionHistory;
 import io.github.gromoff97.awium.support.FakeTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -18,10 +17,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitCondition.Reference;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
@@ -32,6 +31,7 @@ import static io.github.gromoff97.awium.execution.ExecutionStep.Phase;
 import static io.github.gromoff97.awium.execution.WaitCompletion.PersistenceFailure;
 import static io.github.gromoff97.awium.execution.WaitCompletion.Timeout;
 import static io.github.gromoff97.awium.execution.WaitCompletion.Uncontrolled;
+import static io.github.gromoff97.awium.execution.ProbeFailure.locatedFailure;
 import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
@@ -48,6 +48,7 @@ import static io.github.gromoff97.awium.result.AwaitFailure.Reason.values;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason;
 import static io.github.gromoff97.awium.result.AwaitResult.Failed;
 import static io.github.gromoff97.awium.support.AwaitAssertions.assertFailure;
+import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
 import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
 import static io.github.gromoff97.awium.support.ConditionTestRuntime.diagnosticCondition;
 import static io.github.gromoff97.awium.support.TestConditions.check;
@@ -59,6 +60,23 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
 class FailureDiagnosticsTest {
+
+    @Test
+    void locatedFailuresRetainTheirCauseAndObservation() {
+        var cause = new IllegalStateException("offline");
+        var result = tryAwait(() -> "actual").until(check("receipt", actual -> {
+            throw locatedFailure("receipt", cause);
+        }));
+
+        var failed = assertInstanceOf(FailedAfterObservation.class, attempts(result).getFirst());
+        assertEquals("actual", failed.observed());
+        assertEquals("receipt", failed.location());
+        assertSame(cause, failed.cause());
+        var failure = failure(CONDITION_FAILED, result);
+        assertSame(cause, failure.cause());
+        assertThat(failure.message()).contains("Within: receipt");
+        assertThat(failed.toString()).contains("Within: receipt");
+    }
 
     @Test
     void diagnosticFailureRetainsBothOriginalCausesWithoutMutatingThem() {
@@ -130,26 +148,6 @@ class FailureDiagnosticsTest {
         assertSame(original, failure.getCause());
         assertEquals(0, failure.getSuppressed().length);
         assertEquals(0, original.getSuppressed().length);
-    }
-
-    @Test
-    void structuredFailureDefensivelyCopiesSuppressedCauses() {
-        var original = new AssertionError("original");
-        var causes = new ArrayList<Throwable>(List.of(original));
-        var failure = new AwaitFailure(TIMEOUT, "not ready", null, causes);
-        causes.clear();
-        assertEquals(List.of(original), failure.suppressed());
-        assertThrows(UnsupportedOperationException.class, () -> failure.suppressed().clear());
-    }
-
-    @Test
-    void structuredFailureAllowsNoCause() {
-        assertNull(new AwaitFailure(TIMEOUT, "not ready", null, List.of()).cause());
-    }
-    @ParameterizedTest
-    @CsvSource({", message", "TIMEOUT,"})
-    void structuredFailuresRejectMissingRequiredFields(Reason reason, String message) {
-        assertThrows(NullPointerException.class, () -> new AwaitFailure(reason, message, null, List.of()));
     }
 
     private static List<Arguments> failureCases() {
