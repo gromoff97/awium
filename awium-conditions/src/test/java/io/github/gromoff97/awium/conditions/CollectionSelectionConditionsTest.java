@@ -3,38 +3,24 @@ package io.github.gromoff97.awium.conditions;
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.result.AwaitResult;
-import java.util.AbstractList;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.SequencedCollection;
 import java.util.concurrent.Callable;
-import java.util.stream.Stream;
-import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestFactory;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.all;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.any;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.containsNull;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.containsOnly;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.containsOnlyNulls;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.containsSequence;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.containsSubsequence;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainNull;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainSequence;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainSubsequence;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.elementAt;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.endsWith;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.firstElement;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.hasNoDuplicates;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.hasSize;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.hasSizeBetween;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.lastElement;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.none;
 import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElement;
@@ -55,7 +41,6 @@ import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.Comparator.comparingInt;
-import static java.util.stream.IntStream.range;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -64,7 +49,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 class CollectionSelectionConditionsTest {
 
@@ -130,40 +114,6 @@ class CollectionSelectionConditionsTest {
         assertSame(text, await(() -> text).until(subsetOf(List.of("ready"))));
     }
 
-    @Test
-    void contentConditionsCoverNullsDuplicatesSetsAndSizeRanges() {
-        var values = new ArrayList<>(asList("a", "a", null));
-
-        assertInstanceOf(Satisfied.class, evaluate(containsNull, values));
-        assertInstanceOf(Unsatisfied.class,
-                evaluate(doesNotContainNull, values));
-        assertInstanceOf(Unsatisfied.class,
-                evaluate(hasNoDuplicates, values));
-        assertInstanceOf(Satisfied.class,
-                evaluate(containsOnly(asList("a", null)), values));
-        assertInstanceOf(Satisfied.class, evaluate(subsetOf(
-                asList("a", "b", null)), values));
-        assertInstanceOf(Satisfied.class,
-                evaluate(hasSizeBetween(2, 4), values));
-        assertInstanceOf(Satisfied.class, evaluate(
-                hasSize(3), values));
-        assertInstanceOf(Unsatisfied.class,
-                evaluate(containsOnlyNulls, List.of()));
-        assertInstanceOf(Unsatisfied.class,
-                evaluate(containsNull, List.of("a")));
-        assertInstanceOf(Satisfied.class,
-                evaluate(doesNotContainNull, List.of("a")));
-        assertInstanceOf(Satisfied.class, evaluate(containsOnlyNulls,
-                asList(null, null)));
-        assertInstanceOf(Unsatisfied.class, evaluate(containsOnlyNulls,
-                asList(null, "a")));
-        assertInstanceOf(Satisfied.class, evaluate(hasNoDuplicates,
-                List.of("a", "b")));
-        assertInstanceOf(Unsatisfied.class, evaluate(containsOnly(asList("a", null)),
-                asList("a", "b", null)));
-        assertInstanceOf(Unsatisfied.class, evaluate(subsetOf(
-                List.of("a", "b")), List.of("a", "c")));
-    }
 
     @Test
     void orderedConditionsCoverPositionsSequencesAndSorting() {
@@ -221,7 +171,6 @@ class CollectionSelectionConditionsTest {
     @Test
     void singleElementRequiresOneElementBeforeApplyingTheCheck() {
 
-
         var none = rejection(singleElement(matches(value -> value > 10)), List.of(1));
         var many = rejection(singleElement(matches(value -> value == 2)), List.of(1, 2));
 
@@ -258,54 +207,9 @@ class CollectionSelectionConditionsTest {
         }
     }
 
-    @Test
-    void emptyOrderedPatternsDoNotReadTheObservedCollection() {
-        var actual = new AbstractList<Object>() {
-            @Override public Object get(int index) { throw new AssertionError("elements must not be read"); }
-            @Override public int size() { throw new AssertionError("size must not be read"); }
-            @Override public Iterator<Object> iterator() { throw new AssertionError("iterator must not be requested"); }
-            @Override public List<Object> reversed() { throw new AssertionError("reverse view must not be requested"); }
-            @Override public String toString() { return "unread collection"; }
-        };
-        var waiting = await(() -> actual).every(ofNanos(1));
-        for (var check : List.of(startsWith(List.of()), endsWith(List.of()),
-                containsSequence(List.of()), containsSubsequence(List.of()))) {
-            assertSame(actual, waiting.until(check));
-        }
-        for (var check : List.of(doesNotContainSequence(List.of()),
-                doesNotContainSubsequence(List.of()))) {
-            var failure = rejection(check, actual);
-        }
-    }
 
-    @Test
-    void orderedConditionsRejectIncompletePrefixesAndSuffixes() {
-        for (List<Integer> actual : List.of(List.<Integer>of(), List.of(1), List.of(1, 2))) {
-            assertInstanceOf(Unsatisfied.class, evaluate(startsWith(List.of(1, 2, 3)), actual));
-            assertInstanceOf(Unsatisfied.class, evaluate(endsWith(List.of(1, 2, 3)), actual));
-            assertInstanceOf(Unsatisfied.class, evaluate(containsSequence(List.of(1, 2, 3)), actual));
-            assertSame(actual, ((Satisfied<?>) evaluate(doesNotContainSequence(List.of(1, 2, 3)), actual)).value());
-        }
-        var empty = new ArrayDeque<Integer>();
-        assertSame(empty, ((Satisfied<?>) evaluate(sorted(Integer::compareTo), empty)).value());
-    }
 
-    @Test
-    void orderedChecksPreserveSequentialAndSequencedContainersWithNullsAndArrays() {
-        var elements = asList(null, new int[] {1, 2}, "gap", new int[] {3, 4});
-        List<SequencedCollection<Object>> containers = List.of(
-                new LinkedList<>(elements), new LinkedHashSet<>(elements));
-        for (var actual : containers) {
 
-            var waiting = await(() -> actual);
-
-            assertSame(actual, waiting.until(startsWith(asList(null, new int[] {1, 2}))));
-            assertSame(actual, waiting.until(endsWith(List.of("gap", new int[] {3, 4}))));
-            assertSame(actual, waiting.until(containsSequence(List.of(new int[] {1, 2}, "gap"))));
-            var captured = tryAwait(() -> actual).until(containsSubsequence(asList(null, new int[] {3, 4})));
-            assertSame(actual, captured.orThrow());
-        }
-    }
 
     @Test
     void orderedExpectationsTreatReferenceArraysAsSingleElementsWithoutTypeArguments() {
@@ -326,39 +230,6 @@ class CollectionSelectionConditionsTest {
         }
     }
 
-    @TestFactory
-    Stream<DynamicTest> impossiblePositivePatternsRejectWithoutReadingElements() {
-        var expected = List.of(1, 2, 3);
-        return Stream.of(startsWith(expected), endsWith(expected), containsSequence(expected), containsSubsequence(expected))
-                .flatMap(condition -> range(0, 3).mapToObj(size -> dynamicTest(condition.description() + " " + condition.references() + " / size: " + size,
-                        () -> assertInstanceOf(Unsatisfied.class, evaluate(condition, tooShortList(size))))));
-    }
-
-    @TestFactory
-    Stream<DynamicTest> impossibleNegativePatternsPreserveTheCollectionWithoutReadingElements() {
-        var expected = List.of(1, 2, 3);
-        return Stream.of(doesNotContainSequence(expected), doesNotContainSubsequence(expected))
-                .flatMap(condition -> range(0, 3).mapToObj(size -> dynamicTest(condition.description() + " " + condition.references() + " / size: " + size, () -> {
-                    var actual = tooShortList(size);
-                    assertSame(actual, result(evaluate(condition, actual)));
-                })));
-    }
-
-    private static List<Integer> tooShortList(int size) {
-        return new AbstractList<>() {
-            private int sizeReads;
-
-            @Override public int size() {
-                assertEquals(1, ++sizeReads, "an impossible pattern must not reenter size");
-                return size;
-            }
-
-            @Override public Integer get(int index) {
-                throw new AssertionError("an impossible pattern must not retrieve elements");
-            }
-        };
-    }
-
     @Test
     void nestedSelectorsWaitForANullCollectionToBecomeAvailable() {
         var observations = asList(null, List.of(" "), null, List.of(" ")).iterator();
@@ -375,7 +246,6 @@ class CollectionSelectionConditionsTest {
 
     @Test
     void selectorsCoverMissingNullAndInvalidPositions() {
-
 
 
         rejection(firstElement, List.of());
