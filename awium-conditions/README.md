@@ -10,14 +10,12 @@ Payment payment = await(paymentRepository::find)
         .until(present);
 ```
 
-Here `find()` returns `Optional<Payment>`; `until(present)` returns its `Payment`.
-An unsuccessful check is retried until the timeout. Use `tryAwait` to receive
-the outcome and attempt history instead of throwing a wait failure.
+`find()` returns `Optional<Payment>`; `until(present)` returns its `Payment`.
+Use `tryAwait` for an outcome with attempt history.
 
 ## Installation
 
-The snapshot is not published. Clone Awium next to your Gradle project
-and add to `settings.gradle.kts`:
+The snapshot is unpublished. Clone Awium beside your Gradle project and add to `settings.gradle.kts`:
 
 ```kotlin
 includeBuild("../awium/awium-conditions")
@@ -38,7 +36,6 @@ dependencies {
 - [Core diagnostics](../awium-core/docs/diagnostics.md): results, histories, and failures.
 - [Development](docs/development.md): build, tests, and internal responsibilities.
 
-`settings.gradle.kts` uses the sibling `awium-core` build when present.
 Factories are in `io.github.gromoff97.awium.conditions`.
 
 Licensed under [Apache License 2.0](LICENSE).

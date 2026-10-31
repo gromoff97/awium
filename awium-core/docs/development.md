@@ -4,28 +4,30 @@
 
 ## Build and checks
 
-Run from `awium-core`:
+From `awium-core`, build and measure ordinary test coverage:
 
 ```sh
-./gradlew clean build
+./gradlew clean build jacocoTestReport
 ```
 
-This build does not load the conditions project. Checks cover the engine, results,
-history grouping, time configuration, and consumers using only the core JAR on the
-classpath and module path. Product compile/runtime dependencies must be empty.
-Tests use JUnit 6, AssertJ, Mockito, Commons Lang, compile-testing, and ArchUnit.
+JaCoCo writes HTML and XML to `build/reports/jacoco/test`.
+
+This independent build checks the engine, results, history grouping, timing, and
+core-only JAR consumers on the classpath and module path. It rejects product
+compile/runtime dependencies. Tests use JUnit 6, AssertJ, Mockito, Commons Lang,
+compile-testing, and ArchUnit.
 
 PIT uses `ALL`: run `./gradlew pitest` **only on explicit user request**.
 It is separate from `build`, `check`, and `test`.
 
 ## Tests
 
-All tests and their helpers live in `src/test`; none are exported to other builds.
-Behavior tests share the product package and use package-private `usingTime(clock, parker)`
-with `FakeTime`. This replaces time for one configuration. Both callbacks use the
-same time base in nanoseconds: the clock is monotonic, and the parker may return early.
-Clock failures propagate directly; parker failures stop the wait. Clock reads preserve
-the interrupt flag. Production defaults are `System.nanoTime` and `LockSupport.parkNanos`.
+Java tests in `src/test` group API contracts, waiting, execution, results, diagnostics,
+functions, and architecture. `AwaitTestAccess` injects `FakeTime` through package access;
+fluent builders contain no clock-injection methods. Clock and parker use the same
+nanosecond time base: the clock is monotonic, and parking may return early.
+Test clocks must not clear the interrupt flag. Clock failures propagate directly;
+parker failures stop the wait. Production uses `System.nanoTime` and `LockSupport.parkNanos`.
 Mockito uses JDK proxies and reflection without a Java agent.
 Integration tests cover platform and virtual callers, cancellation, and concurrent
 execution of custom conditions. Core tests have no dependency on built-in conditions.
@@ -35,22 +37,26 @@ execution of custom conditions. Core tests have no dependency on built-in condit
 | Component | Owns |
 | --- | --- |
 | `Condition`, `AwaitCondition` families | Immutable definitions, type constraints, and creation of independent runs |
-| `AwaitCondition.CheckDefinition` | Evaluator storage and run creation |
-| `execution.CheckRun` | One check's evaluation and final value |
-| `execution.AbstractConditionRun` | History recording and terminal result assembly |
-| `execution.AttemptHistory` | Invocation numbering and grouping within each history |
+| `CheckDefinition` | Evaluator storage and run creation |
+| `CheckRun` | One check's evaluation and final value |
+| `AbstractConditionRun` | History recording and terminal result assembly |
+| `AttemptHistory` | Invocation numbering and grouping within each history |
 | `Await`; fluent await classes | Source entry points and configuration |
 | `AwaitSupport` | Starting a run, passing it to the engine, and returning its result |
-| `execution.ConditionRun` | Lifecycle contract without sequence or stage concepts |
-| `execution.ConditionExecution` | Lazy evaluator initialization and nested check invocation |
-| `internal.WaitEngine` | Polling, deadlines, and persistence from immutable step snapshots |
-| `internal.AttemptExecution`; `ExecutionStep` | Source/check calls, failures, and attempt timing |
-| `execution.FailureDiagnostics`; `execution.DiagnosticText` | Terminal formatting and guarded value rendering |
+| `ConditionRun` | Lifecycle contract without sequence or stage concepts |
+| `ConditionExecution` | Lazy evaluator initialization and nested check invocation |
+| `WaitEngine` | Polling, deadlines, and persistence from immutable step snapshots |
+| `AttemptExecution`; `ExecutionStep` | Source/check calls, failures, and attempt timing |
+| `FailureDiagnostics`; `DiagnosticText` | Terminal formatting and guarded value rendering |
 
-A run owns completion, history scopes, results, and diagnostic context. The engine
-controls when it may run, persistence, and when waiting ends. Mutable state belongs
-to one run; definitions remain immutable. `ProbeFailure` adds a nested location
-without replacing the original cause.
+Override `Condition.newAttempt()` for a stateful evaluator, created lazily for each use.
+For a custom lifecycle, override `newRun(definition, recording)` and return a fresh
+`AbstractConditionRun`. Its `probe` checks observations, `complete` decides completion,
+and `result` supplies the final value, including when nested. The supplied definition
+carries the `because` reason. The base class records history and assembles the outcome;
+protected hooks customize history scopes and diagnostics. The engine owns polling,
+timeouts, and persistence. Mutable state stays within a run; definitions stay immutable.
+`ProbeFailure` adds a nested location while preserving the original cause.
 
 ## Type and module boundaries
 

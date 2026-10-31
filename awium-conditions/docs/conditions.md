@@ -2,7 +2,7 @@
 
 [README](../README.md) · [Core usage](../../awium-core/docs/usage.md) · [Core diagnostics](../../awium-core/docs/diagnostics.md)
 
-Checks return the exact observed object unless **→** indicates otherwise.
+Checks return the observed instance unless **→** indicates otherwise.
 Constants such as `present` need no parentheses. Qualify colliding names:
 `CollectionConditions.nonEmpty` and `MapConditions.nonEmpty`.
 
@@ -12,10 +12,9 @@ Optional, collection, map, and text conditions do not match null observations.
 
 ### Expected values
 
-Bulk factories read an iterable or map once and make a shallow copy, preserving
-encounter order, duplicates, and supported nulls. They reject null inputs and
-report reading failures before polling. Elements, keys, and values are not
-deep-copied. Single-value operands retain references, including containers.
+Bulk factories shallow-copy iterables or maps once, preserving order, duplicates,
+and supported nulls. Null inputs and read failures are rejected before polling.
+Elements, keys, values, and single operands remain references, including containers.
 `StringConditions` freeze text operands at construction.
 
 Use `singletonList(array)` for one array in an expected set;
@@ -44,8 +43,8 @@ Collections and maps have `hasSize(n)`, `hasSizeNotEqualTo(n)`, `hasSizeGreaterT
 
 ### Callback types
 
-Callbacks use `CheckedPredicate`, `CheckedBiPredicate`, `CheckedConsumer`, or
-`CheckedFunction`, permitting checked throwables.
+Custom callbacks use `AwaitAttempt<INPUT, RESULT>`; predicates and assertions use
+`CheckedPredicate`, `CheckedBiPredicate`, and `CheckedConsumer`. All permit checked throwables.
 For stored JDK callbacks, use `predicate::test`, `consumer::accept`, or `function::apply`.
 Negate checked predicates with `CheckedPredicate.not` or `CheckedBiPredicate.not`.
 
@@ -70,9 +69,8 @@ empty `notIn` matches anything, including null.
 
 ### Predicates and assertions
 
-`matches` uses a boolean result. `asserted` succeeds on normal return and converts
-`AssertionError` to a mismatch. It discards a method reference's return value:
-returning `false` does not fail the assertion.
+`matches` uses a boolean result. `asserted` treats normal return as success and
+`AssertionError` as a mismatch. Return values are discarded: `false` is not an assertion failure.
 
 ### Custom conditions
 
@@ -81,13 +79,12 @@ String receipt = await(paymentRepository::load).until(condition("payment has a r
         actual.receipt() == null ? unsatisfied("receipt was absent") : satisfied(actual.receipt())));
 ```
 
-Callbacks return `satisfied(value)` or `unsatisfied(...)`; the
-[core contract](../../awium-core/README.md) defines outcomes and custom implementations.
+The [core contract](../../awium-core/README.md) defines callback outcomes and custom implementations.
 
-`condition` reuses its callback. `conditionPerWait` takes a `Callable` creating one
-callback per wait and captured position, on first evaluation. Nested factories wait
-for successful extraction. State persists across candidates and retries. Only state
-created inside the factory is isolated; external state remains shared.
+`condition` reuses its callback. `conditionPerWait` accepts a `Callable` that creates
+one callback per wait and captured position, on first evaluation. Nested factories
+start after extraction succeeds. Factory state persists across candidates and retries;
+external state remains shared.
 
 ```java
 var check = conditionPerWait("two paid observations", () -> {
@@ -120,10 +117,10 @@ Payment payment = await(paymentRepository::findAll)
         .until(singleElement(instanceOf(Payment.class)));
 ```
 
-Selectors extract first and check at most once per attempt. Missing values, wrong
-cardinality, or rejected selections are mismatches. A positional/key selector
-never searches another candidate after a failed check. Predicates and preserving
-checks return the selection; typed conditions return their chosen result.
+Selectors check an extracted value at most once per attempt. Missing values, wrong cardinality,
+and rejected selections are mismatches; positional/key selectors never search another
+candidate. Predicates and preserving checks return the selection; typed conditions
+return their chosen result.
 
 Quantifiers accept predicates or conditions, including `all(present)` and
 `allValues(singleElement)`. Nested results are discarded; narrowing does not
@@ -195,7 +192,7 @@ Element comparisons include array contents.
 | `startsWith(xs)`, `endsWith(xs)` | Ordered prefix or suffix |
 | `containsSequence(xs)`, `doesNotContainSequence(xs)` | Consecutive ordered elements |
 | `containsSubsequence(xs)`, `doesNotContainSubsequence(xs)` | Ordered elements, allowing gaps |
-| `sorted(comparator)` | Nondecreasing comparator order |
+| `sorted(comparator)` | Nondecreasing order; use `sorted(naturalOrder())` for natural order |
 | `singleElement` | Exactly one element → element |
 | `firstElement`, `lastElement`, `elementAt(index)` | Ordered position → element |
 
@@ -274,9 +271,9 @@ one captured check still produces a one-element list.
 
 `persisting` rechecks only the final stage; earlier captures stay unchanged.
 
-Capture sequences cannot be nested. `captured(conditions)` copies its argument
-array and rejects empty/null arrays and null stages. Definitions such as
-`captured(present, present).because("available twice")` work across optional types.
+Capture sequences cannot nest. `captured(conditions)` copies its argument array and
+rejects empty/null arrays and null stages. `captured(present, present).because("available twice")`
+works across optional types.
 
 For covariant sources, typed views preserve each observation's wildcard type.
 Mixed selectors, predicates, or comparisons followed by `because` may need a source
@@ -299,21 +296,13 @@ conditions[1]: 3 → UnsatisfiedObservation("pending", ...)
 
 Attempt numbers span the whole wait. A stage's first range starts after the previous
 stage's last attempt. A successful stage may precede later sequence failure.
-Terminal diagnostics add stage number and sequence reason; timeout after an
-intermediate success identifies the next stage. Histories retain complete source
-observations, so `matches` does not capture fields read only by its predicate.
+Terminal diagnostics add the stage number and sequence reason; timeout after an
+intermediate success identifies the next stage. [Core diagnostics](../../awium-core/docs/diagnostics.md)
+describes observation retention.
 
-## Stored sources and views
+## Container views
 
-A stored JDK `Callable` selects the general value overload. Use a method reference
-when selecting a contained value:
-
-```java
-Callable<Optional<Payment>> source = paymentRepository::find;
-Payment found = await(source::call).until(present);
-```
-
-Views keep the complete container type and selected bound:
+Views keep the complete container type and selected bound without copying data:
 
 ```java
 var source = new CollectionViewSource<Payment, List<? extends Payment>>(

@@ -1,12 +1,10 @@
 # Awium Core
 
-The Java 21 wait engine: source polling, condition contracts, results, and histories.
-Execution stays on the calling thread. Product dependencies: only the JDK.
+Java 21 source polling, condition contracts, results, and histories. Depends only on the JDK.
 
 ## Installation
 
-The snapshot is not published. With the repository cloned next to your Gradle project,
-add to `settings.gradle.kts`:
+The snapshot is unpublished. Clone Awium beside your Gradle project and add to `settings.gradle.kts`:
 
 ```kotlin
 includeBuild("../awium/awium-core")
@@ -39,38 +37,28 @@ Payment payment = await(paymentRepository::load)
         .until(new PaidPayment().because("Checkout must complete"));
 ```
 
-Choose a different `RESULT` to extract a value. `description()` names the check
-in diagnostics and keeps `Condition` distinct from predicate lambdas during overload resolution.
-
-Keep the definition immutable. Override `newAttempt()` to create an independent,
-stateful evaluator on first evaluation of each use. For a custom lifecycle, override
-`newRun(definition, recording)` and return a fresh `execution.AbstractConditionRun`:
-`probe` checks each observation, `complete` decides completion, and `result` returns
-the final value. The supplied definition carries any `because` reason. The base class
-records history and assembles the result; protected hooks customize history scopes
-and diagnostics. Nested uses wait for completion and return that run's final value.
-Polling, timeout, and persistence remain the engine's responsibility.
+Choose another `RESULT` to extract a value. `description()` labels diagnostics
+and prevents ambiguity with predicate lambdas.
+Keep definitions immutable; [custom lifecycles](docs/development.md) support per-use state.
 
 ## Check outcomes
 
-`ConditionResult<RESULT>` supplies these static factories:
+`ConditionResult<RESULT>` has two variants, created with:
 
 | Factory | Meaning |
 | --- | --- |
 | `satisfied(value)` | Chosen result, including null; pass `actual` to return the observation |
 | `unsatisfied()`, `unsatisfied(message)`, `unsatisfied(message, cause)` | Mismatch with optional diagnostics |
 
-There is no no-argument success or user-returnable uncontrolled state. The declared
-result determines the terminal type: `ConditionResult<CharSequence>`
-yields `CharSequence` even with a `String` source.
-`mapValue(function)` transforms only a satisfied value; mismatches retain their diagnostics.
+The declared result sets the terminal type: `ConditionResult<CharSequence>` yields
+`CharSequence` even for a `String` source. `mapValue(function)` transforms success
+values and preserves mismatches.
 
 ## Reasons
 
-`because(nonBlankReason)` returns an immutable copy whose reason appears in diagnostics.
-Calling it again replaces the reason; an outer reason overrides an inherited nested reason.
-Keep a condition's specific type: `AwaitCondition` alone does not retain the constraints
-needed by `until`.
+`because(nonBlankReason)` copies the condition, replacing any previous or inherited
+reason. Keep its specific type: `AwaitCondition` alone
+lacks the constraints required by `until`.
 
 ## Documentation
 

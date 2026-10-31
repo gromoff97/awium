@@ -10,24 +10,21 @@ Payment payment = await(paymentRepository::load)
         .until(paid);
 ```
 
-`paid` has type `Condition<Payment, Payment>`. `until` accepts one condition
-and starts polling until it succeeds.
-Each attempt reads the source once; returning the result needs no extra read.
+`paid` is a `Condition<Payment, Payment>`. `until` polls one condition, reading the
+source once per attempt and returning the result without another read.
 
-Configurations and conditions are immutable and reusable. Each terminal call
-starts fresh timing and condition execution state.
+Immutable configurations and conditions are reusable. Each terminal call starts
+fresh timing and execution state.
 
-Execution stays on the calling platform or virtual thread, with its `ThreadLocal`
-values. Awium creates no worker. Callers manage synchronization of shared mutable
-values.
+Execution stays on the calling platform or virtual thread with its `ThreadLocal`
+values. Callers synchronize shared mutable values; Awium creates no worker.
 
 ## Sources
 
 Pass a lambda or method reference; direct values are not accepted. Sources may
 throw checked exceptions. Both wait modes accept the same source types and timing settings.
 
-Awium keeps source values by reference, without copying or freezing them. Return
-copies from the source when you need independent snapshots.
+Awium retains source references. Return copies when independent snapshots are needed.
 
 A stored JDK `Callable` selects the general value overload. Pass it as a method
 reference to select the container overload:
@@ -50,8 +47,7 @@ All extend `Callable`.
 | Wildcard method reference selects the general overload | Use `await(() -> repository.findAllView())` or a typed view. |
 
 `CollectionViewSource<ELEMENT, VALUES>` and `MapViewSource<KEY, VALUE, ENTRIES>`
-declare the complete container type and selected bound without copying data.
-The [condition guide](../../awium-conditions/docs/conditions.md) shows concrete selectors.
+declare container types and selected bounds. See [selector examples](../../awium-conditions/docs/conditions.md).
 
 ## Timing
 
@@ -61,11 +57,11 @@ The [condition guide](../../awium-conditions/docs/conditions.md) shows concrete 
 | `upTo(timeout)` | 10 s | Positive |
 | `persisting(duration)` | Zero: disabled | Non-negative |
 
-Settings accept `Duration` in any order; the last value wins. Awium validates durations immediately.
+Settings accept `Duration` in any order, validate immediately, and use the last value.
 
-- Unless interrupted, the first attempt starts immediately. The timeout cannot
-  cancel it. Later attempts must start and finish before the acquisition deadline;
-  late results remain in diagnostics but cannot satisfy the wait.
+- Unless interrupted, the first attempt starts immediately. The timeout cannot cancel
+  callbacks. Acquisition attempts succeed only if they finish before the deadline;
+  late results remain in diagnostics, and no further attempts start.
 - Intervals may exceed the timeout; parking is capped at the remaining acquisition time.
 - After success, `persisting` keeps checking for its duration, possibly beyond `upTo`.
   Any persistence mismatch fails immediately.
