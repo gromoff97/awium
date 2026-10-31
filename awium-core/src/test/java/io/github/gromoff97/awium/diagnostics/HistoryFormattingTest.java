@@ -1,25 +1,24 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.diagnostics;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
-
-import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.result.ConditionHistory;
+import io.github.gromoff97.awium.support.FakeTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
-import static io.github.gromoff97.awium.AwaitTestAccess.failure;
-import static io.github.gromoff97.awium.AwaitTestAccess.observation;
-import static io.github.gromoff97.awium.support.TestConditions.accepted;
-import static io.github.gromoff97.awium.support.TestConditions.check;
-import static io.github.gromoff97.awium.support.TestConditions.expected;
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
 import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
+import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
+import static io.github.gromoff97.awium.support.AwaitAssertions.observation;
+import static io.github.gromoff97.awium.support.TestConditions.accepted;
+import static io.github.gromoff97.awium.support.TestConditions.check;
+import static io.github.gromoff97.awium.support.TestConditions.expected;
 import static java.time.Duration.ofNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;

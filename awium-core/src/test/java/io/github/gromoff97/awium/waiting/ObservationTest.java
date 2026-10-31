@@ -1,8 +1,6 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.waiting;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
-
-import io.github.gromoff97.awium.support.FakeTime;
+import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.execution.WaitCompletion;
 import io.github.gromoff97.awium.function.CheckedFunction;
@@ -11,6 +9,7 @@ import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.support.FakeTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -32,15 +31,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
-import static io.github.gromoff97.awium.AwaitTestAccess.failure;
-import static io.github.gromoff97.awium.AwaitTestAccess.observation;
-import static io.github.gromoff97.awium.AwaitTestAccess.start;
-import static io.github.gromoff97.awium.AwaitTestAccess.uncontrolled;
-import static io.github.gromoff97.awium.support.TestConditions.check;
-import static io.github.gromoff97.awium.support.TestConditions.checkPerWait;
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.execution.WaitCompletion.Uncontrolled;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
@@ -55,6 +48,13 @@ import static io.github.gromoff97.awium.result.AwaitFailure.Reason.SOURCE_FAILED
 import static io.github.gromoff97.awium.result.AwaitResult.Failed;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
+import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
+import static io.github.gromoff97.awium.support.AwaitAssertions.observation;
+import static io.github.gromoff97.awium.support.AwaitAssertions.uncontrolled;
+import static io.github.gromoff97.awium.support.ConditionTestRuntime.start;
+import static io.github.gromoff97.awium.support.TestConditions.check;
+import static io.github.gromoff97.awium.support.TestConditions.checkPerWait;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static java.lang.Thread.sleep;

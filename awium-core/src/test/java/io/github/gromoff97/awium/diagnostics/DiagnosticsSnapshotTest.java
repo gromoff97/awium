@@ -1,9 +1,7 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.diagnostics;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
-
-import io.github.gromoff97.awium.support.FakeTime;
-import org.junit.jupiter.params.provider.CsvSource;
+import io.github.gromoff97.awium.AwaitCondition;
+import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.AwaitCondition.Reference;
 import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.execution.ConditionRun;
@@ -17,6 +15,7 @@ import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
 import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.support.FakeTime;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -29,6 +28,7 @@ import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -36,13 +36,8 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
-import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.support.ConditionTestRuntime.diagnosticCondition;
-import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-import static io.github.gromoff97.awium.support.TestConditions.accepted;
-import static io.github.gromoff97.awium.support.TestConditions.check;
-import static io.github.gromoff97.awium.support.TestConditions.expected;
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.PERSISTENCE;
 import static io.github.gromoff97.awium.execution.WaitCompletion.*;
@@ -52,6 +47,12 @@ import static io.github.gromoff97.awium.result.Attempt.Operation;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.support.AwaitAssertions.assertFailure;
+import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
+import static io.github.gromoff97.awium.support.ConditionTestRuntime.diagnosticCondition;
+import static io.github.gromoff97.awium.support.TestConditions.accepted;
+import static io.github.gromoff97.awium.support.TestConditions.check;
+import static io.github.gromoff97.awium.support.TestConditions.expected;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static java.time.Duration.ofNanos;
@@ -272,7 +273,7 @@ class DiagnosticsSnapshotTest {
                     Mismatch: business mismatch
 
                 Timing: elapsed 3 s; timeout 2 s; interval 1 s
-                Cause: io.github.gromoff97.awium.DiagnosticsSnapshotTest$CountingAssertion: assertion failed""", failure.getMessage());
+                Cause: io.github.gromoff97.awium.diagnostics.DiagnosticsSnapshotTest$CountingAssertion: assertion failed""", failure.getMessage());
         assertEquals(1, assertion.calls);
     }
 
@@ -727,7 +728,6 @@ class DiagnosticsSnapshotTest {
         }
     }
 
-
     @ParameterizedTest(name = "tryAwait={0}, reference={1}")
     @CsvSource({"false,scalar", "true,scalar", "false,array", "true,array", "false,list", "true,list", "false,entry", "true,entry"})
     void renderingPreservesInterruptionBetweenFieldsButUsesTheFinalFlagWithinOneReference(boolean capture, String shape) {
@@ -760,7 +760,7 @@ class DiagnosticsSnapshotTest {
         };
         var check = new AwaitCondition.PreservingCondition<>("ready",
                 new Reference<>("Expected", expected),
-                value -> unsatisfied("not ready", original));
+                value -> unsatisfied("not ready", original)) {};
         var waiting = timedAwait(() -> clearing, config(1, 2, 0), time, time);
         AwaitFailure failure = capture
                 ? failure(diagnostic(waiting).until(check))

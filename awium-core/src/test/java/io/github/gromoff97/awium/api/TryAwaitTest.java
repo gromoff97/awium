@@ -1,9 +1,10 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.api;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
-
-import io.github.gromoff97.awium.support.FakeTime;
+import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.ValueAwait;
 import io.github.gromoff97.awium.result.AwaitResult;
+import io.github.gromoff97.awium.support.AwaitAssertions;
+import io.github.gromoff97.awium.support.FakeTime;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
@@ -11,22 +12,23 @@ import org.junit.jupiter.api.Test;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
-import static io.github.gromoff97.awium.AwaitTestAccess.observation;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedTryAwait;
-import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-import static io.github.gromoff97.awium.support.TestConditions.accepted;
-import static io.github.gromoff97.awium.support.TestConditions.check;
-import static io.github.gromoff97.awium.support.TestConditions.matching;
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
 import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
 import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.support.AwaitAssertions.assertFailure;
+import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
+import static io.github.gromoff97.awium.support.AwaitAssertions.observation;
+import static io.github.gromoff97.awium.support.TestConditions.accepted;
+import static io.github.gromoff97.awium.support.TestConditions.check;
+import static io.github.gromoff97.awium.support.TestConditions.matching;
 import static java.time.Duration.ofNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
@@ -64,7 +66,7 @@ class TryAwaitTest {
 
         assertEquals("boundary", result.orThrow());
         assertThat(result.conditions().getFirst().attempts().keySet()).containsExactly(1L, 2L, 3L);
-        assertThat(attempts(result)).extracting(AwaitTestAccess::observation).containsExactlyElementsOf(results);
+        assertThat(attempts(result)).extracting(AwaitAssertions::observation).containsExactlyElementsOf(results);
     }
 
     @Test

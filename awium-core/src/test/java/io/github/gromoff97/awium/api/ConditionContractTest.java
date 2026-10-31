@@ -9,7 +9,7 @@ import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.support.FakeTime;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
+import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;

@@ -24,9 +24,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
-import static io.github.gromoff97.awium.AwaitTestAccess.observation;
-import static io.github.gromoff97.awium.AwaitTestAccess.start;
-import static io.github.gromoff97.awium.AwaitTestAccess.uncontrolled;
+import static io.github.gromoff97.awium.support.AwaitAssertions.observation;
+import static io.github.gromoff97.awium.support.ConditionTestRuntime.start;
+import static io.github.gromoff97.awium.support.AwaitAssertions.uncontrolled;
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.*;
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase;
 import static io.github.gromoff97.awium.execution.WaitCompletion.*;

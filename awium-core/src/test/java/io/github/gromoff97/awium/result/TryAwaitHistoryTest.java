@@ -1,12 +1,11 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.result;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
-
-import io.github.gromoff97.awium.support.FakeTime;
+import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitResult;
 import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.support.FakeTime;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -14,17 +13,18 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
-import static io.github.gromoff97.awium.AwaitTestAccess.failure;
-import static io.github.gromoff97.awium.AwaitTestAccess.observation;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedTryAwait;
-import static io.github.gromoff97.awium.support.TestConditions.accepted;
-import static io.github.gromoff97.awium.support.TestConditions.check;
-import static io.github.gromoff97.awium.support.TestConditions.expected;
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
 import static io.github.gromoff97.awium.result.AwaitResult.Succeeded;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
+import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
+import static io.github.gromoff97.awium.support.AwaitAssertions.observation;
+import static io.github.gromoff97.awium.support.TestConditions.accepted;
+import static io.github.gromoff97.awium.support.TestConditions.check;
+import static io.github.gromoff97.awium.support.TestConditions.expected;
 import static java.time.Duration.ofNanos;
 import static java.util.stream.IntStream.range;
 import static java.util.stream.Stream.concat;

@@ -1,10 +1,8 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.waiting;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
-
-import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.support.FakeTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -22,14 +20,15 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
-import static io.github.gromoff97.awium.AwaitTestAccess.observation;
-import static io.github.gromoff97.awium.support.TestConditions.check;
-import static io.github.gromoff97.awium.support.TestConditions.checkPerWait;
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.INTERRUPTED;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
+import static io.github.gromoff97.awium.support.AwaitAssertions.observation;
+import static io.github.gromoff97.awium.support.TestConditions.check;
+import static io.github.gromoff97.awium.support.TestConditions.checkPerWait;
 import static java.lang.System.nanoTime;
 import static java.lang.Thread.State.*;
 import static java.lang.Thread.currentThread;

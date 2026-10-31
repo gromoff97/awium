@@ -1,8 +1,5 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.diagnostics;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
-
-import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.execution.ExecutionStep;
 import io.github.gromoff97.awium.execution.WaitCompletion;
@@ -11,6 +8,7 @@ import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.ConditionHistory;
+import io.github.gromoff97.awium.support.FakeTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +16,6 @@ import java.util.TreeMap;
 import java.util.function.Function;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -28,10 +25,7 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitCondition.Reference;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
-import static io.github.gromoff97.awium.AwaitTestAccess.failure;
-import static io.github.gromoff97.awium.support.ConditionTestRuntime.diagnosticCondition;
-import static io.github.gromoff97.awium.support.TestConditions.check;
-import static io.github.gromoff97.awium.support.TestConditions.expected;
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.PERSISTENCE;
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase;
@@ -53,24 +47,18 @@ import static io.github.gromoff97.awium.result.AwaitFailure.Reason.WAIT_FAILED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.values;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason;
 import static io.github.gromoff97.awium.result.AwaitResult.Failed;
+import static io.github.gromoff97.awium.support.AwaitAssertions.assertFailure;
+import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
+import static io.github.gromoff97.awium.support.ConditionTestRuntime.diagnosticCondition;
+import static io.github.gromoff97.awium.support.TestConditions.check;
+import static io.github.gromoff97.awium.support.TestConditions.expected;
 import static java.lang.Thread.interrupted;
 import static java.time.Duration.ofNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
-class FailureTaxonomyTest {
-
-    static Throwable assertFailure(Reason reason, Executable executable) {
-        Throwable thrown = switch (reason) {
-            case TIMEOUT, PERSISTENCE_FAILED -> assertThrows(AwaitAssertionError.class, executable);
-            default -> assertThrows(AwaitExecutionException.class, executable);
-        };
-        AwaitFailure failure = thrown instanceof AwaitAssertionError assertion
-                ? assertion.failure() : ((AwaitExecutionException) thrown).failure();
-        assertEquals(reason, failure.reason());
-        return thrown;
-    }
+class FailureDiagnosticsTest {
 
     @Test
     void diagnosticFailureRetainsBothOriginalCausesWithoutMutatingThem() {

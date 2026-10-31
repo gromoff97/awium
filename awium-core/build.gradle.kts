@@ -51,7 +51,7 @@ pitest {
         "io.github.gromoff97.awium.*CompilationContractTest",
         "io.github.gromoff97.awium.architecture.CoreArchitectureTest",
         "io.github.gromoff97.awium.api.PublicSurfaceTest",
-        "io.github.gromoff97.awium.ThreadIntegrationTest",
+        "io.github.gromoff97.awium.waiting.ThreadIntegrationTest",
     )
     pitestVersion = "1.25.9"
     junit5PluginVersion = "1.2.3"

@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.observation;
+import static io.github.gromoff97.awium.support.AwaitAssertions.observation;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static java.time.Duration.ZERO;
 import static java.time.Duration.ofNanos;

@@ -1,11 +1,9 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.api;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
-
+import io.github.gromoff97.awium.Await;
+import io.github.gromoff97.awium.AwaitCondition;
+import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.support.FakeTime;
-import static io.github.gromoff97.awium.Await.tryAwait;
-import io.github.gromoff97.awium.function.CheckedBiPredicate;
-import io.github.gromoff97.awium.function.CheckedPredicate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -16,13 +14,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import static io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
-import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
+import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
+import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
+import static io.github.gromoff97.awium.support.AwaitAssertions.assertFailure;
 import static io.github.gromoff97.awium.support.TestConditions.accepted;
 import static io.github.gromoff97.awium.support.TestConditions.expected;
-import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
-import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;

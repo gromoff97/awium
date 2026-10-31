@@ -1,6 +1,9 @@
 package io.github.gromoff97.awium.support;
 
+import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.execution.ConditionExecution;
+import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.result.ConditionResult;
 
@@ -9,6 +12,10 @@ import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public final class ConditionTestRuntime {
+
+    public static <INPUT, RESULT> ConditionRun<INPUT, RESULT> start(AwaitCondition condition) {
+        return ConditionExecution.start(condition, false);
+    }
 
     public static Condition<Object, Object> diagnosticCondition(String description, Reference<?> reference) {
         return new DefinedCondition<>(description, reference, () -> ConditionResult::satisfied);

@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
-import static io.github.gromoff97.awium.AwaitTestAccess.failure;
+import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
 import static io.github.gromoff97.awium.support.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.execution.ConditionExecution.bind;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
