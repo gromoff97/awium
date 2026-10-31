@@ -9,6 +9,7 @@ import io.github.gromoff97.awium.conditions.Conditions.equalTo
 import io.github.gromoff97.awium.conditions.Conditions.notEqualTo
 import io.github.gromoff97.awium.conditions.OptionalConditions.hasValue
 import io.github.gromoff97.awium.conditions.support.Directional
+import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import java.util.Optional
 import org.assertj.core.api.Assertions.assertThatNullPointerException
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -16,6 +17,15 @@ import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 
 class HasValueTest {
+    @Test
+    fun `a predicate is called only for present values`() {
+        val checked = mutableListOf<String>()
+        val execution = bind<Optional<String>, String>(hasValue { value: String -> checked += value; value == "ready" })
+        execution.probe(Optional.empty())
+        execution.probe(Optional.of("ready"))
+        assertEquals(listOf("ready"), checked)
+    }
+
     @Test
     fun `rejects null`() {
         rejection(hasValue(equalTo("1")), null)

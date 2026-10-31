@@ -16,6 +16,16 @@ import org.junit.jupiter.api.Test
 
 class ValueForConditionTest {
     @Test
+    fun `a predicate is called only when the key is present`() {
+        val checked = mutableListOf<String>()
+        val execution = bind<Map<String, String>, String>(valueFor("key") { value: String -> checked += value; value == "ready" })
+        execution.probe(emptyMap())
+        execution.probe(mapOf("key" to "pending"))
+        execution.probe(mapOf("key" to "ready"))
+        assertEquals(listOf("pending", "ready"), checked)
+    }
+
+    @Test
     fun `returns the original value for the selected key`() {
         val value = BigDecimal("42.00")
         assertSame(value, result(evaluate(valueFor("key"), mapOf("other" to 0, "key" to value))))
