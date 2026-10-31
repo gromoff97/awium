@@ -1,18 +1,16 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.ConditionResult;
-import io.github.gromoff97.awium.function.CheckedFunction;
 import io.github.gromoff97.awium.function.CheckedPredicate;
-import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.internal.AwaitAttempt;
 import io.github.gromoff97.awium.internal.ConditionExecution;
+import io.github.gromoff97.awium.internal.ProbeFailure;
 import io.github.gromoff97.awium.internal.SequenceExecution;
+import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
-import java.util.stream.Stream;
 
 import static io.github.gromoff97.awium.Condition.ApplicableCondition;
 import static io.github.gromoff97.awium.Condition.Captured;
@@ -21,9 +19,14 @@ import static io.github.gromoff97.awium.Condition.PreservingCondition;
 import static io.github.gromoff97.awium.Condition.Reference;
 import static io.github.gromoff97.awium.Condition.SelectedCondition;
 import static io.github.gromoff97.awium.Condition.Typed;
+import static io.github.gromoff97.awium.Condition.required;
+import static io.github.gromoff97.awium.internal.ProbeFailure.locatedFailure;
+import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Stream.concat;
 import static java.util.stream.StreamSupport.stream;
 
 final class ConditionSupport {
@@ -35,14 +38,18 @@ final class ConditionSupport {
         return bind((Check) condition);
     }
 
-    // Closed selectors and comparisons get their result types from their factory and terminal bounds.
+    // Factories and terminal bounds establish input and result types before binding.
     static <INPUT, RESULT> ConditionExecution<INPUT, RESULT> bind(Check condition) {
-        return new ConditionExecution<>(Condition.required(condition), condition.evaluatorFactory);
+        return new ConditionExecution<>(required(condition).evaluatorFactory);
     }
 
-    static <INPUT> SequenceExecution<INPUT, INPUT> bind(Captured condition) {
-        return SequenceExecution.captured(Condition.required(condition),
-                stage -> ConditionExecution.observing(stage, stage.evaluatorFactory));
+    static <INPUT, RESULT> SequenceExecution<INPUT, RESULT> sequence(Check condition) {
+        return new SequenceExecution<>(List.of(bind(condition)));
+    }
+
+    static <INPUT> SequenceExecution<INPUT, INPUT> sequence(Captured<?> condition) {
+        return new SequenceExecution<>(required(condition).stages().stream()
+                .map(stage -> ConditionExecution.<INPUT>observing(stage.evaluatorFactory)).toList());
     }
 
     enum Quantifier {
@@ -71,7 +78,7 @@ final class ConditionSupport {
             };
         }
 
-        private boolean satisfied(boolean stopped) {
+        private boolean isSatisfied(boolean stopped) {
             return switch (this) {
                 case ALL, NONE -> !stopped;
                 case ANY -> stopped;
@@ -79,30 +86,19 @@ final class ConditionSupport {
         }
     }
 
-    static <INPUT, RESULT> Typed<INPUT, RESULT> condition(String description, Reference<?> reference,
-            AwaitAttempt<? super INPUT, ? extends RESULT> evaluation) {
-        var condition = new Typed<INPUT, RESULT>(description, reference,
-                () -> evaluation);
-        requireNonNull(evaluation, "evaluation must not be null");
-        return condition;
-    }
-
     static <INPUT> PreservingCondition<INPUT> preserving(String description,
-            CheckedFunction<? super INPUT, ? extends ConditionResult<?>> evaluator) {
+            AwaitAttempt<? super INPUT, ? extends INPUT> evaluator) {
         return preserving(description, null, evaluator);
     }
 
     static <INPUT> PreservingCondition<INPUT> preserving(String description, Reference<?> reference,
-            CheckedFunction<? super INPUT, ? extends ConditionResult<?>> evaluator) {
-        var definition = condition(description, reference, (INPUT actual) ->
-                AttemptResult.of(evaluator.apply(actual)).mapSatisfied(ignored -> actual));
-        requireNonNull(evaluator, "evaluation must not be null");
-        return new PreservingCondition<>(definition);
+            AwaitAttempt<? super INPUT, ? extends INPUT> evaluator) {
+        return new PreservingCondition<>(description, reference, evaluator);
     }
 
     static <INPUT> SelectedCondition<INPUT> selected(String description,
             AwaitAttempt<? super INPUT, ?> evaluator) {
-        return new SelectedCondition<>(condition(description, null, evaluator));
+        return new SelectedCondition<>(new Typed<>(description, null, evaluator));
     }
 
     static <VALUE> Reference<VALUE> expectedReference(VALUE value) {
@@ -114,54 +110,46 @@ final class ConditionSupport {
             Function<? super INPUT, ? extends Iterable<? extends ELEMENT>> elements) {
         String elementsDescription = subject + " " + items;
         String mismatch = quantifier.mismatch(elementsDescription);
-        Condition.required(nested);
-        return new PreservingCondition<>(new Typed<>(nested, quantifier.description(elementsDescription), nested.references(), () -> {
+        required(nested);
+        return new PreservingCondition<>(nested, quantifier.description(elementsDescription), () -> {
             ConditionExecution<ELEMENT, ?> evaluator = bind(nested);
-            return actual -> actual == null ? AttemptResult.unsatisfied(subject + " was null")
+            return actual -> actual == null ? unsatisfied(subject + " was null")
                     : evaluateQuantifier(actual, elements, evaluator, quantifier, mismatch, elementsDescription);
-        }));
+        });
     }
 
-    private static <INPUT, ELEMENT> AttemptResult<INPUT> evaluateQuantifier(
+    private static <INPUT, ELEMENT> ConditionResult<INPUT> evaluateQuantifier(
             INPUT actual, Function<? super INPUT, ? extends Iterable<? extends ELEMENT>> elements,
             ConditionExecution<? super ELEMENT, ?> evaluator,
-            Quantifier quantifier, String mismatch, String elementsDescription) {
-        AttemptResult<?> last = null;
+            Quantifier quantifier, String mismatch, String elementsDescription) throws Throwable {
+        ConditionResult<?> last = null;
         long checked = 0;
         try {
             for (ELEMENT value : elements.apply(actual)) {
                 checked++;
-                var evaluated = evaluator.probe(value);
-                if (evaluated instanceof AttemptResult.Uncontrolled<?> failure) {
-                    return nestedFailure(elementsDescription + "[" + (checked - 1) + "]", failure);
-                }
+                var evaluated = evaluator.probeAt(value, elementsDescription + "[" + (checked - 1) + "]");
                 last = evaluated;
-                if (quantifier.stops(evaluated instanceof AttemptResult.Satisfied<?>)) {
-                    return quantifiedResult(actual, quantifier.satisfied(true), mismatch, checked, evaluated);
+                if (quantifier.stops(evaluated instanceof Satisfied<?>)) {
+                    return quantifiedResult(actual, quantifier.isSatisfied(true), mismatch, checked, evaluated);
                 }
             }
+        } catch (ProbeFailure failure) {
+            throw failure;
         } catch (Throwable failure) {
-            return nestedFailure(elementsDescription + " (checked " + checked + ")",
-                    AttemptResult.uncontrolled(failure));
+            throw locatedFailure(elementsDescription + " (checked " + checked + ")", failure);
         }
-        return quantifiedResult(actual, quantifier.satisfied(false), mismatch, checked, last);
+        return quantifiedResult(actual, quantifier.isSatisfied(false), mismatch, checked, last);
     }
 
-    private static <INPUT> AttemptResult<INPUT> quantifiedResult(INPUT actual, boolean successful,
-            String mismatch, long checked, AttemptResult<?> evaluated) {
-        return successful ? AttemptResult.satisfied(actual)
+    private static <INPUT> ConditionResult<INPUT> quantifiedResult(INPUT actual, boolean successful,
+            String mismatch, long checked, ConditionResult<?> evaluated) {
+        return successful ? satisfied(actual)
                 : nestedMismatch(mismatch + " (checked " + checked + ")", evaluated);
     }
 
-    private static <RESULT> AttemptResult.Unsatisfied<RESULT> nestedMismatch(String mismatch, AttemptResult<?> evaluated) {
-        if (!(evaluated instanceof AttemptResult.Unsatisfied<?> failure)) return AttemptResult.unsatisfied(mismatch);
-        return AttemptResult.unsatisfied(failure.mismatch() == null ? mismatch : mismatch + ": " + failure.mismatch(), failure.cause());
-    }
-
-    private static <RESULT> AttemptResult.Uncontrolled<RESULT> nestedFailure(
-            String location, AttemptResult.Uncontrolled<?> failure) {
-        String path = failure.location() == null ? location : location + " → " + failure.location();
-        return new AttemptResult.Uncontrolled<>(failure.cause(), path);
+    private static <RESULT> Unsatisfied<RESULT> nestedMismatch(String mismatch, ConditionResult<?> evaluated) {
+        if (!(evaluated instanceof Unsatisfied<?> failure)) return unsatisfied(mismatch);
+        return unsatisfied(failure.mismatch() == null ? mismatch : mismatch + ": " + failure.mismatch(), failure.cause());
     }
 
     static <VALUE> Reference<VALUE> unexpectedReference(VALUE value) {
@@ -177,29 +165,25 @@ final class ConditionSupport {
     static <INPUT, VALUE, RESULT> Typed<INPUT, RESULT> compose(
             String selection, Typed<? super VALUE, RESULT> nested, Check extractionCondition) {
         return compose(selection, nested, extractionCondition,
-                () -> ConditionSupport.bind(nested));
+                () -> bind(nested));
     }
 
     private static <INPUT, VALUE, RESULT> Typed<INPUT, RESULT> compose(String selection, Condition nested,
             Check extractionCondition,
             Supplier<? extends ConditionExecution<? super VALUE, ? extends RESULT>> evaluatorFactory) {
-        Condition.required(nested);
-        var references = Stream.concat(extractionCondition.references().stream(), nested.references().stream()).toList();
+        required(nested);
+        var references = concat(extractionCondition.references().stream(), nested.references().stream()).toList();
         return new Typed<>(nested, selection, references, () -> {
             // Bare selectors obtain their value type from the enclosing selector factory's source constraints.
             var extraction = ConditionSupport.<INPUT, VALUE>bind(extractionCondition);
             var evaluator = evaluatorFactory.get();
             return actual -> switch (extraction.probe(actual)) {
-                case AttemptResult.Satisfied<? extends VALUE> success -> {
-                    var evaluated = evaluator.probe(success.value());
-                    if (evaluated instanceof AttemptResult.Uncontrolled<?> failure) {
-                        yield nestedFailure(selection, failure);
-                    }
-                    yield evaluated instanceof AttemptResult.Unsatisfied<?>
+                case Satisfied<? extends VALUE> success -> {
+                    var evaluated = evaluator.probeAt(success.value(), selection);
+                    yield evaluated instanceof Unsatisfied<?>
                             ? nestedMismatch(selection, evaluated) : evaluated;
                 }
-                case AttemptResult.Unsatisfied<?> mismatch -> AttemptResult.unsatisfied(mismatch.mismatch(), mismatch.cause());
-                case AttemptResult.Uncontrolled<?> failure -> new AttemptResult.Uncontrolled<>(failure.cause(), failure.location());
+                case Unsatisfied<?> mismatch -> unsatisfied(mismatch.mismatch(), mismatch.cause());
             };
         });
     }
@@ -207,14 +191,14 @@ final class ConditionSupport {
     static <INPUT> PreservingCondition<INPUT> preserving(String description, String mismatch,
             CheckedPredicate<? super INPUT> matches) {
         return preserving(description, actual -> matches.test(actual)
-                ? satisfied(null) : unsatisfied(mismatch));
+                ? satisfied(actual) : unsatisfied(mismatch));
     }
 
     static <INPUT> PreservingCondition<INPUT> preservingNonNull(String subject, String description,
             String mismatch, Reference<?> reference, CheckedPredicate<? super INPUT> matches) {
         return preserving(description, reference, actual -> actual == null
                 ? unsatisfied(subject + " was null")
-                : matches.test(actual) ? satisfied(null) : unsatisfied(mismatch));
+                : matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch));
     }
 
     static <INPUT> PreservingCondition<INPUT> sized(String subject, String measure, int bound, IntPredicate matches,
@@ -227,17 +211,17 @@ final class ConditionSupport {
                 return unsatisfied(subject + " was null");
             }
             int size = sizeOf.applyAsInt(actual);
-            return matches.test(size) ? satisfied(null) : unsatisfied(subject + " " + measure + " was " + size);
+            return matches.test(size) ? satisfied(actual) : unsatisfied(subject + " " + measure + " was " + size);
         });
     }
 
-    static <ELEMENT> AttemptResult<ELEMENT> single(String subject, Iterable<? extends ELEMENT> values) {
-        if (values == null) return AttemptResult.unsatisfied(subject + " was null");
+    static <ELEMENT> ConditionResult<ELEMENT> single(String subject, Iterable<? extends ELEMENT> values) {
+        if (values == null) return unsatisfied(subject + " was null");
         var iterator = values.iterator();
-        if (!iterator.hasNext()) return AttemptResult.unsatisfied(subject + " size was 0");
+        if (!iterator.hasNext()) return unsatisfied(subject + " size was 0");
         ELEMENT value = iterator.next();
-        return iterator.hasNext() ? AttemptResult.unsatisfied(subject + " size was greater than 1")
-                : AttemptResult.satisfied(value);
+        return iterator.hasNext() ? unsatisfied(subject + " size was greater than 1")
+                : satisfied(value);
     }
 
     static void validateRange(int lowerBound, int upperBound, String measure) {

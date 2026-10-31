@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.AttemptResult;
+import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,12 +15,10 @@ import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.Condition.Typed;
 import static io.github.gromoff97.awium.ConditionSupport.bind;
-import static io.github.gromoff97.awium.ConditionTestRuntime.evaluated;
 import static io.github.gromoff97.awium.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.Conditions.conditionPerWait;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static io.github.gromoff97.awium.OptionalConditions.hasValue;
-import static io.github.gromoff97.awium.internal.AttemptResult.Uncontrolled;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.lang.Thread.currentThread;
@@ -30,6 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 class ConditionExecutionTest {
 
@@ -39,14 +39,14 @@ class ConditionExecutionTest {
     }
 
     @Test
-    void eachProbeReturnsAnIndependentResultAndSharesOneLazyEvaluator() {
+    void eachProbeReturnsAnIndependentResultAndSharesOneLazyEvaluator() throws Throwable {
         int[] factories = {0};
         var observations = new ArrayList<String>();
         Typed<String, Integer> condition = new Typed<>("count calls", null, () -> {
             factories[0]++;
             return actual -> {
                 observations.add(actual);
-                return AttemptResult.satisfied(observations.size());
+                return ConditionResult.satisfied(observations.size());
             };
         });
         var execution = bind(condition);
@@ -71,40 +71,34 @@ class ConditionExecutionTest {
                 () -> actual -> switch (++calls[0]) {
                     case 1 -> throw failure;
                     case 2 -> null;
-                    default -> AttemptResult.satisfied(actual.length());
+                    default -> ConditionResult.satisfied(actual.length());
                 });
         var execution = bind(condition);
 
-        var first = execution.probe("ready");
-        var second = execution.probe("ready");
-        var third = execution.probe("ready");
-
-        assertSame(failure, assertInstanceOf(Uncontrolled.class, first).cause());
-        var invalid = assertInstanceOf(Uncontrolled.class, second).cause();
-        assertInstanceOf(NullPointerException.class, invalid);
-        assertEquals("condition returned null evaluation", invalid.getMessage());
-        assertEquals(5, result(third));
+        assertSame(failure, assertThrows(Throwable.class, () -> execution.probe("ready")));
+        var invalid = assertThrows(NullPointerException.class, () -> execution.probe("ready"));
+        assertEquals("condition returned null ConditionResult", invalid.getMessage());
+        assertEquals(5, result(assertDoesNotThrow(() -> execution.probe("ready"))));
     }
 
     @Test
-    void nullIsAValidObservation() {
+    void nullIsAValidObservation() throws Throwable {
         Typed<String, String> condition = new Typed<>("preserve null", null,
-                () -> AttemptResult::satisfied);
+                () -> ConditionResult::satisfied);
         assertNull(result(bind(condition).probe(null)));
     }
 
     @Test
-    void interruptedCallDoesNotInitializeTheConditionAndCanBeRetriedAfterClearingTheFlag() {
+    void interruptedCallDoesNotInitializeTheConditionAndCanBeRetriedAfterClearingTheFlag() throws Throwable {
         int[] factories = {0};
         Typed<String, String> condition = new Typed<>("preserve", null, () -> {
             factories[0]++;
-            return AttemptResult::satisfied;
+            return ConditionResult::satisfied;
         });
         var execution = bind(condition);
 
         currentThread().interrupt();
-        var interruption = assertInstanceOf(Uncontrolled.class, execution.probe("ready"));
-        assertInstanceOf(InterruptedException.class, interruption.cause());
+        assertThrows(InterruptedException.class, () -> execution.probe("ready"));
         assertEquals(0, factories[0]);
         interrupted();
 
@@ -171,14 +165,14 @@ class ConditionExecutionTest {
         Typed<Integer, Integer> ordinary = new Typed<>(
                 "counted", null, () -> {
                     int[] calls = {0};
-                    return ignored -> AttemptResult.satisfied(++calls[0]);
+                    return ignored -> ConditionResult.satisfied(++calls[0]);
                 });
         assertEquals("counted", ordinary.description());
         var first = bind(ordinary);
         var second = bind(ordinary);
 
-        assertEquals(1, result(evaluated(first.probe(0))));
-        assertEquals(2, result(evaluated(first.probe(0))));
-        assertEquals(1, result(evaluated(second.probe(0))));
+        assertEquals(1, result(assertDoesNotThrow(() -> first.probe(0))));
+        assertEquals(2, result(assertDoesNotThrow(() -> first.probe(0))));
+        assertEquals(1, result(assertDoesNotThrow(() -> second.probe(0))));
     }
 }

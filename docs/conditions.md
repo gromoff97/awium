@@ -91,6 +91,7 @@ Use the static factories of `ConditionResult<RESULT>`:
 There is no no-argument success or user-returnable uncontrolled state. The declared
 callback result determines the terminal type: `ConditionResult<CharSequence>`
 yields `CharSequence` even with a `String` source.
+`mapValue(function)` transforms only a satisfied value; mismatches retain their diagnostics.
 
 `condition` reuses its callback. `conditionPerWait` takes a `Callable` creating one
 callback per wait and captured position, on first evaluation. Nested factories wait

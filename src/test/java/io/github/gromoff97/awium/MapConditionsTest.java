@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.AttemptResult;
+import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,8 +38,8 @@ import static io.github.gromoff97.awium.ProbeContainers.ProbeEntry;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.ProbeContainers.once;
 import static io.github.gromoff97.awium.ProbeContainers.sizeOnlyMap;
-import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
-import static io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
 import static java.util.Collections.singletonList;
@@ -238,7 +238,7 @@ class MapConditionsTest {
 
     @Test
     void nullActualShortCircuitsAndAggregateFactoriesValidateInputs() {
-        AttemptResult<?> evaluation = evaluate(
+        ConditionResult<?> evaluation = evaluate(
                 containsAllEntries(map("a", "1")), null);
         assertInstanceOf(Unsatisfied.class, evaluation);
         assertThat(mismatch(evaluation)).isNotBlank();

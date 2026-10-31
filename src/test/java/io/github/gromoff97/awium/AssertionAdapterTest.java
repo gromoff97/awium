@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.function.CheckedConsumer;
-import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
@@ -82,7 +81,7 @@ class AssertionAdapterTest {
                     return satisfied(value);
                 });
 
-        AttemptResult<? extends String> evaluation = evaluate(condition, "42");
+        ConditionResult<? extends String> evaluation = evaluate(condition, "42");
 
         assertEquals("42", result(evaluation));
         assertEquals(1, invocations[0]);
@@ -115,7 +114,7 @@ class AssertionAdapterTest {
             invocations[0]++;
         });
 
-        AttemptResult<? extends String> evaluation = evaluate(condition, actual);
+        ConditionResult<? extends String> evaluation = evaluate(condition, actual);
 
         assertSame(actual, result(evaluation));
         assertEquals(1, invocations[0]);

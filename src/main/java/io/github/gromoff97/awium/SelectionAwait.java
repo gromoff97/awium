@@ -34,6 +34,6 @@ public sealed class SelectionAwait<OBSERVED, ELEMENT> extends ValueAwait<OBSERVE
     }
 
     public ELEMENT until(SelectedCondition<? super OBSERVED> condition) {
-        return complete(ConditionSupport.bind(condition));
+        return complete(condition);
     }
 }

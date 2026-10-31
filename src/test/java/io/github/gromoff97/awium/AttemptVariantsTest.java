@@ -13,8 +13,8 @@ import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
 import static io.github.gromoff97.awium.result.Attempt.Operation.SOURCE;
-import static io.github.gromoff97.awium.result.Attempt.Satisfied;
-import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
+import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
+import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.time.Duration.ofNanos;
@@ -62,7 +62,7 @@ class AttemptVariantsTest {
                 .until(captured(isNull, isNull, isNull));
 
         verify(source, times(2)).call();
-        assertInstanceOf(Satisfied.class, result.conditions().getFirst().attempts().firstEntry().getValue());
+        assertInstanceOf(SatisfiedObservation.class, result.conditions().getFirst().attempts().firstEntry().getValue());
         switch (result.conditions().get(1).attempts().lastEntry().getValue()) {
             case FailedBeforeObservation(var operation, var error) -> {
                 assertSame(cause, error);
@@ -84,7 +84,7 @@ class AttemptVariantsTest {
         assertNull(result.orThrow());
         assertFalse(outcomes.hasNext());
         switch (result.conditions().getFirst().attempts().firstEntry().getValue()) {
-            case Unsatisfied(var observed, var mismatch, var error) -> {
+            case UnsatisfiedObservation(var observed, var mismatch, var error) -> {
                 String actual = observed;
                 assertNull(actual);
                 assertEquals("pending", mismatch);
@@ -92,6 +92,6 @@ class AttemptVariantsTest {
             }
             default -> fail("a returned mismatch must remain a completed check");
         }
-        assertInstanceOf(Satisfied.class, result.conditions().getFirst().attempts().lastEntry().getValue());
+        assertInstanceOf(SatisfiedObservation.class, result.conditions().getFirst().attempts().lastEntry().getValue());
     }
 }

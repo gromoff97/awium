@@ -9,7 +9,9 @@ import java.util.concurrent.Callable;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
-public final class DiagnosticMapAwait<OBSERVED extends Map<?, ?>, ENTRY extends Map.Entry<?, ?>, VALUE>
+import static java.util.Map.Entry;
+
+public final class DiagnosticMapAwait<OBSERVED extends Map<?, ?>, ENTRY extends Entry<?, ?>, VALUE>
         extends DiagnosticSelectionAwait<OBSERVED, ENTRY> {
 
     DiagnosticMapAwait(Callable<? extends OBSERVED> source, WaitConfiguration configuration) {
@@ -38,7 +40,7 @@ public final class DiagnosticMapAwait<OBSERVED extends Map<?, ?>, ENTRY extends 
 
     public AwaitResult<OBSERVED, VALUE> until(
             MapValueCondition<? super OBSERVED> condition) {
-        return capture(ConditionSupport.bind(condition));
+        return capture(condition);
     }
 
 }

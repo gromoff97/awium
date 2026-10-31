@@ -75,7 +75,7 @@ class NestedSelectionTest {
                 singleElement(matches((Payment value) -> !value.paid())),
                 singleElement(matches(Payment::paid))));
         var observation = attempts(result).getLast();
-        assertInstanceOf(Attempt.Unsatisfied.class, observation);
+        assertInstanceOf(Attempt.UnsatisfiedObservation.class, observation);
         assertEquals(1L, result.conditions().getFirst().attempts().lastKey());
         assertEquals(3L, result.conditions().getLast().attempts().lastKey());
     }

@@ -2,14 +2,13 @@ package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.internal.AwaitAttempt;
 import io.github.gromoff97.awium.internal.DiagnosticText;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
-public abstract sealed class Condition
-        permits Condition.Check, Condition.Captured {
+public abstract sealed class Condition {
 
     private final String description;
     private final String explanation;
@@ -115,19 +114,18 @@ public abstract sealed class Condition
         public abstract InputCondition<INPUT> because(String explanation);
     }
 
-    public abstract static sealed class Captured extends Condition
-            permits CapturedSource {
+    public static final class Captured<CHECK extends Check> extends Condition {
 
         private final List<Check> stages;
 
-        private Captured(Check[] conditions) {
+        Captured(Check[] conditions) {
             super("conditions are satisfied in order", List.of(), null);
-            stages = Arrays.stream(requireNonNull(conditions, "conditions must not be null"))
+            stages = stream(requireNonNull(conditions, "conditions must not be null"))
                     .map(Condition::required).toList();
             if (stages.isEmpty()) throw new IllegalArgumentException("conditions must not be empty");
         }
 
-        private Captured(Captured original, String explanation) {
+        private Captured(Captured<CHECK> original, String explanation) {
             super(original, explanation);
             stages = original.stages;
         }
@@ -137,10 +135,17 @@ public abstract sealed class Condition
         }
 
         @Override
-        public abstract Captured because(String explanation);
+        public Captured<CHECK> because(String explanation) {
+            return new Captured<>(this, explanation);
+        }
     }
 
     public static final class Typed<INPUT, RESULT> extends InputCondition<INPUT> {
+
+        Typed(String description, Reference<?> reference, AwaitAttempt<? super INPUT, ? extends RESULT> evaluation) {
+            this(description, reference, () -> evaluation);
+            requireNonNull(evaluation, "evaluation must not be null");
+        }
 
         Typed(String description, Reference<?> reference,
                 Callable<? extends AwaitAttempt<? super INPUT, ? extends RESULT>> evaluatorFactory) {
@@ -165,8 +170,15 @@ public abstract sealed class Condition
     public static final class PreservingCondition<INPUT>
             extends InputCondition<INPUT> implements PreservesObservation {
 
-        PreservingCondition(Typed<INPUT, INPUT> definition) {
-            super(definition);
+        PreservingCondition(String description, Reference<?> reference,
+                AwaitAttempt<? super INPUT, ? extends INPUT> evaluation) {
+            super(description, reference == null ? List.of() : List.of(reference), () -> evaluation, null);
+            requireNonNull(evaluation, "evaluation must not be null");
+        }
+
+        PreservingCondition(Condition nested, String description,
+                Callable<? extends AwaitAttempt<? super INPUT, ? extends INPUT>> evaluatorFactory) {
+            super(description + ": " + required(nested).description, nested.references, evaluatorFactory, nested.explanation);
         }
 
         private PreservingCondition(PreservingCondition<INPUT> original, String explanation) {
@@ -182,8 +194,9 @@ public abstract sealed class Condition
     public static final class ComparisonCondition<EXPECTED>
             extends ApplicableCondition<Object, Reference<? super EXPECTED>> implements PreservesObservation {
 
-        ComparisonCondition(Typed<Object, Object> definition) {
-            super(definition);
+        ComparisonCondition(String description, Reference<?> reference, AwaitAttempt<Object, Object> evaluation) {
+            super(description, List.of(reference), () -> evaluation, null);
+            requireNonNull(evaluation, "evaluation must not be null");
         }
 
         private ComparisonCondition(ComparisonCondition<EXPECTED> original, String explanation) {
@@ -227,22 +240,6 @@ public abstract sealed class Condition
         @Override
         public MapValueCondition<INPUT> because(String explanation) {
             return new MapValueCondition<>(this, explanation);
-        }
-    }
-
-    public static final class CapturedSource<CHECK extends Check> extends Captured {
-
-        CapturedSource(Check[] conditions) {
-            super(conditions);
-        }
-
-        private CapturedSource(CapturedSource<CHECK> original, String explanation) {
-            super(original, explanation);
-        }
-
-        @Override
-        public CapturedSource<CHECK> because(String explanation) {
-            return new CapturedSource<>(this, explanation);
         }
     }
 

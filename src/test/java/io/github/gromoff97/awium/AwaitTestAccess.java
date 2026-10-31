@@ -36,8 +36,8 @@ final class AwaitTestAccess {
 
     static <OBSERVED> OBSERVED observation(Attempt<OBSERVED> attempt) {
         return switch (attempt) {
-            case Attempt.Satisfied<OBSERVED> satisfied -> satisfied.observed();
-            case Attempt.Unsatisfied<OBSERVED> unsatisfied -> unsatisfied.observed();
+            case Attempt.SatisfiedObservation<OBSERVED> satisfied -> satisfied.observed();
+            case Attempt.UnsatisfiedObservation<OBSERVED> unsatisfied -> unsatisfied.observed();
             case Attempt.FailedAfterObservation<OBSERVED> failed -> failed.observed();
             case Attempt.FailedBeforeObservation<OBSERVED> ignored -> fail("expected an observation");
         };

@@ -44,7 +44,7 @@ import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static io.github.gromoff97.awium.OptionalConditions.hasValue;
 import static io.github.gromoff97.awium.ProbeContainers.EntryMap;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
-import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
+import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
@@ -296,7 +296,7 @@ class CompositionDiagnosticsTest {
         var last = attempts(result).getLast();
         var condition = result.conditions().getLast().condition();
         assertEquals(description, condition.description());
-        assertEquals(mismatch, assertInstanceOf(Unsatisfied.class, last).mismatch());
+        assertEquals(mismatch, assertInstanceOf(UnsatisfiedObservation.class, last).mismatch());
     }
 
     @ParameterizedTest
@@ -312,7 +312,7 @@ class CompositionDiagnosticsTest {
             var failure = failure(result);
             var entry = attempts(result).getLast();
             assertEquals(TIMEOUT, failure.reason());
-            assertEquals(mismatch, assertInstanceOf(Unsatisfied.class, entry).mismatch());
+            assertEquals(mismatch, assertInstanceOf(UnsatisfiedObservation.class, entry).mismatch());
         }
         assertSame(selected, selectedResult.conditions().getFirst().condition());
         assertSame(typed, typedResult.conditions().getFirst().condition());

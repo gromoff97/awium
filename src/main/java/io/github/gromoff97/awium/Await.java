@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
+import static java.util.Map.Entry;
 import static java.util.Objects.requireNonNull;
 
 public final class Await {
@@ -24,7 +25,7 @@ public final class Await {
         return new SelectionAwait<>(source, WaitConfiguration.DEFAULT);
     }
 
-    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> MapAwait<ENTRIES, Map.Entry<KEY, VALUE>, VALUE> await(MapSource<ENTRIES> source) {
+    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> MapAwait<ENTRIES, Entry<KEY, VALUE>, VALUE> await(MapSource<ENTRIES> source) {
         return new MapAwait<>(source, WaitConfiguration.DEFAULT);
     }
 
@@ -34,7 +35,7 @@ public final class Await {
     }
 
     public static <KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>
-            MapAwait<ENTRIES, Map.Entry<? extends KEY, ? extends VALUE>, VALUE> await(MapViewSource<KEY, VALUE, ENTRIES> source) {
+            MapAwait<ENTRIES, Entry<? extends KEY, ? extends VALUE>, VALUE> await(MapViewSource<KEY, VALUE, ENTRIES> source) {
         return new MapAwait<>(requireNonNull(source, "source must not be null").delegate(), WaitConfiguration.DEFAULT);
     }
 
@@ -50,7 +51,7 @@ public final class Await {
         return new DiagnosticSelectionAwait<>(source, WaitConfiguration.DEFAULT);
     }
 
-    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> DiagnosticMapAwait<ENTRIES, Map.Entry<KEY, VALUE>, VALUE> tryAwait(MapSource<ENTRIES> source) {
+    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> DiagnosticMapAwait<ENTRIES, Entry<KEY, VALUE>, VALUE> tryAwait(MapSource<ENTRIES> source) {
         return new DiagnosticMapAwait<>(source, WaitConfiguration.DEFAULT);
     }
 
@@ -60,7 +61,7 @@ public final class Await {
     }
 
     public static <KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>
-            DiagnosticMapAwait<ENTRIES, Map.Entry<? extends KEY, ? extends VALUE>, VALUE> tryAwait(MapViewSource<KEY, VALUE, ENTRIES> source) {
+            DiagnosticMapAwait<ENTRIES, Entry<? extends KEY, ? extends VALUE>, VALUE> tryAwait(MapViewSource<KEY, VALUE, ENTRIES> source) {
         return new DiagnosticMapAwait<>(requireNonNull(source, "source must not be null").delegate(), WaitConfiguration.DEFAULT);
     }
 

@@ -90,7 +90,7 @@ class TryAwaitTest {
         assertNull(nullSource.orThrow());
         assertNull(nullPredicate.orThrow());
         var observation = attempts(nullSource).getFirst();
-        assertInstanceOf(Attempt.Satisfied.class, observation);
+        assertInstanceOf(Attempt.SatisfiedObservation.class, observation);
         assertNull(observation(observation));
         assertEquals("payment", selected.orThrow());
     }

@@ -24,8 +24,8 @@ import static io.github.gromoff97.awium.Conditions.isNotNull;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
-import static io.github.gromoff97.awium.result.Attempt.Satisfied;
-import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
+import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
+import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
@@ -54,12 +54,12 @@ class TimingConfigurationTest {
                             dynamicTest(label + "success", () -> {
                                 var result = persistPastSignedNanoseconds(origin, persistence, () -> "ready", () -> satisfied("ready"));
                                 assertEquals(1, attempts(result).size());
-                                assertInstanceOf(Satisfied.class, attempts(result).getLast());
+                                assertInstanceOf(SatisfiedObservation.class, attempts(result).getLast());
                                 assertEquals("ready", result.orThrow());
                             }),
                             dynamicTest(label + "mismatch", () -> {
                                 var result = persistPastSignedNanoseconds(origin, persistence, () -> "ready", () -> unsatisfied("changed"));
-                                assertOverflowFailure(result, Unsatisfied.class, PERSISTENCE_FAILED, null, timing.getValue());
+                                assertOverflowFailure(result, UnsatisfiedObservation.class, PERSISTENCE_FAILED, null, timing.getValue());
                             }),
                             dynamicTest(label + "condition failure", () -> {
                                 var cause = new IllegalStateException("condition failure");

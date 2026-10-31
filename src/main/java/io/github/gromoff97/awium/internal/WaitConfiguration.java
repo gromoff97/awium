@@ -5,13 +5,15 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
+import static java.time.Duration.ofMillis;
+import static java.time.Duration.ofSeconds;
 import static java.util.Objects.requireNonNull;
 
 public record WaitConfiguration(long everyNanos, long upToNanos, long persistenceNanos,
         LongSupplier clock, LongConsumer parker) {
 
     public static final WaitConfiguration DEFAULT = new WaitConfiguration(
-            Duration.ofMillis(100).toNanos(), Duration.ofSeconds(10).toNanos(), 0L,
+            ofMillis(100).toNanos(), ofSeconds(10).toNanos(), 0L,
             System::nanoTime, LockSupport::parkNanos);
 
     public WaitConfiguration {

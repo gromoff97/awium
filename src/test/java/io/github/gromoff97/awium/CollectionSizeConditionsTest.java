@@ -10,7 +10,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.Condition.PreservingCondition;
-import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.CollectionConditions.empty;
 import static io.github.gromoff97.awium.CollectionConditions.hasSize;

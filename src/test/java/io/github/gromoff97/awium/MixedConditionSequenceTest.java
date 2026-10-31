@@ -18,11 +18,11 @@ import static io.github.gromoff97.awium.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static io.github.gromoff97.awium.OptionalConditions.hasValue;
-import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
+import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
 import static io.github.gromoff97.awium.result.AwaitResult.Failed;
-import static io.github.gromoff97.awium.result.AwaitResult.Satisfied;
+import static io.github.gromoff97.awium.result.AwaitResult.Succeeded;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.time.Duration.ofNanos;
@@ -61,7 +61,7 @@ class MixedConditionSequenceTest {
         assertEquals(3, collection.orThrow().getLast().getFirst().stage());
         assertEquals(3, attempts(collection).size());
         assertSame(collections.get(1), observation(attempts(collection).get(1)));
-        assertInstanceOf(Unsatisfied.class, attempts(collection).get(1));
+        assertInstanceOf(UnsatisfiedObservation.class, attempts(collection).get(1));
         assertFalse(collectionSource.hasNext());
 
         var maps = List.of(Map.of("user", CREATED), Map.of("user", PENDING), Map.of("user", READY));
@@ -77,7 +77,7 @@ class MixedConditionSequenceTest {
         assertSame(maps.get(1), observation(retry));
         assertEquals("ready", map.conditions().getLast().condition().explanation());
         assertEquals(2L, map.conditions().getLast().attempts().firstKey());
-        assertInstanceOf(Unsatisfied.class, retry);
+        assertInstanceOf(UnsatisfiedObservation.class, retry);
         assertFalse(mapSource.hasNext());
     }
 
@@ -99,7 +99,7 @@ class MixedConditionSequenceTest {
                         equalTo(CREATED), matches(User::pending),
                         equalTo(READY), matches(User::ready)));
         switch (captured) {
-            case Satisfied(var history, var values) -> {
+            case Succeeded(var history, var values) -> {
                 assertEquals(users, values);
                 assertEquals(3, values.getLast().stage());
                 assertSame(READY, values.getLast());

@@ -1,14 +1,12 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.internal.AwaitAttempt;
-import io.github.gromoff97.awium.internal.AttemptResult;
+import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.internal.ExecutionStep;
-import io.github.gromoff97.awium.internal.SequenceExecution;
 import io.github.gromoff97.awium.internal.WaitCompletion;
 import io.github.gromoff97.awium.internal.WaitConfiguration;
 import io.github.gromoff97.awium.internal.WaitEngine;
 import io.github.gromoff97.awium.result.Attempt;
-import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -25,16 +23,16 @@ import org.junit.jupiter.params.provider.MethodSource;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.observation;
 import static io.github.gromoff97.awium.AwaitTestAccess.uncontrolled;
-import static io.github.gromoff97.awium.ConditionSupport.bind;
-import static io.github.gromoff97.awium.ConditionSupport.condition;
-import static io.github.gromoff97.awium.internal.AttemptResult.satisfied;
-import static io.github.gromoff97.awium.internal.AttemptResult.unsatisfied;
+import static io.github.gromoff97.awium.ConditionSupport.sequence;
+import static io.github.gromoff97.awium.Condition.Typed;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.internal.ExecutionStep.Phase.*;
 import static io.github.gromoff97.awium.internal.ExecutionStep.Phase;
 import static io.github.gromoff97.awium.internal.WaitCompletion.*;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.*;
-import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
+import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.apache.commons.lang3.exception.ExceptionUtils.rethrow;
@@ -48,6 +46,7 @@ import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -62,19 +61,19 @@ class WaitEngineTest {
     }
 
     @Test
-    void alreadyInterruptedWaitOnlyReadsTheClockToRecordItsFailure() {
+    void alreadyInterruptedWaitOnlyReadsTheClockToStartAndRecordItsFailure() {
         LongSupplier clock = mock();
         Callable<String> source = mock();
-        when(clock.getAsLong()).thenReturn(7L);
+        when(clock.getAsLong()).thenReturn(0L, 7L);
         var engine = new WaitEngine<String>(config(1, 10, 0).withTime(clock, time), source,
-                new SequenceExecution<>(bind(Conditions.isNotNull)), 0);
+                sequence(Conditions.isNotNull));
         currentThread().interrupt();
 
         var failure = assertInstanceOf(Uncontrolled.class, engine.waitFor(ignored -> {}));
 
         assertInstanceOf(InterruptedException.class, uncontrolled(WAITING, failure.step().attempt()).cause());
         assertEquals(7L, failure.step().completedAfterNanos());
-        verify(clock).getAsLong();
+        verify(clock, times(2)).getAsLong();
         verifyNoInteractions(source);
     }
 
@@ -89,8 +88,8 @@ class WaitEngineTest {
                     .doAnswer(ignored -> { currentThread().interrupt(); return time.getAsLong(); })
                     .doAnswer(ignored -> time.getAsLong()).when(clock).getAsLong();
         }), () -> { sourceCalls[0]++; return "actual"; },
-                new SequenceExecution<>(bind(Conditions.condition(
-                        "ready", (String actual) -> ConditionResult.satisfied(actual)))), 0).waitFor(ignored -> {});
+                sequence(Conditions.condition(
+                        "ready", (String actual) -> ConditionResult.satisfied(actual)))).waitFor(ignored -> {});
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -112,7 +111,7 @@ class WaitEngineTest {
             return "actual";
         }, actual -> satisfied(result));
 
-        var success = assertInstanceOf(Satisfied.class, outcome);
+        var success = assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(100L), starts);
         assertThat(time.parkRequests).isEmpty();
         assertEquals(0, completed(success.step()));
@@ -122,7 +121,7 @@ class WaitEngineTest {
     @Test
     void measuresEveryFromObservationCompletion() {
         var starts = new ArrayList<Long>();
-        Supplier<AttemptResult<String>> evaluations = mock();
+        Supplier<ConditionResult<String>> evaluations = mock();
         when(evaluations.get()).thenAnswer(ignored -> {
             time.advanceNanos(3);
             return unsatisfied("not yet");
@@ -133,7 +132,7 @@ class WaitEngineTest {
             return "actual";
         }, actual -> evaluations.get());
 
-        var success = assertInstanceOf(Satisfied.class, outcome);
+        var success = assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(0L, 8L), starts);
         assertThat(time.parkRequests).containsExactly(5L);
         assertEquals("actual", successfulObservation(success.step()));
@@ -143,7 +142,7 @@ class WaitEngineTest {
     @CsvSource({"9, 0", "4, 5"})
     void acceptsALaterSuccessCompletingOneNanosecondBeforeTheDeadline(long interval, long evaluation) {
         var starts = new ArrayList<Long>();
-        Supplier<AttemptResult<String>> evaluations = mock();
+        Supplier<ConditionResult<String>> evaluations = mock();
         when(evaluations.get()).thenReturn(unsatisfied("not yet")).thenAnswer(ignored -> {
             time.advanceNanos(evaluation);
             return satisfied("ready");
@@ -154,7 +153,7 @@ class WaitEngineTest {
             return "actual";
         }, actual -> evaluations.get());
 
-        var success = assertInstanceOf(Satisfied.class, outcome);
+        var success = assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(0L, interval), starts);
         assertThat(time.parkRequests).containsExactly(interval);
         assertEquals(9, completed(success.step()));
@@ -166,7 +165,7 @@ class WaitEngineTest {
         var time = new FakeTime(100);
         var starts = new ArrayList<Long>();
         var assertion = new AssertionError("third mismatch");
-        var evaluations = List.<AttemptResult<Object>>of(unsatisfied("mismatch 1"), unsatisfied("mismatch 2"),
+        var evaluations = List.<ConditionResult<Object>>of(unsatisfied("mismatch 1"), unsatisfied("mismatch 2"),
                 unsatisfied("mismatch 3", assertion)).iterator();
 
         WaitCompletion outcome = wait(time, config(4, 10, 0), () -> {
@@ -195,7 +194,7 @@ class WaitEngineTest {
                 ignored -> {}), () -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, new SequenceExecution<>(bind(Conditions.condition("test condition", (String actual) -> ConditionResult.satisfied(actual))))).waitFor(ignored -> {});
+                }, sequence(Conditions.condition("test condition", (String actual) -> ConditionResult.satisfied(actual)))).waitFor(ignored -> {});
 
         assertInstanceOf(Timeout.class, outcome);
         assertEquals(1, sourceCalls[0]);
@@ -248,14 +247,14 @@ class WaitEngineTest {
         time.wakeAfter(0);
         time.wakeAfter(1);
         var starts = new ArrayList<Long>();
-        var evaluations = List.<AttemptResult<String>>of(unsatisfied("not ready"), satisfied("ready")).iterator();
+        var evaluations = List.<ConditionResult<String>>of(unsatisfied("not ready"), satisfied("ready")).iterator();
 
         WaitCompletion outcome = wait(time, config(5, 20, 0), () -> {
             starts.add(time.getAsLong());
             return "actual";
         }, value -> evaluations.next());
 
-        assertInstanceOf(Satisfied.class, outcome);
+        assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(0L, 5L), starts);
         assertThat(time.parkRequests).containsExactly(5L, 3L, 3L, 2L);
     }
@@ -265,14 +264,14 @@ class WaitEngineTest {
         long started = Long.MAX_VALUE - 2;
         var time = new FakeTime(started);
         var starts = new ArrayList<Long>();
-        var evaluations = List.<AttemptResult<String>>of(unsatisfied("not ready"), satisfied("ready")).iterator();
+        var evaluations = List.<ConditionResult<String>>of(unsatisfied("not ready"), satisfied("ready")).iterator();
 
         WaitCompletion outcome = wait(time, config(4, 10, 0), () -> {
             starts.add(time.getAsLong());
             return "actual";
         }, value -> evaluations.next());
 
-        assertInstanceOf(Satisfied.class, outcome);
+        assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(started, Long.MIN_VALUE + 1), starts);
         assertThat(time.parkRequests).containsExactly(4L);
     }
@@ -284,7 +283,7 @@ class WaitEngineTest {
         WaitCompletion outcome = wait(time, config(3, 10, 0), () -> {
             time.advanceNanos(11);
             throw failure;
-        }, AttemptResult::satisfied);
+        }, ConditionResult::satisfied);
 
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
@@ -294,7 +293,7 @@ class WaitEngineTest {
 
     @ParameterizedTest
     @MethodSource("waitingResults")
-    void classifiesAParkingFailureForTheNextAttempt(long persistence, AttemptResult<String> evaluation) {
+    void classifiesAParkingFailureForTheNextAttempt(long persistence, ConditionResult<String> evaluation) {
         var time = new FakeTime(100);
         var failure = new IllegalStateException("park failed");
 
@@ -312,7 +311,7 @@ class WaitEngineTest {
 
     @ParameterizedTest
     @MethodSource("waitingResults")
-    void detectsAnInterruptRaisedWhileParkedForTheNextAttempt(long persistence, AttemptResult<String> evaluation) {
+    void detectsAnInterruptRaisedWhileParkedForTheNextAttempt(long persistence, ConditionResult<String> evaluation) {
         var parkCalls = new int[1];
 
         WaitCompletion outcome = wait(time, config(5, 20, persistence), nanos -> {
@@ -331,7 +330,7 @@ class WaitEngineTest {
     }
 
     private static List<Arguments> waitingResults() {
-        return List.of(argumentSet("acquisition", 0L, AttemptResult.<String>unsatisfied("not yet")),
+        return List.of(argumentSet("acquisition", 0L, ConditionResult.<String>unsatisfied("not yet")),
                 argumentSet("persistence", 10L, satisfied("ready")));
     }
 
@@ -352,14 +351,15 @@ class WaitEngineTest {
     @Test
     void skipsSourceWhenRetrievalClockSetsInterruptFlag() {
         int[] sourceCalls = {0};
-        LongSupplier clock = () -> {
+        LongSupplier clock = mock();
+        when(clock.getAsLong()).thenReturn(0L).thenAnswer(ignored -> {
             currentThread().interrupt();
-            return 0;
-        };
+            return 0L;
+        });
         var outcome = new WaitEngine<String>(config(5, 20, 0).withTime(clock,
                 nanos -> { throw new AssertionError("parker must not be called"); }),
                 () -> { sourceCalls[0]++; return "actual"; },
-                new SequenceExecution<>(bind(Conditions.condition("ready", (String actual) -> ConditionResult.satisfied(actual)))), 0).waitFor(ignored -> {});
+                sequence(Conditions.condition("ready", (String actual) -> ConditionResult.satisfied(actual)))).waitFor(ignored -> {});
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -377,7 +377,7 @@ class WaitEngineTest {
         var outcome = new WaitEngine<String>(config(1, 2, 0).withTime(clock, nanos -> {}), () -> {
             sourceCalls[0]++;
             return "actual";
-        }, new SequenceExecution<>(bind(Conditions.condition("not ready", (String value) -> ConditionResult.unsatisfied("not yet"))))).waitFor(ignored -> {});
+        }, sequence(Conditions.condition("not ready", (String value) -> ConditionResult.unsatisfied("not yet")))).waitFor(ignored -> {});
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -395,10 +395,10 @@ class WaitEngineTest {
         when(clock.getAsLong()).thenReturn(0L);
         var outcome = new WaitEngine<String>(config(5, 20, persistence).withTime(clock,
                 nanos -> parkCalls[0]++), () -> { sourceCalls[0]++; return "actual"; },
-                new SequenceExecution<>(bind(Conditions.condition("ready", (String actual) -> {
+                sequence(Conditions.condition("ready", (String actual) -> {
                     doReturn(0L).doAnswer(ignored -> { currentThread().interrupt(); return 0L; }).when(clock).getAsLong();
                     return evaluation;
-                }))), 0).waitFor(ignored -> {});
+                }))).waitFor(ignored -> {});
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -431,7 +431,7 @@ class WaitEngineTest {
 
         WaitCompletion outcome = wait(time, config(3, 10, 0), () -> {
             throw new AssertionError("source must not be called");
-        }, AttemptResult::satisfied);
+        }, ConditionResult::satisfied);
 
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
@@ -451,7 +451,7 @@ class WaitEngineTest {
             return "actual";
         }, actual -> satisfied(results.next()));
 
-        var success = assertInstanceOf(Satisfied.class, outcome);
+        var success = assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(0L, 5L, 10L, 12L), starts);
         assertThat(time.parkRequests).containsExactly(5L, 5L, 2L);
         assertEquals(12, completed(success.step()));
@@ -465,9 +465,9 @@ class WaitEngineTest {
         WaitCompletion outcome = wait(time, config(5, 20, 3), () -> {
                     starts.add(time.getAsLong());
                     return time.getAsLong();
-                }, AttemptResult::satisfied);
+                }, ConditionResult::satisfied);
 
-        var success = assertInstanceOf(Satisfied.class, outcome);
+        var success = assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(0L, 3L), starts);
         assertThat(time.parkRequests).containsExactly(3L);
         assertEquals(3, completed(success.step()));
@@ -483,9 +483,9 @@ class WaitEngineTest {
         WaitCompletion outcome = wait(time, config(4, 20, 6), () -> {
             starts.add(time.getAsLong());
             return time.getAsLong();
-        }, AttemptResult::satisfied);
+        }, ConditionResult::satisfied);
 
-        var success = assertInstanceOf(Satisfied.class, outcome);
+        var success = assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(
                 started, Long.MIN_VALUE + 1, Long.MIN_VALUE + 3), starts);
         assertThat(time.parkRequests).containsExactly(4L, 2L);
@@ -496,7 +496,7 @@ class WaitEngineTest {
     @Test
     void persistsBeyondUpToAfterAcquisitionAtTheLastValidNanosecond() {
         var starts = new ArrayList<Long>();
-        Supplier<AttemptResult<String>> evaluations = mock();
+        Supplier<ConditionResult<String>> evaluations = mock();
         when(evaluations.get()).thenReturn(unsatisfied("not yet")).thenAnswer(ignored -> {
             time.advanceNanos(5);
             return satisfied("acquired");
@@ -507,7 +507,7 @@ class WaitEngineTest {
             return "actual";
         }, actual -> evaluations.get());
 
-        var success = assertInstanceOf(Satisfied.class, outcome);
+        var success = assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(0L, 4L, 13L, 14L), starts);
         assertThat(time.parkRequests).containsExactly(4L, 4L, 1L);
         assertEquals(14, completed(success.step()));
@@ -517,7 +517,7 @@ class WaitEngineTest {
     @Test
     void treatsARegularSatisfiedObservationCompletingAfterBoundaryAsFinal() {
         var starts = new ArrayList<Long>();
-        Supplier<AttemptResult<String>> evaluations = mock();
+        Supplier<ConditionResult<String>> evaluations = mock();
         when(evaluations.get()).thenReturn(satisfied("acquired")).thenAnswer(ignored -> {
             time.advanceNanos(5);
             return satisfied("late boundary");
@@ -528,7 +528,7 @@ class WaitEngineTest {
             return "actual";
         }, actual -> evaluations.get());
 
-        var success = assertInstanceOf(Satisfied.class, outcome);
+        var success = assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(0L, 6L), starts);
         assertThat(time.parkRequests).containsExactly(6L);
         assertEquals(11, completed(success.step()));
@@ -558,7 +558,7 @@ class WaitEngineTest {
     @Test
     void uncontrolledPersistenceObservationWinsAfterBothDeadlines() {
         var failure = new IllegalStateException("condition failed");
-        Supplier<AttemptResult<Object>> evaluations = mock();
+        Supplier<ConditionResult<Object>> evaluations = mock();
         when(evaluations.get()).thenReturn(satisfied(new Object())).thenAnswer(ignored -> {
             time.advanceNanos(10);
             throw failure;
@@ -583,7 +583,7 @@ class WaitEngineTest {
             Callable<S> source,
             AwaitAttempt<S, R> condition) {
         return new WaitEngine<S>(config.withTime(time, parker), source,
-                new SequenceExecution<>(bind(condition("test condition", null, condition)))).waitFor(ignored -> {});
+                sequence(new Typed<>("test condition", null, condition))).waitFor(ignored -> {});
     }
 
     private static long completed(ExecutionStep<?> attempt) {
@@ -595,10 +595,10 @@ class WaitEngineTest {
     }
 
     private static Object successfulObservation(ExecutionStep<?> attempt) {
-        return assertInstanceOf(Attempt.Satisfied.class, attempt.attempt()).observed();
+        return assertInstanceOf(Attempt.SatisfiedObservation.class, attempt.attempt()).observed();
     }
 
     private static String mismatch(ExecutionStep<?> attempt) {
-        return assertInstanceOf(Unsatisfied.class, attempt.attempt()).mismatch();
+        return assertInstanceOf(UnsatisfiedObservation.class, attempt.attempt()).mismatch();
     }
 }

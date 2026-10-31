@@ -3,6 +3,7 @@ package io.github.gromoff97.awium.result;
 import io.github.gromoff97.awium.internal.DiagnosticText;
 import java.util.List;
 
+import static io.github.gromoff97.awium.internal.DiagnosticText.conditionHistory;
 import static io.github.gromoff97.awium.internal.DiagnosticText.field;
 import static java.util.Objects.requireNonNull;
 
@@ -12,7 +13,7 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
 
     default RESULT orThrow() {
         return switch (this) {
-            case Satisfied<OBSERVED, RESULT> success -> success.result();
+            case Succeeded<OBSERVED, RESULT> success -> success.result();
             case Failed<OBSERVED, RESULT> failed -> {
                 AwaitFailure failure = failed.failure();
                 switch (failure.reason()) {
@@ -27,15 +28,15 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
         var out = new StringBuilder(summary);
         for (int i = 0; i < conditions.size(); i++) {
             var history = conditions.get(i);
-            out.append("\n\n").append(DiagnosticText.conditionHistory("Condition " + (i + 1), history));
+            out.append("\n\n").append(conditionHistory("Condition " + (i + 1), history));
         }
         return out.toString();
     }
 
-    record Satisfied<OBSERVED, RESULT>(List<ConditionHistory<OBSERVED>> conditions,
+    record Succeeded<OBSERVED, RESULT>(List<ConditionHistory<OBSERVED>> conditions,
             RESULT result) implements AwaitResult<OBSERVED, RESULT> {
 
-        public Satisfied {
+        public Succeeded {
             conditions = List.copyOf(conditions);
         }
 

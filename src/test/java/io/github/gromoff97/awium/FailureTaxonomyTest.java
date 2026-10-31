@@ -41,7 +41,7 @@ import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
 import static io.github.gromoff97.awium.result.Attempt.Operation.SOURCE;
 import static io.github.gromoff97.awium.result.Attempt.Operation.WAITING;
-import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
+import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.INTERRUPTED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.PERSISTENCE_FAILED;
@@ -103,10 +103,10 @@ class FailureTaxonomyTest {
             @Override public String toString() { throw rendering; }
         };
         var metadata = diagnosticCondition("ready", new Reference<>("Expected", expected));
-        var attempt = new ExecutionStep<>(metadata, 1, 0, phase, 2, retained);
+        var attempt = new ExecutionStep<>(1, 1, 0, phase, 2, retained);
         var outcome = completion.apply(attempt);
         var configuration = config(1, 2, 0);
-        var captured = FailureDiagnostics.failure(outcome, configuration, 1);
+        var captured = FailureDiagnostics.failure(metadata, outcome, configuration, 1);
         assertEquals(reason, captured.reason());
         assertSame(original, captured.cause());
         assertEquals(List.of(rendering), captured.suppressed());
@@ -167,8 +167,8 @@ class FailureTaxonomyTest {
         var interruption = new InterruptedException("interrupted");
         var waiting = new IllegalStateException("operation failed");
         var cases = List.of(
-                failureCase(TIMEOUT, timeout, ACQUISITION, new Unsatisfied<>("actual", "not ready", timeout), step -> new Timeout(step.completedAfterNanos(), step)),
-                failureCase(PERSISTENCE_FAILED, persistence, PERSISTENCE, new Unsatisfied<>("actual", "not ready", persistence),
+                failureCase(TIMEOUT, timeout, ACQUISITION, new UnsatisfiedObservation<>("actual", "not ready", timeout), step -> new Timeout(step.completedAfterNanos(), step)),
+                failureCase(PERSISTENCE_FAILED, persistence, PERSISTENCE, new UnsatisfiedObservation<>("actual", "not ready", persistence),
                         step -> new PersistenceFailure(0, step)),
                 failureCase(SOURCE_FAILED, source, ACQUISITION, new FailedBeforeObservation<>(SOURCE, source),
                         step -> new Uncontrolled(step, false)),

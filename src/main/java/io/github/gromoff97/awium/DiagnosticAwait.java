@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.Condition.CapturedSource;
 import io.github.gromoff97.awium.Condition.ApplicableCondition;
+import io.github.gromoff97.awium.Condition.Captured;
 import io.github.gromoff97.awium.Condition.PreservesObservation;
 import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.internal.WaitConfiguration;
@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
+
+import static io.github.gromoff97.awium.Condition.Typed;
 
 public sealed class DiagnosticAwait<OBSERVED> extends AwaitSupport<OBSERVED> permits DiagnosticSelectionAwait {
 
@@ -36,15 +38,15 @@ public sealed class DiagnosticAwait<OBSERVED> extends AwaitSupport<OBSERVED> per
 
     public <CHECK extends ApplicableCondition<? super OBSERVED, ? super Reference<? super OBSERVED>> & PreservesObservation>
             AwaitResult<OBSERVED, OBSERVED> until(CHECK condition) {
-        return capture(ConditionSupport.bind(condition));
+        return capture(condition);
     }
 
-    public <RESULT> AwaitResult<OBSERVED, RESULT> until(Condition.Typed<? super OBSERVED, ? extends RESULT> condition) {
-        return capture(ConditionSupport.bind(condition));
+    public <RESULT> AwaitResult<OBSERVED, RESULT> until(Typed<? super OBSERVED, ? extends RESULT> condition) {
+        return capture(condition);
     }
 
     public AwaitResult<OBSERVED, List<OBSERVED>> until(
-            CapturedSource<? extends ApplicableCondition<? super OBSERVED, ? super Reference<? super OBSERVED>>> condition) {
-        return capture(ConditionSupport.<OBSERVED>bind(condition));
+            Captured<? extends ApplicableCondition<? super OBSERVED, ? super Reference<? super OBSERVED>>> condition) {
+        return capture(condition);
     }
 }

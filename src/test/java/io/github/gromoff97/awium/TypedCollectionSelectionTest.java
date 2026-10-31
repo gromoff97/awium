@@ -37,7 +37,7 @@ import static io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAI
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.INTERRUPTED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
 import static io.github.gromoff97.awium.result.AwaitResult.Failed;
-import static io.github.gromoff97.awium.result.AwaitResult.Satisfied;
+import static io.github.gromoff97.awium.result.AwaitResult.Succeeded;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.lang.Thread.currentThread;
@@ -100,7 +100,7 @@ class TypedCollectionSelectionTest {
         assertEquals(1, waiting.until(elementAt(0, instanceOf(User.class))).id());
         AwaitResult<List<Object>, User> captured = diagnostic(waiting).until(firstElement(instanceOf(User.class)));
         switch (captured) {
-            case Satisfied(var history, var user) -> assertEquals(1, user.id());
+            case Succeeded(var history, var user) -> assertEquals(1, user.id());
             case Failed(var history, var failure) -> fail(failure.message());
         }
     }
@@ -125,7 +125,7 @@ class TypedCollectionSelectionTest {
         assertSame(values, selected.getLast());
         AwaitResult<List<User>, User> captured = diagnostic(waiting).until(lastElement(equalTo(LAST)));
         switch (captured) {
-            case Satisfied(var history, var user) -> assertEquals(2, user.id());
+            case Succeeded(var history, var user) -> assertEquals(2, user.id());
             case Failed(var history, var failure) -> fail(failure.message());
         }
         List<CharSequence> texts = List.of("ready");
@@ -156,7 +156,7 @@ class TypedCollectionSelectionTest {
         var retried = tryAwait(() -> List.of(new User(-1), FIRST, LAST)).usingTime(time, time).every(ofNanos(1))
                 .until(firstElement(secondObservation));
         switch (retried) {
-            case Satisfied(var history, var user) -> assertEquals(-1, user.id());
+            case Succeeded(var history, var user) -> assertEquals(-1, user.id());
             case Failed(var history, var failure) -> fail(failure.message());
         }
         assertEquals(2, attempts(retried).size());
@@ -216,7 +216,7 @@ class TypedCollectionSelectionTest {
         assertThrows(UnsupportedOperationException.class, selected::clear);
         AwaitResult<List<Object>, List<List<Object>>> captured = diagnostic(waiting).until(captured(firstUser, lastUser));
         switch (captured) {
-            case Satisfied(var history, var users) -> {
+            case Succeeded(var history, var users) -> {
                 assertSame(values, users.getFirst());
                 assertSame(values, users.getLast());
             }

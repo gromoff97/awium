@@ -56,8 +56,8 @@ import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.*;
 import static io.github.gromoff97.awium.result.Attempt.Operation;
-import static io.github.gromoff97.awium.result.Attempt.Satisfied;
-import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
+import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
+import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
@@ -114,7 +114,7 @@ class CapturedConditionTest {
         List<List<Payment>> captured = result.orThrow();
         assertEquals(values, captured);
         assertSame(captured, result.orThrow());
-        assertThat(attempts(result)).hasOnlyElementsOfType(Satisfied.class)
+        assertThat(attempts(result)).hasOnlyElementsOfType(SatisfiedObservation.class)
                 .extracting(AwaitTestAccess::observation).containsExactlyElementsOf(observations);
         assertEquals(6, reads[0]);
     }
@@ -296,7 +296,7 @@ class CapturedConditionTest {
         assertSame(second, values.getLast());
         assertEquals(values, attempt.orThrow());
         assertEquals(4, attempts(attempt).size());
-        assertInstanceOf(Satisfied.class, attempts(attempt).get(1));
+        assertInstanceOf(SatisfiedObservation.class, attempts(attempt).get(1));
         assertSame(first, observation(attempts(attempt).get(1)));
         assertEquals(8, reads[0]);
         assertThrows(UnsupportedOperationException.class, values::clear);
@@ -348,10 +348,10 @@ class CapturedConditionTest {
         assertEquals(3, attempts(attempt).size());
         assertEquals(6, reads[0]);
         var acquisition = attempts(attempt).get(1);
-        assertInstanceOf(Satisfied.class, acquisition);
+        assertInstanceOf(SatisfiedObservation.class, acquisition);
         assertSame(acquired, observation(acquisition).get("last"));
         var firstAttempt = attempts(attempt).getFirst();
-        assertInstanceOf(Satisfied.class, firstAttempt);
+        assertInstanceOf(SatisfiedObservation.class, firstAttempt);
         assertSame(first, observation(firstAttempt));
         assertThrows(UnsupportedOperationException.class, values::clear);
     }
@@ -399,10 +399,10 @@ class CapturedConditionTest {
         assertSame(observations.getFirst(), values.get(0));
         assertSame(observations.getLast(), values.get(1));
         var earlier = attempts(result).get(1);
-        assertInstanceOf(Satisfied.class, earlier);
+        assertInstanceOf(SatisfiedObservation.class, earlier);
         assertSame(acquired, observation(earlier).getLast());
         var firstAttempt = attempts(result).getFirst();
-        assertInstanceOf(Satisfied.class, firstAttempt);
+        assertInstanceOf(SatisfiedObservation.class, firstAttempt);
         assertSame(first, observation(firstAttempt).getFirst());
         assertThrows(UnsupportedOperationException.class, values::clear);
         assertEquals(3, reads[0]);
@@ -422,8 +422,8 @@ class CapturedConditionTest {
                 .containsExactly(first, second, third);
         assertThat(result.conditions()).extracting(history -> List.copyOf(history.attempts().keySet()))
                 .containsExactly(List.of(1L), List.of(2L, 3L), List.of(4L));
-        assertThat(attempts(result)).hasExactlyElementsOfTypes(Satisfied.class, Unsatisfied.class,
-                        Satisfied.class, Satisfied.class)
+        assertThat(attempts(result)).hasExactlyElementsOfTypes(SatisfiedObservation.class, UnsatisfiedObservation.class,
+                        SatisfiedObservation.class, SatisfiedObservation.class)
                 .allSatisfy(attempt -> assertThat(observation(attempt)).isNotEmpty());
 
         assertEquals(List.of("created", "processing", "completed"),
@@ -509,7 +509,7 @@ class CapturedConditionTest {
             time.advanceNanos(2);
             return "observed";
         }, config(1, 2, 0), time, time).until(captured(matches(value -> true), matches(value -> true)));
-        var outcome = assertInstanceOf(Satisfied.class,
+        var outcome = assertInstanceOf(SatisfiedObservation.class,
                 attempts(result).getFirst());
 
         assertEquals("observed", observation(attempts(result).getFirst()));
@@ -688,7 +688,7 @@ class CapturedConditionTest {
 
     @Test
     void sequenceStartsFreshAfterSuccessAndTimeout() {
-        Condition.CapturedSource<Condition.InputCondition<Payment>> lifecycle = captured(matches(value -> value.status() == Status.CREATED),
+        Condition.Captured<Condition.InputCondition<Payment>> lifecycle = captured(matches(value -> value.status() == Status.CREATED),
                 matches(value -> value.status() == Status.FINISHED));
         var firstCreated = new Payment(Status.CREATED, "first execution");
         var nextCreated = new Payment(Status.CREATED, "next execution");
@@ -706,7 +706,7 @@ class CapturedConditionTest {
                 new Payment[]{nextCreated, firstFinished}, lifecycle, 10));
     }
 
-    private static List<Payment> runLifecycle(Payment[] observations, Condition.CapturedSource<Condition.InputCondition<Payment>> lifecycle, long timeout) {
+    private static List<Payment> runLifecycle(Payment[] observations, Condition.Captured<Condition.InputCondition<Payment>> lifecycle, long timeout) {
         var time = new FakeTime(0);
         int[] next = {0};
         return timedAwait(() -> observations[min(next[0]++, observations.length - 1)],

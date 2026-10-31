@@ -11,12 +11,12 @@ source type first, condition result type second.
 var result = tryAwait(paymentRepository::find).until(present);
 // AwaitResult<Optional<Payment>, Payment>
 out.println(switch (result) {
-    case Satisfied(var conditions, var payment) -> payment.receipt();
+    case Succeeded(var conditions, var payment) -> payment.receipt();
     case Failed(var conditions, var failure) -> failure.message();
 });
 ```
 
-Records expose `Satisfied.result()` or `Failed.failure()`. `AwaitFailure` has
+Records expose `Succeeded.result()` or `Failed.failure()`. `AwaitFailure` has
 `reason()`, `message()`, original `cause()`, and immutable `suppressed()` causes.
 On success, `result.orThrow()` returns the selected value, including null.
 Reading a result never reruns checks. A failed result creates its wrapper exception
@@ -53,8 +53,8 @@ The sealed `Attempt<OBSERVED>` has four immutable records:
 
 | Variant | Fields | Meaning |
 | --- | --- | --- |
-| `Satisfied` | `observed` | This check passed |
-| `Unsatisfied` | `observed`, `mismatch`, `cause` | Mismatch; retry allowed even with a cause |
+| `SatisfiedObservation` | `observed` | This check passed |
+| `UnsatisfiedObservation` | `observed`, `mismatch`, `cause` | Mismatch; retry allowed even with a cause |
 | `FailedAfterObservation` | `observed`, `operation`, `cause`, `location` | Observation obtained, then execution failed |
 | `FailedBeforeObservation` | `operation`, `cause` | Observation unavailable |
 
@@ -98,9 +98,9 @@ states; `lastEntry().getValue()` gives the last state of a nonempty map.
 For `captured(equalTo("created"), equalTo("paid"))`:
 
 ```text
-conditions[0]: 1 → Satisfied("created")
-conditions[1]: 3 → Unsatisfied("pending", ...)
-               4 → Satisfied("paid")
+conditions[0]: 1 → SatisfiedObservation("created")
+conditions[1]: 3 → UnsatisfiedObservation("pending", ...)
+               4 → SatisfiedObservation("paid")
 ```
 
 Grouping preserves chronological changes without trimming or skipping checks.

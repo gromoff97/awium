@@ -33,7 +33,7 @@ import static io.github.gromoff97.awium.MapConditions.doesNotContainAnyKeys;
 import static io.github.gromoff97.awium.MapConditions.doesNotContainAnyValues;
 import static io.github.gromoff97.awium.MapConditions.noValue;
 import static io.github.gromoff97.awium.ProbeContainers.membershipCollection;
-import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
+import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static java.lang.Integer.compare;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
@@ -251,8 +251,8 @@ class ConditionHistoryTest {
     }
 
     private static List<String> mismatches(AwaitResult<?, ?> result) {
-        return attempts(result).stream().filter(Unsatisfied.class::isInstance)
-                .map(attempt -> ((Unsatisfied<?>) attempt).mismatch()).toList();
+        return attempts(result).stream().filter(UnsatisfiedObservation.class::isInstance)
+                .map(attempt -> ((UnsatisfiedObservation<?>) attempt).mismatch()).toList();
     }
 
     private final class Element {

@@ -68,12 +68,19 @@ class ArtifactContractIT {
         var classes = new ClassFileImporter().importJar(jar);
         assertIndependent(classes,
                 Set.of("Condition", "AwaitAttempt", "ConditionExecution", "ConditionSupport",
-                        "ConditionResult", "AttemptResult", "SequenceExecution", "ExecutionStep", "AttemptExecution",
+                        "ConditionResult", "ProbeFailure", "SequenceExecution", "ExecutionStep", "AttemptExecution",
                         "WaitEngine", "WaitCompletion", "WaitConfiguration"),
                 Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "Conditions", "CollectionConditions",
                         "MapConditions", "OptionalConditions", "StringConditions", "FailureDiagnostics", "DiagnosticText"));
         assertIndependent(classes, Set.of("ConditionResult"), Set.of("ConditionExecution", "Attempt", "AwaitResult"));
-        assertIndependent(classes, Set.of("Condition"), Set.of("ConditionExecution", "AttemptResult"));
+        assertIndependent(classes, Set.of("WaitCompletion"), Set.of("AwaitFailure", "Attempt"));
+        assertIndependent(classes, Set.of("AttemptHistory"),
+                Set.of("ExecutionStep", "SequenceExecution", "ConditionExecution", "AttemptExecution",
+                        "WaitEngine", "WaitCompletion", "WaitConfiguration"));
+        assertIndependent(classes,
+                Set.of("AwaitAttempt", "ConditionExecution", "SequenceExecution", "ExecutionStep", "AttemptExecution",
+                        "WaitEngine", "WaitCompletion", "WaitConfiguration"), Set.of("Condition"));
+        assertIndependent(classes, Set.of("Condition"), Set.of("ConditionExecution", "ConditionResult"));
         assertIndependent(classes, Set.of("Reference", "ConditionResult.Unsatisfied"),
                 Set.of("AwaitAttempt", "ConditionExecution", "SequenceExecution", "AttemptExecution",
                         "WaitEngine", "WaitCompletion"));

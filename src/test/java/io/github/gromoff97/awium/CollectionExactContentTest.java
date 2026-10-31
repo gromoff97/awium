@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.AttemptResult;
+import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -28,8 +28,8 @@ import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.ProbeContainers.Directional;
 import static io.github.gromoff97.awium.ProbeContainers.ThrowingEquals;
 import static io.github.gromoff97.awium.ProbeContainers.once;
-import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
-import static io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
@@ -175,7 +175,7 @@ class CollectionExactContentTest {
 
     @Test
     void nullActualIsUnsatisfiedAndNullAggregateIsRejected() {
-        AttemptResult<?> evaluation = evaluate(
+        ConditionResult<?> evaluation = evaluate(
                 containsExactly(List.of("a")), null);
         assertInstanceOf(Unsatisfied.class, evaluation);
         assertThat(mismatch(evaluation)).isNotBlank();

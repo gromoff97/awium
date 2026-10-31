@@ -40,8 +40,8 @@ public final class ArtifactConsumer {
 
     private static String observed(Attempt<Optional<String>> attempt) {
         return switch (attempt) {
-            case Attempt.Satisfied(var optional) -> optional.orElse(null);
-            case Attempt.Unsatisfied(var optional, var mismatch, var cause) -> optional.orElse(null);
+            case Attempt.SatisfiedObservation(var optional) -> optional.orElse(null);
+            case Attempt.UnsatisfiedObservation(var optional, var mismatch, var cause) -> optional.orElse(null);
             case Attempt.FailedAfterObservation(var optional, var operation, var cause, var location) -> optional.orElse(null);
             case Attempt.FailedBeforeObservation(var operation, var cause) -> null;
         };

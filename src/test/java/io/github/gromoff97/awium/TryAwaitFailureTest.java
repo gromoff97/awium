@@ -40,7 +40,7 @@ import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static io.github.gromoff97.awium.OptionalConditions.hasValue;
 import static io.github.gromoff97.awium.result.Attempt.Operation;
-import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
+import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.result.AwaitResult.Failed;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
@@ -114,14 +114,14 @@ class TryAwaitFailureTest {
     void predicateTimeoutHasTheSameOutcomeInBothTerminals() {
         var timeout = assertParity(time -> timedAwait(() -> "actual", config(1, 2, 0), time, time),
                 () -> matches(actual -> false));
-        assertInstanceOf(Unsatisfied.class, attempts(timeout).getLast());
+        assertInstanceOf(UnsatisfiedObservation.class, attempts(timeout).getLast());
     }
 
     @Test
     void assertionTimeoutHasTheSameOutcomeInBothTerminals() {
         var timeout = assertParity(time -> timedAwait(() -> "actual", config(1, 2, 0), time, time),
                 () -> asserted(actual -> { throw new AssertionError("assertion failed"); }));
-        assertInstanceOf(Unsatisfied.class, attempts(timeout).getLast());
+        assertInstanceOf(UnsatisfiedObservation.class, attempts(timeout).getLast());
     }
 
     @Test
@@ -129,14 +129,14 @@ class TryAwaitFailureTest {
         var persistence = assertTypedParity(time -> timedAwait(() -> "actual",
                         config(1, 3, 2), time, time),
                 TryAwaitFailureTest::unstableCondition);
-        assertInstanceOf(Unsatisfied.class, attempts(persistence).getLast());
+        assertInstanceOf(UnsatisfiedObservation.class, attempts(persistence).getLast());
     }
 
     @Test
     void assertionPersistenceHasTheSameOutcomeInBothTerminals() {
         var persistence = assertParity(time -> timedAwait(() -> "actual", config(1, 3, 2), time, time),
                 TryAwaitFailureTest::unstableAssertion);
-        assertInstanceOf(Unsatisfied.class, attempts(persistence).getLast());
+        assertInstanceOf(UnsatisfiedObservation.class, attempts(persistence).getLast());
     }
 
     @ParameterizedTest

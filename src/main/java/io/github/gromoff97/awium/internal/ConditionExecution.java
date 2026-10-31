@@ -1,29 +1,29 @@
 package io.github.gromoff97.awium.internal;
 
-import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.concurrent.Callable;
 
+import static io.github.gromoff97.awium.internal.ProbeFailure.locatedFailure;
+import static java.lang.Thread.currentThread;
 import static java.util.Objects.requireNonNull;
 
 public final class ConditionExecution<OBSERVED, RESULT> {
 
-    final Condition.Check condition;
     private final Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory;
     private AwaitAttempt<? super OBSERVED, ? extends RESULT> evaluator;
 
-    public ConditionExecution(Condition.Check condition, Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory) {
-        this.condition = requireNonNull(condition, "condition must not be null");
+    public ConditionExecution(Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory) {
         this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
     }
 
     public static <OBSERVED> ConditionExecution<OBSERVED, OBSERVED> observing(
-            Condition.Check condition, Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory) {
+            Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory) {
         requireNonNull(evaluatorFactory, "evaluator factory must not be null");
-        return new ConditionExecution<>(condition, () -> {
+        return new ConditionExecution<>(() -> {
             AwaitAttempt<? super OBSERVED, ?> evaluator = createEvaluator(evaluatorFactory);
             return (AwaitAttempt<OBSERVED, OBSERVED>) actual ->
-                    requireNonNull(evaluator.probe(actual), "condition returned null evaluation")
-                            .mapSatisfied(ignored -> actual);
+                    requireNonNull(evaluator.probe(actual), "condition returned null ConditionResult")
+                            .mapValue(ignored -> actual);
         });
     }
 
@@ -34,27 +34,24 @@ public final class ConditionExecution<OBSERVED, RESULT> {
         return (AwaitAttempt<? super OBSERVED, ? extends RESULT>) evaluatorFactory.call();
     }
 
-    public AttemptResult<? extends RESULT> probe(OBSERVED actual) {
+    public ConditionResult<? extends RESULT> probe(OBSERVED actual) throws Throwable {
+        if (currentThread().isInterrupted()) throw interrupted(null);
+        if (evaluator == null) evaluator = createEvaluator(evaluatorFactory);
+        if (currentThread().isInterrupted()) throw interrupted(null);
+        var result = requireNonNull(evaluator.probe(actual), "condition returned null ConditionResult");
+        if (currentThread().isInterrupted()) throw interrupted(result.cause());
+        return result;
+    }
+
+    public ConditionResult<? extends RESULT> probeAt(OBSERVED actual, String location) throws Throwable {
         try {
-            if (Thread.currentThread().isInterrupted()) {
-                return interrupted(null);
-            }
-            if (evaluator == null) evaluator = createEvaluator(evaluatorFactory);
-            if (Thread.currentThread().isInterrupted()) {
-                return interrupted(null);
-            }
-            var result = requireNonNull(evaluator.probe(actual), "condition returned null evaluation");
-            if (!(result instanceof AttemptResult.Uncontrolled<?>) && Thread.currentThread().isInterrupted()) {
-                return interrupted(result.cause());
-            }
-            return result;
+            return probe(actual);
         } catch (Throwable failure) {
-            return AttemptResult.uncontrolled(failure);
+            throw locatedFailure(location, failure);
         }
     }
 
-    private AttemptResult<RESULT> interrupted(Throwable cause) {
-        return AttemptResult.uncontrolled(cause == null
-                ? new InterruptedException("caller thread interrupt flag was set") : cause);
+    private static Throwable interrupted(Throwable cause) {
+        return cause == null ? new InterruptedException("caller thread interrupt flag was set") : cause;
     }
 }

@@ -71,7 +71,7 @@ class EntryConditionInputTest {
         assertTrue(selected.getValue().active());
         AwaitResult<LinkedHashMap<String, User>, Map.Entry<String, User>> result = tryAwait(() -> source).until(check);
         switch (result) {
-            case AwaitResult.Satisfied(var history, var entry) -> {
+            case AwaitResult.Succeeded(var history, var entry) -> {
                 assertSame(seen.getLast(), entry);
                 assertSame(user, entry.getValue());
                 assertTrue(entry.getValue().active());

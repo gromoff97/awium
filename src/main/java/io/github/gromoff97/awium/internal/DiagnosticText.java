@@ -10,6 +10,14 @@ import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
+import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
+import static io.github.gromoff97.awium.result.Attempt.Failure;
+import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
+import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
+import static java.lang.Character.isISOControl;
+import static java.lang.Long.divideUnsigned;
+import static java.lang.Long.remainderUnsigned;
 import static java.lang.Thread.currentThread;
 import static java.util.Arrays.deepToString;
 
@@ -63,12 +71,12 @@ public final class DiagnosticText {
         var cause = attempt.cause();
         var text = new DiagnosticText(cause);
         switch (attempt) {
-            case Attempt.Satisfied<?> ignored -> field(out, "", label, "satisfied");
-            case Attempt.Unsatisfied<?> mismatch -> {
+            case SatisfiedObservation<?> ignored -> field(out, "", label, "satisfied");
+            case UnsatisfiedObservation<?> mismatch -> {
                 field(out, "", label, "unsatisfied");
                 if (mismatch.mismatch() != null) field(out, "Mismatch", mismatch.mismatch());
             }
-            case Attempt.Failure<?> failure -> {
+            case Failure<?> failure -> {
                 field(out, "", label, "failed (" + failure.operation() + ")");
                 if (failure.location() != null) field(out, "Within", failure.location());
             }
@@ -87,8 +95,8 @@ public final class DiagnosticText {
         StringJoiner result = new StringJoiner(" ").setEmptyValue("0 ns");
         for (TimeUnit unit : DURATION_UNITS) {
             long unitNanos = unit.toNanos(1);
-            long count = Long.divideUnsigned(remainingNanos, unitNanos);
-            remainingNanos = Long.remainderUnsigned(remainingNanos, unitNanos);
+            long count = divideUnsigned(remainingNanos, unitNanos);
+            remainingNanos = remainderUnsigned(remainingNanos, unitNanos);
             if (count != 0) {
                 String suffix = switch (unit) {
                     case DAYS -> "d";
@@ -121,10 +129,10 @@ public final class DiagnosticText {
 
     String observation(Attempt<?> attempt) {
         return switch (attempt) {
-            case Attempt.Satisfied<?> evaluated -> value(evaluated.observed());
-            case Attempt.Unsatisfied<?> evaluated -> value(evaluated.observed());
-            case Attempt.FailedAfterObservation<?> failed -> value(failed.observed());
-            case Attempt.FailedBeforeObservation<?> ignored -> null;
+            case SatisfiedObservation<?> evaluated -> value(evaluated.observed());
+            case UnsatisfiedObservation<?> evaluated -> value(evaluated.observed());
+            case FailedAfterObservation<?> failed -> value(failed.observed());
+            case FailedBeforeObservation<?> ignored -> null;
         };
     }
 
@@ -149,7 +157,7 @@ public final class DiagnosticText {
                 case '\r' -> out.append("\\r");
                 case '\t' -> out.append("\\t");
                 default -> {
-                    if (Character.isISOControl(character)) out.append("\\u").append(HexFormat.of().toHexDigits(character));
+                    if (isISOControl(character)) out.append("\\u").append(HexFormat.of().toHexDigits(character));
                     else out.append(character);
                 }
             }

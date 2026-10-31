@@ -2,7 +2,7 @@ package io.github.gromoff97.awium;
 
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.attempts;
 import static io.github.gromoff97.awium.Await.tryAwait;

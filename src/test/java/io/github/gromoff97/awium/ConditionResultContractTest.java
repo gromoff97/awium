@@ -43,6 +43,18 @@ class ConditionResultContractTest {
     private record User(int id) {}
 
     @Test
+    void mappingChangesOnlySatisfiedValues() {
+        var mapped = satisfied("abc").mapValue(String::length);
+        assertEquals(3, assertInstanceOf(Satisfied.class, mapped).value());
+        var cause = new IllegalStateException("not ready");
+        var mismatch = ConditionResult.<String>unsatisfied("retry", cause).mapValue(value -> {
+            throw new AssertionError("mismatches must not be mapped");
+        });
+        assertEquals("retry", assertInstanceOf(Unsatisfied.class, mismatch).mismatch());
+        assertSame(cause, mismatch.cause());
+    }
+
+    @Test
     void callbacksChooseTheResultWithoutExplicitTypeArguments() {
         var actual = new User(42);
         var id = await(() -> actual).until(condition("user id", user -> satisfied(user.id())));
@@ -67,8 +79,8 @@ class ConditionResultContractTest {
 
         assertEquals(42, result.orThrow());
         assertThat(attempts(result)).extracting(AwaitTestAccess::observation).containsExactly(pending, saved);
-        assertThat(attempts(result).getFirst()).isInstanceOf(io.github.gromoff97.awium.result.Attempt.Unsatisfied.class);
-        assertThat(attempts(result).getLast()).isInstanceOf(io.github.gromoff97.awium.result.Attempt.Satisfied.class);
+        assertThat(attempts(result).getFirst()).isInstanceOf(io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation.class);
+        assertThat(attempts(result).getLast()).isInstanceOf(io.github.gromoff97.awium.result.Attempt.SatisfiedObservation.class);
         assertThat(result.conditions().getFirst().toString()).contains("id must be positive", "user must be saved");
         assertSame(check, result.conditions().getFirst().condition());
     }
@@ -97,7 +109,7 @@ class ConditionResultContractTest {
 
         assertNull(label);
         assertNull(result.orThrow());
-        assertInstanceOf(AwaitResult.Satisfied.class, result);
+        assertInstanceOf(AwaitResult.Succeeded.class, result);
         assertSame(actual, AwaitTestAccess.observation(attempts(result).getFirst()));
     }
 
@@ -172,7 +184,7 @@ class ConditionResultContractTest {
         assertEquals(42, waiting.until(condition("ready", ignored -> satisfied(ignored))).id());
         AwaitResult<User, User> result = diagnostic(waiting).until(condition("ready", ignored -> satisfied(ignored)));
         switch (result) {
-            case AwaitResult.Satisfied(var history, var user) -> assertSame(actual, user);
+            case AwaitResult.Succeeded(var history, var user) -> assertSame(actual, user);
             case AwaitResult.Failed(var history, var failure) -> org.junit.jupiter.api.Assertions.fail(failure.message());
         }
         assertSame(actual, await(() -> java.util.Optional.of(actual)).usingTime(time, time)

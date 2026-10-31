@@ -46,7 +46,7 @@ import static io.github.gromoff97.awium.OptionalConditions.hasValue;
 import static io.github.gromoff97.awium.function.CheckedPredicate.not;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED;
 import static io.github.gromoff97.awium.result.AwaitResult.Failed;
-import static io.github.gromoff97.awium.result.AwaitResult.Satisfied;
+import static io.github.gromoff97.awium.result.AwaitResult.Succeeded;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static java.time.Duration.ofNanos;
@@ -127,7 +127,7 @@ class CheckedPredicateTest {
         observations.addAll(List.of(PENDING, LAST));
         AwaitResult<User, User> captured = diagnostic(waiting).until(matches(User::checkReady));
         switch (captured) {
-            case Satisfied(var history, var user) -> {
+            case Succeeded(var history, var user) -> {
                 assertEquals(2, user.id());
                 assertEquals(2, history.getFirst().attempts().size());
             }
@@ -184,7 +184,7 @@ class CheckedPredicateTest {
         AwaitResult<LinkedHashMap<String, User>, Entry<String, User>> captured =
                 diagnostic(waiting).until(singleEntry(CheckedPredicateTest::firstEntry));
         switch (captured) {
-            case Satisfied(var history, var selected) -> assertEquals(1, selected.getValue().id());
+            case Succeeded(var history, var selected) -> assertEquals(1, selected.getValue().id());
             case Failed(var history, var failure) -> fail(failure.message());
         }
     }
@@ -209,7 +209,7 @@ class CheckedPredicateTest {
         var waiting = await(maps::removeFirst).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(4));
         AwaitResult<Map<String, User>, User> result = diagnostic(waiting).until(valueFor("user", ready));
         switch (result) {
-            case Satisfied(var history, var user) -> {
+            case Succeeded(var history, var user) -> {
                 assertEquals(1, user.id());
                 assertEquals(3, history.getFirst().attempts().size());
             }

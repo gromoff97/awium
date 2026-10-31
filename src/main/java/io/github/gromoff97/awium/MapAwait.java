@@ -8,7 +8,9 @@ import java.util.concurrent.Callable;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
-public final class MapAwait<OBSERVED extends Map<?, ?>, ENTRY extends Map.Entry<?, ?>, VALUE>
+import static java.util.Map.Entry;
+
+public final class MapAwait<OBSERVED extends Map<?, ?>, ENTRY extends Entry<?, ?>, VALUE>
         extends SelectionAwait<OBSERVED, ENTRY> {
 
     MapAwait(Callable<? extends OBSERVED> source, WaitConfiguration configuration) {
@@ -36,6 +38,6 @@ public final class MapAwait<OBSERVED extends Map<?, ?>, ENTRY extends Map.Entry<
     }
 
     public VALUE until(MapValueCondition<? super OBSERVED> condition) {
-        return complete(ConditionSupport.bind(condition));
+        return complete(condition);
     }
 }

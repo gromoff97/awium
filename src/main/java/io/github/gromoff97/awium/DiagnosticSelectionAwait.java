@@ -36,7 +36,7 @@ public sealed class DiagnosticSelectionAwait<OBSERVED, ELEMENT> extends Diagnost
 
     public AwaitResult<OBSERVED, ELEMENT> until(
             SelectedCondition<? super OBSERVED> condition) {
-        return capture(ConditionSupport.bind(condition));
+        return capture(condition);
     }
 
 }

@@ -26,7 +26,7 @@ import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static io.github.gromoff97.awium.OptionalConditions.*;
 import static io.github.gromoff97.awium.StringConditions.startsWith;
-import static io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
 import static io.github.gromoff97.awium.internal.WaitConfiguration.DEFAULT;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.result.AwaitResult.Failed;

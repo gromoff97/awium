@@ -47,8 +47,8 @@ import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.Conditions.instanceOf;
 import static io.github.gromoff97.awium.Conditions.matches;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
-import static io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.asList;
@@ -119,7 +119,7 @@ class CollectionSelectionConditionsTest {
 
         var diagnostic = tryAwait(() -> actual).until(subsetOf(List.of("ready")));
         switch (diagnostic) {
-            case AwaitResult.Satisfied(var history, var value) -> {
+            case AwaitResult.Succeeded(var history, var value) -> {
                 assertSame(actual, value);
                 assertEquals(5, value.getFirst().length());
             }

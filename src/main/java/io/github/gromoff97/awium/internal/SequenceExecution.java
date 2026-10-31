@@ -1,44 +1,31 @@
 package io.github.gromoff97.awium.internal;
 
-import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
+
+import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
+import static java.lang.Math.min;
 
 public final class SequenceExecution<OBSERVED, RESULT> {
 
-    private final Condition definition;
     private final List<ConditionExecution<OBSERVED, RESULT>> stages;
     private final List<RESULT> results = new ArrayList<>();
 
-    public SequenceExecution(ConditionExecution<OBSERVED, RESULT> attempt) {
-        this(attempt.condition, List.of(attempt));
-    }
-
-    private SequenceExecution(Condition definition, List<ConditionExecution<OBSERVED, RESULT>> stages) {
-        this.definition = definition;
-        this.stages = stages;
-    }
-
-    public static <OBSERVED> SequenceExecution<OBSERVED, OBSERVED> captured(Condition.Captured sequence,
-            Function<Condition.Check, ConditionExecution<OBSERVED, OBSERVED>> bind) {
-        return new SequenceExecution<>(sequence, sequence.stages().stream().map(bind).toList());
+    public SequenceExecution(List<ConditionExecution<OBSERVED, RESULT>> stages) {
+        this.stages = List.copyOf(stages);
     }
 
     int stageNumber() {
-        return Math.min(results.size() + 1, stages.size());
+        return min(results.size() + 1, stages.size());
     }
 
-    Condition definition() {
-        return definition;
+    int totalStages() {
+        return stages.size();
     }
 
     int completedStages() {
         return results.size();
-    }
-
-    boolean isComplete() {
-        return results.size() == stages.size();
     }
 
     public List<RESULT> values() {
@@ -46,16 +33,12 @@ public final class SequenceExecution<OBSERVED, RESULT> {
         return results.stream().toList();
     }
 
-    public List<Condition> conditions() {
-        return stages.stream().<Condition>map(stage -> stage.condition).toList();
-    }
-
-    AttemptResult<? extends RESULT> probe(OBSERVED actual) {
+    ConditionResult<? extends RESULT> probe(OBSERVED actual) throws Throwable {
         var stage = stages.get(stageNumber() - 1);
         // Persistence rechecks the final stage, retaining all earlier values.
-        if (isComplete()) results.removeLast();
+        if (results.size() == stages.size()) results.removeLast();
         var evaluation = stage.probe(actual);
-        if (evaluation instanceof AttemptResult.Satisfied<? extends RESULT> success) {
+        if (evaluation instanceof Satisfied<? extends RESULT> success) {
             results.add(success.value());
         }
         return evaluation;

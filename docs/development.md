@@ -37,15 +37,16 @@ use real time and only public methods.
 | `ConditionSupport`, `ValueMatching` | Construction/composition and shared comparisons |
 | `Await`; `ValueAwait`, `SelectionAwait`, `MapAwait` | Source entry points; fluent configuration |
 | `DiagnosticAwait`, `DiagnosticSelectionAwait`, `DiagnosticMapAwait` | Diagnostic facade |
-| `AwaitSupport` | Shared execution and terminal handling |
+| `AwaitSupport` | Terminal binding, execution, and result handling |
 | `ConditionExecution` | Lazy evaluator initialization and check invocation |
 | `SequenceExecution` | Stage transitions and retained selected/captured values |
-| `WaitEngine` | Polling, deadlines, persistence |
+| `WaitEngine` | Polling, deadlines, persistence from immutable step snapshots |
 | `AttemptExecution`; transient `ExecutionStep` | Source/attempt calls; timing and execution context |
 | `AttemptHistory` | Invocation numbering and history grouping |
 | `FailureDiagnostics`, `DiagnosticText` | Terminal formatting and guarded rendering outside polling |
 
-`AttemptResult` adds uncontrolled failure to public `ConditionResult` outcomes.
+`ConditionResult` is the sole check outcome. Exceptions retain their original cause;
+`ProbeFailure` adds the location of a nested check before history records the failure.
 
 ## Type and module boundaries
 

@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.result;
 
-import io.github.gromoff97.awium.internal.DiagnosticText;
-
+import static io.github.gromoff97.awium.internal.DiagnosticText.attempt;
 import static java.util.Objects.requireNonNull;
 
 public sealed interface Attempt<OBSERVED> {
@@ -10,17 +9,17 @@ public sealed interface Attempt<OBSERVED> {
         return null;
     }
 
-    record Satisfied<OBSERVED>(OBSERVED observed) implements Attempt<OBSERVED> {
+    record SatisfiedObservation<OBSERVED>(OBSERVED observed) implements Attempt<OBSERVED> {
         @Override
         public String toString() {
-            return DiagnosticText.attempt(this);
+            return attempt(this);
         }
     }
 
-    record Unsatisfied<OBSERVED>(OBSERVED observed, String mismatch, Throwable cause) implements Attempt<OBSERVED> {
+    record UnsatisfiedObservation<OBSERVED>(OBSERVED observed, String mismatch, Throwable cause) implements Attempt<OBSERVED> {
         @Override
         public String toString() {
-            return DiagnosticText.attempt(this);
+            return attempt(this);
         }
     }
 
@@ -34,7 +33,7 @@ public sealed interface Attempt<OBSERVED> {
 
         @Override
         public String toString() {
-            return DiagnosticText.attempt(this);
+            return attempt(this);
         }
     }
 
@@ -47,7 +46,7 @@ public sealed interface Attempt<OBSERVED> {
 
         @Override
         public String toString() {
-            return DiagnosticText.attempt(this);
+            return attempt(this);
         }
     }
 

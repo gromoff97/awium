@@ -56,8 +56,8 @@ import static io.github.gromoff97.awium.StringConditions.nonBlank;
 import static io.github.gromoff97.awium.StringConditions.nonEmpty;
 import static io.github.gromoff97.awium.StringConditions.notEqualToIgnoringCase;
 import static io.github.gromoff97.awium.StringConditions.startsWith;
-import static io.github.gromoff97.awium.internal.AttemptResult.Satisfied;
-import static io.github.gromoff97.awium.internal.AttemptResult.Unsatisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
 import static java.lang.Integer.compare;
 import static java.time.Duration.ofNanos;
@@ -217,7 +217,7 @@ class ScalarConditionsTest {
             assertEquals(text.capacity(), value.capacity());
             var captured = diagnostic(waiting).until(check);
             switch (captured) {
-                case AwaitResult.Satisfied(var history, var result) -> {
+                case AwaitResult.Succeeded(var history, var result) -> {
                     assertSame(text, result);
                     assertEquals(text.capacity(), result.capacity());
                 }

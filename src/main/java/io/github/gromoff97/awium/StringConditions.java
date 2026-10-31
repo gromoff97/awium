@@ -9,11 +9,13 @@ import java.util.regex.Pattern;
 
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
+import static io.github.gromoff97.awium.ConditionSupport.sized;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ConditionSupport.validateRange;
 import static io.github.gromoff97.awium.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
 import static java.util.Objects.requireNonNull;
+import static java.util.regex.Pattern.compile;
 import static java.util.stream.StreamSupport.stream;
 
 public final class StringConditions {
@@ -55,7 +57,7 @@ public final class StringConditions {
 
     public static PreservingCondition<CharSequence> containsIgnoringCase(CharSequence expected) {
         String value = text(expected, "expected string");
-        var pattern = Pattern.compile(value, Pattern.LITERAL | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+        var pattern = compile(value, Pattern.LITERAL | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         return preservingNonNull("string", "string contains expected string ignoring case",
                 "string did not contain expected string ignoring case", expectedReference(value),
                 actual -> pattern.matcher(actual).find());
@@ -86,7 +88,7 @@ public final class StringConditions {
     }
 
     public static PreservingCondition<CharSequence> matchesRegex(CharSequence regex) {
-        return matchesRegex(Pattern.compile(text(regex, "regex")));
+        return matchesRegex(compile(text(regex, "regex")));
     }
 
     public static PreservingCondition<CharSequence> matchesRegex(Pattern expected) {
@@ -96,7 +98,7 @@ public final class StringConditions {
     }
 
     public static PreservingCondition<CharSequence> doesNotMatchRegex(CharSequence regex) {
-        return doesNotMatchRegex(Pattern.compile(text(regex, "regex")));
+        return doesNotMatchRegex(compile(text(regex, "regex")));
     }
 
     public static PreservingCondition<CharSequence> doesNotMatchRegex(Pattern unexpected) {
@@ -124,38 +126,38 @@ public final class StringConditions {
     }
 
     public static PreservingCondition<CharSequence> hasLength(int expected) {
-        return sized(expected, actual -> actual == expected, "is " + expected);
+        return stringLength(expected, actual -> actual == expected, "is " + expected);
     }
 
     public static PreservingCondition<CharSequence> hasLengthNotEqualTo(int unexpected) {
-        return sized(unexpected, actual -> actual != unexpected, "is not " + unexpected);
+        return stringLength(unexpected, actual -> actual != unexpected, "is not " + unexpected);
     }
 
     public static PreservingCondition<CharSequence> hasLengthGreaterThan(int lowerBound) {
-        return sized(lowerBound, actual -> actual > lowerBound, "is greater than " + lowerBound);
+        return stringLength(lowerBound, actual -> actual > lowerBound, "is greater than " + lowerBound);
     }
 
     public static PreservingCondition<CharSequence> hasLengthAtLeast(int lowerBound) {
-        return sized(lowerBound, actual -> actual >= lowerBound, "is at least " + lowerBound);
+        return stringLength(lowerBound, actual -> actual >= lowerBound, "is at least " + lowerBound);
     }
 
     public static PreservingCondition<CharSequence> hasLengthLessThan(int upperBound) {
-        return sized(upperBound, actual -> actual < upperBound, "is less than " + upperBound);
+        return stringLength(upperBound, actual -> actual < upperBound, "is less than " + upperBound);
     }
 
     public static PreservingCondition<CharSequence> hasLengthAtMost(int upperBound) {
-        return sized(upperBound, actual -> actual <= upperBound, "is at most " + upperBound);
+        return stringLength(upperBound, actual -> actual <= upperBound, "is at most " + upperBound);
     }
 
     public static PreservingCondition<CharSequence> hasLengthBetween(int lowerBound, int upperBound) {
         validateRange(lowerBound, upperBound, "length");
-        return sized(lowerBound, length -> length >= lowerBound && length <= upperBound,
+        return stringLength(lowerBound, length -> length >= lowerBound && length <= upperBound,
                 "is between " + lowerBound + " and " + upperBound);
     }
 
-    private static PreservingCondition<CharSequence> sized(int bound, IntPredicate matches,
+    private static PreservingCondition<CharSequence> stringLength(int bound, IntPredicate matches,
             String relation) {
-        return ConditionSupport.sized("string", "length", bound, matches, relation, CharSequence::length);
+        return sized("string", "length", bound, matches, relation, CharSequence::length);
     }
 
     private static PreservingCondition<CharSequence> matching(String description, String mismatch,

@@ -31,7 +31,7 @@ class MapIterableSourceTest {
         assertEquals(10, waiting.until(valueFor("key", java.util.Objects::nonNull)).intValue());
         AwaitResult<MapWithUsers, Map.Entry<String, Integer>> captured = diagnostic(waiting).until(MapConditions.singleEntry);
         switch (captured) {
-            case AwaitResult.Satisfied(var history, var entry) -> assertEquals(10, entry.getValue().intValue());
+            case AwaitResult.Succeeded(var history, var entry) -> assertEquals(10, entry.getValue().intValue());
             case AwaitResult.Failed(var history, var failure) -> fail(failure.message());
         }
     }

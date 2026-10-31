@@ -1,71 +1,75 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.result.ConditionResult;
-import io.github.gromoff97.awium.internal.AttemptResult;
-import io.github.gromoff97.awium.Condition.CapturedSource;
+import io.github.gromoff97.awium.Condition.Captured;
 import io.github.gromoff97.awium.Condition.ComparisonCondition;
 import io.github.gromoff97.awium.Condition.PreservingCondition;
 import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.function.CheckedConsumer;
 import io.github.gromoff97.awium.function.CheckedFunction;
 import io.github.gromoff97.awium.function.CheckedPredicate;
+import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.IntPredicate;
 
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.Condition.ApplicableCondition;
+import static io.github.gromoff97.awium.Condition.Check;
+import static io.github.gromoff97.awium.Condition.InputCondition;
+import static io.github.gromoff97.awium.Condition.Typed;
 import static io.github.gromoff97.awium.ConditionSupport.expectedReference;
+import static io.github.gromoff97.awium.ConditionSupport.preserving;
 import static io.github.gromoff97.awium.ConditionSupport.preservingNonNull;
 import static io.github.gromoff97.awium.ConditionSupport.snapshot;
 import static io.github.gromoff97.awium.ConditionSupport.unexpectedReference;
 import static io.github.gromoff97.awium.ValueMatching.matchesAny;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.util.Objects.deepEquals;
 import static java.util.Objects.requireNonNull;
 
 public final class Conditions {
 
-    public static final PreservingCondition<Object> isNull = ConditionSupport.preserving("value is null",
+    public static final PreservingCondition<Object> isNull = preserving("value is null",
             "value was not null", actual -> actual == null);
-    public static final PreservingCondition<Object> isNotNull = ConditionSupport.preserving("value is not null",
+    public static final PreservingCondition<Object> isNotNull = preserving("value is not null",
             "value was null", actual -> actual != null);
 
     private Conditions() {}
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <CHECK extends Condition.Check> CapturedSource<CHECK> captured(CHECK... conditions) {
+    public static <CHECK extends Check> Captured<CHECK> captured(CHECK... conditions) {
         // Keep the check type so mixed input bounds can be inferred from the terminal call.
-        return new CapturedSource<>(conditions);
+        return new Captured<>(conditions);
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <INPUT, EXPECTED> CapturedSource<Condition.ApplicableCondition<INPUT, Reference<? super EXPECTED>>> captured(
-            Condition.ApplicableCondition<? super INPUT, ? super Reference<? super EXPECTED>>... conditions) {
-        return new CapturedSource<>(conditions);
+    public static <INPUT, EXPECTED> Captured<ApplicableCondition<INPUT, Reference<? super EXPECTED>>> captured(
+            ApplicableCondition<? super INPUT, ? super Reference<? super EXPECTED>>... conditions) {
+        return new Captured<>(conditions);
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <INPUT> CapturedSource<Condition.InputCondition<INPUT>> captured(
-            Condition.InputCondition<? super INPUT>... conditions) {
-        return new CapturedSource<>(conditions);
+    public static <INPUT> Captured<InputCondition<INPUT>> captured(
+            InputCondition<? super INPUT>... conditions) {
+        return new Captured<>(conditions);
     }
 
-    public static <INPUT, RESULT> Condition.Typed<INPUT, RESULT> condition(String description,
+    public static <INPUT, RESULT> Typed<INPUT, RESULT> condition(String description,
             CheckedFunction<? super INPUT, ? extends ConditionResult<? extends RESULT>> evaluation) {
-        var condition = ConditionSupport.<INPUT, RESULT>condition(description, null,
-                (INPUT actual) -> AttemptResult.of(evaluation.apply(actual)));
+        var condition = new Typed<INPUT, RESULT>(description, null,
+                actual -> evaluation.apply(actual));
         requireNonNull(evaluation, "evaluation must not be null");
         return condition;
     }
 
-    public static <INPUT, RESULT> Condition.Typed<INPUT, RESULT> conditionPerWait(String description,
+    public static <INPUT, RESULT> Typed<INPUT, RESULT> conditionPerWait(String description,
             Callable<? extends CheckedFunction<? super INPUT, ? extends ConditionResult<? extends RESULT>>> evaluatorFactory) {
-        var condition = new Condition.Typed<INPUT, RESULT>(description, null, () -> {
+        var condition = new Typed<INPUT, RESULT>(description, null, () -> {
             var evaluator = requireNonNull(evaluatorFactory.call(), "evaluator must not be null");
-            return actual -> AttemptResult.of(evaluator.apply(actual));
+            return evaluator::apply;
         });
         requireNonNull(evaluatorFactory, "evaluator factory must not be null");
         return condition;
@@ -73,10 +77,10 @@ public final class Conditions {
 
     public static <INPUT> PreservingCondition<INPUT> asserted(CheckedConsumer<? super INPUT> assertion) {
         requireNonNull(assertion, "assertion must not be null");
-        return ConditionSupport.preserving("value satisfies assertion", actual -> {
+        return preserving("value satisfies assertion", actual -> {
             try {
                 assertion.accept(actual);
-                return satisfied(null);
+                return satisfied(actual);
             } catch (AssertionError error) {
                 return unsatisfied("value did not satisfy assertion", error);
             }
@@ -103,20 +107,20 @@ public final class Conditions {
                 actual -> actual != unexpected);
     }
 
-    public static <RESULT> Condition.Typed<Object, RESULT> instanceOf(Class<RESULT> type) {
+    public static <RESULT> Typed<Object, RESULT> instanceOf(Class<RESULT> type) {
         requireNonNull(type, "type must not be null");
-        return ConditionSupport.condition("value is an instance of " + type.getTypeName(), null, actual ->
+        return new Typed<>("value is an instance of " + type.getTypeName(), null, actual ->
                 type.isInstance(actual)
-                        ? AttemptResult.satisfied(type.cast(actual))
-                        : AttemptResult.unsatisfied(typeMismatch(actual)));
+                        ? satisfied(type.cast(actual))
+                        : unsatisfied(typeMismatch(actual)));
     }
 
-    public static <RESULT> Condition.Typed<Object, RESULT> exactlyInstanceOf(Class<RESULT> type) {
+    public static <RESULT> Typed<Object, RESULT> exactlyInstanceOf(Class<RESULT> type) {
         requireNonNull(type, "type must not be null");
-        return ConditionSupport.condition("value is exactly an instance of " + type.getTypeName(), null, actual ->
+        return new Typed<>("value is exactly an instance of " + type.getTypeName(), null, actual ->
                 actual != null && actual.getClass() == type
-                        ? AttemptResult.satisfied(type.cast(actual))
-                        : AttemptResult.unsatisfied(typeMismatch(actual)));
+                        ? satisfied(type.cast(actual))
+                        : unsatisfied(typeMismatch(actual)));
     }
 
     private static String typeMismatch(Object actual) {
@@ -137,7 +141,7 @@ public final class Conditions {
 
     public static <INPUT> PreservingCondition<INPUT> matches(CheckedPredicate<? super INPUT> predicate) {
         requireNonNull(predicate, "predicate must not be null");
-        return ConditionSupport.preserving("value matches", "value did not match", predicate);
+        return preserving("value matches", "value did not match", predicate);
     }
 
     public static <BOUND, INPUT extends Comparable<? super BOUND>>
@@ -178,8 +182,8 @@ public final class Conditions {
 
     private static <EXPECTED> ComparisonCondition<EXPECTED> comparison(String description, String mismatch,
             Reference<?> reference, CheckedPredicate<Object> matches) {
-        return new ComparisonCondition<>(ConditionSupport.condition(description, reference,
-                actual -> matches.test(actual) ? AttemptResult.satisfied(actual) : AttemptResult.unsatisfied(mismatch)));
+        return new ComparisonCondition<>(description, reference,
+                actual -> matches.test(actual) ? satisfied(actual) : unsatisfied(mismatch));
     }
 
     private static <BOUND, INPUT extends Comparable<? super BOUND>>

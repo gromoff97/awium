@@ -22,12 +22,12 @@ class AwaitResultTest {
 
     @Test
     void resultsCopyConditionHistoriesAndSuccessRetainsLegitimateNull() {
-        Attempt<String> attempt = new Attempt.Satisfied<>(null);
+        Attempt<String> attempt = new Attempt.SatisfiedObservation<>(null);
         var mutableAttempts = new TreeMap<>(Map.of(1L, attempt));
         var history = new ConditionHistory<>(diagnosticCondition("ready", null), mutableAttempts);
         var mutable = new ArrayList<>(List.of(history));
 
-        var result = new AwaitResult.Satisfied<>(mutable, null);
+        var result = new AwaitResult.Succeeded<>(mutable, null);
         var failed = new AwaitResult.Failed<>(mutable,
                 new AwaitFailure(AwaitFailure.Reason.TIMEOUT, "timeout", null, List.of()));
         mutable.clear();
@@ -58,9 +58,9 @@ class AwaitResultTest {
     @Test
     void resultsRequireConditionHistoriesAndRejectNullEntries() {
         var failure = new AwaitFailure(AwaitFailure.Reason.TIMEOUT, "timeout", null, List.of());
-        assertThrows(NullPointerException.class, () -> new AwaitResult.Satisfied<>(null, "ready"));
+        assertThrows(NullPointerException.class, () -> new AwaitResult.Succeeded<>(null, "ready"));
         assertThrows(NullPointerException.class, () -> new AwaitResult.Failed<>(null, failure));
-        assertThrows(NullPointerException.class, () -> new AwaitResult.Satisfied<>(singletonList(null), "ready"));
+        assertThrows(NullPointerException.class, () -> new AwaitResult.Succeeded<>(singletonList(null), "ready"));
         assertThrows(NullPointerException.class, () -> new AwaitResult.Failed<>(singletonList(null), failure));
         var condition = diagnosticCondition("ready", null);
         assertThrows(NullPointerException.class, () -> new ConditionHistory<>(null, new TreeMap<>()));
@@ -80,7 +80,7 @@ class AwaitResultTest {
     @Test
     void historyOrdersNumbersNaturallyAndPreventsMutationThroughViews() {
         var condition = diagnosticCondition("ready", null);
-        var attempt = new Attempt.Satisfied<>("ready");
+        var attempt = new Attempt.SatisfiedObservation<>("ready");
         var supplied = new TreeMap<Long, Attempt<String>>(java.util.Comparator.reverseOrder());
         supplied.put(2L, attempt);
         supplied.put(1L, attempt);

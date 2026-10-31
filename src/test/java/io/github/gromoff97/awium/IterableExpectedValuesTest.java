@@ -31,7 +31,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static io.github.gromoff97.awium.MapConditions.containsAllKeys;
-import static io.github.gromoff97.awium.result.AwaitResult.Satisfied;
+import static io.github.gromoff97.awium.result.AwaitResult.Succeeded;
 import static io.github.gromoff97.awium.result.AwaitResult.Failed;
 import static java.lang.Thread.currentThread;
 import static java.util.stream.IntStream.range;
@@ -137,7 +137,7 @@ class IterableExpectedValuesTest {
         verify(expected).iterator();
         assertEquals(before.getClass(), after.getClass());
         switch (before) {
-            case Satisfied(var ignoredHistory, var observed) -> {
+            case Succeeded(var ignoredHistory, var observed) -> {
                 ACTUAL value = waiting.until(condition);
                 assertSame(actual, value);
                 assertSame(actual, observed);

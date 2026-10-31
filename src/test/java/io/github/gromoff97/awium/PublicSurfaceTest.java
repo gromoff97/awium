@@ -10,7 +10,6 @@ import org.junit.jupiter.params.provider.FieldSource;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Condition.ApplicableCondition;
 import static io.github.gromoff97.awium.Condition.Captured;
-import static io.github.gromoff97.awium.Condition.CapturedSource;
 import static io.github.gromoff97.awium.Condition.Check;
 import static io.github.gromoff97.awium.Condition.ComparisonCondition;
 import static io.github.gromoff97.awium.Condition.InputCondition;
@@ -50,8 +49,7 @@ class PublicSurfaceTest {
                 "preservingAttempt", "selectionAttempt", "yields", "preserving");
         for (Class<?> stage : List.of(Conditions.class, Condition.class, Check.class, Captured.class,
                 InputCondition.class, Typed.class, PreservingCondition.class, ComparisonCondition.class,
-                SelectedCondition.class, MapValueCondition.class, ApplicableCondition.class,
-                CapturedSource.class)) {
+                SelectedCondition.class, MapValueCondition.class, ApplicableCondition.class)) {
             assertThat(stage.getMethods()).noneMatch(method -> excludedMethods.contains(method.getName()));
         }
         assertThat(Condition.class).isSealed().isAssignableFrom(ComparisonCondition.class, SelectedCondition.class,

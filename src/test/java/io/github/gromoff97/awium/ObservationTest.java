@@ -1,15 +1,13 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.function.CheckedFunction;
-import io.github.gromoff97.awium.internal.AttemptResult;
-import io.github.gromoff97.awium.internal.SequenceExecution;
+import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.internal.WaitCompletion;
 import io.github.gromoff97.awium.internal.WaitEngine;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
-import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,9 +37,8 @@ import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.observation;
 import static io.github.gromoff97.awium.AwaitTestAccess.uncontrolled;
 import static io.github.gromoff97.awium.CollectionConditions.singleElement;
-import static io.github.gromoff97.awium.ConditionSupport.bind;
-import static io.github.gromoff97.awium.ConditionSupport.condition;
-import static io.github.gromoff97.awium.ConditionSupport.preserving;
+import static io.github.gromoff97.awium.ConditionSupport.sequence;
+import static io.github.gromoff97.awium.Condition.Typed;
 import static io.github.gromoff97.awium.Conditions.captured;
 import static io.github.gromoff97.awium.Conditions.condition;
 import static io.github.gromoff97.awium.Conditions.conditionPerWait;
@@ -53,8 +50,8 @@ import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
 import static io.github.gromoff97.awium.result.Attempt.Operation.SOURCE;
 import static io.github.gromoff97.awium.result.Attempt.Operation.WAITING;
-import static io.github.gromoff97.awium.result.Attempt.Satisfied;
-import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
+import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
+import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.INTERRUPTED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.SOURCE_FAILED;
@@ -142,10 +139,10 @@ class ObservationTest {
         var actual = new Object();
         var result = new Object();
 
-        var execution = new SequenceExecution<>(bind(condition("test condition", null, (Object value) -> {
+        var execution = sequence(new Typed<>("test condition", null, (Object value) -> {
             time.advanceNanos(3);
-            return AttemptResult.satisfied(result);
-        })));
+            return ConditionResult.satisfied(result);
+        }));
         WaitCompletion terminal = new WaitEngine<>(config(1, 20, 0).withTime(time, time), () -> {
             time.advanceNanos(2);
             return actual;
@@ -153,7 +150,7 @@ class ObservationTest {
 
         var step = terminal.step();
         var observation = step.attempt();
-        assertInstanceOf(Satisfied.class, observation);
+        assertInstanceOf(SatisfiedObservation.class, observation);
         assertEquals(ACQUISITION, step.phase());
         assertEquals(5, step.completedAfterNanos());
         assertSame(actual, observation(observation));
@@ -166,7 +163,7 @@ class ObservationTest {
         var attempt = attempt(() -> actual, value -> satisfied(value));
 
         assertSame(actual, observation(attempt));
-        assertInstanceOf(Satisfied.class, attempt);
+        assertInstanceOf(SatisfiedObservation.class, attempt);
     }
 
     @ParameterizedTest
@@ -174,7 +171,7 @@ class ObservationTest {
     void unsatisfiedAttemptsRetainTheirObservationAndDiagnosticDetails(ConditionResult.Unsatisfied<?> original) {
         var actual = new Object();
         var attempt = attempt(() -> actual, value -> original);
-        var status = assertInstanceOf(Unsatisfied.class, attempt);
+        var status = assertInstanceOf(UnsatisfiedObservation.class, attempt);
 
         assertSame(actual, observation(attempt));
         assertEquals(original.mismatch(), status.mismatch());
@@ -306,10 +303,10 @@ class ObservationTest {
             sourceCalls[0]++;
             currentThread().interrupt();
             return actual;
-        }, new SequenceExecution<>(bind(condition("ready", value -> {
+        }, sequence(condition("ready", value -> {
             conditionCalls[0]++;
             return satisfied(value);
-        })))).waitFor(ignored -> {});
+        }))).waitFor(ignored -> {});
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         uncontrolled(SOURCE, failure.step().attempt());
@@ -373,10 +370,10 @@ class ObservationTest {
                 new WaitEngine<Object>(config(1, 20, 0).withTime(clock, nanos -> boundary.accept("waiting")), () -> {
                     boundary.accept("source");
                     return new Object();
-                }, new SequenceExecution<>(bind(condition("ready", value -> {
+                }, sequence(condition("ready", value -> {
                     boundary.accept("condition");
                     return unsatisfied("not yet");
-                })))).waitFor(ignored -> {})));
+                }))).waitFor(ignored -> {})));
         assertTrue(currentThread().isInterrupted(), phase);
     }
 
@@ -532,10 +529,10 @@ class ObservationTest {
 
     private static Attempt<?> attempt(Callable<Object> source, CheckedFunction<Object, ConditionResult<?>> condition) {
         var time = new FakeTime(0);
-        return new WaitEngine<Object>(config(1, 2, 0).withTime(time, time), source, new SequenceExecution<>(bind(preserving("test condition", actual -> {
+        return new WaitEngine<Object>(config(1, 2, 0).withTime(time, time), source, sequence(condition("test condition", actual -> {
             ConditionResult<?> evaluation = condition.apply(actual);
             time.advanceNanos(2);
             return evaluation;
-        })))).waitFor(ignored -> {}).step().attempt();
+        }))).waitFor(ignored -> {}).step().attempt();
     }
 }

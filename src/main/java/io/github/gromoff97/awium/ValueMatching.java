@@ -42,7 +42,7 @@ final class ValueMatching {
                 return unsatisfied(subject + " was null");
             }
             int missingIndex = firstMissingExpectedIndex(actualElements.apply(actual), expected, matches);
-            return missingIndex < 0 ? satisfied(null) : unsatisfied(subject + " did not contain all expected " + elements
+            return missingIndex < 0 ? satisfied(actual) : unsatisfied(subject + " did not contain all expected " + elements
                     + "; first missing at expected index " + missingIndex);
         });
     }
@@ -61,7 +61,7 @@ final class ValueMatching {
                 return unsatisfied(subject + " was null");
             }
             int presentIndex = firstPresentExpectedIndex(actualElements.apply(actual), unexpected, matches);
-            return presentIndex < 0 ? satisfied(null) : unsatisfied(subject + " contained unexpected " + elements
+            return presentIndex < 0 ? satisfied(actual) : unsatisfied(subject + " contained unexpected " + elements
                     + "; first at unexpected index " + presentIndex);
         });
     }

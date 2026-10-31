@@ -21,7 +21,7 @@ import static io.github.gromoff97.awium.Conditions.*;
 import static io.github.gromoff97.awium.MapConditions.*;
 import static io.github.gromoff97.awium.OptionalConditions.*;
 import static io.github.gromoff97.awium.result.AwaitResult.Failed;
-import static io.github.gromoff97.awium.result.AwaitResult.Satisfied;
+import static io.github.gromoff97.awium.result.AwaitResult.Succeeded;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static java.util.AbstractMap.SimpleImmutableEntry;
 import static java.util.Comparator.comparingInt;
@@ -209,7 +209,7 @@ class FluentConditionTest {
         assertEquals(List.of("receipt", "receipt", "receipt", "receipt", "receipt", "receipt"),
                 List.of(payment.id(), created.id(), selected.id(), optional.id(), mapped.id(), sequence.getLast().id()));
         var value = switch (diagnostic) {
-            case Satisfied(var history, var observed) -> observed;
+            case Succeeded(var history, var observed) -> observed;
             case Failed(var history, var failure) -> throw new AssertionError(failure.message());
         };
         assertEquals("receipt", value.id());

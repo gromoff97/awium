@@ -119,7 +119,7 @@ class PositiveFluentMatrixTest {
         assertSame(text, entry.getValue());
         assertSame(values, original);
         assertEquals(1000, switch (result) {
-            case AwaitResult.Satisfied(var history, var selected) -> selected.intValue();
+            case AwaitResult.Succeeded(var history, var selected) -> selected.intValue();
             case AwaitResult.Failed(var history, var failure) -> throw new AssertionError(failure);
         });
     }

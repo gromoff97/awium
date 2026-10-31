@@ -1,6 +1,9 @@
 package io.github.gromoff97.awium.result;
 
 import io.github.gromoff97.awium.internal.DiagnosticText;
+import java.util.function.Function;
+
+import static java.util.Objects.requireNonNull;
 
 public sealed interface ConditionResult<RESULT> {
 
@@ -22,6 +25,14 @@ public sealed interface ConditionResult<RESULT> {
 
     static <RESULT> Unsatisfied<RESULT> unsatisfied(String mismatch, Throwable cause) {
         return new Unsatisfied<>(mismatch, cause);
+    }
+
+    default <NEXT> ConditionResult<NEXT> mapValue(Function<? super RESULT, ? extends NEXT> mapping) {
+        requireNonNull(mapping, "mapping must not be null");
+        return switch (this) {
+            case Satisfied<RESULT> success -> satisfied(mapping.apply(success.value()));
+            case Unsatisfied<RESULT> mismatch -> unsatisfied(mismatch.mismatch(), mismatch.cause());
+        };
     }
 
     record Satisfied<RESULT>(RESULT value) implements ConditionResult<RESULT> {}

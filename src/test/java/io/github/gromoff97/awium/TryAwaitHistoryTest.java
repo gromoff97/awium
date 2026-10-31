@@ -28,9 +28,9 @@ import static io.github.gromoff97.awium.MapConditions.singleEntry;
 import static io.github.gromoff97.awium.MapConditions.valueFor;
 import static io.github.gromoff97.awium.OptionalConditions.hasValue;
 import static io.github.gromoff97.awium.OptionalConditions.present;
-import static io.github.gromoff97.awium.result.Attempt.Unsatisfied;
+import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.AwaitResult.Failed;
-import static io.github.gromoff97.awium.result.AwaitResult.Satisfied;
+import static io.github.gromoff97.awium.result.AwaitResult.Succeeded;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.time.Duration.ofNanos;
@@ -64,7 +64,7 @@ class TryAwaitHistoryTest {
 
         assertInstanceOf(Failed.class, result);
         assertThat(result.conditions().getFirst().attempts().keySet()).containsExactly(4L, 6L, 12L, 24L, 30L);
-        assertThat(attempts(result)).hasOnlyElementsOfType(Unsatisfied.class)
+        assertThat(attempts(result)).hasOnlyElementsOfType(UnsatisfiedObservation.class)
                 .extracting(AwaitTestAccess::observation).containsExactly(0, 10, 20, 30, 40);
         assertTrue(result.conditions().getLast().attempts().isEmpty());
     }
@@ -210,7 +210,7 @@ class TryAwaitHistoryTest {
         assertEquals(1, attempts(result).size());
         assertEquals(300, result.conditions().getFirst().attempts().firstKey());
         assertEquals("one ready element", result.conditions().getFirst().condition().explanation());
-        assertInstanceOf(Unsatisfied.class, attempts(result).getFirst());
+        assertInstanceOf(UnsatisfiedObservation.class, attempts(result).getFirst());
     }
 
     @Test
@@ -256,8 +256,8 @@ class TryAwaitHistoryTest {
         var result = timedTryAwait(ThrowingProbe::new,
                 config(1, 10, 3), time, time).until(condition("ready", actual -> satisfied(actual)));
 
-        assertInstanceOf(Satisfied.class, result);
-        assertThat(attempts(result)).hasSize(4).hasOnlyElementsOfType(Attempt.Satisfied.class);
+        assertInstanceOf(Succeeded.class, result);
+        assertThat(attempts(result)).hasSize(4).hasOnlyElementsOfType(Attempt.SatisfiedObservation.class);
         assertSame(observation(attempts(result).getLast()), result.orThrow());
     }
 
@@ -275,7 +275,7 @@ class TryAwaitHistoryTest {
         assertEquals("ready", selected);
         assertThat(result.conditions().getFirst().attempts().keySet()).containsExactly(2L, 4L, 5L);
         assertThat(attempts(result).subList(0, 2))
-                .extracting(attempt -> assertInstanceOf(Unsatisfied.class, attempt).mismatch())
+                .extracting(attempt -> assertInstanceOf(UnsatisfiedObservation.class, attempt).mismatch())
                 .containsExactly("collection size was 0", "single element: collection size was 0");
         assertSame(check, result.conditions().getFirst().condition());
     }
@@ -292,7 +292,7 @@ class TryAwaitHistoryTest {
         assertEquals("ready", result.orThrow());
         assertEquals(4, attempts(result).size());
         assertThat(attempts(result).subList(0, 3))
-                .extracting(attempt -> assertInstanceOf(Unsatisfied.class, attempt).mismatch())
+                .extracting(attempt -> assertInstanceOf(UnsatisfiedObservation.class, attempt).mismatch())
                 .containsExactly("optional was empty", "optional value: collection size was 0",
                         "optional value: single element: collection size was 0");
     }

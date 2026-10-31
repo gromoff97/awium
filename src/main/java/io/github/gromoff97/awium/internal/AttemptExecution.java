@@ -4,12 +4,21 @@ import io.github.gromoff97.awium.result.Attempt;
 import java.util.concurrent.Callable;
 import java.util.function.LongSupplier;
 
+import static io.github.gromoff97.awium.internal.ExecutionStep.Phase;
+import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
+import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
+import static io.github.gromoff97.awium.result.Attempt.Failure;
+import static io.github.gromoff97.awium.result.Attempt.Operation;
+import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
+import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
+import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
 import static java.lang.Thread.currentThread;
 
 record AttemptExecution<OBSERVED>(Callable<? extends OBSERVED> source,
         SequenceExecution<OBSERVED, ?> execution, LongSupplier clock, long started) {
 
-    ExecutionStep<OBSERVED> call(ExecutionStep.Phase phase) {
+    ExecutionStep<OBSERVED> call(Phase phase) {
         var interrupted = interruptedBefore(phase);
         if (interrupted != null) return interrupted;
         int stageNumber = execution.stageNumber();
@@ -18,48 +27,56 @@ record AttemptExecution<OBSERVED>(Callable<? extends OBSERVED> source,
             actual = source.call();
         } catch (Throwable failure) {
             return step(phase, stageNumber,
-                    new Attempt.FailedBeforeObservation<>(Attempt.Operation.SOURCE, failure), clock.getAsLong());
+                    new FailedBeforeObservation<>(Operation.SOURCE, failure), clock.getAsLong());
         }
 
         // Keep the clock/cancellation boundary before invoking user condition code.
         clock.getAsLong();
         if (currentThread().isInterrupted()) {
-            return step(phase, stageNumber, new Attempt.FailedAfterObservation<>(actual, Attempt.Operation.SOURCE,
+            return step(phase, stageNumber, new FailedAfterObservation<>(actual, Operation.SOURCE,
                     new InterruptedException("caller thread interrupt flag was set"), null), clock.getAsLong());
         }
 
-        var evaluation = execution.probe(actual);
+        Attempt<OBSERVED> attempt = observe(actual);
         long completed = clock.getAsLong();
-        if (!(evaluation instanceof AttemptResult.Uncontrolled<?>) && currentThread().isInterrupted()) {
-            var cause = evaluation.cause();
-            evaluation = AttemptResult.uncontrolled(cause == null
-                    ? new InterruptedException("caller thread interrupt flag was set") : cause);
+        if (!(attempt instanceof Failure<?>) && currentThread().isInterrupted()) {
+            var cause = attempt.cause();
+            attempt = new FailedAfterObservation<>(actual, Operation.CONDITION,
+                    cause == null ? new InterruptedException("caller thread interrupt flag was set") : cause, null);
         }
-        Attempt<OBSERVED> attempt = switch (evaluation) {
-            case AttemptResult.Satisfied<?> ignored -> new Attempt.Satisfied<>(actual);
-            case AttemptResult.Unsatisfied<?> mismatch ->
-                    new Attempt.Unsatisfied<>(actual, mismatch.mismatch(), mismatch.cause());
-            case AttemptResult.Uncontrolled<?> failure -> new Attempt.FailedAfterObservation<>(actual,
-                    Attempt.Operation.CONDITION, failure.cause(), failure.location());
-        };
         return step(phase, stageNumber, attempt, completed);
     }
 
-    private ExecutionStep<OBSERVED> step(ExecutionStep.Phase phase, int stageNumber,
+    private Attempt<OBSERVED> observe(OBSERVED actual) {
+        try {
+            return switch (execution.probe(actual)) {
+                case Satisfied<?> ignored -> new SatisfiedObservation<>(actual);
+                case Unsatisfied<?> mismatch ->
+                        new UnsatisfiedObservation<>(actual, mismatch.mismatch(), mismatch.cause());
+            };
+        } catch (ProbeFailure failure) {
+            return new FailedAfterObservation<>(actual, Operation.CONDITION,
+                    failure.getCause(), failure.location());
+        } catch (Throwable failure) {
+            return new FailedAfterObservation<>(actual, Operation.CONDITION, failure, null);
+        }
+    }
+
+    private ExecutionStep<OBSERVED> step(Phase phase, int stageNumber,
             Attempt<OBSERVED> attempt, long completed) {
-        return new ExecutionStep<>(execution.definition(), stageNumber, execution.completedStages(),
+        return new ExecutionStep<>(execution.totalStages(), stageNumber, execution.completedStages(),
                 phase, completed - started, attempt);
     }
 
-    ExecutionStep<OBSERVED> interruptedBefore(ExecutionStep.Phase phase) {
+    ExecutionStep<OBSERVED> interruptedBefore(Phase phase) {
         return currentThread().isInterrupted()
                 ? waitingFailure(phase, new InterruptedException("caller thread interrupt flag was set"))
                 : null;
     }
 
-    ExecutionStep<OBSERVED> waitingFailure(ExecutionStep.Phase phase, Throwable failure) {
+    ExecutionStep<OBSERVED> waitingFailure(Phase phase, Throwable failure) {
         return step(phase, execution.stageNumber(),
-                new Attempt.FailedBeforeObservation<>(Attempt.Operation.WAITING, failure), clock.getAsLong());
+                new FailedBeforeObservation<>(Operation.WAITING, failure), clock.getAsLong());
     }
 
 }
