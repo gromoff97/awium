@@ -29,45 +29,45 @@ record AttemptExecution<OBSERVED>(Callable<? extends OBSERVED> source,
         try {
             actual = source.call();
         } catch (Throwable failure) {
-            return step(phase,
+            return failed(phase,
                     new FailedBeforeObservation<>(Operation.SOURCE, failure), clock.getAsLong());
         }
 
         // Keep the clock/cancellation boundary before invoking user condition code.
         clock.getAsLong();
         if (currentThread().isInterrupted()) {
-            return step(phase, new FailedAfterObservation<>(actual, Operation.SOURCE,
+            return failed(phase, new FailedAfterObservation<>(actual, Operation.SOURCE,
                     new InterruptedException("caller thread interrupt flag was set"), null), clock.getAsLong());
         }
 
-        Attempt<OBSERVED> attempt = observe(actual);
+        Attempt<OBSERVED> attempt;
+        boolean complete = false;
+        try {
+            attempt = switch (execution.probe(actual)) {
+                case Satisfied<?> ignored -> new SatisfiedObservation<>(actual);
+                case Unsatisfied<?> mismatch ->
+                        new UnsatisfiedObservation<>(actual, mismatch.mismatch(), mismatch.cause());
+            };
+            if (!currentThread().isInterrupted()) complete = execution.complete();
+        } catch (ProbeFailure failure) {
+            attempt = new FailedAfterObservation<>(actual, Operation.CONDITION,
+                    failure.getCause(), failure.location());
+        } catch (Throwable failure) {
+            attempt = new FailedAfterObservation<>(actual, Operation.CONDITION, failure, null);
+        }
         long completed = clock.getAsLong();
         if (!(attempt instanceof Failure<?>) && currentThread().isInterrupted()) {
             var cause = attempt.cause();
             attempt = new FailedAfterObservation<>(actual, Operation.CONDITION,
                     cause == null ? new InterruptedException("caller thread interrupt flag was set") : cause, null);
+            complete = false;
         }
-        return step(phase, attempt, completed);
+        return new ExecutionStep<>(complete, phase, completed - started, attempt);
     }
 
-    private Attempt<OBSERVED> observe(OBSERVED actual) {
-        try {
-            return switch (execution.probe(actual)) {
-                case Satisfied<?> ignored -> new SatisfiedObservation<>(actual);
-                case Unsatisfied<?> mismatch ->
-                        new UnsatisfiedObservation<>(actual, mismatch.mismatch(), mismatch.cause());
-            };
-        } catch (ProbeFailure failure) {
-            return new FailedAfterObservation<>(actual, Operation.CONDITION,
-                    failure.getCause(), failure.location());
-        } catch (Throwable failure) {
-            return new FailedAfterObservation<>(actual, Operation.CONDITION, failure, null);
-        }
-    }
-
-    private ExecutionStep<OBSERVED> step(Phase phase,
-            Attempt<OBSERVED> attempt, long completed) {
-        return new ExecutionStep<>(execution.complete(),
+    private ExecutionStep<OBSERVED> failed(Phase phase,
+            Failure<OBSERVED> attempt, long completed) {
+        return new ExecutionStep<>(false,
                 phase, completed - started, attempt);
     }
 
@@ -79,7 +79,7 @@ record AttemptExecution<OBSERVED>(Callable<? extends OBSERVED> source,
 
     ExecutionStep<OBSERVED> waitingFailure(Phase phase, Throwable failure) {
         execution.beginAttempt();
-        return step(phase,
+        return failed(phase,
                 new FailedBeforeObservation<>(Operation.WAITING, failure), clock.getAsLong());
     }
 
