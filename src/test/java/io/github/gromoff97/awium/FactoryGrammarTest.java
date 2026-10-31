@@ -72,6 +72,9 @@ class FactoryGrammarTest {
         assertNullRejected("condition", () -> diagnostic(waiting).until((Condition.Typed<String, String>) null));
         assertNullRejected("condition", () -> waiting.until((Condition.ComparisonCondition<String>) null));
         assertNullRejected("condition", () -> diagnostic(waiting).until((Condition.ComparisonCondition<String>) null));
+        Condition.CapturedSource<PreservingCondition<String>> sequence = null;
+        assertNullRejected("condition", () -> waiting.until(sequence));
+        assertNullRejected("condition", () -> diagnostic(waiting).until(sequence));
         assertNullRejected("condition", () -> waiting.until(captured(equalTo("value"), equalTo("value"), (Condition.ComparisonCondition<String>) null)));
         assertNullRejected("condition", () -> diagnostic(waiting).until(captured(equalTo("value"), equalTo("value"), (Condition.ComparisonCondition<String>) null)));
 

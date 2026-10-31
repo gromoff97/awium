@@ -8,20 +8,20 @@ import java.util.function.Function;
 public final class SequenceExecution<OBSERVED, RESULT> {
 
     private final Condition definition;
-    private final List<AttemptFactory<OBSERVED, RESULT>> stages;
+    private final List<ConditionExecution<OBSERVED, RESULT>> stages;
     private final List<RESULT> results = new ArrayList<>();
 
-    public SequenceExecution(AttemptFactory<OBSERVED, RESULT> attempt) {
+    public SequenceExecution(ConditionExecution<OBSERVED, RESULT> attempt) {
         this(attempt.condition, List.of(attempt));
     }
 
-    private SequenceExecution(Condition definition, List<AttemptFactory<OBSERVED, RESULT>> stages) {
+    private SequenceExecution(Condition definition, List<ConditionExecution<OBSERVED, RESULT>> stages) {
         this.definition = definition;
         this.stages = stages;
     }
 
     public static <OBSERVED> SequenceExecution<OBSERVED, OBSERVED> captured(Condition.Captured sequence,
-            Function<Condition.Check, AttemptFactory<OBSERVED, OBSERVED>> bind) {
+            Function<Condition.Check, ConditionExecution<OBSERVED, OBSERVED>> bind) {
         return new SequenceExecution<>(sequence, sequence.stages().stream().map(bind).toList());
     }
 
@@ -50,16 +50,14 @@ public final class SequenceExecution<OBSERVED, RESULT> {
         return stages.stream().<Condition>map(stage -> stage.condition).toList();
     }
 
-    BoundAttempt<OBSERVED, RESULT> attempt(OBSERVED actual) {
+    AttemptResult<? extends RESULT> probe(OBSERVED actual) {
         var stage = stages.get(stageNumber() - 1);
         // Persistence rechecks the final stage, retaining all earlier values.
         if (isComplete()) results.removeLast();
-        return stage.create(actual);
-    }
-
-    void record(AttemptResult<? extends RESULT> evaluation) {
+        var evaluation = stage.probe(actual);
         if (evaluation instanceof AttemptResult.Satisfied<? extends RESULT> success) {
             results.add(success.value());
         }
+        return evaluation;
     }
 }

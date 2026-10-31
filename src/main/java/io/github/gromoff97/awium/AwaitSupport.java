@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.AttemptFactory;
+import io.github.gromoff97.awium.internal.ConditionExecution;
 import io.github.gromoff97.awium.internal.FailureDiagnostics;
 import io.github.gromoff97.awium.internal.SequenceExecution;
 import io.github.gromoff97.awium.internal.WaitCompletion;
@@ -24,27 +24,21 @@ abstract sealed class AwaitSupport<OBSERVED> permits ValueAwait, DiagnosticAwait
         this.configuration = configuration;
     }
 
-    final <RESULT> RESULT complete(AttemptFactory<OBSERVED, RESULT> attempt) {
+    final <RESULT> RESULT complete(ConditionExecution<OBSERVED, RESULT> attempt) {
         return complete(new SequenceExecution<>(attempt)).getFirst();
     }
 
     final <VALUE> List<VALUE> complete(SequenceExecution<OBSERVED, VALUE> execution) {
         var history = new AttemptHistory<OBSERVED>(false);
         var outcome = new WaitEngine<>(configuration, source, execution).waitFor(history::add);
-        complete(outcome, configuration, history.count());
+        if (!(outcome instanceof WaitCompletion.Satisfied)) {
+            AwaitFailure failure = FailureDiagnostics.failure(outcome, configuration, history.count());
+            new AwaitResult.Failed<>(List.of(), failure).orThrow();
+        }
         return execution.values();
     }
 
-    private static void complete(WaitCompletion outcome,
-            WaitConfiguration configuration, long attemptNumber) {
-        if (outcome instanceof WaitCompletion.Satisfied) {
-            return;
-        }
-        AwaitFailure failure = FailureDiagnostics.failure(outcome, configuration, attemptNumber);
-        new AwaitResult.Failed<>(List.of(), failure).orThrow();
-    }
-
-    final <RESULT> AwaitResult<OBSERVED, RESULT> capture(AttemptFactory<OBSERVED, RESULT> attempt) {
+    final <RESULT> AwaitResult<OBSERVED, RESULT> capture(ConditionExecution<OBSERVED, RESULT> attempt) {
         return capture(new SequenceExecution<>(attempt), List::getFirst);
     }
 

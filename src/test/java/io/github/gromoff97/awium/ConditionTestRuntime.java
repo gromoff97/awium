@@ -20,15 +20,15 @@ final class ConditionTestRuntime {
     }
 
     static <SOURCE, RESULT> AttemptResult<? extends RESULT> evaluate(Typed<? super SOURCE, ? extends RESULT> condition, SOURCE actual) {
-        return evaluated(bind(condition).create(actual).call());
+        return evaluated(bind(condition).probe(actual));
     }
 
     static <SOURCE> AttemptResult<? extends SOURCE> evaluate(PreservingCondition<? super SOURCE> condition, SOURCE actual) {
-        return evaluated(ConditionSupport.<SOURCE, SOURCE>bind(condition).create(actual).call());
+        return evaluated(ConditionSupport.<SOURCE, SOURCE>bind(condition).probe(actual));
     }
 
     static <SOURCE> AttemptResult<? extends SOURCE> evaluate(ComparisonCondition<? extends SOURCE> condition, SOURCE actual) {
-        return evaluated(ConditionSupport.<SOURCE, SOURCE>bind(condition).create(actual).call());
+        return evaluated(ConditionSupport.<SOURCE, SOURCE>bind(condition).probe(actual));
     }
 
     static <RESULT> AttemptResult<? extends RESULT> evaluated(AttemptResult<? extends RESULT> attempt) {

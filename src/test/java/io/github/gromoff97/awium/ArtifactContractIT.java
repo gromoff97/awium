@@ -4,9 +4,8 @@ import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
-import io.github.gromoff97.awium.internal.AttemptFactory;
+import io.github.gromoff97.awium.internal.ConditionExecution;
 import io.github.gromoff97.awium.internal.AwaitAttempt;
-import io.github.gromoff97.awium.internal.BoundAttempt;
 import io.github.gromoff97.awium.internal.SequenceExecution;
 import io.github.gromoff97.awium.internal.WaitEngine;
 import java.lang.module.ModuleFinder;
@@ -68,26 +67,26 @@ class ArtifactContractIT {
         resource = jar;
         var classes = new ClassFileImporter().importJar(jar);
         assertIndependent(classes,
-                Set.of("Condition", "AwaitAttempt", "BoundAttempt", "AttemptFactory", "ConditionSupport",
+                Set.of("Condition", "AwaitAttempt", "ConditionExecution", "ConditionSupport",
                         "ConditionResult", "AttemptResult", "SequenceExecution", "ExecutionStep", "AttemptExecution",
                         "WaitEngine", "WaitCompletion", "WaitConfiguration"),
                 Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "Conditions", "CollectionConditions",
                         "MapConditions", "OptionalConditions", "StringConditions", "FailureDiagnostics", "DiagnosticText"));
-        assertIndependent(classes, Set.of("ConditionResult"), Set.of("BoundAttempt", "Attempt", "AwaitResult"));
-        assertIndependent(classes, Set.of("Condition"), Set.of("AttemptFactory", "AttemptResult"));
+        assertIndependent(classes, Set.of("ConditionResult"), Set.of("ConditionExecution", "Attempt", "AwaitResult"));
+        assertIndependent(classes, Set.of("Condition"), Set.of("ConditionExecution", "AttemptResult"));
         assertIndependent(classes, Set.of("Reference", "ConditionResult.Unsatisfied"),
-                Set.of("AwaitAttempt", "BoundAttempt", "AttemptFactory", "SequenceExecution", "AttemptExecution",
+                Set.of("AwaitAttempt", "ConditionExecution", "SequenceExecution", "AttemptExecution",
                         "WaitEngine", "WaitCompletion"));
         assertIndependent(classes, Set.of("ConditionSupport"),
                 Set.of("WaitEngine", "WaitCompletion", "FailureDiagnostics", "ValueMatching"));
         assertFalse(AwaitAttempt.class.isAssignableFrom(SequenceExecution.class));
         assertIndependent(classes, Set.of("SequenceExecution"),
                 Set.of("ConditionSupport", "WaitEngine", "WaitConfiguration"));
-        assertIndependent(classes, Set.of("BoundAttempt"),
+        assertIndependent(classes, Set.of("ConditionExecution"),
                 Set.of("SequenceExecution", "WaitEngine", "AttemptHistory", "Attempt", "WaitConfiguration"));
         assertIndependent(classes,
                 Set.of("Conditions", "CollectionConditions", "MapConditions", "OptionalConditions", "StringConditions"),
-                Set.of("AwaitAttempt", "BoundAttempt", "AttemptFactory", "SequenceExecution", "AttemptExecution",
+                Set.of("AwaitAttempt", "ConditionExecution", "SequenceExecution", "AttemptExecution",
                         "WaitEngine", "WaitCompletion", "WaitConfiguration", "FailureDiagnostics"));
         assertIndependent(classes, Set.of("FailureDiagnostics"),
                 Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "AwaitResult", "AwaitAssertionError",
@@ -137,8 +136,7 @@ class ArtifactContractIT {
 
     @Test
     void executionPackageIsHiddenFromModuleConsumers() {
-        assertInaccessible(AttemptFactory.class, true, "compiler.err.package.not.visible");
-        assertInaccessible(BoundAttempt.class, true, "compiler.err.package.not.visible");
+        assertInaccessible(ConditionExecution.class, true, "compiler.err.package.not.visible");
         assertInaccessible(WaitEngine.class, true, "compiler.err.package.not.visible");
     }
 

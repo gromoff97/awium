@@ -6,7 +6,6 @@
 
 ```sh
 ./gradlew check
-./gradlew javadoc
 ```
 
 `check` covers behavior, fluent compilation, packaged-module boundaries, and zero
@@ -14,7 +13,6 @@ product compile/runtime dependencies. Tests use JUnit 6, AssertJ, Mockito,
 compile-testing, ArchUnit, and Commons Lang via Gradle `testImplementation`.
 Mockito uses JDK proxies and reflection without a Java agent.
 Test logging uses `slf4j-jdk14` via `testRuntimeOnly`.
-Javadoc comments are optional; the remaining doclint checks still apply.
 
 PIT uses `ALL`: run `./gradlew pitest` **only on explicit user request**, never
 through `build`, `check`, or `test`.
@@ -40,15 +38,13 @@ use real time and only public methods.
 | `Await`; `ValueAwait`, `SelectionAwait`, `MapAwait` | Source entry points; fluent configuration |
 | `DiagnosticAwait`, `DiagnosticSelectionAwait`, `DiagnosticMapAwait` | Diagnostic facade |
 | `AwaitSupport` | Shared execution and terminal handling |
-| `AttemptFactory` | Evaluator initialization and observation binding |
-| `BoundAttempt.call()` | Check invocation, returning internal `AttemptResult` |
+| `ConditionExecution` | Lazy evaluator initialization and check invocation |
 | `SequenceExecution` | Stage transitions and retained selected/captured values |
 | `WaitEngine` | Polling, deadlines, persistence |
 | `AttemptExecution`; transient `ExecutionStep` | Source/attempt calls; timing and execution context |
 | `AttemptHistory` | Invocation numbering and history grouping |
 | `FailureDiagnostics`, `DiagnosticText` | Terminal formatting and guarded rendering outside polling |
 
-`BoundAttempt` stores no previous result, timing, number, or progress.
 `AttemptResult` adds uncontrolled failure to public `ConditionResult` outcomes.
 
 ## Type and module boundaries

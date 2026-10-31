@@ -5,21 +5,21 @@ import java.util.concurrent.Callable;
 
 import static java.util.Objects.requireNonNull;
 
-public final class AttemptFactory<OBSERVED, RESULT> {
+public final class ConditionExecution<OBSERVED, RESULT> {
 
     final Condition.Check condition;
     private final Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory;
     private AwaitAttempt<? super OBSERVED, ? extends RESULT> evaluator;
 
-    public AttemptFactory(Condition.Check condition, Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory) {
+    public ConditionExecution(Condition.Check condition, Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory) {
         this.condition = requireNonNull(condition, "condition must not be null");
         this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
     }
 
-    public static <OBSERVED> AttemptFactory<OBSERVED, OBSERVED> observing(
+    public static <OBSERVED> ConditionExecution<OBSERVED, OBSERVED> observing(
             Condition.Check condition, Callable<? extends AwaitAttempt<?, ?>> evaluatorFactory) {
         requireNonNull(evaluatorFactory, "evaluator factory must not be null");
-        return new AttemptFactory<>(condition, () -> {
+        return new ConditionExecution<>(condition, () -> {
             AwaitAttempt<? super OBSERVED, ?> evaluator = createEvaluator(evaluatorFactory);
             return (AwaitAttempt<OBSERVED, OBSERVED>) actual ->
                     requireNonNull(evaluator.probe(actual), "condition returned null evaluation")
@@ -34,12 +34,27 @@ public final class AttemptFactory<OBSERVED, RESULT> {
         return (AwaitAttempt<? super OBSERVED, ? extends RESULT>) evaluatorFactory.call();
     }
 
-    public BoundAttempt<OBSERVED, RESULT> create(OBSERVED actual) {
-        return new BoundAttempt<>(actual, this::evaluator);
+    public AttemptResult<? extends RESULT> probe(OBSERVED actual) {
+        try {
+            if (Thread.currentThread().isInterrupted()) {
+                return interrupted(null);
+            }
+            if (evaluator == null) evaluator = createEvaluator(evaluatorFactory);
+            if (Thread.currentThread().isInterrupted()) {
+                return interrupted(null);
+            }
+            var result = requireNonNull(evaluator.probe(actual), "condition returned null evaluation");
+            if (!(result instanceof AttemptResult.Uncontrolled<?>) && Thread.currentThread().isInterrupted()) {
+                return interrupted(result.cause());
+            }
+            return result;
+        } catch (Throwable failure) {
+            return AttemptResult.uncontrolled(failure);
+        }
     }
 
-    private AwaitAttempt<? super OBSERVED, ? extends RESULT> evaluator() throws Exception {
-        if (evaluator == null) evaluator = createEvaluator(evaluatorFactory);
-        return evaluator;
+    private AttemptResult<RESULT> interrupted(Throwable cause) {
+        return AttemptResult.uncontrolled(cause == null
+                ? new InterruptedException("caller thread interrupt flag was set") : cause);
     }
 }

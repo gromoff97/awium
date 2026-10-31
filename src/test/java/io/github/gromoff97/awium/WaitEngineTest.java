@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.function.CheckedFunction;
+import io.github.gromoff97.awium.internal.AwaitAttempt;
 import io.github.gromoff97.awium.internal.AttemptResult;
 import io.github.gromoff97.awium.internal.ExecutionStep;
 import io.github.gromoff97.awium.internal.SequenceExecution;
@@ -572,7 +572,7 @@ class WaitEngineTest {
         assertSame(failure, attempt.cause());
     }
 
-    private static <S, R> WaitCompletion wait(FakeTime time, WaitConfiguration config, Callable<S> source, CheckedFunction<S, AttemptResult<R>> condition) {
+    private static <S, R> WaitCompletion wait(FakeTime time, WaitConfiguration config, Callable<S> source, AwaitAttempt<S, R> condition) {
         return wait(time, config, time, source, condition);
     }
 
@@ -581,7 +581,7 @@ class WaitEngineTest {
             WaitConfiguration config,
             LongConsumer parker,
             Callable<S> source,
-            CheckedFunction<S, AttemptResult<R>> condition) {
+            AwaitAttempt<S, R> condition) {
         return new WaitEngine<S>(config.withTime(time, parker), source,
                 new SequenceExecution<>(bind(condition("test condition", null, condition)))).waitFor(ignored -> {});
     }

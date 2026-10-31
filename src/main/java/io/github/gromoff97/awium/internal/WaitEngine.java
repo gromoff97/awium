@@ -28,7 +28,7 @@ public record WaitEngine<OBSERVED>(WaitConfiguration configuration, Callable<? e
         return persist(recorder, acquired, runner);
     }
 
-    private WaitCompletion acquire(Consumer<ExecutionStep<OBSERVED>> recorder, AttemptExecution<OBSERVED, ?> runner) {
+    private WaitCompletion acquire(Consumer<ExecutionStep<OBSERVED>> recorder, AttemptExecution<OBSERVED> runner) {
         long deadline = started + configuration.upToNanos();
         ExecutionStep<OBSERVED> lastStep = null;
         long completed = started;
@@ -65,7 +65,7 @@ public record WaitEngine<OBSERVED>(WaitConfiguration configuration, Callable<? e
     }
 
     private WaitCompletion persist(Consumer<ExecutionStep<OBSERVED>> recorder,
-            WaitCompletion.Satisfied acquired, AttemptExecution<OBSERVED, ?> runner) {
+            WaitCompletion.Satisfied acquired, AttemptExecution<OBSERVED> runner) {
         long acquiredAt = started + acquired.step().completedAfterNanos();
         long deadline = acquiredAt + configuration.persistenceNanos();
         long completed = acquiredAt;
@@ -95,7 +95,7 @@ public record WaitEngine<OBSERVED>(WaitConfiguration configuration, Callable<? e
         }
     }
 
-    private ExecutionStep<OBSERVED> waitBeforeAttempt(AttemptExecution<OBSERVED, ?> runner, long delay,
+    private ExecutionStep<OBSERVED> waitBeforeAttempt(AttemptExecution<OBSERVED> runner, long delay,
             ExecutionStep.Phase phase, long completed) {
         long deadline = completed + delay;
         long remaining;

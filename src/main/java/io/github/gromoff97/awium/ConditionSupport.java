@@ -1,14 +1,12 @@
 package io.github.gromoff97.awium;
 
 import io.github.gromoff97.awium.result.ConditionResult;
-import io.github.gromoff97.awium.Condition.ApplicableCondition;
-import io.github.gromoff97.awium.Condition.PreservingCondition;
-import io.github.gromoff97.awium.Condition.Reference;
-import io.github.gromoff97.awium.Condition.SelectedCondition;
 import io.github.gromoff97.awium.function.CheckedFunction;
 import io.github.gromoff97.awium.function.CheckedPredicate;
-import io.github.gromoff97.awium.internal.AttemptFactory;
 import io.github.gromoff97.awium.internal.AttemptResult;
+import io.github.gromoff97.awium.internal.AwaitAttempt;
+import io.github.gromoff97.awium.internal.ConditionExecution;
+import io.github.gromoff97.awium.internal.SequenceExecution;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
@@ -16,6 +14,13 @@ import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 
+import static io.github.gromoff97.awium.Condition.ApplicableCondition;
+import static io.github.gromoff97.awium.Condition.Captured;
+import static io.github.gromoff97.awium.Condition.Check;
+import static io.github.gromoff97.awium.Condition.PreservingCondition;
+import static io.github.gromoff97.awium.Condition.Reference;
+import static io.github.gromoff97.awium.Condition.SelectedCondition;
+import static io.github.gromoff97.awium.Condition.Typed;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.util.Objects.requireNonNull;
@@ -25,18 +30,19 @@ final class ConditionSupport {
 
     private ConditionSupport() {}
 
-    static <INPUT, RESULT> AttemptFactory<INPUT, RESULT> bind(
-            Condition.Typed<? super INPUT, ? extends RESULT> condition) {
-        return bind((Condition.Check) condition);
+    static <INPUT, RESULT> ConditionExecution<INPUT, RESULT> bind(
+            Typed<? super INPUT, ? extends RESULT> condition) {
+        return bind((Check) condition);
     }
 
     // Closed selectors and comparisons get their result types from their factory and terminal bounds.
-    static <INPUT, RESULT> AttemptFactory<INPUT, RESULT> bind(Condition.Check condition) {
-        return new AttemptFactory<>(condition, condition.evaluatorFactory);
+    static <INPUT, RESULT> ConditionExecution<INPUT, RESULT> bind(Check condition) {
+        return new ConditionExecution<>(Condition.required(condition), condition.evaluatorFactory);
     }
 
-    static <INPUT> AttemptFactory<INPUT, INPUT> observing(Condition.Check condition) {
-        return AttemptFactory.observing(condition, condition.evaluatorFactory);
+    static <INPUT> SequenceExecution<INPUT, INPUT> bind(Captured condition) {
+        return SequenceExecution.captured(Condition.required(condition),
+                stage -> ConditionExecution.observing(stage, stage.evaluatorFactory));
     }
 
     enum Quantifier {
@@ -73,10 +79,10 @@ final class ConditionSupport {
         }
     }
 
-    static <INPUT, RESULT> Condition.Typed<INPUT, RESULT> condition(String description, Reference<?> reference,
-            CheckedFunction<? super INPUT, ? extends AttemptResult<? extends RESULT>> evaluation) {
-        var condition = new Condition.Typed<INPUT, RESULT>(description, reference,
-                () -> evaluation::apply);
+    static <INPUT, RESULT> Typed<INPUT, RESULT> condition(String description, Reference<?> reference,
+            AwaitAttempt<? super INPUT, ? extends RESULT> evaluation) {
+        var condition = new Typed<INPUT, RESULT>(description, reference,
+                () -> evaluation);
         requireNonNull(evaluation, "evaluation must not be null");
         return condition;
     }
@@ -95,7 +101,7 @@ final class ConditionSupport {
     }
 
     static <INPUT> SelectedCondition<INPUT> selected(String description,
-            CheckedFunction<? super INPUT, ? extends AttemptResult<?>> evaluator) {
+            AwaitAttempt<? super INPUT, ?> evaluator) {
         return new SelectedCondition<>(condition(description, null, evaluator));
     }
 
@@ -109,8 +115,8 @@ final class ConditionSupport {
         String elementsDescription = subject + " " + items;
         String mismatch = quantifier.mismatch(elementsDescription);
         Condition.required(nested);
-        return new PreservingCondition<>(new Condition.Typed<>(nested, quantifier.description(elementsDescription), nested.references(), () -> {
-            AttemptFactory<ELEMENT, ?> evaluator = bind(nested);
+        return new PreservingCondition<>(new Typed<>(nested, quantifier.description(elementsDescription), nested.references(), () -> {
+            ConditionExecution<ELEMENT, ?> evaluator = bind(nested);
             return actual -> actual == null ? AttemptResult.unsatisfied(subject + " was null")
                     : evaluateQuantifier(actual, elements, evaluator, quantifier, mismatch, elementsDescription);
         }));
@@ -118,14 +124,14 @@ final class ConditionSupport {
 
     private static <INPUT, ELEMENT> AttemptResult<INPUT> evaluateQuantifier(
             INPUT actual, Function<? super INPUT, ? extends Iterable<? extends ELEMENT>> elements,
-            AttemptFactory<? super ELEMENT, ?> evaluator,
+            ConditionExecution<? super ELEMENT, ?> evaluator,
             Quantifier quantifier, String mismatch, String elementsDescription) {
         AttemptResult<?> last = null;
         long checked = 0;
         try {
             for (ELEMENT value : elements.apply(actual)) {
                 checked++;
-                var evaluated = evaluator.create(value).call();
+                var evaluated = evaluator.probe(value);
                 if (evaluated instanceof AttemptResult.Uncontrolled<?> failure) {
                     return nestedFailure(elementsDescription + "[" + (checked - 1) + "]", failure);
                 }
@@ -162,30 +168,30 @@ final class ConditionSupport {
         return new Reference<>("Unexpected", value);
     }
 
-    static <INPUT, VALUE> Condition.Typed<INPUT, VALUE> compose(
-            String selection, ApplicableCondition<?, ?> nested, Condition.Check extractionCondition) {
+    static <INPUT, VALUE> Typed<INPUT, VALUE> compose(
+            String selection, ApplicableCondition<?, ?> nested, Check extractionCondition) {
         return compose(selection, nested, extractionCondition,
                 () -> ConditionSupport.<VALUE, VALUE>bind(nested));
     }
 
-    static <INPUT, VALUE, RESULT> Condition.Typed<INPUT, RESULT> compose(
-            String selection, Condition.Typed<? super VALUE, RESULT> nested, Condition.Check extractionCondition) {
+    static <INPUT, VALUE, RESULT> Typed<INPUT, RESULT> compose(
+            String selection, Typed<? super VALUE, RESULT> nested, Check extractionCondition) {
         return compose(selection, nested, extractionCondition,
                 () -> ConditionSupport.bind(nested));
     }
 
-    private static <INPUT, VALUE, RESULT> Condition.Typed<INPUT, RESULT> compose(String selection, Condition nested,
-            Condition.Check extractionCondition,
-            Supplier<? extends AttemptFactory<? super VALUE, ? extends RESULT>> evaluatorFactory) {
+    private static <INPUT, VALUE, RESULT> Typed<INPUT, RESULT> compose(String selection, Condition nested,
+            Check extractionCondition,
+            Supplier<? extends ConditionExecution<? super VALUE, ? extends RESULT>> evaluatorFactory) {
         Condition.required(nested);
         var references = Stream.concat(extractionCondition.references().stream(), nested.references().stream()).toList();
-        return new Condition.Typed<>(nested, selection, references, () -> {
+        return new Typed<>(nested, selection, references, () -> {
             // Bare selectors obtain their value type from the enclosing selector factory's source constraints.
             var extraction = ConditionSupport.<INPUT, VALUE>bind(extractionCondition);
             var evaluator = evaluatorFactory.get();
-            return actual -> switch (extraction.create(actual).call()) {
+            return actual -> switch (extraction.probe(actual)) {
                 case AttemptResult.Satisfied<? extends VALUE> success -> {
-                    var evaluated = evaluator.create(success.value()).call();
+                    var evaluated = evaluator.probe(success.value());
                     if (evaluated instanceof AttemptResult.Uncontrolled<?> failure) {
                         yield nestedFailure(selection, failure);
                     }

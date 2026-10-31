@@ -8,8 +8,6 @@ import java.util.concurrent.Callable;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
-import static io.github.gromoff97.awium.Condition.required;
-
 public sealed class DiagnosticSelectionAwait<OBSERVED, ELEMENT> extends DiagnosticAwait<OBSERVED> permits DiagnosticMapAwait {
 
     DiagnosticSelectionAwait(Callable<? extends OBSERVED> source, WaitConfiguration configuration) {
@@ -38,7 +36,7 @@ public sealed class DiagnosticSelectionAwait<OBSERVED, ELEMENT> extends Diagnost
 
     public AwaitResult<OBSERVED, ELEMENT> until(
             SelectedCondition<? super OBSERVED> condition) {
-        return capture(ConditionSupport.bind(required(condition)));
+        return capture(ConditionSupport.bind(condition));
     }
 
 }

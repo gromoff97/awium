@@ -6,8 +6,8 @@ import java.util.function.LongSupplier;
 
 import static java.lang.Thread.currentThread;
 
-record AttemptExecution<OBSERVED, RESULT>(Callable<? extends OBSERVED> source,
-        SequenceExecution<OBSERVED, RESULT> execution, LongSupplier clock, long started) {
+record AttemptExecution<OBSERVED>(Callable<? extends OBSERVED> source,
+        SequenceExecution<OBSERVED, ?> execution, LongSupplier clock, long started) {
 
     ExecutionStep<OBSERVED> call(ExecutionStep.Phase phase) {
         var interrupted = interruptedBefore(phase);
@@ -28,8 +28,7 @@ record AttemptExecution<OBSERVED, RESULT>(Callable<? extends OBSERVED> source,
                     new InterruptedException("caller thread interrupt flag was set"), null), clock.getAsLong());
         }
 
-        var evaluation = execution.attempt(actual).call();
-        execution.record(evaluation);
+        var evaluation = execution.probe(actual);
         long completed = clock.getAsLong();
         if (!(evaluation instanceof AttemptResult.Uncontrolled<?>) && currentThread().isInterrupted()) {
             var cause = evaluation.cause();

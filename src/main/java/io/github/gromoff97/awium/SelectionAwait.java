@@ -7,8 +7,6 @@ import java.util.concurrent.Callable;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
-import static io.github.gromoff97.awium.Condition.required;
-
 public sealed class SelectionAwait<OBSERVED, ELEMENT> extends ValueAwait<OBSERVED> permits MapAwait {
 
     SelectionAwait(Callable<? extends OBSERVED> source, WaitConfiguration configuration) {
@@ -36,6 +34,6 @@ public sealed class SelectionAwait<OBSERVED, ELEMENT> extends ValueAwait<OBSERVE
     }
 
     public ELEMENT until(SelectedCondition<? super OBSERVED> condition) {
-        return complete(ConditionSupport.bind(required(condition)));
+        return complete(ConditionSupport.bind(condition));
     }
 }

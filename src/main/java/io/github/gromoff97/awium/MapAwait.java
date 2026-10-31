@@ -8,8 +8,6 @@ import java.util.concurrent.Callable;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 
-import static io.github.gromoff97.awium.Condition.required;
-
 public final class MapAwait<OBSERVED extends Map<?, ?>, ENTRY extends Map.Entry<?, ?>, VALUE>
         extends SelectionAwait<OBSERVED, ENTRY> {
 
@@ -38,6 +36,6 @@ public final class MapAwait<OBSERVED extends Map<?, ?>, ENTRY extends Map.Entry<
     }
 
     public VALUE until(MapValueCondition<? super OBSERVED> condition) {
-        return complete(ConditionSupport.bind(required(condition)));
+        return complete(ConditionSupport.bind(condition));
     }
 }

@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-class AttemptFactoryTest {
+class ConditionExecutionTest {
 
     @AfterEach
     void clearInterruptFlag() {
@@ -39,7 +39,7 @@ class AttemptFactoryTest {
     }
 
     @Test
-    void attemptsKeepTheirBindingAndEachCallReturnsAnIndependentTypedResult() {
+    void eachProbeReturnsAnIndependentResultAndSharesOneLazyEvaluator() {
         int[] factories = {0};
         var observations = new ArrayList<String>();
         Typed<String, Integer> condition = new Typed<>("count calls", null, () -> {
@@ -49,21 +49,17 @@ class AttemptFactoryTest {
                 return AttemptResult.satisfied(observations.size());
             };
         });
-        var factory = bind(condition);
-        var first = factory.create("first");
-        var second = factory.create("second");
+        var execution = bind(condition);
 
         assertEquals(0, factories[0]);
-        assertEquals("first", first.observed());
-        var firstResult = first.call();
-        var secondResult = second.call();
-        var repeatedResult = first.call();
+        var firstResult = execution.probe("first");
+        var secondResult = execution.probe("second");
+        var repeatedResult = execution.probe("first");
 
         assertEquals(1, result(firstResult));
         assertEquals(2, result(secondResult));
         assertEquals(3, result(repeatedResult));
         assertEquals(List.of("first", "second", "first"), observations);
-        assertEquals("first", first.observed());
         assertEquals(1, factories[0]);
     }
 
@@ -77,11 +73,11 @@ class AttemptFactoryTest {
                     case 2 -> null;
                     default -> AttemptResult.satisfied(actual.length());
                 });
-        var attempt = bind(condition).create("ready");
+        var execution = bind(condition);
 
-        var first = attempt.call();
-        var second = attempt.call();
-        var third = attempt.call();
+        var first = execution.probe("ready");
+        var second = execution.probe("ready");
+        var third = execution.probe("ready");
 
         assertSame(failure, assertInstanceOf(Uncontrolled.class, first).cause());
         var invalid = assertInstanceOf(Uncontrolled.class, second).cause();
@@ -91,13 +87,10 @@ class AttemptFactoryTest {
     }
 
     @Test
-    void nullIsAValidBoundObservation() {
+    void nullIsAValidObservation() {
         Typed<String, String> condition = new Typed<>("preserve null", null,
                 () -> AttemptResult::satisfied);
-        var attempt = bind(condition).create(null);
-
-        assertNull(attempt.observed());
-        assertNull(result(attempt.call()));
+        assertNull(result(bind(condition).probe(null)));
     }
 
     @Test
@@ -107,15 +100,15 @@ class AttemptFactoryTest {
             factories[0]++;
             return AttemptResult::satisfied;
         });
-        var attempt = bind(condition).create("ready");
+        var execution = bind(condition);
 
         currentThread().interrupt();
-        var interruption = assertInstanceOf(Uncontrolled.class, attempt.call());
+        var interruption = assertInstanceOf(Uncontrolled.class, execution.probe("ready"));
         assertInstanceOf(InterruptedException.class, interruption.cause());
         assertEquals(0, factories[0]);
         interrupted();
 
-        assertEquals("ready", result(attempt.call()));
+        assertEquals("ready", result(execution.probe("ready")));
         assertEquals(1, factories[0]);
     }
 
@@ -181,11 +174,11 @@ class AttemptFactoryTest {
                     return ignored -> AttemptResult.satisfied(++calls[0]);
                 });
         assertEquals("counted", ordinary.description());
-        var first = bind(ordinary).create(0);
-        var second = bind(ordinary).create(0);
+        var first = bind(ordinary);
+        var second = bind(ordinary);
 
-        assertEquals(1, result(evaluated(first.call())));
-        assertEquals(2, result(evaluated(first.call())));
-        assertEquals(1, result(evaluated(second.call())));
+        assertEquals(1, result(evaluated(first.probe(0))));
+        assertEquals(2, result(evaluated(first.probe(0))));
+        assertEquals(1, result(evaluated(second.probe(0))));
     }
 }
