@@ -1,11 +1,13 @@
 package io.github.gromoff97.awium.api;
 
-import java.util.List;
-import org.junit.jupiter.api.Test;
+import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
 class CompilationContractTest {
 
@@ -26,70 +28,61 @@ class CompilationContractTest {
                 """.formatted(factory));
     }
 
-    @Test
-    void negativeFixturesRejectValidCodeAndUnrelatedErrors() {
-        assertThrows(AssertionError.class,
-                () -> assertRejected("final class Contract {}"));
-        assertThrows(AssertionError.class,
-                () -> assertRejected("final class Contract { void broken( }"));
-        assertThrows(AssertionError.class, () -> assertRejected("""
-                import missing.Type;
-                final class Contract {}
-                """));
-        assertThrows(AssertionError.class, () -> assertRejected("""
+    @ParameterizedTest
+    @MethodSource("invalidFixtures")
+    void negativeFixturesRejectValidCodeAndUnrelatedErrors(String source) {
+        assertThrows(AssertionError.class, () -> assertRejected(source));
+    }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "String source = \"value\";",
+            "java.util.function.Supplier<String> source = () -> \"value\";"
+    })
+    void excludedDirectAndJdkSourceTypesDoNotCompile(String declaration) {
+        assertRejected("""
                 final class Contract {
-                    void check(Callable<String> source) {
-                        await(source).utnil();
+                    void check() {
+                        %s
+                        await(source);
                     }
                 }
-                """));
+                """.formatted(declaration));
     }
 
-    @Test
-    void excludedDirectAndJdkSourceTypesDoNotCompile() {
-        for (String declaration : new String[] {
-                "String source = \"value\";",
-                "java.util.function.Supplier<String> source = () -> \"value\";"
-        }) {
-            assertRejected("""
-                    final class Contract {
-                        void check() {
-                            %s
-                            await(source);
-                        }
+    @ParameterizedTest
+    @ValueSource(strings = {"await(StringBuilder::new);", "await(Optional::empty);", "await(() -> null);"})
+    void ambiguousSourcesNeedALambdaOrAnExplicitSourceCategory(String expression) {
+        assertRejected("""
+                final class Contract { void check() { %s } }
+                """.formatted(expression));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "SelectedCondition<Optional<?>>", "SelectedCondition<Collection<?>>", "SelectedCondition<Map<?, ?>>"
+    })
+    void categorySpecificTerminalsRejectWrongConditions(String type) {
+        assertRejected("""
+                import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
+                final class Contract {
+                    void check(Callable<String> source, %s condition) {
+                        await(source).until(condition);
                     }
-                    """.formatted(declaration));
-        }
+                }
+                """.formatted(type));
     }
 
-    @Test
-    void ambiguousSourcesNeedALambdaOrAnExplicitSourceCategory() {
-        for (String expression : List.of("await(StringBuilder::new);", "await(Optional::empty);", "await(() -> null);")) {
-            assertRejected("""
-                    final class Contract { void check() { %s } }
-                    """.formatted(expression));
-        }
-    }
-
-    @Test
-    void categorySpecificTerminalsRejectWrongConditions() {
-        for (String type : List.of(
-                "SelectedCondition<Optional<?>>",
-                "SelectedCondition<Collection<?>>",
-                "SelectedCondition<Map<?, ?>>")) {
-            assertRejected("""
-                    import io.github.gromoff97.awium.*;
-                    import io.github.gromoff97.awium.result.*;
-                    import io.github.gromoff97.awium.function.*;
-                    import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
-                    final class Contract {
-                        void check(Callable<String> source, %s condition) {
-                            await(source).until(condition);
+    static Stream<Arguments> invalidFixtures() {
+        return Stream.of(
+                argumentSet("valid code", "final class Contract {}"),
+                argumentSet("syntax error", "final class Contract { void broken( }"),
+                argumentSet("missing import", "import missing.Type; final class Contract {}"),
+                argumentSet("unknown method", """
+                        final class Contract {
+                            void check(Callable<String> source) { await(source).utnil(); }
                         }
-                    }
-                    """.formatted(type));
-        }
+                        """));
     }
 
     private static void assertRejected(String source) {

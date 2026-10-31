@@ -1,51 +1,43 @@
 package io.github.gromoff97.awium.conditions.api
 
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.TestFactory
 
 class OrderedWaitCompilationContractTest {
 
-    @ParameterizedTest
-    @ValueSource(strings = ["await", "tryAwait"])
-    fun `rejects incompatible callback and source types`(factory: String) {
-        for (expression in listOf(
+    @TestFactory
+    fun `rejects incompatible callback and source types`() = listOf("await", "tryAwait").flatMap { factory ->
+        listOf(
                 "%s(Contract::text).until(matches((Integer value) -> true));",
                 """%s(Contract::text).until(captured(captured(equalTo("ready"))));""",
                 "%s(Contract::text).until(matches(value -> value.length()));",
                 "%s(Contract::optional).until(captured(firstElement, lastElement));",
                 "%s(Contract::collection).until(captured(present, present));",
                 "%s(Contract::map).until(captured(firstElement, lastElement));",
-                "%s(Contract::collection).until(captured(singleEntry, singleEntry));")) {
-            assertRejected(expression.format(factory))
-        }
+                "%s(Contract::collection).until(captured(singleEntry, singleEntry));")
+            .map { rejected(it.format(factory)) }
     }
 
-    @Test
-    fun `sequence results cannot be assigned to single or unrelated values`() {
-        for (expression in listOf(
+    @TestFactory
+    fun `sequence results cannot be assigned to single or unrelated values`() = listOf(
                 "String value = await(Contract::text).until(captured(isNotNull, isNotNull));",
                 "AwaitResult<String, String> value = tryAwait(Contract::text).until(captured(isNotNull, isNotNull));",
                 "List<Integer> value = await(Contract::collection).until(captured(firstElement, lastElement));",
                 "Callable<List<String>> source = Contract::collection; List<Integer> wrong = await(source::call).until(captured(firstElement, lastElement));",
                 "Callable<List<String>> source = Contract::collection; AwaitResult<List<String>, List<Integer>> wrong = tryAwait(source::call).until(captured(firstElement, lastElement));",
-                "List<Integer> result = await(Contract::text).until(captured(instanceOf(String.class), instanceOf(String.class)));")) {
-            assertRejected(expression)
-        }
-    }
+                "List<Integer> result = await(Contract::text).until(captured(instanceOf(String.class), instanceOf(String.class)));")
+        .map(::rejected)
 
-    @ParameterizedTest
-    @ValueSource(strings = ["await", "tryAwait"])
-    fun `terminals require one explicit condition`(factory: String) {
-        for (arguments in listOf("", "isNotNull, isNotNull", "present, present",
+    @TestFactory
+    fun `terminals require one explicit condition`() = listOf("await", "tryAwait").flatMap { factory ->
+        listOf("", "isNotNull, isNotNull", "present, present",
                 "singleElement, singleElement", """valueFor("ready"), valueFor("ready")""",
                 "instanceOf(String.class), instanceOf(String.class)",
-                "new io.github.gromoff97.awium.AwaitCondition.PreservingCondition<?>[]{isNotNull}")) {
-            assertRejected("%s(Contract::text).until(%s);".format(factory, arguments))
-        }
+                "new io.github.gromoff97.awium.AwaitCondition.PreservingCondition<?>[]{isNotNull}")
+            .map { rejected("$factory(Contract::text).until($it);") }
     }
 
-    private fun assertRejected(body: String) {
+    private fun rejected(body: String) = dynamicTest(body) {
         CompilationSupport.assertRejected("""
                 import java.util.*;
                 import java.util.concurrent.Callable;

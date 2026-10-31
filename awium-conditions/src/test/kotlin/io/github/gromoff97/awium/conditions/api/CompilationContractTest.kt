@@ -1,11 +1,13 @@
 package io.github.gromoff97.awium.conditions.api
 
+import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 
 class CompilationContractTest {
 
-    @Test
-    fun `nested quantifiers reject incompatible inputs and results`() {
+    @TestFactory
+    fun `nested quantifiers reject incompatible inputs and results`() = buildList {
         for (body in listOf(
                 "await(() -> users).until(all(matches(String::isBlank)));",
                 "await(() -> users).until(any(equalTo(123)));",
@@ -38,7 +40,7 @@ class CompilationContractTest {
                 "Map<String,User> wrong = await(() -> map).until(MapConditions.singleEntry(e->e.getValue().active()));",
                 "await(() -> map).until(MapConditions.hasNoEntry(equalTo(Map.entry(123,new User(true)))));",
                 """await(() -> map).until(MapConditions.allEntries(equalTo(Map.entry("user",123))));""")) {
-            assertRejected("""
+            add(dynamicTest(body) { assertRejected("""
                     import io.github.gromoff97.awium.conditions.MapConditions;
                     import io.github.gromoff97.awium.conditions.OptionalConditions;
                     import static io.github.gromoff97.awium.conditions.Conditions.*;
@@ -47,12 +49,12 @@ class CompilationContractTest {
                         record User(boolean active) {}
                         void check(List<User> users, Map<String,User> map) { %s }
                     }
-                    """.trimIndent().format(body))
+                    """.trimIndent().format(body)) })
         }
     }
 
-    @Test
-    fun `typed collection selections keep source and result constraints`() {
+    @TestFactory
+    fun `typed collection selections keep source and result constraints`() = buildList {
         for (body in listOf(
                 """await(() -> "wrong").until(firstElement(instanceOf(User.class)));""",
                 "await(() -> Set.of(new User(1))).until(lastElement(instanceOf(User.class)));",
@@ -80,7 +82,7 @@ class CompilationContractTest {
                 """await(() -> Map.of("u",new User(1))).until(MapConditions.singleEntry(io.github.gromoff97.awium.conditions.function.CheckedBiPredicate.not((Integer key,User user)->true)));""",
                 "AwaitResult<List<Object>, String> wrong = tryAwait(() -> values).until(lastElement(instanceOf(User.class)));",
                 "AwaitResult<List<Object>, List<Integer>> wrong = tryAwait(() -> values).until(captured(elementAt(0,instanceOf(User.class)),firstElement(instanceOf(Integer.class))));")) {
-            assertRejected("""
+            add(dynamicTest(body) { assertRejected("""
                     import io.github.gromoff97.awium.result.AwaitResult;
                     import io.github.gromoff97.awium.conditions.MapConditions;
                     import io.github.gromoff97.awium.conditions.OptionalConditions;
@@ -90,15 +92,15 @@ class CompilationContractTest {
                         record User(int id) {}
                         void check(List<Object> values) { %s }
                     }
-                    """.trimIndent().format(body))
+                    """.trimIndent().format(body)) })
         }
     }
 
-    @Test
-    fun `a map implementing Iterable still rejects element selectors`() {
+    @TestFactory
+    fun `a map implementing Iterable still rejects element selectors`() = buildList {
         for (factory in listOf("await", "tryAwait")) {
             for (condition in listOf("singleElement", "singleElement(User::active)", "singleElement(matches(User::active))", "singleElement(equalTo(new User(true)))")) {
-                assertRejected("""
+                add(dynamicTest("$factory / $condition") { assertRejected("""
                         import static io.github.gromoff97.awium.conditions.Conditions.*;
                         import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
                         final class Contract {
@@ -109,13 +111,13 @@ class CompilationContractTest {
                             }
                             void check(Callable<Both> source) { %s(source::call).until(%s); }
                         }
-                        """.trimIndent().format(factory, condition))
+                        """.trimIndent().format(factory, condition)) })
             }
         }
     }
 
-    @Test
-    fun `expected iterables do not weaken element key or value constraints`() {
+    @TestFactory
+    fun `expected iterables do not weaken element key or value constraints`() = buildList {
         for (expression in listOf(
                 """await(() -> "ready").until(in(wrong));""",
                 """await(() -> "ready").until(notIn(wrong));""",
@@ -126,19 +128,19 @@ class CompilationContractTest {
                 """await(() -> Map.of("key", "ready")).until(MapConditions.containsAllKeys(wrong));""",
                 """await(() -> Map.of("key", "ready")).until(MapConditions.containsOnlyKeys(wrong));""",
                 """await(() -> Map.of("key", "ready")).until(MapConditions.containsAllValues(wrong));""")) {
-            assertRejected("""
+            add(dynamicTest(expression) { assertRejected("""
                     import io.github.gromoff97.awium.conditions.MapConditions;
                     import static io.github.gromoff97.awium.conditions.Conditions.*;
                     import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
                     final class Contract {
                         void check(Iterable<Integer> wrong) { %s }
                     }
-                    """.trimIndent().format(expression))
+                    """.trimIndent().format(expression)) })
         }
     }
 
-    @Test
-    fun `iterables reject container conditions`() {
+    @TestFactory
+    fun `iterables reject container conditions`() = buildList {
         for (expression in listOf(
                 "await(() -> users).until(all(User::active));",
                 "await(() -> users).until(any(matches(User::active)));",
@@ -151,7 +153,7 @@ class CompilationContractTest {
                 "await(() -> users).until(present);",
                 """await(() -> users).until(valueFor("key"));""",
                 "await(() -> broad).until(all(User::active));")) {
-            assertRejected("""
+            add(dynamicTest(expression) { assertRejected("""
                     import static io.github.gromoff97.awium.conditions.Conditions.*;
                     import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
                     import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
@@ -160,26 +162,26 @@ class CompilationContractTest {
                         record User(boolean active) {}
                         void check(Iterable<User> users, Iterable<? super User> broad) { %s }
                     }
-                    """.trimIndent().format(expression))
+                    """.trimIndent().format(expression)) })
         }
     }
 
-    @Test
-    fun `text expectations reject numeric values`() {
+    @TestFactory
+    fun `text expectations reject numeric values`() = buildList {
         for (method in listOf("contains", "doesNotContain", "containsIgnoringCase",
                 "startsWith", "doesNotStartWith", "endsWith", "doesNotEndWith",
                 "matchesRegex", "doesNotMatchRegex", "contentEquals", "equalToIgnoringCase", "notEqualToIgnoringCase")) {
-            assertRejected("""
+            add(dynamicTest(method) { assertRejected("""
                     import io.github.gromoff97.awium.conditions.StringConditions;
                     final class Contract {
                         void check() { StringConditions.%s(42); }
                     }
-                    """.trimIndent().format(method))
+                    """.trimIndent().format(method)) })
         }
     }
 
-    @Test
-    fun `conditions and results reject unrelated types`() {
+    @TestFactory
+    fun `conditions and results reject unrelated types`() = buildList {
         for (expression in listOf("await(strings).until(equalTo(42));",
                 """await(strings).until(matches(value -> "wrong boolean"));""",
                 "await(strings).until(matches(value -> null));",
@@ -188,7 +190,7 @@ class CompilationContractTest {
                 "AwaitResult<Optional<Integer>, String> wrong = tryAwait(optional::call).until(present);",
                 "await(characters).until(equalTo(42));",
                 "tryAwait(characters).until(equalTo(42));")) {
-            assertRejected("""
+            add(dynamicTest(expression) { assertRejected("""
                     import io.github.gromoff97.awium.*;
                     import io.github.gromoff97.awium.conditions.*;
                     import io.github.gromoff97.awium.result.*;
@@ -201,36 +203,36 @@ class CompilationContractTest {
                             %s
                         }
                     }
-                    """.trimIndent().format(expression))
+                    """.trimIndent().format(expression)) })
         }
     }
 
-    @Test
-    fun `comparable and text checks enforce their input contracts`() {
+    @TestFactory
+    fun `comparable and text checks enforce their input contracts`() = buildList {
         for (factory in listOf("await", "tryAwait")) {
             for (condition in listOf("greaterThan(1)", "atLeast(1)", "lessThan(1)",
                     "atMost(1)", "between(1, 2)", "strictlyBetween(1, 2)")) {
-                assertRejected("""
+                add(dynamicTest("$factory / $condition") { assertRejected("""
                         import static io.github.gromoff97.awium.conditions.Conditions.*;
                         final class Contract {
                             void check() {
                                 %s(() -> "ready").until(%s);
                             }
                         }
-                        """.trimIndent().format(factory, condition))
+                        """.trimIndent().format(factory, condition)) })
             }
             for (condition in listOf("nonBlank", "hasLength(1)", """contentEquals("ready")""")) {
-                assertRejected("""
+                add(dynamicTest("$factory / $condition") { assertRejected("""
                         import io.github.gromoff97.awium.conditions.StringConditions;
                         final class Contract {
                             void check() {
                                 %s(() -> 1).until(StringConditions.%s);
                             }
                         }
-                        """.trimIndent().format(factory, condition))
+                        """.trimIndent().format(factory, condition)) })
             }
             for (condition in listOf("between", "strictlyBetween")) {
-                assertRejected("""
+                add(dynamicTest("$factory / $condition") { assertRejected("""
                         import static io.github.gromoff97.awium.conditions.Conditions.*;
                         final class Contract {
                             record Limit(int number) {}
@@ -241,13 +243,13 @@ class CompilationContractTest {
                                 %s(() -> new Measurement(10)).until(%s(new Limit(5), new Limit(15)));
                             }
                         }
-                        """.trimIndent().format(factory, condition))
+                        """.trimIndent().format(factory, condition)) })
             }
         }
     }
 
-    @Test
-    fun `collection expectations reject unrelated element types`() {
+    @TestFactory
+    fun `collection expectations reject unrelated element types`() = buildList {
         for (condition in listOf("contains(42)",
                 "containsAll(List.of(42))",
                 "doesNotContain(42)",
@@ -267,22 +269,22 @@ class CompilationContractTest {
                 "doesNotContainSubsequence(List.of(42))")) {
             for (factory in listOf("await", "tryAwait")) {
                 val expression = factory + "(source::call).until(CollectionConditions." + condition + ");"
-                assertRejected("""
+                add(dynamicTest(expression) { assertRejected("""
                         import io.github.gromoff97.awium.conditions.CollectionConditions;
                         final class Contract {
                             void check(Callable<List<String>> source) {
                                 %s
                             }
                         }
-                        """.trimIndent().format(expression))
+                        """.trimIndent().format(expression)) })
             }
         }
     }
 
-    @Test
-    fun `plain callable container sources require adaptation for selections`() {
+    @TestFactory
+    fun `plain callable container sources require adaptation for selections`() = buildList {
         for (expression in listOf("await(optional).until(present);", "await(collection).until(singleElement);", "await(map).until(singleEntry);")) {
-            assertRejected("""
+            add(dynamicTest(expression) { assertRejected("""
                     import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
                     import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElement;
                     import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
@@ -290,12 +292,12 @@ class CompilationContractTest {
                         void check(Callable<Optional<String>> optional, Callable<List<String>> collection,
                                 Callable<Map<String, String>> map) { %s }
                     }
-                    """.trimIndent().format(expression))
+                    """.trimIndent().format(expression)) })
         }
     }
 
-    @Test
-    fun `adapted callable selections reject incompatible result types`() {
+    @TestFactory
+    fun `adapted callable selections reject incompatible result types`() = buildList {
         for (condition in listOf("present", "singleElement", "firstElement", "lastElement", "singleEntry")) {
             val source = if (condition == "present") "optional" else if (condition == "singleEntry") "map" else "collection"
             val contract = """
@@ -310,44 +312,44 @@ class CompilationContractTest {
                         }
                     }
                     """.trimIndent()
-            assertRejected(contract.format(source, condition))
+            add(dynamicTest(condition) { assertRejected(contract.format(source, condition)) })
         }
     }
 
-    @Test
-    fun `collection and map conditions cannot be mixed`() {
-        assertRejected("""
+    @TestFactory
+    fun `collection and map conditions cannot be mixed`() = buildList {
+        add(dynamicTest("map size on a collection") { assertRejected("""
                 import io.github.gromoff97.awium.conditions.MapConditions;
                 final class Contract {
                     void check(Callable<List<String>> source) {
                         await(source::call).until(MapConditions.nonEmpty);
                     }
                 }
-                """.trimIndent())
-        assertRejected("""
+                """.trimIndent()) })
+        add(dynamicTest("collection size on a map") { assertRejected("""
                 import io.github.gromoff97.awium.conditions.CollectionConditions;
                 final class Contract {
                     void check(Callable<Map<String, String>> source) {
                         await(source::call).until(CollectionConditions.nonEmpty);
                     }
                 }
-                """.trimIndent())
-        assertRejected("""
+                """.trimIndent()) })
+        add(dynamicTest("entry selection on a collection") { assertRejected("""
                 import io.github.gromoff97.awium.conditions.MapConditions;
                 final class Contract {
                     void check(Callable<List<String>> source) {
                         await(source::call).until(MapConditions.singleEntry);
                     }
                 }
-                """.trimIndent())
-        assertRejected("""
+                """.trimIndent()) })
+        add(dynamicTest("element selection on a map") { assertRejected("""
                 import io.github.gromoff97.awium.conditions.CollectionConditions;
                 final class Contract {
                     void check(Callable<Map<String, String>> source) {
                         await(source::call).until(CollectionConditions.singleElement);
                     }
                 }
-                """.trimIndent())
+                """.trimIndent()) })
     }
 
     @Test
@@ -374,8 +376,8 @@ class CompilationContractTest {
                 """.trimIndent())
     }
 
-    @Test
-    fun `map membership conditions reject incompatible keys and values`() {
+    @TestFactory
+    fun `map membership conditions reject incompatible keys and values`() = buildList {
         for (factory in listOf("await", "tryAwait")) {
             for (condition in listOf("containsKey(1)", """containsValue("wrong")""",
                     "containsAllKeys(List.of(1))", """containsAllValues(List.of("wrong"))""",
@@ -384,7 +386,7 @@ class CompilationContractTest {
                     "doesNotContainAnyKeys(List.of(1))", """doesNotContainAnyValues(List.of("wrong"))""",
                     "hasEntry(1, 1)", """hasEntry("x", "wrong")""",
                     "containsAllEntries(Map.of(1, 1))", """containsAllEntries(Map.of("x", "wrong"))""")) {
-                assertRejected("""
+                add(dynamicTest("$factory / $condition") { assertRejected("""
                         import static io.github.gromoff97.awium.conditions.MapConditions.*;
 
                         final class Contract {
@@ -392,17 +394,17 @@ class CompilationContractTest {
                                 %s(source::call).until(%s);
                             }
                         }
-                        """.trimIndent().format(factory, condition))
+                        """.trimIndent().format(factory, condition)) })
             }
         }
     }
 
-    @Test
-    fun `custom conditions reject an incompatible observed type`() {
+    @TestFactory
+    fun `custom conditions reject an incompatible observed type`() = buildList {
         for (factory in listOf("await", "tryAwait")) {
             for (condition in listOf("""condition("typed", Contract::status)""",
                     """conditionPerWait("typed", Contract::evaluator)""")) {
-                assertRejected("""
+                add(dynamicTest("$factory / $condition") { assertRejected("""
                         import static io.github.gromoff97.awium.conditions.Conditions.*;
                         import io.github.gromoff97.awium.function.AwaitAttempt;
                         import io.github.gromoff97.awium.result.ConditionResult;
@@ -418,7 +420,7 @@ class CompilationContractTest {
                                 %s(source).until(%s.because("reason"));
                             }
                         }
-                        """.trimIndent().format(factory, condition))
+                        """.trimIndent().format(factory, condition)) })
             }
         }
     }

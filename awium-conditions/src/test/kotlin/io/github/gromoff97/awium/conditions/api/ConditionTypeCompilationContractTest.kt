@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.conditions.api
 
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
@@ -15,12 +16,12 @@ class ConditionTypeCompilationContractTest {
         """.trimIndent())
     }
 
-    @Test
-    fun `custom checks cannot return an attempt failure`() {
+    @TestFactory
+    fun `custom checks cannot return an attempt failure`() = buildList {
         for (expression in listOf(
                 """Conditions.condition("failed", value -> failure);""",
                 """Conditions.conditionPerWait("failed", () -> value -> failure);""")) {
-            CompilationSupport.assertRejected("""
+            add(dynamicTest(expression) { CompilationSupport.assertRejected("""
                     package io.github.gromoff97.awium;
                     import io.github.gromoff97.awium.conditions.*;
                     import io.github.gromoff97.awium.result.Attempt;
@@ -30,12 +31,12 @@ class ConditionTypeCompilationContractTest {
                             %s
                         }
                     }
-                    """.trimIndent().format(expression))
+                    """.trimIndent().format(expression)) })
         }
     }
 
-    @Test
-    fun `custom checks reject incompatible input and result types`() {
+    @TestFactory
+    fun `custom checks reject incompatible input and result types`() = buildList {
         for (expression in listOf(
                 """String wrong = await(numbers).until(condition("identity", value -> ConditionResult.satisfied(value)));""",
                 """AwaitResult<Number, String> wrong = tryAwait(numbers).until(condition("identity", value -> ConditionResult.satisfied(value)));""",
@@ -48,12 +49,12 @@ class ConditionTypeCompilationContractTest {
                 """String wrong = await(numbers).until(condition("id", (Number value) -> ConditionResult.satisfied(value.intValue())).because("reason"));""",
                 """await(() -> Map.of("key", 1)).until(MapConditions.hasEntry(condition("wrong value", """
                         + "(Map.Entry<String, String> entry) -> ConditionResult.satisfied(entry.getValue()))));")) {
-            assertRejected(expression)
+            add(rejected(expression))
         }
     }
 
-    @Test
-    fun `explanations cannot weaken input or result types`() {
+    @TestFactory
+    fun `explanations cannot weaken input or result types`() = buildList {
         for (expression in listOf(
                 """await(() -> "ready").until(equalTo(123).because("reason"));""",
                 """await(collection::call).until(singleElement(matches(String::isBlank)).because("reason"));""",
@@ -66,12 +67,12 @@ class ConditionTypeCompilationContractTest {
                 """List<String> wrong = await(collection::call).until(captured(singleElement, singleElement).because("reason"));""",
                 """List<String> wrong = await(map::call).until(captured(valueFor("key"), valueFor("key")).because("reason"));""",
                 """List<Integer> wrong = await(() -> "ready").until(captured(instanceOf(String.class)).because("reason"));""")) {
-            assertRejected(expression)
+            add(rejected(expression))
         }
     }
 
-    @Test
-    fun `comparisons reject incompatible expected types`() {
+    @TestFactory
+    fun `comparisons reject incompatible expected types`() = buildList {
         for (factory in listOf("await", "tryAwait")) {
             for (condition in listOf("equalTo(123)",
                 "notEqualTo(123)",
@@ -79,25 +80,25 @@ class ConditionTypeCompilationContractTest {
                 "notSameAs(123)",
                 "in(List.of(123, 456))",
                 "notIn(List.of(123, 456))")) {
-                assertRejected("""%s(() -> "ready").until(%s);""".format(factory, condition))
+                add(rejected("""%s(() -> "ready").until(%s);""".format(factory, condition)))
             }
         }
     }
 
-    @Test
-    fun `subset rejects incompatible element types`() {
+    @TestFactory
+    fun `subset rejects incompatible element types`() = buildList {
         for (factory in listOf("await", "tryAwait")) {
             for (expression in listOf(
                     """%s(() -> List.of("ready")).until(CollectionConditions.subsetOf(List.of(123)));""",
                     """%s(() -> List.of("ready")).until(captured(CollectionConditions.subsetOf(List.of(123)), isNotNull));""",
                     """%s(() -> List.of(List.of("ready"))).until(singleElement(CollectionConditions.subsetOf(List.of(123))));""")) {
-                assertRejected(expression.format(factory))
+                add(rejected(expression.format(factory)))
             }
         }
     }
 
-    @Test
-    fun `nested comparisons reject incompatible expected types`() {
+    @TestFactory
+    fun `nested comparisons reject incompatible expected types`() = buildList {
         for (factory in listOf("await", "tryAwait")) {
             for (expression in listOf(
                     """%s(optional::call).until(hasValue(equalTo("wrong")));""",
@@ -105,13 +106,13 @@ class ConditionTypeCompilationContractTest {
                     """%s(map::call).until(valueFor("key", equalTo("wrong")));""",
                     "%s(map::call).until(singleEntry(equalTo(Map.entry(123, 1))));",
                     """%s(map::call).until(singleEntry(equalTo(Map.entry("key", "wrong"))));""")) {
-                assertRejected(expression.format(factory))
+                add(rejected(expression.format(factory)))
             }
         }
     }
 
-    @Test
-    fun `selector constraints also apply to views and mixed capture sequences`() {
+    @TestFactory
+    fun `selector constraints also apply to views and mixed capture sequences`() = buildList {
         for (factory in listOf("await", "tryAwait")) {
             for (expression in listOf(
                     """%s(new CollectionViewSource<Number, List<? extends Number>>(() -> List.of(1))).until(singleElement(equalTo("wrong")).because("reason"));""",
@@ -126,13 +127,13 @@ class ConditionTypeCompilationContractTest {
                     "%s(collection::call).until(present);",
                     "%s(optional::call).until(singleElement);",
                     "%s(map::call).until(singleElement);")) {
-                assertRejected(expression.format(factory))
+                add(rejected(expression.format(factory)))
             }
         }
     }
 
-    @Test
-    fun `mixed value stages retain both input constraints`() {
+    @TestFactory
+    fun `mixed value stages retain both input constraints`() = buildList {
         for (factory in listOf("await", "tryAwait")) {
             for (arguments in listOf(
                     "equalTo(123), isNotNull",
@@ -140,43 +141,43 @@ class ConditionTypeCompilationContractTest {
                     "equalTo(new Object()), matches(String::isBlank)",
                     """equalTo("ready"), matches((Integer value) -> true)""",
                     "matches(String::isBlank), notIn(List.of(123))")) {
-                assertRejected("""%s(() -> "ready").until(captured(%s));""".format(factory, arguments))
+                add(rejected("""%s(() -> "ready").until(captured(%s));""".format(factory, arguments)))
             }
         }
-        assertRejected("""List<Integer> wrong = await(() -> "ready").until(captured(equalTo("ready"), isNotNull));""")
-        assertRejected("""await(() -> "ready").<Object>until(captured(equalTo(123), isNotNull));""")
+        add(rejected("""List<Integer> wrong = await(() -> "ready").until(captured(equalTo("ready"), isNotNull));"""))
+        add(rejected("""await(() -> "ready").<Object>until(captured(equalTo(123), isNotNull));"""))
     }
 
-    @Test
-    fun `preserving checks cannot be assigned arbitrary result types`() {
-        assertRejected("Condition<Object, Object> erased = isNotNull;")
-        assertRejected("""Condition<String, String> erased = equalTo("ready");""")
+    @TestFactory
+    fun `preserving checks cannot be assigned arbitrary result types`() = buildList {
+        add(rejected("Condition<Object, Object> erased = isNotNull;"))
+        add(rejected("""Condition<String, String> erased = equalTo("ready");"""))
     }
 
-    @Test
-    fun `map lookups reject incompatible key types`() {
+    @TestFactory
+    fun `map lookups reject incompatible key types`() = buildList {
         for (factory in listOf("await", "tryAwait")) {
             for (condition in listOf("valueFor(123)", "entryFor(123)",
                     "valueFor(123, equalTo(1))", "valueFor(123, instanceOf(String.class))")) {
-                assertRejected("%s(map::call).until(%s);".format(factory, condition))
+                add(rejected("%s(map::call).until(%s);".format(factory, condition)))
             }
         }
     }
 
-    @Test
-    fun `matches rejects existing conditions`() {
+    @TestFactory
+    fun `matches rejects existing conditions`() = buildList {
         for (expression in listOf(
                 "matches(equalTo(1));",
                 "matches(instanceOf(String.class));",
                 "matches(present);",
                 "matches(singleElement);",
                 """matches(valueFor("key"));""")) {
-            assertRejected(expression)
+            add(rejected(expression))
         }
     }
 
-    @Test
-    fun `conditions reject unrelated result types`() {
+    @TestFactory
+    fun `conditions reject unrelated result types`() = buildList {
         for (expression in listOf(
                 "String wrong = await(numbers).until(equalTo(1));",
                 "String wrong = await(collection::call).until(singleElement(equalTo(1)));",
@@ -194,12 +195,12 @@ class ConditionTypeCompilationContractTest {
                 "await(collection::call).until(singleElement(matches(String::isBlank)));",
                 """AwaitResult<Map<String, Number>, String> wrong = tryAwait(map::call).until(valueFor("key"));""",
                 """List<String> wrong = await(map::call).until(captured(valueFor("key"), valueFor("key")));""")) {
-            assertRejected(expression)
+            add(rejected(expression))
         }
     }
 
-    @Test
-    fun `typed quantifiers reject incompatible callbacks`() {
+    @TestFactory
+    fun `typed quantifiers reject incompatible callbacks`() = buildList {
         for (factory in listOf("await", "tryAwait")) {
             for (expression in listOf(
                     "%s(map::call).until(allKeys((Integer key) -> key > 0));",
@@ -220,13 +221,13 @@ class ConditionTypeCompilationContractTest {
                     "%s(collection::call).until(CollectionConditions.all(String::isBlank));",
                     "%s(collection::call).until(CollectionConditions.any(String::isBlank));",
                     "%s(collection::call).until(CollectionConditions.none(String::isBlank));")) {
-                assertRejected(expression.format(factory))
+                add(rejected(expression.format(factory)))
             }
         }
     }
 
-    @Test
-    fun `selectors keep their declared input and result types`() {
+    @TestFactory
+    fun `selectors keep their declared input and result types`() = buildList {
         for (expression in listOf("Condition<Optional<?>, Object> erased = present;",
                 """Condition<Map<?, ?>, Object> erased = valueFor("key");""",
                 "Object value = await(() -> List.of(Optional.of(1))).until(singleElement(present));",
@@ -234,9 +235,11 @@ class ConditionTypeCompilationContractTest {
                 "List<Object> values = await(collection::call).until(captured(singleElement, isNotNull));",
                 """Callable<Map<String, Number>> plain = map; String value = await(plain::call).until(valueFor("key"));""",
                 "await(collection::call).until(CollectionConditions.sorted(String::compareTo));")) {
-            assertRejected(expression)
+            add(rejected(expression))
         }
     }
+
+    private fun rejected(body: String) = dynamicTest(body) { assertRejected(body) }
 
     private fun assertRejected(body: String) {
         CompilationSupport.assertRejected("""
