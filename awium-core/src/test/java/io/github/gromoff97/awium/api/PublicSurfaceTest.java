@@ -1,5 +1,13 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.api;
 
+import io.github.gromoff97.awium.AwaitCondition;
+import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.ValueAwait;
+import io.github.gromoff97.awium.SelectionAwait;
+import io.github.gromoff97.awium.MapAwait;
+import io.github.gromoff97.awium.DiagnosticAwait;
+import io.github.gromoff97.awium.DiagnosticSelectionAwait;
+import io.github.gromoff97.awium.DiagnosticMapAwait;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -15,7 +23,7 @@ import static io.github.gromoff97.awium.AwaitCondition.InputCondition;
 import static io.github.gromoff97.awium.AwaitCondition.MapValueCondition;
 import static io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import static io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
-import static io.github.gromoff97.awium.TestConditions.accepted;
+import static io.github.gromoff97.awium.support.TestConditions.accepted;
 import static java.lang.Thread.currentThread;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;

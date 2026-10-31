@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.api;
 
 import java.util.List;
 import org.junit.jupiter.params.ParameterizedTest;

@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.architecture;
 
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;

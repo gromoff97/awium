@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.execution.WaitCompletion;
 import io.github.gromoff97.awium.function.CheckedFunction;
@@ -36,8 +37,8 @@ import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.observation;
 import static io.github.gromoff97.awium.AwaitTestAccess.start;
 import static io.github.gromoff97.awium.AwaitTestAccess.uncontrolled;
-import static io.github.gromoff97.awium.TestConditions.check;
-import static io.github.gromoff97.awium.TestConditions.checkPerWait;
+import static io.github.gromoff97.awium.support.TestConditions.check;
+import static io.github.gromoff97.awium.support.TestConditions.checkPerWait;
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.execution.WaitCompletion.Uncontrolled;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;

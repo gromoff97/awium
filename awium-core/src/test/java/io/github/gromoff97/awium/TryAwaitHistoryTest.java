@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitResult;
@@ -16,9 +17,9 @@ import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
 import static io.github.gromoff97.awium.AwaitTestAccess.observation;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedTryAwait;
-import static io.github.gromoff97.awium.TestConditions.accepted;
-import static io.github.gromoff97.awium.TestConditions.check;
-import static io.github.gromoff97.awium.TestConditions.expected;
+import static io.github.gromoff97.awium.support.TestConditions.accepted;
+import static io.github.gromoff97.awium.support.TestConditions.check;
+import static io.github.gromoff97.awium.support.TestConditions.expected;
 import static io.github.gromoff97.awium.result.AwaitResult.Succeeded;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;

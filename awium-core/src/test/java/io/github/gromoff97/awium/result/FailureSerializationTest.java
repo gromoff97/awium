@@ -1,16 +1,15 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.result;
 
-import io.github.gromoff97.awium.result.AwaitAssertionError;
-import io.github.gromoff97.awium.result.AwaitExecutionException;
-import io.github.gromoff97.awium.result.AwaitFailure;
+import io.github.gromoff97.awium.support.FakeTime;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.TestConditions.check;
-import static io.github.gromoff97.awium.TestConditions.expected;
+import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.support.TestConditions.check;
+import static io.github.gromoff97.awium.support.TestConditions.expected;
 import static java.time.Duration.ofNanos;
 import static org.apache.commons.lang3.SerializationUtils.roundtrip;
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,7 +22,7 @@ class FailureSerializationTest {
         var display = new BrokenDisplay();
         var assertion = new AssertionError("not ready");
         var timeout = assertThrows(AwaitAssertionError.class,
-                () -> await(() -> display).usingTime(time, time).every(ofNanos(1)).upTo(ofNanos(2))
+                () -> timedAwait(() -> display, time).every(ofNanos(1)).upTo(ofNanos(2))
                         .until(check("not ready", value -> io.github.gromoff97.awium.result.ConditionResult.unsatisfied("not ready", assertion))));
         Callable<BrokenDisplay> source = () -> { throw new IOException("source failed"); };
         var execution = assertThrows(AwaitExecutionException.class,

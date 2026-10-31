@@ -1,7 +1,7 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.execution;
 
-import io.github.gromoff97.awium.execution.DefinedCondition;
-import io.github.gromoff97.awium.execution.ConditionExecution;
+import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.ArrayList;
@@ -10,10 +10,10 @@ import java.util.concurrent.Callable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
-import static io.github.gromoff97.awium.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.support.ConditionTestRuntime.result;
 import static io.github.gromoff97.awium.execution.ConditionExecution.bind;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static java.lang.Thread.currentThread;
@@ -133,7 +133,7 @@ class ConditionExecutionTest {
             @Override public String description() { throw renderingFailure; }
             @Override public ConditionResult<String> probe(String actual) { throw probeFailure; }
         };
-        var waiting = await(() -> "ready").usingTime(time, time);
+        var waiting = timedAwait(() -> "ready", time);
         var result = diagnostic(waiting).until(condition);
         assertSame(probeFailure, failure(result).cause());
         assertThat(failure(result).suppressed()).containsExactly(renderingFailure);

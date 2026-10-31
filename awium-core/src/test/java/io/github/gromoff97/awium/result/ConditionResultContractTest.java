@@ -1,6 +1,5 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.result;
 
-import io.github.gromoff97.awium.result.ConditionResult;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.result.ConditionResult.*;

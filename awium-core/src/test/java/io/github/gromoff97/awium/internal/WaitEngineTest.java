@@ -1,13 +1,12 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.internal;
 
+import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.execution.ExecutionStep;
 import io.github.gromoff97.awium.execution.WaitCompletion;
 import io.github.gromoff97.awium.execution.WaitTiming;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.internal.WaitConfiguration;
-import io.github.gromoff97.awium.internal.WaitEngine;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitResult;
 import io.github.gromoff97.awium.result.ConditionResult;

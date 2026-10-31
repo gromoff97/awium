@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -15,9 +16,9 @@ import static io.github.gromoff97.awium.AwaitTestAccess.observation;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedTryAwait;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-import static io.github.gromoff97.awium.TestConditions.accepted;
-import static io.github.gromoff97.awium.TestConditions.check;
-import static io.github.gromoff97.awium.TestConditions.matching;
+import static io.github.gromoff97.awium.support.TestConditions.accepted;
+import static io.github.gromoff97.awium.support.TestConditions.check;
+import static io.github.gromoff97.awium.support.TestConditions.matching;
 import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
 import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED;

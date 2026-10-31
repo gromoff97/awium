@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.support.FakeTime;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import io.github.gromoff97.awium.function.CheckedBiPredicate;
 import io.github.gromoff97.awium.function.CheckedPredicate;
@@ -16,8 +17,8 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import static io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
 import static io.github.gromoff97.awium.FailureTaxonomyTest.assertFailure;
-import static io.github.gromoff97.awium.TestConditions.accepted;
-import static io.github.gromoff97.awium.TestConditions.expected;
+import static io.github.gromoff97.awium.support.TestConditions.accepted;
+import static io.github.gromoff97.awium.support.TestConditions.expected;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static java.time.Duration.*;

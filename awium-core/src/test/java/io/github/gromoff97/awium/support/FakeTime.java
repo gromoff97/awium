@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.support;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -9,16 +9,16 @@ import java.util.function.LongSupplier;
 import static java.lang.Math.min;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-final class FakeTime implements LongSupplier, LongConsumer {
+public final class FakeTime implements LongSupplier, LongConsumer {
 
     private static final int MAX_TIME_OPERATIONS = 100_000;
 
     private final ArrayDeque<Long> parkAdvances = new ArrayDeque<>();
-    final List<Long> parkRequests = new ArrayList<>();
+    public final List<Long> parkRequests = new ArrayList<>();
     private long nowNanos;
     private int operations;
 
-    FakeTime(long nowNanos) {
+    public FakeTime(long nowNanos) {
         this.nowNanos = nowNanos;
     }
 
@@ -37,11 +37,11 @@ final class FakeTime implements LongSupplier, LongConsumer {
                 : min(nanos, parkAdvances.removeFirst()));
     }
 
-    void advanceNanos(long nanos) {
+    public void advanceNanos(long nanos) {
         nowNanos = getAsLong() + nanos;
     }
 
-    void wakeAfter(long nanos) {
+    public void wakeAfter(long nanos) {
         parkAdvances.addLast(nanos);
     }
 }

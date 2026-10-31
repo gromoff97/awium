@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium;
 
+import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.execution.ExecutionStep;
 import io.github.gromoff97.awium.execution.WaitCompletion;
@@ -26,9 +27,9 @@ import static io.github.gromoff97.awium.AwaitCondition.Reference;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.failure;
-import static io.github.gromoff97.awium.ConditionTestRuntime.diagnosticCondition;
-import static io.github.gromoff97.awium.TestConditions.check;
-import static io.github.gromoff97.awium.TestConditions.expected;
+import static io.github.gromoff97.awium.support.ConditionTestRuntime.diagnosticCondition;
+import static io.github.gromoff97.awium.support.TestConditions.check;
+import static io.github.gromoff97.awium.support.TestConditions.expected;
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.PERSISTENCE;
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase;

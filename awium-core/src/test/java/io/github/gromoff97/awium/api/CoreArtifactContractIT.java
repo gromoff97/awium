@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.api;
 
 import io.github.gromoff97.awium.internal.WaitEngine;
 import java.lang.module.ModuleFinder;
