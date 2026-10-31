@@ -7,6 +7,7 @@ import io.github.gromoff97.awium.conditions.ConditionAssertions.observation
 import io.github.gromoff97.awium.conditions.ConditionAssertions.probe
 import io.github.gromoff97.awium.conditions.Conditions.captured
 import io.github.gromoff97.awium.conditions.Conditions.condition
+import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait
 import io.github.gromoff97.awium.conditions.Conditions.equalTo
 import io.github.gromoff97.awium.conditions.Conditions.isNull
 import io.github.gromoff97.awium.conditions.Conditions.matches
@@ -26,7 +27,9 @@ import io.github.gromoff97.awium.execution.ConditionExecution.start
 import io.github.gromoff97.awium.execution.ExecutionStep
 import io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION
 import io.github.gromoff97.awium.execution.WaitCompletion.Timeout
+import io.github.gromoff97.awium.execution.WaitCompletion.SatisfiedWait
 import io.github.gromoff97.awium.execution.WaitTiming
+import io.github.gromoff97.awium.function.CheckedFunction
 import java.io.IOException
 import java.time.Duration.ofNanos
 import java.util.concurrent.Callable
@@ -123,16 +126,77 @@ class CapturedHistoryTest {
 
     @Test
     fun `each attempt is recorded under the stage that checked it`() {
-        val source = listOf("created", "created", "processing", "completed").iterator()
-        val stages = listOf(equalTo("created"), equalTo("processing"), equalTo("completed"))
+        val source = listOf(0, 0, 10, 10, 20, 20, 30).iterator()
+        val stages = listOf(equalTo(10), equalTo(20), equalTo(30))
         val result = tryAwait(Callable { source.next() }).every(ofNanos(1)).until(captured(*stages.toTypedArray()))
 
         assertEquals(stages, result.conditions().map { it.condition() })
-        assertEquals(listOf(listOf(1L), listOf(2L, 3L), listOf(4L)),
+        assertEquals(listOf(listOf(2L, 3L), listOf(4L, 5L), listOf(6L, 7L)),
             result.conditions().map { it.attempts().keys.toList() })
-        assertEquals(listOf(SatisfiedObservation::class.java, UnsatisfiedObservation::class.java,
-            SatisfiedObservation::class.java, SatisfiedObservation::class.java), attempts(result).map { it.javaClass })
-        assertEquals(listOf("created", "created", "processing", "completed"), attempts(result).map(::observation))
+        assertEquals(List(3) { listOf(UnsatisfiedObservation::class.java, SatisfiedObservation::class.java) }.flatten(),
+            attempts(result).map { it.javaClass })
+        assertEquals(listOf(listOf(0, 10), listOf(10, 20), listOf(20, 30)),
+            result.conditions().map { it.attempts().values.map(::observation) })
+        assertEquals(listOf(10, 20, 30), result.orThrow())
+    }
+
+    @Test
+    fun `an incomplete run retains unreached stages without initializing them`() {
+        var initialized = 0
+        val unreached = conditionPerWait<Int, Int>("third") {
+            initialized++
+            CheckedFunction { satisfied(it) }
+        }.because("last check")
+        val run = start<Int, List<Int>>(captured(equalTo(1), equalTo(3), unreached), true)
+        probe(run, 1)
+        run.record(SatisfiedObservation(1))
+        for (actual in listOf(0, 0, 2, 2)) {
+            val rejected = assertInstanceOf(Unsatisfied::class.java, probe(run, actual))
+            run.record(UnsatisfiedObservation(actual, rejected.mismatch(), rejected.cause()))
+        }
+        val step = ExecutionStep(false, ACQUISITION, 0, UnsatisfiedObservation(2, "value was not equal", null))
+        val result = run.finish(Timeout(step), mock(WaitTiming::class.java))
+
+        assertEquals(3, result.conditions().size)
+        assertEquals(listOf(0, 2), result.conditions()[1].attempts().values.map(::observation))
+        val last = result.conditions().last()
+        assertSame(unreached, last.condition())
+        assertTrue(last.attempts().isEmpty())
+        assertEquals(0, initialized)
+        assertThat(last.toString()).contains("not attempted", "last check")
+    }
+
+    @Test
+    fun `rechecking a complete run records only its final stage`() {
+        val run = start<Int, List<Int>>(captured(equalTo(1), equalTo(2)), true)
+        for (actual in listOf(1, 2, 2, 2)) {
+            probe(run, actual)
+            run.record(SatisfiedObservation(actual))
+        }
+        val step = ExecutionStep(true, ACQUISITION, 0, SatisfiedObservation(2))
+        val result = run.finish(SatisfiedWait(step), mock(WaitTiming::class.java))
+        assertEquals(listOf(listOf(1L), listOf(4L)), result.conditions().map { it.attempts().keys.toList() })
+    }
+
+    @Test
+    fun `the report labels each stage and its observation changes`() {
+        val source = listOf("created", "pending", "pending", "paid").iterator()
+        val result = tryAwait(Callable { source.next() }).every(ofNanos(1)).until(captured(
+            equalTo("created"), equalTo("paid").because("payment accepted")).because("order lifecycle"))
+        val report = result.toString()
+        assertEquals(2, report.lineSequence().count { it.startsWith("Condition ") })
+        assertThat(report).contains("Condition 1:", "Condition 2:", "Expected: \"created\"", "Expected: \"paid\"",
+            "Because: payment accepted", "Through #3", "Observed now: \"pending\"")
+    }
+
+    @Test
+    fun `returning to an earlier condition repeats its definition in the report`() {
+        val ready = equalTo("ready")
+        val source = listOf("ready", "retry", "ready").iterator()
+        val result = tryAwait(Callable { source.next() }).every(ofNanos(1)).until(captured(ready, equalTo("retry"), ready))
+        val lines = result.toString().lines()
+        assertEquals(3, lines.count { it.startsWith("Condition ") })
+        assertEquals(2, lines.count { it.contains("Expected: \"ready\"") })
     }
 
     @Test

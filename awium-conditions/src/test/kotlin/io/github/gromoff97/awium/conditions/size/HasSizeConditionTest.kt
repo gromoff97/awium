@@ -25,6 +25,18 @@ import org.mockito.Mockito.`when`
 
 class HasSizeConditionTest {
     @Test
+    fun `a mismatch keeps the size observed during its probe`() {
+        val values = mutableListOf<Int>()
+        val check = CollectionConditions.hasSize(4)
+        val mismatches = (1..3).map { value ->
+            values += value
+            rejection(check, values).mismatch()
+        }
+        values += 99
+        assertEquals(listOf("collection size was 1", "collection size was 2", "collection size was 3"), mismatches)
+    }
+
+    @Test
     fun `describes the length unit and bound`() {
         assertEquals("string length is 5", StringConditions.hasLength(5).description())
     }

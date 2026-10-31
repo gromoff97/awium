@@ -52,7 +52,8 @@ class EntryMatchesConditionTest {
 
     @Test
     fun `rejects a missing predicate`() {
-        assertThrows(NullPointerException::class.java) { singleEntry(null as CheckedBiPredicate<String, Int>?) }
+        val failure = assertThrows(NullPointerException::class.java) { singleEntry(null as CheckedBiPredicate<String, Int>?) }
+        assertEquals("predicate must not be null", failure.message)
     }
 
     @Test
