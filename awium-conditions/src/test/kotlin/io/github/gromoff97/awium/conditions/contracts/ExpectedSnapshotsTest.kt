@@ -18,6 +18,7 @@ import java.util.Spliterator
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -38,11 +39,13 @@ class ExpectedSnapshotsTest {
         val input = Iterable { assertEquals(1, ++reads, "expected values were read twice"); values.iterator() }
         val check = factory(input)
         val before = listOf(evaluate(check, actual), evaluate(check, other))
-        if (arrayBacked) array[0] = "changed" else { mutable.clear(); mutable += "changed" }
+        if (arrayBacked) array[0] = "new" else { mutable.clear(); mutable += "new" }
 
         assertEquals(before, listOf(evaluate(check, actual), evaluate(check, other)))
         assertEquals(expected, check.references().first().value())
         assertEquals(1, reads)
+        val updated = factory(values)
+        assertNotEquals(before, listOf(evaluate(updated, actual), evaluate(updated, other)))
     }
 
     @ParameterizedTest
@@ -202,13 +205,13 @@ class ExpectedSnapshotsTest {
         @JvmStatic
         fun snapshots() = listOf(false, true).flatMap { arrayBacked ->
             collections.map { (name, factory) -> argumentSet("$name / array=$arrayBacked", factory,
-                listOf("a", null, "a"), listOf("a", null, "a"), listOf("changed"), arrayBacked) } +
+                listOf("a", null, "a"), listOf("a", null, "a"), listOf("new"), arrayBacked) } +
             mapViews.map { (name, factory) -> argumentSet("$name / array=$arrayBacked", factory,
-                listOf("a", null), linkedMapOf("a" to "a", null to null), mapOf("changed" to "changed"), arrayBacked) } +
-            text.flatMap { (name, factory) -> listOf(listOf("a", "b"), listOf("x", "y")).map { expected ->
-                argumentSet("$name / $expected / array=$arrayBacked", factory, expected, StringBuilder("abc"), StringBuilder("xyz"), arrayBacked) } } +
+                listOf("a", null), linkedMapOf("a" to "a", null to null), mapOf("new" to "new"), arrayBacked) } +
+            text.map { (name, factory) -> argumentSet("$name / array=$arrayBacked", factory,
+                listOf("a", "b"), StringBuilder("ab"), StringBuilder("new"), arrayBacked) } +
             candidates.map { (name, factory) -> argumentSet("$name / array=$arrayBacked", factory,
-                listOf(null, "ready"), "ready", "missing", arrayBacked) }
+                listOf("ready", null), "ready", "new", arrayBacked) }
         }
 
         @JvmStatic

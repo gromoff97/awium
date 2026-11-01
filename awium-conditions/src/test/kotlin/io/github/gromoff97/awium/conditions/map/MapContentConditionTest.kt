@@ -72,16 +72,6 @@ class MapContentConditionTest {
     }
 
     @Test
-    fun `copies expected entries before later map mutations`() {
-        val expected = linkedMapOf("a" to "1")
-        val condition = containsExactlyEntries(expected)
-        expected.entries.single().setValue("changed")
-        val actual = mapOf("a" to "1")
-
-        assertSame(actual, result(evaluate(condition, actual)))
-    }
-
-    @Test
     fun `compares array keys and values by content`() {
         val actual = EntryMap(listOf(ProbeEntry(intArrayOf(1), intArrayOf(2))))
         assertSame(actual, result(evaluate(containsExactlyEntries(mapOf(intArrayOf(1) to intArrayOf(2))), actual)))

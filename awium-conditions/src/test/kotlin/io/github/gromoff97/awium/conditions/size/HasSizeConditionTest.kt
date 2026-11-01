@@ -127,7 +127,14 @@ class HasSizeConditionTest {
             boundary(StringConditions.hasLengthBetween(4, 6), "failed", "failure"),
             boundary(StringConditions.hasLength(0), "", "x"),
             boundary(StringConditions.hasLengthAtMost(0), "", "x")
-        ).flatten()
+        ).flatten() + listOf(
+            argumentSet("collection equality / above bound", CollectionConditions.hasSize(2), listOf(1, 2, 3), false),
+            argumentSet("collection inequality / above bound", CollectionConditions.hasSizeNotEqualTo(2), listOf(1, 2, 3), true),
+            argumentSet("map equality / above bound", MapConditions.hasSize(2), map(3), false),
+            argumentSet("map inequality / above bound", MapConditions.hasSizeNotEqualTo(2), map(3), true),
+            argumentSet("text equality / above bound", StringConditions.hasLength(5), "longer", false),
+            argumentSet("text inequality / below bound", StringConditions.hasLengthNotEqualTo(4), "hey", true)
+        )
 
         @JvmStatic
         fun diagnostics() = listOf(

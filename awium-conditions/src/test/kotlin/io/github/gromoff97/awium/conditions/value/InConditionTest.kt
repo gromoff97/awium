@@ -8,7 +8,6 @@ import io.github.gromoff97.awium.conditions.Conditions.`in`
 import io.github.gromoff97.awium.conditions.Conditions.notIn
 import io.github.gromoff97.awium.conditions.support.Directional
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Named
@@ -19,10 +18,6 @@ import org.junit.jupiter.params.provider.Arguments.argumentSet
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.NullAndEmptySource
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.Mockito.CALLS_REAL_METHODS
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
 
 class InConditionTest {
     @ParameterizedTest
@@ -52,35 +47,6 @@ class InConditionTest {
     @MethodSource("factories")
     fun `rejects a missing candidate set immediately`(create: (Iterable<Any?>?) -> ComparisonCondition<Any?>) {
         assertThrows(NullPointerException::class.java) { create(null) }
-    }
-
-    @Test
-    fun `reads candidates once and freezes membership`() {
-        val mutable = mutableListOf(null, "ready")
-        val candidates: Iterable<String?> = mock(CALLS_REAL_METHODS)
-        `when`(candidates.iterator()).thenAnswer { mutable.iterator() }
-            .thenThrow(AssertionError("candidates read twice"))
-        val condition = `in`(candidates)
-        mutable.clear()
-
-        assertEquals("ready", result(evaluate(condition, "ready")))
-        assertNull(result(evaluate(condition, null)))
-        assertEquals(listOf(null, "ready"), condition.references().single().value())
-        verify(candidates).iterator()
-    }
-
-    @ParameterizedTest
-    @MethodSource("factories")
-    fun `array-backed candidates are copied`(create: (Iterable<Any?>?) -> ComparisonCondition<Any?>) {
-        val expected = arrayOf<Any?>("before", null)
-        val condition = create(expected.asList())
-        val before = evaluate(condition, "before")
-        val after = evaluate(condition, "after")
-        expected[0] = "after"
-
-        assertEquals(before, evaluate(condition, "before"))
-        assertEquals(after, evaluate(condition, "after"))
-        assertEquals(listOf("before", null), condition.references().single().value())
     }
 
     @Test

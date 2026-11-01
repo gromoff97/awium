@@ -61,19 +61,6 @@ class CollectionContentConditionTest {
     }
 
     @ParameterizedTest
-    @MethodSource("rules")
-    fun `copies expected order duplicates and nulls`(rule: Rule) {
-        val expected = mutableListOf("a", null, "a")
-        val condition = rule.factory(expected)
-        val actual = listOf("a", null)
-        val before = evaluate(condition, actual)
-        expected.clear()
-
-        assertEquals(before, evaluate(condition, actual))
-        assertEquals(listOf("a", null, "a"), condition.references().single().value())
-    }
-
-    @ParameterizedTest
     @MethodSource("exactMismatches")
     fun `different sizes do not start traversal`(factory: (Iterable<Any?>?) -> AwaitCondition, negated: Boolean, size: Int) {
         val actual = object : ArrayList<String>(List(size) { "a" }) {

@@ -77,19 +77,6 @@ class ContainsElementsConditionTest {
         assertThrows(NullPointerException::class.java) { membership.factory(null) }
     }
 
-    @ParameterizedTest
-    @MethodSource("mapMemberships")
-    fun `copies expected map contents before later changes`(membership: MapMembership) {
-        val expected = linkedMapOf<String?, String?>("a" to "1")
-        val condition = membership.factory(expected)
-        val actual = mapOf("a" to "1")
-        val before = evaluate(condition, actual)
-        expected.entries.single().setValue("changed")
-        expected.clear()
-
-        assertEquals(before, evaluate(condition, actual))
-    }
-
     @Test
     fun `entry snapshot failures are reported when the condition is created`() {
         val cause = IllegalStateException("expected entries failed")
@@ -132,18 +119,6 @@ class ContainsElementsConditionTest {
     fun `rejects missing expected elements immediately`(membership: Membership) {
         val cause = assertThrows(NullPointerException::class.java) { membership.factory(null) }
         assertThat(cause.message).contains("elements")
-    }
-
-    @ParameterizedTest
-    @MethodSource("memberships")
-    fun `copies expected elements before later mutations`(membership: Membership) {
-        val expected = mutableListOf("a", null, "a")
-        val condition = membership.factory(expected)
-        val before = evaluate(condition, listOf("a", null))
-        expected.clear()
-
-        assertEquals(before, evaluate(condition, listOf("a", null)))
-        assertEquals(listOf("a", null, "a"), condition.references().single().value())
     }
 
     @Test

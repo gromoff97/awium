@@ -79,19 +79,6 @@ class CollectionSequenceConditionTest {
     }
 
     @ParameterizedTest
-    @MethodSource("rules")
-    fun `copies the expected pattern before later mutations`(rule: Rule) {
-        val expected = mutableListOf("a", null, "a")
-        val condition = rule.factory(expected)
-        val actual = listOf("a", null, "a")
-        val before = evaluate(condition, actual)
-        expected.clear()
-
-        assertEquals(before, evaluate(condition, actual))
-        assertEquals(listOf("a", null, "a"), condition.references().single().value())
-    }
-
-    @ParameterizedTest
     @MethodSource("arrayPatterns")
     fun `ordered patterns compare array elements by content`(condition: AwaitCondition) {
         val elements = listOf(null, intArrayOf(1, 2), "gap", intArrayOf(3, 4))

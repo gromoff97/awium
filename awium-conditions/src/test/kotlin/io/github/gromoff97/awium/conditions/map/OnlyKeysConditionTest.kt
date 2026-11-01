@@ -39,16 +39,6 @@ class OnlyKeysConditionTest {
     }
 
     @Test
-    fun `copies expected keys`() {
-        val expected = mutableListOf("a", "b")
-        val condition = containsOnlyKeys(expected)
-        expected.clear()
-        val actual = mapOf("a" to 1, "b" to 2)
-
-        assertSame(actual, result(evaluate(condition, actual)))
-    }
-
-    @Test
     fun `uses observation-first equality without hashing`() {
         val key = Directional(true)
         val expected = Directional(false)
