@@ -11,7 +11,6 @@ import io.github.gromoff97.awium.conditions.internal.ContainsElementsCondition.M
 import io.github.gromoff97.awium.conditions.internal.ContainsElementsCondition;
 import io.github.gromoff97.awium.conditions.internal.EmptyCondition;
 import io.github.gromoff97.awium.conditions.internal.EntryForCondition;
-import io.github.gromoff97.awium.conditions.internal.EntryMatchesCondition;
 import io.github.gromoff97.awium.conditions.internal.HasSizeCondition;
 import io.github.gromoff97.awium.conditions.internal.MapContentCondition;
 import io.github.gromoff97.awium.conditions.internal.MapEntries;
@@ -29,6 +28,7 @@ import java.util.Objects;
 
 import static io.github.gromoff97.awium.AwaitCondition.InputCondition;
 import static io.github.gromoff97.awium.conditions.Conditions.matches;
+import static io.github.gromoff97.awium.conditions.internal.MapEntries.entryPredicate;
 import static io.github.gromoff97.awium.conditions.internal.MapEntries.snapshotEntries;
 import static io.github.gromoff97.awium.conditions.internal.NestedCondition.compose;
 import static io.github.gromoff97.awium.conditions.internal.SizeRelation.AT_LEAST;
@@ -82,7 +82,7 @@ public final class MapConditions {
 
     public static <KEY, VALUE> SelectedCondition<Map<? extends KEY, ? extends VALUE>> singleEntry(
             CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
-        return new SelectedCondition<>(compose("single entry", new EntryMatchesCondition<>(predicate), singleEntry)) {};
+        return new SelectedCondition<>(compose("single entry", matches(entryPredicate(predicate)), singleEntry)) {};
     }
 
     public static <KEY, VALUE> SelectedCondition<Map<KEY, VALUE>> singleEntry(
@@ -105,7 +105,7 @@ public final class MapConditions {
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> allEntries(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
-        return new QuantifiedCondition<>("map", "entries", Quantifier.ALL, new EntryMatchesCondition<>(predicate), Map::entrySet);
+        return new QuantifiedCondition<>("map", "entries", Quantifier.ALL, matches(entryPredicate(predicate)), Map::entrySet);
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> allEntries(InputCondition<? super Entry<KEY, VALUE>> nested) {
@@ -126,7 +126,7 @@ public final class MapConditions {
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> hasEntry(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
-        return new QuantifiedCondition<>("map", "entries", Quantifier.ANY, new EntryMatchesCondition<>(predicate), Map::entrySet);
+        return new QuantifiedCondition<>("map", "entries", Quantifier.ANY, matches(entryPredicate(predicate)), Map::entrySet);
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> hasEntry(InputCondition<? super Entry<KEY, VALUE>> nested) {
@@ -147,7 +147,7 @@ public final class MapConditions {
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<? extends KEY, ? extends VALUE>> hasNoEntry(CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
-        return new QuantifiedCondition<>("map", "entries", Quantifier.NONE, new EntryMatchesCondition<>(predicate), Map::entrySet);
+        return new QuantifiedCondition<>("map", "entries", Quantifier.NONE, matches(entryPredicate(predicate)), Map::entrySet);
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> hasNoEntry(InputCondition<? super Entry<KEY, VALUE>> nested) {
@@ -317,7 +317,5 @@ public final class MapConditions {
     public static <KEY, VALUE> PreservingCondition<Map<? super KEY, ? super VALUE>> doesNotContainExactlyEntries(Map<? extends KEY, ? extends VALUE> unexpected) {
         return new MapContentCondition<>(unexpected, true);
     }
-
-    // Preserve encounter order and distinct entries without calling user equals/hashCode.
 
 }

@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 
-class EntryMatchesConditionTest {
+class EntryPredicateTest {
     @Test
     fun `passes key and value to the predicate and preserves the entry`() {
         val entry = ProbeEntry("key", 42)
