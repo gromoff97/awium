@@ -45,6 +45,19 @@ class WaitEngineLifecycleTest {
     void clearInterruptFlag() { interrupted(); }
 
     @Test
+    void preparationFailureStopsBeforeSourceRetrieval() throws Exception {
+        Callable<String> source = mock();
+        var cause = new AssertionError("preparation failed");
+        doThrow(cause).when(run).beginAttempt();
+
+        var outcome = assertInstanceOf(Uncontrolled.class, execute(source));
+        var attempt = assertInstanceOf(FailedBeforeObservation.class, outcome.step().attempt());
+        assertEquals(CONDITION, attempt.operation());
+        assertSame(cause, attempt.cause());
+        verify(source, never()).call();
+    }
+
+    @Test
     void interruptedPreparationSkipsSourceRetrieval() throws Exception {
         Callable<String> source = mock();
         doAnswer(ignored -> {
