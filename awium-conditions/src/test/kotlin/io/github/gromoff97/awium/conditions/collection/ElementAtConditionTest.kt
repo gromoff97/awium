@@ -110,6 +110,7 @@ class ElementAtConditionTest {
 
         @JvmStatic
         fun selectors() = listOf(firstElement, lastElement, elementAt(0))
+            .map { argumentSet(it.description(), it) }
 
         @JvmStatic
         fun requiredReads() = listOf(

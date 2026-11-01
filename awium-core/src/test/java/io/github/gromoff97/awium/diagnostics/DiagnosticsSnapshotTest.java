@@ -286,7 +286,7 @@ class DiagnosticsSnapshotTest {
         }
     }
 
-    @ParameterizedTest(name = "tryAwait={0}, message={1}")
+    @ParameterizedTest(name = "{displayName} [{index}] tryAwait={0}, message={1}")
     @MethodSource("blankMessageTerminals")
     void blankCauseMessagesAreOmittedAndReadOnlyOnce(boolean recording, String message) {
         int[] reads = {0};
@@ -418,7 +418,7 @@ class DiagnosticsSnapshotTest {
         assertThat(failure).hasMessageContainingAll("Attempt: 3 (PERSISTENCE)", "elapsed 5 ns");
     }
 
-    @ParameterizedTest(name = "array={0}")
+    @ParameterizedTest(name = "{displayName} [{index}] array={0}")
     @ValueSource(booleans = {false, true})
     void nullFromToStringUsesStandardArrayFormatting(boolean array) {
         Object value = mock();
@@ -434,7 +434,7 @@ class DiagnosticsSnapshotTest {
         assertThat(valueFailure).hasMessageContainingAll(array ? "Actual: [null]" : "Actual: null", "Timing:");
     }
 
-    @ParameterizedTest(name = "tryAwait={0}")
+    @ParameterizedTest(name = "{displayName} [{index}] tryAwait={0}")
     @ValueSource(booleans = {false, true})
     void diagnosticFailurePreservesTheInterruptRaisedByRendering(boolean recording) {
         int[] messageCalls = {0};
@@ -463,7 +463,7 @@ class DiagnosticsSnapshotTest {
         assertTrue(currentThread().isInterrupted());
     }
 
-    @ParameterizedTest(name = "tryAwait={0}")
+    @ParameterizedTest(name = "{displayName} [{index}] tryAwait={0}")
     @ValueSource(booleans = {false, true})
     void diagnosticErrorMessagesAreNotEvaluatedRecursively(boolean recording) {
         var interruption = new InterruptedException("diagnostic message interrupted");
@@ -700,7 +700,7 @@ class DiagnosticsSnapshotTest {
         }
     }
 
-    @ParameterizedTest(name = "tryAwait={0}, reference={1}")
+    @ParameterizedTest(name = "{displayName} [{index}] tryAwait={0}, reference={1}")
     @CsvSource({"false,scalar", "true,scalar", "false,array", "true,array", "false,list", "true,list", "false,entry", "true,entry"})
     void renderingPreservesInterruptionBetweenFieldsButUsesTheFinalFlagWithinOneReference(boolean recording, String shape) {
         int[] renders = {0, 0, 0};

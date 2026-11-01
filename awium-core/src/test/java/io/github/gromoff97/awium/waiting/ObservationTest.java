@@ -202,7 +202,7 @@ class ObservationTest {
         assertFalse(currentThread().isInterrupted());
     }
 
-    @ParameterizedTest(name = "{0}, {1}")
+    @ParameterizedTest(name = "{displayName} [{index}] {0}, {1}")
     @MethodSource("conditionFailures")
     void ordinaryAwaitPreservesCallbackAndFactoryFailures(Throwable cause, Condition<String, String> condition) {
         var waiting = await(() -> "actual");

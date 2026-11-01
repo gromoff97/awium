@@ -155,7 +155,7 @@ class WaitEngineTest {
         assertEquals("actual", successfulObservation(success.step()));
     }
 
-    @ParameterizedTest(name = "interval={0}, evaluation={1}")
+    @ParameterizedTest(name = "{displayName} [{index}] interval={0}, evaluation={1}")
     @CsvSource({"9, 0", "4, 5"})
     void acceptsALaterSuccessCompletingOneNanosecondBeforeTheDeadline(long interval, long evaluation) {
         var starts = new ArrayList<Long>();

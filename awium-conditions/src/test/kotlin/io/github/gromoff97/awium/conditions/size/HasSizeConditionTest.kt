@@ -14,11 +14,10 @@ import io.github.gromoff97.awium.result.ConditionResult.Satisfied
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments.arguments
+import org.junit.jupiter.params.provider.Arguments.argumentSet
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
@@ -41,7 +40,7 @@ class HasSizeConditionTest {
         assertEquals("string length is 5", StringConditions.hasLength(5).description())
     }
 
-    @ParameterizedTest(name = "{0}, observed {1}")
+    @ParameterizedTest
     @MethodSource("boundaries")
     fun `checks the size boundary`(condition: AwaitCondition, actual: Any, expected: Boolean) {
         val outcome = evaluate(condition, actual)
@@ -49,13 +48,13 @@ class HasSizeConditionTest {
         if (expected) assertSame(actual, result(outcome))
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest
     @MethodSource("diagnostics")
     fun `reports the observed size`(condition: AwaitCondition, actual: Any, expected: String) {
         assertEquals(expected, rejection(condition, actual).mismatch())
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest
     @MethodSource("nullInputs")
     fun `rejects a missing observation`(condition: AwaitCondition, expected: String) {
         assertEquals(expected, rejection(condition, null).mismatch())
@@ -132,16 +131,16 @@ class HasSizeConditionTest {
 
         @JvmStatic
         fun diagnostics() = listOf(
-            arguments(CollectionConditions.hasSize(2), listOf("value"), "collection size was 1"),
-            arguments(MapConditions.hasSize(2), mapOf("key" to "value"), "map size was 1"),
-            arguments(StringConditions.hasLength(5), "read", "string length was 4")
+            argumentSet("collection", CollectionConditions.hasSize(2), listOf("value"), "collection size was 1"),
+            argumentSet("map", MapConditions.hasSize(2), mapOf("key" to "value"), "map size was 1"),
+            argumentSet("text", StringConditions.hasLength(5), "read", "string length was 4")
         )
 
         @JvmStatic
         fun nullInputs() = listOf(
-            arguments(CollectionConditions.hasSize(2), "collection was null"),
-            arguments(MapConditions.hasSize(2), "map was null"),
-            arguments(StringConditions.hasLength(2), "string was null")
+            argumentSet("collection", CollectionConditions.hasSize(2), "collection was null"),
+            argumentSet("map", MapConditions.hasSize(2), "map was null"),
+            argumentSet("text", StringConditions.hasLength(2), "string was null")
         )
 
         @JvmStatic
@@ -162,14 +161,14 @@ class HasSizeConditionTest {
         )
 
         private fun boundary(condition: AwaitCondition, matching: Any, mismatching: Any) = listOf(
-            arguments(named(condition.description(), condition), matching, true),
-            arguments(named(condition.description(), condition), mismatching, false)
+            argumentSet("${condition.description()} / observed $matching", condition, matching, true),
+            argumentSet("${condition.description()} / observed $mismatching", condition, mismatching, false)
         )
 
         private fun invalidSizeRange(name: String, factory: Executable) =
             invalid(name, "size range must be non-negative and ordered", factory)
 
-        private fun invalid(name: String, message: String, factory: Executable) = arguments(named(name, factory), message)
+        private fun invalid(name: String, message: String, factory: Executable) = argumentSet(name, factory, message)
 
         private fun map(size: Int) = (0 until size).associateWith { it }
     }

@@ -38,5 +38,6 @@ class NullElementsConditionTest {
 
         @JvmStatic
         fun conditions() = listOf(containsNull, doesNotContainNull, containsOnlyNulls)
+            .map { argumentSet(it.description(), it) }
     }
 }

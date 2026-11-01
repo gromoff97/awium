@@ -16,7 +16,7 @@ import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class SelectorLifecycleTest {
-    @ParameterizedTest(name = "explained={0}")
+    @ParameterizedTest(name = "{displayName} [{index}] explained={0}")
     @ValueSource(booleans = {false, true})
     void elementSelectorsUseCustomRuns(boolean explained) throws Throwable {
         var definition = afterTwoObservations((List<String> actual) -> actual.getFirst());
@@ -25,7 +25,7 @@ class SelectorLifecycleTest {
         assertIndependentRuns(explained ? selector.because("first value") : selector, List.of("ready"));
     }
 
-    @ParameterizedTest(name = "explained={0}")
+    @ParameterizedTest(name = "{displayName} [{index}] explained={0}")
     @ValueSource(booleans = {false, true})
     void mapValueSelectorsUseCustomRuns(boolean explained) throws Throwable {
         var definition = afterTwoObservations((Map<String, String> actual) -> actual.get("key"));

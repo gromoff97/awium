@@ -51,7 +51,7 @@ class TryAwaitHistoryTest {
         assertThrows(UnsupportedOperationException.class, attempts(execution)::clear);
     }
 
-    @ParameterizedTest(name = "count={0}")
+    @ParameterizedTest(name = "{displayName} [{index}] count={0}")
     @ValueSource(ints = {255, 256, 257, 10_000})
     void repeatedObservationsAndDiagnosticsKeepTheLastNumberWithoutATailLimit(int count) {
         int[] calls = {0};

@@ -118,7 +118,7 @@ class ObservationDiagnosticsTest {
         }, mismatches(result))
     }
 
-    @ParameterizedTest
+    @ParameterizedTest(name = "{displayName} [{index}] {0}")
     @MethodSource("requiredMapParts")
     fun `map membership retains missing key value and entry positions`(elements: String, check: PreservingCondition<in Map<String, String>>) {
         val values = linkedMapOf<String, String>()
@@ -147,7 +147,7 @@ class ObservationDiagnosticsTest {
         }, mismatches(result))
     }
 
-    @ParameterizedTest
+    @ParameterizedTest(name = "{displayName} [{index}] {0}")
     @MethodSource("forbiddenMapParts")
     fun `map absence retains forbidden key value and entry positions`(elements: String, check: PreservingCondition<in Map<String, String>>) {
         val values = linkedMapOf("first" to "one", "second" to "two")

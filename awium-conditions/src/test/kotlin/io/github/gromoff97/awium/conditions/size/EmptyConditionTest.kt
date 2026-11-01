@@ -13,10 +13,9 @@ import io.github.gromoff97.awium.conditions.StringConditions
 import io.github.gromoff97.awium.result.ConditionResult.Satisfied
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments.arguments
+import org.junit.jupiter.params.provider.Arguments.argumentSet
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
@@ -34,13 +33,13 @@ class EmptyConditionTest {
         assertEquals(matches, evaluate(condition, actual) is Satisfied<*>)
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest
     @MethodSource("matchingInputs")
     fun `returns the observation`(condition: AwaitCondition, actual: Any) {
         assertSame(actual, result(evaluate(condition, actual)))
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest
     @MethodSource("mismatchingInputs")
     fun `reports why the observation failed`(condition: AwaitCondition, actual: Any?, expected: String) {
         assertEquals(expected, rejection(condition, actual).mismatch())
@@ -79,34 +78,36 @@ class EmptyConditionTest {
     companion object {
         @JvmStatic
         fun textLengths() = listOf(
-            arguments(StringConditions.empty, 0, true), arguments(StringConditions.empty, 3, false),
-            arguments(StringConditions.nonEmpty, 3, true), arguments(StringConditions.nonEmpty, 0, false)
+            argumentSet("empty / length 0", StringConditions.empty, 0, true),
+            argumentSet("empty / length 3", StringConditions.empty, 3, false),
+            argumentSet("nonempty / length 3", StringConditions.nonEmpty, 3, true),
+            argumentSet("nonempty / length 0", StringConditions.nonEmpty, 0, false)
         )
 
         @JvmStatic
         fun matchingInputs() = listOf(
-            arguments(named("empty collection", CollectionConditions.empty), emptyList<Any>()),
-            arguments(named("nonempty collection", CollectionConditions.nonEmpty), listOf("value")),
-            arguments(named("empty map", MapConditions.empty), emptyMap<Any, Any>()),
-            arguments(named("nonempty map", MapConditions.nonEmpty), mapOf("key" to "value")),
-            arguments(named("empty text", StringConditions.empty), ""),
-            arguments(named("nonempty text", StringConditions.nonEmpty), "value")
+            argumentSet("empty collection", CollectionConditions.empty, emptyList<Any>()),
+            argumentSet("nonempty collection", CollectionConditions.nonEmpty, listOf("value")),
+            argumentSet("empty map", MapConditions.empty, emptyMap<Any, Any>()),
+            argumentSet("nonempty map", MapConditions.nonEmpty, mapOf("key" to "value")),
+            argumentSet("empty text", StringConditions.empty, ""),
+            argumentSet("nonempty text", StringConditions.nonEmpty, "value")
         )
 
         @JvmStatic
         fun mismatchingInputs() = listOf(
-            arguments(CollectionConditions.empty, listOf("value"), "collection was not empty"),
-            arguments(CollectionConditions.nonEmpty, emptyList<Any>(), "collection was empty"),
-            arguments(MapConditions.empty, mapOf("key" to "value"), "map was not empty"),
-            arguments(MapConditions.nonEmpty, emptyMap<Any, Any>(), "map was empty"),
-            arguments(StringConditions.empty, "value", "string was not empty"),
-            arguments(StringConditions.nonEmpty, "", "string was empty"),
-            arguments(CollectionConditions.empty, null, "collection was null"),
-            arguments(CollectionConditions.nonEmpty, null, "collection was null"),
-            arguments(MapConditions.empty, null, "map was null"),
-            arguments(MapConditions.nonEmpty, null, "map was null"),
-            arguments(StringConditions.empty, null, "string was null"),
-            arguments(StringConditions.nonEmpty, null, "string was null")
+            argumentSet("empty collection", CollectionConditions.empty, listOf("value"), "collection was not empty"),
+            argumentSet("nonempty collection", CollectionConditions.nonEmpty, emptyList<Any>(), "collection was empty"),
+            argumentSet("empty map", MapConditions.empty, mapOf("key" to "value"), "map was not empty"),
+            argumentSet("nonempty map", MapConditions.nonEmpty, emptyMap<Any, Any>(), "map was empty"),
+            argumentSet("empty text", StringConditions.empty, "value", "string was not empty"),
+            argumentSet("nonempty text", StringConditions.nonEmpty, "", "string was empty"),
+            argumentSet("empty collection / null", CollectionConditions.empty, null, "collection was null"),
+            argumentSet("nonempty collection / null", CollectionConditions.nonEmpty, null, "collection was null"),
+            argumentSet("empty map / null", MapConditions.empty, null, "map was null"),
+            argumentSet("nonempty map / null", MapConditions.nonEmpty, null, "map was null"),
+            argumentSet("empty text / null", StringConditions.empty, null, "string was null"),
+            argumentSet("nonempty text / null", StringConditions.nonEmpty, null, "string was null")
         )
     }
 }
