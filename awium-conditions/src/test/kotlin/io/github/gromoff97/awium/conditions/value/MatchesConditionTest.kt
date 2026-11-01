@@ -4,8 +4,8 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
-import io.github.gromoff97.awium.conditions.common.Conditions.matches
-import io.github.gromoff97.awium.conditions.function.CheckedPredicate
+import io.github.gromoff97.awium.conditions.common.CommonConditions.matches
+import io.github.gromoff97.awium.function.checked.CheckedPredicate
 import java.io.IOException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame

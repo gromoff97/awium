@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.conditions.common.internal;
+package io.github.gromoff97.awium.support;
 
 import java.util.List;
 

@@ -19,8 +19,8 @@ class ConditionTypeCompilationContractTest {
     @TestFactory
     fun `custom checks cannot return an attempt failure`() = buildList {
         for (expression in listOf(
-                """Conditions.condition("failed", value -> failure);""",
-                """Conditions.conditionPerWait("failed", () -> value -> failure);""")) {
+                """CommonConditions.condition("failed", value -> failure);""",
+                """CommonConditions.conditionPerWait("failed", () -> value -> failure);""")) {
             add(dynamicTest(expression) { CompilationSupport.assertRejected("""
                     package io.github.gromoff97.awium;
                     import io.github.gromoff97.awium.conditions.common.*;
@@ -224,7 +224,7 @@ class ConditionTypeCompilationContractTest {
                 import io.github.gromoff97.awium.Await.*;
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.Await.tryAwait;
-                import static io.github.gromoff97.awium.conditions.common.Conditions.*;
+                import static io.github.gromoff97.awium.conditions.common.CommonConditions.*;
                 import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.*;
                 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
                 import static io.github.gromoff97.awium.conditions.map.MapConditions.*;

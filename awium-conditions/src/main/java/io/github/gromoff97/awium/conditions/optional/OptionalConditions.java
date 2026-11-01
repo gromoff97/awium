@@ -3,12 +3,12 @@ package io.github.gromoff97.awium.conditions.optional;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.conditions.function.CheckedPredicate;
+import io.github.gromoff97.awium.function.checked.CheckedPredicate;
 import java.util.Optional;
 
 import static io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
-import static io.github.gromoff97.awium.conditions.common.Conditions.matches;
-import static io.github.gromoff97.awium.conditions.common.internal.NestedCondition.compose;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.matches;
+import static io.github.gromoff97.awium.conditions.optional.NestedCondition.compose;
 
 public final class OptionalConditions {
 

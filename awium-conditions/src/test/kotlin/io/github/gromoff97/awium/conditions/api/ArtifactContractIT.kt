@@ -3,8 +3,11 @@ package io.github.gromoff97.awium.conditions.api
 import com.google.testing.compile.Compiler.javac
 import com.google.testing.compile.JavaFileObjects.forSourceString
 import io.github.gromoff97.awium.Await
-import io.github.gromoff97.awium.conditions.common.internal.HasSizeCondition
-import io.github.gromoff97.awium.conditions.common.internal.NestedCondition
+import io.github.gromoff97.awium.support.Quantifier
+import io.github.gromoff97.awium.support.NestedChecks
+import io.github.gromoff97.awium.support.ExpectedValues
+import io.github.gromoff97.awium.support.SizeRelation
+import io.github.gromoff97.awium.support.ValueMatching
 import io.github.gromoff97.awium.conditions.support.conditionsJar
 import io.github.gromoff97.awium.conditions.support.coreJar
 import java.io.File.pathSeparator
@@ -31,7 +34,7 @@ class ArtifactContractIT {
         val conditions = ModuleFinder.of(conditionsJar).find("io.github.gromoff97.awium.conditions").orElseThrow().descriptor()
 
         assertFalse(conditions.isAutomatic)
-        assertEquals(setOf("io.github.gromoff97.awium.conditions.common", "io.github.gromoff97.awium.conditions.function",
+        assertEquals(setOf("io.github.gromoff97.awium.conditions.common", "io.github.gromoff97.awium.function.checked",
             "io.github.gromoff97.awium.conditions.collection", "io.github.gromoff97.awium.conditions.map",
             "io.github.gromoff97.awium.conditions.optional", "io.github.gromoff97.awium.conditions.string"),
             conditions.exports().map { it.source() }.toSet())
@@ -58,8 +61,9 @@ class ArtifactContractIT {
     }
 
     @ParameterizedTest
-    @ValueSource(classes = [HasSizeCondition::class, NestedCondition::class])
-    fun `condition implementations are hidden from module consumers`(type: Class<*>) {
+    @ValueSource(classes = [Quantifier::class, NestedChecks::class,
+        ExpectedValues::class, SizeRelation::class, ValueMatching::class])
+    fun `implementation classes are hidden from module consumers`(type: Class<*>) {
         val source = forSourceString("consumer.Contract", """
             package consumer;
             import ${type.name};
@@ -72,7 +76,7 @@ class ArtifactContractIT {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["common.EqualityCondition", "collection.SortedCondition", "map.SingleEntryCondition",
+    @ValueSource(strings = ["common.CapturedCondition", "common.EqualityCondition", "collection.SortedCondition", "map.SingleEntryCondition",
         "optional.PresentCondition", "string.BlankCondition"])
     fun `family implementations are hidden from classpath consumers`(type: String) {
         val source = forSourceString("consumer.Contract", """

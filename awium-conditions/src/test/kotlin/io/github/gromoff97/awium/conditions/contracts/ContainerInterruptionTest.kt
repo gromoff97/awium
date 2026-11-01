@@ -22,10 +22,10 @@ import io.github.gromoff97.awium.conditions.collection.CollectionConditions.sing
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.sorted
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.startsWith
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
-import io.github.gromoff97.awium.conditions.common.Conditions.captured
-import io.github.gromoff97.awium.conditions.common.Conditions.conditionPerWait
-import io.github.gromoff97.awium.conditions.common.Conditions.instanceOf
-import io.github.gromoff97.awium.conditions.common.Conditions.matches
+import io.github.gromoff97.awium.conditions.common.CommonConditions.captured
+import io.github.gromoff97.awium.conditions.common.CommonConditions.conditionPerWait
+import io.github.gromoff97.awium.conditions.common.CommonConditions.instanceOf
+import io.github.gromoff97.awium.conditions.common.CommonConditions.matches
 import io.github.gromoff97.awium.conditions.map.MapConditions.allEntries
 import io.github.gromoff97.awium.conditions.map.MapConditions.allKeys
 import io.github.gromoff97.awium.conditions.map.MapConditions.allValues
@@ -41,7 +41,7 @@ import io.github.gromoff97.awium.conditions.map.MapConditions.hasSize as mapHasS
 import io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.function.AwaitAttempt
-import io.github.gromoff97.awium.conditions.function.CheckedPredicate
+import io.github.gromoff97.awium.function.checked.CheckedPredicate
 import io.github.gromoff97.awium.result.ConditionResult.satisfied
 import java.lang.Thread.currentThread
 import java.lang.Thread.interrupted

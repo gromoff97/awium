@@ -4,8 +4,8 @@ import io.github.gromoff97.awium.Condition
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.common.Conditions.exactlyInstanceOf
-import io.github.gromoff97.awium.conditions.common.Conditions.instanceOf
+import io.github.gromoff97.awium.conditions.common.CommonConditions.exactlyInstanceOf
+import io.github.gromoff97.awium.conditions.common.CommonConditions.instanceOf
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame

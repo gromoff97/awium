@@ -1,6 +1,6 @@
 package consumer.collection;
 
-import io.github.gromoff97.awium.conditions.common.Conditions;
+import io.github.gromoff97.awium.conditions.common.CommonConditions;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -16,13 +16,13 @@ import static io.github.gromoff97.awium.conditions.collection.CollectionConditio
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.firstElement;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.lastElement;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
-import static io.github.gromoff97.awium.conditions.common.Conditions.captured;
-import static io.github.gromoff97.awium.conditions.common.Conditions.asserted;
-import static io.github.gromoff97.awium.conditions.common.Conditions.equalTo;
-import static io.github.gromoff97.awium.conditions.common.Conditions.instanceOf;
-import static io.github.gromoff97.awium.conditions.common.Conditions.isNotNull;
-import static io.github.gromoff97.awium.conditions.common.Conditions.isNull;
-import static io.github.gromoff97.awium.conditions.common.Conditions.matches;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.captured;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.asserted;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.instanceOf;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.isNotNull;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.isNull;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.matches;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.valueFor;
 import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue;
 import static java.time.Duration.ofNanos;
@@ -84,7 +84,7 @@ public final class SelectionConsumer {
     }
 
     public static List<List<User>> capturedSelectors(List<User> values) {
-        var check = Conditions.<List<User>>captured(singleElement(equalTo(values.getFirst())),
+        var check = CommonConditions.<List<User>>captured(singleElement(equalTo(values.getFirst())),
                 singleElement(User::positive)).because("selected user is valid");
         var observations = await(() -> values).every(ofNanos(1)).until(check);
         observations.getFirst().getFirst().id();
@@ -92,7 +92,7 @@ public final class SelectionConsumer {
     }
 
     public static List<List<User>> recordedSelectors(List<User> values) {
-        var check = Conditions.<List<User>>captured(singleElement(equalTo(values.getFirst())),
+        var check = CommonConditions.<List<User>>captured(singleElement(equalTo(values.getFirst())),
                 singleElement(User::positive)).because("selected user is valid");
         var observations = tryAwait(() -> values).every(ofNanos(1)).until(check).orThrow();
         observations.getFirst().getFirst().id();

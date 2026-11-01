@@ -5,67 +5,62 @@ import io.github.gromoff97.awium.AwaitCondition.MapValueCondition;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.conditions.common.internal.ContainsCondition;
-import io.github.gromoff97.awium.conditions.common.internal.ContainsElementsCondition.Membership;
-import io.github.gromoff97.awium.conditions.common.internal.ContainsElementsCondition;
-import io.github.gromoff97.awium.conditions.common.internal.EmptyCondition;
-import io.github.gromoff97.awium.conditions.common.internal.HasSizeCondition;
-import io.github.gromoff97.awium.conditions.common.internal.QuantifiedCondition.Quantifier;
-import io.github.gromoff97.awium.conditions.common.internal.QuantifiedCondition;
-import io.github.gromoff97.awium.conditions.function.CheckedBiPredicate;
-import io.github.gromoff97.awium.conditions.function.CheckedPredicate;
+import io.github.gromoff97.awium.support.Membership;
+import io.github.gromoff97.awium.support.Quantifier;
+import io.github.gromoff97.awium.function.checked.CheckedBiPredicate;
+import io.github.gromoff97.awium.function.checked.CheckedPredicate;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Map.Entry;
 import java.util.Map;
 import java.util.Objects;
 
 import static io.github.gromoff97.awium.AwaitCondition.InputCondition;
-import static io.github.gromoff97.awium.conditions.common.Conditions.matches;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.matches;
 import static io.github.gromoff97.awium.conditions.map.MapEntries.entryPredicate;
 import static io.github.gromoff97.awium.conditions.map.MapEntries.snapshotEntries;
-import static io.github.gromoff97.awium.conditions.common.internal.NestedCondition.compose;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.AT_LEAST;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.AT_MOST;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.BETWEEN;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.EQUAL;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.GREATER;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.LESS;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.NOT_EQUAL;
+import static io.github.gromoff97.awium.conditions.map.NestedCondition.compose;
+import static io.github.gromoff97.awium.support.SizeRelation.AT_LEAST;
+import static io.github.gromoff97.awium.support.SizeRelation.AT_MOST;
+import static io.github.gromoff97.awium.support.SizeRelation.BETWEEN;
+import static io.github.gromoff97.awium.support.SizeRelation.EQUAL;
+import static io.github.gromoff97.awium.support.SizeRelation.GREATER;
+import static io.github.gromoff97.awium.support.SizeRelation.LESS;
+import static io.github.gromoff97.awium.support.SizeRelation.NOT_EQUAL;
 
 public final class MapConditions {
 
     public static final SelectedCondition<Map<?, ?>> singleEntry = new SingleEntryCondition();
-    public static final PreservingCondition<Map<?, ?>> empty = new EmptyCondition<>("map", Map::isEmpty, true);
-    public static final PreservingCondition<Map<?, ?>> nonEmpty = new EmptyCondition<>("map", Map::isEmpty, false);
+    public static final PreservingCondition<Map<?, ?>> empty = new EmptyCondition(true);
+    public static final PreservingCondition<Map<?, ?>> nonEmpty = new EmptyCondition(false);
 
     private MapConditions() {}
 
     public static PreservingCondition<Map<?, ?>> hasSize(int expected) {
-        return new HasSizeCondition<>("map", "size", Map::size, EQUAL, expected);
+        return new HasSizeCondition(EQUAL, expected, expected);
     }
 
     public static PreservingCondition<Map<?, ?>> hasSizeNotEqualTo(int unexpected) {
-        return new HasSizeCondition<>("map", "size", Map::size, NOT_EQUAL, unexpected);
+        return new HasSizeCondition(NOT_EQUAL, unexpected, unexpected);
     }
 
     public static PreservingCondition<Map<?, ?>> hasSizeGreaterThan(int lowerBound) {
-        return new HasSizeCondition<>("map", "size", Map::size, GREATER, lowerBound);
+        return new HasSizeCondition(GREATER, lowerBound, lowerBound);
     }
 
     public static PreservingCondition<Map<?, ?>> hasSizeAtLeast(int lowerBound) {
-        return new HasSizeCondition<>("map", "size", Map::size, AT_LEAST, lowerBound);
+        return new HasSizeCondition(AT_LEAST, lowerBound, lowerBound);
     }
 
     public static PreservingCondition<Map<?, ?>> hasSizeLessThan(int upperBound) {
-        return new HasSizeCondition<>("map", "size", Map::size, LESS, upperBound);
+        return new HasSizeCondition(LESS, upperBound, upperBound);
     }
 
     public static PreservingCondition<Map<?, ?>> hasSizeAtMost(int upperBound) {
-        return new HasSizeCondition<>("map", "size", Map::size, AT_MOST, upperBound);
+        return new HasSizeCondition(AT_MOST, upperBound, upperBound);
     }
 
     public static PreservingCondition<Map<?, ?>> hasSizeBetween(int lowerBound, int upperBound) {
-        return new HasSizeCondition<>("map", "size", Map::size, BETWEEN, lowerBound, upperBound);
+        return new HasSizeCondition(BETWEEN, lowerBound, upperBound);
     }
 
     public static <KEY, VALUE> SelectedCondition<Map<KEY, VALUE>> singleEntry(

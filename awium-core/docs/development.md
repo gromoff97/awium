@@ -61,7 +61,8 @@ Mutable state stays within a run; definitions stay immutable.
 
 `ApplicableCondition` constrains inputs and comparisons; `InputCondition` fixes
 the comparison constraint for input-only checks. `CollectingCondition` declares a
-source-observation list result. `PreservesObservation` shares a terminal overload
+source-observation list result; its default `stages()` returns the condition itself
+as the only stage. `PreservesObservation` shares a terminal overload
 across preserving checks and comparisons. Selector implementations must return the
 corresponding source element, entry, or value; typed `Condition` declares its output.
 

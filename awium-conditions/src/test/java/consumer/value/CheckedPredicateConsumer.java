@@ -1,6 +1,6 @@
 package consumer.value;
 
-import io.github.gromoff97.awium.conditions.function.CheckedBiPredicate;
+import io.github.gromoff97.awium.function.checked.CheckedBiPredicate;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -19,7 +19,7 @@ import static io.github.gromoff97.awium.conditions.collection.CollectionConditio
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.lastElement;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.elementAt;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
-import static io.github.gromoff97.awium.conditions.common.Conditions.matches;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.matches;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.allEntries;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.allKeys;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.allValues;
@@ -32,7 +32,7 @@ import static io.github.gromoff97.awium.conditions.map.MapConditions.noValue;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.valueFor;
 import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue;
-import static io.github.gromoff97.awium.conditions.function.CheckedPredicate.not;
+import static io.github.gromoff97.awium.function.checked.CheckedPredicate.not;
 import static java.time.Duration.ofNanos;
 
 public final class CheckedPredicateConsumer {

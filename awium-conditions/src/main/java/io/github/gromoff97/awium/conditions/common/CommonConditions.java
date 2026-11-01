@@ -1,47 +1,48 @@
 package io.github.gromoff97.awium.conditions.common;
 
 import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
+import io.github.gromoff97.awium.AwaitCondition.CollectingCondition;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.AwaitCondition.Reference;
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.conditions.function.CheckedConsumer;
-import io.github.gromoff97.awium.conditions.function.CheckedPredicate;
+import io.github.gromoff97.awium.function.checked.CheckedConsumer;
+import io.github.gromoff97.awium.function.checked.CheckedPredicate;
 import java.util.concurrent.Callable;
 
 import static io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
 import static io.github.gromoff97.awium.AwaitCondition.InputCondition;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.AT_LEAST;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.AT_MOST;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.GREATER;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.LESS;
+import static io.github.gromoff97.awium.support.SizeRelation.AT_LEAST;
+import static io.github.gromoff97.awium.support.SizeRelation.AT_MOST;
+import static io.github.gromoff97.awium.support.SizeRelation.GREATER;
+import static io.github.gromoff97.awium.support.SizeRelation.LESS;
 
-public final class Conditions {
+public final class CommonConditions {
 
     public static final PreservingCondition<Object> isNull = new NullCondition(true);
     public static final PreservingCondition<Object> isNotNull = new NullCondition(false);
 
-    private Conditions() {}
+    private CommonConditions() {}
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <CHECK extends AwaitCondition> CapturedCondition<CHECK> captured(CHECK... conditions) {
+    public static <CHECK extends AwaitCondition> CollectingCondition<CHECK> captured(CHECK... conditions) {
         // Keep the check type so mixed input bounds can be inferred from the terminal call.
         return new CapturedCondition<>(conditions);
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <INPUT, EXPECTED> CapturedCondition<ApplicableCondition<INPUT, Reference<? super EXPECTED>>> captured(
+    public static <INPUT, EXPECTED> CollectingCondition<ApplicableCondition<INPUT, Reference<? super EXPECTED>>> captured(
             ApplicableCondition<? super INPUT, ? super Reference<? super EXPECTED>>... conditions) {
         return new CapturedCondition<>(conditions);
     }
 
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <INPUT> CapturedCondition<InputCondition<INPUT>> captured(
+    public static <INPUT> CollectingCondition<InputCondition<INPUT>> captured(
             InputCondition<? super INPUT>... conditions) {
         return new CapturedCondition<>(conditions);
     }

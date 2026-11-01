@@ -10,10 +10,10 @@ import io.github.gromoff97.awium.conditions.collection.CollectionConditions.sing
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
-import io.github.gromoff97.awium.conditions.common.Conditions.condition
-import io.github.gromoff97.awium.conditions.common.Conditions.instanceOf
-import io.github.gromoff97.awium.conditions.common.Conditions.matches
-import io.github.gromoff97.awium.conditions.common.Conditions.conditionPerWait
+import io.github.gromoff97.awium.conditions.common.CommonConditions.condition
+import io.github.gromoff97.awium.conditions.common.CommonConditions.instanceOf
+import io.github.gromoff97.awium.conditions.common.CommonConditions.matches
+import io.github.gromoff97.awium.conditions.common.CommonConditions.conditionPerWait
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
@@ -230,7 +230,7 @@ class NestedConditionTest {
     @ValueSource(booleans = [false, true])
     fun `an interrupted positional predicate stops after one call`(last: Boolean) {
         var calls = 0
-        val predicate = io.github.gromoff97.awium.conditions.function.CheckedPredicate<Int> {
+        val predicate = io.github.gromoff97.awium.function.checked.CheckedPredicate<Int> {
             calls++
             Thread.currentThread().interrupt()
             false

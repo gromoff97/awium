@@ -8,12 +8,12 @@ import io.github.gromoff97.awium.conditions.collection.CollectionConditions.none
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.common.Conditions.captured
-import io.github.gromoff97.awium.conditions.common.Conditions.condition
-import io.github.gromoff97.awium.conditions.common.Conditions.conditionPerWait
-import io.github.gromoff97.awium.conditions.common.Conditions.equalTo
-import io.github.gromoff97.awium.conditions.common.Conditions.instanceOf
-import io.github.gromoff97.awium.conditions.common.Conditions.matches
+import io.github.gromoff97.awium.conditions.common.CommonConditions.captured
+import io.github.gromoff97.awium.conditions.common.CommonConditions.condition
+import io.github.gromoff97.awium.conditions.common.CommonConditions.conditionPerWait
+import io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo
+import io.github.gromoff97.awium.conditions.common.CommonConditions.instanceOf
+import io.github.gromoff97.awium.conditions.common.CommonConditions.matches
 import io.github.gromoff97.awium.conditions.map.MapConditions.hasEntry
 import io.github.gromoff97.awium.conditions.map.MapConditions.hasNoEntry
 import io.github.gromoff97.awium.conditions.map.MapConditions.allEntries
@@ -30,7 +30,7 @@ import io.github.gromoff97.awium.conditions.optional.OptionalConditions.present
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import io.github.gromoff97.awium.function.AwaitAttempt
-import io.github.gromoff97.awium.conditions.function.CheckedPredicate
+import io.github.gromoff97.awium.function.checked.CheckedPredicate
 import io.github.gromoff97.awium.result.ConditionResult.Satisfied
 import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
 import io.github.gromoff97.awium.result.ConditionResult.satisfied

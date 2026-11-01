@@ -17,7 +17,7 @@ import static java.lang.Math.min;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
-public final class CapturedCondition<CHECK extends AwaitCondition> extends AwaitCondition.CollectingCondition<CHECK> {
+final class CapturedCondition<CHECK extends AwaitCondition> extends AwaitCondition.CollectingCondition<CHECK> {
 
     private final List<AwaitCondition> stages;
 
@@ -33,6 +33,7 @@ public final class CapturedCondition<CHECK extends AwaitCondition> extends Await
         stages = original.stages;
     }
 
+    @Override
     public List<AwaitCondition> stages() { return stages; }
 
     @Override

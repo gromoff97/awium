@@ -1,16 +1,29 @@
-package io.github.gromoff97.awium.conditions.common.internal;
+package io.github.gromoff97.awium.support;
 
-import io.github.gromoff97.awium.conditions.function.CheckedBiPredicate;
-import io.github.gromoff97.awium.conditions.function.CheckedPredicate;
+import io.github.gromoff97.awium.function.checked.CheckedBiPredicate;
+import io.github.gromoff97.awium.function.checked.CheckedPredicate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.function.Function;
+import io.github.gromoff97.awium.result.ConditionResult;
 
 import static java.util.Objects.deepEquals;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 
 public final class ValueMatching {
 
     private ValueMatching() {}
+
+    public static <INPUT, ACTUAL, EXPECTED> ConditionResult<INPUT> contains(INPUT actual, String subject,
+            String element, EXPECTED expected, boolean negated,
+            Function<? super INPUT, ? extends Iterable<? extends ACTUAL>> elements,
+            CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) throws Throwable {
+        return actual == null ? unsatisfied(subject + " was null")
+                : matchesAny(elements.apply(actual), value -> matches.test(value, expected)) != negated
+                        ? satisfied(actual) : unsatisfied(subject + (negated ? " contained unexpected " : " did not contain expected ") + element);
+    }
 
     public static boolean prefixMatches(Iterator<?> actual, Iterable<?> expected) {
         for (Object value : expected) {
@@ -34,12 +47,12 @@ public final class ValueMatching {
         return !matchesAny(values, value -> !matches.test(value));
     }
 
-    static <ACTUAL, EXPECTED> int firstMissingExpectedIndex(Collection<ACTUAL> actual, Collection<EXPECTED> expected,
+    public static <ACTUAL, EXPECTED> int firstMissingExpectedIndex(Collection<ACTUAL> actual, Collection<EXPECTED> expected,
             CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) throws Throwable {
         return indexOfFirstMatch(expected, candidate -> !matchesAny(actual, value -> matches.test(value, candidate)));
     }
 
-    static <ACTUAL, EXPECTED> int firstPresentExpectedIndex(Collection<ACTUAL> actual, Collection<EXPECTED> expected,
+    public static <ACTUAL, EXPECTED> int firstPresentExpectedIndex(Collection<ACTUAL> actual, Collection<EXPECTED> expected,
             CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) throws Throwable {
         return indexOfFirstMatch(expected, candidate -> matchesAny(actual, value -> matches.test(value, candidate)));
     }

@@ -6,5 +6,5 @@ module io.github.gromoff97.awium.conditions {
     exports io.github.gromoff97.awium.conditions.map;
     exports io.github.gromoff97.awium.conditions.optional;
     exports io.github.gromoff97.awium.conditions.string;
-    exports io.github.gromoff97.awium.conditions.function;
+    exports io.github.gromoff97.awium.function.checked;
 }

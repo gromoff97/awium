@@ -5,15 +5,9 @@ import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.conditions.collection.CollectionContentCondition.Content;
 import io.github.gromoff97.awium.conditions.collection.CollectionSequenceCondition.Sequence;
-import io.github.gromoff97.awium.conditions.common.internal.ContainsCondition;
-import io.github.gromoff97.awium.conditions.common.internal.ContainsElementsCondition.Membership;
-import io.github.gromoff97.awium.conditions.common.internal.ContainsElementsCondition;
-import io.github.gromoff97.awium.conditions.common.internal.EmptyCondition;
-import io.github.gromoff97.awium.conditions.common.internal.HasSizeCondition;
-import io.github.gromoff97.awium.conditions.common.internal.QuantifiedCondition.Quantifier;
-import io.github.gromoff97.awium.conditions.common.internal.QuantifiedCondition;
-import io.github.gromoff97.awium.conditions.common.internal.SingleElementCondition;
-import io.github.gromoff97.awium.conditions.function.CheckedPredicate;
+import io.github.gromoff97.awium.support.Membership;
+import io.github.gromoff97.awium.support.Quantifier;
+import io.github.gromoff97.awium.function.checked.CheckedPredicate;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Objects;
@@ -21,22 +15,22 @@ import java.util.SequencedCollection;
 
 import static io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
 import static io.github.gromoff97.awium.AwaitCondition.InputCondition;
-import static io.github.gromoff97.awium.conditions.common.Conditions.matches;
-import static io.github.gromoff97.awium.conditions.common.internal.NestedCondition.compose;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.AT_LEAST;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.AT_MOST;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.BETWEEN;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.EQUAL;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.GREATER;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.LESS;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.NOT_EQUAL;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.matches;
+import static io.github.gromoff97.awium.conditions.collection.NestedCondition.compose;
+import static io.github.gromoff97.awium.support.SizeRelation.AT_LEAST;
+import static io.github.gromoff97.awium.support.SizeRelation.AT_MOST;
+import static io.github.gromoff97.awium.support.SizeRelation.BETWEEN;
+import static io.github.gromoff97.awium.support.SizeRelation.EQUAL;
+import static io.github.gromoff97.awium.support.SizeRelation.GREATER;
+import static io.github.gromoff97.awium.support.SizeRelation.LESS;
+import static io.github.gromoff97.awium.support.SizeRelation.NOT_EQUAL;
 import static java.util.function.Function.identity;
 
 public final class CollectionConditions {
 
     public static final SelectedCondition<Collection<?>> singleElement = new SingleElementCondition();
-    public static final PreservingCondition<Collection<?>> empty = new EmptyCondition<>("collection", Collection::isEmpty, true);
-    public static final PreservingCondition<Collection<?>> nonEmpty = new EmptyCondition<>("collection", Collection::isEmpty, false);
+    public static final PreservingCondition<Collection<?>> empty = new EmptyCondition(true);
+    public static final PreservingCondition<Collection<?>> nonEmpty = new EmptyCondition(false);
     public static final PreservingCondition<Collection<?>> containsNull = new NullElementsCondition(false, false);
     public static final PreservingCondition<Collection<?>> doesNotContainNull = new NullElementsCondition(true, false);
     public static final PreservingCondition<Collection<?>> containsOnlyNulls = new NullElementsCondition(false, true);
@@ -45,31 +39,31 @@ public final class CollectionConditions {
     private CollectionConditions() {}
 
     public static PreservingCondition<Collection<?>> hasSize(int expected) {
-        return new HasSizeCondition<>("collection", "size", Collection::size, EQUAL, expected);
+        return new HasSizeCondition(EQUAL, expected, expected);
     }
 
     public static PreservingCondition<Collection<?>> hasSizeNotEqualTo(int unexpected) {
-        return new HasSizeCondition<>("collection", "size", Collection::size, NOT_EQUAL, unexpected);
+        return new HasSizeCondition(NOT_EQUAL, unexpected, unexpected);
     }
 
     public static PreservingCondition<Collection<?>> hasSizeGreaterThan(int lowerBound) {
-        return new HasSizeCondition<>("collection", "size", Collection::size, GREATER, lowerBound);
+        return new HasSizeCondition(GREATER, lowerBound, lowerBound);
     }
 
     public static PreservingCondition<Collection<?>> hasSizeAtLeast(int lowerBound) {
-        return new HasSizeCondition<>("collection", "size", Collection::size, AT_LEAST, lowerBound);
+        return new HasSizeCondition(AT_LEAST, lowerBound, lowerBound);
     }
 
     public static PreservingCondition<Collection<?>> hasSizeLessThan(int upperBound) {
-        return new HasSizeCondition<>("collection", "size", Collection::size, LESS, upperBound);
+        return new HasSizeCondition(LESS, upperBound, upperBound);
     }
 
     public static PreservingCondition<Collection<?>> hasSizeAtMost(int upperBound) {
-        return new HasSizeCondition<>("collection", "size", Collection::size, AT_MOST, upperBound);
+        return new HasSizeCondition(AT_MOST, upperBound, upperBound);
     }
 
     public static PreservingCondition<Collection<?>> hasSizeBetween(int lowerBound, int upperBound) {
-        return new HasSizeCondition<>("collection", "size", Collection::size, BETWEEN, lowerBound, upperBound);
+        return new HasSizeCondition(BETWEEN, lowerBound, upperBound);
     }
 
     public static <ELEMENT> SelectedCondition<Collection<? extends ELEMENT>> singleElement(CheckedPredicate<? super ELEMENT> predicate) {

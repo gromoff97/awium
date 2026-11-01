@@ -6,12 +6,12 @@ import io.github.gromoff97.awium.conditions.collection.CollectionConditions.firs
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.lastElement
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.probe
-import io.github.gromoff97.awium.conditions.common.Conditions.captured
-import io.github.gromoff97.awium.conditions.common.Conditions.conditionPerWait
-import io.github.gromoff97.awium.conditions.common.Conditions.equalTo
-import io.github.gromoff97.awium.conditions.common.Conditions.isNotNull
-import io.github.gromoff97.awium.conditions.common.Conditions.instanceOf
-import io.github.gromoff97.awium.conditions.common.Conditions.matches
+import io.github.gromoff97.awium.conditions.common.CommonConditions.captured
+import io.github.gromoff97.awium.conditions.common.CommonConditions.conditionPerWait
+import io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo
+import io.github.gromoff97.awium.conditions.common.CommonConditions.isNotNull
+import io.github.gromoff97.awium.conditions.common.CommonConditions.instanceOf
+import io.github.gromoff97.awium.conditions.common.CommonConditions.matches
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.execution.ConditionExecution.start
 import io.github.gromoff97.awium.function.AwaitAttempt
@@ -69,7 +69,7 @@ class CapturedConditionTest {
     fun `the stage list exposes the conditions in declaration order`() {
         val first = equalTo("early")
         val last = equalTo("final")
-        assertEquals(listOf(first, last), captured(first, last).stages())
+        assertEquals(listOf(first, last), CapturedConsumer.explainedStages(first, last))
     }
 
     @Test

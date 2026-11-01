@@ -6,8 +6,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.SequencedCollection;
 
-import static io.github.gromoff97.awium.conditions.common.internal.ExpectedValues.snapshot;
-import static io.github.gromoff97.awium.conditions.common.internal.ValueMatching.prefixMatches;
+import static io.github.gromoff97.awium.support.ExpectedValues.snapshot;
+import static io.github.gromoff97.awium.support.ValueMatching.prefixMatches;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.util.Objects.deepEquals;

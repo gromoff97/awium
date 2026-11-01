@@ -4,8 +4,8 @@ import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import java.util.List;
 import java.util.Map;
 
-import static io.github.gromoff97.awium.conditions.common.internal.ExpectedValues.snapshot;
-import static io.github.gromoff97.awium.conditions.common.internal.ValueMatching.sameDistinctElements;
+import static io.github.gromoff97.awium.support.ExpectedValues.snapshot;
+import static io.github.gromoff97.awium.support.ValueMatching.sameDistinctElements;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 

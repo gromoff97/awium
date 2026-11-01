@@ -12,7 +12,7 @@ import java.util.concurrent.Callable;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.*;
-import static io.github.gromoff97.awium.conditions.common.Conditions.*;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.*;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.*;
 import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.*;
 import static io.github.gromoff97.awium.conditions.string.StringConditions.*;

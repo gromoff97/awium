@@ -6,7 +6,7 @@ import io.github.gromoff97.awium.conditions.collection.CollectionConditions.cont
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.common.Conditions
+import io.github.gromoff97.awium.conditions.common.CommonConditions
 import io.github.gromoff97.awium.conditions.map.MapConditions
 import io.github.gromoff97.awium.conditions.map.MapConditions.containsAllEntries
 import io.github.gromoff97.awium.conditions.map.MapConditions.containsExactlyEntries
@@ -194,7 +194,7 @@ class ExpectedSnapshotsTest {
             "all fragments" to StringConditions::containsAll, "no fragments" to StringConditions::doesNotContainAny
         )
         private val candidates: Map<String, (Iterable<String?>) -> AwaitCondition> = linkedMapOf(
-            "in" to Conditions::`in`, "not in" to Conditions::notIn
+            "in" to CommonConditions::`in`, "not in" to CommonConditions::notIn
         )
         private val entries: Map<String, (Map<String?, String?>) -> AwaitCondition> = linkedMapOf(
             "all entries" to MapConditions::containsAllEntries, "no entries" to MapConditions::doesNotContainAnyEntries,

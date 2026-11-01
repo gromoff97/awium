@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.conditions.function;
+package io.github.gromoff97.awium.function.checked;
 
 @FunctionalInterface
 public interface CheckedConsumer<VALUE> {

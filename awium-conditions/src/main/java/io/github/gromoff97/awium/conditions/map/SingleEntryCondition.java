@@ -3,7 +3,7 @@ package io.github.gromoff97.awium.conditions.map;
 import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
 import java.util.Map;
 
-import static io.github.gromoff97.awium.conditions.common.internal.SingleElementCondition.single;
+import static io.github.gromoff97.awium.support.ContainerChecks.single;
 
 final class SingleEntryCondition extends SelectedCondition<Map<?, ?>> {
     SingleEntryCondition() {

@@ -1,7 +1,8 @@
 package consumer.collection;
 
+import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.conditions.common.CapturedCondition;
+import io.github.gromoff97.awium.AwaitCondition.CollectingCondition;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -15,13 +16,13 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.hasSize;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
-import static io.github.gromoff97.awium.conditions.common.Conditions.captured;
-import static io.github.gromoff97.awium.conditions.common.Conditions.condition;
-import static io.github.gromoff97.awium.conditions.common.Conditions.equalTo;
-import static io.github.gromoff97.awium.conditions.common.Conditions.exactlyInstanceOf;
-import static io.github.gromoff97.awium.conditions.common.Conditions.instanceOf;
-import static io.github.gromoff97.awium.conditions.common.Conditions.isNotNull;
-import static io.github.gromoff97.awium.conditions.common.Conditions.matches;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.captured;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.condition;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.exactlyInstanceOf;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.instanceOf;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.isNotNull;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.matches;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.entryFor;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.valueFor;
@@ -33,6 +34,10 @@ import static java.util.Arrays.fill;
 
 public final class CapturedConsumer {
     private CapturedConsumer() {}
+
+    public static List<AwaitCondition> explainedStages(AwaitCondition first, AwaitCondition last) {
+        return captured(first, last).because("ordered observations").stages();
+    }
 
     public record Payment(int stage, String detail) {
         public boolean pending() { return stage == 2; }
@@ -179,7 +184,7 @@ public final class CapturedConsumer {
                 : await(source).every(ofNanos(1)).until(sequence);
     }
 
-    public static CapturedCondition<?> nullStages() {
+    public static CollectingCondition<?> nullStages() {
         return captured((PreservingCondition<String>[]) null);
     }
 }

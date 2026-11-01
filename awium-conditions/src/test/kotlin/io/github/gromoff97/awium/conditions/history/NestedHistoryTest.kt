@@ -3,7 +3,7 @@ package io.github.gromoff97.awium.conditions.history
 import io.github.gromoff97.awium.Await.tryAwait
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
-import io.github.gromoff97.awium.conditions.common.Conditions.instanceOf
+import io.github.gromoff97.awium.conditions.common.CommonConditions.instanceOf
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation
 import java.time.Duration.ofNanos

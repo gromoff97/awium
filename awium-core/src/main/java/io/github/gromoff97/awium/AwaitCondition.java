@@ -172,6 +172,8 @@ public interface AwaitCondition {
 
         protected CollectingCondition(CollectingCondition<CHECK> original, String explanation) { super(original, explanation); }
 
+        public List<AwaitCondition> stages() { return List.of(this); }
+
         @Override
         public final ConditionRun<?, ?> newRun(AwaitCondition definition, boolean recording) {
             return collectingRun(definition, recording);

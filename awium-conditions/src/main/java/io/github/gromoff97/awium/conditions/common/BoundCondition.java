@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.conditions.common;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.conditions.common.internal.SizeRelation;
+import io.github.gromoff97.awium.support.SizeRelation;
 
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;

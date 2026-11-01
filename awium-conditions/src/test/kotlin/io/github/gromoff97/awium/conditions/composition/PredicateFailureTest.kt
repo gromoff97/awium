@@ -9,7 +9,7 @@ import io.github.gromoff97.awium.conditions.collection.CollectionConditions.last
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.elementAt
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
-import io.github.gromoff97.awium.conditions.common.Conditions.matches
+import io.github.gromoff97.awium.conditions.common.CommonConditions.matches
 import io.github.gromoff97.awium.conditions.map.MapConditions.allEntries
 import io.github.gromoff97.awium.conditions.map.MapConditions.allKeys
 import io.github.gromoff97.awium.conditions.map.MapConditions.allValues
@@ -22,8 +22,8 @@ import io.github.gromoff97.awium.conditions.map.MapConditions.noValue
 import io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
-import io.github.gromoff97.awium.conditions.function.CheckedBiPredicate
-import io.github.gromoff97.awium.conditions.function.CheckedPredicate
+import io.github.gromoff97.awium.function.checked.CheckedBiPredicate
+import io.github.gromoff97.awium.function.checked.CheckedPredicate
 import java.io.IOException
 import java.util.Optional
 import org.junit.jupiter.api.AfterEach

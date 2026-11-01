@@ -5,8 +5,8 @@ import io.github.gromoff97.awium.Condition
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.common.Conditions.equalTo
-import io.github.gromoff97.awium.conditions.common.Conditions.notEqualTo
+import io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo
+import io.github.gromoff97.awium.conditions.common.CommonConditions.notEqualTo
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.conditions.support.Directional
 import io.github.gromoff97.awium.execution.ConditionExecution.bind

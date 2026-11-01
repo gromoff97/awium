@@ -1,23 +1,21 @@
 package io.github.gromoff97.awium.conditions.string;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.conditions.common.internal.EmptyCondition;
-import io.github.gromoff97.awium.conditions.common.internal.HasSizeCondition;
 import io.github.gromoff97.awium.conditions.string.TextMatchCondition.Match;
 import java.util.regex.Pattern;
 
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.AT_LEAST;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.AT_MOST;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.BETWEEN;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.EQUAL;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.GREATER;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.LESS;
-import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.NOT_EQUAL;
+import static io.github.gromoff97.awium.support.SizeRelation.AT_LEAST;
+import static io.github.gromoff97.awium.support.SizeRelation.AT_MOST;
+import static io.github.gromoff97.awium.support.SizeRelation.BETWEEN;
+import static io.github.gromoff97.awium.support.SizeRelation.EQUAL;
+import static io.github.gromoff97.awium.support.SizeRelation.GREATER;
+import static io.github.gromoff97.awium.support.SizeRelation.LESS;
+import static io.github.gromoff97.awium.support.SizeRelation.NOT_EQUAL;
 
 public final class StringConditions {
 
-    public static final PreservingCondition<CharSequence> empty = new EmptyCondition<>("string", CharSequence::isEmpty, true);
-    public static final PreservingCondition<CharSequence> nonEmpty = new EmptyCondition<>("string", CharSequence::isEmpty, false);
+    public static final PreservingCondition<CharSequence> empty = new EmptyCondition(true);
+    public static final PreservingCondition<CharSequence> nonEmpty = new EmptyCondition(false);
     public static final PreservingCondition<CharSequence> blank = new BlankCondition(true);
     public static final PreservingCondition<CharSequence> nonBlank = new BlankCondition(false);
 
@@ -88,31 +86,31 @@ public final class StringConditions {
     }
 
     public static PreservingCondition<CharSequence> hasLength(int expected) {
-        return new HasSizeCondition<>("string", "length", CharSequence::length, EQUAL, expected);
+        return new HasLengthCondition(EQUAL, expected, expected);
     }
 
     public static PreservingCondition<CharSequence> hasLengthNotEqualTo(int unexpected) {
-        return new HasSizeCondition<>("string", "length", CharSequence::length, NOT_EQUAL, unexpected);
+        return new HasLengthCondition(NOT_EQUAL, unexpected, unexpected);
     }
 
     public static PreservingCondition<CharSequence> hasLengthGreaterThan(int lowerBound) {
-        return new HasSizeCondition<>("string", "length", CharSequence::length, GREATER, lowerBound);
+        return new HasLengthCondition(GREATER, lowerBound, lowerBound);
     }
 
     public static PreservingCondition<CharSequence> hasLengthAtLeast(int lowerBound) {
-        return new HasSizeCondition<>("string", "length", CharSequence::length, AT_LEAST, lowerBound);
+        return new HasLengthCondition(AT_LEAST, lowerBound, lowerBound);
     }
 
     public static PreservingCondition<CharSequence> hasLengthLessThan(int upperBound) {
-        return new HasSizeCondition<>("string", "length", CharSequence::length, LESS, upperBound);
+        return new HasLengthCondition(LESS, upperBound, upperBound);
     }
 
     public static PreservingCondition<CharSequence> hasLengthAtMost(int upperBound) {
-        return new HasSizeCondition<>("string", "length", CharSequence::length, AT_MOST, upperBound);
+        return new HasLengthCondition(AT_MOST, upperBound, upperBound);
     }
 
     public static PreservingCondition<CharSequence> hasLengthBetween(int lowerBound, int upperBound) {
-        return new HasSizeCondition<>("string", "length", CharSequence::length, BETWEEN, lowerBound, upperBound);
+        return new HasLengthCondition(BETWEEN, lowerBound, upperBound);
     }
 
 }

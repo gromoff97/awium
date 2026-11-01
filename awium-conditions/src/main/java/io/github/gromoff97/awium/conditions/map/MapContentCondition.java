@@ -6,7 +6,7 @@ import java.util.Map.Entry;
 import java.util.Map;
 
 import static io.github.gromoff97.awium.conditions.map.MapEntries.snapshotEntries;
-import static io.github.gromoff97.awium.conditions.common.internal.ValueMatching.sameElementsInAnyOrder;
+import static io.github.gromoff97.awium.support.ValueMatching.sameElementsInAnyOrder;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 

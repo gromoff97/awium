@@ -14,11 +14,11 @@ import java.util.Set;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.conditions.common.Conditions.atLeast;
-import static io.github.gromoff97.awium.conditions.common.Conditions.captured;
-import static io.github.gromoff97.awium.conditions.common.Conditions.equalTo;
-import static io.github.gromoff97.awium.conditions.common.Conditions.instanceOf;
-import static io.github.gromoff97.awium.conditions.common.Conditions.matches;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.atLeast;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.captured;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.instanceOf;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.matches;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.allEntries;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.entryFor;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry;

@@ -23,7 +23,7 @@ import static io.github.gromoff97.awium.conditions.collection.CollectionConditio
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.sorted;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.startsWith;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.subsetOf;
-import static io.github.gromoff97.awium.conditions.common.Conditions.captured;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.captured;
 import static java.util.Collections.singletonList;
 import static java.util.Comparator.comparingInt;
 import static java.util.Comparator.naturalOrder;

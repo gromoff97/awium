@@ -18,6 +18,12 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 
 class CollectingConditionTest {
     @Test
+    void aStandaloneCollectorExposesItselfAsItsOnlyStage() {
+        var condition = new RecordOnce();
+        assertEquals(List.of(condition), condition.stages());
+    }
+
+    @Test
     void untilInfersCollectedObservationTypesFromTheSource() {
         var actual = "ready";
         var values = await(() -> actual).until(new RecordOnce());

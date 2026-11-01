@@ -9,10 +9,10 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.failure
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.probe
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.uncontrolled
-import io.github.gromoff97.awium.conditions.common.Conditions.captured
-import io.github.gromoff97.awium.conditions.common.Conditions.condition
-import io.github.gromoff97.awium.conditions.common.Conditions.conditionPerWait
-import io.github.gromoff97.awium.conditions.common.Conditions.isNotNull
+import io.github.gromoff97.awium.conditions.common.CommonConditions.captured
+import io.github.gromoff97.awium.conditions.common.CommonConditions.condition
+import io.github.gromoff97.awium.conditions.common.CommonConditions.conditionPerWait
+import io.github.gromoff97.awium.conditions.common.CommonConditions.isNotNull
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.execution.ConditionExecution.bind

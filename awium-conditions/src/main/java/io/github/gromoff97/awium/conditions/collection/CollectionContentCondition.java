@@ -6,12 +6,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 
-import static io.github.gromoff97.awium.conditions.common.internal.ValueMatching.prefixMatches;
-import static io.github.gromoff97.awium.conditions.common.internal.ExpectedValues.snapshot;
-import static io.github.gromoff97.awium.conditions.common.internal.ValueMatching.matchesAll;
-import static io.github.gromoff97.awium.conditions.common.internal.ValueMatching.matchesAny;
-import static io.github.gromoff97.awium.conditions.common.internal.ValueMatching.sameDistinctElements;
-import static io.github.gromoff97.awium.conditions.common.internal.ValueMatching.sameElementsInAnyOrder;
+import static io.github.gromoff97.awium.support.ValueMatching.prefixMatches;
+import static io.github.gromoff97.awium.support.ExpectedValues.snapshot;
+import static io.github.gromoff97.awium.support.ValueMatching.matchesAll;
+import static io.github.gromoff97.awium.support.ValueMatching.matchesAny;
+import static io.github.gromoff97.awium.support.ValueMatching.sameDistinctElements;
+import static io.github.gromoff97.awium.support.ValueMatching.sameElementsInAnyOrder;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.util.Objects.deepEquals;

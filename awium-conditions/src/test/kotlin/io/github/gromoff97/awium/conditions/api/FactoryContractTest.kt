@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
 import io.github.gromoff97.awium.Condition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions
-import io.github.gromoff97.awium.conditions.common.Conditions
+import io.github.gromoff97.awium.conditions.common.CommonConditions
 import io.github.gromoff97.awium.conditions.map.MapConditions
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions
 import io.github.gromoff97.awium.conditions.string.StringConditions
@@ -18,7 +18,7 @@ import io.github.gromoff97.awium.conditions.map.MapConditions.hasNoEntry
 import io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
-import io.github.gromoff97.awium.conditions.function.CheckedPredicate
+import io.github.gromoff97.awium.function.checked.CheckedPredicate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -30,7 +30,7 @@ import org.junit.jupiter.params.provider.ValueSource
 
 class FactoryContractTest {
     @ParameterizedTest
-    @ValueSource(classes = [Conditions::class, OptionalConditions::class, CollectionConditions::class,
+    @ValueSource(classes = [CommonConditions::class, OptionalConditions::class, CollectionConditions::class,
         MapConditions::class, StringConditions::class])
     fun `constant conditions have no zero argument factory aliases`(catalog: Class<*>) {
         for (field in catalog.fields) {

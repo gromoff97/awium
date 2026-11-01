@@ -46,11 +46,11 @@ Collections and maps have `hasSize(n)`, `hasSizeNotEqualTo(n)`, `hasSizeGreaterT
 
 Custom callbacks use `AwaitAttempt<INPUT, RESULT>`; predicates and assertions use
 `CheckedPredicate`, `CheckedBiPredicate`, and `CheckedConsumer` from
-`io.github.gromoff97.awium.conditions.function`. All permit checked throwables.
+`io.github.gromoff97.awium.function.checked`. All permit checked throwables.
 For stored JDK callbacks, use `predicate::test`, `consumer::accept`, or `function::apply`.
 Negate checked predicates with `CheckedPredicate.not` or `CheckedBiPredicate.not`.
 
-## Conditions
+## Common conditions
 
 | Condition | Meaning |
 | --- | --- |
@@ -67,7 +67,7 @@ Negate checked predicates with `CheckedPredicate.not` or `CheckedBiPredicate.not
 Single bounds need not be comparable: the source must implement `Comparable<BOUND>`.
 Range bounds must also compare with each other. Empty `in` never matches;
 empty `notIn` matches anything, including null.
-[Signatures](../src/main/java/io/github/gromoff97/awium/conditions/common/Conditions.java).
+[Signatures](../src/main/java/io/github/gromoff97/awium/conditions/common/CommonConditions.java).
 
 ### Predicates and assertions
 
@@ -278,11 +278,14 @@ Capture sequences cannot nest. `captured(conditions)` copies its argument array 
 rejects empty/null arrays and null stages. `captured(present, present).because("available twice")`
 works across optional types.
 
+The returned `CollectingCondition` exposes its immutable stage list through `stages()`,
+including after `because(...)`.
+
 For covariant sources, typed views preserve each observation's wildcard type.
 Mixed selectors, predicates, or comparisons followed by `because` may need a source
-hint: `Conditions.<List<Payment>>captured(...)` (likewise `Optional<Payment>` or
+hint: `CommonConditions.<List<Payment>>captured(...)` (likewise `Optional<Payment>` or
 `Map<String, Payment>`). Comparing the complete source as well can require two hints:
-`Conditions.<List<Payment>, List<Payment>>captured(...)`. Incompatible checks remain
+`CommonConditions.<List<Payment>, List<Payment>>captured(...)`. Incompatible checks remain
 compile-time errors.
 
 ### Sequence diagnostics

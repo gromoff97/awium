@@ -17,9 +17,9 @@ import static io.github.gromoff97.awium.conditions.collection.CollectionConditio
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.lastElement;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.nonEmpty;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
-import static io.github.gromoff97.awium.conditions.common.Conditions.captured;
-import static io.github.gromoff97.awium.conditions.common.Conditions.isNotNull;
-import static io.github.gromoff97.awium.conditions.common.Conditions.matches;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.captured;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.isNotNull;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.matches;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.allEntries;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.entryFor;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry;

@@ -1,6 +1,6 @@
-package io.github.gromoff97.awium.conditions.function
+package io.github.gromoff97.awium.function.checked
 
-import io.github.gromoff97.awium.conditions.function.CheckedPredicate.not
+import io.github.gromoff97.awium.function.checked.CheckedBiPredicate.not
 import java.io.IOException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
@@ -13,35 +13,36 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 
-class CheckedPredicateTest {
+class CheckedBiPredicateTest {
     @ParameterizedTest
     @ValueSource(booleans = [true, false])
     fun `negation calls the predicate once with the original arguments`(answer: Boolean) {
-        val predicate: CheckedPredicate<Any> = mock()
-        val actual = Any()
-        `when`(predicate.test(actual)).thenReturn(answer)
+        val predicate: CheckedBiPredicate<Any, Any> = mock()
+        val first = Any()
+        val second = Any()
+        `when`(predicate.test(first, second)).thenReturn(answer)
 
-        assertEquals(!answer, not(predicate).test(actual))
-        verify(predicate).test(actual)
+        assertEquals(!answer, not(predicate).test(first, second))
+        verify(predicate).test(first, second)
     }
 
     @Test
     fun `negation passes null arguments to the predicate`() {
-        val predicate: CheckedPredicate<Any> = mock()
-        not(predicate).test(null)
-        verify(predicate).test(null)
+        val predicate: CheckedBiPredicate<Any, Any> = mock()
+        not(predicate).test(null, null)
+        verify(predicate).test(null, null)
     }
 
     @Test
     fun `negation rejects a missing predicate`() {
-        assertThrows(NullPointerException::class.java) { not<Any>(null) }
+        assertThrows(NullPointerException::class.java) { not<Any, Any>(null) }
     }
 
     @ParameterizedTest
     @MethodSource("failures")
     fun `negation propagates the original failure`(cause: Throwable) {
-        val predicate = not { _: Any -> throw cause }
-        assertSame(cause, assertThrows(Throwable::class.java) { predicate.test("value") })
+        val predicate = not { _: Any, _: Any -> throw cause }
+        assertSame(cause, assertThrows(Throwable::class.java) { predicate.test("first", "second") })
     }
 
     companion object {

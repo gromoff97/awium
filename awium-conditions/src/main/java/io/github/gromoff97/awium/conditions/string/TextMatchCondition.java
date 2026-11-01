@@ -3,7 +3,7 @@ package io.github.gromoff97.awium.conditions.string;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import java.util.function.BiPredicate;
 
-import static io.github.gromoff97.awium.conditions.common.internal.ExpectedValues.text;
+import static io.github.gromoff97.awium.support.ExpectedValues.text;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 

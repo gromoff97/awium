@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.Await.CollectionSource;
 import io.github.gromoff97.awium.Await.MapSource;
 import io.github.gromoff97.awium.Await.OptionalSource;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.conditions.function.CheckedPredicate;
+import io.github.gromoff97.awium.function.checked.CheckedPredicate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,14 +14,14 @@ import java.util.Optional;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.all;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
-import static io.github.gromoff97.awium.conditions.common.Conditions.instanceOf;
-import static io.github.gromoff97.awium.conditions.common.Conditions.matches;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.instanceOf;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.matches;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.allEntries;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.hasEntry;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.hasNoEntry;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.valueFor;
 import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.present;
-import static io.github.gromoff97.awium.conditions.function.CheckedPredicate.not;
+import static io.github.gromoff97.awium.function.checked.CheckedPredicate.not;
 
 public final class ExplanationConsumer {
     private ExplanationConsumer() {}

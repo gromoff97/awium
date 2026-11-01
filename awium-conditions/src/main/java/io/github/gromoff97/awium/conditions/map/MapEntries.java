@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.conditions.map;
 
-import io.github.gromoff97.awium.conditions.function.CheckedBiPredicate;
-import io.github.gromoff97.awium.conditions.function.CheckedPredicate;
+import io.github.gromoff97.awium.function.checked.CheckedBiPredicate;
+import io.github.gromoff97.awium.function.checked.CheckedPredicate;
 import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
