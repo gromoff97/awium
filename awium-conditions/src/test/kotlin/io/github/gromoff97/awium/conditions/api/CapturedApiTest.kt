@@ -7,6 +7,7 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.observat
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.Optional
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
@@ -57,8 +58,7 @@ class CapturedApiTest {
         val observations = (1..3).map { listOf(Payment(it, "stage $it")) }
         val values = if (recorded) CapturedConsumer.recordedMixedChecks(observations).orThrow()
             else CapturedConsumer.mixedChecks(observations)
-        assertEquals(3, values.size)
-        observations.zip(values).forEach { (expected, actual) -> assertSame(expected, actual) }
+        assertThat(values).zipSatisfy(observations) { actual, expected -> assertSame(expected, actual) }
     }
 
     @Test
@@ -91,7 +91,7 @@ class CapturedApiTest {
     @Test
     fun `a reason preserves narrowing stages`() {
         val payment = Payment(3, "paid")
-        CapturedConsumer.explainedNarrowing(payment).forEach { assertSame(payment, it) }
+        assertThat(CapturedConsumer.explainedNarrowing(payment)).hasSize(2).allSatisfy { assertSame(payment, it) }
     }
 
     @Test
@@ -113,7 +113,7 @@ class CapturedApiTest {
     @ValueSource(booleans = [false, true])
     fun `nested narrowing retains each original container`(recorded: Boolean) {
         val observations = listOf(listOf<Number>(1000), listOf<Number>(2000))
-        observations.zip(CapturedConsumer.nestedNarrowing(observations, recorded)).forEach { (expected, actual) ->
+        assertThat(CapturedConsumer.nestedNarrowing(observations, recorded)).zipSatisfy(observations) { actual, expected ->
             assertSame(expected, actual)
         }
     }
@@ -122,7 +122,7 @@ class CapturedApiTest {
     @ValueSource(booleans = [false, true])
     fun `comparisons preserve the broader source type`(recorded: Boolean) {
         val observations = listOf(BigDecimal("1.00"), BigInteger("2"), 1024L)
-        observations.zip(CapturedConsumer.comparedNumbers(observations, recorded)).forEach { (expected, actual) ->
+        assertThat(CapturedConsumer.comparedNumbers(observations, recorded)).zipSatisfy(observations) { actual, expected ->
             assertSame(expected, actual)
         }
     }
