@@ -4,8 +4,8 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
-import io.github.gromoff97.awium.conditions.MapConditions.singleEntry
-import io.github.gromoff97.awium.conditions.MapConditions.allEntries
+import io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry
+import io.github.gromoff97.awium.conditions.map.MapConditions.allEntries
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.ProbeEntry
 import io.github.gromoff97.awium.execution.ConditionExecution.bind

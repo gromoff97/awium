@@ -40,10 +40,10 @@ class CompilationContractTest {
             "await(() -> map).until(MapConditions.hasNoEntry(equalTo(Map.entry(123,new User(true)))));",
             """await(() -> map).until(MapConditions.allEntries(equalTo(Map.entry("user",123))));""").map { body ->
         dynamicTest(body) { assertRejected("""
-                import io.github.gromoff97.awium.conditions.MapConditions;
-                import io.github.gromoff97.awium.conditions.OptionalConditions;
+                import io.github.gromoff97.awium.conditions.map.MapConditions;
+                import io.github.gromoff97.awium.conditions.optional.OptionalConditions;
                 import static io.github.gromoff97.awium.conditions.Conditions.*;
-                import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
+                import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.*;
                 final class Contract {
                     record User(boolean active) {}
                     void check(List<User> users, Map<String,User> map) { %s }
@@ -81,10 +81,10 @@ class CompilationContractTest {
             "AwaitResult<List<Object>, List<Integer>> wrong = tryAwait(() -> values).until(captured(elementAt(0,instanceOf(User.class)),firstElement(instanceOf(Integer.class))));").map { body ->
         dynamicTest(body) { assertRejected("""
                 import io.github.gromoff97.awium.result.AwaitResult;
-                import io.github.gromoff97.awium.conditions.MapConditions;
-                import io.github.gromoff97.awium.conditions.OptionalConditions;
+                import io.github.gromoff97.awium.conditions.map.MapConditions;
+                import io.github.gromoff97.awium.conditions.optional.OptionalConditions;
                 import static io.github.gromoff97.awium.conditions.Conditions.*;
-                import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
+                import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.*;
                 final class Contract {
                     record User(int id) {}
                     void check(List<Object> values) { %s }
@@ -97,7 +97,7 @@ class CompilationContractTest {
         listOf("singleElement", "singleElement(User::active)", "singleElement(matches(User::active))", "singleElement(equalTo(new User(true)))").map { condition ->
             dynamicTest("$factory / $condition") { assertRejected("""
                     import static io.github.gromoff97.awium.conditions.Conditions.*;
-                    import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
+                    import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.*;
                     final class Contract {
                         record User(boolean active) {}
                         static final class Both extends AbstractMap<String,Integer> implements Iterable<User> {
@@ -122,9 +122,9 @@ class CompilationContractTest {
             """await(() -> Map.of("key", "ready")).until(MapConditions.containsOnlyKeys(wrong));""",
             """await(() -> Map.of("key", "ready")).until(MapConditions.containsAllValues(wrong));""").map { expression ->
         dynamicTest(expression) { assertRejected("""
-                import io.github.gromoff97.awium.conditions.MapConditions;
+                import io.github.gromoff97.awium.conditions.map.MapConditions;
                 import static io.github.gromoff97.awium.conditions.Conditions.*;
-                import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
+                import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.*;
                 final class Contract {
                     void check(Iterable<Integer> wrong) { %s }
                 }
@@ -146,9 +146,9 @@ class CompilationContractTest {
             "await(() -> broad).until(all(User::active));").map { expression ->
         dynamicTest(expression) { assertRejected("""
                 import static io.github.gromoff97.awium.conditions.Conditions.*;
-                import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
-                import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
-                import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
+                import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.*;
+                import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.present;
+                import static io.github.gromoff97.awium.conditions.map.MapConditions.valueFor;
                 final class Contract {
                     record User(boolean active) {}
                     void check(Iterable<User> users, Iterable<? super User> broad) { %s }
@@ -161,7 +161,7 @@ class CompilationContractTest {
             "startsWith", "doesNotStartWith", "endsWith", "doesNotEndWith",
             "matchesRegex", "doesNotMatchRegex", "contentEquals", "equalToIgnoringCase", "notEqualToIgnoringCase").map { method ->
         dynamicTest(method) { assertRejected("""
-                import io.github.gromoff97.awium.conditions.StringConditions;
+                import io.github.gromoff97.awium.conditions.string.StringConditions;
                 final class Contract {
                     void check() { StringConditions.%s(42); }
                 }
@@ -183,7 +183,7 @@ class CompilationContractTest {
                 import io.github.gromoff97.awium.result.*;
                 import io.github.gromoff97.awium.function.*;
                 import static io.github.gromoff97.awium.conditions.Conditions.*;
-                import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
+                import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.present;
                 final class Contract {
                     void check(Callable<String> strings, Callable<Object> objects,
                             Callable<CharSequence> characters, Callable<Optional<Integer>> optional) {
@@ -209,7 +209,7 @@ class CompilationContractTest {
             }
             for (condition in listOf("nonBlank", "hasLength(1)", """contentEquals("ready")""")) {
                 add(dynamicTest("$factory / $condition") { assertRejected("""
-                        import io.github.gromoff97.awium.conditions.StringConditions;
+                        import io.github.gromoff97.awium.conditions.string.StringConditions;
                         final class Contract {
                             void check() {
                                 %s(() -> 1).until(StringConditions.%s);
@@ -255,7 +255,7 @@ class CompilationContractTest {
         listOf("await", "tryAwait").map { factory ->
             val expression = factory + "(source::call).until(CollectionConditions." + condition + ");"
             dynamicTest(expression) { assertRejected("""
-                    import io.github.gromoff97.awium.conditions.CollectionConditions;
+                    import io.github.gromoff97.awium.conditions.collection.CollectionConditions;
                     final class Contract {
                         void check(Callable<List<String>> source) {
                             %s
@@ -269,9 +269,9 @@ class CompilationContractTest {
     fun `plain callable container sources require adaptation for selections`() = listOf(
             "await(optional).until(present);", "await(collection).until(singleElement);", "await(map).until(singleEntry);").map { expression ->
         dynamicTest(expression) { assertRejected("""
-                import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
-                import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElement;
-                import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
+                import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.present;
+                import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
+                import static io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry;
                 final class Contract {
                     void check(Callable<Optional<String>> optional, Callable<List<String>> collection,
                             Callable<Map<String, String>> map) { %s }
@@ -284,9 +284,9 @@ class CompilationContractTest {
             "present", "singleElement", "firstElement", "lastElement", "singleEntry").map { condition ->
         val source = if (condition == "present") "optional" else if (condition == "singleEntry") "map" else "collection"
         val contract = """
-                import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
-                import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
-                import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
+                import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.*;
+                import static io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry;
+                import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.present;
                 final class Contract {
                     void check(Callable<Optional<String>> optional,
                             Callable<List<String>> collection,
@@ -301,7 +301,7 @@ class CompilationContractTest {
     @TestFactory
     fun `collection and map conditions cannot be mixed`() = buildList {
         add(dynamicTest("map size on a collection") { assertRejected("""
-                import io.github.gromoff97.awium.conditions.MapConditions;
+                import io.github.gromoff97.awium.conditions.map.MapConditions;
                 final class Contract {
                     void check(Callable<List<String>> source) {
                         await(source::call).until(MapConditions.nonEmpty);
@@ -309,7 +309,7 @@ class CompilationContractTest {
                 }
                 """.trimIndent()) })
         add(dynamicTest("collection size on a map") { assertRejected("""
-                import io.github.gromoff97.awium.conditions.CollectionConditions;
+                import io.github.gromoff97.awium.conditions.collection.CollectionConditions;
                 final class Contract {
                     void check(Callable<Map<String, String>> source) {
                         await(source::call).until(CollectionConditions.nonEmpty);
@@ -317,7 +317,7 @@ class CompilationContractTest {
                 }
                 """.trimIndent()) })
         add(dynamicTest("entry selection on a collection") { assertRejected("""
-                import io.github.gromoff97.awium.conditions.MapConditions;
+                import io.github.gromoff97.awium.conditions.map.MapConditions;
                 final class Contract {
                     void check(Callable<List<String>> source) {
                         await(source::call).until(MapConditions.singleEntry);
@@ -325,7 +325,7 @@ class CompilationContractTest {
                 }
                 """.trimIndent()) })
         add(dynamicTest("element selection on a map") { assertRejected("""
-                import io.github.gromoff97.awium.conditions.CollectionConditions;
+                import io.github.gromoff97.awium.conditions.collection.CollectionConditions;
                 final class Contract {
                     void check(Callable<Map<String, String>> source) {
                         await(source::call).until(CollectionConditions.singleElement);
@@ -337,7 +337,7 @@ class CompilationContractTest {
     @Test
     fun `collection selection rejects an unrelated element type`() {
         assertRejected("""
-                import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElement;
+                import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
                 final class Contract {
                     void check() {
                         Integer wrong = await(() -> List.of("value")).until(singleElement);
@@ -349,7 +349,7 @@ class CompilationContractTest {
     @Test
     fun `ordered selection rejects unordered sources`() {
         assertRejected("""
-                import static io.github.gromoff97.awium.conditions.CollectionConditions.firstElement;
+                import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.firstElement;
                 final class Contract {
                     void check(Callable<HashSet<String>> source) {
                         await(source::call).until(firstElement);
@@ -368,7 +368,7 @@ class CompilationContractTest {
                 "hasEntry(1, 1)", """hasEntry("x", "wrong")""",
                 "containsAllEntries(Map.of(1, 1))", """containsAllEntries(Map.of("x", "wrong"))""").map { condition ->
             dynamicTest("$factory / $condition") { assertRejected("""
-                    import static io.github.gromoff97.awium.conditions.MapConditions.*;
+                    import static io.github.gromoff97.awium.conditions.map.MapConditions.*;
 
                     final class Contract {
                         void check(Callable<Map<String, Integer>> source) {
@@ -406,7 +406,7 @@ class CompilationContractTest {
     @Test
     fun `ordered equality rejects unordered collections`() {
         assertRejected("""
-                import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
+                import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.*;
 
                 final class Contract {
                     void check(Callable<Set<String>> source) {
@@ -421,7 +421,7 @@ class CompilationContractTest {
         assertRejected("""
                 import io.github.gromoff97.awium.Await.MapViewSource;
                 import static io.github.gromoff97.awium.conditions.Conditions.captured;
-                import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
+                import static io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry;
                 final class Contract {
                     static <KEY, VALUE> void overwrite(List<Map<KEY, VALUE>> maps) {
                         KEY key = maps.getFirst().keySet().iterator().next();

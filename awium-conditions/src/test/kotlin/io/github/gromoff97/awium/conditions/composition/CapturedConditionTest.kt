@@ -2,9 +2,9 @@ package io.github.gromoff97.awium.conditions.composition
 
 import consumer.collection.CapturedConsumer
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
-import io.github.gromoff97.awium.conditions.CollectionConditions.firstElement
-import io.github.gromoff97.awium.conditions.CollectionConditions.lastElement
-import io.github.gromoff97.awium.conditions.CollectionConditions.singleElement
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.firstElement
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.lastElement
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.probe
 import io.github.gromoff97.awium.conditions.Conditions.captured
 import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait
@@ -12,7 +12,7 @@ import io.github.gromoff97.awium.conditions.Conditions.equalTo
 import io.github.gromoff97.awium.conditions.Conditions.isNotNull
 import io.github.gromoff97.awium.conditions.Conditions.instanceOf
 import io.github.gromoff97.awium.conditions.Conditions.matches
-import io.github.gromoff97.awium.conditions.MapConditions.valueFor
+import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.execution.ConditionExecution.start
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied

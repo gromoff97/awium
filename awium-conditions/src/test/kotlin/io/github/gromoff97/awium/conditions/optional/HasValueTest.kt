@@ -7,7 +7,7 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejectio
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.Conditions.equalTo
 import io.github.gromoff97.awium.conditions.Conditions.notEqualTo
-import io.github.gromoff97.awium.conditions.OptionalConditions.hasValue
+import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.conditions.support.Directional
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import java.util.Optional

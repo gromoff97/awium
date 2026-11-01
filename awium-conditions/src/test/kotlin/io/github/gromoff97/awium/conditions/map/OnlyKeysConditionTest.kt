@@ -3,7 +3,7 @@ package io.github.gromoff97.awium.conditions.map
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.MapConditions.containsOnlyKeys
+import io.github.gromoff97.awium.conditions.map.MapConditions.containsOnlyKeys
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.ProbeEntry
 import io.github.gromoff97.awium.conditions.support.Directional

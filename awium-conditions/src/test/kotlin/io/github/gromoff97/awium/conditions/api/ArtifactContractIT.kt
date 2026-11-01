@@ -3,8 +3,8 @@ package io.github.gromoff97.awium.conditions.api
 import com.google.testing.compile.Compiler.javac
 import com.google.testing.compile.JavaFileObjects.forSourceString
 import io.github.gromoff97.awium.Await
-import io.github.gromoff97.awium.conditions.internal.HasSizeCondition
-import io.github.gromoff97.awium.conditions.internal.NestedCondition
+import io.github.gromoff97.awium.conditions.common.HasSizeCondition
+import io.github.gromoff97.awium.conditions.common.NestedCondition
 import io.github.gromoff97.awium.conditions.support.conditionsJar
 import io.github.gromoff97.awium.conditions.support.coreJar
 import java.io.File.pathSeparator
@@ -31,7 +31,9 @@ class ArtifactContractIT {
         val conditions = ModuleFinder.of(conditionsJar).find("io.github.gromoff97.awium.conditions").orElseThrow().descriptor()
 
         assertFalse(conditions.isAutomatic)
-        assertEquals(setOf("io.github.gromoff97.awium.conditions", "io.github.gromoff97.awium.conditions.function"),
+        assertEquals(setOf("io.github.gromoff97.awium.conditions", "io.github.gromoff97.awium.conditions.function",
+            "io.github.gromoff97.awium.conditions.collection", "io.github.gromoff97.awium.conditions.map",
+            "io.github.gromoff97.awium.conditions.optional", "io.github.gromoff97.awium.conditions.string"),
             conditions.exports().map { it.source() }.toSet())
         assertEquals(setOf("java.base", "io.github.gromoff97.awium.core"), conditions.requires().map { it.name() }.toSet())
         assertTrue(conditions.requires().single { it.name() == "io.github.gromoff97.awium.core" }.modifiers().contains(TRANSITIVE))
@@ -67,6 +69,20 @@ class ArtifactContractIT {
         val compilation = javac().withOptions("--release", "21", "-proc:none", "--module-path", "$coreJar$pathSeparator$conditionsJar")
             .compile(source, module)
         assertThat(compilation.errors().map { it.code }).contains("compiler.err.package.not.visible")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["EqualityCondition", "collection.SortedCondition", "map.SingleEntryCondition",
+        "optional.PresentCondition", "string.BlankCondition"])
+    fun `family implementations are hidden from classpath consumers`(type: String) {
+        val source = forSourceString("consumer.Contract", """
+            package consumer;
+            import io.github.gromoff97.awium.conditions.$type;
+            final class Contract {}
+        """.trimIndent())
+        val compilation = javac().withOptions("--release", "21", "-proc:none", "-classpath", "$coreJar$pathSeparator$conditionsJar")
+            .compile(source)
+        assertThat(compilation.errors().map { it.code }).contains("compiler.err.not.def.public.cant.access")
     }
 
     private fun assertConsumerResult(loader: ClassLoader) {

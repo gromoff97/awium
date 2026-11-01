@@ -5,14 +5,6 @@ import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.AwaitCondition.Reference;
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.conditions.internal.AssertedCondition;
-import io.github.gromoff97.awium.conditions.internal.BoundCondition;
-import io.github.gromoff97.awium.conditions.internal.EqualityCondition;
-import io.github.gromoff97.awium.conditions.internal.InCondition;
-import io.github.gromoff97.awium.conditions.internal.InstanceOfCondition;
-import io.github.gromoff97.awium.conditions.internal.MatchesCondition;
-import io.github.gromoff97.awium.conditions.internal.NullCondition;
-import io.github.gromoff97.awium.conditions.internal.RangeCondition;
 import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.conditions.function.CheckedConsumer;
@@ -21,10 +13,10 @@ import java.util.concurrent.Callable;
 
 import static io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
 import static io.github.gromoff97.awium.AwaitCondition.InputCondition;
-import static io.github.gromoff97.awium.conditions.internal.SizeRelation.AT_LEAST;
-import static io.github.gromoff97.awium.conditions.internal.SizeRelation.AT_MOST;
-import static io.github.gromoff97.awium.conditions.internal.SizeRelation.GREATER;
-import static io.github.gromoff97.awium.conditions.internal.SizeRelation.LESS;
+import static io.github.gromoff97.awium.conditions.common.SizeRelation.AT_LEAST;
+import static io.github.gromoff97.awium.conditions.common.SizeRelation.AT_MOST;
+import static io.github.gromoff97.awium.conditions.common.SizeRelation.GREATER;
+import static io.github.gromoff97.awium.conditions.common.SizeRelation.LESS;
 
 public final class Conditions {
 

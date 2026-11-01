@@ -5,8 +5,8 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
-import io.github.gromoff97.awium.conditions.MapConditions.containsExactlyEntries
-import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainExactlyEntries
+import io.github.gromoff97.awium.conditions.map.MapConditions.containsExactlyEntries
+import io.github.gromoff97.awium.conditions.map.MapConditions.doesNotContainExactlyEntries
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.ProbeEntry
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.once

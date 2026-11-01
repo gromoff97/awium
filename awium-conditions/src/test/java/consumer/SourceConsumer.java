@@ -1,6 +1,6 @@
 package consumer;
 
-import io.github.gromoff97.awium.conditions.MapConditions;
+import io.github.gromoff97.awium.conditions.map.MapConditions;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,20 +12,20 @@ import static io.github.gromoff97.awium.Await.CollectionViewSource;
 import static io.github.gromoff97.awium.Await.MapViewSource;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.all;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.firstElement;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.lastElement;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.nonEmpty;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.all;
+import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.firstElement;
+import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.lastElement;
+import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.nonEmpty;
+import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.conditions.Conditions.captured;
 import static io.github.gromoff97.awium.conditions.Conditions.isNotNull;
 import static io.github.gromoff97.awium.conditions.Conditions.matches;
-import static io.github.gromoff97.awium.conditions.MapConditions.allEntries;
-import static io.github.gromoff97.awium.conditions.MapConditions.entryFor;
-import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
-import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
-import static io.github.gromoff97.awium.conditions.OptionalConditions.hasValue;
-import static io.github.gromoff97.awium.conditions.OptionalConditions.present;
+import static io.github.gromoff97.awium.conditions.map.MapConditions.allEntries;
+import static io.github.gromoff97.awium.conditions.map.MapConditions.entryFor;
+import static io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry;
+import static io.github.gromoff97.awium.conditions.map.MapConditions.valueFor;
+import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue;
+import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.present;
 import static java.time.Duration.ofNanos;
 
 public final class SourceConsumer {

@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium.conditions.collection
 
 import io.github.gromoff97.awium.AwaitCondition
-import io.github.gromoff97.awium.conditions.CollectionConditions.elementAt
-import io.github.gromoff97.awium.conditions.CollectionConditions.firstElement
-import io.github.gromoff97.awium.conditions.CollectionConditions.lastElement
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.elementAt
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.firstElement
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.lastElement
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result

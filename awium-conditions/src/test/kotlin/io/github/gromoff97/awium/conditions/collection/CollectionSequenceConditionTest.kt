@@ -1,12 +1,12 @@
 package io.github.gromoff97.awium.conditions.collection
 
 import io.github.gromoff97.awium.AwaitCondition
-import io.github.gromoff97.awium.conditions.CollectionConditions.containsSequence
-import io.github.gromoff97.awium.conditions.CollectionConditions.containsSubsequence
-import io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainSequence
-import io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainSubsequence
-import io.github.gromoff97.awium.conditions.CollectionConditions.endsWith
-import io.github.gromoff97.awium.conditions.CollectionConditions.startsWith
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsSequence
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsSubsequence
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.doesNotContainSequence
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.doesNotContainSubsequence
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.endsWith
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.startsWith
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result

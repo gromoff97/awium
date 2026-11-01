@@ -217,15 +217,17 @@ class ConditionTypeCompilationContractTest {
                 import java.util.concurrent.Callable;
                 import io.github.gromoff97.awium.*;
                 import io.github.gromoff97.awium.conditions.*;
+                import io.github.gromoff97.awium.conditions.collection.CollectionConditions;
+                import io.github.gromoff97.awium.conditions.map.MapConditions;
                 import io.github.gromoff97.awium.result.*;
                 import io.github.gromoff97.awium.function.*;
                 import io.github.gromoff97.awium.Await.*;
                 import static io.github.gromoff97.awium.Await.await;
                 import static io.github.gromoff97.awium.Await.tryAwait;
                 import static io.github.gromoff97.awium.conditions.Conditions.*;
-                import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
-                import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElement;
-                import static io.github.gromoff97.awium.conditions.MapConditions.*;
+                import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.*;
+                import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
+                import static io.github.gromoff97.awium.conditions.map.MapConditions.*;
                 final class Contract {
                     void check(Callable<Number> numbers, Callable<Optional<Number>> optional,
                             Callable<List<Number>> collection, Callable<Map<String, Number>> map) {

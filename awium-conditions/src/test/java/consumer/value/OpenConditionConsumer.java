@@ -8,12 +8,12 @@ import java.util.Optional;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.all;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.hasSize;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.all;
+import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.hasSize;
+import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.conditions.Conditions.captured;
-import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
-import static io.github.gromoff97.awium.conditions.OptionalConditions.hasValue;
+import static io.github.gromoff97.awium.conditions.map.MapConditions.valueFor;
+import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue;
 import static java.time.Duration.ofNanos;
 
 public final class OpenConditionConsumer {

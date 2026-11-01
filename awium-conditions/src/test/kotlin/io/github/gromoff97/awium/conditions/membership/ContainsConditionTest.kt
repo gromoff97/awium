@@ -1,16 +1,16 @@
 package io.github.gromoff97.awium.conditions.membership
 
 import io.github.gromoff97.awium.AwaitCondition
-import io.github.gromoff97.awium.conditions.CollectionConditions.contains
-import io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContain
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.contains
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.doesNotContain
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
-import io.github.gromoff97.awium.conditions.MapConditions.containsKey
-import io.github.gromoff97.awium.conditions.MapConditions.containsValue
-import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainKey
-import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainValue
+import io.github.gromoff97.awium.conditions.map.MapConditions.containsKey
+import io.github.gromoff97.awium.conditions.map.MapConditions.containsValue
+import io.github.gromoff97.awium.conditions.map.MapConditions.doesNotContainKey
+import io.github.gromoff97.awium.conditions.map.MapConditions.doesNotContainValue
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.membershipCollection
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.ProbeEntry

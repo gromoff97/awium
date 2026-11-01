@@ -2,16 +2,16 @@ package io.github.gromoff97.awium.conditions.composition
 
 import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition
-import io.github.gromoff97.awium.conditions.CollectionConditions.all
-import io.github.gromoff97.awium.conditions.CollectionConditions.singleElement
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.all
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.Conditions.equalTo
 import io.github.gromoff97.awium.conditions.Conditions.matches
-import io.github.gromoff97.awium.conditions.MapConditions.allEntries
-import io.github.gromoff97.awium.conditions.MapConditions.hasEntry
-import io.github.gromoff97.awium.conditions.MapConditions.hasNoEntry
-import io.github.gromoff97.awium.conditions.MapConditions.valueFor
-import io.github.gromoff97.awium.conditions.OptionalConditions.hasValue
+import io.github.gromoff97.awium.conditions.map.MapConditions.allEntries
+import io.github.gromoff97.awium.conditions.map.MapConditions.hasEntry
+import io.github.gromoff97.awium.conditions.map.MapConditions.hasNoEntry
+import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
+import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import java.util.Optional
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest

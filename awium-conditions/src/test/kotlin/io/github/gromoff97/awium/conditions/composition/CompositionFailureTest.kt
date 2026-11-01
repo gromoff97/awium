@@ -3,7 +3,7 @@ package io.github.gromoff97.awium.conditions.composition
 import io.github.gromoff97.awium.Await.tryAwait
 import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.Condition
-import io.github.gromoff97.awium.conditions.CollectionConditions.singleElement
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.failure
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.probe
@@ -13,8 +13,8 @@ import io.github.gromoff97.awium.conditions.Conditions.captured
 import io.github.gromoff97.awium.conditions.Conditions.condition
 import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait
 import io.github.gromoff97.awium.conditions.Conditions.isNotNull
-import io.github.gromoff97.awium.conditions.MapConditions.valueFor
-import io.github.gromoff97.awium.conditions.OptionalConditions.hasValue
+import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
+import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import io.github.gromoff97.awium.execution.ConditionExecution.start
 import io.github.gromoff97.awium.execution.ProbeFailure

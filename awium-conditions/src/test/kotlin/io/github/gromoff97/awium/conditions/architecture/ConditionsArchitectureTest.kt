@@ -18,8 +18,7 @@ class ConditionsArchitectureTest {
 
     @Test
     fun `condition implementations do not call factories or waiting facades`() {
-        noClasses().that().resideInAPackage("..awium.conditions.internal..")
-            .or(inFamilies(setOf("CapturedCondition"))).should().dependOnClassesThat(
+        noClasses().that(inFamilies(catalogs).negate()).should().dependOnClassesThat(
             inFamilies(setOf("Await", "ValueAwait", "SelectionAwait", "MapAwait", "DiagnosticAwait", "DiagnosticSelectionAwait", "DiagnosticMapAwait",
                 "Conditions", "CollectionConditions", "MapConditions", "OptionalConditions", "StringConditions"))
         ).check(productClasses)
@@ -27,10 +26,25 @@ class ConditionsArchitectureTest {
 
     @Test
     fun `catalogs leave execution to condition implementations`() {
-        val catalogs = inFamilies(setOf("Conditions", "CollectionConditions", "MapConditions", "OptionalConditions", "StringConditions"))
-        noClasses().that(catalogs)
+        noClasses().that(inFamilies(catalogs))
             .should().dependOnClassesThat(inFamilies(setOf("ConditionRun", "ConditionExecution", "WaitCompletion"))).check(productClasses)
-        noClasses().that(catalogs).should().accessClassesThat(inFamilies(setOf("AwaitAttempt"))).check(productClasses)
+        noClasses().that(inFamilies(catalogs)).should().accessClassesThat(inFamilies(setOf("AwaitAttempt"))).check(productClasses)
+    }
+
+    @Test
+    fun `family implementations are package private`() {
+        noClasses().that().resideInAnyPackage("..awium.conditions", "..awium.conditions.collection",
+            "..awium.conditions.map", "..awium.conditions.optional", "..awium.conditions.string")
+            .and(inFamilies(catalogs + "CapturedCondition").negate())
+            .should().bePublic().check(productClasses)
+    }
+
+    @Test
+    fun `common implementations do not depend on condition families`() {
+        noClasses().that().resideInAPackage("..awium.conditions.common..")
+            .should().dependOnClassesThat().resideInAnyPackage("..awium.conditions", "..awium.conditions.collection..",
+                "..awium.conditions.map..", "..awium.conditions.optional..", "..awium.conditions.string..")
+            .check(productClasses)
     }
 
     @Test
@@ -44,6 +58,7 @@ class ConditionsArchitectureTest {
     }
 
     companion object {
+        private val catalogs = setOf("Conditions", "CollectionConditions", "MapConditions", "OptionalConditions", "StringConditions")
         private val productClasses by lazy { JarFile(conditionsJar.toFile()).use { ClassFileImporter().importJars(it) } }
         private val coreModule = ModuleFinder.of(coreJar).find("io.github.gromoff97.awium.core").orElseThrow().descriptor()
         private val unexportedCorePackages = coreModule.packages() - coreModule.exports().filterNot { it.isQualified }.map { it.source() }.toSet()

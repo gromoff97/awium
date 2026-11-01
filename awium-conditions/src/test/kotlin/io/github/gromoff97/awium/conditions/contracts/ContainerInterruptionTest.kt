@@ -2,44 +2,44 @@ package io.github.gromoff97.awium.conditions.contracts
 
 import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.AwaitCondition.InputCondition
-import io.github.gromoff97.awium.conditions.CollectionConditions.all as allElements
-import io.github.gromoff97.awium.conditions.CollectionConditions.any as anyElement
-import io.github.gromoff97.awium.conditions.CollectionConditions.contains
-import io.github.gromoff97.awium.conditions.CollectionConditions.containsExactly
-import io.github.gromoff97.awium.conditions.CollectionConditions.containsExactlyInAnyOrder
-import io.github.gromoff97.awium.conditions.CollectionConditions.containsOnly
-import io.github.gromoff97.awium.conditions.CollectionConditions.containsSequence
-import io.github.gromoff97.awium.conditions.CollectionConditions.containsSubsequence
-import io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContain
-import io.github.gromoff97.awium.conditions.CollectionConditions.elementAt
-import io.github.gromoff97.awium.conditions.CollectionConditions.endsWith
-import io.github.gromoff97.awium.conditions.CollectionConditions.firstElement
-import io.github.gromoff97.awium.conditions.CollectionConditions.hasNoDuplicates
-import io.github.gromoff97.awium.conditions.CollectionConditions.hasSize
-import io.github.gromoff97.awium.conditions.CollectionConditions.lastElement
-import io.github.gromoff97.awium.conditions.CollectionConditions.none as noElement
-import io.github.gromoff97.awium.conditions.CollectionConditions.singleElement
-import io.github.gromoff97.awium.conditions.CollectionConditions.sorted
-import io.github.gromoff97.awium.conditions.CollectionConditions.startsWith
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.all as allElements
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.any as anyElement
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.contains
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsExactly
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsExactlyInAnyOrder
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsOnly
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsSequence
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsSubsequence
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.doesNotContain
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.elementAt
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.endsWith
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.firstElement
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.hasNoDuplicates
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.hasSize
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.lastElement
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.none as noElement
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.sorted
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.startsWith
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.Conditions.captured
 import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait
 import io.github.gromoff97.awium.conditions.Conditions.instanceOf
 import io.github.gromoff97.awium.conditions.Conditions.matches
-import io.github.gromoff97.awium.conditions.MapConditions.allEntries
-import io.github.gromoff97.awium.conditions.MapConditions.allKeys
-import io.github.gromoff97.awium.conditions.MapConditions.allValues
-import io.github.gromoff97.awium.conditions.MapConditions.containsAllEntries
-import io.github.gromoff97.awium.conditions.MapConditions.containsExactlyEntries
-import io.github.gromoff97.awium.conditions.MapConditions.containsKey
-import io.github.gromoff97.awium.conditions.MapConditions.containsOnlyKeys
-import io.github.gromoff97.awium.conditions.MapConditions.containsValue
-import io.github.gromoff97.awium.conditions.MapConditions.entryFor
-import io.github.gromoff97.awium.conditions.MapConditions.hasEntry
-import io.github.gromoff97.awium.conditions.MapConditions.hasNoEntry
-import io.github.gromoff97.awium.conditions.MapConditions.hasSize as mapHasSize
-import io.github.gromoff97.awium.conditions.MapConditions.singleEntry
-import io.github.gromoff97.awium.conditions.MapConditions.valueFor
+import io.github.gromoff97.awium.conditions.map.MapConditions.allEntries
+import io.github.gromoff97.awium.conditions.map.MapConditions.allKeys
+import io.github.gromoff97.awium.conditions.map.MapConditions.allValues
+import io.github.gromoff97.awium.conditions.map.MapConditions.containsAllEntries
+import io.github.gromoff97.awium.conditions.map.MapConditions.containsExactlyEntries
+import io.github.gromoff97.awium.conditions.map.MapConditions.containsKey
+import io.github.gromoff97.awium.conditions.map.MapConditions.containsOnlyKeys
+import io.github.gromoff97.awium.conditions.map.MapConditions.containsValue
+import io.github.gromoff97.awium.conditions.map.MapConditions.entryFor
+import io.github.gromoff97.awium.conditions.map.MapConditions.hasEntry
+import io.github.gromoff97.awium.conditions.map.MapConditions.hasNoEntry
+import io.github.gromoff97.awium.conditions.map.MapConditions.hasSize as mapHasSize
+import io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry
+import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.conditions.function.CheckedPredicate
 import io.github.gromoff97.awium.result.ConditionResult.satisfied

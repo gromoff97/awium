@@ -39,10 +39,12 @@ It is separate from `build`, `check`, and `test`.
 | Component | Owns |
 | --- | --- |
 | `Conditions`, domain catalogs | Public factories; no checking algorithms |
-| `conditions.internal.*Condition` | Algorithms, operands, mismatch descriptions, and composition |
+| Conditions beside each factory | Family-specific checks; package-private |
+| `conditions.common` | Checks and helpers shared across families |
 | `CapturedCondition.Run` | Stage transitions, collected observations, and stage diagnostics |
 
 Mutable state belongs to each run; reusable definitions stay immutable.
-The Java module `io.github.gromoff97.awium.conditions` exports
-`io.github.gromoff97.awium.conditions` and `.conditions.function`, requiring core transitively.
-Concrete helpers in `.conditions.internal` are unexported.
+Factories live in `conditions`, `conditions.collection`, `conditions.map`,
+`conditions.optional`, and `conditions.string`. The Java module exports these
+packages and `conditions.function`, requiring core transitively. `conditions.common`
+is unexported; its public classes allow reuse between families within the module.

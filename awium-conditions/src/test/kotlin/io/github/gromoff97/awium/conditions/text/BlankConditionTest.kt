@@ -3,8 +3,8 @@ package io.github.gromoff97.awium.conditions.text
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.StringConditions.blank
-import io.github.gromoff97.awium.conditions.StringConditions.nonBlank
+import io.github.gromoff97.awium.conditions.string.StringConditions.blank
+import io.github.gromoff97.awium.conditions.string.StringConditions.nonBlank
 import io.github.gromoff97.awium.conditions.support.Characters
 import java.util.stream.IntStream.range
 import org.junit.jupiter.api.Assertions.assertEquals

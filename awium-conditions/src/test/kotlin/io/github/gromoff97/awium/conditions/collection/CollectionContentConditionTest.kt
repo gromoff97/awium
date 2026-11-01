@@ -1,12 +1,12 @@
 package io.github.gromoff97.awium.conditions.collection
 
 import io.github.gromoff97.awium.AwaitCondition
-import io.github.gromoff97.awium.conditions.CollectionConditions.containsExactly
-import io.github.gromoff97.awium.conditions.CollectionConditions.containsExactlyInAnyOrder
-import io.github.gromoff97.awium.conditions.CollectionConditions.containsOnly
-import io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainExactly
-import io.github.gromoff97.awium.conditions.CollectionConditions.doesNotContainExactlyInAnyOrder
-import io.github.gromoff97.awium.conditions.CollectionConditions.subsetOf
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsExactly
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsExactlyInAnyOrder
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsOnly
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.doesNotContainExactly
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.doesNotContainExactlyInAnyOrder
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.subsetOf
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result

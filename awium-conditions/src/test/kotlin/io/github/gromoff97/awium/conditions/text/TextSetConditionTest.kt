@@ -4,8 +4,8 @@ import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.StringConditions.containsAll
-import io.github.gromoff97.awium.conditions.StringConditions.doesNotContainAny
+import io.github.gromoff97.awium.conditions.string.StringConditions.containsAll
+import io.github.gromoff97.awium.conditions.string.StringConditions.doesNotContainAny
 import java.nio.CharBuffer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame

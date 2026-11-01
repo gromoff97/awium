@@ -153,7 +153,7 @@ map values have the same restriction.
 | `absent` | Empty optional |
 | `hasValue(check)` | Present → checked value or chosen result |
 
-[Signatures](../src/main/java/io/github/gromoff97/awium/conditions/OptionalConditions.java).
+[Signatures](../src/main/java/io/github/gromoff97/awium/conditions/optional/OptionalConditions.java).
 
 ## StringConditions
 
@@ -173,7 +173,7 @@ Observations and text operands use `CharSequence`.
 Blankness uses `Character.isWhitespace` on Unicode code points.
 Unlike `contentEquals`, general `equalTo` may reject distinct
 `StringBuilder` objects with identical characters.
-[Signatures](../src/main/java/io/github/gromoff97/awium/conditions/StringConditions.java).
+[Signatures](../src/main/java/io/github/gromoff97/awium/conditions/string/StringConditions.java).
 
 ## CollectionConditions
 
@@ -205,7 +205,7 @@ lists. First/last traverse forward/backward; single selection uses one iterator 
 distinguish zero, one, or multiple elements. These reads are not atomic snapshots.
 For ordered map views, use `sequencedKeySet()`, `sequencedValues()`, or
 `sequencedEntrySet()`; plain `values()` exposes only `Collection`.
-[Signatures](../src/main/java/io/github/gromoff97/awium/conditions/CollectionConditions.java).
+[Signatures](../src/main/java/io/github/gromoff97/awium/conditions/collection/CollectionConditions.java).
 
 ## MapConditions
 
@@ -233,7 +233,7 @@ Expected keys and values use `Objects.deepEquals`, observed operand first, regar
 of map comparators or identity semantics. Nested checks keep their own comparison:
 `hasEntry(equalTo(entry))` follows entry equality (array keys/values compare by
 identity in standard entries). Selected entries may remain connected to the map.
-[Signatures](../src/main/java/io/github/gromoff97/awium/conditions/MapConditions.java).
+[Signatures](../src/main/java/io/github/gromoff97/awium/conditions/map/MapConditions.java).
 
 ### Map entry inference
 

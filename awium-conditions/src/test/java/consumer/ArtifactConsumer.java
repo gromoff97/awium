@@ -11,11 +11,11 @@ import java.util.concurrent.Callable;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.*;
+import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.*;
 import static io.github.gromoff97.awium.conditions.Conditions.*;
-import static io.github.gromoff97.awium.conditions.MapConditions.*;
-import static io.github.gromoff97.awium.conditions.OptionalConditions.*;
-import static io.github.gromoff97.awium.conditions.StringConditions.*;
+import static io.github.gromoff97.awium.conditions.map.MapConditions.*;
+import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.*;
+import static io.github.gromoff97.awium.conditions.string.StringConditions.*;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static java.time.Duration.ofMillis;
 

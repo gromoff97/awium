@@ -3,10 +3,10 @@ package io.github.gromoff97.awium.conditions.composition
 import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
 import io.github.gromoff97.awium.Condition
-import io.github.gromoff97.awium.conditions.CollectionConditions.elementAt
-import io.github.gromoff97.awium.conditions.CollectionConditions.firstElement
-import io.github.gromoff97.awium.conditions.CollectionConditions.lastElement
-import io.github.gromoff97.awium.conditions.CollectionConditions.singleElement
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.elementAt
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.firstElement
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.lastElement
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
@@ -14,9 +14,9 @@ import io.github.gromoff97.awium.conditions.Conditions.condition
 import io.github.gromoff97.awium.conditions.Conditions.instanceOf
 import io.github.gromoff97.awium.conditions.Conditions.matches
 import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait
-import io.github.gromoff97.awium.conditions.MapConditions.valueFor
-import io.github.gromoff97.awium.conditions.MapConditions.singleEntry
-import io.github.gromoff97.awium.conditions.OptionalConditions.hasValue
+import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
+import io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry
+import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import io.github.gromoff97.awium.function.AwaitAttempt

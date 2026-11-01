@@ -19,10 +19,10 @@ import static io.github.gromoff97.awium.conditions.Conditions.captured;
 import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
 import static io.github.gromoff97.awium.conditions.Conditions.instanceOf;
 import static io.github.gromoff97.awium.conditions.Conditions.matches;
-import static io.github.gromoff97.awium.conditions.MapConditions.allEntries;
-import static io.github.gromoff97.awium.conditions.MapConditions.entryFor;
-import static io.github.gromoff97.awium.conditions.MapConditions.singleEntry;
-import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
+import static io.github.gromoff97.awium.conditions.map.MapConditions.allEntries;
+import static io.github.gromoff97.awium.conditions.map.MapConditions.entryFor;
+import static io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry;
+import static io.github.gromoff97.awium.conditions.map.MapConditions.valueFor;
 
 public final class SelectionConsumer {
     private SelectionConsumer() {}

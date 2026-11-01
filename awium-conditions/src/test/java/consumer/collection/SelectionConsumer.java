@@ -12,10 +12,10 @@ import java.util.Optional;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.elementAt;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.firstElement;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.lastElement;
-import static io.github.gromoff97.awium.conditions.CollectionConditions.singleElement;
+import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.elementAt;
+import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.firstElement;
+import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.lastElement;
+import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.conditions.Conditions.captured;
 import static io.github.gromoff97.awium.conditions.Conditions.asserted;
 import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
@@ -23,8 +23,8 @@ import static io.github.gromoff97.awium.conditions.Conditions.instanceOf;
 import static io.github.gromoff97.awium.conditions.Conditions.isNotNull;
 import static io.github.gromoff97.awium.conditions.Conditions.isNull;
 import static io.github.gromoff97.awium.conditions.Conditions.matches;
-import static io.github.gromoff97.awium.conditions.MapConditions.valueFor;
-import static io.github.gromoff97.awium.conditions.OptionalConditions.hasValue;
+import static io.github.gromoff97.awium.conditions.map.MapConditions.valueFor;
+import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue;
 import static java.time.Duration.ofNanos;
 
 public final class SelectionConsumer {

@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.conditions.collection
 
-import io.github.gromoff97.awium.conditions.CollectionConditions.singleElement
+import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result

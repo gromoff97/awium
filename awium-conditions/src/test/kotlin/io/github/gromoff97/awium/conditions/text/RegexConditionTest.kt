@@ -4,8 +4,8 @@ import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.StringConditions.doesNotMatchRegex
-import io.github.gromoff97.awium.conditions.StringConditions.matchesRegex
+import io.github.gromoff97.awium.conditions.string.StringConditions.doesNotMatchRegex
+import io.github.gromoff97.awium.conditions.string.StringConditions.matchesRegex
 import io.github.gromoff97.awium.conditions.support.Characters
 import io.github.gromoff97.awium.result.ConditionResult.Satisfied
 import java.util.regex.Pattern

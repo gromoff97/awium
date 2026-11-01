@@ -3,7 +3,7 @@ package io.github.gromoff97.awium.conditions.text
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.StringConditions.containsIgnoringCase
+import io.github.gromoff97.awium.conditions.string.StringConditions.containsIgnoringCase
 import io.github.gromoff97.awium.conditions.support.Characters
 import io.github.gromoff97.awium.result.ConditionResult.Satisfied
 import org.junit.jupiter.api.Assertions.assertEquals
