@@ -13,6 +13,7 @@ import java.math.BigDecimal
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
@@ -23,9 +24,13 @@ class RangeConditionTest {
     @ParameterizedTest
     @MethodSource("boundaries")
     fun `checks both range boundaries`(condition: PreservingCondition<Int>, actual: Int, matches: Boolean) {
-        val outcome = evaluate(condition, actual)
-        assertEquals(matches, outcome is Satisfied<*>)
-        if (matches) assertEquals(actual, result(outcome))
+        assertEquals(matches, evaluate(condition, actual) is Satisfied<*>)
+    }
+
+    @ParameterizedTest
+    @MethodSource("nonUnitComparisons")
+    fun `uses the sign of each bound comparison`(condition: PreservingCondition<String>) {
+        assertSame("m", result(evaluate(condition, "m")))
     }
 
     @Test
@@ -53,6 +58,12 @@ class RangeConditionTest {
     }
 
     companion object {
+        @JvmStatic
+        fun nonUnitComparisons() = listOf(
+            named("inclusive", between<String, String>("a", "z")),
+            named("exclusive", strictlyBetween<String, String>("a", "z"))
+        )
+
         @JvmStatic
         fun boundaries() = listOf(
             boundary(between(5, 7), 5, true), boundary(between(5, 7), 7, true),

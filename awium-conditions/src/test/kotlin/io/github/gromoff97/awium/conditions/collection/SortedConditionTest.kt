@@ -6,6 +6,8 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejectio
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import java.util.Comparator.naturalOrder
+import java.util.Comparator.nullsFirst
+import java.util.Comparator.nullsLast
 import java.util.Comparator.reverseOrder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
@@ -21,7 +23,7 @@ import org.mockito.Mockito.verifyNoInteractions
 class SortedConditionTest {
     @ParameterizedTest
     @MethodSource("orderedValues")
-    fun `uses the supplied order and permits equal neighbours`(actual: List<Int>, comparator: Comparator<Int>) {
+    fun `uses the supplied order and permits equal neighbours`(actual: List<Int?>, comparator: Comparator<Int?>) {
         assertSame(actual, result(evaluate(sorted(comparator), actual)))
     }
 
@@ -72,6 +74,8 @@ class SortedConditionTest {
         fun orderedValues() = listOf(
             argumentSet("ascending", listOf(1, 2, 3), naturalOrder<Int>()),
             argumentSet("descending", listOf(3, 2, 1), reverseOrder<Int>()),
+            argumentSet("nulls first", listOf(null, 1, 2), nullsFirst(naturalOrder<Int>())),
+            argumentSet("nulls last", listOf(1, 2, null), nullsLast(naturalOrder<Int>())),
             argumentSet("equal neighbours", listOf(1, 1), naturalOrder<Int>())
         )
     }

@@ -10,13 +10,13 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments.arguments
+import org.junit.jupiter.params.provider.Arguments.argumentSet
 import org.junit.jupiter.params.provider.MethodSource
 
 class ContainsIgnoringCaseConditionTest {
     @ParameterizedTest
     @MethodSource("examples")
-    fun `matches literal text with Unicode case folding`(expected: String, actual: String, matches: Boolean) {
+    fun `finds literal text without case sensitivity`(expected: String, actual: String, matches: Boolean) {
         assertEquals(matches, evaluate(containsIgnoringCase(expected), actual) is Satisfied<*>)
     }
 
@@ -44,10 +44,16 @@ class ContainsIgnoringCaseConditionTest {
     companion object {
         @JvmStatic
         fun examples() = listOf(
-            arguments("READY", "ready", true), arguments("READY", "failed", false),
-            arguments("ς", "Σ", true),
-            arguments("a+b[.]", "xA+B[.]y", true), arguments("a+b[.]", "aaabxy", false),
-            arguments("\uD800", "\uD800\uDC00", false), arguments("\uD800", "\uD800", true)
+            argumentSet("different case", "READY", "ready", true),
+            argumentSet("different text", "READY", "failed", false),
+            argumentSet("empty text", "", "", true),
+            argumentSet("empty fragment", "", "ready", true),
+            argumentSet("final sigma", "ς", "Σ", true),
+            argumentSet("supplementary letter", "\uD801\uDC00", "x\uD801\uDC28y", true),
+            argumentSet("literal regex characters", "a+b[.]", "xA+B[.]y", true),
+            argumentSet("no regex interpretation", "a+b[.]", "aaabxy", false),
+            argumentSet("surrogate pair stays whole", "\uD800", "\uD800\uDC00", false),
+            argumentSet("lone surrogate", "\uD800", "\uD800", true)
         )
     }
 }
