@@ -1,15 +1,31 @@
 package io.github.gromoff97.awium.api;
 
 import java.util.stream.Stream;
+import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
 class CompilationContractTest {
+
+    @TestFactory
+    Stream<DynamicTest> predicatesMustBeExpressedThroughConditions() {
+        return Stream.of("await", "tryAwait").flatMap(factory ->
+                Stream.of("value -> true", "String::isBlank", "value -> true, value -> false")
+                        .map(arguments -> "%s(Contract::text).until(%s);".formatted(factory, arguments))
+                        .map(expression -> dynamicTest(expression, () -> assertRejected("""
+                                final class Contract {
+                                    static String text() { return "ready"; }
+                                    void check() { %s }
+                                }
+                                """.formatted(expression)))));
+    }
 
     @ParameterizedTest
     @ValueSource(strings = {

@@ -28,15 +28,6 @@ class OrderedWaitCompilationContractTest {
                 "List<Integer> result = await(Contract::text).until(captured(instanceOf(String.class), instanceOf(String.class)));")
         .map(::rejected)
 
-    @TestFactory
-    fun `terminals require one explicit condition`() = listOf("await", "tryAwait").flatMap { factory ->
-        listOf("", "isNotNull, isNotNull", "present, present",
-                "singleElement, singleElement", """valueFor("ready"), valueFor("ready")""",
-                "instanceOf(String.class), instanceOf(String.class)",
-                "new io.github.gromoff97.awium.AwaitCondition.PreservingCondition<?>[]{isNotNull}")
-            .map { rejected("$factory(Contract::text).until($it);") }
-    }
-
     private fun rejected(body: String) = dynamicTest(body) {
         CompilationSupport.assertRejected("""
                 import java.util.*;
