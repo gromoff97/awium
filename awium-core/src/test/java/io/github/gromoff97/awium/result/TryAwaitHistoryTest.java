@@ -1,10 +1,6 @@
 package io.github.gromoff97.awium.result;
 
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.result.Attempt;
-import io.github.gromoff97.awium.result.AwaitAssertionError;
-import io.github.gromoff97.awium.result.AwaitResult;
-import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.util.List;
 import java.util.stream.Stream;

@@ -29,7 +29,6 @@ import static io.github.gromoff97.awium.support.AwaitAssertions.uncontrolled;
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.*;
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase;
 import static io.github.gromoff97.awium.execution.WaitCompletion.*;
-import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.*;
 import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
 import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
