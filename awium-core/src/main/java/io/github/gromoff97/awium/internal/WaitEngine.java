@@ -90,8 +90,6 @@ public final class WaitEngine<OBSERVED> {
                 return new Uncontrolled(preparationFailure);
             }
 
-            // Keep the clock/cancellation boundary before source retrieval, as in acquisition.
-            configuration.clock().getAsLong();
             ExecutionStep<OBSERVED> step = runner.call(PERSISTENCE);
             completed = started + step.completedAfterNanos();
             recorder.accept(step);

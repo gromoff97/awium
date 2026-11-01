@@ -37,8 +37,6 @@ record AttemptExecution<OBSERVED>(Callable<? extends OBSERVED> source,
                     new FailedBeforeObservation<>(Operation.SOURCE, failure), clock.getAsLong());
         }
 
-        // Keep the clock/cancellation boundary before invoking user condition code.
-        clock.getAsLong();
         if (currentThread().isInterrupted()) {
             return failed(phase, new FailedAfterObservation<>(actual, Operation.SOURCE,
                     new InterruptedException("caller thread interrupt flag was set"), null), clock.getAsLong());

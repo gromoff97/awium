@@ -45,7 +45,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -93,28 +92,6 @@ class WaitEngineTest {
         assertEquals(7L, failure.step().completedAfterNanos());
         verify(clock, times(2)).getAsLong();
         verifyNoInteractions(source);
-    }
-
-    @Test
-    void persistenceRetrievalClockCancellationPreventsAnotherSourceCall() {
-        int[] sourceCalls = {0};
-        LongSupplier clock = mock();
-        when(clock.getAsLong()).thenAnswer(ignored -> time.getAsLong());
-        var outcome = new WaitEngine<String>(withTime(config(5, 20, 10), clock, nanos -> {
-            time.advanceNanos(nanos);
-            doAnswer(ignored -> time.getAsLong())
-                    .doAnswer(ignored -> { currentThread().interrupt(); return time.getAsLong(); })
-                    .doAnswer(ignored -> time.getAsLong()).when(clock).getAsLong();
-        }), () -> { sourceCalls[0]++; return "actual"; },
-                start(accepted, false)).waitFor(ignored -> {});
-
-        var failure = assertInstanceOf(Uncontrolled.class, outcome);
-        var attempt = uncontrolled(WAITING, failure.step().attempt());
-        assertEquals(1, sourceCalls[0]);
-        assertEquals(PERSISTENCE, failure.step().phase());
-        assertInstanceOf(FailedBeforeObservation.class, attempt);
-        assertInstanceOf(InterruptedException.class, attempt.cause());
-        assertTrue(currentThread().isInterrupted());
     }
 
     @Test
@@ -386,15 +363,18 @@ class WaitEngineTest {
     }
 
     @Test
-    void retrievalClockInterruptionWinsOverTheAcquisitionDeadline() {
+    void cancellationAtTheDeadlineWinsOverTimeout() {
         int[] sourceCalls = {0};
         LongSupplier clock = mock();
-        when(clock.getAsLong()).thenReturn(0L, 0L, 0L, 0L, 0L, 1L)
-                .thenAnswer(ignored -> { currentThread().interrupt(); return 2L; }).thenReturn(2L);
+        when(clock.getAsLong()).thenReturn(0L);
         var outcome = new WaitEngine<String>(withTime(config(1, 2, 0), clock, nanos -> {}), () -> {
             sourceCalls[0]++;
             return "actual";
-        }, start(check("not ready", (String value) -> ConditionResult.unsatisfied("not yet")), false)).waitFor(ignored -> {});
+        }, start(check("not ready", (String value) -> {
+            doReturn(0L, 1L).doAnswer(ignored -> { currentThread().interrupt(); return 2L; })
+                    .doReturn(2L).when(clock).getAsLong();
+            return unsatisfied("not yet");
+        }), false)).waitFor(ignored -> {});
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
