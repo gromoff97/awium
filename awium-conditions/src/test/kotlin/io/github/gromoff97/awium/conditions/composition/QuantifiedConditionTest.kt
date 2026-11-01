@@ -205,12 +205,6 @@ class QuantifiedConditionTest {
     }
 
     @ParameterizedTest
-    @MethodSource("mapMismatches")
-    fun `map quantifiers reject a decisive mismatch`(condition: AwaitCondition) {
-        rejection(condition, linkedMapOf("a" to 1, "b" to 2))
-    }
-
-    @ParameterizedTest
     @MethodSource("entryFailures")
     fun `entry callbacks preserve the original checked failure`(factory: (CheckedPredicate<Map.Entry<String, Int>>) -> AwaitCondition) {
         val cause = IOException("entry failed")
@@ -231,28 +225,32 @@ class QuantifiedConditionTest {
             val expectedEntry = equalTo(java.util.Map.entry("user", ready))
             val readyMap = EntryMap(listOf(UserEntry()))
             val pendingMap = EntryMap(listOf(SimpleImmutableEntry<String?, User?>(null, null)))
-            val mapMatches = listOf<AwaitCondition>(
+            val mixedMap = EntryMap(listOf(SimpleImmutableEntry<String?, User?>(null, null), UserEntry()))
+            val mapAll = listOf<AwaitCondition>(
                 allKeys(key), allKeys(equalTo("user")), allKeys(instanceOf(String::class.java)),
-                anyKey(key), anyKey(equalTo("user")), anyKey(instanceOf(String::class.java)),
                 allValues(user), allValues(equalTo(ready)), allValues(instanceOf(User::class.java)),
+                allEntries(entry), allEntries(expectedEntry), allEntries<String, User>(instanceOf(UserEntry::class.java)))
+            val mapAny = listOf<AwaitCondition>(
+                anyKey(key), anyKey(equalTo("user")), anyKey(instanceOf(String::class.java)),
                 anyValue(user), anyValue(equalTo(ready)), anyValue(instanceOf(User::class.java)),
-                allEntries(entry), allEntries(expectedEntry), allEntries<String, User>(instanceOf(UserEntry::class.java)),
                 hasEntry(entry), hasEntry(expectedEntry), hasEntry<String, User>(instanceOf(UserEntry::class.java)))
             val mapAbsences = listOf<AwaitCondition>(noKey(key), noKey(equalTo("user")), noKey(instanceOf(String::class.java)),
                 noValue(user), noValue(equalTo(ready)), noValue(instanceOf(User::class.java)),
                 hasNoEntry(entry), hasNoEntry(expectedEntry), hasNoEntry<String, User>(instanceOf(UserEntry::class.java)))
             val collections = listOf(
-                Example(all(equalTo(ready)), listOf(ready), listOf(pending)),
-                Example(all(instanceOf(String::class.java)), listOf("ready"), listOf(ready)),
-                Example(all(matches { value: User -> value.active }), listOf(ready), listOf(pending)),
-                Example(any(equalTo(ready)), listOf(ready), listOf(pending)),
-                Example(any(instanceOf(String::class.java)), listOf("ready"), listOf(ready)),
-                Example(any(matches { value: User -> value.active }), listOf(ready), listOf(pending)),
+                Example(all(equalTo(ready)), listOf(ready), listOf(pending, ready)),
+                Example(all(instanceOf(String::class.java)), listOf("ready"), listOf(ready, "ready")),
+                Example(all(matches { value: User -> value.active }), listOf(ready), listOf(pending, ready)),
+                Example(any(equalTo(ready)), listOf(pending, ready), listOf(pending)),
+                Example(any(instanceOf(String::class.java)), listOf(ready, "ready"), listOf(ready)),
+                Example(any(matches { value: User -> value.active }), listOf(pending, ready), listOf(pending)),
                 Example(none(equalTo(ready)), listOf(pending), listOf(ready)),
                 Example(none(instanceOf(User::class.java)), listOf("skip"), listOf(ready)),
                 Example(none(matches { value: User -> value.active }), listOf(pending), listOf(ready)))
-            return mapMatches.map { argumentSet(it.description(), Example(it, readyMap, pendingMap)) } +
+            return mapAll.map { argumentSet(it.description(), Example(it, readyMap, mixedMap)) } +
+                mapAny.map { argumentSet(it.description(), Example(it, mixedMap, pendingMap)) } +
                 mapAbsences.map { argumentSet(it.description(), Example(it, pendingMap, readyMap)) } +
+                mapPredicates().map { argumentSet(it.condition.description(), it) } +
                 collections.map { argumentSet(it.condition.description(), it) }
         }
 
@@ -296,17 +294,20 @@ class QuantifiedConditionTest {
             argumentSet("explained", hasNoEntry { entry: Map.Entry<String, String> -> entry.key == "failed" && entry.value == "1" }
                 .because("failed entry must be absent")))
 
-        @JvmStatic
-        fun mapMismatches() = listOf(
-            argumentSet("all entries", allEntries { _: String, value: Int -> value < 2 }),
-            argumentSet("some entry", hasEntry { _: String, value: Int -> value > 2 }),
-            argumentSet("no entry", hasNoEntry { _: String, value: Int -> value == 2 }),
-            argumentSet("all keys", allKeys { key: String -> key == "a" }),
-            argumentSet("any key", anyKey { key: String -> key == "missing" }),
-            argumentSet("no key", noKey { key: String -> key == "a" }),
-            argumentSet("all values", allValues { value: Int -> value < 2 }),
-            argumentSet("any value", anyValue { value: Int -> value > 2 }),
-            argumentSet("no value", noValue { value: Int -> value == 2 }))
+        private fun mapPredicates(): List<Example> {
+            val one = mapOf("a" to 1)
+            val mixed = linkedMapOf("a" to 1, "b" to 2)
+            return listOf(
+                Example(allEntries { _: String, value: Int -> value < 2 }, one, mixed),
+                Example(hasEntry { _: String, value: Int -> value == 2 }, mixed, one),
+                Example(hasNoEntry { _: String, value: Int -> value == 2 }, one, mixed),
+                Example(allKeys { key: String -> key == "a" }, one, mixed),
+                Example(anyKey { key: String -> key == "b" }, mixed, one),
+                Example(noKey { key: String -> key == "b" }, one, mixed),
+                Example(allValues { value: Int -> value < 2 }, one, mixed),
+                Example(anyValue { value: Int -> value == 2 }, mixed, one),
+                Example(noValue { value: Int -> value == 2 }, one, mixed))
+        }
 
         @JvmStatic
         fun entryFailures() = listOf(
