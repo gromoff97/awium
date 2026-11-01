@@ -30,10 +30,10 @@ class CoreArchitectureTest {
                             .as("core has no built-in condition dependencies"),
                     independent(Set.of("ConditionRun", "AwaitAttempt", "ConditionExecution", "ProbeFailure",
                                     "ExecutionStep", "AttemptExecution", "WaitEngine", "WaitCompletion", "WaitConfiguration"),
-                            Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "Conditions", "CollectionConditions",
-                                    "MapConditions", "OptionalConditions", "StringConditions", "DiagnosticText"))
+                            Set.of("Await", "AwaitSupport", "ValueAwait", "SelectionAwait", "MapAwait", "DiagnosticAwait",
+                                    "DiagnosticSelectionAwait", "DiagnosticMapAwait", "DiagnosticText", "FailureDiagnostics"))
                             .as("polling and execution do not depend on facades or formatting"),
-                    independent(Set.of("AwaitSupport"), Set.of("CheckRun", "CapturedCondition", "AttemptHistory", "FailureDiagnostics"))
+                    independent(Set.of("AwaitSupport"), Set.of("CheckRun", "AttemptHistory", "FailureDiagnostics"))
                             .as("waiting facades do not depend on run implementations"),
                     independent(Set.of("ConditionResult"), Set.of("ConditionExecution", "Attempt", "AwaitResult"))
                             .as("check outcomes do not depend on execution"),
@@ -50,7 +50,8 @@ class CoreArchitectureTest {
                             Set.of("AwaitAttempt", "ConditionExecution", "AttemptExecution", "WaitEngine", "WaitCompletion"))
                             .as("condition metadata does not depend on execution"),
                     independent(Set.of("FailureDiagnostics"),
-                            Set.of("Await", "ValueAwait", "SelectionAwait", "MapAwait", "AwaitResult", "AwaitAssertionError", "AwaitExecutionException"))
+                            Set.of("Await", "AwaitSupport", "ValueAwait", "SelectionAwait", "MapAwait", "DiagnosticAwait",
+                                    "DiagnosticSelectionAwait", "DiagnosticMapAwait", "AwaitResult", "AwaitAssertionError", "AwaitExecutionException"))
                             .as("failure formatting does not depend on facades or exception wrappers"))
                     .map(rule -> dynamicTest(rule.getDescription(), () -> rule.check(classes)));
         }
