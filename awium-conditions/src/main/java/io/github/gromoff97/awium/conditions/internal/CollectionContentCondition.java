@@ -6,7 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 
-import static io.github.gromoff97.awium.conditions.internal.CollectionSequenceCondition.prefixMatches;
+import static io.github.gromoff97.awium.conditions.internal.ValueMatching.prefixMatches;
 import static io.github.gromoff97.awium.conditions.internal.ExpectedValues.snapshot;
 import static io.github.gromoff97.awium.conditions.internal.ValueMatching.matchesAll;
 import static io.github.gromoff97.awium.conditions.internal.ValueMatching.matchesAny;

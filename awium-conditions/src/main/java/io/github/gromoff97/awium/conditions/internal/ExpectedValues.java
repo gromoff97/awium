@@ -13,4 +13,9 @@ final class ExpectedValues {
         return stream(requireNonNull(values, name + " must not be null").spliterator(), false).toList();
     }
 
+    static String text(CharSequence value, String name) {
+        return requireNonNull(requireNonNull(value, name + " must not be null").toString(),
+                "text.toString() must not return null");
+    }
+
 }

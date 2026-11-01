@@ -3,9 +3,9 @@ package io.github.gromoff97.awium.conditions.internal;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import java.util.function.BiPredicate;
 
+import static io.github.gromoff97.awium.conditions.internal.ExpectedValues.text;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
-import static java.util.Objects.requireNonNull;
 
 public final class TextMatchCondition extends PreservingCondition<CharSequence> {
     public enum Match {
@@ -41,11 +41,6 @@ public final class TextMatchCondition extends PreservingCondition<CharSequence> 
     private TextMatchCondition(String value, Match match) {
         super("string " + match.description, new Reference<>(match.reference, value), actual -> actual == null
                 ? unsatisfied("string was null") : match.matches.test(actual, value) ? satisfied(actual) : unsatisfied("string " + match.mismatch));
-    }
-
-    static String text(CharSequence value, String name) {
-        return requireNonNull(requireNonNull(value, name + " must not be null").toString(),
-                "text.toString() must not return null");
     }
 
 }

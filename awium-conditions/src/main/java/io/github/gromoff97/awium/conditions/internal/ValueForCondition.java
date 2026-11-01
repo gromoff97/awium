@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.AwaitCondition.MapValueCondition;
 import java.util.Map.Entry;
 import java.util.Map;
 
-import static io.github.gromoff97.awium.conditions.internal.EntryForCondition.findEntry;
+import static io.github.gromoff97.awium.conditions.internal.MapEntries.findEntry;
 
 public final class ValueForCondition<KEY> extends MapValueCondition<Map<? super KEY, ?>> {
     public ValueForCondition(KEY key) {

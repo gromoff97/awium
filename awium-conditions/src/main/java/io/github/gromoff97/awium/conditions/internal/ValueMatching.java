@@ -12,6 +12,15 @@ final class ValueMatching {
 
     private ValueMatching() {}
 
+    static boolean prefixMatches(Iterator<?> actual, Iterable<?> expected) {
+        for (Object value : expected) {
+            if (!actual.hasNext() || !deepEquals(actual.next(), value)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     static <VALUE> boolean matchesAny(Iterable<? extends VALUE> values, CheckedPredicate<? super VALUE> matches) throws Throwable {
         for (VALUE value : values) {
             if (matches.test(value)) {

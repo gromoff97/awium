@@ -3,7 +3,7 @@ package io.github.gromoff97.awium.conditions.internal;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import java.util.regex.Pattern;
 
-import static io.github.gromoff97.awium.conditions.internal.TextMatchCondition.text;
+import static io.github.gromoff97.awium.conditions.internal.ExpectedValues.text;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.util.regex.Pattern.compile;

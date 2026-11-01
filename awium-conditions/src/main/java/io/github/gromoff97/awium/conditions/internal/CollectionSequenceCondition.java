@@ -2,12 +2,12 @@ package io.github.gromoff97.awium.conditions.internal;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.SequencedCollection;
 
 import static io.github.gromoff97.awium.conditions.internal.ExpectedValues.snapshot;
+import static io.github.gromoff97.awium.conditions.internal.ValueMatching.prefixMatches;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.util.Objects.deepEquals;
@@ -57,15 +57,6 @@ public final class CollectionSequenceCondition<INPUT extends SequencedCollection
             }
         }
         return false;
-    }
-
-    static boolean prefixMatches(Iterator<?> actual, Iterable<?> expected) {
-        for (Object value : expected) {
-            if (!actual.hasNext() || !deepEquals(actual.next(), value)) {
-                return false;
-            }
-        }
-        return true;
     }
 
 }
