@@ -21,7 +21,7 @@ public final class AwaitAssertions {
 
     public static <RESULT> RESULT result(ConditionResult<? extends RESULT> evaluation) {
         return evaluation instanceof Satisfied<? extends RESULT> success
-                ? success.value() : fail("condition was not satisfied");
+                ? success.value() : fail("expected a satisfied condition, got " + evaluation, evaluation.cause());
     }
 
     public static AwaitFailure failure(AwaitResult<?, ?> result) {
@@ -43,7 +43,7 @@ public final class AwaitAssertions {
             case Attempt.SatisfiedObservation<OBSERVED> satisfied -> satisfied.observed();
             case Attempt.UnsatisfiedObservation<OBSERVED> unsatisfied -> unsatisfied.observed();
             case Attempt.FailedAfterObservation<OBSERVED> failed -> failed.observed();
-            case Attempt.FailedBeforeObservation<OBSERVED> ignored -> fail("expected an observation");
+            case Attempt.FailedBeforeObservation<OBSERVED> failed -> fail("expected an observation, got " + failed, failed.cause());
         };
     }
 

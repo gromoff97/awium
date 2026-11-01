@@ -46,7 +46,7 @@ object ConditionAssertions {
         ConditionExecution.bind<SOURCE, SOURCE>(condition).probe(actual)
 
     fun <RESULT> result(evaluation: ConditionResult<out RESULT>): RESULT =
-        if (evaluation is Satisfied<out RESULT>) evaluation.value() else fail("condition was not satisfied")
+        if (evaluation is Satisfied<out RESULT>) evaluation.value() else fail("expected a satisfied condition, got $evaluation", evaluation.cause())
 
     fun mismatch(evaluation: ConditionResult<*>): String? =
         assertInstanceOf(Unsatisfied::class.java, evaluation).mismatch()
@@ -64,7 +64,7 @@ object ConditionAssertions {
         is Attempt.SatisfiedObservation -> attempt.observed()
         is Attempt.UnsatisfiedObservation -> attempt.observed()
         is Attempt.FailedAfterObservation -> attempt.observed()
-        is Attempt.FailedBeforeObservation -> fail("expected an observation")
+        is Attempt.FailedBeforeObservation -> fail("expected an observation, got $attempt", attempt.cause())
     }
 
     fun uncontrolled(operation: Attempt.Operation, attempt: Attempt<*>): Attempt.Failure<*> =
