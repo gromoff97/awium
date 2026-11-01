@@ -13,5 +13,5 @@ record SelectedNestedCondition<INPUT>(Condition<INPUT, ?> nested) implements Sel
     @Override public String explanation() { return nested.explanation(); }
     @Override public List<Reference<?>> references() { return nested.references(); }
     @Override public AttemptResult<?> probe(INPUT actual) throws Throwable { return newAttempt().probe(actual); }
-    @Override public AwaitAttempt<INPUT, ?> newAttempt() { return bind(nested)::probe; }
+    @Override public AwaitAttempt<INPUT, ?> newAttempt() { return bind(nested); }
 }

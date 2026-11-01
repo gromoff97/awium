@@ -13,7 +13,7 @@ import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.lang.Thread.currentThread;
 import static java.util.Objects.requireNonNull;
 
-public final class ConditionExecution<OBSERVED, RESULT> {
+public final class ConditionExecution<OBSERVED, RESULT> implements AwaitAttempt<OBSERVED, RESULT> {
 
     public static <INPUT, RESULT> ConditionExecution<INPUT, RESULT> bind(
             Condition<? super INPUT, ? extends RESULT> condition) {
@@ -61,6 +61,7 @@ public final class ConditionExecution<OBSERVED, RESULT> {
         this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
     }
 
+    @Override
     public AttemptResult<? extends RESULT> probe(OBSERVED actual) throws Throwable {
         if (currentThread().isInterrupted()) throw interrupted(null);
         if (evaluator == null) evaluator = evaluatorFactory.call();
