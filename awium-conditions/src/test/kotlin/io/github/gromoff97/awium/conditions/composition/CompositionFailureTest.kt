@@ -15,7 +15,7 @@ import io.github.gromoff97.awium.conditions.common.CommonConditions.isNotNull
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
-import io.github.gromoff97.awium.execution.ConditionExecution.start
+import io.github.gromoff97.awium.execution.ConditionRun
 import io.github.gromoff97.awium.execution.ProbeFailure
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.Attempt.Operation.CONDITION
@@ -102,7 +102,7 @@ class CompositionFailureTest {
                 null
             } else satisfied(it)
         }
-        val run = start<String, List<String>>(captured(broken, isNotNull))
+        val run = ConditionRun<String, List<String>>(captured(broken, isNotNull))
         assertThat(assertThrows(NullPointerException::class.java) { run.probe("actual") })
             .hasMessage("condition returned null AttemptResult")
         assertEquals(interrupted, Thread.currentThread().isInterrupted)

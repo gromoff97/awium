@@ -47,7 +47,7 @@ class CoreArchitectureTest {
                             .as("history recording does not depend on execution"),
                     independent(Set.of("Condition"), Set.of("WaitEngine", "WaitCompletion", "WaitConfiguration", "AwaitResult", "FailureDiagnostics"))
                             .as("the condition contract does not depend on polling or diagnostics"),
-                    independent(Set.of("ConditionExecution"), Set.of("WaitEngine", "AttemptHistory", "Attempt", "WaitConfiguration"))
+                    independent(Set.of("ConditionExecution"), Set.of("WaitEngine", "ConditionRun", "AttemptHistory", "Attempt", "WaitConfiguration"))
                             .as("nested execution does not depend on polling or history"),
                     independent(Set.of("Reference", "AttemptResult.Unsatisfied"),
                             Set.of("AwaitAttempt", "ConditionExecution", "AttemptExecution", "WaitEngine", "WaitCompletion"))

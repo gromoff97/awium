@@ -58,8 +58,8 @@ class CollectingConditionTest {
     @Test
     void newRunsKeepTheirCollectedValuesIndependent() throws Throwable {
         var condition = new RecordOnce();
-        var first = ConditionExecution.<String, List<String>>start(condition);
-        var second = ConditionExecution.<String, List<String>>start(condition);
+        var first = new ConditionRun<String, List<String>>(condition);
+        var second = new ConditionRun<String, List<String>>(condition);
         first.probe("first");
 
         second.probe("second");

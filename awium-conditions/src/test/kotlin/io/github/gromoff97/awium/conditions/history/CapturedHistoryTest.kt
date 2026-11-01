@@ -23,7 +23,7 @@ import io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED
 import io.github.gromoff97.awium.result.AttemptResult.satisfied
 import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
-import io.github.gromoff97.awium.execution.ConditionExecution.start
+import io.github.gromoff97.awium.execution.ConditionRun
 import io.github.gromoff97.awium.execution.ExecutionStep
 import io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION
 import io.github.gromoff97.awium.execution.WaitCompletion.Timeout
@@ -55,7 +55,7 @@ class CapturedHistoryTest {
     fun `a sequence failure identifies the pending stage and both relevant reasons`() {
         val first = equalTo("created").because("payment must be created")
         val second = equalTo("paid").because("payment must be completed")
-        val run = start<String, List<String>>(captured(first, second).because("checkout lifecycle"))
+        val run = ConditionRun<String, List<String>>(captured(first, second).because("checkout lifecycle"))
         run.probe("created")
         run.record(SatisfiedObservation("created"))
         val rejected = assertInstanceOf(Unsatisfied::class.java, run.probe("created"))
@@ -75,7 +75,7 @@ class CapturedHistoryTest {
             if (it == "paid") satisfied(it) else unsatisfied("payment pending")
         }
         val shipped = condition<String, String>("shipped") { unsatisfied("tracking number missing") }
-        val run = start<String, List<String>>(captured(paid, shipped))
+        val run = ConditionRun<String, List<String>>(captured(paid, shipped))
         for (actual in listOf("created", "paid", "paid")) {
             run.probe(actual)
             val checked = run.historyResult()
@@ -174,7 +174,7 @@ class CapturedHistoryTest {
             initialized++
             AwaitAttempt { satisfied(it) }
         }.because("last check")
-        val run = start<Int, List<Int>>(captured(equalTo(1), equalTo(3), unreached))
+        val run = ConditionRun<Int, List<Int>>(captured(equalTo(1), equalTo(3), unreached))
         run.probe(1)
         run.record(SatisfiedObservation(1))
         for (actual in listOf(0, 0, 2, 2)) {
@@ -195,7 +195,7 @@ class CapturedHistoryTest {
 
     @Test
     fun `rechecking a complete run records only its final stage`() {
-        val run = start<Int, List<Int>>(captured(equalTo(1), equalTo(2)))
+        val run = ConditionRun<Int, List<Int>>(captured(equalTo(1), equalTo(2)))
         for (actual in listOf(1, 2, 2, 2)) {
             run.probe(actual)
             run.record(SatisfiedObservation(actual))

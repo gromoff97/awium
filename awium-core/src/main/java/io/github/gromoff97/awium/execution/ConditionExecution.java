@@ -30,12 +30,8 @@ public final class ConditionExecution<OBSERVED, RESULT> implements AwaitAttempt<
         });
     }
 
-    public static <INPUT, RESULT> ConditionRun<INPUT, RESULT> start(AwaitCondition condition) {
-        return new ConditionRun<>(condition, prepare(condition));
-    }
-
     @SuppressWarnings("unchecked")
-    private static <INPUT, RESULT> Condition<INPUT, RESULT> prepare(AwaitCondition condition) {
+    static <INPUT, RESULT> Condition<INPUT, RESULT> prepare(AwaitCondition condition) {
         // Terminal bounds determine the result of source-dependent selectors and preserving checks.
         return (Condition<INPUT, RESULT>) requireNonNull(
                 requireNonNull(condition, "condition must not be null").newRun(), "condition returned null run");

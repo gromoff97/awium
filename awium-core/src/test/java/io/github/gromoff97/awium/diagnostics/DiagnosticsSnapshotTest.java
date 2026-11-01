@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium.diagnostics;
 
+import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.AwaitCondition.Reference;
-import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.support.TestCondition;
 import io.github.gromoff97.awium.execution.ExecutionStep;
 import io.github.gromoff97.awium.execution.WaitCompletion;
@@ -627,7 +627,7 @@ class DiagnosticsSnapshotTest {
 
     private static Throwable renderFailure(AwaitCondition condition, AwaitFailure.Reason reason, WaitCompletion outcome,
             WaitConfiguration configuration, long attemptNumber) {
-        var run = ConditionExecution.start(condition);
+        var run = new ConditionRun<>(condition);
         for (long number = 0; number < attemptNumber; number++) {
             run.record(new Attempt.SatisfiedObservation<>(null));
         }

@@ -23,7 +23,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
 import static io.github.gromoff97.awium.support.AwaitAssertions.observation;
-import static io.github.gromoff97.awium.execution.ConditionExecution.start;
 import static io.github.gromoff97.awium.support.TestConditions.accepted;
 import static io.github.gromoff97.awium.support.TestConditions.check;
 import static io.github.gromoff97.awium.support.AwaitAssertions.uncontrolled;
@@ -68,7 +67,7 @@ class WaitEngineTest {
         Condition<String, Integer> condition = mock(CALLS_REAL_METHODS);
         doReturn(unsatisfied("another observation is required"), satisfied(5)).when(condition).probe("ready");
         doReturn(satisfied(5)).when(condition).historyResult(any());
-        ConditionRun<String, Integer> run = start(condition);
+        ConditionRun<String, Integer> run = new ConditionRun<>(condition);
 
         var outcome = new WaitEngine<>(withTime(config(1, 10, 0), time, time), () -> "ready", run)
                 .waitFor();
@@ -86,7 +85,7 @@ class WaitEngineTest {
         Callable<String> source = mock();
         when(clock.getAsLong()).thenReturn(0L, 7L);
         var engine = new WaitEngine<String>(withTime(config(1, 10, 0), clock, time), source,
-                start(accepted));
+                new ConditionRun<>(accepted));
         currentThread().interrupt();
 
         var failure = assertInstanceOf(Uncontrolled.class, engine.waitFor());
@@ -191,7 +190,7 @@ class WaitEngineTest {
                 ignored -> {}), () -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, start(accepted)).waitFor();
+                }, new ConditionRun<>(accepted)).waitFor();
 
         assertInstanceOf(Timeout.class, outcome);
         assertEquals(1, sourceCalls[0]);
@@ -356,7 +355,7 @@ class WaitEngineTest {
         var outcome = new WaitEngine<String>(withTime(config(5, 20, 0), clock,
                 nanos -> { throw new AssertionError("parker must not be called"); }),
                 () -> { sourceCalls[0]++; return "actual"; },
-                start(accepted)).waitFor();
+                new ConditionRun<>(accepted)).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -373,7 +372,7 @@ class WaitEngineTest {
         var outcome = new WaitEngine<String>(withTime(config(1, 2, 0), clock, nanos -> {}), () -> {
             sourceCalls[0]++;
             return "actual";
-        }, start(check("not ready", (String value) -> {
+        }, new ConditionRun<>(check("not ready", (String value) -> {
             doReturn(0L, 1L).doAnswer(ignored -> { currentThread().interrupt(); return 2L; })
                     .doReturn(2L).when(clock).getAsLong();
             return unsatisfied("not yet");
@@ -395,7 +394,7 @@ class WaitEngineTest {
         when(clock.getAsLong()).thenReturn(0L);
         var outcome = new WaitEngine<String>(withTime(config(5, 20, persistence), clock,
                 nanos -> parkCalls[0]++), () -> { sourceCalls[0]++; return "actual"; },
-                start(check("ready", (String actual) -> {
+                new ConditionRun<>(check("ready", (String actual) -> {
                     doReturn(0L).doAnswer(ignored -> { currentThread().interrupt(); return 0L; }).when(clock).getAsLong();
                     return evaluation;
                 }))).waitFor();
@@ -583,7 +582,7 @@ class WaitEngineTest {
             Callable<S> source,
             AwaitAttempt<S, R> condition) {
         return new WaitEngine<S>(withTime(config, time, parker), source,
-                start(check("test condition", condition))).waitFor();
+                new ConditionRun<>(check("test condition", condition))).waitFor();
     }
 
     private static Object successfulObservation(ExecutionStep<?> attempt) {

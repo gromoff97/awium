@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium.internal;
 
+import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.execution.WaitCompletion;
 import io.github.gromoff97.awium.result.Diagnostic;
@@ -29,7 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
-import static io.github.gromoff97.awium.execution.ConditionExecution.start;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -129,7 +129,7 @@ class WaitEngineLifecycleTest {
     }
 
     private WaitCompletion execute(Callable<String> source) {
-        return new WaitEngine<>(withTime(config(1, 10, 0), time, time), source, start(run))
+        return new WaitEngine<>(withTime(config(1, 10, 0), time, time), source, new ConditionRun<>(run))
                 .waitFor();
     }
 }

@@ -14,7 +14,7 @@ import io.github.gromoff97.awium.conditions.common.CommonConditions.isNotNull
 import io.github.gromoff97.awium.conditions.common.CommonConditions.instanceOf
 import io.github.gromoff97.awium.conditions.common.CommonConditions.matches
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
-import io.github.gromoff97.awium.execution.ConditionExecution.start
+import io.github.gromoff97.awium.execution.ConditionRun
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
 import io.github.gromoff97.awium.result.AttemptResult.Satisfied
@@ -101,7 +101,7 @@ class CapturedConditionTest {
     fun `selector stages capture whole observations instead of their selected values`() {
         val first = listOf("first", 1)
         val last = listOf(2, "last")
-        val run = start<List<Any>, List<List<Any>>>(captured(firstElement(instanceOf(String::class.java)),
+        val run = ConditionRun<List<Any>, List<List<Any>>>(captured(firstElement(instanceOf(String::class.java)),
             lastElement(instanceOf(String::class.java))))
 
         run.probe(first)
@@ -113,7 +113,7 @@ class CapturedConditionTest {
     @Test
     fun `a pending nested stage preserves earlier captures`() {
         val pending = listOf(false)
-        val run = start<List<Boolean>, List<List<Boolean>>>(captured(
+        val run = ConditionRun<List<Boolean>, List<List<Boolean>>>(captured(
             singleElement(matches { ready: Boolean -> !ready }), singleElement(matches { ready: Boolean -> ready })))
         run.probe(pending)
 
@@ -131,7 +131,7 @@ class CapturedConditionTest {
             var calls = 0
             AwaitAttempt { actual -> if (++calls == 2) satisfied(actual) else unsatisfied("retry") }
         }
-        val run = start<List<String>, List<List<String>>>(captured(singleElement(nested), singleElement(nested)))
+        val run = ConditionRun<List<String>, List<List<String>>>(captured(singleElement(nested), singleElement(nested)))
 
         repeat(4) { run.probe(listOf("ready")) }
         assertEquals(List(2) { listOf("ready") }, run.result())
@@ -148,7 +148,7 @@ class CapturedConditionTest {
         }
         val sequence = captured(afterRetry, equalTo("pending"), afterRetry)
         repeat(2) {
-            val run = start<String, List<String>>(sequence)
+            val run = ConditionRun<String, List<String>>(sequence)
             for (actual in listOf("created", "created", "pending", "created", "created")) run.probe(actual)
             assertEquals(listOf("created", "pending", "created"), run.result())
         }
@@ -157,7 +157,7 @@ class CapturedConditionTest {
 
     @Test
     fun `captured results cannot be modified`() {
-        val run = start<List<String>, List<List<String>>>(captured(singleElement, singleElement))
+        val run = ConditionRun<List<String>, List<List<String>>>(captured(singleElement, singleElement))
         repeat(2) { run.probe(listOf("ready")) }
         assertThrows(UnsupportedOperationException::class.java) { (run.result() as MutableList).clear() }
     }
@@ -167,7 +167,7 @@ class CapturedConditionTest {
         val first = mapOf<String, Number?>("first" to null)
         val acquired = mapOf<String, Number?>("last" to 2)
         val refreshed = mapOf<String, Number?>("last" to 3)
-        val run = start<Map<String, Number?>, List<Map<String, Number?>>>(
+        val run = ConditionRun<Map<String, Number?>, List<Map<String, Number?>>>(
             captured(valueFor("first"), valueFor("last", isNotNull)))
 
         run.probe(first)
@@ -184,7 +184,7 @@ class CapturedConditionTest {
         val first = listOf("first", "ignored")
         val acquired = listOf("ignored", "acquired")
         val refreshed = listOf("ignored", "refreshed")
-        val run = start<List<String>, List<List<String>>>(captured(firstElement, lastElement))
+        val run = ConditionRun<List<String>, List<List<String>>>(captured(firstElement, lastElement))
         for (actual in listOf(first, acquired, refreshed)) run.probe(actual)
         assertSame(first, run.result().first())
         assertSame(refreshed, run.result().last())
@@ -209,7 +209,7 @@ class CapturedConditionTest {
     fun `each probe advances at most one stage`() {
         var calls = 0
         val stage = matches { value: Int -> calls++; value == 1 }
-        val run = start<Int, List<Int>>(captured(stage, stage, stage))
+        val run = ConditionRun<Int, List<Int>>(captured(stage, stage, stage))
         for (count in 1..3) {
             val outcome = run.probe(1)
             assertEquals(count == 3, outcome is Satisfied<*>)
@@ -223,7 +223,7 @@ class CapturedConditionTest {
     fun `a completed sequence rechecks only its final stage`() {
         var earlyCalls = 0
         var finalCalls = 0
-        val run = start<String, List<String>>(captured(
+        val run = ConditionRun<String, List<String>>(captured(
             matches { value: String -> earlyCalls++; value == "early" },
             matches { value: String -> finalCalls++; value != "early" }))
 
@@ -235,7 +235,7 @@ class CapturedConditionTest {
 
     @Test
     fun `a final stage mismatch removes its previous capture`() {
-        val run = start<String, List<String>>(captured(equalTo("early"), equalTo("final")))
+        val run = ConditionRun<String, List<String>>(captured(equalTo("early"), equalTo("final")))
         run.probe("early")
         run.probe("final")
 
@@ -246,7 +246,7 @@ class CapturedConditionTest {
 
     @Test
     fun `later states cannot skip an unfinished intermediate stage`() {
-        val run = start<String, List<String>>(captured(equalTo("created"), equalTo("pending"), equalTo("finished")))
+        val run = ConditionRun<String, List<String>>(captured(equalTo("created"), equalTo("pending"), equalTo("finished")))
         run.probe("created")
         repeat(2) { assertInstanceOf(Unsatisfied::class.java, run.probe("finished")) }
         assertInstanceOf(Unsatisfied::class.java, run.probe("pending"))
@@ -257,13 +257,13 @@ class CapturedConditionTest {
     @Test
     fun `new runs are independent of completed and incomplete executions`() {
         val condition = captured(equalTo("created"), equalTo("finished"))
-        val complete = start<String, List<String>>(condition)
+        val complete = ConditionRun<String, List<String>>(condition)
         complete.probe("created")
         complete.probe("finished")
-        val incomplete = start<String, List<String>>(condition)
+        val incomplete = ConditionRun<String, List<String>>(condition)
         incomplete.probe("created")
         incomplete.probe("pending")
-        val next = start<String, List<String>>(condition)
+        val next = ConditionRun<String, List<String>>(condition)
 
         assertInstanceOf(Unsatisfied::class.java, next.probe("finished"))
         next.probe("created")

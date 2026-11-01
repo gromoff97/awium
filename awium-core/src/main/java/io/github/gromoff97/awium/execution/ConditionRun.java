@@ -22,9 +22,9 @@ public final class ConditionRun<OBSERVED, RESULT> {
     private final AttemptHistory<OBSERVED> history = new AttemptHistory<>();
     private AttemptResult<? extends RESULT> latestResult;
 
-    ConditionRun(AwaitCondition condition, Condition<OBSERVED, RESULT> check) {
+    public ConditionRun(AwaitCondition condition) {
         this.condition = condition;
-        this.check = check;
+        check = ConditionExecution.prepare(condition);
         evaluation = new ConditionExecution<>(check::newAttempt);
     }
 

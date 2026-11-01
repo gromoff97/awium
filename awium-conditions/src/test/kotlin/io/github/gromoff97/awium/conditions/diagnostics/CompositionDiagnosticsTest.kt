@@ -33,7 +33,7 @@ import io.github.gromoff97.awium.conditions.map.MapConditions.noValue
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
-import io.github.gromoff97.awium.execution.ConditionExecution.start
+import io.github.gromoff97.awium.execution.ConditionRun
 import io.github.gromoff97.awium.result.Attempt.Operation.CONDITION
 import io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
@@ -197,7 +197,7 @@ class CompositionDiagnosticsTest {
     @Test
     fun `captured keeps the failed quantifier stage mismatch`() {
         val check = all(condition<Any, Any>("account is active") { unsatisfied("account is not active") })
-        val run = start<List<String>, List<List<String>>>(captured(isNotNull, check))
+        val run = ConditionRun<List<String>, List<List<String>>>(captured(isNotNull, check))
         run.probe(listOf("pending"))
         val rejected = assertInstanceOf(Unsatisfied::class.java, run.probe(listOf("pending")))
         assertEquals("not all collection elements matched (checked 1): account is not active", rejected.mismatch())
@@ -251,7 +251,7 @@ class CompositionDiagnosticsTest {
     @Test
     fun `a missing captured key retains lookup context without initializing its nested check`() {
         val check = valueFor("customerId", conditionPerWait<String, String>("nested") { throw AssertionError("nested factory called") })
-        val run = start<Map<String, String>, List<Map<String, String>>>(captured(check, check))
+        val run = ConditionRun<Map<String, String>, List<Map<String, String>>>(captured(check, check))
         val rejected = assertInstanceOf(Unsatisfied::class.java, run.probe(emptyMap()))
         assertEquals("map did not contain the expected key", rejected.mismatch())
         assertEquals("customerId", check.references().single().value())

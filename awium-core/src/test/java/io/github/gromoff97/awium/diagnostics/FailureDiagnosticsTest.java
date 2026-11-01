@@ -2,7 +2,6 @@ package io.github.gromoff97.awium.diagnostics;
 
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.execution.ConditionRun;
-import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.execution.ExecutionStep;
 import io.github.gromoff97.awium.execution.WaitCompletion;
 import io.github.gromoff97.awium.result.Attempt;
@@ -174,7 +173,7 @@ class FailureDiagnosticsTest {
         var attempt = new ExecutionStep<>(false, phase, 2, retained);
         var outcome = completion.apply(attempt);
         var configuration = config(1, 2, 0);
-        var run = ConditionExecution.<Object, Object>start(metadata);
+        var run = new ConditionRun<Object, Object>(metadata);
         run.record(retained);
         var report = run.finish(outcome, configuration);
         var returned = failure(report);
@@ -209,7 +208,7 @@ class FailureDiagnosticsTest {
     }
 
     private static ConditionRun<Object, Object> describedRun(Supplier<Diagnostic> diagnostic) {
-        return ConditionExecution.start(new Condition<Object, Object>() {
+        return new ConditionRun<>(new Condition<Object, Object>() {
             @Override public String description() { return "ready"; }
             @Override public List<Reference<?>> references() { return List.of(new Reference<>("Expected", "ready")); }
             @Override public AttemptResult<Object> probe(Object actual) { throw new AssertionError("diagnostics must not probe"); }
