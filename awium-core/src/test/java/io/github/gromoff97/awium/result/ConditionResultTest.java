@@ -16,6 +16,16 @@ class ConditionResultTest {
     }
 
     @Test
+    void mapsNullAsASuccessfulValue() {
+        assertEquals(satisfied("mapped"), satisfied(null).mapValue(value -> "mapped"));
+    }
+
+    @Test
+    void mappingMayReturnNull() {
+        assertEquals(satisfied(null), satisfied("abc").mapValue(value -> null));
+    }
+
+    @Test
     void mappingSkipsMismatchesAndPreservesTheirDiagnostics() {
         var cause = new IllegalStateException("not ready");
         var mismatch = ConditionResult.<String>unsatisfied("retry", cause).mapValue(value -> {

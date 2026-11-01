@@ -130,7 +130,7 @@ class WaitEngineTest {
         var success = assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(100L), starts);
         assertThat(time.parkRequests).isEmpty();
-        assertEquals(0, completed(success.step()));
+        assertEquals(0, success.step().completedAfterNanos());
         assertEquals("actual", successfulObservation(success.step()));
     }
 
@@ -172,7 +172,7 @@ class WaitEngineTest {
         var success = assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(0L, interval), starts);
         assertThat(time.parkRequests).containsExactly(interval);
-        assertEquals(9, completed(success.step()));
+        assertEquals(9, success.step().completedAfterNanos());
         assertEquals("actual", successfulObservation(success.step()));
     }
 
@@ -195,7 +195,7 @@ class WaitEngineTest {
         assertEquals(List.of(100L, 104L, 108L), starts);
         assertThat(time.parkRequests).containsExactly(4L, 4L, 2L);
         assertEquals(10, timeout.elapsedNanos());
-        assertEquals(8, completed(unsatisfied));
+        assertEquals(8, unsatisfied.completedAfterNanos());
         assertEquals("mismatch 3", mismatch(unsatisfied));
         assertSame(assertion, unsatisfied.attempt().cause());
     }
@@ -230,9 +230,9 @@ class WaitEngineTest {
         var timeout = assertInstanceOf(
                 Timeout.class, outcome);
         var unsatisfied = timeout.step();
-        assertEquals(10, completed(unsatisfied));
+        assertEquals(10, unsatisfied.completedAfterNanos());
         assertEquals(10, timeout.elapsedNanos());
-        assertSame(actual, observed(unsatisfied));
+        assertSame(actual, observation(unsatisfied.attempt()));
         assertEquals("late", mismatch(unsatisfied));
         assertSame(assertion, unsatisfied.attempt().cause());
     }
@@ -251,9 +251,9 @@ class WaitEngineTest {
         var timeout = assertInstanceOf(
                 Timeout.class, outcome);
         var satisfied = timeout.step();
-        assertEquals(11, completed(satisfied));
+        assertEquals(11, satisfied.completedAfterNanos());
         assertEquals(11, timeout.elapsedNanos());
-        assertSame(actual, observed(satisfied));
+        assertSame(actual, observation(satisfied.attempt()));
         assertSame(actual, successfulObservation(satisfied));
     }
 
@@ -470,7 +470,7 @@ class WaitEngineTest {
         var success = assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(0L, 5L, 10L, 12L), starts);
         assertThat(time.parkRequests).containsExactly(5L, 5L, 2L);
-        assertEquals(12, completed(success.step()));
+        assertEquals(12, success.step().completedAfterNanos());
         assertEquals("actual", successfulObservation(success.step()));
     }
 
@@ -486,7 +486,7 @@ class WaitEngineTest {
         var success = assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(0L, 3L), starts);
         assertThat(time.parkRequests).containsExactly(3L);
-        assertEquals(3, completed(success.step()));
+        assertEquals(3, success.step().completedAfterNanos());
         assertEquals(3L, successfulObservation(success.step()));
     }
 
@@ -505,7 +505,7 @@ class WaitEngineTest {
         assertEquals(List.of(
                 started, Long.MIN_VALUE + 1, Long.MIN_VALUE + 3), starts);
         assertThat(time.parkRequests).containsExactly(4L, 2L);
-        assertEquals(6, completed(success.step()));
+        assertEquals(6, success.step().completedAfterNanos());
         assertEquals(Long.MIN_VALUE + 3, successfulObservation(success.step()));
     }
 
@@ -526,7 +526,7 @@ class WaitEngineTest {
         var success = assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(0L, 4L, 13L, 14L), starts);
         assertThat(time.parkRequests).containsExactly(4L, 4L, 1L);
-        assertEquals(14, completed(success.step()));
+        assertEquals(14, success.step().completedAfterNanos());
         assertEquals("actual", successfulObservation(success.step()));
     }
 
@@ -547,7 +547,7 @@ class WaitEngineTest {
         var success = assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(0L, 6L), starts);
         assertThat(time.parkRequests).containsExactly(6L);
-        assertEquals(11, completed(success.step()));
+        assertEquals(11, success.step().completedAfterNanos());
         assertEquals("actual", successfulObservation(success.step()));
     }
 
@@ -564,8 +564,8 @@ class WaitEngineTest {
         var loss = assertInstanceOf(PersistenceFailure.class, outcome);
         var unsatisfied = loss.step();
         assertEquals(0, loss.acquiredAfterNanos());
-        assertEquals(5, completed(unsatisfied));
-        assertSame(failingActual, observed(unsatisfied));
+        assertEquals(5, unsatisfied.completedAfterNanos());
+        assertSame(failingActual, observation(unsatisfied.attempt()));
         assertEquals("lost", mismatch(unsatisfied));
         assertSame(assertion, unsatisfied.attempt().cause());
         assertThat(time.parkRequests).containsExactly(5L);
@@ -600,14 +600,6 @@ class WaitEngineTest {
             AwaitAttempt<S, R> condition) {
         return new WaitEngine<S>(withTime(config, time, parker), source,
                 start(new DefinedCondition<>("test condition", null, condition))).waitFor(ignored -> {});
-    }
-
-    private static long completed(ExecutionStep<?> attempt) {
-        return attempt.completedAfterNanos();
-    }
-
-    private static Object observed(ExecutionStep<?> attempt) {
-        return observation(attempt.attempt());
     }
 
     private static Object successfulObservation(ExecutionStep<?> attempt) {
