@@ -9,7 +9,6 @@ import io.github.gromoff97.awium.conditions.Conditions.condition
 import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import io.github.gromoff97.awium.function.AwaitAttempt
-import io.github.gromoff97.awium.result.ConditionResult
 import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
 import io.github.gromoff97.awium.result.ConditionResult.satisfied
 import io.github.gromoff97.awium.result.ConditionResult.unsatisfied

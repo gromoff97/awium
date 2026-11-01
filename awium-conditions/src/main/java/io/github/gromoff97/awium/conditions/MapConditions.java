@@ -4,7 +4,6 @@ import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
 import io.github.gromoff97.awium.AwaitCondition.MapValueCondition;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
-import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.conditions.internal.ContainsCondition;
 import io.github.gromoff97.awium.conditions.internal.ContainsElementsCondition.Membership;

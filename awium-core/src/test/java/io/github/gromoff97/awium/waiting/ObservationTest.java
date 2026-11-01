@@ -28,7 +28,6 @@ import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION;
-import static io.github.gromoff97.awium.execution.WaitCompletion.Uncontrolled;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
 import static io.github.gromoff97.awium.result.Attempt.Operation.SOURCE;

@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.conditions;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.conditions.internal.BlankCondition;
 import io.github.gromoff97.awium.conditions.internal.ContainsIgnoringCaseCondition;
 import io.github.gromoff97.awium.conditions.internal.EmptyCondition;
