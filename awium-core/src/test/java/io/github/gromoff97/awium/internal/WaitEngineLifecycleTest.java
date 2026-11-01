@@ -19,6 +19,7 @@ import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -118,6 +119,20 @@ class WaitEngineLifecycleTest {
         assertInstanceOf(InterruptedException.class, outcome.step().attempt().cause());
         assertTrue(currentThread().isInterrupted());
         verify(run, times(completionCalls)).complete();
+    }
+
+    @Test
+    void cancellationDuringCompletionPreservesTheMismatchCause() throws Throwable {
+        var cause = new AssertionError("value is still pending");
+        doReturn(unsatisfied("pending", cause)).when(run).probe("actual");
+        when(run.complete()).thenAnswer(ignored -> {
+            currentThread().interrupt();
+            return false;
+        });
+
+        var outcome = assertInstanceOf(Uncontrolled.class, execute(() -> "actual"));
+        assertTrue(outcome.interrupted());
+        assertSame(cause, outcome.step().attempt().cause());
     }
 
     private WaitCompletion execute(Callable<String> source) {
