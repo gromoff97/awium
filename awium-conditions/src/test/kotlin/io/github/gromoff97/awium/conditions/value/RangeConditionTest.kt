@@ -70,6 +70,7 @@ class RangeConditionTest {
             boundary(between(5, 7), 4, false), boundary(between(5, 7), 8, false),
             boundary(strictlyBetween(5, 7), 6, true), boundary(strictlyBetween(5, 7), 5, false),
             boundary(strictlyBetween(5, 7), 7, false),
+            boundary(strictlyBetween(5, 7), 4, false), boundary(strictlyBetween(5, 7), 8, false),
             boundary(between(5, 5), 5, true), boundary(strictlyBetween(5, 5), 5, false)
         )
 

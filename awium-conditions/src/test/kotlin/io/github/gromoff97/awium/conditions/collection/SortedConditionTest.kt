@@ -31,7 +31,7 @@ class SortedConditionTest {
     @MethodSource("inversions")
     fun `compares consecutive pairs and stops at the first inversion`(actual: List<Int>, lastIndex: Int) {
         val comparisons = mutableListOf<Pair<Int, Int>>()
-        val condition = sorted<Int> { first, second -> comparisons.add(first to second); first.compareTo(second) }
+        val condition = sorted<Int> { first, second -> comparisons.add(first to second); first - second }
 
         assertEquals("collection was not sorted at indices ${lastIndex - 1} and $lastIndex", rejection(condition, actual).mismatch())
         assertEquals(actual.zipWithNext().take(lastIndex), comparisons)
@@ -67,7 +67,7 @@ class SortedConditionTest {
         @JvmStatic
         fun inversions() = listOf(
             argumentSet("first pair", listOf(3, 1, 2), 1),
-            argumentSet("later pair", listOf(1, 3, 2, 4), 2)
+            argumentSet("later pair", listOf(1, 4, 2, 5), 2)
         )
 
         @JvmStatic

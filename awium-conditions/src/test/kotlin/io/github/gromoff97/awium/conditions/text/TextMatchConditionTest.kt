@@ -76,8 +76,8 @@ class TextMatchConditionTest {
     companion object {
         @JvmStatic
         fun examples() = listOf(
-            named("contains", Example(StringConditions::contains, "ready", "failed")),
-            named("doesNotContain", Example(StringConditions::doesNotContain, "failed", "ready")),
+            named("contains", Example(StringConditions::contains, "already now", "READY now")),
+            named("doesNotContain", Example(StringConditions::doesNotContain, "READY now", "already now")),
             named("startsWith", Example(StringConditions::startsWith, "ready now", "not ready")),
             named("doesNotStartWith", Example(StringConditions::doesNotStartWith, "not ready", "ready now")),
             named("endsWith", Example(StringConditions::endsWith, "already", "ready now")),
